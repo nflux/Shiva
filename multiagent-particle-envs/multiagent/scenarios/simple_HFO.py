@@ -5,29 +5,30 @@ import hfo
 
 class Scenario(BaseScenario):
     def make_world(self):
-        #world = World()
-        # add agents
-        hfo_env = hfo.HFOEnvironment()
-        hfo_env.connectToServer(hfo.HIGH_LEVEL_FEATURE_SET,
-                            config_dir='/home.sda4/home/ssajjadi/Desktop/ML/work/HFO-master/bin/teams/base/config/formations-dt', 
-                        server_port=6000, server_addr='localhost', team_name='base_left', play_goalie=False)
-
-        world = hfo_env
-        #world.agents = [Agent() for i in range(1)]
-        #for i, agent in enumerate(world.agents):
-        #    agent.name = 'agent %d' % i
-        #    agent.collide = False
-        #    agent.silent = True
-        # add landmarks
-        #world.landmarks = [Landmark() for i in range(1)]
-        #for i, landmark in enumerate(world.landmarks):
-        #    landmark.name = 'landmark %d' % i
-        #    landmark.collide = False
-        #    landmark.movable = False
-        # make initial conditions
-        #self.reset_world(world)
-        return world
+        world = World()
         
+        world.hfo_env = hfo.HFOEnvironment()
+        world.hfo_env.connectToServer(hfo.HIGH_LEVEL_FEATURE_SET,
+                            config_dir='/home/mehrzad/Desktop/work/PlayaVista/Sigma-Robocup/bin/teams/base/config/formations-dt', 
+                        server_port=6000, server_addr='localhost', team_name='base_left', play_goalie=False)
+         
+        # add agents
+        world.agents = [Agent() for i in range(1)]
+        for i, agent in enumerate(world.agents):
+            agent.name = 'agent %d' % i
+            agent.collide = False
+            agent.silent = True
+        # add landmarks
+        world.landmarks = [Landmark() for i in range(1)]
+        for i, landmark in enumerate(world.landmarks):
+            landmark.name = 'landmark %d' % i
+            landmark.collide = False
+            landmark.movable = False
+        # make initial conditions
+        self.reset_world(world)
+         
+        return world
+
     
     def reset_world(self, world):
         
@@ -53,5 +54,6 @@ class Scenario(BaseScenario):
     
     def observation(self, agent, world):
         # get positions of all entities in this agent's reference frame
-        return world.getState()
+        print('querying agents observation : ', world.hfo_env.getState() )
+        return world.hfo_env.getState()
         

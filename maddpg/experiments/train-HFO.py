@@ -3,10 +3,11 @@ import numpy as np
 import tensorflow as tf
 import time
 import pickle
-
+import hfo
 import maddpg.common.tf_util as U
 from maddpg.trainer.maddpg import MADDPGAgentTrainer
 import tensorflow.contrib.layers as layers
+
 
 def parse_args():
     parser = argparse.ArgumentParser("Reinforcement Learning experiments for multiagent environments")
@@ -75,6 +76,7 @@ def get_trainers(env, num_adversaries, obs_shape_n, arglist):
             local_q_func=(arglist.good_policy=='ddpg')))
     return trainers
 
+action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL ]
 
 def train(arglist):
     with U.single_threaded_session():
@@ -82,20 +84,14 @@ def train(arglist):
         env = make_env(arglist.scenario, arglist, arglist.benchmark)
         # Create agent trainers
         obs_shape_n = [env.observation_space[i].shape for i in range(env.n)]
+        print('observation shape n : ', obs_shape_n)
         num_adversaries = min(env.n, arglist.num_adversaries)
         trainers = get_trainers(env, num_adversaries, obs_shape_n, arglist)
+        print('having ' ,len(trainers), ' trainers')
         print('Using good policy {} and adv policy {}'.format(arglist.good_policy, arglist.adv_policy))
 
         # Initialize
         U.initialize()
-
-        # Load previous results, if necessary
-        if arglist.load_dir == "":
-            arglist.load_dir = arglist.save_dir
-        if arglist.display or arglist.restore or arglist.benchmark:
-            print('Loading previous state...')
-            U.load_state(arglist.load_dir)
-
         episode_rewards = [0.0]  # sum of rewards for all agents
         agent_rewards = [[0.0] for _ in range(env.n)]  # individual agent reward
         final_ep_rewards = []  # sum of rewards for training curve
@@ -112,7 +108,8 @@ def train(arglist):
             # get action
             action_n = [agent.action(obs) for agent, obs in zip(trainers,obs_n)]
             # environment step
-            new_obs_n, rew_n, done_n, info_n = env.step(action_n)
+            print('action chosen is: ', action_n)
+            new_obs_n, rew_n, done_n, info_n = env.step([action_list[1]])#action_n)
             episode_step += 1
             done = all(done_n)
             terminal = (episode_step >= arglist.max_episode_len)
