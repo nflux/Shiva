@@ -236,29 +236,41 @@ class MADDPG(object):
         Instantiate instance of this class from multi-agent environment
         """
         agent_init_params = []
-        alg_types = [adversary_alg if atype == 'adversary' else agent_alg for
-                     atype in env.agent_types]
-        for acsp, obsp, algtype in zip(env.action_space, env.observation_space,
+        alg_types = [ agent_alg for
+                     atype in range(env.num_TA)]
+        for acsp, obsp, algtype in zip(env.action_list, env.team_obs,
                                        alg_types):
+ 
+            '''print('acsp', acsp)
+            print('obsp', obsp)
+            print('algtype', algtype)
             num_in_pol = obsp.shape[0]
+            print('num_in_pol ', num_in_pol)
             if isinstance(acsp, Box):
                 discrete_action = False
                 get_shape = lambda x: x.shape[0]
             else:  # Discrete
                 discrete_action = True
-                get_shape = lambda x: x.n
-            num_out_pol = get_shape(acsp)
+                get_shape = lambda x: x.shape[0] #x.n
+            num_out_pol = acsp #.shape[0] #get_shape(acsp)
+            print('num_out_pol', num_out_pol)
             if algtype == "MADDPG":
                 num_in_critic = 0
-                for oobsp in env.observation_space:
+                for oobsp in env.team_obs:
                     num_in_critic += oobsp.shape[0]
-                for oacsp in env.action_space:
+                for oacsp in env.team_actions:
                     num_in_critic += get_shape(oacsp)
             else:
-                num_in_critic = obsp.shape[0] + get_shape(acsp)
+                num_in_critic = obsp.shape[0] + get_shape(acsp)'''
+
+            num_in_pol = obsp.shape[0]
+            num_out_pol = 4
+            num_in_critic = obsp.shape[0] * env.num_TA
+            
             agent_init_params.append({'num_in_pol': num_in_pol,
                                       'num_out_pol': num_out_pol,
                                       'num_in_critic': num_in_critic})
+        discrete_action = True
         init_dict = {'gamma': gamma, 'tau': tau, 'lr': lr,
                      'hidden_dim': hidden_dim,
                      'alg_types': alg_types,

@@ -24,10 +24,10 @@ import numpy as np
 from gym.spaces import Box, Discrete
 from pathlib import Path
 from torch.autograd import Variable
-from tensorboardX import SummaryWriter
+#from tensorboardX import SummaryWriter
 from utils.make_env import make_env
 from utils.buffer import ReplayBuffer
-from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
+#from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
 
 from HFO_env import *
@@ -37,8 +37,19 @@ from HFO_env import *
 #from helper import * 
 
 
-env = HFO_env(8,0,1,'left',False,1000,1000,'high','high') 
+env = HFO_env(1,0,0,'left',False,1000,1000,'high','high')
+time.sleep(0.1)
+print('')
 
+
+# For 2000 iterations have each agent on team take a random action
+for it in range(20):
+    env.Step([random.randint(0,3) for i in range(env.num_TA)],'team')
+    print("Agent 0 Observation:",env.Observation(0,'team'))
+    #print("Reward:",env.Reward(0,'team'))
+        
+
+print("Done")
 
 maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   adversary_alg= "MADDPG",
@@ -49,6 +60,7 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
 replay_buffer = ReplayBuffer(10000, 1,
                                  [12],
                                  [4])
+
 t = 0
 for ep_i in range(0, 1000):
         
