@@ -35,7 +35,7 @@ from HFO_env import *
 
 
 
-env = HFO_env(3,0,0,'left',False,1000,1000,'high','high')
+env = HFO_env(1,0,0,'left',False,1000,1000,'high','high')
 time.sleep(0.1)
 print("Done connecting to the server ")
 
@@ -45,8 +45,10 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   tau=0.08,
                                   lr=0.0002,
                                   hidden_dim=64)
+
 print('maddpg.nagents ', maddpg.nagents)
-print('env.num_TA ', env.num_TA)            
+print('env.num_TA ', env.num_TA)  
+print('env.num_features : ' , env.num_features)
 #initialize the replay buffer of size 10000 for number of agent with their observations & actions 
 replay_buffer = ReplayBuffer(10000, env.num_TA,
                                  [env.num_features for i in range(env.num_TA)],
@@ -91,14 +93,20 @@ for ep_i in range(0, 10):
             actions = [[ac[i] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
             print('actions, ', actions)
             agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
+
+            obs =  np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] ) 
+
             env.Step(agents_actions, 'team') # take the fucking actions
             
-            rewards = np.vstack([env.Reward(i,'team') for i in range(env.num_TA) ]).T
-            #rewards = np.vstack([0 for i in range(env.num_TA) ]).T
             
-            print('rewards ',  rewards)
-            next_obs = np.asarray(env.team_obs)
-            dones = np.vstack([0 for i in range(env.num_TA)]).T
+            
+            #rewards = np.vstack([env.Reward(i,'team') for i in range(env.num_TA) ])
+            rewards = np.vstack([10 for i in range(env.num_TA) ])
+            #print('rewards ',  rewards)
+            #next_obs = np.asarray(env.team_obs)
+            next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
+
+            dones = np.vstack([0 for i in range(env.num_TA)])
             replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
             obs = next_obs
             
@@ -111,11 +119,11 @@ for ep_i in range(0, 10):
                 maddpg.prep_training(device='cpu')
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
-                        sample = replay_buffer.sample(1,
+                        sample = replay_buffer.sample(2,
                                                       to_gpu=False)
                         print('sample: ', sample)
                         print('a_i ' , a_i )
-                        maddpg.update(sample, a_i )
+                        #maddpg.update(sample, a_i )
                     maddpg.update_all_targets()
                 maddpg.prep_rollouts(device='cpu')
         ep_rews = replay_buffer.get_average_rewards(100)

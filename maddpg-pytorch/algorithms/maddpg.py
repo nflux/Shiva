@@ -13,7 +13,7 @@ class MADDPG(object):
     """
     def __init__(self, agent_init_params, alg_types,
                  gamma=0.95, tau=0.01, lr=0.01, hidden_dim=64,
-                 discrete_action=False):
+                 discrete_action=True):
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -111,6 +111,7 @@ class MADDPG(object):
                                             curr_agent.target_policy(
                                                 next_obs[agent_i]))),
                                        dim=1)
+                print('trgt_vf_in  in discrete action ', trgt_vf_in)
             else:
                 trgt_vf_in = torch.cat((next_obs[agent_i],
                                         curr_agent.target_policy(next_obs[agent_i])),

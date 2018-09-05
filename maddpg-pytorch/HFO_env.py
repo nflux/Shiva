@@ -301,7 +301,7 @@ class HFO_env():
                 j = 0 # j to maximum episode length
                 d = False
                 self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
-
+                print('length of observation: ', len(self.team_obs[agent_ID]))
                 while j < max_epLength:
                     j+=1
                     # If the action flag is set, each thread takes its action
