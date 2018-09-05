@@ -61,6 +61,7 @@ class DDPGAgent(object):
         Outputs:
             action (PyTorch Variable): Actions for this agent
         """
+        
         action = self.policy(obs)
         if self.discrete_action:
             if explore:

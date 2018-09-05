@@ -264,7 +264,7 @@ class MADDPG(object):
                 num_in_critic = obsp.shape[0] + get_shape(acsp)'''
 
             num_in_pol = obsp.shape[0]
-            num_out_pol = 4
+            num_out_pol =  4
             num_in_critic = obsp.shape[0] * env.num_TA
             
             agent_init_params.append({'num_in_pol': num_in_pol,
