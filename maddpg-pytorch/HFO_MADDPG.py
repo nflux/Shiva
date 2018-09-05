@@ -35,12 +35,8 @@ from HFO_env import *
 
 
 
-env = HFO_env(1,0,0,'left',False,1000,1000,'high','high')
+env = HFO_env(3,0,0,'left',False,1000,1000,'high','high')
 time.sleep(0.1)
-print('')
-
-
-
 print("Done connecting to the server ")
 
 # initializing the maddpg 
@@ -49,11 +45,12 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   tau=0.08,
                                   lr=0.0002,
                                   hidden_dim=64)
-
-#initialize the replay buffer of size 10000 for 1 agent with 12 observations and 4 actions 
-replay_buffer = ReplayBuffer(10000, 1,
-                                 [12],
-                                 [4])
+print('maddpg.nagents ', maddpg.nagents)
+print('env.num_TA ', env.num_TA)            
+#initialize the replay buffer of size 10000 for number of agent with their observations & actions 
+replay_buffer = ReplayBuffer(10000, env.num_TA,
+                                 [env.num_features for i in range(env.num_TA)],
+                                 [len(env.action_list) for i in range(env.num_TA)])
 
 t = 0
 # for the duration of 10 episodes 
@@ -77,7 +74,7 @@ for ep_i in range(0, 10):
             #print('env team observation ',env.team_obs) 
             #print("Agent 0 Observation:",env.Observation(0,'team'))
             #print("Reward:",env.Reward(0,'team'))
-            #print('maddpg.nagents ', maddpg.nagents)
+            
             # gather all the observations into a torch tensor 
             torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
                                   requires_grad=False)
@@ -91,14 +88,35 @@ for ep_i in range(0, 10):
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
             print('agent_actions ', agent_actions)
             # rearrange actions to be per environment
-            actions = [ac[0] for ac in agent_actions] # is this returning one-hot-encoded for each agent ? 
+            actions = [[ac[i] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
             print('actions, ', actions)
-            print('best actions ', actions.index(max(actions)))
-            env.Step([0], 'team')
+            agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
+            env.Step(agents_actions, 'team') # take the fucking actions
             
-            '''rewards = np.asarray([env.Reward(i,'team') for i in range(env.num_TA) ]).T
+            rewards = np.vstack([env.Reward(i,'team') for i in range(env.num_TA) ]).T
+            #rewards = np.vstack([0 for i in range(env.num_TA) ]).T
+            
+            print('rewards ',  rewards)
             next_obs = np.asarray(env.team_obs)
-            dones = np.asarray([0 for i in range(env.num_TA)])
+            dones = np.vstack([0 for i in range(env.num_TA)]).T
             replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
-            obs = next_obs'''
+            obs = next_obs
             
+            t += 1
+            if (len(replay_buffer) >= 32 and
+                (t % 10) < 1):
+                #if USE_CUDA:
+                #    maddpg.prep_training(device='gpu')
+                #else:
+                maddpg.prep_training(device='cpu')
+                for u_i in range(1):
+                    for a_i in range(maddpg.nagents):
+                        sample = replay_buffer.sample(1,
+                                                      to_gpu=False)
+                        print('sample: ', sample)
+                        print('a_i ' , a_i )
+                        maddpg.update(sample, a_i )
+                    maddpg.update_all_targets()
+                maddpg.prep_rollouts(device='cpu')
+        ep_rews = replay_buffer.get_average_rewards(100)
+        print('episode rewards ', ep_rews )
