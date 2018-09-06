@@ -36,7 +36,7 @@ from HFO_env import *
 
  # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 20000 --frames-per-trial 1000 --seed 123
 
-env = HFO_env(1,0,0,'left',False,1000,1000,'high','high')
+env = HFO_env(1,0,1,'left',False,1000,1000,'high','high')
 time.sleep(0.1)
 print("Done connecting to the server ")
 
@@ -57,11 +57,11 @@ replay_buffer = ReplayBuffer(10000, env.num_TA,
                                  [env.num_features for i in range(env.num_TA)],
                                  [len(env.action_list) for i in range(env.num_TA)])
 
-num_episodes = 1000
-episode_length = 500
+num_episodes = 20000
+episode_length = 1000
 t = 0
 
-env.Step([random.randint(0,3) for i in range(env.num_TA)],'team')
+env.Step([random.randint(0,len(env.action_list)-1) for i in range(env.num_TA)],'team')
 
 # for the duration of 1000 episodes 
 for ep_i in range(0, num_episodes):
@@ -71,14 +71,12 @@ for ep_i in range(0, num_episodes):
         
         maddpg.prep_rollouts(device='cpu')
         #define the noise used for exploration
-        explr_pct_remaining = max(0, 100 - ep_i) / 100
+        explr_pct_remaining = max(0, num_episodes - ep_i) / num_episodes
         maddpg.scale_noise(0 + (0.3 - 0.0) * explr_pct_remaining)
         maddpg.reset_noise()
         #for the duration of 100 episode with maximum length of 500 time steps 
         
-        # without this initial random step the agents seemed to crash, it's a waste of 1 timestep per episode 
-        env.Step([random.randint(0,3) for i in range(env.num_TA)],'team')
-            
+
             
         for et_i in range(episode_length):
             # rearrange observations to be per agent, and convert to torch Variable
@@ -98,14 +96,13 @@ for ep_i in range(0, num_episodes):
             #print('torch_obs', torch_obs)
             # feed the maddpg with the obsevation of all agents 
             torch_agent_actions = maddpg.step(torch_obs, explore=True)
-            print("TORCH ACTIONS: ",torch_agent_actions)
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
             # rearrange actions to be per environment
             actions = [[ac[i] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
             agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
 
-            print("Actions taken: ", agent_actions)
+            #print("Actions taken: ", agent_actions)
             obs =  np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] ) 
 
             
@@ -141,4 +138,4 @@ for ep_i in range(0, num_episodes):
                     maddpg.update_all_targets()
                 maddpg.prep_rollouts(device='cpu')
         ep_rews = replay_buffer.get_average_rewards(episode_length)
-        print('episode rewards ', ep_rews )
+ #       print('episode rewards ', ep_rews )

@@ -81,8 +81,9 @@ class HFO_env():
         
         
         # Initialization of mutable lists to be passsed to threads
-        self.team_actions = np.array([3]*num_TA)
-        self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL ]
+        self.team_actions = np.array([2]*num_TA)
+        self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL]
+
         self.team_should_act = np.array([0]*num_TA)
         self.team_should_act_flag = False
         
@@ -230,11 +231,12 @@ class HFO_env():
     def getReward(self,s):    
           reward=0
           #--------------------------- 
+          reward+=self.team_obs[0][10]*10
           if s=='Goal':
-            reward=1000
+            reward=10000
           #--------------------------- 
           elif s=='CapturedByDefense':
-            reward=-1000
+            reward=-500
           #--------------------------- 
           elif s=='OutOfBounds':
             reward=-1000
