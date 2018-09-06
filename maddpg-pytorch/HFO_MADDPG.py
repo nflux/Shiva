@@ -46,6 +46,8 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   lr=0.0002,
                                   hidden_dim=64)
 
+
+
 print('maddpg.nagents ', maddpg.nagents)
 print('env.num_TA ', env.num_TA)  
 print('env.num_features : ' , env.num_features)
@@ -55,8 +57,8 @@ replay_buffer = ReplayBuffer(10000, env.num_TA,
                                  [len(env.action_list) for i in range(env.num_TA)])
 
 t = 0
-# for the duration of 10 episodes 
-for ep_i in range(0, 10):
+# for the duration of 100 episodes 
+for ep_i in range(0, 100):
         
         #get the whole team observation 
         obs = np.asarray(env.team_obs)
@@ -66,8 +68,8 @@ for ep_i in range(0, 10):
         explr_pct_remaining = max(0, 20 - ep_i) / 20
         maddpg.scale_noise(0 + (0.3 - 0.0) * explr_pct_remaining)
         maddpg.reset_noise()
-        #for the duration of 1 episode with maximum length of 10 time steps 
-        for et_i in range(10):
+        #for the duration of 100 episode with maximum length of 250 time steps 
+        for et_i in range(500):
             
             # rearrange observations to be per agent, and convert to torch Variable
             
@@ -101,8 +103,8 @@ for ep_i in range(0, 10):
             
             
             #rewards = np.vstack([env.Reward(i,'team') for i in range(env.num_TA) ])
-            rewards = np.vstack([10 for i in range(env.num_TA) ])
-            #print('rewards ',  rewards)
+            rewards = np.vstack([env.Reward(i,'team') for i in range(env.num_TA) ])
+            #q('rewards ',  rewards)
             #next_obs = np.asarray(env.team_obs)
             next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
 
@@ -123,7 +125,7 @@ for ep_i in range(0, 10):
                                                       to_gpu=False)
                         print('sample: ', sample)
                         print('a_i ' , a_i )
-                        #maddpg.update(sample, a_i )
+                        maddpg.update(sample, a_i )
                     maddpg.update_all_targets()
                 maddpg.prep_rollouts(device='cpu')
         ep_rews = replay_buffer.get_average_rewards(100)

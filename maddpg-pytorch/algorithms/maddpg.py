@@ -266,7 +266,9 @@ class MADDPG(object):
 
             num_in_pol = obsp.shape[0]
             num_out_pol =  4
-            num_in_critic = obsp.shape[0] * env.num_TA
+            # obs space and action space are concatenated before sending to
+            # critic network
+            num_in_critic = (num_in_pol + num_out_pol) *env.num_TA
             
             agent_init_params.append({'num_in_pol': num_in_pol,
                                       'num_out_pol': num_out_pol,

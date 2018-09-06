@@ -283,7 +283,7 @@ class HFO_env():
 
 
         self.team_envs[agent_ID].connectToServer(feat_lvl,
-                                config_dir='/home.sda4/home/ssajjadi/Desktop/ML/work/HFO-master/bin/teams/base/config/formations-dt', 
+                                config_dir='/home/andrew/GitDownloads/HFO/bin/teams/base/config/formations-dt', 
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
