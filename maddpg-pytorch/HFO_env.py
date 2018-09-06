@@ -41,6 +41,7 @@ class HFO_env():
         wait (list of bools): Contains boolean flag for each agent. Functions as a locking
             mechanism for threads
         wait_flag (bool): Boolean flag True if all agents are in sync.
+        num_features (int): Number of features (varies with high or low setting)
         
         
     Todo:
