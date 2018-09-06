@@ -62,7 +62,8 @@ episode_length = 1000
 t = 0
 
 env.Step([random.randint(0,len(env.action_list)-1) for i in range(env.num_TA)],'team')
-
+reward_total = [ ]
+logger_df = pd.DataFrame({'reward':reward_total})
 # for the duration of 1000 episodes 
 for ep_i in range(0, num_episodes):
         
@@ -115,13 +116,18 @@ for ep_i in range(0, num_episodes):
             rewards = np.vstack([env.Reward(i,'team') for i in range(env.num_TA) ])
             #q('rewards ',  rewards)
             #next_obs = np.asarray(env.team_obs)
+            
             next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
 
             dones = np.vstack([0 for i in range(env.num_TA)])
             replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
             obs = next_obs
+            for i in range(env.num_TA):
+                logger_df = logger_df.append({'reward':env.Reward(i,'team')}, ignore_index=True)
             
             t += 1
+            if t%1000 == 0:
+                    logger_df.to_csv('history.csv')
             if (len(replay_buffer) >= 32 and
                 (t % 10) < 1):
                 #if USE_CUDA:
@@ -137,5 +143,6 @@ for ep_i in range(0, num_episodes):
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()
                 maddpg.prep_rollouts(device='cpu')
+                logger_df
         ep_rews = replay_buffer.get_average_rewards(episode_length)
  #       print('episode rewards ', ep_rews )
