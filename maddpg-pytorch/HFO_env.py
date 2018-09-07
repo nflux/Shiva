@@ -3,7 +3,7 @@ import numpy as np
 import hfo
 import time
 import _thread as thread
-
+import pandas as pd
 
 #from helper import * 
 
@@ -41,6 +41,7 @@ class HFO_env():
         wait (list of bools): Contains boolean flag for each agent. Functions as a locking
             mechanism for threads
         wait_flag (bool): Boolean flag True if all agents are in sync.
+        num_features (int): Number of features (varies with high or low setting)
         
         
     Todo:
@@ -80,8 +81,9 @@ class HFO_env():
         
         
         # Initialization of mutable lists to be passsed to threads
-        self.team_actions = np.array([3]*num_TA)
-        self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL ]
+        self.team_actions = np.array([2]*num_TA)
+        self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL, hfo.MOVE]
+
         self.team_should_act = np.array([0]*num_TA)
         self.team_should_act_flag = False
         
@@ -229,6 +231,13 @@ class HFO_env():
     def getReward(self,s):    
           reward=0
           #--------------------------- 
+          #reward+= self.team_obs[0][10]*10
+          ball_kickable = False 
+          for i in range(self.num_TA):
+                if self.team_obs[i][5] == 1:
+                    ball_kickable= True #ball kickable by team reward  
+          if ball_kickable == False:
+            reward-=-10
           if s=='Goal':
             reward=1000
           #--------------------------- 
@@ -243,7 +252,7 @@ class HFO_env():
             reward=-1000
           #--------------------------- 
           elif s=='InGame':
-            reward=-10
+            reward=-1
           #--------------------------- 
           elif s=='SERVER_DOWN':  
             reward=0
@@ -283,7 +292,7 @@ class HFO_env():
 
 
         self.team_envs[agent_ID].connectToServer(feat_lvl,
-                                config_dir='/home.sda4/home/ssajjadi/Desktop/ML/work/HFO-master/bin/teams/base/config/formations-dt', 
+                                config_dir='/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt', 
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
