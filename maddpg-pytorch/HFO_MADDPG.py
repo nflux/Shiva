@@ -120,6 +120,7 @@ for ep_i in range(0, num_episodes):
             next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
 
             dones = np.vstack([0 for i in range(env.num_TA)])
+            print(rewards)
             replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
             obs = next_obs
             for i in range(env.num_TA):
