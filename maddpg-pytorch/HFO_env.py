@@ -44,6 +44,7 @@ class HFO_env():
         num_features (int): Number of features (varies with high or low setting)
         
         
+        
     Todo:
         * Functionality for synchronizing team actions with opponent team actions
         """
@@ -54,6 +55,25 @@ class HFO_env():
     
     
     def __init__(self, num_TA,num_OA,num_ONPC,base,goalie,num_trials,fpt,feat_lvl,act_lvl):
+        """ Initializes HFO_Env
+        
+        Args:
+            num_TA (int): Number of teammate agents. (0-11)
+            num_OA (int): Number of opponent agents. (0-11)
+            num_ONPC (int): Number of opponent NPCs. (0-11)
+            base (str): Which side for the team. ('left','right')
+            goalie (bool): Should team use a goalie. (True,False)
+            num_trials (int): Number of episodes
+            fpt (int): Frames per trial
+            feat_lvl (str): High or low feature level. ('high','low')
+            act_lvl (str): High or low action level. ('high','low')
+
+        
+        
+        Returns:
+            HFO_Env
+        
+        """
                 
         self.num_TA = num_TA 
         self.num_OA = num_OA
@@ -83,7 +103,7 @@ class HFO_env():
         # Initialization of mutable lists to be passsed to threads
         self.team_actions = np.array([2]*num_TA)
         self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL, hfo.MOVE]
-
+        self.kick_actions = [hfo.DRIBBLE, hfo.SHOOT, hfo.PASS] # actions that require the ball to be kickable
         self.team_should_act = np.array([0]*num_TA)
         self.team_should_act_flag = False
         
@@ -107,7 +127,7 @@ class HFO_env():
         for i in range(num_TA):
             print("Connecting player %i" % i , "on team %s to the server" % base)
             thread.start_new_thread(self.connect,(feat_lvl, base, 
-                                             False,i,))
+                                             False,i,fpt,))
             time.sleep(0.5)
 
 
@@ -228,31 +248,38 @@ class HFO_env():
 
 
     # Engineered Reward Function
-    def getReward(self,s):    
+    def getReward(self,s,agentID):    
           reward=0
           #--------------------------- 
-          #reward+= self.team_obs[0][10]*10
+        
+          #reward+= self.team_obs[0][10]*10 # possible that this is the open angle
+            
           ball_kickable = False 
           for i in range(self.num_TA):
                 if self.team_obs[i][5] == 1:
-                    ball_kickable= True #ball kickable by team reward  
+                    ball_kickable= True #ball kickable by team reward
           if ball_kickable == False:
-            reward-=-10
+            reward+=-10
+            
+            
+          if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.team_obs[agentID][5] == -1:
+            reward+= -500 # kicked when not avaialable
+            
           if s=='Goal':
-            reward=1000
+            reward+=1000
           #--------------------------- 
           elif s=='CapturedByDefense':
-            reward=-1000
+            reward+=-1000
           #--------------------------- 
           elif s=='OutOfBounds':
-            reward=-1000
+            reward+=-1000
           #--------------------------- 
           #Cause Unknown Do Nothing
           elif s=='OutOfTime':
-            reward=-1000
+            reward+=-1000
           #--------------------------- 
           elif s=='InGame':
-            reward=-1
+            reward+=-1
           #--------------------------- 
           elif s=='SERVER_DOWN':  
             reward=0
@@ -264,7 +291,7 @@ class HFO_env():
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def connect(self,feat_lvl, base, goalie, agent_ID):
+    def connect(self,feat_lvl, base, goalie, agent_ID,fpt):
         """ Connect threaded agent to server
 
         Args:
@@ -292,12 +319,11 @@ class HFO_env():
 
 
         self.team_envs[agent_ID].connectToServer(feat_lvl,
-                                config_dir='/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt', 
+                                config_dir='/home/andrew/GitDownloads/HFO/bin/teams/base/config/formations-dt', 
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        max_epLength = 1000
-        num_episodes = 20000
+        
 
 
         # Once all agents have been loaded,
@@ -311,7 +337,7 @@ class HFO_env():
                 d = False
                 self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                 print('length of observation: ', len(self.team_obs[agent_ID]))
-                while j < max_epLength:
+                while j < fpt:
                     j+=1
                     # If the action flag is set, each thread takes its action
                     # Sets its personal flag to false, such that if all agents have taken their action 
@@ -341,7 +367,7 @@ class HFO_env():
                     self.team_envs[agent_ID].act(self.action_list[self.team_actions[agent_ID]]) # take the action
                     self.world_status = self.team_envs[agent_ID].step() # update world
                     self.team_rewards[agent_ID] = self.getReward(
-                       self.team_envs[agent_ID].statusToString(self.world_status)) # update reward
+                       self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
                     self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs
                     self.team_should_act[agent_ID] = False # Set personal action flag as done
 
