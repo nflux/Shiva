@@ -36,7 +36,7 @@ from HFO_env import *
 
  # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 20000 --frames-per-trial 1000 --seed 123
 
-env = HFO_env(1,0,1,'left',False,1000,1000,'high','high')
+env = HFO_env(4,0,1,'left',False,1000,1000,'high','high')
 time.sleep(0.1)
 print("Done connecting to the server ")
 
@@ -111,16 +111,14 @@ for ep_i in range(0, num_episodes):
             env.Step(agents_actions, 'team') # take the fucking actions
             
             
-            
-            #rewards = np.vstack([env.Reward(i,'team') for i in range(env.num_TA) ])
-            rewards = np.vstack([env.Reward(i,'team') for i in range(env.num_TA) ])
+
+            rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])
             #q('rewards ',  rewards)
             #next_obs = np.asarray(env.team_obs)
             
             next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
 
-            dones = np.vstack([0 for i in range(env.num_TA)])
-            print(rewards)
+            dones = np.hstack([env.d for i in range(env.num_TA)])
             replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
             obs = next_obs
             for i in range(env.num_TA):

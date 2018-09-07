@@ -252,7 +252,7 @@ class HFO_env():
           reward=0
           #--------------------------- 
         
-          #reward+= self.team_obs[0][10]*10 # possible that this is the open angle
+          #reward+= np.max([self.team_obs[i][10]*10 for i in range(self.num_TA)]) # possible that this is the open angle
             
           ball_kickable = False 
           for i in range(self.num_TA):
