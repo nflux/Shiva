@@ -49,11 +49,6 @@ class HFO_env():
         * Functionality for synchronizing team actions with opponent team actions
         """
     
-    
-
-
-    
-    
     def __init__(self, num_TA,num_OA,num_ONPC,base,goalie,num_trials,fpt,feat_lvl,act_lvl):
         """ Initializes HFO_Env
         
@@ -119,10 +114,6 @@ class HFO_env():
 
         self.world_status = 0
         
-
-
-        
-
         # Create thread for each teammate
         for i in range(num_TA):
             print("Connecting player %i" % i , "on team %s to the server" % base)
@@ -204,7 +195,7 @@ class HFO_env():
         """
         [self.Queue_action(i,actions[i],side) for i in range(len(actions))]
         
-        return np.asarray(self.team_obs),self.team_rewards,self.d
+        return np.asarray(self.team_obs),self.team_rewards,self.d, self.team_envs[0].statusToString(self.world_status)
         
         
         
@@ -260,11 +251,14 @@ class HFO_env():
                     ball_kickable= True #ball kickable by team reward
           if ball_kickable == False:
             reward+=-10
+<<<<<<< Updated upstream
             
             
           if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.team_obs[agentID][5] == -1:
             reward+= -500 # kicked when not avaialable
             
+=======
+>>>>>>> Stashed changes
           if s=='Goal':
             reward+=1000
           #--------------------------- 
@@ -282,7 +276,7 @@ class HFO_env():
             reward+=-1
           #--------------------------- 
           elif s=='SERVER_DOWN':  
-            reward=0
+            reward+=0
           #--------------------------- 
           else:
             print("Error: Unknown GameState", s)
@@ -291,7 +285,11 @@ class HFO_env():
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<<<<<<< Updated upstream
     def connect(self,feat_lvl, base, goalie, agent_ID,fpt):
+=======
+    def connect(self,feat_lvl, base, goalie, agent_ID, fpt):
+>>>>>>> Stashed changes
         """ Connect threaded agent to server
 
         Args:
@@ -319,12 +317,19 @@ class HFO_env():
 
 
         self.team_envs[agent_ID].connectToServer(feat_lvl,
+<<<<<<< Updated upstream
                                 config_dir='/home/andrew/GitDownloads/HFO/bin/teams/base/config/formations-dt', 
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         
 
+=======
+                                config_dir='/home/daniel/Desktop/RoboCup/HFO/bin/teams/base/config/formations-dt', 
+                            server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+>>>>>>> Stashed changes
 
         # Once all agents have been loaded,
         # wait for action command, take action, update: obs, reward, and world status
@@ -367,7 +372,11 @@ class HFO_env():
                     self.team_envs[agent_ID].act(self.action_list[self.team_actions[agent_ID]]) # take the action
                     self.world_status = self.team_envs[agent_ID].step() # update world
                     self.team_rewards[agent_ID] = self.getReward(
+<<<<<<< Updated upstream
                        self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
+=======
+                    self.team_envs[agent_ID].statusToString(self.world_status)) # update reward
+>>>>>>> Stashed changes
                     self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs
                     self.team_should_act[agent_ID] = False # Set personal action flag as done
 
@@ -387,5 +396,3 @@ class HFO_env():
                         break
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
-
-   
