@@ -1,10 +1,11 @@
 import random
 import numpy as np
 import hfo
-import HFO.hfo
 import time
 import _thread as thread
 import pandas as pd
+
+from HFO import get_config_path
 
 #from helper import *
 
@@ -310,7 +311,7 @@ class HFO_env():
 
 
         self.team_envs[agent_ID].connectToServer(feat_lvl,
-                            config_dir=HFO.hfo.get_config_path(),
+                            config_dir=get_config_path(),
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
