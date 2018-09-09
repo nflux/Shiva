@@ -36,7 +36,7 @@ from HFO_env import *
 
  # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 20000 --frames-per-trial 1000 --seed 123
 
-env = HFO_env(4,0,1,'left',False,1000,1000,'high','high')
+env = HFO_env(1,0,1,'left',False,1000,1000,'high','high')
 time.sleep(0.1)
 print("Done connecting to the server ")
 
@@ -101,6 +101,8 @@ for ep_i in range(0, num_episodes):
             torch_agent_actions = maddpg.step(torch_obs, explore=True)
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
+            # print("This is the agent's actions:")
+            # print(agent_actions)
             # rearrange actions to be per environment
             actions = [[ac[i] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
             agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 

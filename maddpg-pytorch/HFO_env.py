@@ -102,8 +102,8 @@ class HFO_env():
         self.team_should_act = np.array([0]*num_TA)
         self.team_should_act_flag = False
         
-        self.team_rewards = np.zeros(num_TA)
         self.team_obs = np.empty([num_TA,self.num_features],dtype=object)
+        self.team_rewards = np.zeros(num_TA)
 
         self.opp_actions = np.zeros(num_OA)
         self.opp_should_act = np.array([0]*num_OA)
@@ -250,15 +250,11 @@ class HFO_env():
                 if self.team_obs[i][5] == 1:
                     ball_kickable= True #ball kickable by team reward
           if ball_kickable == False:
-            reward+=-10
-<<<<<<< Updated upstream
-            
+            reward+=-10      
             
           if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.team_obs[agentID][5] == -1:
             reward+= -500 # kicked when not avaialable
             
-=======
->>>>>>> Stashed changes
           if s=='Goal':
             reward+=1000
           #--------------------------- 
@@ -285,11 +281,7 @@ class HFO_env():
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-<<<<<<< Updated upstream
     def connect(self,feat_lvl, base, goalie, agent_ID,fpt):
-=======
-    def connect(self,feat_lvl, base, goalie, agent_ID, fpt):
->>>>>>> Stashed changes
         """ Connect threaded agent to server
 
         Args:
@@ -317,19 +309,10 @@ class HFO_env():
 
 
         self.team_envs[agent_ID].connectToServer(feat_lvl,
-<<<<<<< Updated upstream
-                                config_dir='/home/andrew/GitDownloads/HFO/bin/teams/base/config/formations-dt', 
+                            config_dir='/home/daniel/Desktop/RoboCup/HFO/bin/teams/base/config/formations-dt', 
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        
-
-=======
-                                config_dir='/home/daniel/Desktop/RoboCup/HFO/bin/teams/base/config/formations-dt', 
-                            server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
-
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
->>>>>>> Stashed changes
 
         # Once all agents have been loaded,
         # wait for action command, take action, update: obs, reward, and world status
@@ -372,11 +355,7 @@ class HFO_env():
                     self.team_envs[agent_ID].act(self.action_list[self.team_actions[agent_ID]]) # take the action
                     self.world_status = self.team_envs[agent_ID].step() # update world
                     self.team_rewards[agent_ID] = self.getReward(
-<<<<<<< Updated upstream
-                       self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
-=======
-                    self.team_envs[agent_ID].statusToString(self.world_status)) # update reward
->>>>>>> Stashed changes
+                        self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
                     self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs
                     self.team_should_act[agent_ID] = False # Set personal action flag as done
 
