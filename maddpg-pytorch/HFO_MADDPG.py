@@ -61,6 +61,7 @@ num_episodes = 20000
 episode_length = 250
 t = 0
 time_step = 0
+kickable_counter = 0
 
 env.Step([random.randint(0,len(env.action_list)-1) for i in range(env.num_TA)],'team')
 reward_total = [ ]
@@ -80,7 +81,8 @@ for ep_i in range(0, num_episodes):
         maddpg.scale_noise(0 + (0.3 - 0.0) * explr_pct_remaining)
         maddpg.reset_noise()
         #for the duration of 100 episode with maximum length of 500 time steps
-        time_step = 0 
+        time_step = 0
+        kickable_counter = 0
         for et_i in range(0, episode_length):
             # rearrange observations to be per agent, and convert to torch Variable
             
@@ -111,10 +113,27 @@ for ep_i in range(0, num_episodes):
             obs =  np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] ) 
 
             time_step += 1
+
+            # If kickable is True one of the agents has possession of the ball
+            kickable = False
+            for i in range(env.num_TA):
+                if env.team_obs[i][5] == 1:
+                    kickable = True
+            if kickable == True:
+                kickable_counter += 1
+
+
             _,_,d,world_stat = env.Step(agents_actions, 'team')
             # if d == True agent took an end action such as scoring a goal
             if d == True:
-                step_logger_df = step_logger_df.append({'time_steps': time_step, 'why': world_stat}, ignore_index=True)
+                # print("The kickable counter is: " +  str(kickable_counter))
+                # print("The time step is: " + str(time_step))
+                # print("The percentage of steps with ball kickable is: " + str((kickable_counter/time_step) *100))
+                step_logger_df = step_logger_df.append({'time_steps': time_step, 
+                                                        'why': world_stat,
+                                                        'kickable percentages': (kickable_counter/time_step) * 100}, 
+                                                        ignore_index=True)
+                print(step_logger_df)  
                 break;
 
             # print("The number of agents is " + str(maddpg.nagents))
