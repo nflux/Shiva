@@ -1,0 +1,85 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+*.a
+*.o
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+install_manifest.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Make files
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+CMakeFiles/
+
+# Executeables
+bin/teams/
+bin/rcssserver
+bin/soccerwindow2
+example/hfo_example_agent
+example/high_level_random_agent
+example/low_level_random_agent
+example/mid_level_move_agent
+example/mid_level_kick_agent
+example/mid_level_dribble_agent
+example/communication_agent
+example/hand_coded_defense_agent
+
+# Dependency directories
+librcsc-prefix/
+rcssserver-prefix/
+soccerwindow2-prefix/
+
+# Logs
+log/
+bin/log/

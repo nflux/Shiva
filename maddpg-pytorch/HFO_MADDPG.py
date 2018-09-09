@@ -101,12 +101,12 @@ for ep_i in range(0, num_episodes):
             torch_agent_actions = maddpg.step(torch_obs, explore=True)
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
-            # print("This is the agent's actions:")
-            # print(agent_actions)
             # rearrange actions to be per environment
             actions = [[ac[i] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
             agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
-
+            
+            # for i in agents_actions:
+            #     print("The agent's action is: " + str(i))
             #print("Actions taken: ", agent_actions)
             obs =  np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] ) 
 
@@ -117,7 +117,7 @@ for ep_i in range(0, num_episodes):
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 'why': world_stat}, ignore_index=True)
                 break;
 
-
+            # print("The number of agents is " + str(maddpg.nagents))
             
 
             rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])
