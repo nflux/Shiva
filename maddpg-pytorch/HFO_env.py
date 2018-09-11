@@ -111,8 +111,8 @@ class HFO_env():
         self.opp_should_act = np.array([0]*num_OA)
         self.opp_should_act_flag = False
 
-        self.opp_obs = np.empty([num_OA,5],dtype=object)
-        self.opp_rewards = np.zeros(num_OA)
+        #self.opp_obs = np.empty([num_OA,5],dtype=object)
+        #self.opp_rewards = np.zeros(num_OA)
 
         self.world_status = 0
 
@@ -308,7 +308,6 @@ class HFO_env():
             base = 'base_left'
         elif base == 'right':
             base = 'base_right'
-
 
         self.team_envs[agent_ID].connectToServer(feat_lvl,
                             config_dir=get_config_path(),

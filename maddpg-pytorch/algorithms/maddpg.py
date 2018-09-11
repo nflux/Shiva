@@ -237,10 +237,12 @@ class MADDPG(object):
         Instantiate instance of this class from multi-agent environment
         """
         agent_init_params = []
+        
         alg_types = [ agent_alg for
                      atype in range(env.num_TA)]
-        for acsp, obsp, algtype in zip(env.action_list, env.team_obs,
-                                       alg_types):
+        for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs,
+                                       alg_types): # changed acsp to be action_list for each agent 
+                                                   # giving dimension num_TA x action_list so they may zip properly
  
             '''print('acsp', acsp)
             print('obsp', obsp)
@@ -273,6 +275,8 @@ class MADDPG(object):
             agent_init_params.append({'num_in_pol': num_in_pol,
                                       'num_out_pol': num_out_pol,
                                       'num_in_critic': num_in_critic})
+            
+        ## change for continuous
         discrete_action = True
         init_dict = {'gamma': gamma, 'tau': tau, 'lr': lr,
                      'hidden_dim': hidden_dim,

@@ -34,9 +34,11 @@ from HFO_env import *
 
 
 
- # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 20000 --frames-per-trial 1000 --seed 123
+ # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 20000 --frames-per-trial 1000 --seed 123 --untouched-time=1000
+    
 
-env = HFO_env(1,0,1,'left',False,1000,1000,'high','high')
+    
+env = HFO_env(8,0,1,'left',False,1000,1000,'high','high')
 time.sleep(0.1)
 print("Done connecting to the server ")
 
@@ -84,22 +86,14 @@ for ep_i in range(0, num_episodes):
         time_step = 0
         kickable_counter = 0
         for et_i in range(0, episode_length):
-            # rearrange observations to be per agent, and convert to torch Variable
-            
+        
 
-            
-            #print('env team observation ',env.team_obs) 
-            #print("Agent 0 Observation:",env.Observation(0,'team'))
-            #print("Reward:",env.Reward(0,'team'))
-            
             # gather all the observations into a torch tensor 
             torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
                                   requires_grad=False)
                          for i in range(maddpg.nagents)]
-            #print('vstack obs: ' , np.vstack(obs[0,:]))
             # get actions as torch Variables
             #print('torch_obs', torch_obs)
-            # feed the maddpg with the obsevation of all agents 
             torch_agent_actions = maddpg.step(torch_obs, explore=True)
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
