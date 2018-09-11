@@ -159,15 +159,15 @@ for ep_i in range(0, num_episodes):
             t += 1
             if t%1000 == 0:
                 logger_df.to_csv('history.csv')
-            if (len(replay_buffer) >= 256 and
-                (t % 100) < 1):
+            if (len(replay_buffer) >= 32 and
+                (t % 10) < 1):
                 #if USE_CUDA:
                 #    maddpg.prep_training(device='gpu')
                 #else:
                 maddpg.prep_training(device='cpu')
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
-                        sample = replay_buffer.sample(256,
+                        sample = replay_buffer.sample(32,
                                                       to_gpu=False,norm_rews=False)
                         #print('sample: ', sample)
                         #print('a_i ' , a_i )
