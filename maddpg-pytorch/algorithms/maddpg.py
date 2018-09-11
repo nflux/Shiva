@@ -232,7 +232,7 @@ class MADDPG(object):
 
     @classmethod
     def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",
-                      gamma=0.95, tau=0.01, lr=0.01, hidden_dim=64):
+                      gamma=0.95, tau=0.01, lr=0.01, hidden_dim=64,discrete_action=True):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -240,34 +240,41 @@ class MADDPG(object):
         
         alg_types = [ agent_alg for
                      atype in range(env.num_TA)]
-        for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs,
-                                       alg_types): # changed acsp to be action_list for each agent 
-                                                   # giving dimension num_TA x action_list so they may zip properly
+        for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs, alg_types):
+            
+            # changed acsp to be action_list for each agent 
+                # giving dimension num_TA x action_list so they may zip properly
+                
  
-            '''print('acsp', acsp)
-            print('obsp', obsp)
-            print('algtype', algtype)
-            num_in_pol = obsp.shape[0]
-            print('num_in_pol ', num_in_pol)
-            if isinstance(acsp, Box):
+            ''' if isinstance(acsp, Box):
                 discrete_action = False
                 get_shape = lambda x: x.shape[0]
             else:  # Discrete
                 discrete_action = True
-                get_shape = lambda x: x.shape[0] #x.n
-            num_out_pol = acsp #.shape[0] #get_shape(acsp)
-            print('num_out_pol', num_out_pol)
+                get_shape = lambda x: x.n
+            num_out_pol = get_shape(acsp)
             if algtype == "MADDPG":
                 num_in_critic = 0
-                for oobsp in env.team_obs:
+                for oobsp in env.observation_space:
                     num_in_critic += oobsp.shape[0]
-                for oacsp in env.team_actions:
+                for oacsp in env.action_space:
                     num_in_critic += get_shape(oacsp)
             else:
                 num_in_critic = obsp.shape[0] + get_shape(acsp)'''
 
+    
+
             num_in_pol = obsp.shape[0]
+        
             num_out_pol =  len(env.action_list)
+            
+            
+    
+            # if cont
+            if not discrete_action:
+                num_out_pol = len(env.action_list) + len(env.action_params[0])
+                
+                
             # obs space and action space are concatenated before sending to
             # critic network
             num_in_critic = (num_in_pol + num_out_pol) *env.num_TA
@@ -277,7 +284,6 @@ class MADDPG(object):
                                       'num_in_critic': num_in_critic})
             
         ## change for continuous
-        discrete_action = True
         init_dict = {'gamma': gamma, 'tau': tau, 'lr': lr,
                      'hidden_dim': hidden_dim,
                      'alg_types': alg_types,

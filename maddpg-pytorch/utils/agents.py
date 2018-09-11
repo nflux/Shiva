@@ -72,6 +72,7 @@ class DDPGAgent(object):
             if explore:
                 action += Variable(Tensor(self.exploration.noise()),
                                    requires_grad=False)
+            # change to tanh
             action = action.clamp(-1, 1)
         return action
 
@@ -91,14 +92,3 @@ class DDPGAgent(object):
         self.policy_optimizer.load_state_dict(params['policy_optimizer'])
         self.critic_optimizer.load_state_dict(params['critic_optimizer'])
 
-    #Finds agent distance to ball
-    def distance_to_ball(self, obs):
-
-        #Relative x and y is the offset between the ball and the agent.
-        relative_x = obs[0][0]-obs[0][3]
-        relative_y = obs[0][1]-obs[0][4]
-
-        #Returns the relative distance between the agent and the ball
-        ball_distance = math.sqrt(relative_x**2+relative_y**2)
-
-        return ball_distance, relative_x, relative_y

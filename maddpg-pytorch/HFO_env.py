@@ -4,6 +4,7 @@ import hfo
 import time
 import _thread as thread
 import pandas as pd
+import math
 
 from HFO import get_config_path
 
@@ -72,13 +73,26 @@ class HFO_env():
 
         """
 
+        # params for low level actions
+        num_action_params = 6 # 2 for dash and kick 1 for turn and tackle
+        self.action_params = np.asarray([[0.0]*num_action_params for i in range(num_TA)])
+        if act_lvl == 'low':
+            #                   pow,deg   deg       deg         pow,deg    
+            self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
+            self.kick_actions = [hfo.KICK] # actions that require the ball to be kickable
+    
+        elif act_lvl == 'high':
+            self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL, hfo.MOVE]
+            self.kick_actions = [hfo.DRIBBLE, hfo.SHOOT, hfo.PASS] # actions that require the ball to be kickable
+        
         self.num_TA = num_TA
         self.num_OA = num_OA
         self.num_ONPC = num_ONPC
 
+        self.act_lvl = act_lvl
+        self.feat_lvl = feat_lvl
         if feat_lvl == 'low':
-            # TODO find **ACCURATE** num_features for low level
-            self.num_features = 0
+            self.num_features = 50 + 9*num_TA + 9*num_OA + 9*num_ONPC
         elif feat_lvl == 'high':
             self.num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
 
@@ -99,8 +113,7 @@ class HFO_env():
 
         # Initialization of mutable lists to be passsed to threads
         self.team_actions = np.array([2]*num_TA)
-        self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL, hfo.MOVE]
-        self.kick_actions = [hfo.DRIBBLE, hfo.SHOOT, hfo.PASS] # actions that require the ball to be kickable
+
         self.team_should_act = np.array([0]*num_TA)
         self.team_should_act_flag = False
 
@@ -120,7 +133,7 @@ class HFO_env():
         for i in range(num_TA):
             print("Connecting player %i" % i , "on team %s to the server" % base)
             thread.start_new_thread(self.connect,(feat_lvl, base,
-                                             False,i,fpt,))
+                                             False,i,fpt,act_lvl,))
             time.sleep(0.5)
 
 
@@ -181,7 +194,7 @@ class HFO_env():
             return self.opp_rewards[agent_id]
 
 
-    def Step(self,actions,side):
+    def Step(self,actions,side,params=[]):
         """ Performs each agents' action from actions and returns world_status
 
         Args:
@@ -195,13 +208,13 @@ class HFO_env():
             * Add functionality for opp team
 
         """
-        [self.Queue_action(i,actions[i],side) for i in range(len(actions))]
+        [self.Queue_action(i,actions[i],side,params) for i in range(len(actions))]
 
         return np.asarray(self.team_obs),self.team_rewards,self.d, self.team_envs[0].statusToString(self.world_status)
 
 
 
-    def Queue_action(self,agent_id,action,side):
+    def Queue_action(self,agent_id,action,side,params=[]):
         """ Queues an action on agent, and if all agents have received action instructions performs the actions.
 
         Args:
@@ -221,6 +234,10 @@ class HFO_env():
 
         if side == 'team':
             self.team_actions[agent_id] = action
+            if self.act_lvl == 'low':
+                for p in range(params.shape[1]):
+                    self.action_params[agent_id][p] = params[agent_id][p]
+            
         elif side == 'opp':
             self.opp_actions[agent_id] = action
 
@@ -238,25 +255,82 @@ class HFO_env():
 
         time.sleep(0.001) ### *** without this sleep function the process crashes. specifically, 0.001
 
+    def get_kickable_status(self,agentID):
+        ball_kickable = False
+        if self.feat_lvl == 'high':
+            if self.team_obs[agentID][5] == 1:
+                ball_kickable = True
+        elif self.feat_lvl == 'low':
+            if self.team_obs[agentID][12] == 1:
+                ball_kickable = True
+        return ball_kickable
+            
+            
 
+        
+    #Finds agent distance to ball - high level feature
+    def distance_to_ball(self, obs):
+
+        #Relative x and y is the offset between the ball and the agent.
+        relative_x = obs[0]-obs[3]
+        relative_y = obs[1]-obs[4]
+
+        #Returns the relative distance between the agent and the ball
+        ball_distance = math.sqrt(relative_x**2+relative_y**2)
+
+        return ball_distance, relative_x, relative_y
+
+    
+    # low level feature (1 for closest to object -1 for furthest)
+    def ball_proximity(self,agentID):
+        if self.team_obs[agentID][50]: # ball pos valid
+            return self.team_obs[agentID][53]
+        else:
+            return -1
+        
+        
+    # needs to use angular features of ball and center goal
+    # *TODO: implementation details
+    def ball_distance_to_goal(self,obs):
+        return 0
+
+        
+    
+    def scale_params(self,agentID):
+        # dash power/deg
+        self.action_params[agentID][0]*=100
+        self.action_params[agentID][1]*=180
+        # turn deg
+        self.action_params[agentID][2]*=180
+        # tackle deg
+        self.action_params[agentID][3]*=180
+        # kick power/deg
+        #rescale to positive number
+        self.action_params[agentID][4]= ((self.action_params[agentID][4] + 1)/2)*100
+        self.action_params[agentID][5]*=180
 
     # Engineered Reward Function
     def getReward(self,s,agentID):
         reward=0
         #---------------------------
 
-        #reward+= np.max([self.team_obs[i][10]*10 for i in range(self.num_TA)]) # possible that this is the open angle
-
-        ball_kickable = False
-        for i in range(self.num_TA):
-            if self.team_obs[i][5] == 1:
-                ball_kickable= True #ball kickable by team reward
-        if ball_kickable == False:
+        
+        team_kickable = False
+        team_kickable = np.array([self.get_kickable_status(i) for i in range(self.num_TA)]).any() # kickable by team
+        if team_kickable == False:
             reward+=-10
 
-        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.team_obs[agentID][5] == -1:
-            reward+= -500 # kicked when not avaialable
-
+            
+        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID):
+            reward+= (-1)*500 # kicked when not avaialable
+        
+        # reduce distance to ball
+        if self.feat_lvl == 'high':
+            r,_,_ = self.distance_to_ball(self.team_obs[agentID])
+            reward += (-1)*r * 10
+        else:
+            reward += self.ball_proximity(agentID) * 10
+        
         if s=='Goal':
             reward+=1000
         #---------------------------
@@ -283,7 +357,7 @@ class HFO_env():
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def connect(self,feat_lvl, base, goalie, agent_ID,fpt):
+    def connect(self,feat_lvl, base, goalie, agent_ID,fpt,act_lvl):
         """ Connect threaded agent to server
 
         Args:
@@ -349,8 +423,27 @@ class HFO_env():
 
                     while not self.team_should_act_flag and not self.team_should_act[agent_ID]:
                         time.sleep(0.0001)
-
-                    self.team_envs[agent_ID].act(self.action_list[self.team_actions[agent_ID]]) # take the action
+                    
+                    # take the action
+                    if act_lvl == 'high':
+                        self.team_envs[agent_ID].act(self.action_list[self.team_actions[agent_ID]]) # take the action
+                    elif act_lvl == 'low':
+                        # use params for low level actions
+                        
+                        # scale action params
+                        self.scale_params(agent_ID)
+                        a = self.team_actions[agent_ID]
+                        if a == 0:
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
+                        elif a == 1:
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][2])
+                        elif a == 2:
+                            
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][3])           
+                        elif a ==3:
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
+                        
+                                                    
                     self.world_status = self.team_envs[agent_ID].step() # update world
                     self.team_rewards[agent_ID] = self.getReward(
                     self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward

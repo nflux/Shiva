@@ -34,10 +34,11 @@ from HFO_env import *
 
 
 
- # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 20000 --frames-per-trial 1000 --seed 123 --untouched-time=1000
+ # ./bin/HFO --offense-agents=8 --defense-npcs=1 --trials 20000 --frames-per-trial 1000 --seed 123 --untouched-time=1000
     
 # default settings
-action_level = 'high'
+
+action_level = 'low'
 feature_level = 'low'
 
 # if using low level actions use non discrete settings
@@ -47,8 +48,8 @@ else:
     discrete_action = False
     
     
-    
-env = HFO_env(8,0,1,'left',False,1000,1000,'high','high')
+
+env = HFO_env(8,0,1,'left',False,1000,1000,feature_level,action_level)
 time.sleep(0.1)
 print("Done connecting to the server ")
 
@@ -67,15 +68,22 @@ print('env.num_features : ' , env.num_features)
 #initialize the replay buffer of size 10000 for number of agent with their observations & actions 
 replay_buffer = ReplayBuffer(10000, env.num_TA,
                                  [env.num_features for i in range(env.num_TA)],
-                                 [len(env.action_list) for i in range(env.num_TA)])
+                                 [env.action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
 
 num_episodes = 20000
-episode_length = 250
+num_explore_episodes = 1000
+episode_length = 1000
 t = 0
 time_step = 0
 kickable_counter = 0
 
-env.Step([random.randint(0,len(env.action_list)-1) for i in range(env.num_TA)],'team')
+if discrete_action:
+    env.Step([random.randint(0,len(env.action_list)-1) for i in range(env.num_TA)],'team')
+else:
+    params = np.asarray([[random.uniform(-1,1) for i in range(env.action_params.shape[1])] for j in range(env.num_TA)])
+    env.Step([random.randint(0,len(env.action_list)-1) for i in range(env.num_TA)],'team', params)
+    
+    
 reward_total = [ ]
 num_steps_per_episode = []
 end_actions = []
@@ -89,7 +97,7 @@ for ep_i in range(0, num_episodes):
         
         maddpg.prep_rollouts(device='cpu')
         #define the noise used for exploration
-        explr_pct_remaining = max(0, num_episodes - ep_i) / num_episodes
+        explr_pct_remaining = max(0, num_explore_episodes - ep_i) / num_explore_episodes
         maddpg.scale_noise(0 + (0.3 - 0.0) * explr_pct_remaining)
         maddpg.reset_noise()
         #for the duration of 100 episode with maximum length of 500 time steps
@@ -108,9 +116,12 @@ for ep_i in range(0, num_episodes):
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
             # rearrange actions to be per environment
-            actions = [[ac[i] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
-            agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
+            actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
+            # params
+            params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions])
             
+
+            agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
             # for i in agents_actions:
             #     print("The agent's action is: " + str(i))
             #print("Actions taken: ", agent_actions)
@@ -120,19 +131,14 @@ for ep_i in range(0, num_episodes):
 
             # If kickable is True one of the agents has possession of the ball
             kickable = False
-            for i in range(env.num_TA):
-                if env.team_obs[i][5] == 1:
-                    kickable = True
+            kickable = np.array([env.get_kickable_status(i) for i in range(env.num_TA)]).any()
             if kickable == True:
                 kickable_counter += 1
 
 
-            _,_,d,world_stat = env.Step(agents_actions, 'team')
+            _,_,d,world_stat = env.Step(agents_actions, 'team',params)
             # if d == True agent took an end action such as scoring a goal
             if d == True:
-                # print("The kickable counter is: " +  str(kickable_counter))
-                # print("The time step is: " + str(time_step))
-                # print("The percentage of steps with ball kickable is: " + str((kickable_counter/time_step) *100))
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 
                                                         'why': world_stat,
                                                         'kickable percentages': (kickable_counter/time_step) * 100}, 
@@ -140,15 +146,10 @@ for ep_i in range(0, num_episodes):
                 print(step_logger_df)  
                 break;
 
-            # print("The number of agents is " + str(maddpg.nagents))
             
 
-            rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])
-            #q('rewards ',  rewards)
-            #next_obs = np.asarray(env.team_obs)
-            
+            rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])            
             next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
-
             dones = np.hstack([env.d for i in range(env.num_TA)])
             replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
             obs = next_obs
@@ -158,15 +159,15 @@ for ep_i in range(0, num_episodes):
             t += 1
             if t%1000 == 0:
                 logger_df.to_csv('history.csv')
-            if (len(replay_buffer) >= 32 and
-                (t % 10) < 1):
+            if (len(replay_buffer) >= 256 and
+                (t % 100) < 1):
                 #if USE_CUDA:
                 #    maddpg.prep_training(device='gpu')
                 #else:
                 maddpg.prep_training(device='cpu')
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
-                        sample = replay_buffer.sample(32,
+                        sample = replay_buffer.sample(256,
                                                       to_gpu=False,norm_rews=False)
                         #print('sample: ', sample)
                         #print('a_i ' , a_i )
