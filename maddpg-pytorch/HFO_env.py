@@ -340,7 +340,7 @@ class HFO_env():
         # reduce distance to the goal
         if self.feat_lvl == 'high':
             if team_kickable:
-                reward += (-1)* distance_to_goal(self.team_obs[agentID]) * 10 
+                reward += (-1)* self.distance_to_goal(self.team_obs[agentID]) * 10 
             
         if s=='Goal':
             reward+=1000
