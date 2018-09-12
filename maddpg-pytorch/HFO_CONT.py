@@ -34,12 +34,23 @@ from HFO_env import *
 
 
 
- # ./bin/HFO --offense-agents=8 --defense-npcs=1 --trials 20000 --frames-per-trial 1000 --seed 123 --untouched-time=1000
+ # ./bin/HFO --offense-agents=8 --defense-npcs=1 --trials 20000 --frames-per-trial 200 --seed 123 --untouched-time=200
     
 # default settings
 
 action_level = 'low'
-feature_level = 'low'
+feature_level = 'high'
+
+num_episodes = 20000
+episode_length = 200 # FPS
+
+replay_memory_size = 50000
+num_explore_episodes = 2000 
+
+t = 0
+time_step = 0
+kickable_counter = 0
+
 
 # if using low level actions use non discrete settings
 if action_level == 'high':
@@ -49,7 +60,8 @@ else:
     
     
 
-env = HFO_env(8,0,1,'left',False,1000,1000,feature_level,action_level)
+env = HFO_env(1,0,0,'left',False,num_episodes , episode_length
+              ,feature_level,action_level)
 time.sleep(0.1)
 print("Done connecting to the server ")
 
@@ -66,16 +78,10 @@ print('maddpg.nagents ', maddpg.nagents)
 print('env.num_TA ', env.num_TA)  
 print('env.num_features : ' , env.num_features)
 #initialize the replay buffer of size 10000 for number of agent with their observations & actions 
-replay_buffer = ReplayBuffer(10000, env.num_TA,
+replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA,
                                  [env.num_features for i in range(env.num_TA)],
                                  [env.action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
 
-num_episodes = 20000
-num_explore_episodes = 1000
-episode_length = 1000
-t = 0
-time_step = 0
-kickable_counter = 0
 
 if discrete_action:
     env.Step([random.randint(0,len(env.action_list)-1) for i in range(env.num_TA)],'team')
@@ -129,7 +135,7 @@ for ep_i in range(0, num_episodes):
 
             time_step += 1
 
-            # If kickable is True one of the agents has possession of the ball
+            # If kickable is True one of the teammate agents has possession of the ball
             kickable = False
             kickable = np.array([env.get_kickable_status(i) for i in range(env.num_TA)]).any()
             if kickable == True:
@@ -141,9 +147,11 @@ for ep_i in range(0, num_episodes):
             if d == True:
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 
                                                         'why': world_stat,
-                                                        'kickable percentages': (kickable_counter/time_step) * 100}, 
+                                                        'kickable_percentages': (kickable_counter/time_step) * 100,
+                                                        'average_reward': replay_buffer.get_average_rewards(1)}, 
                                                         ignore_index=True)
-                print(step_logger_df)  
+                #print(step_logger_df) 
+                
                 break;
 
             
@@ -153,12 +161,12 @@ for ep_i in range(0, num_episodes):
             dones = np.hstack([env.d for i in range(env.num_TA)])
             replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
             obs = next_obs
-            for i in range(env.num_TA):
-                logger_df = logger_df.append({'reward':env.Reward(i,'team')}, ignore_index=True)
+            #for i in range(env.num_TA):
+            #    logger_df = logger_df.append({'reward':env.Reward(i,'team')}, ignore_index=True)
             
             t += 1
             if t%1000 == 0:
-                logger_df.to_csv('history.csv')
+                step_logger_df.to_csv('history.csv')
             if (len(replay_buffer) >= 32 and
                 (t % 10) < 1):
                 #if USE_CUDA:

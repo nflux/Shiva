@@ -279,7 +279,11 @@ class HFO_env():
         ball_distance = math.sqrt(relative_x**2+relative_y**2)
 
         return ball_distance, relative_x, relative_y
+    
+    def distance_to_goal(self, obs):
 
+        # return the approximate distance of the agent to the goal center 
+        return obs[6]
     
     # low level feature (1 for closest to object -1 for furthest)
     def ball_proximity(self,agentID):
@@ -317,12 +321,14 @@ class HFO_env():
         
         team_kickable = False
         team_kickable = np.array([self.get_kickable_status(i) for i in range(self.num_TA)]).any() # kickable by team
-        if team_kickable == False:
-            reward+=-10
+        if team_kickable :
+            reward+= 10
+        #else team_kickable == False :
+        #    reward+=-10
 
             
-        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID):
-            reward+= (-1)*500 # kicked when not avaialable
+        if self.action_list[self.team_actions[agentID]] in self.kick_actions and (self.get_kickable_status(agentID) == False) :
+            reward+= (-1)*50 # kicked when not avaialable
         
         # reduce distance to ball
         if self.feat_lvl == 'high':
@@ -331,6 +337,11 @@ class HFO_env():
         else:
             reward += self.ball_proximity(agentID) * 10
         
+        # reduce distance to the goal
+        if self.feat_lvl == 'high':
+            if team_kickable:
+                reward += (-1)* distance_to_goal(self.team_obs[agentID]) * 10 
+            
         if s=='Goal':
             reward+=1000
         #---------------------------
@@ -345,7 +356,7 @@ class HFO_env():
             reward+=-1000
         #---------------------------
         elif s=='InGame':
-            reward+=-1
+            reward+=0
         #---------------------------
         elif s=='SERVER_DOWN':
             reward+=0
@@ -384,7 +395,7 @@ class HFO_env():
             base = 'base_right'
 
         self.team_envs[agent_ID].connectToServer(feat_lvl,
-                            config_dir=get_config_path(),
+                            config_dir='/home.sda4/home/ssajjadi/Desktop/ML/work/HFO-master/bin/teams/base/config/formations-dt',
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
