@@ -72,7 +72,7 @@ else:
     
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
-env = HFO_env(1,0,0,'left',False,num_episodes , episode_length
+env = HFO_env(4,0,0,'left',False,num_episodes , episode_length
               ,feature_level,action_level)
 time.sleep(0.1)
 print("Done connecting to the server ")
@@ -161,7 +161,7 @@ for ep_i in range(0, num_episodes):
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 
                                                         'why': world_stat,
                                                         'kickable_percentages': (kickable_counter/time_step) * 100,
-                                                        'average_reward': replay_buffer.get_average_rewards(1)}, 
+                                                        'average_reward': replay_buffer.get_average_rewards(time_step)}, 
                                                         ignore_index=True)
                 #print(step_logger_df) 
                 
