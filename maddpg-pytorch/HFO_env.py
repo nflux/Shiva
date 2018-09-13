@@ -340,7 +340,7 @@ class HFO_env():
         # reduce distance to the goal
         if self.feat_lvl == 'high':
             if team_kickable:
-                reward += (-1)* self.distance_to_goal(self.team_obs[agentID]) * 10 
+                reward += self.distance_to_goal(self.team_obs[agentID]) * 10 
             
         if s=='Goal':
             reward+=1000
@@ -394,8 +394,7 @@ class HFO_env():
         elif base == 'right':
             base = 'base_right'
 
-        self.team_envs[agent_ID].connectToServer(feat_lvl,
-                            config_dir='/home.sda4/home/ssajjadi/Desktop/ML/work/HFO-master/bin/teams/base/config/formations-dt',
+        self.team_envs[agent_ID].connectToServer(feat_lvl,                    config_dir='/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt',
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

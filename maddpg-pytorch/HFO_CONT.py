@@ -41,16 +41,27 @@ from HFO_env import *
 action_level = 'low'
 feature_level = 'high'
 
-num_episodes = 20000
+num_episodes = 170000
 episode_length = 200 # FPS
 
-replay_memory_size = 50000
-num_explore_episodes = 2000 
+replay_memory_size = 1000000
+num_explore_episodes = 30000 
+
+USE_CUDA = False 
+
+final_noise_scale = 0.0
+init_noise_scale = 0.3
+steps_per_update = 100
+
+batch_size = 1024
+hidden_dim = 64
+lr = 0.001
+tau = 0.01
 
 t = 0
 time_step = 0
 kickable_counter = 0
-
+n_training_threads = 6
 
 # if using low level actions use non discrete settings
 if action_level == 'high':
@@ -59,7 +70,8 @@ else:
     discrete_action = False
     
     
-
+if not USE_CUDA:
+        torch.set_num_threads(n_training_threads)
 env = HFO_env(1,0,0,'left',False,num_episodes , episode_length
               ,feature_level,action_level)
 time.sleep(0.1)
@@ -68,9 +80,9 @@ print("Done connecting to the server ")
 # initializing the maddpg 
 maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   adversary_alg= "MADDPG",
-                                  tau=0.08,
-                                  lr=0.0002,
-                                  hidden_dim=64,discrete_action=discrete_action)
+                                  tau=tau,
+                                  lr=lr,
+                                  hidden_dim=hidden_dim ,discrete_action=discrete_action)
 
 
 
@@ -104,7 +116,8 @@ for ep_i in range(0, num_episodes):
         maddpg.prep_rollouts(device='cpu')
         #define the noise used for exploration
         explr_pct_remaining = max(0, num_explore_episodes - ep_i) / num_explore_episodes
-        maddpg.scale_noise(0 + (0.3 - 0.0) * explr_pct_remaining)
+        maddpg.scale_noise(final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)
+        
         maddpg.reset_noise()
         #for the duration of 100 episode with maximum length of 500 time steps
         time_step = 0
@@ -167,15 +180,15 @@ for ep_i in range(0, num_episodes):
             t += 1
             if t%1000 == 0:
                 step_logger_df.to_csv('history.csv')
-            if (len(replay_buffer) >= 32 and
-                (t % 10) < 1):
+            if (len(replay_buffer) >= batch_size and
+                (t % steps_per_update) < 1):
                 #if USE_CUDA:
                 #    maddpg.prep_training(device='gpu')
                 #else:
                 maddpg.prep_training(device='cpu')
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
-                        sample = replay_buffer.sample(32,
+                        sample = replay_buffer.sample(batch_size,
                                                       to_gpu=False,norm_rews=False)
                         #print('sample: ', sample)
                         #print('a_i ' , a_i )
