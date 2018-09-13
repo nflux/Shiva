@@ -45,7 +45,7 @@ num_episodes = 170000
 episode_length = 200 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 30000 
+num_explore_episodes = 10000 
 
 USE_CUDA = False 
 
@@ -53,7 +53,7 @@ final_noise_scale = 0.0
 init_noise_scale = 0.3
 steps_per_update = 100
 
-batch_size = 1024
+batch_size = 32
 hidden_dim = 64
 lr = 0.001
 tau = 0.01

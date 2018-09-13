@@ -280,6 +280,18 @@ class HFO_env():
 
         return ball_distance, relative_x, relative_y
     
+    #Finds goal distance to ball - high level feature
+    def distance_goal_to_ball(self, obs):
+
+        #Relative x and y is the offset between the ball and the goal center.
+        relative_x = 1 - obs[3]
+        relative_y = 0 - obs[4]
+
+        #Returns the relative distance between the goal and the ball
+        ball_distance_to_goal = math.sqrt(relative_x**2+relative_y**2)
+
+        return ball_distance_to_goal, relative_x, relative_y
+    
     def distance_to_goal(self, obs):
 
         # return the approximate distance of the agent to the goal center 
@@ -320,44 +332,49 @@ class HFO_env():
 
         
         #remove tackle penalty
-        if self.action_list[self.team_actions[agentID]] == hfo.TACKLE:
-            reward+= -100
+        #if self.action_list[self.team_actions[agentID]] == hfo.TACKLE:
+        #    reward+= -100
         
+        
+        ########################### keep the ball kickable ####################################
         team_kickable = False
         team_kickable = np.array([self.get_kickable_status(i) for i in range(self.num_TA)]).any() # kickable by team
         if team_kickable :
-            reward+= 10
-        #else team_kickable == False :
-        #    reward+=-10
-
-
-        if self.action_list[self.team_actions[agentID]] in self.kick_actions and (self.get_kickable_status(agentID) == False) :
-            reward+= (-1)*50 # kicked when not avaialable
+            reward+= 1
         
-        # reduce distance to ball
+
+        #if self.action_list[self.team_actions[agentID]] in self.kick_actions and (self.get_kickable_status(agentID) == False) :
+        #    reward+= (-1)*50 # kicked when not avaialable
+        
+        ####################### reduce distance to ball  ##################
         if self.feat_lvl == 'high':
             r,_,_ = self.distance_to_ball(self.team_obs[agentID])
             reward += (-1)*r * 10
         else:
             reward += self.ball_proximity(agentID) * 10
-            
-        # reduce distance to the goal
+        ########################################################################
+        
+        ####################### reduce ball distance to goal  ##################
+        
         if self.feat_lvl == 'high':
-            if team_kickable:
-                reward += self.distance_to_goal(self.team_obs[agentID]) * 10 
+            r,_,_ = self.distance_goal_to_ball(self.team_obs[agentID])
+            reward += (-3)*r * 10
+        ########################################################################
+
+        
             
         if s=='Goal':
-            reward+=1000
+            reward+=100
         #---------------------------
         elif s=='CapturedByDefense':
-            reward+=-1000
+            reward+=-100
         #---------------------------
         elif s=='OutOfBounds':
-            reward+=-1000
+            reward+=-100
         #---------------------------
         #Cause Unknown Do Nothing
         elif s=='OutOfTime':
-            reward+=-1000
+            reward+=-100
         #---------------------------
         elif s=='InGame':
             reward+=0
@@ -398,8 +415,9 @@ class HFO_env():
         elif base == 'right':
             base = 'base_right'
 
-        #config_dir=get_config_path(), 
-        self.team_envs[agent_ID].connectToServer(feat_lvl,                    config_dir=get_config_path(),
+        #config_dir=get_config_path() 
+        config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
+        self.team_envs[agent_ID].connectToServer(feat_lvl,                    config_dir=config_dir,
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
