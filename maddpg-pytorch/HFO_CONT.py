@@ -34,7 +34,7 @@ from HFO_env import *
 
 
 
- # ./bin/HFO --offense-agents=8 --defense-npcs=1 --trials 20000 --frames-per-trial 200 --seed 123 --untouched-time=200
+ # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 170000 --frames-per-trial 200 --seed 123 --untouched-time=200
     
 # default settings
 
@@ -55,7 +55,7 @@ steps_per_update = 100
 
 batch_size = 1024
 hidden_dim = 64
-lr = 0.01
+lr = 0.001
 tau = 0.01
 
 t = 0
@@ -72,7 +72,7 @@ else:
     
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
-env = HFO_env(4,0,0,'left',False,num_episodes , episode_length
+env = HFO_env(1,0,0,'left',False,num_episodes , episode_length
               ,feature_level,action_level)
 time.sleep(0.1)
 print("Done connecting to the server ")
@@ -130,21 +130,21 @@ for ep_i in range(0, num_episodes):
                                   requires_grad=False)
                          for i in range(maddpg.nagents)]
             # get actions as torch Variables
-            #print('torch_obs', torch_obs)
             torch_agent_actions = maddpg.step(torch_obs, explore=True)
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
             # rearrange actions to be per environment
+            
+            
+            
+            actions_params_for_buffer = np.array([[ac[i] for ac in agent_actions] for i in range(1)]).reshape(
+                env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
             actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
-            # params
             params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions])
             
-
             agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
-            # for i in agents_actions:
-            #     print("The agent's action is: " + str(i))
-            #print("Actions taken: ", agent_actions)
-            obs =  np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] ) 
+            
+            obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
 
             time_step += 1
 
@@ -159,9 +159,15 @@ for ep_i in range(0, num_episodes):
             # if d == True agent took an end action such as scoring a goal
 
             rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])            
-            next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
+            
+            
+            #next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
+            next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
             dones = np.hstack([env.d for i in range(env.num_TA)])
-            replay_buffer.push(obs, agent_actions, rewards, next_obs, dones)
+
+            #replay_buffer.push(obs, actions_params_for_buffer, rewards, next_obs, dones) get format right
+
+            replay_buffer.push(obs, actions_params_for_buffer, rewards, next_obs, dones)
             obs = next_obs
             #for i in range(env.num_TA):
             #    logger_df = logger_df.append({'reward':env.Reward(i,'team')}, ignore_index=True)
@@ -169,6 +175,8 @@ for ep_i in range(0, num_episodes):
             t += 1
             if t%1000 == 0:
                 step_logger_df.to_csv('history.csv')
+                time.sleep(0.001)
+            
             if (len(replay_buffer) >= batch_size and
                 (t % steps_per_update) < 1):
                 #if USE_CUDA:

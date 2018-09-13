@@ -37,7 +37,9 @@ class ReplayBuffer(object):
         return self.filled_i
 
     def push(self, observations, actions, rewards, next_observations, dones):
-        nentries = observations.shape[0]  # handle multiple parallel environments
+        #nentries = observations.shape[0]  # handle multiple parallel environments
+        # for now ** change **
+        nentries = 1
         if self.curr_i + nentries > self.max_steps:
             rollover = self.max_steps - self.curr_i # num of indices to roll over
             for agent_i in range(self.num_agents):
@@ -55,12 +57,12 @@ class ReplayBuffer(object):
             self.filled_i = self.max_steps
         for agent_i in range(self.num_agents):
             self.obs_buffs[agent_i][self.curr_i:self.curr_i + nentries] = np.vstack(
-                observations[:, agent_i])
+                observations[:, agent_i]).T # added .T
             # actions are already batched by agent, so they are indexed differently
             self.ac_buffs[agent_i][self.curr_i:self.curr_i + nentries] = actions[agent_i]
             self.rew_buffs[agent_i][self.curr_i:self.curr_i + nentries] = rewards[agent_i]
             self.next_obs_buffs[agent_i][self.curr_i:self.curr_i + nentries] = np.vstack(
-                next_observations[:, agent_i])
+                next_observations[:, agent_i]).T # added .T
             self.done_buffs[agent_i][self.curr_i:self.curr_i + nentries] = dones[agent_i]
         self.curr_i += nentries
         if self.filled_i < self.max_steps:

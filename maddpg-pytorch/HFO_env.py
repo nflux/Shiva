@@ -112,7 +112,7 @@ class HFO_env():
 
 
         # Initialization of mutable lists to be passsed to threads
-        self.team_actions = np.array([2]*num_TA)
+        self.team_actions = np.array([3]*num_TA)
 
         self.team_should_act = np.array([0]*num_TA)
         self.team_should_act_flag = False
@@ -229,7 +229,7 @@ class HFO_env():
         # Function is running too fast for agents to act so wait until the agents have acted
 
         while not self.wait_flag:
-            time.sleep(0.0001)
+            time.sleep(0.001)
         self.wait[agent_id] = False
 
         if side == 'team':
@@ -248,7 +248,7 @@ class HFO_env():
         if self.team_should_act.all():
             self.team_should_act_flag = True
             while self.team_should_act_flag:
-                time.sleep(0.0001)
+                time.sleep(0.001)
 
         if not self.wait.any():
             self.wait_flag = False
@@ -319,6 +319,10 @@ class HFO_env():
         #---------------------------
 
         
+        #remove tackle penalty
+        if self.action_list[self.team_actions[agentID]] == hfo.TACKLE:
+            reward+= -100
+        
         team_kickable = False
         team_kickable = np.array([self.get_kickable_status(i) for i in range(self.num_TA)]).any() # kickable by team
         if team_kickable :
@@ -326,7 +330,7 @@ class HFO_env():
         #else team_kickable == False :
         #    reward+=-10
 
-            
+
         if self.action_list[self.team_actions[agentID]] in self.kick_actions and (self.get_kickable_status(agentID) == False) :
             reward+= (-1)*50 # kicked when not avaialable
         
@@ -336,7 +340,7 @@ class HFO_env():
             reward += (-1)*r * 10
         else:
             reward += self.ball_proximity(agentID) * 10
-        
+            
         # reduce distance to the goal
         if self.feat_lvl == 'high':
             if team_kickable:
@@ -407,7 +411,6 @@ class HFO_env():
                 j = 0 # j to maximum episode length
                 d = False
                 self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
-                print('length of observation: ', len(self.team_obs[agent_ID]))
                 while j < fpt:
                     j+=1
                     # If the action flag is set, each thread takes its action
@@ -420,7 +423,7 @@ class HFO_env():
                         if(self.wait.all()):
                             self.wait_flag = True
                         else:
-                            time.sleep(0.0001)
+                            time.sleep(0.001)
 
                     if self.loading[agent_ID]:
                         print("Agent %i loaded" % agent_ID)
@@ -433,7 +436,7 @@ class HFO_env():
 
 
                     while not self.team_should_act_flag and not self.team_should_act[agent_ID]:
-                        time.sleep(0.0001)
+                        time.sleep(0.001)
                     
                     # take the action
                     if act_lvl == 'high':
@@ -463,7 +466,7 @@ class HFO_env():
 
                     # Halts until all threads have taken their action and resets flag to off
                     while(self.team_should_act.any()):
-                        time.sleep(0.0001)
+                        time.sleep(0.001)
                     self.team_should_act_flag = False
 
 
