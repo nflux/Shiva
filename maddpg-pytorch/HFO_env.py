@@ -337,19 +337,19 @@ class HFO_env():
         
         
         ########################### keep the ball kickable ####################################
-        team_kickable = False
-        team_kickable = np.array([self.get_kickable_status(i) for i in range(self.num_TA)]).any() # kickable by team
-        if team_kickable :
-            reward+= 1
+        #team_kickable = False
+        #team_kickable = np.array([self.get_kickable_status(i) for i in range(self.num_TA)]).any() # kickable by team
+        #if team_kickable :
+        #    reward+= 1
         
 
-        #if self.action_list[self.team_actions[agentID]] in self.kick_actions and (self.get_kickable_status(agentID) == False) :
-        #    reward+= (-1)*50 # kicked when not avaialable
+        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID)  : # are these both at time T, or not synced?
+            reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
         
         ####################### reduce distance to ball  ##################
         if self.feat_lvl == 'high':
             r,_,_ = self.distance_to_ball(self.team_obs[agentID])
-            reward += (-1)*r * 10
+            reward += (-1)*r #* 10
         else:
             reward += self.ball_proximity(agentID) * 10
         ########################################################################
@@ -357,34 +357,34 @@ class HFO_env():
         ####################### reduce ball distance to goal  ##################
         
         if self.feat_lvl == 'high':
-            r,_,_ = self.distance_goal_to_ball(self.team_obs[agentID])
-            reward += (-3)*r * 10
+            r,_,_ = self.distance_goal_to_ball(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+            reward += (-3)*r #* 10
         ########################################################################
 
         
             
         if s=='Goal':
-            reward+=100
+            reward+=5
         #---------------------------
-        elif s=='CapturedByDefense':
-            reward+=-100
+        #elif s=='CapturedByDefense':
+        #    reward+=-100
         #---------------------------
-        elif s=='OutOfBounds':
-            reward+=-100
+        #elif s=='OutOfBounds':
+        #    reward+=-100
         #---------------------------
         #Cause Unknown Do Nothing
-        elif s=='OutOfTime':
-            reward+=-100
+        #elif s=='OutOfTime':
+        #    reward+=-100
         #---------------------------
-        elif s=='InGame':
-            reward+=0
+        #elif s=='InGame':
+        #    reward+=0
         #---------------------------
-        elif s=='SERVER_DOWN':
-            reward+=0
+        #elif s=='SERVER_DOWN':
+        #    reward+=0
         #---------------------------
-        else:
-            print("Error: Unknown GameState", s)
-            reward = -1
+        #else:
+        #    print("Error: Unknown GameState", s)
+        #    reward = -1
         return reward
 
 
