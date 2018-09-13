@@ -394,7 +394,8 @@ class HFO_env():
         elif base == 'right':
             base = 'base_right'
 
-        self.team_envs[agent_ID].connectToServer(feat_lvl,                    config_dir='/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt',
+        #config_dir=get_config_path(), 
+        self.team_envs[agent_ID].connectToServer(feat_lvl,                    config_dir=get_config_path(),
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -55,7 +55,7 @@ steps_per_update = 100
 
 batch_size = 1024
 hidden_dim = 64
-lr = 0.001
+lr = 0.01
 tau = 0.01
 
 t = 0
@@ -157,17 +157,6 @@ for ep_i in range(0, num_episodes):
 
             _,_,d,world_stat = env.Step(agents_actions, 'team',params)
             # if d == True agent took an end action such as scoring a goal
-            if d == True:
-                step_logger_df = step_logger_df.append({'time_steps': time_step, 
-                                                        'why': world_stat,
-                                                        'kickable_percentages': (kickable_counter/time_step) * 100,
-                                                        'average_reward': replay_buffer.get_average_rewards(time_step)}, 
-                                                        ignore_index=True)
-                #print(step_logger_df) 
-                
-                break;
-
-            
 
             rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])            
             next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
@@ -195,6 +184,17 @@ for ep_i in range(0, num_episodes):
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()
                 maddpg.prep_rollouts(device='cpu')
+            if d == True:
+                step_logger_df = step_logger_df.append({'time_steps': time_step, 
+                                                        'why': world_stat,
+                                                        'kickable_percentages': (kickable_counter/time_step) * 100,
+                                                        'average_reward': replay_buffer.get_average_rewards(time_step)}, 
+                                                        ignore_index=True)
+                #print(step_logger_df) 
+                
+                break;
+
             
+           
         ep_rews = replay_buffer.get_average_rewards(episode_length)
  #       print('episode rewards ', ep_rews )
