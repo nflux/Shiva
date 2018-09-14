@@ -73,6 +73,8 @@ class HFO_env():
 
         """
 
+        self.sleep_timer = 0.0001 # sleep timer
+        
         # params for low level actions
         num_action_params = 6 # 2 for dash and kick 1 for turn and tackle
         self.action_params = np.asarray([[0.0]*num_action_params for i in range(num_TA)])
@@ -229,7 +231,7 @@ class HFO_env():
         # Function is running too fast for agents to act so wait until the agents have acted
 
         while not self.wait_flag:
-            time.sleep(0.001)
+            time.sleep(self.sleep_timer)
         self.wait[agent_id] = False
 
         if side == 'team':
@@ -248,12 +250,12 @@ class HFO_env():
         if self.team_should_act.all():
             self.team_should_act_flag = True
             while self.team_should_act_flag:
-                time.sleep(0.001)
+                time.sleep(self.sleep_timer)
 
         if not self.wait.any():
             self.wait_flag = False
 
-        time.sleep(0.001) ### *** without this sleep function the process crashes. specifically, 0.001
+        time.sleep(self.sleep_timer) ### *** without this sleep function the process crashes. specifically, 0.001
 
     def get_kickable_status(self,agentID):
         ball_kickable = False
@@ -415,9 +417,9 @@ class HFO_env():
         elif base == 'right':
             base = 'base_right'
 
-        #config_dir=get_config_path() 
-        config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
-        self.team_envs[agent_ID].connectToServer(feat_lvl,                    config_dir=config_dir,
+        config_dir=get_config_path() 
+        #config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
+        self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                             server_port=6000, server_addr='localhost', team_name=base, play_goalie=goalie)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -441,7 +443,7 @@ class HFO_env():
                         if(self.wait.all()):
                             self.wait_flag = True
                         else:
-                            time.sleep(0.001)
+                            time.sleep(self.sleep_timer)
 
                     if self.loading[agent_ID]:
                         print("Agent %i loaded" % agent_ID)
@@ -454,7 +456,7 @@ class HFO_env():
 
 
                     while not self.team_should_act_flag and not self.team_should_act[agent_ID]:
-                        time.sleep(0.001)
+                        time.sleep(self.sleep_timer)
                     
                     # take the action
                     if act_lvl == 'high':
@@ -479,12 +481,14 @@ class HFO_env():
                     self.world_status = self.team_envs[agent_ID].step() # update world
                     self.team_rewards[agent_ID] = self.getReward(
                     self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
-                    self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs
                     self.team_should_act[agent_ID] = False # Set personal action flag as done
 
                     # Halts until all threads have taken their action and resets flag to off
                     while(self.team_should_act.any()):
-                        time.sleep(0.001)
+                        time.sleep(self.sleep_timer)
+                        
+                    self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
+
                     self.team_should_act_flag = False
 
 
