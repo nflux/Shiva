@@ -48,7 +48,7 @@ else:
     
     
     
-env = HFO_env(8,0,1,'left',False,1000,1000,'high','high')
+env = HFO_env(1,0,1,'left',False,1000,1000,'high','high')
 time.sleep(0.1)
 print("Done connecting to the server ")
 
@@ -69,7 +69,9 @@ replay_buffer = ReplayBuffer(10000, env.num_TA,
                                  [env.num_features for i in range(env.num_TA)],
                                  [len(env.action_list) for i in range(env.num_TA)])
 
+#Trials
 num_episodes = 20000
+#frames_per_trial
 episode_length = 250
 t = 0
 time_step = 0
@@ -83,6 +85,11 @@ logger_df = pd.DataFrame({'reward':reward_total})
 step_logger_df = pd.DataFrame({'time_steps': num_steps_per_episode, 'why': end_actions})
 # for the duration of 1000 episodes 
 for ep_i in range(0, num_episodes):
+            
+        #Reset the reward per episode
+        epi_reward_per_agent = 0
+        #Reset the reward per episode
+        total_epi_reward_team = 0
         
         #get the whole team observation 
         obs = np.asarray(env.team_obs)
@@ -97,7 +104,6 @@ for ep_i in range(0, num_episodes):
         kickable_counter = 0
         for et_i in range(0, episode_length):
         
-
             # gather all the observations into a torch tensor 
             torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
                                   requires_grad=False)
@@ -142,7 +148,6 @@ for ep_i in range(0, num_episodes):
 
             # print("The number of agents is " + str(maddpg.nagents))
             
-
             rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])
             #q('rewards ',  rewards)
             #next_obs = np.asarray(env.team_obs)
@@ -173,6 +178,12 @@ for ep_i in range(0, num_episodes):
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()
                 maddpg.prep_rollouts(device='cpu')
+
+            #Sums up the total rewards per timestep
+            epi_reward_per_agent += rewards
+
+        #Prints the total episode reward after all timesteps in episode.
+        print("\n\nThe total reward for the episode " + str(ep_i) + " is: " + str(epi_reward_per_agent) + "\n\n")
             
         ep_rews = replay_buffer.get_average_rewards(episode_length)
- #       print('episode rewards ', ep_rews )
+ #      print('episode rewards ', ep_rews )
