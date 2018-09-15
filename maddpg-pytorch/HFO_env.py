@@ -120,6 +120,8 @@ class HFO_env():
         self.team_should_act_flag = False
 
         self.team_obs = np.empty([num_TA,self.num_features],dtype=object)
+        self.team_obs_previous = np.empty([num_TA,self.num_features],dtype=object)
+
         self.team_rewards = np.zeros(num_TA)
 
         self.opp_actions = np.zeros(num_OA)
@@ -348,19 +350,21 @@ class HFO_env():
         if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID)  : # are these both at time T, or not synced?
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
         
-        ####################### reduce distance to ball  ##################
+        ####################### reduce distance to ball - using delta  ##################
         if self.feat_lvl == 'high':
             r,_,_ = self.distance_to_ball(self.team_obs[agentID])
-            reward += (-1)*r #* 10
+            r_prev,_,_ = self.distance_to_ball(self.team_obs_previous[agentID])
+            reward += r_prev - r #* 10
         else:
             reward += self.ball_proximity(agentID) * 10
         ########################################################################
         
-        ####################### reduce ball distance to goal  ##################
+        ####################### reduce ball distance to goal - using delta  ##################
         
         if self.feat_lvl == 'high':
             r,_,_ = self.distance_goal_to_ball(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-            reward += (-3)*r #* 10
+            r_prev,_,_ = self.distance_goal_to_ball(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+            reward += (3)*(r_prev - r) #* 10
         ########################################################################
 
         
@@ -430,6 +434,7 @@ class HFO_env():
             while(self.start):
                 j = 0 # j to maximum episode length
                 d = False
+                self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                 self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                 while j < fpt:
                     j+=1
@@ -487,6 +492,7 @@ class HFO_env():
                     while(self.team_should_act.any()):
                         time.sleep(self.sleep_timer)
                         
+                    self.team_obs_previous[agent_ID] = self.team_obs[agent_ID]
                     self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
 
                     self.team_should_act_flag = False

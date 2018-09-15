@@ -42,7 +42,7 @@ action_level = 'low'
 feature_level = 'high'
 
 num_episodes = 170000
-episode_length = 200 # FPS
+episode_length = 100 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 10000 
