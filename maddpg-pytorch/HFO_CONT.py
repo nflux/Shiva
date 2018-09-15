@@ -186,7 +186,7 @@ for ep_i in range(0, num_episodes):
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
                         sample = replay_buffer.sample(batch_size,
-                                                      to_gpu=False,norm_rews=False)
+                                                      to_gpu=False,norm_rews=True)
                         #print('sample: ', sample)
                         #print('a_i ' , a_i )
                         maddpg.update(sample, a_i )
