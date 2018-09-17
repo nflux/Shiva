@@ -41,20 +41,20 @@ from HFO_env import *
 action_level = 'low'
 feature_level = 'high'
 
-num_episodes = 170000
+num_episodes = 500000
 episode_length = 100 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 10000 
+num_explore_episodes = 20000 
 
 USE_CUDA = False 
 
-final_noise_scale = 0.0
-init_noise_scale = 0.3
+final_noise_scale = 0.05
+init_noise_scale = 0.99
 steps_per_update = 100
 
 batch_size = 32
-hidden_dim = 64
+hidden_dim = 128
 lr = 0.001
 tau = 0.01
 
@@ -105,8 +105,9 @@ else:
 reward_total = [ ]
 num_steps_per_episode = []
 end_actions = []
-logger_df = pd.DataFrame({'reward':reward_total})
-step_logger_df = pd.DataFrame({'time_steps': num_steps_per_episode, 'why': end_actions})
+logger_df = pd.DataFrame()
+step_logger_df = pd.DataFrame()
+
 # for the duration of 1000 episodes 
 for ep_i in range(0, num_episodes):
         
@@ -196,7 +197,8 @@ for ep_i in range(0, num_episodes):
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 
                                                         'why': world_stat,
                                                         'kickable_percentages': (kickable_counter/time_step) * 100,
-                                                        'average_reward': replay_buffer.get_average_rewards(time_step)}, 
+                                                        'average_reward': replay_buffer.get_average_rewards(time_step),
+                                                       'cumulative_reward': replay_buffer.get_cumulative_rewards(time_step)}, 
                                                         ignore_index=True)
                 #print(step_logger_df) 
                 
