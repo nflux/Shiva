@@ -73,7 +73,7 @@ class HFO_env():
 
         """
 
-        self.sleep_timer = 0.0001 # sleep timer
+        self.sleep_timer = 0.001 # sleep timer
         
         # params for low level actions
         num_action_params = 6 # 2 for dash and kick 1 for turn and tackle
@@ -328,6 +328,21 @@ class HFO_env():
         #rescale to positive number
         self.action_params[agentID][4]= ((self.action_params[agentID][4] + 1)/2)*100
         self.action_params[agentID][5]*=180
+        
+        '''print(self.action_params[agentID][0])
+        if self.action_params[agentID][0] > 100 or self.action_params[agentID][0] < -100:
+            print("INVALID 0\n\n\n\n" ,self.action_params[agentID][0])
+        elif self.action_params[agentID][1] > 180 or self.action_params[agentID][1] < -180:
+            print("INVALID 1\n\n\n\n",self.action_params[agentID][1])
+        elif self.action_params[agentID][2] > 180 or self.action_params[agentID][2] < -180:
+            print("INVALID 2\n\n\n\n",self.action_params[agentID][2])
+        elif self.action_params[agentID][3] > 180 or self.action_params[agentID][3] < -180:
+            print("INVALID 3\n\n\n\n",self.action_params[agentID][3])
+        elif self.action_params[agentID][4] > 100 or self.action_params[agentID][4] < 0:
+            print("INVALID 4\n\n\n\n ",self.action_params[agentID][4])
+        elif self.action_params[agentID][5] > 180 or self.action_params[agentID][5] < -180:
+            print("INVALID 5\n\n\n\n",self.action_params[agentID][5])'''
+
 
     # Engineered Reward Function
     def getReward(self,s,agentID):
@@ -349,6 +364,11 @@ class HFO_env():
 
         if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID)  : # are these both at time T, or not synced?
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
+ 
+
+        if self.team_obs[agentID][-2] == -1:
+            reward+= -1
+        
         
         ####################### reduce distance to ball - using delta  ##################
         if self.feat_lvl == 'high':
@@ -422,8 +442,7 @@ class HFO_env():
             base = 'base_right'
 
         #config_dir=get_config_path() 
-        #config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
-        config_dir = '/home.sda4/home/ssajjadi/Desktop/ML/work/HFO-master/bin/teams/base/config/formations-dt'
+        config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
         recorder_dir = 'log/'
         self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                             server_port=6000, server_addr='localhost', team_name=base, 
@@ -477,18 +496,19 @@ class HFO_env():
                         a = self.team_actions[agent_ID]
                         if a == 0:
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
+                            #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
                         elif a == 1:
+                            #print(self.action_list[a],self.action_params[agent_ID][2])
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][2])
                         elif a == 2:
-                            
+                            #print(self.action_list[a],self.action_params[agent_ID][3])                            
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][3])           
                         elif a ==3:
+                            #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
                         
                                                     
-                    self.world_status = self.team_envs[agent_ID].step() # update world
-                    self.team_rewards[agent_ID] = self.getReward(
-                    self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
+
                     self.team_should_act[agent_ID] = False # Set personal action flag as done
 
                     # Halts until all threads have taken their action and resets flag to off
@@ -496,8 +516,11 @@ class HFO_env():
                         time.sleep(self.sleep_timer)
                         
                     self.team_obs_previous[agent_ID] = self.team_obs[agent_ID]
+                    self.world_status = self.team_envs[agent_ID].step() # update world
+                 
                     self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
-
+                    self.team_rewards[agent_ID] = self.getReward(
+                    self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
                     self.team_should_act_flag = False
 
 
