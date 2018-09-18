@@ -50,10 +50,10 @@ num_explore_episodes = 20000
 USE_CUDA = False 
 
 final_noise_scale = 0.05
-init_noise_scale = 0.99
+init_noise_scale = 1.00
 steps_per_update = 100
 
-batch_size = 32
+batch_size = 128
 hidden_dim = 128
 lr = 0.001
 tau = 0.01
