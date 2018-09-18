@@ -422,7 +422,8 @@ class HFO_env():
             base = 'base_right'
 
         #config_dir=get_config_path() 
-        config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
+        #config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
+        config_dir = '/home.sda4/home/ssajjadi/Desktop/ML/work/HFO-master/bin/teams/base/config/formations-dt'
         recorder_dir = 'log/'
         self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                             server_port=6000, server_addr='localhost', team_name=base, 

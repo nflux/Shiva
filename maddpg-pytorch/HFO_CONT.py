@@ -34,7 +34,7 @@ from HFO_env import *
 
 
 
- # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 170000 --frames-per-trial 200 --seed 123 --untouched-time=200
+ # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 170000 --frames-per-trial 200 --seed 123 --untouched-time=200 --record 
     
 # default settings
 
