@@ -5,12 +5,10 @@ import time
 import _thread as thread
 import pandas as pd
 import math
-
+import hfo_py
 from HFO import get_config_path
-
+import os, subprocess, time, signal
 #from helper import *
-
-
 
 
 
@@ -30,6 +28,7 @@ class HFO_env():
         team_should_act_flag (bool): Boolean flag is True if agents have
             unperformed actions, becomes False if all agents have acted.
         team_obs (list): List containing obs for each agent.
+        team_obs_previous (list): List containing obs for each agent at previous timestep
         team_rewards (list): List containing reward for each agent
         start (bool): Once all agents have been launched, allows threads to listen for
             actions to take.
@@ -51,8 +50,14 @@ class HFO_env():
     Todo:
         * Functionality for synchronizing team actions with opponent team actions
         """
-
-    def __init__(self, num_TA,num_OA,num_ONPC,base,goalie,num_trials,fpt,feat_lvl,act_lvl):
+    # class constructor
+    def __init__(self, num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'left',
+                 goalie = False, num_trials = 10000,fpt = 100,feat_lvl = 'high',
+                 act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
+                 offense_on_ball=0, fullstate = False, seed = 123,
+                 ball_x_min = 0.0, ball_x_max = 0.5, verbose = False, log_game=False,
+                 log_dir="log"):
+        
         """ Initializes HFO_Env
 
         Args:
@@ -73,14 +78,29 @@ class HFO_env():
 
         """
 
+        
+        self.hfo_path = hfo_py.get_hfo_path()
+        self._start_hfo_server(frames_per_trial = fpt, untouched_time = untouched_time,
+                               offense_agents = num_TA, defense_agents = num_OA,
+                               offense_npcs = 0, defense_npcs = num_ONPC,
+                               sync_mode = sync_mode, port = port,
+                               offense_on_ball = offense_on_ball,
+                               fullstate = fullstate, seed = seed,
+                               ball_x_min = ball_x_min, ball_x_max = ball_x_max,
+                               verbose = verbose, log_game = log_game, log_dir = log_dir)                              
+        self.viewer = None                      
+        
         self.sleep_timer = 0.001 # sleep timer
         
         # params for low level actions
-        num_action_params = 6 # 2 for dash and kick 1 for turn and tackle
+        #num_action_params = 6
+        num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
         self.action_params = np.asarray([[0.0]*num_action_params for i in range(num_TA)])
         if act_lvl == 'low':
             #                   pow,deg   deg       deg         pow,deg    
-            self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
+            #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
+            self.action_list = [hfo.DASH, hfo.TURN, hfo.KICK]
+
             self.kick_actions = [hfo.KICK] # actions that require the ball to be kickable
     
         elif act_lvl == 'high':
@@ -93,6 +113,7 @@ class HFO_env():
 
         self.act_lvl = act_lvl
         self.feat_lvl = feat_lvl
+        
         if feat_lvl == 'low':
             self.num_features = 50 + 9*num_TA + 9*num_OA + 9*num_ONPC
         elif feat_lvl == 'high':
@@ -103,34 +124,48 @@ class HFO_env():
         self.team_envs = [hfo.HFOEnvironment() for i in range(num_TA)]
         self.opp_team_envs = [hfo.HFOEnvironment() for i in range(num_OA)]
 
-
+        # flag that says when the episode is done
         self.d = False
 
+        # flag to wait for all the agents to load
         self.start = False
+        # loading flag
         self.loading_flag = True
+        # array to hold the loading flag state for each agent
         self.loading = np.array([1]*num_TA)
+        # talks to the agents
         self.wait = np.array([0]*num_TA)
         self.wait_flag = False
 
 
         # Initialization of mutable lists to be passsed to threads
-        self.team_actions = np.array([3]*num_TA)
+        # action each team mate is supposed to take when its time to act
+        self.team_actions = np.array([2]*num_TA)
 
+        # each individual agent has a wait flag that keeps the agent from doing the next action
         self.team_should_act = np.array([0]*num_TA)
+        # signals all team agents to act
         self.team_should_act_flag = False
 
+        # observation space for all team mate agents
         self.team_obs = np.empty([num_TA,self.num_features],dtype=object)
+        # previous state for all team agents
         self.team_obs_previous = np.empty([num_TA,self.num_features],dtype=object)
 
+        # reward for each agent
         self.team_rewards = np.zeros(num_TA)
 
+        # not used yet
         self.opp_actions = np.zeros(num_OA)
+        # not used yet
         self.opp_should_act = np.array([0]*num_OA)
+        #not used yet
         self.opp_should_act_flag = False
 
         #self.opp_obs = np.empty([num_OA,5],dtype=object)
         #self.opp_rewards = np.zeros(num_OA)
 
+        # keeps track of world state
         self.world_status = 0
 
         # Create thread for each teammate
@@ -156,10 +191,7 @@ class HFO_env():
 #                                                  False,i,))
 #             time.sleep(1)
 
-
         print("All players connected to server")
-
-
         self.start = True
 
 
@@ -199,7 +231,7 @@ class HFO_env():
 
 
     def Step(self,actions,side,params=[]):
-        """ Performs each agents' action from actions and returns world_status
+        """ Performs each agents' action from actions and returns tuple (obs,rewards,world_status)
 
         Args:
             actions (list of ints); List of integers corresponding to the action each agent will take
@@ -259,13 +291,13 @@ class HFO_env():
 
         time.sleep(self.sleep_timer) ### *** without this sleep function the process crashes. specifically, 0.001
 
-    def get_kickable_status(self,agentID):
+    def get_kickable_status(self,agentID,obs):
         ball_kickable = False
         if self.feat_lvl == 'high':
-            if self.team_obs[agentID][5] == 1:
+            if obs[agentID][5] == 1:
                 ball_kickable = True
         elif self.feat_lvl == 'low':
-            if self.team_obs[agentID][12] == 1:
+            if obs[agentID][12] == 1:
                 ball_kickable = True
         return ball_kickable
             
@@ -323,11 +355,20 @@ class HFO_env():
         # turn deg
         self.action_params[agentID][2]*=180
         # tackle deg
+        
+        # with tackle
+        '''
         self.action_params[agentID][3]*=180
         # kick power/deg
         #rescale to positive number
         self.action_params[agentID][4]= ((self.action_params[agentID][4] + 1)/2)*100
-        self.action_params[agentID][5]*=180
+        self.action_params[agentID][5]*=180'''
+        
+        # without tackle
+        # kick power/deg
+        #rescale to positive number
+        self.action_params[agentID][3]= ((self.action_params[agentID][4] + 1)/2)*100
+        self.action_params[agentID][4]*=180
         
         '''print(self.action_params[agentID][0])
         if self.action_params[agentID][0] > 100 or self.action_params[agentID][0] < -100:
@@ -349,20 +390,14 @@ class HFO_env():
         reward=0
         #---------------------------
 
-        
-        #remove tackle penalty
-        #if self.action_list[self.team_actions[agentID]] == hfo.TACKLE:
-        #    reward+= -100
-        
-        
         ########################### keep the ball kickable ####################################
         #team_kickable = False
-        #team_kickable = np.array([self.get_kickable_status(i) for i in range(self.num_TA)]).any() # kickable by team
+        #team_kickable = np.array([self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)]).any() # kickable by team
         #if team_kickable :
         #    reward+= 1
         
 
-        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID)  : # are these both at time T, or not synced?
+        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous)  : # uses action just performed, with previous obs, (both at T)
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
  
 
@@ -395,8 +430,8 @@ class HFO_env():
         #elif s=='CapturedByDefense':
         #    reward+=-100
         #---------------------------
-        #elif s=='OutOfBounds':
-        #    reward+=-1
+        elif s=='OutOfBounds':
+            reward+=-1
         #---------------------------
         #Cause Unknown Do Nothing
         #elif s=='OutOfTime':
@@ -441,8 +476,8 @@ class HFO_env():
         elif base == 'right':
             base = 'base_right'
 
-        #config_dir=get_config_path() 
-        config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
+        config_dir=get_config_path() 
+        #config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
         recorder_dir = 'log/'
         self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                             server_port=6000, server_addr='localhost', team_name=base, 
@@ -494,7 +529,9 @@ class HFO_env():
                         # scale action params
                         self.scale_params(agent_ID)
                         a = self.team_actions[agent_ID]
-                        if a == 0:
+                        
+                        # with tackle
+                        """if a == 0:
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
                             #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
                         elif a == 1:
@@ -506,6 +543,18 @@ class HFO_env():
                         elif a ==3:
                             #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
+                        """
+                        
+                        # without tackle
+                        if a == 0:
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
+                            #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
+                        elif a == 1:
+                            #print(self.action_list[a],self.action_params[agent_ID][2])
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][2])                       
+                        elif a ==2:
+                            #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][3],self.action_params[agent_ID][4])
                         
                                                     
 
@@ -534,3 +583,63 @@ class HFO_env():
                         break
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+    # found from https://github.com/openai/gym-soccer/blob/master/gym_soccer/envs/soccer_env.py
+    def _start_hfo_server(self, frames_per_trial=100,
+                              untouched_time=100, offense_agents=1,
+                              defense_agents=0, offense_npcs=0,
+                              defense_npcs=0, sync_mode=True, port=6000,
+                              offense_on_ball=0, fullstate=False, seed=123,
+                              ball_x_min=0.0, ball_x_max=0.2,
+                              verbose=False, log_game=False,
+                              log_dir="log"):
+            """
+            Starts the Half-Field-Offense server.
+            frames_per_trial: Episodes end after this many steps.
+            untouched_time: Episodes end if the ball is untouched for this many steps.
+            offense_agents: Number of user-controlled offensive players.
+            defense_agents: Number of user-controlled defenders.
+            offense_npcs: Number of offensive bots.
+            defense_npcs: Number of defense bots.
+            sync_mode: Disabling sync mode runs server in real time (SLOW!).
+            port: Port to start the server on.
+            offense_on_ball: Player to give the ball to at beginning of episode.
+            fullstate: Enable noise-free perception.
+            seed: Seed the starting positions of the players and ball.
+            ball_x_[min/max]: Initialize the ball this far downfield: [0,1]
+            verbose: Verbose server messages.
+            log_game: Enable game logging. Logs can be used for replay + visualization.
+            log_dir: Directory to place game logs (*.rcg).
+            """
+            self.server_port = port
+            cmd = self.hfo_path + \
+                  " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
+                  " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
+                  " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
+                  " --ball-x-max %f --log-dir %s --record"\
+                  % (frames_per_trial, untouched_time, offense_agents,
+                     defense_agents, offense_npcs, defense_npcs, port,
+                     offense_on_ball, seed, ball_x_min, ball_x_max,
+                     log_dir)
+            if not sync_mode: cmd += " --no-sync"
+            if fullstate:     cmd += " --fullstate"
+            if verbose:       cmd += " --verbose"
+            if not log_game:  cmd += " --no-logging"
+            print('Starting server with command: %s' % cmd)
+            self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
+            time.sleep(3) # Wait for server to startup before connecting a player
+
+    def _start_viewer(self):
+        """
+        Starts the SoccerWindow visualizer. Note the viewer may also be
+        used with a *.rcg logfile to replay a game. See details at
+        https://github.com/LARG/HFO/blob/master/doc/manual.pdf.
+        """
+        
+        
+        if self.viewer is not None:
+            os.kill(self.viewer.pid, signal.SIGKILL)
+        cmd = hfo_py.get_viewer_path() +\
+              " --connect --port %d" % (self.server_port)
+        self.viewer = subprocess.Popen(cmd.split(' '), shell=False)

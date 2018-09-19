@@ -34,7 +34,7 @@ from HFO_env import *
 
 
 
- # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 170000 --frames-per-trial 200 --seed 123 --untouched-time=200 --record 
+ # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 170000 --frames-per-trial=100 --seed 123 --untouched-time=100 --record 
     
 # default settings
 
@@ -61,7 +61,9 @@ tau = 0.01
 t = 0
 time_step = 0
 kickable_counter = 0
-n_training_threads = 6
+n_training_threads = 1
+
+use_viewer = True
 
 # if using low level actions use non discrete settings
 if action_level == 'high':
@@ -72,8 +74,14 @@ else:
     
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
-env = HFO_env(1,0,0,'left',False,num_episodes , episode_length
-              ,feature_level,action_level)
+        
+env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
+              feat_lvl = feature_level, act_lvl = action_level, untouched_time = episode_length)
+
+# if you want viewer
+if use_viewer:
+    env._start_viewer()
+
 time.sleep(0.1)
 print("Done connecting to the server ")
 
@@ -113,7 +121,8 @@ for ep_i in range(0, num_episodes):
         
         #get the whole team observation 
         obs = np.asarray(env.team_obs)
-        
+        prev_obs = obs
+
         maddpg.prep_rollouts(device='cpu')
         #define the noise used for exploration
         explr_pct_remaining = max(0, num_explore_episodes - ep_i) / num_explore_episodes
@@ -151,7 +160,7 @@ for ep_i in range(0, num_episodes):
 
             # If kickable is True one of the teammate agents has possession of the ball
             kickable = False
-            kickable = np.array([env.get_kickable_status(i) for i in range(env.num_TA)]).any()
+            kickable = np.array([env.get_kickable_status(i,obs.T) for i in range(env.num_TA)]).any()
             if kickable == True:
                 kickable_counter += 1
 
@@ -166,9 +175,9 @@ for ep_i in range(0, num_episodes):
             next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
             dones = np.hstack([env.d for i in range(env.num_TA)])
 
-            #replay_buffer.push(obs, actions_params_for_buffer, rewards, next_obs, dones) get format right
 
             replay_buffer.push(obs, actions_params_for_buffer, rewards, next_obs, dones)
+            prev_obs = obs
             obs = next_obs
             #for i in range(env.num_TA):
             #    logger_df = logger_df.append({'reward':env.Reward(i,'team')}, ignore_index=True)
@@ -201,6 +210,9 @@ for ep_i in range(0, num_episodes):
                                                        'cumulative_reward': replay_buffer.get_cumulative_rewards(time_step)}, 
                                                         ignore_index=True)
                 #print(step_logger_df) 
+            if t%48000 == 0 and use_viewer:
+                env._start_viewer()
+
                 
                 break;
 
