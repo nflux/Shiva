@@ -91,7 +91,7 @@ class HFO_env():
                                verbose = verbose, log_game = log_game, log_dir = log_dir)                              
         self.viewer = None                      
         
-        self.sleep_timer = 0.001 # sleep timer
+        self.sleep_timer = 0.00000001 # sleep timer
         
         # params for low level actions
         #num_action_params = 6
