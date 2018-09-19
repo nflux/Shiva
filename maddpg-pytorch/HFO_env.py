@@ -30,6 +30,7 @@ class HFO_env():
         team_should_act_flag (bool): Boolean flag is True if agents have
             unperformed actions, becomes False if all agents have acted.
         team_obs (list): List containing obs for each agent.
+        team_obs_previous (list): List containing obs for each agent at previous timestep
         team_rewards (list): List containing reward for each agent
         start (bool): Once all agents have been launched, allows threads to listen for
             actions to take.
@@ -51,7 +52,7 @@ class HFO_env():
     Todo:
         * Functionality for synchronizing team actions with opponent team actions
         """
-
+    # class constructor
     def __init__(self, num_TA,num_OA,num_ONPC,base,goalie,num_trials,fpt,feat_lvl,act_lvl):
         """ Initializes HFO_Env
 
@@ -76,11 +77,14 @@ class HFO_env():
         self.sleep_timer = 0.001 # sleep timer
         
         # params for low level actions
-        num_action_params = 6 # 2 for dash and kick 1 for turn and tackle
+        #num_action_params = 6
+        num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
         self.action_params = np.asarray([[0.0]*num_action_params for i in range(num_TA)])
         if act_lvl == 'low':
             #                   pow,deg   deg       deg         pow,deg    
-            self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
+            #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
+            self.action_list = [hfo.DASH, hfo.TURN, hfo.KICK]
+
             self.kick_actions = [hfo.KICK] # actions that require the ball to be kickable
     
         elif act_lvl == 'high':
@@ -93,6 +97,7 @@ class HFO_env():
 
         self.act_lvl = act_lvl
         self.feat_lvl = feat_lvl
+        
         if feat_lvl == 'low':
             self.num_features = 50 + 9*num_TA + 9*num_OA + 9*num_ONPC
         elif feat_lvl == 'high':
@@ -103,34 +108,48 @@ class HFO_env():
         self.team_envs = [hfo.HFOEnvironment() for i in range(num_TA)]
         self.opp_team_envs = [hfo.HFOEnvironment() for i in range(num_OA)]
 
-
+        # flag that says when the episode is done
         self.d = False
 
+        # flag to wait for all the agents to load
         self.start = False
+        # loading flag
         self.loading_flag = True
+        # array to hold the loading flag state for each agent
         self.loading = np.array([1]*num_TA)
+        # talks to the agents
         self.wait = np.array([0]*num_TA)
         self.wait_flag = False
 
 
         # Initialization of mutable lists to be passsed to threads
-        self.team_actions = np.array([3]*num_TA)
+        # action each team mate is supposed to take when its time to act
+        self.team_actions = np.array([2]*num_TA)
 
+        # each individual agent has a wait flag that keeps the agent from doing the next action
         self.team_should_act = np.array([0]*num_TA)
+        # signals all team agents to act
         self.team_should_act_flag = False
 
+        # observation space for all team mate agents
         self.team_obs = np.empty([num_TA,self.num_features],dtype=object)
+        # previous state for all team agents
         self.team_obs_previous = np.empty([num_TA,self.num_features],dtype=object)
 
+        # reward for each agent
         self.team_rewards = np.zeros(num_TA)
 
+        # not used yet
         self.opp_actions = np.zeros(num_OA)
+        # not used yet
         self.opp_should_act = np.array([0]*num_OA)
+        #not used yet
         self.opp_should_act_flag = False
 
         #self.opp_obs = np.empty([num_OA,5],dtype=object)
         #self.opp_rewards = np.zeros(num_OA)
 
+        # keeps track of world state
         self.world_status = 0
 
         # Create thread for each teammate
@@ -156,10 +175,7 @@ class HFO_env():
 #                                                  False,i,))
 #             time.sleep(1)
 
-
         print("All players connected to server")
-
-
         self.start = True
 
 
@@ -199,7 +215,7 @@ class HFO_env():
 
 
     def Step(self,actions,side,params=[]):
-        """ Performs each agents' action from actions and returns world_status
+        """ Performs each agents' action from actions and returns tuple (obs,rewards,world_status)
 
         Args:
             actions (list of ints); List of integers corresponding to the action each agent will take
@@ -323,11 +339,20 @@ class HFO_env():
         # turn deg
         self.action_params[agentID][2]*=180
         # tackle deg
+        
+        # with tackle
+        '''
         self.action_params[agentID][3]*=180
         # kick power/deg
         #rescale to positive number
         self.action_params[agentID][4]= ((self.action_params[agentID][4] + 1)/2)*100
-        self.action_params[agentID][5]*=180
+        self.action_params[agentID][5]*=180'''
+        
+        # without tackle
+        # kick power/deg
+        #rescale to positive number
+        self.action_params[agentID][3]= ((self.action_params[agentID][4] + 1)/2)*100
+        self.action_params[agentID][4]*=180
         
         '''print(self.action_params[agentID][0])
         if self.action_params[agentID][0] > 100 or self.action_params[agentID][0] < -100:
@@ -349,12 +374,6 @@ class HFO_env():
         reward=0
         #---------------------------
 
-        
-        #remove tackle penalty
-        #if self.action_list[self.team_actions[agentID]] == hfo.TACKLE:
-        #    reward+= -100
-        
-        
         ########################### keep the ball kickable ####################################
         #team_kickable = False
         #team_kickable = np.array([self.get_kickable_status(i) for i in range(self.num_TA)]).any() # kickable by team
@@ -395,8 +414,8 @@ class HFO_env():
         #elif s=='CapturedByDefense':
         #    reward+=-100
         #---------------------------
-        #elif s=='OutOfBounds':
-        #    reward+=-1
+        elif s=='OutOfBounds':
+            reward+=-1
         #---------------------------
         #Cause Unknown Do Nothing
         #elif s=='OutOfTime':
@@ -441,8 +460,8 @@ class HFO_env():
         elif base == 'right':
             base = 'base_right'
 
-        #config_dir=get_config_path() 
-        config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
+        config_dir=get_config_path() 
+        #config_dir = '/Users/sajjadi/Desktop/work/HFO/bin/teams/base/config/formations-dt'
         recorder_dir = 'log/'
         self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                             server_port=6000, server_addr='localhost', team_name=base, 
@@ -494,7 +513,9 @@ class HFO_env():
                         # scale action params
                         self.scale_params(agent_ID)
                         a = self.team_actions[agent_ID]
-                        if a == 0:
+                        
+                        # with tackle
+                        """if a == 0:
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
                             #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
                         elif a == 1:
@@ -506,6 +527,18 @@ class HFO_env():
                         elif a ==3:
                             #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
+                        """
+                        
+                        # without tackle
+                        if a == 0:
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
+                            #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
+                        elif a == 1:
+                            #print(self.action_list[a],self.action_params[agent_ID][2])
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][2])                       
+                        elif a ==2:
+                            #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
+                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][3],self.action_params[agent_ID][4])
                         
                                                     
 
