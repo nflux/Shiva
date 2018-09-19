@@ -58,6 +58,7 @@ class HFO_env():
                  ball_x_min = 0.0, ball_x_max = 0.5, verbose = False, log_game=False,
                  log_dir="log"):
         
+
         """ Initializes HFO_Env
 
         Args:
