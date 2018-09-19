@@ -209,12 +209,13 @@ for ep_i in range(0, num_episodes):
                                                         'average_reward': replay_buffer.get_average_rewards(time_step),
                                                        'cumulative_reward': replay_buffer.get_cumulative_rewards(time_step)}, 
                                                         ignore_index=True)
+                break;
+
                 #print(step_logger_df) 
             if t%48000 == 0 and use_viewer:
                 env._start_viewer()
 
                 
-                break;
 
             
            
