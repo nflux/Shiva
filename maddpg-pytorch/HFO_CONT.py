@@ -133,7 +133,8 @@ for ep_i in range(0, num_episodes):
         time_step = 0
         kickable_counter = 0
         for et_i in range(0, episode_length):
-        
+            time_step += 1
+
 
             # gather all the observations into a torch tensor 
             torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
@@ -156,7 +157,6 @@ for ep_i in range(0, num_episodes):
             
             obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
 
-            time_step += 1
 
             # If kickable is True one of the teammate agents has possession of the ball
             kickable = False
@@ -169,8 +169,7 @@ for ep_i in range(0, num_episodes):
             # if d == True agent took an end action such as scoring a goal
 
             rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])            
-            
-            
+ 
             #next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
             next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
             dones = np.hstack([env.d for i in range(env.num_TA)])
@@ -185,7 +184,6 @@ for ep_i in range(0, num_episodes):
             t += 1
             if t%1000 == 0:
                 step_logger_df.to_csv('history.csv')
-                time.sleep(0.001)
             
             if (len(replay_buffer) >= batch_size and
                 (t % steps_per_update) < 1):
@@ -197,7 +195,6 @@ for ep_i in range(0, num_episodes):
                     for a_i in range(maddpg.nagents):
                         sample = replay_buffer.sample(batch_size,
                                                       to_gpu=False,norm_rews=True)
-                        #print('sample: ', sample)
                         #print('a_i ' , a_i )
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()
@@ -208,9 +205,9 @@ for ep_i in range(0, num_episodes):
                                                         'kickable_percentages': (kickable_counter/time_step) * 100,
                                                         'average_reward': replay_buffer.get_average_rewards(time_step),
                                                        'cumulative_reward': replay_buffer.get_cumulative_rewards(time_step)}, 
-                                                        ignore_index=True)
+                                                        ignore_index=True)           
                 break;
-
+                
                 #print(step_logger_df) 
             if t%48000 == 0 and use_viewer:
                 env._start_viewer()
@@ -219,5 +216,5 @@ for ep_i in range(0, num_episodes):
 
             
            
-        ep_rews = replay_buffer.get_average_rewards(episode_length)
+        ep_rews = replay_buffer.get_average_rewards(time_step)
  #       print('episode rewards ', ep_rews )
