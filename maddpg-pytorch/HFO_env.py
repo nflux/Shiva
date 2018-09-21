@@ -351,7 +351,7 @@ class HFO_env():
     
     def scale_params(self,agentID):
         # dash power/deg
-        self.action_params[agentID][0]*=100
+        self.action_params[agentID][0]= ((self.action_params[agentID][0] + 1)/2)*100
         self.action_params[agentID][1]*=180
         # turn deg
         self.action_params[agentID][2]*=180
@@ -368,7 +368,7 @@ class HFO_env():
         # without tackle
         # kick power/deg
         #rescale to positive number
-        self.action_params[agentID][3]= ((self.action_params[agentID][4] + 1)/2)*100
+        self.action_params[agentID][3]= ((self.action_params[agentID][3] + 1)/2)*100
         self.action_params[agentID][4]*=180
         
         '''print(self.action_params[agentID][0])
@@ -410,7 +410,7 @@ class HFO_env():
         if self.feat_lvl == 'high':
             r,_,_ = self.distance_to_ball(self.team_obs[agentID])
             r_prev,_,_ = self.distance_to_ball(self.team_obs_previous[agentID])
-            reward += r_prev - r # if [prev > r] ---> positive; if [r > prev] ----> negative
+            reward += (r_prev - r) # if [prev > r] ---> positive; if [r > prev] ----> negative
         else:
             reward += self.ball_proximity(agentID) * 10
         ########################################################################
@@ -431,8 +431,8 @@ class HFO_env():
         #elif s=='CapturedByDefense':
         #    reward+=-100
         #---------------------------
-        elif s=='OutOfBounds':
-            reward+=-1
+        #elif s=='OutOfBounds':
+        #    reward+=-1
         #---------------------------
         #Cause Unknown Do Nothing
         #elif s=='OutOfTime':
