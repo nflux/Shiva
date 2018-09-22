@@ -557,6 +557,7 @@ class HFO_env():
                             #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][3],self.action_params[agent_ID][4])
                         
+                    #print("ACTION: ",a,"PARAMS:",self.action_params[agent_ID])
                                                     
 
                     self.team_should_act[agent_ID] = False # Set personal action flag as done

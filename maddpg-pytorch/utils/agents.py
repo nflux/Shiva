@@ -21,17 +21,17 @@ class DDPGAgent(object):
         self.policy = MLPNetwork(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
                                  constrain_out=True,
-                                 discrete_action=discrete_action)
+                                 discrete_action=discrete_action, is_actor= True)
         self.critic = MLPNetwork(num_in_critic, 1,
                                  hidden_dim=hidden_dim,
-                                 constrain_out=False)
+                                 constrain_out=False,is_actor=False)
         self.target_policy = MLPNetwork(num_in_pol, num_out_pol,
                                         hidden_dim=hidden_dim,
-                                        constrain_out=True,
+                                        constrain_out=True,is_actor=True,
                                         discrete_action=discrete_action)
         self.target_critic = MLPNetwork(num_in_critic, 1,
                                         hidden_dim=hidden_dim,
-                                        constrain_out=False)
+                                        constrain_out=False,is_actor=False)
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=lr)
@@ -72,7 +72,6 @@ class DDPGAgent(object):
             if explore:
                 action += Variable(Tensor(self.exploration.noise()),
                                    requires_grad=False)
-            # change to tanh
             action = action.clamp(-1, 1)
         return action
 

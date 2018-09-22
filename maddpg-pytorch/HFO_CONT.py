@@ -45,7 +45,7 @@ num_episodes = 500000
 episode_length = 100 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 20000 
+num_explore_episodes = 20000     
 
 USE_CUDA = False 
 
@@ -54,9 +54,9 @@ init_noise_scale = 1.00
 steps_per_update = 100
 
 batch_size = 128
-hidden_dim = 128
+hidden_dim = int(1024)
 lr = 0.001
-tau = 0.01
+tau = 0.0001
 
 t = 0
 time_step = 0
@@ -76,7 +76,7 @@ if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
         
 env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
-              feat_lvl = feature_level, act_lvl = action_level, untouched_time = episode_length)
+              feat_lvl = feature_level, act_lvl = action_level, untouched_time = episode_length,fullstate=True)
 
 # if you want viewer
 if use_viewer:
@@ -152,8 +152,9 @@ for ep_i in range(0, num_episodes):
                 env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
             actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
             params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions])
-            
+            print("ACTIONS: ",actions)
             agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
+
             
             obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
 
@@ -194,7 +195,7 @@ for ep_i in range(0, num_episodes):
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
                         sample = replay_buffer.sample(batch_size,
-                                                      to_gpu=False,norm_rews=True)
+                                                      to_gpu=False,norm_rews=False)
                         #print('a_i ' , a_i )
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()
