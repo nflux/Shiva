@@ -45,11 +45,11 @@ num_episodes = 100000
 episode_length = 100 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 20000     
+num_explore_episodes = 10000     
 
 USE_CUDA = False 
 
-final_noise_scale = 0.05
+final_noise_scale = 0.1
 init_noise_scale = 1.00
 steps_per_update = 100
 
@@ -152,7 +152,7 @@ for ep_i in range(0, num_episodes):
                 env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
             actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
             params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions])
-            print("ACTIONS: ",actions)
+            #print("ACTIONS: ",actions)
             agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
 
             

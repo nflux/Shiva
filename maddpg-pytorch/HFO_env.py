@@ -322,6 +322,7 @@ class HFO_env():
         if obs[50]: # ball pos valid
             return obs[53]
         else:
+            print('no ball...')
             return -1
         
         
