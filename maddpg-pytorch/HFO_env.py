@@ -292,6 +292,11 @@ class HFO_env():
 
         time.sleep(self.sleep_timer) ### *** without this sleep function the process crashes. specifically, 0.001
 
+
+#################################################
+######################  Utils for Reward ########
+#################################################
+
     def get_kickable_status(self,agentID,obs):
         ball_kickable = False
         if self.feat_lvl == 'high':
@@ -304,50 +309,44 @@ class HFO_env():
             
             
 
-        
-    #Finds agent distance to ball - high level feature
-    def distance_to_ball(self, obs):
+    def apprx_to_goal(self, obs):
+        # return the proximity of the agent to the goal center 
+        if self.feat_lvl == 'high':            
+            return obs[6]
+        else:
+            return obs[15]
 
-        #Relative x and y is the offset between the ball and the agent.
-        relative_x = obs[0]-obs[3]
-        relative_y = obs[1]-obs[4]
-
-        #Returns the relative distance between the agent and the ball
-        ball_distance = math.sqrt(relative_x**2+relative_y**2)
-
-        return ball_distance, relative_x, relative_y
-    
-    #Finds goal distance to ball - high level feature
-    def distance_goal_to_ball(self, obs):
-
-        #Relative x and y is the offset between the ball and the goal center.
-        relative_x = 1 - obs[3]
-        relative_y = 0 - obs[4]
-
-        #Returns the relative distance between the goal and the ball
-        ball_distance_to_goal = math.sqrt(relative_x**2+relative_y**2)
-
-        return ball_distance_to_goal, relative_x, relative_y
-    
-    def distance_to_goal(self, obs):
-
-        # return the approximate distance of the agent to the goal center 
-        return obs[6]
-    
     # low level feature (1 for closest to object -1 for furthest)
-    def ball_proximity(self,agentID):
-        if self.team_obs[agentID][50]: # ball pos valid
-            return self.team_obs[agentID][53]
+    def ball_proximity(self,obs):
+        
+        if obs[50]: # ball pos valid
+            return obs[53]
         else:
             return -1
         
         
-    # needs to use angular features of ball and center goal
-    # *TODO: implementation details
     def ball_distance_to_goal(self,obs):
-        return 0
+        if self.feat_lvl == 'high':        
+                relative_x = 1 - obs[3]
+                relative_y = 0 - obs[4]
+                #Returns the relative distance between the goal and the ball
+                ball_distance_to_goal = math.sqrt(relative_x**2+relative_y**2)
 
+        return ball_distance_to_goal, relative_x, relative_y
+    
+ 
+    #Finds agent distance to ball - high level feature
+    def distance_to_ball(self, obs):
+	
+	#Relative x and y is the offset between the ball and the agent.
         
+         if self.feat_lvl == 'high':
+                 relative_x = obs[0]-obs[3]
+                 relative_y = obs[1]-obs[4]
+                 ball_distance = math.sqrt(relative_x**2+relative_y**2)
+			
+         return ball_distance, relative_x, relative_y
+    
     
     def scale_params(self,agentID):
         # dash power/deg
@@ -402,17 +401,21 @@ class HFO_env():
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
  
 
-        if self.team_obs[agentID][-2] == -1:
-            reward+= -1
-        
-        
+        if self.feat_lvl == 'high':        
+                  if self.team_obs[agentID][-2] == -1:
+                        reward+= -1
+        elif self.feat_lvl == 'low':        
+                  if  self.team_obs[agentID][-1] != 1:
+                        reward+= -1
         ####################### reduce distance to ball - using delta  ##################
         if self.feat_lvl == 'high':
             r,_,_ = self.distance_to_ball(self.team_obs[agentID])
             r_prev,_,_ = self.distance_to_ball(self.team_obs_previous[agentID])
             reward += (r_prev - r) # if [prev > r] ---> positive; if [r > prev] ----> negative
-        else:
-            reward += self.ball_proximity(agentID) * 10
+        elif self.feat_lvl == 'low':
+            prox_cur = self.ball_proximity(self.team_obs[agentID])
+            prox_prev = self.ball_proximity(self.team_obs_previous[agentID])
+            reward   += (prox_cur - prox_prev ) # if cur > prev --> + 
         ########################################################################
         
         ####################### reduce ball distance to goal - using delta  ##################
@@ -423,8 +426,6 @@ class HFO_env():
             reward += (3)*(r_prev - r) #* 10
         ########################################################################
 
-        
-            
         if s=='Goal':
             reward+=5
         #---------------------------

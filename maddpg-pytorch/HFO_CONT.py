@@ -39,9 +39,9 @@ from HFO_env import *
 # default settings
 
 action_level = 'low'
-feature_level = 'high'
+feature_level = 'low'
 
-num_episodes = 500000
+num_episodes = 100000
 episode_length = 100 # FPS
 
 replay_memory_size = 1000000
