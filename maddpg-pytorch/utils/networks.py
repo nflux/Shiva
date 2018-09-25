@@ -44,7 +44,7 @@ class MLPNetwork(nn.Module):
             self.out = nn.Linear(128,out_dim)
         
 
-        self.nonlin = nonlin
+        self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         if constrain_out and not discrete_action:
             # initialize small to prevent saturation            
             if is_actor:
@@ -65,23 +65,25 @@ class MLPNetwork(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        X_in =Variable(self.in_fn(X).data, requires_grad=True)
+        
+        
 
-        h1 = self.nonlin(self.fc1(X_in))
-        h1.retain_grad()
+        h1 = self.nonlin(self.fc1(self.in_fn(X)))
+        #h1.retain_grad()
         h2 = self.nonlin(self.fc2(h1))
-        h2.retain_grad()
+        #h2.retain_grad()
         h3 = self.nonlin(self.fc3(h2))
-        h3.retain_grad()
+        #h3.retain_grad()
         h4 = self.nonlin(self.fc4(h3))
-        h4.retain_grad()
+        #h4.retain_grad()
         
         
         if self.is_actor and not self.discrete_action:
             self.final_out_param = Variable(self.out_param(h4).data,requires_grad=True)
             self.final_out_param.retain_grad()
             h = self.final_out_param.register_hook(self.invert)
-            out = torch.cat((self.out_fn(self.out_action(h4)), self.final_out_param),1)
+            self.final_out_action = self.out_fn(self.out_action(h4))
+            out = torch.cat((self.final_out_action, self.final_out_param),1)
         else:
             out = self.out_fn(self.out(h4))
         return out

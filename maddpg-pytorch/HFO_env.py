@@ -418,7 +418,7 @@ class HFO_env():
         elif self.feat_lvl == 'low':
             prox_cur = self.ball_proximity(self.team_obs[agentID])
             prox_prev = self.ball_proximity(self.team_obs_previous[agentID])
-            reward   += (prox_cur - prox_prev ) # if cur > prev --> +     
+            reward   += prox_cur - prox_prev # if cur > prev --> +     
         ########################################################################
         
         ####################### reduce ball distance to goal - using delta  ##################
