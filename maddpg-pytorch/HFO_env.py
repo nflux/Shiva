@@ -149,9 +149,9 @@ class HFO_env():
         self.team_should_act_flag = False
 
         # observation space for all team mate agents
-        self.team_obs = np.empty([num_TA,self.num_features],dtype=object)
+        self.team_obs = np.empty([num_TA,self.num_features],dtype=float)
         # previous state for all team agents
-        self.team_obs_previous = np.empty([num_TA,self.num_features],dtype=object)
+        self.team_obs_previous = np.empty([num_TA,self.num_features],dtype=float)
 
         # reward for each agent
         self.team_rewards = np.zeros(num_TA)

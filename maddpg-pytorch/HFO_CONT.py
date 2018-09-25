@@ -103,12 +103,6 @@ replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA,
                                  [env.action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
 
 
-if discrete_action:
-    env.Step([random.randint(0,len(env.action_list)-1) for i in range(env.num_TA)],'team')
-else:
-    params = np.asarray([[random.uniform(-1,1) for i in range(env.action_params.shape[1])] for j in range(env.num_TA)])
-    env.Step([random.randint(0,len(env.action_list)-1) for i in range(env.num_TA)],'team', params)
-    
     
 reward_total = [ ]
 num_steps_per_episode = []
