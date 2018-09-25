@@ -50,7 +50,7 @@ num_explore_episodes = 3000  # Haus uses over 10,000 updates --
 USE_CUDA = False 
 
 final_noise_scale = 0.1
-init_noise_scale = .30
+init_noise_scale = 1.00
 steps_per_update = 100
 
 batch_size = 128
@@ -132,7 +132,7 @@ for ep_i in range(0, num_episodes):
                                   requires_grad=False)
                          for i in range(maddpg.nagents)]
             # get actions as torch Variables
-            torch_agent_actions = maddpg.step(torch_obs, explore=False)
+            torch_agent_actions = maddpg.step(torch_obs, explore=True)
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
             # rearrange actions to be per environment
