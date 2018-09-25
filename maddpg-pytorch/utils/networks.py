@@ -79,7 +79,8 @@ class MLPNetwork(nn.Module):
         
         
         if self.is_actor and not self.discrete_action:
-            self.final_out_param = Variable(self.out_param(h4).data,requires_grad=True)
+            self.out_param2 = self.out_param(h4)
+            self.final_out_param = Variable(self.out_param2,requires_grad=True)
             self.final_out_param.retain_grad()
             h = self.final_out_param.register_hook(self.invert)
             self.final_out_action = self.out_fn(self.out_action(h4))
