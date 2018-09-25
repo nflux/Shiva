@@ -42,15 +42,15 @@ action_level = 'low'
 feature_level = 'low'
 
 num_episodes = 100000
-episode_length = 100 # FPS
+episode_length = 500 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 10000     
+num_explore_episodes = 3000  # Haus uses over 10,000 updates --
 
 USE_CUDA = False 
 
 final_noise_scale = 0.1
-init_noise_scale = 1.00
+init_noise_scale = .30
 steps_per_update = 100
 
 batch_size = 128
@@ -114,8 +114,6 @@ step_logger_df = pd.DataFrame()
 for ep_i in range(0, num_episodes):
         
         #get the whole team observation 
-        obs = np.asarray(env.team_obs)
-        prev_obs = obs
 
         maddpg.prep_rollouts(device='cpu')
         #define the noise used for exploration
@@ -126,8 +124,7 @@ for ep_i in range(0, num_episodes):
         #for the duration of 100 episode with maximum length of 500 time steps
         time_step = 0
         kickable_counter = 0
-        for et_i in range(0, episode_length):
-            time_step += 1
+        for et_i in range(0, episode_length+1):
 
 
             # gather all the observations into a torch tensor 
@@ -135,11 +132,10 @@ for ep_i in range(0, num_episodes):
                                   requires_grad=False)
                          for i in range(maddpg.nagents)]
             # get actions as torch Variables
-            torch_agent_actions = maddpg.step(torch_obs, explore=True)
+            torch_agent_actions = maddpg.step(torch_obs, explore=False)
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
             # rearrange actions to be per environment
-            
             
             
             actions_params_for_buffer = np.array([[ac[i] for ac in agent_actions] for i in range(1)]).reshape(
@@ -149,7 +145,7 @@ for ep_i in range(0, num_episodes):
             #print("ACTIONS: ",actions)
             agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
 
-            
+     
             obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
 
 
@@ -165,17 +161,17 @@ for ep_i in range(0, num_episodes):
 
             rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])            
  
-            #next_obs = np.vstack([env.Observation(i,'team') for i in range(maddpg.nagents)] )
             next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
             dones = np.hstack([env.d for i in range(env.num_TA)])
 
 
             replay_buffer.push(obs, actions_params_for_buffer, rewards, next_obs, dones)
-            prev_obs = obs
             obs = next_obs
             #for i in range(env.num_TA):
             #    logger_df = logger_df.append({'reward':env.Reward(i,'team')}, ignore_index=True)
             
+            time_step += 1
+
             t += 1
             if t%1000 == 0:
                 step_logger_df.to_csv('history.csv')
@@ -189,7 +185,7 @@ for ep_i in range(0, num_episodes):
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
                         sample = replay_buffer.sample(batch_size,
-                                                      to_gpu=False,norm_rews=False)
+                                                      to_gpu=False,norm_rews=True)
                         #print('a_i ' , a_i )
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()
@@ -202,6 +198,8 @@ for ep_i in range(0, num_episodes):
                                                        'cumulative_reward': replay_buffer.get_cumulative_rewards(time_step)}, 
                                                         ignore_index=True)           
                 break;
+                
+            
                 
                 #print(step_logger_df) 
             if t%48000 == 0 and use_viewer:

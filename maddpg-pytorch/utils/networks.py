@@ -50,6 +50,7 @@ class MLPNetwork(nn.Module):
             if is_actor:
                 self.out_param.weight.data.uniform_(-3e-3, 3e-3)
                 self.out_action_fn = lambda x: x
+                self.out_fn = lambda x: x
             else:
                 self.out.weight.data.uniform_(-3e-3, 3e-3)
                 self.out_fn = F.tanh
@@ -79,21 +80,21 @@ class MLPNetwork(nn.Module):
         if self.is_actor and not self.discrete_action:
             self.final_out_param = Variable(self.out_param(h4).data,requires_grad=True)
             self.final_out_param.retain_grad()
-            #h = self.final_out_param.register_hook(lambda grad: grad*2)
             h = self.final_out_param.register_hook(self.invert)
-            out = torch.cat((self.out_action(h4), self.final_out_param),1)
+            out = torch.cat((self.out_fn(self.out_action(h4)), self.final_out_param),1)
         else:
             out = self.out_fn(self.out(h4))
         return out
 
     def invert(self, grad):
+        clone = grad.clone()
         for i in range(len(grad)):
             for j in range(len(grad[i])):
-                if grad[i][j] > 0:
-                    grad[i][j] *= ((1.0-self.final_out_param[i][j])/(1-(-1)))
+                if clone[i][j] > 0:
+                    clone[i][j] *= ((1.0-self.final_out_param[i][j])/(1-(-1)))
                 else:
-                    grad[i][j] *= ((self.final_out_param[i][j]-(-1.0))/(1-(-1)))
-        return grad
+                    clone[i][j] *= ((self.final_out_param[i][j]-(-1.0))/(1-(-1)))
+        return clone
 '''
 class GradInv(x,fc):
     @staticmethod

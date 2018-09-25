@@ -1,17 +1,18 @@
 from torch import Tensor
 from torch.autograd import Variable
 from torch.optim import Adam
+import torch
 from .networks import MLPNetwork
 from .misc import hard_update, gumbel_softmax, onehot_from_logits
 from .noise import OUNoise
-
+import numpy as np
 class DDPGAgent(object):
     """
     General class for DDPG agents (policy, critic, target policy, target
     critic, exploration noise)
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, hidden_dim=64,
-                 lr=0.01, discrete_action=True):
+                 lr=0.001, discrete_action=True):
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -36,8 +37,8 @@ class DDPGAgent(object):
         hard_update(self.target_critic, self.critic)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=lr)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=lr)
-        if not discrete_action:
-            self.exploration = OUNoise(num_out_pol)
+        if not discrete_action: # input to OUNoise is size of param space # TODO change OUNoise param to # params
+            self.exploration = OUNoise(5) # hard coded
         else:
             self.exploration = 0.3  # epsilon for eps-greedy
         self.discrete_action = discrete_action
@@ -63,7 +64,16 @@ class DDPGAgent(object):
         """
         
         action = self.policy(obs)
-        if self.discrete_action:
+        print(action)
+        # mixed disc/cont
+        
+        if explore:        # TODO change hard coding
+            a = onehot_from_logits(action[0,:3].view(1,3),eps = self.exploration.scale)     # get eps greedy action
+            p = (action[0,:5].view(1,5) + Variable(Tensor(self.exploration.noise()),requires_grad=False)).clamp(-1,1) # get noisey params (OU)
+            action = torch.cat((a,p),1) 
+        return action
+            
+        '''if self.discrete_action:
             if explore:
                 action = gumbel_softmax(action, hard=True)
             else:
@@ -74,7 +84,7 @@ class DDPGAgent(object):
                                    requires_grad=False)
             action = action.clamp(-1, 1)
         return action
-
+'''
     def get_params(self):
         return {'policy': self.policy.state_dict(),
                 'critic': self.critic.state_dict(),

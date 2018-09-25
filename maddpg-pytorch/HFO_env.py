@@ -90,7 +90,7 @@ class HFO_env():
                                ball_x_min = ball_x_min, ball_x_max = ball_x_max,
                                verbose = verbose, log_game = log_game, log_dir = log_dir)                              
         self.viewer = None                      
-
+        self.just_another_flag = True
         self.sleep_timer = 0.0000001 # sleep timer
         
         # params for low level actions
@@ -289,8 +289,10 @@ class HFO_env():
 
         if not self.wait.any():
             self.wait_flag = False
+            self.just_another_flag = False
+        
 
-        time.sleep(self.sleep_timer) ### *** without this sleep function the process crashes. specifically, 0.001
+        #time.sleep(self.sleep_timer) ### *** without this sleep function the process crashes. specifically, 0.001
 
 
 #################################################
@@ -416,14 +418,14 @@ class HFO_env():
         elif self.feat_lvl == 'low':
             prox_cur = self.ball_proximity(self.team_obs[agentID])
             prox_prev = self.ball_proximity(self.team_obs_previous[agentID])
-            reward   += (prox_cur - prox_prev ) # if cur > prev --> + 
+            reward   += (prox_cur - prox_prev ) # if cur > prev --> +     
         ########################################################################
         
         ####################### reduce ball distance to goal - using delta  ##################
         
         if self.feat_lvl == 'high':
-            r,_,_ = self.distance_goal_to_ball(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-            r_prev,_,_ = self.distance_goal_to_ball(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+            r,_,_ = self.ball_distance_to_goal(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+            r_prev,_,_ = self.ball_distance_to_goal(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
             reward += (3)*(r_prev - r) #* 10
         ########################################################################
 
@@ -496,12 +498,13 @@ class HFO_env():
                 d = False
                 self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                 self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
-                while j < fpt:
-                    j+=1
+                
+                while j < fpt+1:
                     # If the action flag is set, each thread takes its action
                     # Sets its personal flag to false, such that if all agents have taken their action
                     # and have updated values we may return to the Step function call
                     # (This synchronizes all agents actions so that they halt until other agents have taken theirs)
+
 
                     self.wait[agent_ID] = True
                     while not self.wait_flag:
@@ -576,15 +579,22 @@ class HFO_env():
                     self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
                     self.team_should_act_flag = False
 
-
-                    # Break if episode done
                     if self.world_status == hfo.IN_GAME:
                         self.d = False
                     else:
                         self.d = True
 
+                    while self.just_another_flag:
+                        time.sleep(self.sleep_timer)
+                    self.just_another_flag = True
+
+                    # Break if episode done
+                    j+=1
+                    
+
                     if self.d == True:
                         break
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
