@@ -320,7 +320,6 @@ class HFO_env():
 
     # low level feature (1 for closest to object -1 for furthest)
     def ball_proximity(self,obs):
-        
         if obs[50]: # ball pos valid
             return obs[53]
         else:
@@ -329,26 +328,46 @@ class HFO_env():
         
         
     def ball_distance_to_goal(self,obs):
-        if self.feat_lvl == 'high':        
-                relative_x = 1 - obs[3]
-                relative_y = 0 - obs[4]
-                #Returns the relative distance between the goal and the ball
-                ball_distance_to_goal = math.sqrt(relative_x**2+relative_y**2)
+        if self.feat_lvl == 'high': 
+            relative_x = 1 - obs[3]
+            relative_y = 0 - obs[4]
+            #Returns the relative distance between the goal and the ball
+            ball_distance_to_goal = math.sqrt(relative_x**2+relative_y**2)
 
+        elif self.feat_lvl =='low':
+            relative_x = 0
+            relative_y = 0
+            ball_proximity = obs[53]
+            goal_proximity = obs[15]
+            ball_dist = 1.0 - ball_proximity
+            goal_dist = 1.0 - goal_proximity
+            kickable = obs[12]
+            ball_ang_sin_rad = obs[51]
+            ball_ang_cos_rad = obs[52]
+            ball_ang_rad = math.acos(ball_ang_cos_rad)
+            if ball_ang_sin_rad < 0:
+                ball_ang_rad *= -1.
+            goal_ang_sin_rad = obs[13]
+            goal_ang_cos_rad = obs[14]
+            goal_ang_rad = math.acos(goal_ang_cos_rad)
+            if goal_ang_sin_rad < 0:
+                goal_ang_rad *= -1.
+            alpha = max(ball_ang_rad, goal_ang_rad) - min(ball_ang_rad, goal_ang_rad)
+            ball_distance_to_goal = math.sqrt(ball_dist*ball_dist + goal_dist*goal_dist -
+                                       2.*ball_dist*goal_dist*math.cos(alpha))
+    
         return ball_distance_to_goal, relative_x, relative_y
     
  
     #Finds agent distance to ball - high level feature
     def distance_to_ball(self, obs):
-	
-	#Relative x and y is the offset between the ball and the agent.
+        #Relative x and y is the offset between the ball and the agent.
+        if self.feat_lvl == 'high':
+            relative_x = obs[0]-obs[3]
+            relative_y = obs[1]-obs[4]
+            ball_distance = math.sqrt(relative_x**2+relative_y**2)
         
-         if self.feat_lvl == 'high':
-                 relative_x = obs[0]-obs[3]
-                 relative_y = obs[1]-obs[4]
-                 ball_distance = math.sqrt(relative_x**2+relative_y**2)
-			
-         return ball_distance, relative_x, relative_y
+        return ball_distance, relative_x, relative_y
     
     
     def scale_params(self,agentID):
@@ -402,6 +421,7 @@ class HFO_env():
 
         if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous)  : # uses action just performed, with previous obs, (both at T)
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
+            print("kicked")
  
 
         if self.feat_lvl == 'high':        
@@ -422,12 +442,10 @@ class HFO_env():
         ########################################################################
         
         ####################### reduce ball distance to goal - using delta  ##################
-        
-        if self.feat_lvl == 'high':
-            r,_,_ = self.ball_distance_to_goal(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-            r_prev,_,_ = self.ball_distance_to_goal(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-            reward += (3)*(r_prev - r) #* 10
-        ########################################################################
+
+        r,_,_ = self.ball_distance_to_goal(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+        r_prev,_,_ = self.ball_distance_to_goal(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+        reward += (3)*(r_prev - r) #* 10
 
         if s=='Goal':
             reward+=5
