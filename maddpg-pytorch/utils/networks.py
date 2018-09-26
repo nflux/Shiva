@@ -1,15 +1,13 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor
 import torch
 from torch.autograd import Variable
-from .misc import hard_update, gumbel_softmax, onehot_from_logits
 
 class MLPNetwork(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, maddpg = object, input_dim = 0, out_dim = 0, hidden_dim=int(1024), nonlin=F.relu,
+    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu,
                  constrain_out=False, norm_in=True, discrete_action=True, is_actor=False):
         """
         Inputs:
@@ -20,7 +18,6 @@ class MLPNetwork(nn.Module):
         """
         super(MLPNetwork, self).__init__()
 
-        self.maddpg = maddpg
         self.is_actor = is_actor
         self.discrete_action = discrete_action
         self.action_size = 3
@@ -83,19 +80,11 @@ class MLPNetwork(nn.Module):
         
         if self.is_actor and not self.discrete_action:
             self.out_param2 = self.out_param(h4)
+            self.final_out_action = self.out_fn(self.out_action(h4))
             self.final_out_param = Variable(self.out_param2,requires_grad=True)
             #self.final_out_param.retain_grad()
             h = self.final_out_param.register_hook(self.invert)
-            self.final_out_action = self.out_fn(self.out_action(h4))
-            if self.maddpg.explore_flag:
-                #print(self.final_out_action,self.final_out_param)
-
-                self.action_one_hots = onehot_from_logits(self.final_out_action,eps = self.maddpg.exploration.scale)
-                self.noisey_params = (self.final_out_param + Variable(Tensor(self.maddpg.exploration.noise()),requires_grad=False)).clamp(-1,1)
-                out = torch.cat((self.action_one_hots, self.noisey_params),1)
-
-            else:
-                out = torch.cat((self.final_out_action,self.final_out_param),1)
+            out = torch.cat((self.final_out_action, self.final_out_param),1)
         else:
             out = self.out_fn(self.out(h4))
         return out

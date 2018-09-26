@@ -10,7 +10,9 @@ import csv
 import itertools 
 import tensorflow.contrib.slim as slim
 import numpy as np
+from utils.misc import hard_update, gumbel_softmax, onehot_from_logits
 
+from torch import Tensor
 import hfo
 import time
 import _thread as thread
@@ -141,9 +143,12 @@ for ep_i in range(0, num_episodes):
             actions_params_for_buffer = np.array([[ac[i] for ac in agent_actions] for i in range(1)]).reshape(
                 env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
             actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
+            noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,3),eps = explr_pct_remaining) for a in actions]     # get eps greedy action
+
+            
             params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions])
             #print("ACTIONS: ",actions)
-            agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in actions[0]] # convert the one hot encoded actions  to list indexes 
+            agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions[0]] # convert the one hot encoded actions  to list indexes 
 
      
             obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
@@ -165,6 +170,7 @@ for ep_i in range(0, num_episodes):
             dones = np.hstack([env.d for i in range(env.num_TA)])
 
 
+        
             replay_buffer.push(obs, actions_params_for_buffer, rewards, next_obs, dones)
             obs = next_obs
             #for i in range(env.num_TA):
