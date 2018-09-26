@@ -64,7 +64,7 @@ class DDPGAgent(object):
         """
         
         action = self.policy(obs)
-        print(action)
+        #print(action)
         # mixed disc/cont
         
         if explore:        # TODO change hard coding
