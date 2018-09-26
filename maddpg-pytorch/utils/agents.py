@@ -19,24 +19,25 @@ class DDPGAgent(object):
             num_out_pol (int): number of dimensions for policy output
             num_in_critic (int): number of dimensions for critic input
         """
-        self.policy = MLPNetwork(num_in_pol, num_out_pol,
+        self.policy = MLPNetwork(maddpg = self, input_dim = num_in_pol, out_dim= num_out_pol,
                                  hidden_dim=hidden_dim,
                                  constrain_out=True,
                                  discrete_action=discrete_action, is_actor= True)
-        self.critic = MLPNetwork(num_in_critic, 1,
+        self.critic = MLPNetwork(maddpg = self, input_dim = num_in_critic,out_dim =  1,
                                  hidden_dim=hidden_dim,
                                  constrain_out=False,is_actor=False)
-        self.target_policy = MLPNetwork(num_in_pol, num_out_pol,
+        self.target_policy = MLPNetwork(maddpg = self, input_dim = num_in_pol,out_dim= num_out_pol,
                                         hidden_dim=hidden_dim,
                                         constrain_out=True,is_actor=True,
                                         discrete_action=discrete_action)
-        self.target_critic = MLPNetwork(num_in_critic, 1,
+        self.target_critic = MLPNetwork(maddpg = self, input_dim = num_in_critic,out_dim= 1,
                                         hidden_dim=hidden_dim,
                                         constrain_out=False,is_actor=False)
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=lr)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=lr)
+        self.explore_flag = False
         if not discrete_action: # input to OUNoise is size of param space # TODO change OUNoise param to # params
             self.exploration = OUNoise(5) # hard coded
         else:
@@ -64,13 +65,15 @@ class DDPGAgent(object):
         """
         
         action = self.policy(obs)
-        print(action)
+        #print(action)
         # mixed disc/cont
         
         if explore:        # TODO change hard coding
-            a = onehot_from_logits(action[0,:3].view(1,3),eps = self.exploration.scale)     # get eps greedy action
-            p = (action[0,:5].view(1,5) + Variable(Tensor(self.exploration.noise()),requires_grad=False)).clamp(-1,1) # get noisey params (OU)
-            action = torch.cat((a,p),1) 
+            self.explore_flag = explore
+            print(action)
+            #a = onehot_from_logits(action[0,:3].view(1,3),eps = self.exploration.scale)     # get eps greedy action
+            #p = (action[0,:5].view(1,5) + Variable(Tensor(self.exploration.noise()),requires_grad=False)).clamp(-1,1) # get noisey params (OU)
+            #action = torch.cat((a,p),1) 
         return action
             
         '''if self.discrete_action:

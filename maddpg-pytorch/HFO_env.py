@@ -419,10 +419,12 @@ class HFO_env():
         #    reward+= 1
         
 
-        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous)  : # uses action just performed, with previous obs, (both at T)
+        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous): # uses action just performed, with previous obs, (both at T)
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
             print("kicked")
- 
+            
+        if self.team_obs[agentID][46] > .99 or self.team_obs[agentID][47] > .99 or self.team_obs[agentID][48] > .99  or self.team_obs[agentID][49] > .99:
+            reward += -.1
 
         if self.feat_lvl == 'high':        
                   if self.team_obs[agentID][-2] == -1:
@@ -445,7 +447,7 @@ class HFO_env():
 
         r,_,_ = self.ball_distance_to_goal(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (3)*(r_prev - r) #* 10
+        reward += (3*.6)*(r_prev - r) #* 10
 
         if s=='Goal':
             reward+=5
