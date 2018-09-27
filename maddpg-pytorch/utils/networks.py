@@ -7,8 +7,7 @@ class MLPNetwork(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu,
-                 constrain_out=False, norm_in=True, discrete_action=True, is_actor=False):
+    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True, is_actor=False):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -29,34 +28,31 @@ class MLPNetwork(nn.Module):
         else:
             self.in_fn = lambda x: x
         self.fc1 = nn.Linear(input_dim, 1024)
+        self.fc1.weight.data.normal_(0, 0.01) 
         self.fc2 = nn.Linear(1024, 512)
+        self.fc2.weight.data.normal_(0, 0.01) 
         self.fc3 = nn.Linear(512, 256)
+        self.fc3.weight.data.normal_(0, 0.01) 
         self.fc4 = nn.Linear(256, 128)
+        self.fc4.weight.data.normal_(0, 0.01) 
         if is_actor:
             # hard coded values
             self.out_action = nn.Linear(128, self.action_size)
-            self.out_param = nn.Linear(128, self.param_size)
-            #h = self.out_param.register_backward_hook(self.invert)
+            self.out_action.weight.data.normal_(0, 0.01) 
 
-            #h = self.out_param.register_hook(invert)
+            self.out_param = nn.Linear(128, self.param_size)
+            self.out_param.weight.data.normal_(0, 3e-3) 
+
+            
+            #h = self.out_param.weight.register_hook(self.invert)
+            #self.out_param.weight._grad.data = self.invert(self.out_param.weight.grad.data)
 
         else:
             self.out = nn.Linear(128,out_dim)
         
 
         self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
-        if constrain_out and not discrete_action:
-            # initialize small to prevent saturation            
-            if is_actor:
-                self.out_param.weight.data.uniform_(-3e-3, 3e-3)
-                self.out_action_fn = lambda x: x
-                self.out_fn = lambda x: x
-            else:
-                self.out.weight.data.uniform_(-3e-3, 3e-3)
-                self.out_fn = F.tanh
-
-        else:  # logits for discrete action (will softmax later)
-            self.out_fn = lambda x: x
+        self.out_fn = lambda x: x
 
     def forward(self, X):
         """
@@ -65,37 +61,43 @@ class MLPNetwork(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        
-        
-
         h1 = self.nonlin(self.fc1(self.in_fn(X)))
-        #h1.retain_grad()
         h2 = self.nonlin(self.fc2(h1))
-        #h2.retain_grad()
         h3 = self.nonlin(self.fc3(h2))
-        #h3.retain_grad()
         h4 = self.nonlin(self.fc4(h3))
-        #h4.retain_grad()
         
         
         if self.is_actor and not self.discrete_action:
-            self.out_param2 = self.out_param(h4)
+            #self.out_param2 = self.out_param(h4)
+            #h = self.final_out_param.register_hook(self.invert)
+            #h = self.out_param2.register_hook(self.invert)
+            
             self.final_out_action = self.out_fn(self.out_action(h4))
-            self.final_out_param = Variable(self.out_param2,requires_grad=True)
-            #self.final_out_param.retain_grad()
-            h = self.final_out_param.register_hook(self.invert)
+            
+            #self.out_param.weight.grad = self.invert(self.out_param.weight.grad)
+            self.inverted_out_param = self.out_param(h4)
+            
+
+            
+            self.final_out_param = Variable(self.inverted_out_param, requires_grad=False)
+            
+            
             out = torch.cat((self.final_out_action, self.final_out_param),1)
+            print(out)
         else:
             out = self.out_fn(self.out(h4))
         return out
 
     def invert(self, grad):
+        print("GRAD1: ",grad)
+        clone = grad.clone()
         for i in range(len(grad)):
             for j in range(len(grad[i])):
-                if grad[i][j] > 0:
-                    grad[i][j] *= ((1.0-self.final_out_param[i][j])/(1-(-1)))
+                if clone[i][j] > 0:
+                    clone[i][j] *= ((1.0-self.final_out_param[i][j])/(1-(-1)))
                 else:
-                    grad[i][j] *= ((self.final_out_param[i][j]-(-1.0))/(1-(-1)))
+                    clone[i][j] *= ((self.final_out_param[i][j]-(-1.0))/(1-(-1)))
+        print("GRAD2: ",clone)
         return grad
 '''
 class GradInv(x,fc):

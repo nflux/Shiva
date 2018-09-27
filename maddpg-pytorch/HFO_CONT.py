@@ -53,7 +53,7 @@ USE_CUDA = False
 
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-steps_per_update = 100
+steps_per_update = 10
 
 batch_size = 128
 hidden_dim = int(1024)
@@ -64,7 +64,7 @@ t = 0
 time_step = 0
 kickable_counter = 0
 n_training_threads = 1
-
+explore = True
 use_viewer = True
 
 # if using low level actions use non discrete settings
@@ -134,7 +134,7 @@ for ep_i in range(0, num_episodes):
                                   requires_grad=False)
                          for i in range(maddpg.nagents)]
             # get actions as torch Variables
-            torch_agent_actions = maddpg.step(torch_obs, explore=True)
+            torch_agent_actions = maddpg.step(torch_obs, explore=explore)
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
             # rearrange actions to be per environment
@@ -143,7 +143,11 @@ for ep_i in range(0, num_episodes):
             actions_params_for_buffer = np.array([[ac[i] for ac in agent_actions] for i in range(1)]).reshape(
                 env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
             actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
-            noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,3),eps = explr_pct_remaining) for a in actions]     # get eps greedy action
+            if explore:
+                noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,3),eps = explr_pct_remaining) for a in actions]     # get eps greedy action
+            else:
+                noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,3),eps = 0) for a in actions]     # get eps greedy action
+
 
             
             params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions])
@@ -191,7 +195,7 @@ for ep_i in range(0, num_episodes):
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
                         sample = replay_buffer.sample(batch_size,
-                                                      to_gpu=False,norm_rews=True)
+                                                      to_gpu=False,norm_rews=False)
                         #print('a_i ' , a_i )
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()

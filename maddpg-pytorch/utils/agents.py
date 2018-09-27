@@ -21,22 +21,18 @@ class DDPGAgent(object):
         """
         self.policy = MLPNetwork(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
-                                 constrain_out=True,
-                                 discrete_action=discrete_action, is_actor= True)
+                                 discrete_action=discrete_action, is_actor= True,norm_in= False)
         self.critic = MLPNetwork(num_in_critic, 1,
-                                 hidden_dim=hidden_dim,
-                                 constrain_out=False,is_actor=False)
+                                 hidden_dim=hidden_dim,is_actor=False,norm_in= False)
         self.target_policy = MLPNetwork(num_in_pol, num_out_pol,
-                                        hidden_dim=hidden_dim,
-                                        constrain_out=True,is_actor=True,
-                                        discrete_action=discrete_action)
+                                        hidden_dim=hidden_dim,is_actor=True,
+                                        discrete_action=discrete_action,norm_in= False)
         self.target_critic = MLPNetwork(num_in_critic, 1,
-                                        hidden_dim=hidden_dim,
-                                        constrain_out=False,is_actor=False)
+                                        hidden_dim=hidden_dim,is_actor=False,norm_in= False)
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)
-        self.policy_optimizer = Adam(self.policy.parameters(), lr=lr)
-        self.critic_optimizer = Adam(self.critic.parameters(), lr=lr)
+        self.policy_optimizer = Adam(self.policy.parameters(), lr=lr, weight_decay =0)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=lr, weight_decay=0)
         if not discrete_action: # input to OUNoise is size of param space # TODO change OUNoise param to # params
             self.exploration = OUNoise(5) # hard coded
         else:
