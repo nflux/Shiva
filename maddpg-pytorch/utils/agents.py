@@ -68,7 +68,7 @@ class DDPGAgent(object):
         
         if explore:     
             a = action[0,:self.action_dim].view(1,self.action_dim)
-            p = (action[0,:self.param_dim].view(1,self.param_dim) + Variable(Tensor(self.exploration.noise()),requires_grad=False)).clamp(-1,1) # get noisey params (OU)
+            p = (action[0,:self.param_dim].view(1,self.param_dim) + Variable(Tensor(self.exploration.noise()),requires_grad=False)) # get noisey params (OU)
             action = torch.cat((a,p),1) 
         return action
             

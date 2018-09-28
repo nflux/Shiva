@@ -55,7 +55,7 @@ final_noise_scale = 0.1
 init_noise_scale = 1.00
 steps_per_update = 10
 
-batch_size = 2
+batch_size = 128
 hidden_dim = int(1024)
 lr = 0.001
 tau = 0.0001

@@ -369,29 +369,22 @@ class HFO_env():
         
         return ball_distance, relative_x, relative_y
     
-    
-    def scale_params(self,agentID):
-        # dash power/deg
-        self.action_params[agentID][0]= ((self.action_params[agentID][0] + 1)/2)*100
-        self.action_params[agentID][1]*=180
-        # turn deg
-        self.action_params[agentID][2]*=180
+    # takes param index (0-4)
+    def get_valid_scaled_param(self,agentID,param):
+        if param == 0: # dash power
+            return ((self.action_params[agentID][0].clip(-1,1) + 1)/2)*100
+        elif param == 1: # dash deg
+            return self.action_params[agentID][1].clip(-1,1)*180
+        elif param == 2: # turn deg
+            return self.action_params[agentID][2].clip(-1,1)*180
         # tackle deg
-        
+        elif param == 3: # kick power
+            return ((self.action_params[agentID][3].clip(-1,1) + 1)/2)*100
+        elif param == 4: # kick deg
+            self.action_params[agentID][4].clip(-1,1)*180
+
         # with tackle
-        '''
-        self.action_params[agentID][3]*=180
-        # kick power/deg
-        #rescale to positive number
-        self.action_params[agentID][4]= ((self.action_params[agentID][4] + 1)/2)*100
-        self.action_params[agentID][5]*=180'''
-        
-        # without tackle
-        # kick power/deg
-        #rescale to positive number
-        self.action_params[agentID][3]= ((self.action_params[agentID][3] + 1)/2)*100
-        self.action_params[agentID][4]*=180
-        
+
         '''print(self.action_params[agentID][0])
         if self.action_params[agentID][0] > 100 or self.action_params[agentID][0] < -100:
             print("INVALID 0\n\n\n\n" ,self.action_params[agentID][0])
@@ -406,6 +399,15 @@ class HFO_env():
         elif self.action_params[agentID][5] > 180 or self.action_params[agentID][5] < -180:
             print("INVALID 5\n\n\n\n",self.action_params[agentID][5])'''
 
+    def get_excess_param_distance(self,agentID):
+        distance = 0
+        distance += (self.action_params[agentID][0].clip(-1,1) - self.action_params[agentID][0])**2
+        distance += (self.action_params[agentID][1].clip(-1,1) - self.action_params[agentID][1])**2
+        distance += (self.action_params[agentID][2].clip(-1,1) - self.action_params[agentID][2])**2
+        distance += (self.action_params[agentID][3].clip(-1,1) - self.action_params[agentID][3])**2
+        distance += (self.action_params[agentID][4].clip(-1,1) - self.action_params[agentID][4])**2
+
+        return distance
 
     # Engineered Reward Function
     def getReward(self,s,agentID):
@@ -427,12 +429,17 @@ class HFO_env():
         #    reward += -.1
         
 
+        ####################### penalty based on sum of square distances of excess params ##############
+        reward += -self.get_excess_param_distance(agentID)
+        
+        ####################### penalty for invalid action  ###############################
         if self.feat_lvl == 'high':        
                   if self.team_obs[agentID][-2] == -1:
                         reward+= -1
         elif self.feat_lvl == 'low':        
                   if  self.team_obs[agentID][-1] != 1:
                         reward+= -1
+                        
         ####################### reduce distance to ball - using delta  ##################
         if self.feat_lvl == 'high':
             r,_,_ = self.distance_to_ball(self.team_obs[agentID])
@@ -442,14 +449,14 @@ class HFO_env():
             prox_cur = self.ball_proximity(self.team_obs[agentID])
             prox_prev = self.ball_proximity(self.team_obs_previous[agentID])
             reward   += prox_cur - prox_prev # if cur > prev --> +     
-        ########################################################################
+        ##################################################################################
         
         ####################### reduce ball distance to goal - using delta  ##################
-
         r,_,_ = self.ball_distance_to_goal(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (3*.6)*(r_prev - r) #* 10
-
+        reward += (3*.6)*(r_prev - r)
+        ##################################################################################
+        
         if s=='Goal':
             reward+=5
         #---------------------------
@@ -554,10 +561,9 @@ class HFO_env():
                         # use params for low level actions
                         
                         # scale action params
-                        self.scale_params(agent_ID)
                         a = self.team_actions[agent_ID]
                         
-                        # with tackle
+                        # with tackle -- outdated
                         """if a == 0:
                             self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
                             #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
@@ -574,17 +580,14 @@ class HFO_env():
                         
                         # without tackle
                         if a == 0:
-                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
+                            self.team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,0),self.get_valid_scaled_param(agent_ID,1))
                             #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
                         elif a == 1:
                             #print(self.action_list[a],self.action_params[agent_ID][2])
-                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][2])                       
+                            self.team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,2))                       
                         elif a ==2:
                             #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
-                            self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][3],self.action_params[agent_ID][4])
-                        
-                    #print("ACTION: ",a,"PARAMS:",self.action_params[agent_ID])
-                                                    
+                            self.team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3),self.get_valid_scaled_param(agent_ID,4))                                                    
 
                     self.team_should_act[agent_ID] = False # Set personal action flag as done
 
