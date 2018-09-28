@@ -7,7 +7,7 @@ class MLPNetwork(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True, is_actor=False):
+    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True, is_actor=False,agent=object):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -17,6 +17,7 @@ class MLPNetwork(nn.Module):
         """
         super(MLPNetwork, self).__init__()
 
+        self.agent=agent
         self.is_actor = is_actor
         self.discrete_action = discrete_action
         self.action_size = 3
@@ -43,10 +44,6 @@ class MLPNetwork(nn.Module):
             self.out_param = nn.Linear(128, self.param_size)
             self.out_param.weight.data.normal_(0, 3e-3) 
 
-            
-            #h = self.out_param.weight.register_hook(self.invert)
-            #self.out_param.weight._grad.data = self.invert(self.out_param.weight.grad.data)
-
         else:
             self.out = nn.Linear(128,out_dim)
         
@@ -68,53 +65,22 @@ class MLPNetwork(nn.Module):
         
         
         if self.is_actor and not self.discrete_action:
-            #self.out_param2 = self.out_param(h4)
-            #h = self.final_out_param.register_hook(self.invert)
-            #h = self.out_param2.register_hook(self.invert)
-            
+ 
             self.final_out_action = self.out_fn(self.out_action(h4))
-            
-            #self.out_param.weight.grad = self.invert(self.out_param.weight.grad)
-            self.inverted_out_param = self.out_param(h4)
-            
-
-            
-            self.final_out_param = Variable(self.inverted_out_param, requires_grad=False)
-            
-            
-            out = torch.cat((self.final_out_action, self.final_out_param),1)
-            print(out)
+            self.current_params = Variable(self.out_fn(self.out_param(h4)),requires_grad=True)
+            #h = self.current_params.register_hook(self.invert)
+            out = torch.cat((self.final_out_action, self.current_params),1)
+            #print(out)
         else:
             out = self.out_fn(self.out(h4))
         return out
 
     def invert(self, grad):
-        print("GRAD1: ",grad)
-        clone = grad.clone()
+        print("ADJUSTING GRADIENT")
         for i in range(len(grad)):
             for j in range(len(grad[i])):
-                if clone[i][j] > 0:
-                    clone[i][j] *= ((1.0-self.final_out_param[i][j])/(1-(-1)))
+                if self.agent.critic_grad_by_actions[j] > 0:
+                    grad[i][j] *= ((1.0-self.current_params[0][j])/(1-(-1)))
                 else:
-                    clone[i][j] *= ((self.final_out_param[i][j]-(-1.0))/(1-(-1)))
-        print("GRAD2: ",clone)
+                    grad[i][j] *= ((self.current_params[0][j]-(-1.0))/(1-(-1)))
         return grad
-'''
-class GradInv(x,fc):
-    @staticmethod
-    def forward(self, x):
-        return x.view_as(x)
-
-    @staticmethod
-    def backward(self, grad_output,fc):
-        for row in grad_output.split(1):
-            for val in row:
-            #for val,p in (row,fc.split(1)):
-                if val > 0:
-                    val = val * ((1.0-0.5)/(1-(-1)))
-                else:
-                    val = val * ((0.5-(-1.0))/(1-(-1)))
-        return grad_output
-
-def grad_invert(x,fc):
-    return GradInv()(x,fc)'''

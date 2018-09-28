@@ -21,20 +21,23 @@ class DDPGAgent(object):
         """
         self.policy = MLPNetwork(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
-                                 discrete_action=discrete_action, is_actor= True,norm_in= False)
+                                 discrete_action=discrete_action, is_actor= True,norm_in= False,agent=self)
         self.critic = MLPNetwork(num_in_critic, 1,
-                                 hidden_dim=hidden_dim,is_actor=False,norm_in= False)
+                                 hidden_dim=hidden_dim,is_actor=False,norm_in= False,agent=self)
         self.target_policy = MLPNetwork(num_in_pol, num_out_pol,
                                         hidden_dim=hidden_dim,is_actor=True,
-                                        discrete_action=discrete_action,norm_in= False)
+                                        discrete_action=discrete_action,norm_in= False,agent=self)
         self.target_critic = MLPNetwork(num_in_critic, 1,
-                                        hidden_dim=hidden_dim,is_actor=False,norm_in= False)
+                                        hidden_dim=hidden_dim,is_actor=False,norm_in= False,agent=self)
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)
+        self.param_dim = 5
+        self.action_dim = 3
+        self.critic_grad_by_action = np.zeros(self.param_dim)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=lr, weight_decay =0)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=lr, weight_decay=0)
         if not discrete_action: # input to OUNoise is size of param space # TODO change OUNoise param to # params
-            self.exploration = OUNoise(5) # hard coded
+            self.exploration = OUNoise(self.param_dim) # hard coded
         else:
             self.exploration = 0.3  # epsilon for eps-greedy
         self.discrete_action = discrete_action
@@ -63,9 +66,9 @@ class DDPGAgent(object):
         #print(action)
         # mixed disc/cont
         
-        if explore:        # TODO change hard coding
-            a = action[0,:3].view(1,3)
-            p = (action[0,:5].view(1,5) + Variable(Tensor(self.exploration.noise()),requires_grad=False)).clamp(-1,1) # get noisey params (OU)
+        if explore:     
+            a = action[0,:self.action_dim].view(1,self.action_dim)
+            p = (action[0,:self.param_dim].view(1,self.param_dim) + Variable(Tensor(self.exploration.noise()),requires_grad=False)).clamp(-1,1) # get noisey params (OU)
             action = torch.cat((a,p),1) 
         return action
             

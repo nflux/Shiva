@@ -55,7 +55,7 @@ final_noise_scale = 0.1
 init_noise_scale = 1.00
 steps_per_update = 10
 
-batch_size = 128
+batch_size = 2
 hidden_dim = int(1024)
 lr = 0.001
 tau = 0.0001
@@ -144,7 +144,7 @@ for ep_i in range(0, num_episodes):
                 env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
             actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
             if explore:
-                noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,3),eps = explr_pct_remaining) for a in actions]     # get eps greedy action
+                noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,3),eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in actions]     # get eps greedy action
             else:
                 noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,3),eps = 0) for a in actions]     # get eps greedy action
 
@@ -213,11 +213,7 @@ for ep_i in range(0, num_episodes):
                 
                 #print(step_logger_df) 
             if t%48000 == 0 and use_viewer:
-                env._start_viewer()
-
-                
-
-            
+                env._start_viewer()       
            
         ep_rews = replay_buffer.get_average_rewards(time_step)
  #       print('episode rewards ', ep_rews )

@@ -421,16 +421,11 @@ class HFO_env():
 
         if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous): # uses action just performed, with previous obs, (both at T)
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
-            print("kicked")
-            
+           
+        # out of bounds penalty
         #if self.team_obs[agentID][46] > .99 or self.team_obs[agentID][47] > .99 or self.team_obs[agentID][48] > .99  or self.team_obs[agentID][49] > .99:
         #    reward += -.1
         
-        
-        ## remove (just for testing -- to push parameters to a high value to test inverted gradient)
-        if self.action_params[agentID][4] < 180: 
-            reward += self.action_params[agentID][4]
-
 
         if self.feat_lvl == 'high':        
                   if self.team_obs[agentID][-2] == -1:

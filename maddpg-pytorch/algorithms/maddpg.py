@@ -125,11 +125,13 @@ class MADDPG(object):
         else:  # DDPG
             vf_in = torch.cat((obs[agent_i], acs[agent_i]), dim=1)
         actual_value = curr_agent.critic(vf_in)
-        vf_loss = MSELoss(actual_value, target_value.detach())
-        vf_loss.backward()
+        
+       
+        vf_loss = MSELoss(actual_value, target_value.detach()) 
+        vf_loss.backward() 
         if parallel:
             average_gradients(curr_agent.critic)
-        #torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 0.5)
         curr_agent.critic_optimizer.step()
 
         curr_agent.policy_optimizer.zero_grad()
@@ -143,6 +145,7 @@ class MADDPG(object):
             curr_pol_out = curr_agent.policy(obs[agent_i])
             curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
         else:
+
             curr_pol_out = curr_agent.policy(obs[agent_i])
             curr_pol_vf_in = curr_pol_out
         if self.alg_types[agent_i] == 'MADDPG':
@@ -158,16 +161,28 @@ class MADDPG(object):
         else:  # DDPG
             vf_in = torch.cat((obs[agent_i], curr_pol_vf_in),
                               dim=1)
+ 
+        '''## want grad of Q respect to A ----------------
+        vf_in.requires_grad_(True)
+        Q = curr_agent.critic(vf_in)
+        #print(Q > 0)
+        Q.backward(retain_graph=True)
+        print(vf_in.grad[:-1] > 0 )
+        #print(vf_in.grad[:-1])
+        # [:,-i] -1 corresponds to the last param for each sample in batch, (vf_in is cat of obs,acs)
+        # if the sum of the gradients positive w/respect Q.mean that indicates that we want to increase that param?
+        curr_agent.critic_grad_by_actions = [vf_in.grad[:,i-5].sum() for i in range(curr_agent.param_dim)]
+        curr_agent.critic_optimizer.zero_grad()
+
+        ## ---------------------------------------------'''
+        
         pol_loss = -curr_agent.critic(vf_in).mean()
-        pol_loss += (curr_pol_out**2).mean() * 1e-3
+        pol_loss += (curr_pol_out**2).mean() * 1e-3 # ?
         pol_loss.backward()
         if parallel:
             average_gradients(curr_agent.policy)
-        #torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 0.5) # do we want to clip the gradients?
-        old_weights = curr_agent.policy.out_param.weight.clone()
+        torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 0.5) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
-        new_weights = curr_agent.policy.out_param.weight.clone()
-        print("ASLKDJASLKDJASKLDJASD:",(old_weights - new_weights).abs_().mean())  # get 0
         if logger is not None:
             logger.add_scalars('agent%i/losses' % agent_i,
                                {'vf_loss': vf_loss,
