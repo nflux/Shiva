@@ -53,7 +53,7 @@ USE_CUDA = False
 
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-steps_per_update = 10
+steps_per_update = 25
 
 batch_size = 128
 hidden_dim = int(1024)
@@ -84,7 +84,7 @@ env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_len
 if use_viewer:
     env._start_viewer()
 
-time.sleep(0.1)
+time.sleep(0.3)
 print("Done connecting to the server ")
 
 # initializing the maddpg 
@@ -126,7 +126,7 @@ for ep_i in range(0, num_episodes):
         #for the duration of 100 episode with maximum length of 500 time steps
         time_step = 0
         kickable_counter = 0
-        for et_i in range(0, episode_length+1):
+        for et_i in range(0, episode_length):
 
 
             # gather all the observations into a torch tensor 

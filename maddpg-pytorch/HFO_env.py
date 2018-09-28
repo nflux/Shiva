@@ -381,23 +381,10 @@ class HFO_env():
         elif param == 3: # kick power
             return ((self.action_params[agentID][3].clip(-1,1) + 1)/2)*100
         elif param == 4: # kick deg
-            self.action_params[agentID][4].clip(-1,1)*180
+            return self.action_params[agentID][4].clip(-1,1)*180
 
         # with tackle
 
-        '''print(self.action_params[agentID][0])
-        if self.action_params[agentID][0] > 100 or self.action_params[agentID][0] < -100:
-            print("INVALID 0\n\n\n\n" ,self.action_params[agentID][0])
-        elif self.action_params[agentID][1] > 180 or self.action_params[agentID][1] < -180:
-            print("INVALID 1\n\n\n\n",self.action_params[agentID][1])
-        elif self.action_params[agentID][2] > 180 or self.action_params[agentID][2] < -180:
-            print("INVALID 2\n\n\n\n",self.action_params[agentID][2])
-        elif self.action_params[agentID][3] > 180 or self.action_params[agentID][3] < -180:
-            print("INVALID 3\n\n\n\n",self.action_params[agentID][3])
-        elif self.action_params[agentID][4] > 100 or self.action_params[agentID][4] < 0:
-            print("INVALID 4\n\n\n\n ",self.action_params[agentID][4])
-        elif self.action_params[agentID][5] > 180 or self.action_params[agentID][5] < -180:
-            print("INVALID 5\n\n\n\n",self.action_params[agentID][5])'''
 
     def get_excess_param_distance(self,agentID):
         distance = 0
@@ -527,7 +514,7 @@ class HFO_env():
                 self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                 self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                 
-                while j < fpt+1:
+                while j < fpt:
                     # If the action flag is set, each thread takes its action
                     # Sets its personal flag to false, such that if all agents have taken their action
                     # and have updated values we may return to the Step function call
