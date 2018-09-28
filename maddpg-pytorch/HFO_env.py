@@ -55,7 +55,7 @@ class HFO_env():
                  goalie = False, num_trials = 10000,fpt = 100,feat_lvl = 'high',
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
                  offense_on_ball=0, fullstate = False, seed = 123,
-                 ball_x_min = 0.0, ball_x_max = 0.5, verbose = False, log_game=False,
+                 ball_x_min = 0.3, ball_x_max = 0.5, verbose = False, log_game=False,
                  log_dir="log"):
         
 
@@ -372,7 +372,7 @@ class HFO_env():
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,param):
         if param == 0: # dash power
-            return ((self.action_params[agentID][0].clip(-1,1) + 1)/2)*100
+            return ((self.action_params[agentID][0].clip(-1,1) + 1)/2)*100 # only allows for positive dash power, change later
         elif param == 1: # dash deg
             return self.action_params[agentID][1].clip(-1,1)*180
         elif param == 2: # turn deg
@@ -407,7 +407,6 @@ class HFO_env():
         #if team_kickable :
         #    reward+= 1
         
-
         if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous): # uses action just performed, with previous obs, (both at T)
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
            
@@ -415,9 +414,12 @@ class HFO_env():
         #if self.team_obs[agentID][46] > .99 or self.team_obs[agentID][47] > .99 or self.team_obs[agentID][48] > .99  or self.team_obs[agentID][49] > .99:
         #    reward += -.1
         
+        
+        # add a penalty for rnning out of stamina?
+        
 
         ####################### penalty based on sum of square distances of excess params ##############
-        reward += -self.get_excess_param_distance(agentID)
+        reward += -self.get_excess_param_distance(agentID)*0.1
         
         ####################### penalty for invalid action  ###############################
         if self.feat_lvl == 'high':        
@@ -441,7 +443,7 @@ class HFO_env():
         ####################### reduce ball distance to goal - using delta  ##################
         r,_,_ = self.ball_distance_to_goal(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (3*.6)*(r_prev - r)
+        reward += (3)*(r_prev - r)
         ##################################################################################
         
         if s=='Goal':

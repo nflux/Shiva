@@ -4,7 +4,7 @@ from gym.spaces import Box, Discrete
 from utils.networks import MLPNetwork
 from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbel_softmax
 from utils.agents import DDPGAgent
-
+import numpy as np
 MSELoss = torch.nn.MSELoss()
 
 class MADDPG(object):
@@ -12,7 +12,7 @@ class MADDPG(object):
     Wrapper class for DDPG-esque (i.e. also MADDPG) agents in multi-agent task
     """
     def __init__(self, agent_init_params, alg_types,
-                 gamma=0.95, tau=0.01, lr=0.01, hidden_dim=64,
+                 gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
                  discrete_action=True):
         """
         Inputs:
@@ -31,14 +31,15 @@ class MADDPG(object):
         """
         self.nagents = len(alg_types)
         self.alg_types = alg_types
-        self.agents = [DDPGAgent(lr=lr, discrete_action=discrete_action,
-                                 hidden_dim=hidden_dim,
+        self.agents = [DDPGAgent(discrete_action=discrete_action,
+                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
                                  **params)
                        for params in agent_init_params]
         self.agent_init_params = agent_init_params
         self.gamma = gamma
         self.tau = tau
-        self.lr = lr
+        self.a_lr = a_lr
+        self.c_lr = c_lr
         self.discrete_action = discrete_action
         self.pol_dev = 'cpu'  # device for policies
         self.critic_dev = 'cpu'  # device for critics
@@ -131,7 +132,11 @@ class MADDPG(object):
         vf_loss.backward() 
         if parallel:
             average_gradients(curr_agent.critic)
-        #torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 0.5)
+        
+  
+        torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 10)
+        
+        
         curr_agent.critic_optimizer.step()
 
         curr_agent.policy_optimizer.zero_grad()
@@ -181,7 +186,9 @@ class MADDPG(object):
         pol_loss.backward()
         if parallel:
             average_gradients(curr_agent.policy)
-        #torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 0.5) # do we want to clip the gradients?
+
+        torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 10) # do we want to clip the gradients?
+
         curr_agent.policy_optimizer.step()
         if logger is not None:
             logger.add_scalars('agent%i/losses' % agent_i,
@@ -250,7 +257,7 @@ class MADDPG(object):
 
     @classmethod
     def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",
-                      gamma=0.95, tau=0.01, lr=0.01, hidden_dim=64,discrete_action=True):
+                      gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -302,7 +309,8 @@ class MADDPG(object):
                                       'num_in_critic': num_in_critic})
             
         ## change for continuous
-        init_dict = {'gamma': gamma, 'tau': tau, 'lr': lr,
+        init_dict = {'gamma': gamma, 'tau': tau, 'a_lr': a_lr,
+                     'c_lr':c_lr,
                      'hidden_dim': hidden_dim,
                      'alg_types': alg_types,
                      'agent_init_params': agent_init_params,

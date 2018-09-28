@@ -47,18 +47,20 @@ num_episodes = 100000
 episode_length = 500 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 3000  # Haus uses over 10,000 updates --
-
+num_explore_episodes = 200  # Haus uses over 10,000 updates --
+burn_in_iterations = 100000
+burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-steps_per_update = 25
+steps_per_update = 1
 
-batch_size = 128
+batch_size = 16
 hidden_dim = int(1024)
-lr = 0.001
-tau = 0.0001
+a_lr = 0.00001
+c_lr = 0.001
+tau = 0.001
 
 t = 0
 time_step = 0
@@ -91,7 +93,8 @@ print("Done connecting to the server ")
 maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   adversary_alg= "MADDPG",
                                   tau=tau,
-                                  lr=lr,
+                                  a_lr=a_lr,
+                                  c_lr=c_lr,
                                   hidden_dim=hidden_dim ,discrete_action=discrete_action)
 
 
@@ -119,7 +122,10 @@ for ep_i in range(0, num_episodes):
 
         maddpg.prep_rollouts(device='cpu')
         #define the noise used for exploration
-        explr_pct_remaining = max(0, num_explore_episodes - ep_i) / num_explore_episodes
+        if ep_i < burn_in_episodes:
+            explr_pct_remaining = 1.0
+        else:
+            explr_pct_remaining = max(0, num_explore_episodes - ep_i + burn_in_episodes) / (num_explore_episodes)
         maddpg.scale_noise(final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)
         
         maddpg.reset_noise()
@@ -187,7 +193,7 @@ for ep_i in range(0, num_episodes):
                 step_logger_df.to_csv('history.csv')
             
             if (len(replay_buffer) >= batch_size and
-                (t % steps_per_update) < 1):
+                (t % steps_per_update) < 1) and t > burn_in_iterations:
                 #if USE_CUDA:
                 #    maddpg.prep_training(device='gpu')
                 #else:
@@ -195,7 +201,7 @@ for ep_i in range(0, num_episodes):
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
                         sample = replay_buffer.sample(batch_size,
-                                                      to_gpu=False,norm_rews=False)
+                                                      to_gpu=False,norm_rews=True)
                         #print('a_i ' , a_i )
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()

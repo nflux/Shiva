@@ -12,7 +12,7 @@ class DDPGAgent(object):
     critic, exploration noise)
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, hidden_dim=64,
-                 lr=0.001, discrete_action=True):
+                 a_lr=0.001, c_lr=0.001, discrete_action=True):
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -21,12 +21,12 @@ class DDPGAgent(object):
         """
         self.policy = MLPNetwork(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
-                                 discrete_action=discrete_action, is_actor= True,norm_in= False,agent=self)
+                                 discrete_action=discrete_action, is_actor= True,norm_in= True,agent=self)
         self.critic = MLPNetwork(num_in_critic, 1,
                                  hidden_dim=hidden_dim,is_actor=False,norm_in= False,agent=self)
         self.target_policy = MLPNetwork(num_in_pol, num_out_pol,
                                         hidden_dim=hidden_dim,is_actor=True,
-                                        discrete_action=discrete_action,norm_in= False,agent=self)
+                                        discrete_action=discrete_action,norm_in= True,agent=self)
         self.target_critic = MLPNetwork(num_in_critic, 1,
                                         hidden_dim=hidden_dim,is_actor=False,norm_in= False,agent=self)
         hard_update(self.target_policy, self.policy)
@@ -34,8 +34,8 @@ class DDPGAgent(object):
         self.param_dim = 5
         self.action_dim = 3
         self.critic_grad_by_action = np.zeros(self.param_dim)
-        self.policy_optimizer = Adam(self.policy.parameters(), lr=lr, weight_decay =0)
-        self.critic_optimizer = Adam(self.critic.parameters(), lr=lr, weight_decay=0)
+        self.policy_optimizer = Adam(self.policy.parameters(), lr=a_lr, weight_decay =0)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
         if not discrete_action: # input to OUNoise is size of param space # TODO change OUNoise param to # params
             self.exploration = OUNoise(self.param_dim) # hard coded
         else:

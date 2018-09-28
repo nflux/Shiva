@@ -43,7 +43,8 @@ class MLPNetwork(nn.Module):
 
             self.out_param = nn.Linear(128, self.param_size)
             self.out_param.weight.data.normal_(0, 3e-3) 
-
+            #self.out_param_fn = F.tanh
+            self.out_param_fn = lambda x: x
         else:
             self.out = nn.Linear(128,out_dim)
         
@@ -67,9 +68,9 @@ class MLPNetwork(nn.Module):
         if self.is_actor and not self.discrete_action:
  
             self.final_out_action = self.out_fn(self.out_action(h4))
-            self.current_params = Variable(self.out_fn(self.out_param(h4)),requires_grad=True)
+            self.final_out_params = Variable(self.out_param_fn(self.out_param(h4)),requires_grad=True)
             #h = self.current_params.register_hook(self.invert)
-            out = torch.cat((self.final_out_action, self.current_params),1)
+            out = torch.cat((self.final_out_action, self.final_out_params),1)
             #print(out)
         else:
             out = self.out_fn(self.out(h4))
