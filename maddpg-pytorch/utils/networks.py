@@ -70,7 +70,7 @@ class MLPNetwork(nn.Module):
         if self.is_actor and not self.discrete_action:
  
             self.final_out_action = self.out_fn(self.out_action(h4))
-            self.final_out_params = Variable(self.out_param_fn(self.out_param(h4)),requires_grad=True)
+            self.final_out_params = Variable(self.out_param_fn(self.out_param(h4)),requires_grad=False)
             #h = self.current_params.register_hook(self.invert)
             out = torch.cat((self.final_out_action, self.final_out_params),1)
             #print(out)
