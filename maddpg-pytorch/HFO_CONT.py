@@ -2,13 +2,13 @@ import itertools
 import random
 import numpy as np
 import random 
-import tensorflow as tf
-import matplotlib.pyplot as plt 
-import scipy.misc
+#import tensorflow as tf
+#import matplotlib.pyplot as plt 
+#import scipy.misc
 import os 
 import csv
 import itertools 
-import tensorflow.contrib.slim as slim
+#import tensorflow.contrib.slim as slim
 import numpy as np
 from utils.misc import hard_update, gumbel_softmax, onehot_from_logits
 
@@ -47,14 +47,15 @@ num_episodes = 100000
 episode_length = 500 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 200  # Haus uses over 10,000 updates --
-burn_in_iterations = 100000
+num_explore_episodes = 20  # Haus uses over 10,000 updates --
+burn_in_iterations = 500000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
 final_noise_scale = 0.1
 init_noise_scale = 1.00
 steps_per_update = 1
+untouched_time = 500
 
 batch_size = 32
 hidden_dim = int(1024)
@@ -65,7 +66,7 @@ tau = 0.001
 t = 0
 time_step = 0
 kickable_counter = 0
-n_training_threads = 1
+n_training_threads = 8
 explore = True
 use_viewer = True
 
@@ -80,13 +81,13 @@ if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
         
 env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
-              feat_lvl = feature_level, act_lvl = action_level, untouched_time = episode_length,fullstate=True)
+              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True)
 
 # if you want viewer
 if use_viewer:
     env._start_viewer()
 
-time.sleep(0.3)
+time.sleep(2)
 print("Done connecting to the server ")
 
 # initializing the maddpg 
@@ -218,7 +219,7 @@ for ep_i in range(0, num_episodes):
             
                 
                 #print(step_logger_df) 
-            if t%48000 == 0 and use_viewer:
+            if t%30000 == 0 and use_viewer:
                 env._start_viewer()       
            
         ep_rews = replay_buffer.get_average_rewards(time_step)
