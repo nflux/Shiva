@@ -54,11 +54,11 @@ USE_CUDA = False
 
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-steps_per_update = 1
+steps_per_update = 2
 
-batch_size = 16
+batch_size = 32
 hidden_dim = int(1024)
-a_lr = 0.00001
+a_lr = 0.0001
 c_lr = 0.001
 tau = 0.001
 
@@ -201,7 +201,7 @@ for ep_i in range(0, num_episodes):
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
                         sample = replay_buffer.sample(batch_size,
-                                                      to_gpu=False,norm_rews=True)
+                                                      to_gpu=False,norm_rews=False)
                         #print('a_i ' , a_i )
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()

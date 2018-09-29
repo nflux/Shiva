@@ -419,7 +419,7 @@ class HFO_env():
         
 
         ####################### penalty based on sum of square distances of excess params ##############
-        reward += -self.get_excess_param_distance(agentID)*0.1
+        #reward += -self.get_excess_param_distance(agentID)*0.1
         
         ####################### penalty for invalid action  ###############################
         if self.feat_lvl == 'high':        
@@ -447,7 +447,7 @@ class HFO_env():
         ##################################################################################
         
         if s=='Goal':
-            reward+=5
+            reward+=10
         #---------------------------
         #elif s=='CapturedByDefense':
         #    reward+=-100

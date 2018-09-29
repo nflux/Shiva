@@ -21,12 +21,12 @@ class DDPGAgent(object):
         """
         self.policy = MLPNetwork(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
-                                 discrete_action=discrete_action, is_actor= True,norm_in= True,agent=self)
+                                 discrete_action=discrete_action, is_actor= True,norm_in= False,agent=self)
         self.critic = MLPNetwork(num_in_critic, 1,
                                  hidden_dim=hidden_dim,is_actor=False,norm_in= False,agent=self)
         self.target_policy = MLPNetwork(num_in_pol, num_out_pol,
                                         hidden_dim=hidden_dim,is_actor=True,
-                                        discrete_action=discrete_action,norm_in= True,agent=self)
+                                        discrete_action=discrete_action,norm_in= False,agent=self)
         self.target_critic = MLPNetwork(num_in_critic, 1,
                                         hidden_dim=hidden_dim,is_actor=False,norm_in= False,agent=self)
         hard_update(self.target_policy, self.policy)
