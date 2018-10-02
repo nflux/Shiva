@@ -134,7 +134,7 @@ class MADDPG(object):
             average_gradients(curr_agent.critic)
         
   
-        torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 10)
+        torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 0.5)
         
         
         curr_agent.critic_optimizer.step()
@@ -151,7 +151,7 @@ class MADDPG(object):
             curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
         else:
 
-            curr_pol_out = curr_agent.policy(obs[agent_i])
+            curr_pol_out = curr_agent.policy(torch.autograd.Variable(obs[agent_i],requires_grad=True))
             curr_pol_vf_in = curr_pol_out
         if self.alg_types[agent_i] == 'MADDPG':
             all_pol_acs = []
@@ -162,39 +162,61 @@ class MADDPG(object):
                     all_pol_acs.append(onehot_from_logits(pi(ob)))
                 else:
                     all_pol_acs.append(pi(ob))
+                    
             vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
         else:  # DDPG
             vf_in = torch.cat((obs[agent_i], curr_pol_vf_in),
                               dim=1)
- 
-        '''## want grad of Q respect to A ----------------
-        vf_in.requires_grad_(True)
-        Q = curr_agent.critic(vf_in)
-        #print(Q > 0)
-        Q.backward(retain_graph=True)
-        print(vf_in.grad[:-1] > 0 )
-        #print(vf_in.grad[:-1])
-        # [:,-i] -1 corresponds to the last param for each sample in batch, (vf_in is cat of obs,acs)
-        # if the sum of the gradients positive w/respect Q.mean that indicates that we want to increase that param?
-        curr_agent.critic_grad_by_actions = [vf_in.grad[:,i-5].sum() for i in range(curr_agent.param_dim)]
-        curr_agent.critic_optimizer.zero_grad()
-
-        ## ---------------------------------------------'''
         
+        
+        ## want grad of Q respect to A ----------------
+        self.params = vf_in.data
+        self.param_dim = curr_agent.param_dim
+
+        hook = vf_in.register_hook(self.inject)
         pol_loss = -curr_agent.critic(vf_in).mean()
-        #pol_loss += (curr_pol_out**2).mean() * 1e-3 # regularize size of action
+        pol_loss += (curr_pol_out**2).mean() * 1e-3 # regularize size of action
         pol_loss.backward()
+        hook.remove()
+
+
         if parallel:
             average_gradients(curr_agent.policy)
 
-        torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 10) # do we want to clip the gradients?
-
+        torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 0.5) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
+        # ------------------------------------
         if logger is not None:
             logger.add_scalars('agent%i/losses' % agent_i,
                                {'vf_loss': vf_loss,
                                 'pol_loss': pol_loss},
                                self.niter)
+
+            
+    def inject(self,grad):
+        new_grad = grad.clone()
+        new_grad = self.invert(new_grad,self.params,self.param_dim)
+        return new_grad
+    
+    # takes input gradients and activation values for params and returns scaled gradients
+    def invert(self,grad,params,num_params):
+        for sample in range(grad.shape[0]): # batch size
+            for index in range(num_params):
+                # last 5 are the params
+                if grad[sample][-1 - index] < 0:
+                    if params[sample][-1-index] > 1:
+                        grad[sample][-1 - index] *= ((1.0-params[sample][-1 - index])/(1-(-1))) # scale
+                    else:
+                        grad[sample][-1 - index] *= ((1.0-params[sample][-1 - index])/(1-(-1))) # scale
+
+                else:
+                    if params[sample][-1-index] <= -1:
+                        grad[sample][-1 - index] *= -1*((params[sample][-1 - index]-(-1.0))/(1-(-1)))
+
+                    else:
+                        grad[sample][-1 - index] *= ((params[sample][-1 - index]-(-1.0))/(1-(-1)))
+        return grad
+    
 
     def update_all_targets(self):
         """

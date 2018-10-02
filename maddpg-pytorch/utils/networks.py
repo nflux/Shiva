@@ -29,6 +29,7 @@ class MLPNetwork(nn.Module):
         else:
             self.in_fn = lambda x: x
         self.fc1 = nn.Linear(input_dim, 1024)
+        
         self.fc1.weight.data.normal_(0, 0.01) 
         self.fc2 = nn.Linear(1024, 512)
         self.fc2.weight.data.normal_(0, 0.01) 
@@ -43,8 +44,8 @@ class MLPNetwork(nn.Module):
 
             self.out_param = nn.Linear(128, self.param_size)
             self.out_param.weight.data.normal_(0, 0.01) 
-            self.out_param_fn = F.tanh
-            #self.out_param_fn = lambda x: x
+            #self.out_param_fn = F.tanh
+            self.out_param_fn = lambda x: x
         else:
             self.out = nn.Linear(128,out_dim)
             self.out.weight.data.normal_(0, 0.01) 
@@ -70,20 +71,12 @@ class MLPNetwork(nn.Module):
         if self.is_actor and not self.discrete_action:
  
             self.final_out_action = self.out_fn(self.out_action(h4))
-            self.final_out_params = Variable(self.out_param_fn(self.out_param(h4)),requires_grad=False)
+            self.final_out_params = Variable(self.out_param_fn(self.out_param(h4)),requires_grad=True)
             #h = self.current_params.register_hook(self.invert)
             out = torch.cat((self.final_out_action, self.final_out_params),1)
-            #print(out)
+           # print("OUT",out)
+
         else:
             out = self.out_fn(self.out(h4))
-        return out
 
-    def invert(self, grad):
-        print("ADJUSTING GRADIENT")
-        for i in range(len(grad)):
-            for j in range(len(grad[i])):
-                if self.agent.critic_grad_by_actions[j] > 0:
-                    grad[i][j] *= ((1.0-self.current_params[0][j])/(1-(-1)))
-                else:
-                    grad[i][j] *= ((self.current_params[0][j]-(-1.0))/(1-(-1)))
-        return grad
+        return out

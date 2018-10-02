@@ -112,6 +112,7 @@ class HFO_env():
         self.num_OA = num_OA
         self.num_ONPC = num_ONPC
 
+        self.been_kicked = False
         self.act_lvl = act_lvl
         self.feat_lvl = feat_lvl
         
@@ -372,7 +373,7 @@ class HFO_env():
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,param):
         if param == 0: # dash power
-            return ((self.action_params[agentID][0].clip(-1,1) + 1)/2)*100 # only allows for positive dash power, change later
+            return (self.action_params[agentID][0].clip(-1,1))*100 # only allows for positive dash power, change later
         elif param == 1: # dash deg
             return self.action_params[agentID][1].clip(-1,1)*180
         elif param == 2: # turn deg
@@ -407,8 +408,9 @@ class HFO_env():
         #if team_kickable :
         #    reward+= 1
         
-        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous): # uses action just performed, with previous obs, (both at T)
+        if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous) and not self.been_kicked: # uses action just performed, with previous obs, (both at T)
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
+            self.been_kicked = True
            
         # out of bounds penalty
         #if self.team_obs[agentID][46] > .99 or self.team_obs[agentID][47] > .99 or self.team_obs[agentID][48] > .99  or self.team_obs[agentID][49] > .99:
@@ -515,7 +517,7 @@ class HFO_env():
                 d = False
                 self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                 self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
-                
+                self.been_kicked = False
                 while j < fpt:
                     # If the action flag is set, each thread takes its action
                     # Sets its personal flag to false, such that if all agents have taken their action

@@ -19,6 +19,8 @@ class DDPGAgent(object):
             num_out_pol (int): number of dimensions for policy output
             num_in_critic (int): number of dimensions for critic input
         """
+        self.updating_actor = False
+
         self.policy = MLPNetwork(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action, is_actor= True,norm_in= False,agent=self)
