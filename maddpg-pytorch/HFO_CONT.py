@@ -49,7 +49,7 @@ episode_length = 500 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 500000 # for time step
+burn_in_iterations = 50000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
@@ -154,25 +154,24 @@ for ep_i in range(0, num_episodes):
             # convert actions to numpy arrays
             agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
             # rearrange actions to be per environment
+            params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions]) 
+
             
-            
-            actions_params_for_buffer = np.array([[ac[i] for ac in agent_actions] for i in range(1)]).reshape(
-                env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+           
             actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
             if explore:
-                noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,3),eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in actions]     # get eps greedy action
+                noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,len(env.action_list)),eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in actions]     # get eps greedy action
             else:
-                noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,3),eps = 0) for a in actions]     # get eps greedy action
+                noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,len(env.action_list)),eps = 0) for a in actions]     # get eps greedy action
 
-
-            
-            params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions])
-            #print("ACTIONS: ",actions)
-            agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions[0]] # convert the one hot encoded actions  to list indexes 
-
-     
+            noisey_actions_for_buffer = [ac.data.numpy() for ac in noisey_actions]
+            noisey_actions_for_buffer = np.asarray([ac[0] for ac in noisey_actions_for_buffer])
+#np.ndarray.flatten
+            actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params)] for i in range(1)]).reshape(
+                env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+            agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes 
             obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
-
+            
 
             # If kickable is True one of the teammate agents has possession of the ball
             kickable = False
@@ -211,7 +210,7 @@ for ep_i in range(0, num_episodes):
                 for u_i in range(1):
                     for a_i in range(maddpg.nagents):
                         sample = replay_buffer.sample(batch_size,
-                                                      to_gpu=False,norm_rews=False)
+                                                      to_gpu=False,norm_rews=True)
                         #print('a_i ' , a_i )
                         maddpg.update(sample, a_i )
                     maddpg.update_all_targets()

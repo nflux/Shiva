@@ -102,9 +102,12 @@ class MADDPG(object):
                 all_trgt_acs = [onehot_from_logits(pi(nobs)) for pi, nobs in
                                 zip(self.target_policies, next_obs)]
             else:
-                all_trgt_acs = [pi(nobs) for pi, nobs in zip(self.target_policies,
-                                                             next_obs)]
+                all_trgt_acs = [torch.cat(
+                    (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),pi(nobs)[:,curr_agent.action_dim:]),1)
+                                for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
+                
             trgt_vf_in = torch.cat((*next_obs, *all_trgt_acs), dim=1)
+                    
         else:  # DDPG
             if self.discrete_action:
                 trgt_vf_in = torch.cat((next_obs[agent_i],
@@ -175,7 +178,7 @@ class MADDPG(object):
 
         hook = vf_in.register_hook(self.inject)
         pol_loss = -curr_agent.critic(vf_in).mean()
-        pol_loss += (curr_pol_out**2).mean() * 1e-3 # regularize size of action
+        #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
         hook.remove()
 
