@@ -204,17 +204,9 @@ class MADDPG(object):
             for index in range(num_params):
                 # last 5 are the params
                 if grad[sample][-1 - index] < 0:
-                    if params[sample][-1-index] > 1:
-                        grad[sample][-1 - index] *= ((1.0-params[sample][-1 - index])/(1-(-1))) # scale
-                    else:
-                        grad[sample][-1 - index] *= ((1.0-params[sample][-1 - index])/(1-(-1))) # scale
-
+                    grad[sample][-1 - index] *= ((1.0-params[sample][-1 - index])/(1-(-1))) # scale
                 else:
-                    if params[sample][-1-index] <= -1:
-                        grad[sample][-1 - index] *= -1*((params[sample][-1 - index]-(-1.0))/(1-(-1)))
-
-                    else:
-                        grad[sample][-1 - index] *= ((params[sample][-1 - index]-(-1.0))/(1-(-1)))
+                    grad[sample][-1 - index] *= ((params[sample][-1 - index]-(-1.0))/(1-(-1)))
         return grad
     
 

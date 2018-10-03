@@ -22,6 +22,7 @@ class MLPNetwork(nn.Module):
         self.discrete_action = discrete_action
         self.action_size = 3
         self.param_size = 5
+        self.count = 0
         if norm_in:  # normalize inputs
             self.in_fn = nn.BatchNorm1d(input_dim)
             self.in_fn.weight.data.fill_(1)
@@ -72,8 +73,10 @@ class MLPNetwork(nn.Module):
  
             self.final_out_action = self.out_fn(self.out_action(h4))
             self.final_out_params = Variable(self.out_param_fn(self.out_param(h4)),requires_grad=True)
-            #h = self.current_params.register_hook(self.invert)
             out = torch.cat((self.final_out_action, self.final_out_params),1)
+            #if self.count % 100 < 1:
+                #print(out)
+            self.count += 1
            # print("OUT",out)
 
         else:
