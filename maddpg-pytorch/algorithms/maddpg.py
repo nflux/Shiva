@@ -269,6 +269,27 @@ class MADDPG(object):
                      'agent_params': [a.get_params() for a in self.agents]}
         torch.save(save_dict, filename)
 
+    #Not finished
+    def save_actor(self, filename):
+        """
+        Save trained parameters of all agent's actor network into one file
+        """
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
+        save_dict = {'init_dict': self.init_dict,
+                     'agent_params': [a.get_params() for a in self.agents]}
+        torch.save(save_dict, filename)
+
+    #Not finished
+    def save_critic(self, filename):
+        """
+        Save trained parameters of all agent's critic networks into one file
+        """
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
+        save_dict = {'init_dict': self.init_dict,
+                     'agent_params': [a.get_params() for a in self.agents]}
+        torch.save(save_dict, filename)
+
+
     @classmethod
     def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",
                       gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True):

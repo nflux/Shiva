@@ -2,6 +2,7 @@ import itertools
 import random
 import numpy as np
 import random 
+import datetime
 #import tensorflow as tf
 #import matplotlib.pyplot as plt 
 #import scipy.misc
@@ -44,11 +45,11 @@ action_level = 'low'
 feature_level = 'low'
 
 num_episodes = 100000
-episode_length = 500 # FPS
+episode_length = 200 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 500000 # for time step
+burn_in_iterations = 0 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
@@ -56,6 +57,14 @@ final_noise_scale = 0.1
 init_noise_scale = 1.00
 steps_per_update = 1
 untouched_time = 500
+
+#Saving the NNs, currently set to save after each episode
+save_critic = False
+save_actor = False
+
+#Load previous NNs, currently set to load only at initialization.
+load_critic = False
+load_actor = False
 
 batch_size = 32
 hidden_dim = int(1024)
@@ -223,4 +232,17 @@ for ep_i in range(0, num_episodes):
                 env._start_viewer()       
            
         ep_rews = replay_buffer.get_average_rewards(time_step)
- #       print('episode rewards ', ep_rews )
+
+        #Saving the actor NN in local path, not finished
+        if save_actor:
+            print('Saving Actor NN')
+            current_day_time = datetime.datetime.now()
+            maddpg.save_actor('saved_NN/Actor/' + str(current_day_time.month) + '_' + str(current_day_time.day) + '_'  + str(current_day_time.year) + '_' + str(current_day_time.hour) + ':' + str(current_day_time.minute) + ":" + str(current_day_time.second) + '.pt')
+
+        #Saving the critic in local path, not finished
+        if save_critic:
+            print('Saving Critic NN')
+            maddpg.save_critic('saved_NN/Critic/' + str(current_day_time.month) + '_' + str(current_day_time.day) + '_'  + str(current_day_time.year) + '_' + str(current_day_time.hour) + ':' + str(current_day_time.minute) +  ":" + str(current_day_time.second) + '.pt')
+
+
+ #      print('episode rewards ', ep_rews )
