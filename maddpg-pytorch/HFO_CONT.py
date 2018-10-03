@@ -45,11 +45,11 @@ action_level = 'low'
 feature_level = 'low'
 
 num_episodes = 100000
-episode_length = 200 # FPS
+episode_length = 500 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 0 # for time step
+burn_in_iterations = 500000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
