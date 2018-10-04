@@ -258,7 +258,7 @@ for ep_i in range(0, num_episodes):
         ep_rews = replay_buffer.get_average_rewards(time_step)
 
         #Saves Actor/Critic every particular number of episodes
-        if ep_i%ep_save_every == 0:
+        if ep_i%ep_save_every == 0 and ep_i != 0:
             #Saving the actor NN in local path, needs to be tested by loading
             if save_actor:
                 print('Saving Actor NN')
