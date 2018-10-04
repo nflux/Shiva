@@ -81,7 +81,7 @@ untouched_time = 500
 save_critic = False
 save_actor = False
 #The NNs saved every #th episode.
-ep_save_every = 100
+ep_save_every = 20
 
 #Load previous NNs, currently set to load only at initialization.
 load_critic = False
@@ -263,14 +263,22 @@ for ep_i in range(0, num_episodes):
             if save_actor:
                 print('Saving Actor NN')
                 current_day_time = datetime.datetime.now()
-                maddpg.save_actor('saved_NN/Actor/' + str(current_day_time.month) + '_' + str(current_day_time.day) + '_'  + str(current_day_time.year) + '_' + str(current_day_time.hour) + ':' + str(current_day_time.minute) + ":" + str(current_day_time.second) + '.pth')
+                maddpg.save_actor('saved_NN/Actor/' + str(current_day_time.month) + 
+                                                '_' + str(current_day_time.day) + 
+                                                '_'  + str(current_day_time.year) + 
+                                                '_' + str(current_day_time.hour) + 
+                                                ':' + str(current_day_time.minute) + 
+                                                '_episode_' + str(ep_i) + '.pth')
 
             #Saving the critic in local path, needs to be tested by loading
             if save_critic:
                 print('Saving Critic NN')
-                maddpg.save_critic('saved_NN/Critic/' + str(current_day_time.month) + '_' + str(current_day_time.day) + '_'  + str(current_day_time.year) + '_' + str(current_day_time.hour) + ':' + str(current_day_time.minute) +  ":" + str(current_day_time.second) + '.ptk')
-
-
+                maddpg.save_critic('saved_NN/Critic/' + str(current_day_time.month) + 
+                                                '_' + str(current_day_time.day) + 
+                                                '_'  + str(current_day_time.year) + 
+                                                '_' + str(current_day_time.hour) + 
+                                                ':' + str(current_day_time.minute) + 
+                                                '_episode_' + str(ep_i) + '.pth')
                
 
  
