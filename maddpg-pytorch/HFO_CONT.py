@@ -37,7 +37,7 @@ from HFO_env import *
 
 
 
- # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 170000 --frames-per-trial=100 --seed 123 --untouched-time=100 --record 
+# ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 170000 --frames-per-trial=100 --seed 123 --untouched-time=100 --record 
     
 # default settings
 
@@ -61,6 +61,8 @@ untouched_time = 500
 #Saving the NNs, currently set to save after each episode
 save_critic = False
 save_actor = False
+#The NNs saved every #th episode.
+ep_save_every = 100
 
 #Load previous NNs, currently set to load only at initialization.
 load_critic = False
@@ -224,24 +226,24 @@ for ep_i in range(0, num_episodes):
                                                         ignore_index=True)           
                 break;
                 
-            
-                
                 #print(step_logger_df) 
             if t%30000 == 0 and use_viewer:
                 env._start_viewer()       
            
         ep_rews = replay_buffer.get_average_rewards(time_step)
 
-        #Saving the actor NN in local path, not finished
-        if save_actor:
-            print('Saving Actor NN')
-            current_day_time = datetime.datetime.now()
-            maddpg.save_actor('saved_NN/Actor/' + str(current_day_time.month) + '_' + str(current_day_time.day) + '_'  + str(current_day_time.year) + '_' + str(current_day_time.hour) + ':' + str(current_day_time.minute) + ":" + str(current_day_time.second) + '.pt')
+        #Saves Actor/Critic every particular number of episodes
+        if ep_i%ep_save_every == 0:
+            #Saving the actor NN in local path, needs to be tested by loading
+            if save_actor:
+                print('Saving Actor NN')
+                current_day_time = datetime.datetime.now()
+                maddpg.save_actor('saved_NN/Actor/' + str(current_day_time.month) + '_' + str(current_day_time.day) + '_'  + str(current_day_time.year) + '_' + str(current_day_time.hour) + ':' + str(current_day_time.minute) + ":" + str(current_day_time.second) + '.pth')
 
-        #Saving the critic in local path, not finished
-        if save_critic:
-            print('Saving Critic NN')
-            maddpg.save_critic('saved_NN/Critic/' + str(current_day_time.month) + '_' + str(current_day_time.day) + '_'  + str(current_day_time.year) + '_' + str(current_day_time.hour) + ':' + str(current_day_time.minute) +  ":" + str(current_day_time.second) + '.pt')
+            #Saving the critic in local path, needs to be tested by loading
+            if save_critic:
+                print('Saving Critic NN')
+                maddpg.save_critic('saved_NN/Critic/' + str(current_day_time.month) + '_' + str(current_day_time.day) + '_'  + str(current_day_time.year) + '_' + str(current_day_time.hour) + ':' + str(current_day_time.minute) +  ":" + str(current_day_time.second) + '.ptk')
 
 
  #      print('episode rewards ', ep_rews )
