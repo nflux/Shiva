@@ -78,7 +78,29 @@ class MADDPG(object):
             actions: List of actions for each agent
         """
         return [a.step(obs, explore=explore) for a, obs in zip(self.agents,
-                                                                 observations)]
+                                                       observations)]
+
+    
+    
+
+    def zero_params(self,params,actions_oh):
+        for a,p in zip(actions_oh,params):
+            
+            if np.argmax(a.data.numpy()) == 0:
+                p[2 + len(a)] = 0 # offset by num of actions to get params
+                p[3 + len(a)] = 0
+                p[4 + len(a)] = 0
+            if np.argmax(a.data.numpy()) == 1:
+                p[0 + len(a)] = 0
+                p[1 + len(a)] = 0
+                p[3 + len(a)] = 0
+                p[4 + len(a)] = 0
+            if np.argmax(a.data.numpy()) == 2:
+                p[0 + len(a)] = 0
+                p[1 + len(a)] = 0
+                p[2 + len(a)] = 0
+        return params
+
 
     def update(self, sample, agent_i, parallel=False, logger=None):
         """
@@ -102,8 +124,15 @@ class MADDPG(object):
                 all_trgt_acs = [onehot_from_logits(pi(nobs)) for pi, nobs in
                                 zip(self.target_policies, next_obs)]
             else:
-                all_trgt_acs = [torch.cat(
-                    (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),pi(nobs)[:,curr_agent.action_dim:]),1)
+                
+                '''print(
+                    [(onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),pi(nobs)[:,curr_agent.action_dim:])
+                     for pi, nobs in zip(self.target_policies, next_obs)])
+                print([torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+                    (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
+                                for pi, nobs in zip(self.target_policies, next_obs)])'''
+                all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+                    (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
                                 for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
                 
             trgt_vf_in = torch.cat((*next_obs, *all_trgt_acs), dim=1)
@@ -131,7 +160,8 @@ class MADDPG(object):
         actual_value = curr_agent.critic(vf_in)
         
        
-        vf_loss = MSELoss(actual_value, target_value.detach()) 
+        vf_loss = MSELoss(actual_value, target_value.detach())
+        #print(vf_loss)
         vf_loss.backward() 
         if parallel:
             average_gradients(curr_agent.critic)
@@ -153,8 +183,12 @@ class MADDPG(object):
             curr_pol_out = curr_agent.policy(obs[agent_i])
             curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
         else:
-
-            curr_pol_out = curr_agent.policy(torch.autograd.Variable(obs[agent_i],requires_grad=True))
+            
+            curr_pol_out = curr_agent.policy(torch.autograd.Variable(obs[agent_i],requires_grad=True)) # ** has full outputs not onehot, not sure if correct?
+            #curr_pol_out = torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+            #        (onehot_from_logits(curr_pol_out[:,:curr_agent.action_dim]),self.zero_params(curr_pol_out,onehot_from_logits(curr_pol_out[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
+                                
+            print(curr_pol_out)
             curr_pol_vf_in = curr_pol_out
         if self.alg_types[agent_i] == 'MADDPG':
             all_pol_acs = []
@@ -164,7 +198,9 @@ class MADDPG(object):
                 elif self.discrete_action:
                     all_pol_acs.append(onehot_from_logits(pi(ob)))
                 else:
-                    all_pol_acs.append(pi(ob))
+                    all_pol_acs.append(pi(ob)) # not sure if we should onehot this
+                    #all_pol_acs.append(torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+                    #(onehot_from_logits(pi(ob)[:,:curr_agent.action_dim]),self.zero_params(pi(ob),onehot_from_logits(pi(ob)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)) 
                     
             vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
         else:  # DDPG
@@ -178,6 +214,7 @@ class MADDPG(object):
 
         hook = vf_in.register_hook(self.inject)
         pol_loss = -curr_agent.critic(vf_in).mean()
+        #print(pol_loss)
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
         hook.remove()

@@ -35,6 +35,25 @@ from algorithms.maddpg import MADDPG
 
 from HFO_env import *
 
+def zero_params(num_TA,params,action_index):
+    for i in range(num_TA):
+        if action_index[i] == 0:
+            params[i][2] = 0
+            params[i][3] = 0
+            params[i][4] = 0
+        if action_index[i] == 1:
+            params[i][0] = 0
+            params[i][1] = 0
+            params[i][3] = 0
+            params[i][4] = 0
+        if action_index[i] == 2:
+            params[i][0] = 0
+            params[i][1] = 0
+            params[i][2] = 0
+    return params
+
+            
+    
 
 
  # ./bin/HFO --offense-agents=1 --defense-npcs=0 --trials 170000 --frames-per-trial=100 --seed 123 --untouched-time=100 --record 
@@ -49,7 +68,7 @@ episode_length = 500 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 50000 # for time step
+burn_in_iterations = 500000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
@@ -166,13 +185,18 @@ for ep_i in range(0, num_episodes):
 
             noisey_actions_for_buffer = [ac.data.numpy() for ac in noisey_actions]
             noisey_actions_for_buffer = np.asarray([ac[0] for ac in noisey_actions_for_buffer])
-#np.ndarray.flatten
-            actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params)] for i in range(1)]).reshape(
-                env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+            
+
+    
+
             agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes 
             obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
             
-
+            params_for_buffer = zero_params(env.num_TA,params,agents_actions)
+            
+            actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params_for_buffer)] for i in range(1)]).reshape(
+                env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+    
             # If kickable is True one of the teammate agents has possession of the ball
             kickable = False
             kickable = np.array([env.get_kickable_status(i,obs.T) for i in range(env.num_TA)]).any()
@@ -227,7 +251,8 @@ for ep_i in range(0, num_episodes):
             
                 
                 #print(step_logger_df) 
-            if t%30000 == 0 and use_viewer:
+            #if t%30000 == 0 and use_viewer:
+            if t%30000 == 0 and use_viewer and ep_i > 1500:
                 env._start_viewer()       
            
         ep_rews = replay_buffer.get_average_rewards(time_step)
@@ -244,4 +269,8 @@ for ep_i in range(0, num_episodes):
             maddpg.save_critic('saved_NN/Critic/' + str(current_day_time.month) + '_' + str(current_day_time.day) + '_'  + str(current_day_time.year) + '_' + str(current_day_time.hour) + ':' + str(current_day_time.minute) +  ":" + str(current_day_time.second) + '.pt')
 
 
- #      print('episode rewards ', ep_rews )
+               
+
+ 
+            
+    
