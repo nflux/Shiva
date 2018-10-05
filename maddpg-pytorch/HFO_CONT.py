@@ -252,7 +252,7 @@ for ep_i in range(0, num_episodes):
                 
                 #print(step_logger_df) 
             #if t%30000 == 0 and use_viewer:
-            if t%30000 == 0 and use_viewer and ep_i > 1500:
+            if t%30000 == 0 and use_viewer and ep_i > 1600:
                 env._start_viewer()       
            
         ep_rews = replay_buffer.get_average_rewards(time_step)
