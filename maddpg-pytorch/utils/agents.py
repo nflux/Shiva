@@ -3,6 +3,8 @@ from torch.autograd import Variable
 from torch.optim import Adam
 import torch
 from .networks import MLPNetwork
+import torch.nn.functional as F
+
 from .misc import hard_update, gumbel_softmax, onehot_from_logits
 from .noise import OUNoise
 import numpy as np
@@ -12,7 +14,7 @@ class DDPGAgent(object):
     critic, exploration noise)
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, hidden_dim=64,
-                 a_lr=0.001, c_lr=0.001, discrete_action=True):
+                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=10,delta=20.0/50):
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -21,6 +23,16 @@ class DDPGAgent(object):
         """
         self.updating_actor = False
 
+        self.param_dim = 5
+        self.action_dim = 3
+        
+        
+        # D4PG
+        self.n_atoms = n_atoms
+        self.vmax = vmax
+        self.vmin = vmin
+        self.delta = delta   
+        
         self.policy = MLPNetwork(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action, is_actor= True,norm_in= False,agent=self)
@@ -33,11 +45,11 @@ class DDPGAgent(object):
                                         hidden_dim=hidden_dim,is_actor=False,norm_in= False,agent=self)
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)
-        self.param_dim = 5
-        self.action_dim = 3
+
         self.critic_grad_by_action = np.zeros(self.param_dim)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=a_lr, weight_decay =0)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
+
         if not discrete_action: # input to OUNoise is size of param space # TODO change OUNoise param to # params
             self.exploration = OUNoise(self.param_dim) # hard coded
         else:
@@ -69,6 +81,7 @@ class DDPGAgent(object):
         # mixed disc/cont
         if explore:     
             a = action[0,:self.action_dim].view(1,self.action_dim)
+            #print(a)
             p = (action[0,self.action_dim:].view(1,self.param_dim) + Variable(Tensor(self.exploration.noise()),requires_grad=False)) # get noisey params (OU)
             action = torch.cat((a,p),1) 
         #print(action)

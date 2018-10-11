@@ -68,7 +68,7 @@ episode_length = 500 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 500000 # for time step
+burn_in_iterations = 10 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
@@ -100,6 +100,13 @@ n_training_threads = 8
 explore = True
 use_viewer = True
 
+# D4PG atoms
+Vmax = 10
+Vmin = -10
+N_ATOMS = 51
+DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
+
+
 # if using low level actions use non discrete settings
 if action_level == 'high':
     discrete_action = True
@@ -111,7 +118,7 @@ if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
         
 env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
-              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True)
+              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False)
 
 # if you want viewer
 if use_viewer:
@@ -126,7 +133,8 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   tau=tau,
                                   a_lr=a_lr,
                                   c_lr=c_lr,
-                                  hidden_dim=hidden_dim ,discrete_action=discrete_action)
+                                  hidden_dim=hidden_dim ,discrete_action=discrete_action,
+                                  vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,DELTA_Z=DELTA_Z)
 
 
 
@@ -252,7 +260,7 @@ for ep_i in range(0, num_episodes):
                 
                 #print(step_logger_df) 
             #if t%30000 == 0 and use_viewer:
-            if t%30000 == 0 and use_viewer and ep_i > 1600:
+            if t%30000 == 0 and use_viewer and ep_i > 120:
                 env._start_viewer()       
            
         ep_rews = replay_buffer.get_average_rewards(time_step)

@@ -62,7 +62,7 @@ def onehot_from_logits(logits, eps=0.0):
                         enumerate(torch.rand(logits.shape[0]))])
 
 # modified for PyTorch from https://github.com/ericjang/gumbel-softmax/blob/master/Categorical%20VAE.ipynb
-def sample_gumbel(shape,eps=1e-20,tens_type=torch.FloatTensor):  # changed eps to match scale, which is our annealed % for expl #(shape, eps=1e-20, tens_type=torch.FloatTensor):
+def sample_gumbel(shape,eps=1e-20,tens_type=torch.FloatTensor):  
     """Sample from Gumbel(0, 1)"""
     U = Variable(tens_type(*shape).uniform_(), requires_grad=False)
     return -torch.log(-torch.log(U + eps) + eps)

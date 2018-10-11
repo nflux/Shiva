@@ -7,7 +7,7 @@ class MLPNetwork(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True, is_actor=False,agent=object):
+    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True, is_actor=False,agent=object,n_atoms=51):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -46,12 +46,15 @@ class MLPNetwork(nn.Module):
             self.out_param = nn.Linear(128, self.param_size)
             self.out_param.weight.data.normal_(0, 0.01) 
             self.out_param_fn = lambda x: x
-            self.out_action_fn = F.softmax
-            #self.out_action_fn = lambda x: x
+            #self.out_action_fn = F.log_softmax
+            self.out_action_fn = lambda x: x
 
-        else:
-            self.out = nn.Linear(128,out_dim)
-            self.out.weight.data.normal_(0, 0.01) 
+        else: # is critic
+            self.out = nn.Linear(128,1)
+            self.out.weight.data.normal_(0, 0.01)
+            
+            #D4PG
+            self.register_buffer("supports",torch.arange(agent.vmin,agent.vmax + agent.delta, agent.delta))
 
         
 
@@ -74,14 +77,19 @@ class MLPNetwork(nn.Module):
         if self.is_actor and not self.discrete_action:
  
             self.final_out_action = self.out_action_fn(self.out_action(h4))
-            self.final_out_params = Variable(self.out_param_fn(self.out_param(h4)),requires_grad=True)
+            self.final_out_params = self.out_param_fn(self.out_param(h4))
             out = torch.cat((self.final_out_action, self.final_out_params),1)
             if self.count % 100 < 1:
-                print(out)
+            #print(" ")
+               print("network output",out)
             self.count += 1
-            #print("OUT",out)
 
         else:
             out = self.out_fn(self.out(h4))
 
         return out
+
+    def distr_to_q(self, distr):
+        weights = F.softmax(distr, dim=1) * self.supports
+        res = weights.sum(dim=1)
+        return res.unsqueeze(dim=-1)

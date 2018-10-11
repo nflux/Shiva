@@ -13,7 +13,8 @@ class MADDPG(object):
     """
     def __init__(self, agent_init_params, alg_types,
                  gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
-                 discrete_action=True):
+                 discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51,
+                 DELTA_Z = 20.0/50):
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -33,6 +34,8 @@ class MADDPG(object):
         self.alg_types = alg_types
         self.agents = [DDPGAgent(discrete_action=discrete_action,
                                  hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
+                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
+                                 delta = DELTA_Z,
                                  **params)
                        for params in agent_init_params]
         self.agent_init_params = agent_init_params
@@ -79,13 +82,48 @@ class MADDPG(object):
         """
         return [a.step(obs, explore=explore) for a, obs in zip(self.agents,
                                                        observations)]
-
     
-    
+    # returns the distribution projection
+    def distr_projection(next_distr_v, rewards_v, dones_mask_t, gamma, device="cpu"):
+        next_distr = next_distr_v.data.cpu().numpy()
+        rewards = rewards_v.data.cpu().numpy()
+        dones_mask = dones_mask_t.cpu().numpy().astype(np.bool)
+        batch_size = len(rewards)
+        proj_distr = np.zeros((batch_size, N_ATOMS), dtype=np.float32)
 
+        for atom in range(N_ATOMS):
+            tz_j = np.minimum(Vmax, np.maximum(Vmin, rewards + (Vmin + atom * DELTA_Z) * gamma))
+            b_j = (tz_j - Vmin) / DELTA_Z
+            l = np.floor(b_j).astype(np.int64)
+            u = np.ceil(b_j).astype(np.int64)
+            eq_mask = u == l
+            proj_distr[eq_mask, l[eq_mask]] += next_distr[eq_mask, atom]
+            ne_mask = u != l
+            proj_distr[ne_mask, l[ne_mask]] += next_distr[ne_mask, atom] * (u - b_j)[ne_mask]
+            proj_distr[ne_mask, u[ne_mask]] += next_distr[ne_mask, atom] * (b_j - l)[ne_mask]
+
+        if dones_mask.any():
+            proj_distr[dones_mask] = 0.0
+            tz_j = np.minimum(Vmax, np.maximum(Vmin, rewards[dones_mask]))
+            b_j = (tz_j - Vmin) / DELTA_Z
+            l = np.floor(b_j).astype(np.int64)
+            u = np.ceil(b_j).astype(np.int64)
+            eq_mask = u == l
+            eq_dones = dones_mask.copy()
+            eq_dones[dones_mask] = eq_mask
+            if eq_dones.any():
+                proj_distr[eq_dones, l] = 1.0
+            ne_mask = u != l
+            ne_dones = dones_mask.copy()
+            ne_dones[dones_mask] = ne_mask
+            if ne_dones.any():
+                proj_distr[ne_dones, l] = (u - b_j)[ne_mask]
+                proj_distr[ne_dones, u] = (b_j - l)[ne_mask]
+        return torch.FloatTensor(proj_distr).to(device)
+    
+    # zeros the params corresponding to the non-chosen actions
     def zero_params(self,params,actions_oh):
         for a,p in zip(actions_oh,params):
-            
             if np.argmax(a.data.numpy()) == 0:
                 p[2 + len(a)] = 0 # offset by num of actions to get params
                 p[3 + len(a)] = 0
@@ -119,49 +157,27 @@ class MADDPG(object):
         curr_agent = self.agents[agent_i]
 
         curr_agent.critic_optimizer.zero_grad()
-        if self.alg_types[agent_i] == 'MADDPG':
-            if self.discrete_action: # one-hot encode action
-                all_trgt_acs = [onehot_from_logits(pi(nobs)) for pi, nobs in
-                                zip(self.target_policies, next_obs)]
-            else:
-                
-                '''print(
-                    [(onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),pi(nobs)[:,curr_agent.action_dim:])
-                     for pi, nobs in zip(self.target_policies, next_obs)])
-                print([torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-                    (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
-                                for pi, nobs in zip(self.target_policies, next_obs)])'''
-                all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-                    (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
-                                for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
-                
-            trgt_vf_in = torch.cat((*next_obs, *all_trgt_acs), dim=1)
-                    
-        else:  # DDPG
-            if self.discrete_action:
-                trgt_vf_in = torch.cat((next_obs[agent_i],
-                                        onehot_from_logits(
-                                            curr_agent.target_policy(
-                                                next_obs[agent_i]))),
-                                       dim=1)
-                print('trgt_vf_in  in discrete action ', trgt_vf_in)
-            else:
-                trgt_vf_in = torch.cat((next_obs[agent_i],
-                                        curr_agent.target_policy(next_obs[agent_i])),
-                                       dim=1)
+        
+        
+        all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+            (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),
+             self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
+                        for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
+
+        #print(all_trgt_acs)
+        trgt_vf_in = torch.cat((*next_obs, *all_trgt_acs), dim=1)
+
+
         target_value = (rews[agent_i].view(-1, 1) + self.gamma *
                         curr_agent.target_critic(trgt_vf_in) *
                         (1 - dones[agent_i].view(-1, 1)))
 
-        if self.alg_types[agent_i] == 'MADDPG':
-            vf_in = torch.cat((*obs, *acs), dim=1)
-        else:  # DDPG
-            vf_in = torch.cat((obs[agent_i], acs[agent_i]), dim=1)
+        vf_in = torch.cat((*obs, *acs), dim=1)
+        
         actual_value = curr_agent.critic(vf_in)
         
        
         vf_loss = MSELoss(actual_value, target_value.detach())
-        #print(vf_loss)
         vf_loss.backward() 
         if parallel:
             average_gradients(curr_agent.critic)
@@ -183,41 +199,38 @@ class MADDPG(object):
             curr_pol_out = curr_agent.policy(obs[agent_i])
             curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
         else:
+            curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
+
+            self.curr_pol_out = curr_pol_out.clone() # for inverting action space
+            gumbel = gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim],hard=True)
             
-            curr_pol_out = curr_agent.policy(torch.autograd.Variable(obs[agent_i],requires_grad=True)) # ** has full outputs not onehot, not sure if correct?
-            #curr_pol_out = torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-            #        (onehot_from_logits(curr_pol_out[:,:curr_agent.action_dim]),self.zero_params(curr_pol_out,onehot_from_logits(curr_pol_out[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
-                                
-            print(curr_pol_out)
-            curr_pol_vf_in = curr_pol_out
-        if self.alg_types[agent_i] == 'MADDPG':
-            all_pol_acs = []
-            for i, pi, ob in zip(range(self.nagents), self.policies, obs):
-                if i == agent_i:
-                    all_pol_acs.append(curr_pol_vf_in)
-                elif self.discrete_action:
-                    all_pol_acs.append(onehot_from_logits(pi(ob)))
-                else:
-                    all_pol_acs.append(pi(ob)) # not sure if we should onehot this
-                    #all_pol_acs.append(torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-                    #(onehot_from_logits(pi(ob)[:,:curr_agent.action_dim]),self.zero_params(pi(ob),onehot_from_logits(pi(ob)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)) 
-                    
-            vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
-        else:  # DDPG
-            vf_in = torch.cat((obs[agent_i], curr_pol_vf_in),
-                              dim=1)
+            # concat one-hot actions with params zero'd along indices non-chosen actions
+            curr_pol_vf_in = torch.cat((gumbel, 
+                                      self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)   
+        all_pol_acs = []
+        for i, pi, ob in zip(range(self.nagents), self.policies, obs):
+            if i == agent_i:
+                all_pol_acs.append(curr_pol_vf_in)
+            elif self.discrete_action:
+                all_pol_acs.append(onehot_from_logits(pi(ob)))
+            else: # changed to be gumbeled TODO: shariq does not gumbel this, we don't want to sample noise from other agents actions?
+                a = pi(ob)
+                g = onehot_from_logits(torch.log(a[:,:curr_agent.action_dim]),hard=True)
+                c = torch.cat((g,self.zero_params(a,g)[:,curr_agent.action_dim:]),1)
+                all_pol_acs.append(c) # 
+
+        vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
+
+
         
-        
-        ## want grad of Q respect to A ----------------
+        # invert gradient --------------------------------------
         self.params = vf_in.data
         self.param_dim = curr_agent.param_dim
-
         hook = vf_in.register_hook(self.inject)
+        # ------------------------------------------------------
         pol_loss = -curr_agent.critic(vf_in).mean()
-        #print(pol_loss)
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
-        hook.remove()
 
 
         if parallel:
@@ -225,6 +238,8 @@ class MADDPG(object):
 
         torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 0.5) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
+        hook.remove()
+
         # ------------------------------------
         if logger is not None:
             logger.add_scalars('agent%i/losses' % agent_i,
@@ -236,17 +251,31 @@ class MADDPG(object):
     def inject(self,grad):
         new_grad = grad.clone()
         new_grad = self.invert(new_grad,self.params,self.param_dim)
+        #print("new",new_grad[0,-8:])
         return new_grad
     
     # takes input gradients and activation values for params and returns scaled gradients
     def invert(self,grad,params,num_params):
         for sample in range(grad.shape[0]): # batch size
             for index in range(num_params):
+                if params[sample][-1 - index] != 0:
                 # last 5 are the params
-                if grad[sample][-1 - index] < 0:
-                    grad[sample][-1 - index] *= ((1.0-params[sample][-1 - index])/(1-(-1))) # scale
+                    if grad[sample][-1 - index] < 0:
+                        grad[sample][-1 - index] *= ((1.0-params[sample][-1 - index])/(1-(-1))) # scale
+                    else:
+                        grad[sample][-1 - index] *= ((params[sample][-1 - index]-(-1.0))/(1-(-1)))
                 else:
-                    grad[sample][-1 - index] *= ((params[sample][-1 - index]-(-1.0))/(1-(-1)))
+                    grad[sample][-1-index] *= 0
+        for sample in range(grad.shape[0]): # batch size
+            for index in range(3):
+                if params[sample][-1 - num_params - index] != 0:
+                # last 5 are the params
+                    if grad[sample][-1 - num_params - index] < 0:
+                        grad[sample][-1 - num_params - index] *= ((1.0-self.curr_pol_out[sample][-1 - num_params -index])/(1-(-1))) # scale
+                    else:
+                        grad[sample][-1 - num_params - index] *= ((self.curr_pol_out[sample][-1 - num_params - index]-(-1.0))/(1-(-1)))
+                else:
+                    grad[sample][-1 - num_params - index] *= 0
         return grad
     
 
@@ -332,7 +361,8 @@ class MADDPG(object):
 
     @classmethod
     def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",
-                      gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True):
+                      gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51,
+                 DELTA_Z = 20.0/50):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -343,26 +373,7 @@ class MADDPG(object):
         for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs, alg_types):
             
             # changed acsp to be action_list for each agent 
-                # giving dimension num_TA x action_list so they may zip properly
-                
- 
-            ''' if isinstance(acsp, Box):
-                discrete_action = False
-                get_shape = lambda x: x.shape[0]
-            else:  # Discrete
-                discrete_action = True
-                get_shape = lambda x: x.n
-            num_out_pol = get_shape(acsp)
-            if algtype == "MADDPG":
-                num_in_critic = 0
-                for oobsp in env.observation_space:
-                    num_in_critic += oobsp.shape[0]
-                for oacsp in env.action_space:
-                    num_in_critic += get_shape(oacsp)
-            else:
-                num_in_critic = obsp.shape[0] + get_shape(acsp)'''
-
-    
+                # giving dimension num_TA x action_list so they may zip properly    
 
             num_in_pol = obsp.shape[0]
         
@@ -389,7 +400,11 @@ class MADDPG(object):
                      'hidden_dim': hidden_dim,
                      'alg_types': alg_types,
                      'agent_init_params': agent_init_params,
-                     'discrete_action': discrete_action}
+                     'discrete_action': discrete_action,
+                     'vmax': vmax,
+                     'vmin': vmin,
+                     'N_ATOMS': N_ATOMS,
+                     'DELTA_Z': DELTA_Z}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
