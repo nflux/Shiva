@@ -109,15 +109,11 @@ class DDPGAgent(object):
 
     #Used to get just the actor weights and params.
     def get_actor_params(self):
-        return {'policy': self.policy.state_dict(),
-                'target_policy': self.target_policy.state_dict(),
-                'policy_optimizer': self.policy_optimizer.state_dict()}
+        return {'policy': self.policy.state_dict()}
 
     #Used to get just the critic weights and params.
     def get_critic_params(self):
-        return {'critic': self.critic.state_dict(),
-                'target_critic': self.target_critic.state_dict(),
-                'critic_optimizer': self.critic_optimizer.state_dict()}
+        return {'critic': self.critic.state_dict()}
 
     def load_params(self, params):
         self.policy.load_state_dict(params['policy'])
