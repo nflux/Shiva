@@ -266,17 +266,20 @@ class MADDPG(object):
                         grad[sample][-1 - index] *= ((params[sample][-1 - index]-(-1.0))/(1-(-1)))
                 else:
                     grad[sample][-1-index] *= 0
-        '''for sample in range(grad.shape[0]): # batch size
+        for sample in range(grad.shape[0]): # batch size
             # inverts gradients of discrete actions
-            for index in range(3):
-                ''if params[sample][-1 - num_params - index] != 0:
+            '''for index in range(3):
+                if params[sample][-1 - num_params - index] != 0:
                 # last 5 are the params
                     if grad[sample][-1 - num_params - index] < 0:
                         grad[sample][-1 - num_params - index] *= ((1.0-self.curr_pol_out[sample][-1 - num_params -index])/(1-(-1))) # scale
                     else:
                         grad[sample][-1 - num_params - index] *= ((self.curr_pol_out[sample][-1 - num_params - index]-(-1.0))/(1-(-1)))
                 else:
-                    grad[sample][-1 - num_params - index] *= 0'''''
+                    grad[sample][-1 - num_params - index] *= 0'''
+            for index in range(3):
+                if params[sample][-1-num_params-index] == 0:
+                    grad[sample][-1-num_params-index] *= 0 
         return grad
     
 
