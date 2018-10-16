@@ -202,11 +202,11 @@ class MADDPG(object):
             curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
 
             self.curr_pol_out = curr_pol_out.clone() # for inverting action space
-            gumbel = gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim],hard=True)
-            
+            gumbel = gumbel_softmax(torch.log(curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
             # concat one-hot actions with params zero'd along indices non-chosen actions
             curr_pol_vf_in = torch.cat((gumbel, 
                                       self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)   
+            print(curr_pol_vf_in)
         all_pol_acs = []
         for i, pi, ob in zip(range(self.nagents), self.policies, obs):
             if i == agent_i:
@@ -266,16 +266,17 @@ class MADDPG(object):
                         grad[sample][-1 - index] *= ((params[sample][-1 - index]-(-1.0))/(1-(-1)))
                 else:
                     grad[sample][-1-index] *= 0
-        for sample in range(grad.shape[0]): # batch size
+        '''for sample in range(grad.shape[0]): # batch size
+            # inverts gradients of discrete actions
             for index in range(3):
-                if params[sample][-1 - num_params - index] != 0:
+                ''if params[sample][-1 - num_params - index] != 0:
                 # last 5 are the params
                     if grad[sample][-1 - num_params - index] < 0:
                         grad[sample][-1 - num_params - index] *= ((1.0-self.curr_pol_out[sample][-1 - num_params -index])/(1-(-1))) # scale
                     else:
                         grad[sample][-1 - num_params - index] *= ((self.curr_pol_out[sample][-1 - num_params - index]-(-1.0))/(1-(-1)))
                 else:
-                    grad[sample][-1 - num_params - index] *= 0
+                    grad[sample][-1 - num_params - index] *= 0'''''
         return grad
     
 

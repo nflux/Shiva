@@ -46,8 +46,8 @@ class MLPNetwork(nn.Module):
             self.out_param = nn.Linear(128, self.param_size)
             self.out_param.weight.data.normal_(0, 0.01) 
             self.out_param_fn = lambda x: x
-            #self.out_action_fn = F.log_softmax
-            self.out_action_fn = lambda x: x
+            self.out_action_fn = F.softmax
+            #self.out_action_fn = lambda x: x
 
         else: # is critic
             self.out = nn.Linear(128,1)
