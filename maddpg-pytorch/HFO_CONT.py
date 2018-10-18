@@ -105,6 +105,7 @@ Vmax = 10
 Vmin = -10
 N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
+REWARD_STEPS = 5
 
 
 # if using low level actions use non discrete settings
@@ -134,7 +135,8 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   a_lr=a_lr,
                                   c_lr=c_lr,
                                   hidden_dim=hidden_dim ,discrete_action=discrete_action,
-                                  vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,DELTA_Z=DELTA_Z)
+                                  vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
+                              REWARD_STEPS=REWARD_STEPS,DELTA_Z=DELTA_Z)
 
 
 

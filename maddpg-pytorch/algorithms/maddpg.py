@@ -13,7 +13,7 @@ class MADDPG(object):
     """
     def __init__(self, agent_init_params, alg_types,
                  gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
-                 discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51,
+                 discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51, REWARD_STEPS = 5,
                  DELTA_Z = 20.0/50):
         """
         Inputs:
@@ -49,7 +49,11 @@ class MADDPG(object):
         self.trgt_pol_dev = 'cpu'  # device for target policies
         self.trgt_critic_dev = 'cpu'  # device for target critics
         self.niter = 0
-
+        self.REWARD_STEPS = REWARD_STEPS
+        self.N_ATOMS = N_ATOMS
+        self.Vmax = vmax
+        self.Vmin = vmin
+        self.DELTA_Z = DELTA_Z
     @property
     def policies(self):
         return [a.policy for a in self.agents]
@@ -84,16 +88,16 @@ class MADDPG(object):
                                                        observations)]
     
     # returns the distribution projection
-    def distr_projection(next_distr_v, rewards_v, dones_mask_t, gamma, device="cpu"):
+    def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, gamma, device="cpu"):
         next_distr = next_distr_v.data.cpu().numpy()
         rewards = rewards_v.data.cpu().numpy()
         dones_mask = dones_mask_t.cpu().numpy().astype(np.bool)
         batch_size = len(rewards)
-        proj_distr = np.zeros((batch_size, N_ATOMS), dtype=np.float32)
+        proj_distr = np.zeros((batch_size, self.N_ATOMS), dtype=np.float32)
 
-        for atom in range(N_ATOMS):
-            tz_j = np.minimum(Vmax, np.maximum(Vmin, rewards + (Vmin + atom * DELTA_Z) * gamma))
-            b_j = (tz_j - Vmin) / DELTA_Z
+        for atom in range(self.N_ATOMS):
+            tz_j = np.minimum(self.Vmax, np.maximum(self.Vmin, rewards + (self.Vmin + atom * self.DELTA_Z) * gamma))
+            b_j = (tz_j - self.Vmin) / self.DELTA_Z
             l = np.floor(b_j).astype(np.int64)
             u = np.ceil(b_j).astype(np.int64)
             eq_mask = u == l
@@ -104,8 +108,8 @@ class MADDPG(object):
 
         if dones_mask.any():
             proj_distr[dones_mask] = 0.0
-            tz_j = np.minimum(Vmax, np.maximum(Vmin, rewards[dones_mask]))
-            b_j = (tz_j - Vmin) / DELTA_Z
+            tz_j = np.minimum(self.Vmax, np.maximum(self.Vmin, rewards[dones_mask]))
+            b_j = (tz_j - self.Vmin) / self.DELTA_Z
             l = np.floor(b_j).astype(np.int64)
             u = np.ceil(b_j).astype(np.int64)
             eq_mask = u == l
@@ -153,43 +157,43 @@ class MADDPG(object):
             logger (SummaryWriter from Tensorboard-Pytorch):
                 If passed in, important quantities will be logged
         """
+        
         obs, acs, rews, next_obs, dones = sample
         curr_agent = self.agents[agent_i]
-
-        curr_agent.critic_optimizer.zero_grad()
         
+        # Train critic ------------------------
+        curr_agent.critic_optimizer.zero_grad()
         
         all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
             (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),
              self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
                         for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
 
-        #print(all_trgt_acs)
+        # Target critic values
         trgt_vf_in = torch.cat((*next_obs, *all_trgt_acs), dim=1)
-
-
-        target_value = (rews[agent_i].view(-1, 1) + self.gamma *
-                        curr_agent.target_critic(trgt_vf_in) *
-                        (1 - dones[agent_i].view(-1, 1)))
-
-        vf_in = torch.cat((*obs, *acs), dim=1)
+        trgt_vf_distr = F.softmax(curr_agent.target_critic(trgt_vf_in),dim=1) # critic distribution
         
+        trgt_vf_distr_proj = self.distr_projection(trgt_vf_distr,rews[agent_i],dones[agent_i], # distribution projection
+                                              gamma=self.gamma**self.REWARD_STEPS,device='cpu') 
+
+        # Actual critic values
+        vf_in = torch.cat((*obs, *acs), dim=1)
         actual_value = curr_agent.critic(vf_in)
         
-       
-        vf_loss = MSELoss(actual_value, target_value.detach())
+        # distribution distance function
+        prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
+        
+        vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
         vf_loss.backward() 
         if parallel:
             average_gradients(curr_agent.critic)
         
-  
         torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 0.5)
-        
-        
         curr_agent.critic_optimizer.step()
-
         curr_agent.policy_optimizer.zero_grad()
-
+        
+        # Train actor -----------------------
+        
         if self.discrete_action:
             # Forward pass as if onehot (hard=True) but backprop through a differentiable
             # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
@@ -213,7 +217,7 @@ class MADDPG(object):
                 all_pol_acs.append(curr_pol_vf_in)
             elif self.discrete_action:
                 all_pol_acs.append(onehot_from_logits(pi(ob)))
-            else: # changed to be gumbeled TODO: shariq does not gumbel this, we don't want to sample noise from other agents actions?
+            else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
                 a = pi(ob)
                 g = onehot_from_logits(torch.log(a[:,:curr_agent.action_dim]),hard=True)
                 c = torch.cat((g,self.zero_params(a,g)[:,curr_agent.action_dim:]),1)
@@ -221,14 +225,12 @@ class MADDPG(object):
 
         vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
 
-
-        
         # invert gradient --------------------------------------
         self.params = vf_in.data
         self.param_dim = curr_agent.param_dim
         hook = vf_in.register_hook(self.inject)
         # ------------------------------------------------------
-        pol_loss = -curr_agent.critic(vf_in).mean()
+        pol_loss = -curr_agent.critic.distr_to_q(curr_agent.critic(vf_in)).mean()
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
 
@@ -365,8 +367,8 @@ class MADDPG(object):
 
     @classmethod
     def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",
-                      gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51,
-                 DELTA_Z = 20.0/50):
+                      gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,
+                      vmax = 10,vmin = -10, N_ATOMS = 51, REWARD_STEPS = 5, DELTA_Z = 20.0/50):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -408,6 +410,7 @@ class MADDPG(object):
                      'vmax': vmax,
                      'vmin': vmin,
                      'N_ATOMS': N_ATOMS,
+                     'REWARD_STEPS': REWARD_STEPS,
                      'DELTA_Z': DELTA_Z}
         instance = cls(**init_dict)
         instance.init_dict = init_dict

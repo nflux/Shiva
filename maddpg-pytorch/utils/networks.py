@@ -50,7 +50,7 @@ class MLPNetwork(nn.Module):
             #self.out_action_fn = lambda x: x
 
         else: # is critic
-            self.out = nn.Linear(128,1)
+            self.out = nn.Linear(128,n_atoms)
             self.out.weight.data.normal_(0, 0.01)
             
             #D4PG

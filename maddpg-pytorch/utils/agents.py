@@ -14,7 +14,7 @@ class DDPGAgent(object):
     critic, exploration noise)
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, hidden_dim=64,
-                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=10,delta=20.0/50):
+                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50):
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -26,12 +26,11 @@ class DDPGAgent(object):
         self.param_dim = 5
         self.action_dim = 3
         
-        
+        self.delta = (float(vmax)-vmin)/(n_atoms-1)
         # D4PG
         self.n_atoms = n_atoms
         self.vmax = vmax
         self.vmin = vmin
-        self.delta = delta   
         
         self.policy = MLPNetwork(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
