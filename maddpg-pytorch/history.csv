@@ -1,1 +1,4 @@
-""
+,average_reward,cumulative_reward,kickable_percentages,time_steps,why
+0,[-0.37837543391278533],[-189.43096608856712],0.0,499.0,OutOfTime
+1,[-0.3566029250854266],[-178.58825669254247],0.0,499.0,OutOfTime
+2,[-0.3462036715401349],[-172.40751603215492],0.0,499.0,OutOfTime

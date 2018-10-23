@@ -59,7 +59,7 @@ episode_length = 500 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 100 # for time step
+burn_in_iterations = 10000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
@@ -78,7 +78,7 @@ ep_save_every = 20
 load_critic = False
 load_actor = False
 
-batch_size = 32
+batch_size = 64
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -117,7 +117,7 @@ env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_len
 if use_viewer:
     env._start_viewer()
 
-time.sleep(4)
+time.sleep(2)
 print("Done connecting to the server ")
 
 # initializing the maddpg 
@@ -156,6 +156,7 @@ for ep_i in range(0, num_episodes):
     n_step_obs = []
     n_step_acs = []
     n_step_next_obs = []
+    n_step_dones = []
     maddpg.prep_rollouts(device='cpu')
     #define/update the noise used for exploration
     if ep_i < burn_in_episodes:
@@ -212,7 +213,7 @@ for ep_i in range(0, num_episodes):
 
         next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
         dones = np.hstack([env.d for i in range(env.num_TA)])
-
+ 
 
 
         # Store n-steps reward| Here we are using full episodic rollout 
@@ -220,7 +221,7 @@ for ep_i in range(0, num_episodes):
         n_step_obs.append(obs)
         n_step_next_obs.append(next_obs)
         n_step_acs.append(actions_params_for_buffer)
-
+        n_step_dones.append(dones)
         time_step += 1
 
         t += 1
@@ -247,7 +248,7 @@ for ep_i in range(0, num_episodes):
                 for step in range(et_i+1 - n):
                     n_step_reward += n_step_rewards[et_i - step] * gamma**(et_i - step)
                     #n_step_rewards[n] is the single step rew, n_step_reward is the rolled out value
-                replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],dones,n_step_reward) 
+                replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],n_step_reward) 
             # log
             if time_step > 0 and ep_i > 1:
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 
