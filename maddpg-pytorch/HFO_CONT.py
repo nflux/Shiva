@@ -46,18 +46,20 @@ def zero_params(num_TA,params,action_index):
             params[i][2] = 0
     return params
 
-            
-# default settings
-
+# options
+D4PG = True
 action_level = 'low'
 feature_level = 'low'
+
+# default settings
+
 
 num_episodes = 100000
 episode_length = 500 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 50000 # for time step
+burn_in_iterations = 100 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
@@ -81,7 +83,8 @@ hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
-
+# Mixed target beta (0 = 1-step, 1 = MC update)
+beta = 0.2
 t = 0
 time_step = 0
 kickable_counter = 0
@@ -95,7 +98,7 @@ Vmax = 10
 Vmin = -10
 N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-REWARD_STEPS = 5
+REWARD_STEPS = 1
 
 # if using low level actions use non discrete settings
 if action_level == 'high':
@@ -125,7 +128,7 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   c_lr=c_lr,
                                   hidden_dim=hidden_dim ,discrete_action=discrete_action,
                                   vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
-                              REWARD_STEPS=REWARD_STEPS,DELTA_Z=DELTA_Z)
+                              REWARD_STEPS=REWARD_STEPS,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=beta)
 
 
 
@@ -152,7 +155,7 @@ for ep_i in range(0, num_episodes):
     n_step_reward = 0
     n_step_obs = []
     n_step_acs = []
-
+    n_step_next_obs = []
     maddpg.prep_rollouts(device='cpu')
     #define/update the noise used for exploration
     if ep_i < burn_in_episodes:
@@ -212,21 +215,11 @@ for ep_i in range(0, num_episodes):
 
 
 
-        # Store n-steps | send first and last to buffer with rewards = discounted sum rewards
+        # Store n-steps reward| Here we are using full episodic rollout 
         n_step_rewards.append(rewards)
         n_step_obs.append(obs)
+        n_step_next_obs.append(next_obs)
         n_step_acs.append(actions_params_for_buffer)
-        if et_i >= REWARD_STEPS:
-            # TODO: reward stacking is probably wrong for multiagent
-            # Get discounted reward sum for n steps
-            for step in range(REWARD_STEPS):
-                n_step_reward += n_step_rewards[-2 - step] * gamma**(REWARD_STEPS - 1 - step)
-            # push first, last obs and rew sum
-            replay_buffer.push(n_step_obs[-REWARD_STEPS], n_step_acs[-REWARD_STEPS], n_step_reward, next_obs, dones)
-            n_step_reward = 0
-
-   
-        obs = next_obs
 
         time_step += 1
 
@@ -244,33 +237,34 @@ for ep_i in range(0, num_episodes):
                 for a_i in range(maddpg.nagents):
                     sample = replay_buffer.sample(batch_size,
                                                   to_gpu=False,norm_rews=True)
-                    #print('a_i ' , a_i )
                     maddpg.update(sample, a_i )
                 maddpg.update_all_targets()
             maddpg.prep_rollouts(device='cpu')
         if d == True:
-            step_logger_df = step_logger_df.append({'time_steps': time_step, 
+            # push all experiences for episode with reward rollout
+            for n in range(et_i+1):
+                n_step_reward = 0
+                for step in range(et_i+1 - n):
+                    n_step_reward += n_step_rewards[et_i - step] * gamma**(et_i - step)
+                    #n_step_rewards[n] is the single step rew, n_step_reward is the rolled out value
+                replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],dones,n_step_reward) 
+            # log
+            if time_step > 0 and ep_i > 1:
+                step_logger_df = step_logger_df.append({'time_steps': time_step, 
                                                     'why': world_stat,
                                                     'kickable_percentages': (kickable_counter/time_step) * 100,
-                                                    'average_reward': replay_buffer.get_average_rewards(time_step),
+                                                    'average_reward': replay_buffer.get_average_rewards(time_step-1),
                                                    'cumulative_reward': replay_buffer.get_cumulative_rewards(time_step)}, 
                                                     ignore_index=True)
-
-            # push rest n steps
-            if et_i >= REWARD_STEPS and ep_i > 1:
-                for n in range(REWARD_STEPS-1):
-                    n_step_reward = 0
-                    for step in range(REWARD_STEPS-1-n):
-                        n_step_reward += n_step_rewards[-2 - step] * gamma**(REWARD_STEPS - 2 - step)
-                    replay_buffer.push(n_step_obs[-REWARD_STEPS + 1 + n], n_step_acs[-REWARD_STEPS +1 + n], n_step_reward,obs,dones)                
             break;
+        obs = next_obs
 
             #print(step_logger_df) 
         #if t%30000 == 0 and use_viewer:
         if t%30000 == 0 and use_viewer and ep_i > 120:
             env._start_viewer()       
 
-    ep_rews = replay_buffer.get_average_rewards(time_step)
+    #ep_rews = replay_buffer.get_average_rewards(time_step)
 
     #Saves Actor/Critic every particular number of episodes
     if ep_i%ep_save_every == 0 and ep_i != 0:

@@ -7,7 +7,7 @@ class MLPNetwork(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True, is_actor=False,agent=object,n_atoms=51):
+    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True, is_actor=False,agent=object,n_atoms=51,D4PG=False):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -50,13 +50,13 @@ class MLPNetwork(nn.Module):
             self.out_action_fn = lambda x: x
 
         else: # is critic
-            self.out = nn.Linear(128,n_atoms)
+            if D4PG:
+                self.out = nn.Linear(128,n_atoms)
+                self.register_buffer("supports",torch.arange(agent.vmin,agent.vmax + agent.delta, agent.delta))
+            else:
+                self.out = nn.Linear(128,1)
             self.out.weight.data.normal_(0, 0.01)
             
-            #D4PG
-            self.register_buffer("supports",torch.arange(agent.vmin,agent.vmax + agent.delta, agent.delta))
-
-        
 
         self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
