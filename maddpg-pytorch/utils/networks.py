@@ -55,9 +55,8 @@ class MLPNetwork(nn.Module):
                 self.register_buffer("supports",torch.arange(agent.vmin,agent.vmax + agent.delta, agent.delta))
             else:
                 self.out = nn.Linear(128,1)
+                
             self.out.weight.data.normal_(0, 0.01)
-            
-
         self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
 
@@ -79,9 +78,9 @@ class MLPNetwork(nn.Module):
             self.final_out_action = self.out_action_fn(self.out_action(h4))
             self.final_out_params = self.out_param_fn(self.out_param(h4))
             out = torch.cat((self.final_out_action, self.final_out_params),1)
-            if self.count % 100 < 1:
+            #if self.count % 100 < 1:
             #print(" ")
-               print("network output",out)
+               #print("network output",out)
             self.count += 1
 
         else:

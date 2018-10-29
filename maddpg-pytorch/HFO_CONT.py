@@ -47,7 +47,7 @@ def zero_params(num_TA,params,action_index):
     return params
 
 # options
-D4PG = True
+D4PG = False
 action_level = 'low'
 feature_level = 'low'
 
@@ -58,8 +58,8 @@ num_episodes = 100000
 episode_length = 500 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 10000 # for time step
+num_explore_episodes = 100  # Haus uses over 10,000 updates --
+burn_in_iterations = 25000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
@@ -78,7 +78,7 @@ ep_save_every = 20
 load_critic = False
 load_actor = False
 
-batch_size = 64
+batch_size = 32
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -117,7 +117,7 @@ env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_len
 if use_viewer:
     env._start_viewer()
 
-time.sleep(2)
+time.sleep(3)
 print("Done connecting to the server ")
 
 # initializing the maddpg 
@@ -246,7 +246,7 @@ for ep_i in range(0, num_episodes):
             for n in range(et_i+1):
                 n_step_reward = 0
                 for step in range(et_i+1 - n):
-                    n_step_reward += n_step_rewards[et_i - step] * gamma**(et_i - step)
+                    n_step_reward += n_step_rewards[et_i - step] * gamma**(et_i - n - step)
                     #n_step_rewards[n] is the single step rew, n_step_reward is the rolled out value
                 replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],n_step_reward) 
             # log
@@ -262,7 +262,7 @@ for ep_i in range(0, num_episodes):
 
             #print(step_logger_df) 
         #if t%30000 == 0 and use_viewer:
-        if t%30000 == 0 and use_viewer and ep_i > 120:
+        if t%30000 == 0 and use_viewer and ep_i > 300:
             env._start_viewer()       
 
     #ep_rews = replay_buffer.get_average_rewards(time_step)
@@ -271,7 +271,7 @@ for ep_i in range(0, num_episodes):
     if ep_i%ep_save_every == 0 and ep_i != 0:
         #Saving the actor NN in local path, needs to be tested by loading
         if save_actor:
-            print('Saving Actor NN')
+            ('Saving Actor NN')
             current_day_time = datetime.datetime.now()
             maddpg.save_actor('saved_NN/Actor/actor_' + str(current_day_time.month) + 
                                             '_' + str(current_day_time.day) + 

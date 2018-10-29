@@ -454,8 +454,8 @@ class HFO_env():
         #elif s=='CapturedByDefense':
         #    reward+=-100
         #---------------------------
-        elif s=='OutOfBounds':
-            reward+=-0.5
+        #elif s=='OutOfBounds':
+        #    reward+=-0.5
         #---------------------------
         #Cause Unknown Do Nothing
         #elif s=='OutOfTime':
