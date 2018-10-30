@@ -47,7 +47,7 @@ def zero_params(num_TA,params,action_index):
     return params
 
 # options
-D4PG = False
+D4PG = True
 action_level = 'low'
 feature_level = 'low'
 
@@ -58,8 +58,8 @@ num_episodes = 100000
 episode_length = 500 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 100  # Haus uses over 10,000 updates --
-burn_in_iterations = 25000 # for time step
+num_explore_episodes = 40  # Haus uses over 10,000 updates --
+burn_in_iterations = 100 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
@@ -84,7 +84,7 @@ a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
 # Mixed target beta (0 = 1-step, 1 = MC update)
-beta = 0.2
+beta = 0.0
 t = 0
 time_step = 0
 kickable_counter = 0
@@ -237,7 +237,7 @@ for ep_i in range(0, num_episodes):
             for u_i in range(1):
                 for a_i in range(maddpg.nagents):
                     sample = replay_buffer.sample(batch_size,
-                                                  to_gpu=False,norm_rews=True)
+                                                  to_gpu=False,norm_rews=False)
                     maddpg.update(sample, a_i )
                 maddpg.update_all_targets()
             maddpg.prep_rollouts(device='cpu')

@@ -82,9 +82,12 @@ class MLPNetwork(nn.Module):
             #print(" ")
                #print("network output",out)
             self.count += 1
-
         else:
             out = self.out_fn(self.out(h4))
+            if self.count % 100 < 1:
+            #print(" ")
+               print("network output",out)
+            self.count += 1
 
         return out
 

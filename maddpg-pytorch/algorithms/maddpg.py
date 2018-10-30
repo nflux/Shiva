@@ -240,7 +240,9 @@ class MADDPG(object):
         hook = vf_in.register_hook(self.inject)
         # ------------------------------------------------------
         if self.D4PG:
-            pol_loss = -curr_agent.critic.distr_to_q(curr_agent.critic(vf_in)).mean()
+            critic_out = curr_agent.critic(vf_in)
+            distr_q = curr_agent.critic.distr_to_q(critic_out)
+            pol_loss = -distr_q.mean()
         else: # non-distributional
             pol_loss = -curr_agent.critic(vf_in).mean()
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
