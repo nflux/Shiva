@@ -47,7 +47,7 @@ def zero_params(num_TA,params,action_index):
     return params
 
 # options
-D4PG = True
+D4PG = False
 action_level = 'low'
 feature_level = 'low'
 
@@ -59,7 +59,7 @@ episode_length = 500 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 100 # for time step
+burn_in_iterations = 20000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
@@ -84,7 +84,7 @@ a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
 # Mixed target beta (0 = 1-step, 1 = MC update)
-beta = 0.0
+beta = 0.2
 t = 0
 time_step = 0
 kickable_counter = 0
@@ -248,7 +248,8 @@ for ep_i in range(0, num_episodes):
                 for step in range(et_i+1 - n):
                     n_step_reward += n_step_rewards[et_i - step] * gamma**(et_i - n - step)
                     #n_step_rewards[n] is the single step rew, n_step_reward is the rolled out value
-                replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],n_step_reward) 
+                replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],np.hstack([n_step_reward])            
+) 
             # log
             if time_step > 0 and ep_i > 1:
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 
