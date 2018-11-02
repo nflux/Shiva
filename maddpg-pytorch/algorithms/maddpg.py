@@ -189,8 +189,9 @@ class MADDPG(object):
             prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
             vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
         else: # single critic value
-            target_value = (1-self.beta)*((rews[agent_i].view(-1, 1) + self.gamma *
-                        curr_agent.target_critic(trgt_vf_in) * (1 - dones[agent_i].view(-1, 1)))) + self.beta*(cum_rews[agent_i].view(-1,1))
+            target_value = (1-self.beta)*(rews[agent_i].view(-1, 1) + self.gamma *
+                        curr_agent.target_critic(trgt_vf_in) * (1 - dones[agent_i].view(-1, 1))).add(self.beta*(cum_rews[agent_i].view(-1,1)))
+            #vf_loss = MSELoss(actual_value, target_value)
             vf_loss = MSELoss(actual_value, target_value.detach())
             
         vf_loss.backward() 
@@ -214,8 +215,13 @@ class MADDPG(object):
             curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
 
             self.curr_pol_out = curr_pol_out.clone() # for inverting action space
-            #gumbel = gumbel_softmax(torch.log(curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
-            gumbel = gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim],hard=True)
+            #gumbel = gumbel_softmax(torch.softmax(curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
+            #gumbel = gumbel_softmax((curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
+
+            log_pol_out = torch.log(curr_pol_out[:,:curr_agent.action_dim].clone())
+            gumbel = gumbel_softmax(log_pol_out,hard=True)
+            #gumbel = onehot_from_logits(log_pol_out,eps=0.0)
+            
 
             # concat one-hot actions with params zero'd along indices non-chosen actions
             curr_pol_vf_in = torch.cat((gumbel, 
@@ -281,7 +287,7 @@ class MADDPG(object):
                     grad[sample][-1-index] *= 0
         for sample in range(grad.shape[0]): # batch size
             # inverts gradients of discrete actions
-            for index in range(3):
+            '''for index in range(3):
                 if params[sample][-1 - num_params - index] != 0:
                 # last 5 are the params
                     if grad[sample][-1 - num_params - index] < 0:
@@ -289,10 +295,10 @@ class MADDPG(object):
                     else:
                         grad[sample][-1 - num_params - index] *= ((self.curr_pol_out[sample][-1 - num_params - index]-(-1.0))/(1-(-1)))
                 else:
-                    grad[sample][-1 - num_params - index] *= 0
-            #for index in range(3):
-            #    if params[sample][-1-num_params-index] == 0:
-            #        grad[sample][-1-num_params-index] *= 0 
+                    grad[sample][-1 - num_params - index] *= 0'''
+            for index in range(3):
+                if params[sample][-1-num_params-index] == 0:
+                    grad[sample][-1-num_params-index] *= 0
         return grad
     
 

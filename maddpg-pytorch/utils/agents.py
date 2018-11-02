@@ -1,6 +1,6 @@
 from torch import Tensor
 from torch.autograd import Variable
-from torch.optim import Adam
+from torch.optim import Adam,SGD
 import torch
 from .networks import MLPNetwork
 import torch.nn.functional as F
@@ -51,7 +51,9 @@ class DDPGAgent(object):
 
         self.critic_grad_by_action = np.zeros(self.param_dim)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=a_lr, weight_decay =0)
+        #self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
+
 
         if not discrete_action: # input to OUNoise is size of param space # TODO change OUNoise param to # params
             self.exploration = OUNoise(self.param_dim) # hard coded
@@ -84,8 +86,8 @@ class DDPGAgent(object):
         # mixed disc/cont
         if explore:     
             a = action[0,:self.action_dim].view(1,self.action_dim)
-            #print(a)
             p = (action[0,self.action_dim:].view(1,self.param_dim) + Variable(Tensor(self.exploration.noise()),requires_grad=False)) # get noisey params (OU)
+            self.exploration.reset()
             action = torch.cat((a,p),1) 
         #print(action)
         return action

@@ -399,7 +399,7 @@ class HFO_env():
 
     # Engineered Reward Function
     def getReward(self,s,agentID):
-        reward=0
+        reward=0.0
         #---------------------------
 
         ########################### keep the ball kickable ####################################

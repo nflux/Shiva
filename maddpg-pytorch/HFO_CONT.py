@@ -28,6 +28,28 @@ from utils.buffer import ReplayBuffer
 from algorithms.maddpg import MADDPG
 
 from HFO_env import *
+def e_greedy(logits, eps=0.0):
+    """
+    Given batch of logits, return one-hot sample using epsilon greedy strategy
+    (based on given epsilon)
+    
+    ** Modified to return True if random action is taken, else return False
+    """
+    # get best (according to current policy) actions in one-hot form
+    argmax_acs = (logits == logits.max(1, keepdim=True)[0]).float()
+    if eps == 0.0:
+        return argmax_acs,False
+    # get random actions in one-hot form
+    rand_acs = Variable(torch.eye(logits.shape[1])[[np.random.choice(
+        range(logits.shape[1]), size=logits.shape[0])]], requires_grad=False)
+    # chooses between best and random actions using epsilon greedy
+    explore = False
+    rand = torch.rand(logits.shape[0])
+    for i,r in enumerate(rand):
+        if r < eps:
+            explore = True        
+    return torch.stack([argmax_acs[i] if r > eps else rand_acs[i] for i, r in
+                        enumerate(rand)]) , explore
 
 def zero_params(num_TA,params,action_index):
     for i in range(num_TA):
@@ -58,12 +80,12 @@ num_episodes = 100000
 episode_length = 500 # FPS
 
 replay_memory_size = 1000000
-num_explore_episodes = 40  # Haus uses over 10,000 updates --
-burn_in_iterations = 20000 # for time step
+num_explore_episodes = 20  # Haus uses over 10,000 updates --
+burn_in_iterations = 10000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
-final_noise_scale = 0.1
+final_noise_scale = 0.01
 init_noise_scale = 1.00
 steps_per_update = 1
 untouched_time = 500
@@ -84,7 +106,7 @@ a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
 # Mixed target beta (0 = 1-step, 1 = MC update)
-beta = 0.2
+beta = 0.3
 t = 0
 time_step = 0
 kickable_counter = 0
@@ -152,7 +174,7 @@ step_logger_df = pd.DataFrame()
 for ep_i in range(0, num_episodes):
 
     n_step_rewards = []
-    n_step_reward = 0
+    n_step_reward = 0.0
     n_step_obs = []
     n_step_acs = []
     n_step_next_obs = []
@@ -169,6 +191,8 @@ for ep_i in range(0, num_episodes):
     time_step = 0
     kickable_counter = 0
     for et_i in range(0, episode_length):
+        maddpg.reset_noise()
+
         # gather all the observations into a torch tensor 
         torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
                               requires_grad=False)
@@ -183,17 +207,25 @@ for ep_i in range(0, num_episodes):
         params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions]) 
         actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
         if explore:
-            noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,len(env.action_list)),
+            noisey_actions = [e_greedy(torch.tensor(a).view(1,len(env.action_list)),
                                                  eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in actions]     # get eps greedy action
         else:
-            noisey_actions = [onehot_from_logits(torch.tensor(a).view(1,len(env.action_list)),eps = 0) for a in actions]     # get eps greedy action
+            noisey_actions = [e_greedy(torch.tensor(a).view(1,len(env.action_list)),eps = 0) for a in actions]     # get eps greedy action
 
+
+        # modify for multi agent
+        randoms = noisey_actions[0][1]
+        noisey_actions = [noisey_actions[0][0]]
+        
         noisey_actions_for_buffer = [ac.data.numpy() for ac in noisey_actions]
         noisey_actions_for_buffer = np.asarray([ac[0] for ac in noisey_actions_for_buffer])
 
         agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes 
         obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
-
+        
+        # use random unif parameters if e_greedy
+        if randoms:
+            params = np.asarray([[val for val in (np.random.uniform(-1,1,5))]])
         params_for_buffer = zero_params(env.num_TA,params,agents_actions)
 
         actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params_for_buffer)] for i in range(1)]).reshape(
@@ -248,8 +280,7 @@ for ep_i in range(0, num_episodes):
                 for step in range(et_i+1 - n):
                     n_step_reward += n_step_rewards[et_i - step] * gamma**(et_i - n - step)
                     #n_step_rewards[n] is the single step rew, n_step_reward is the rolled out value
-                replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],np.hstack([n_step_reward])            
-) 
+                replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],np.hstack([n_step_reward])) 
             # log
             if time_step > 0 and ep_i > 1:
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 
@@ -263,7 +294,7 @@ for ep_i in range(0, num_episodes):
 
             #print(step_logger_df) 
         #if t%30000 == 0 and use_viewer:
-        if t%30000 == 0 and use_viewer and ep_i > 300:
+        if t%30000 == 0 and use_viewer and ep_i > 400:
             env._start_viewer()       
 
     #ep_rews = replay_buffer.get_average_rewards(time_step)
