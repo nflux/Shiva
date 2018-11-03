@@ -85,7 +85,7 @@ burn_in_iterations = 10000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 
-final_noise_scale = 0.01
+final_noise_scale = 0.1
 init_noise_scale = 1.00
 steps_per_update = 1
 untouched_time = 500
@@ -100,13 +100,13 @@ ep_save_every = 20
 load_critic = False
 load_actor = False
 
-batch_size = 32
+batch_size = 16
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
 # Mixed target beta (0 = 1-step, 1 = MC update)
-beta = 0.3
+beta = 1.0
 t = 0
 time_step = 0
 kickable_counter = 0
@@ -280,7 +280,12 @@ for ep_i in range(0, num_episodes):
                 for step in range(et_i+1 - n):
                     n_step_reward += n_step_rewards[et_i - step] * gamma**(et_i - n - step)
                     #n_step_rewards[n] is the single step rew, n_step_reward is the rolled out value
-                replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],np.hstack([n_step_reward])) 
+                if n != et_i: # push next actions
+                    replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],np.hstack([n_step_reward]),n_step_acs[n+1]) 
+                else: # push any action as next, it will be zero'd by the dones mask
+                    replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],np.hstack([n_step_reward]),n_step_acs[n]) 
+
+                    
             # log
             if time_step > 0 and ep_i > 1:
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 
@@ -289,7 +294,7 @@ for ep_i in range(0, num_episodes):
                                                     'average_reward': replay_buffer.get_average_rewards(time_step-1),
                                                    'cumulative_reward': replay_buffer.get_cumulative_rewards(time_step)}, 
                                                     ignore_index=True)
-            break;
+            break;  
         obs = next_obs
 
             #print(step_logger_df) 

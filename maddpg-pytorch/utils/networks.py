@@ -46,9 +46,9 @@ class MLPNetwork(nn.Module):
             self.out_param = nn.Linear(128, self.param_size)
             self.out_param.weight.data.normal_(0, 0.01) 
             self.out_param_fn = lambda x: x
-            self.out_action_fn = F.softmax
+            #self.out_action_fn = F.softmax
             #self.out_action_fn = F.log_softmax
-            #self.out_action_fn = lambda x: x
+            self.out_action_fn = lambda x: x
 
         else: # is critic
             if D4PG:
@@ -79,8 +79,9 @@ class MLPNetwork(nn.Module):
             self.final_out_action = self.out_action_fn(self.out_action(h4))
             self.final_out_params = self.out_param_fn(self.out_param(h4))
             out = torch.cat((self.final_out_action, self.final_out_params),1)
-            if self.count % 100 < 1:
+            if self.count % 100 < 1 and out.shape[0] == 1:
             #print(" ")
+            
                print("network output",out)
             self.count += 1
         else:

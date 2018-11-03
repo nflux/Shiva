@@ -163,20 +163,25 @@ class MADDPG(object):
                 If passed in, important quantities will be logged
         """
         # rews = 1-step, cum-rews = n-step
-        obs, acs, rews, next_obs, dones,cum_rews = sample
+        obs, acs, rews, next_obs, dones,cum_rews,nacs = sample
         curr_agent = self.agents[agent_i]
-        
+        zero_values = False
         # Train critic ------------------------
         curr_agent.critic_optimizer.zero_grad()
         
-        all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+        if zero_values:
+            all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
             (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),
              self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
                         for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
+        else:
+            all_trgt_acs = [pi(nobs) for pi, nobs in zip(self.target_policies,next_obs)]  
+            
 
         # Target critic values
         trgt_vf_in = torch.cat((*next_obs, *all_trgt_acs), dim=1)
-        
+        #trgt_vf_in = torch.cat((*next_obs, *nacs), dim=1)
+
         # Actual critic values
         vf_in = torch.cat((*obs, *acs), dim=1)
         actual_value = curr_agent.critic(vf_in)
@@ -190,7 +195,7 @@ class MADDPG(object):
             vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
         else: # single critic value
             target_value = (1-self.beta)*(rews[agent_i].view(-1, 1) + self.gamma *
-                        curr_agent.target_critic(trgt_vf_in) * (1 - dones[agent_i].view(-1, 1))).add(self.beta*(cum_rews[agent_i].view(-1,1)))
+                        curr_agent.target_critic(trgt_vf_in) * (1 - dones[agent_i].view(-1, 1))) + self.beta*(cum_rews[agent_i].view(-1,1))
             #vf_loss = MSELoss(actual_value, target_value)
             vf_loss = MSELoss(actual_value, target_value.detach())
             
@@ -216,16 +221,23 @@ class MADDPG(object):
 
             self.curr_pol_out = curr_pol_out.clone() # for inverting action space
             #gumbel = gumbel_softmax(torch.softmax(curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
-            #gumbel = gumbel_softmax((curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
+            #log_pol_out = curr_pol_out[:,:curr_agent.action_dim].clone()
 
-            log_pol_out = torch.log(curr_pol_out[:,:curr_agent.action_dim].clone())
-            gumbel = gumbel_softmax(log_pol_out,hard=True)
+            gumbel = gumbel_softmax((curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
+
+            #log_pol_out = torch.log(curr_pol_out[:,:curr_agent.action_dim].clone())
+            #gumbel = gumbel_softmax(log_pol_out,hard=True)
             #gumbel = onehot_from_logits(log_pol_out,eps=0.0)
             
 
             # concat one-hot actions with params zero'd along indices non-chosen actions
-            curr_pol_vf_in = torch.cat((gumbel, 
-                                      self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)   
+            if zero_values:
+                curr_pol_vf_in = torch.cat((gumbel, 
+                                      self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
+            else:
+                curr_pol_vf_in = torch.cat((gumbel, 
+                                      curr_pol_out[:,curr_agent.action_dim:]),1)
+                
             #print(curr_pol_vf_in)
         all_pol_acs = []
         for i, pi, ob in zip(range(self.nagents), self.policies, obs):
@@ -273,7 +285,8 @@ class MADDPG(object):
         #print("new",new_grad[0,-8:])
         return new_grad
     
-    # takes input gradients and activation values for params and returns scaled gradients
+    #zerod critic
+    '''# takes input gradients and activation values for params and returns scaled gradients
     def invert(self,grad,params,num_params):
         for sample in range(grad.shape[0]): # batch size
             for index in range(num_params):
@@ -287,7 +300,9 @@ class MADDPG(object):
                     grad[sample][-1-index] *= 0
         for sample in range(grad.shape[0]): # batch size
             # inverts gradients of discrete actions
-            '''for index in range(3):
+            for index in range(3):
+                if np.abs(grad[sample][-1-num_params -index]) > 10:
+                    print(grad[sample][-1-num_params  -index])
                 if params[sample][-1 - num_params - index] != 0:
                 # last 5 are the params
                     if grad[sample][-1 - num_params - index] < 0:
@@ -295,12 +310,33 @@ class MADDPG(object):
                     else:
                         grad[sample][-1 - num_params - index] *= ((self.curr_pol_out[sample][-1 - num_params - index]-(-1.0))/(1-(-1)))
                 else:
-                    grad[sample][-1 - num_params - index] *= 0'''
+                    grad[sample][-1 - num_params - index] *= 0
             for index in range(3):
                 if params[sample][-1-num_params-index] == 0:
                     grad[sample][-1-num_params-index] *= 0
-        return grad
+        return grad'''
     
+    # non-zerod critic
+    # takes input gradients and activation values for params and returns scaled gradients
+    def invert(self,grad,params,num_params):
+        for sample in range(grad.shape[0]): # batch size
+            for index in range(num_params):
+            # last 5 are the params
+                if grad[sample][-1 - index] < 0:
+                    grad[sample][-1 - index] *= ((1.0-params[sample][-1 - index])/(1-(-1))) # scale
+                else:
+                    grad[sample][-1 - index] *= ((params[sample][-1 - index]-(-1.0))/(1-(-1)))
+        for sample in range(grad.shape[0]): # batch size
+            # inverts gradients of discrete actions
+            for index in range(3):
+            # last 5 are the params
+                if grad[sample][-1 - num_params - index] < 0:
+                    grad[sample][-1 - num_params - index] *= ((1.0-self.curr_pol_out[sample][-1 - num_params -index])/(1-(-1))) # scale
+                else:
+                    grad[sample][-1 - num_params - index] *= ((self.curr_pol_out[sample][-1 - num_params - index]-(-1.0))/(1-(-1)))
+
+        return grad
+ 
 
     def update_all_targets(self):
         """
