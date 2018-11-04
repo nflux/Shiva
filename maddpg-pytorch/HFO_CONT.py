@@ -20,8 +20,7 @@ import os
 import numpy as np
 from gym.spaces import Box, Discrete
 from pathlib import Path
-from torch.autograd import Variable
-#from tensorboardX import SummaryWriter
+from torch.autograd import Variable#from tensorboardX import SummaryWriter
 from utils.make_env import make_env
 from utils.buffer import ReplayBuffer
 #from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
@@ -100,7 +99,7 @@ ep_save_every = 20
 load_critic = False
 load_actor = False
 
-batch_size = 16
+batch_size = 32
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -226,7 +225,9 @@ for ep_i in range(0, num_episodes):
         # use random unif parameters if e_greedy
         if randoms:
             params = np.asarray([[val for val in (np.random.uniform(-1,1,5))]])
-        params_for_buffer = zero_params(env.num_TA,params,agents_actions)
+        else:
+            noisey_actions_for_buffer = np.asarray(actions[0])
+        params_for_buffer = params
 
         actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params_for_buffer)] for i in range(1)]).reshape(
             env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer

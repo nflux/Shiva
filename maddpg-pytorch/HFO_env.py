@@ -424,12 +424,12 @@ class HFO_env():
         #reward += -self.get_excess_param_distance(agentID)*0.1
         
         ####################### penalty for invalid action  ###############################
-        if self.feat_lvl == 'high':        
+        '''if self.feat_lvl == 'high':        
                   if self.team_obs[agentID][-2] == -1:
                         reward+= -1
         elif self.feat_lvl == 'low':        
                   if  self.team_obs[agentID][-1] != 1:
-                        reward+= -1
+                        reward+= -1'''
                         
         ####################### reduce distance to ball - using delta  ##################
         if self.feat_lvl == 'high':
@@ -445,11 +445,11 @@ class HFO_env():
         ####################### reduce ball distance to goal - using delta  ##################
         r,_,_ = self.ball_distance_to_goal(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (3)*(r_prev - r)
+        reward += (3)*(r_prev - r)*.6
         ##################################################################################
         
         if s=='Goal':
-            reward+=10
+            reward+=5
         #---------------------------
         #elif s=='CapturedByDefense':
         #    reward+=-100

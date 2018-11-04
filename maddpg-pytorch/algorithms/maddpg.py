@@ -202,7 +202,7 @@ class MADDPG(object):
         vf_loss.backward() 
         if parallel:
             average_gradients(curr_agent.critic)
-        torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 1)
         curr_agent.critic_optimizer.step()
         curr_agent.policy_optimizer.zero_grad()
         
@@ -223,7 +223,7 @@ class MADDPG(object):
             #gumbel = gumbel_softmax(torch.softmax(curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
             #log_pol_out = curr_pol_out[:,:curr_agent.action_dim].clone()
 
-            gumbel = gumbel_softmax((curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
+            #gumbel = gumbel_softmax((curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
 
             #log_pol_out = torch.log(curr_pol_out[:,:curr_agent.action_dim].clone())
             #gumbel = gumbel_softmax(log_pol_out,hard=True)
@@ -235,8 +235,7 @@ class MADDPG(object):
                 curr_pol_vf_in = torch.cat((gumbel, 
                                       self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
             else:
-                curr_pol_vf_in = torch.cat((gumbel, 
-                                      curr_pol_out[:,curr_agent.action_dim:]),1)
+                curr_pol_vf_in = curr_pol_out
                 
             #print(curr_pol_vf_in)
         all_pol_acs = []
@@ -267,7 +266,7 @@ class MADDPG(object):
         pol_loss.backward()
         if parallel:
             average_gradients(curr_agent.policy)
-        torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 0.5) # do we want to clip the gradients?
+        torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
         hook.remove()
 
