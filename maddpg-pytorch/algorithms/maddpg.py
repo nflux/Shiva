@@ -63,7 +63,16 @@ class MADDPG(object):
     @property
     def target_policies(self):
         return [a.target_policy for a in self.agents]
+    
+    def scale_beta(self, beta):
+        """
+        Scale beta
+        Inputs:
+            scale (float): scale of beta
+        """
+        self.beta = beta
 
+    
     def scale_noise(self, scale):
         """
         Scale noise for each agent
@@ -202,7 +211,7 @@ class MADDPG(object):
         vf_loss.backward() 
         if parallel:
             average_gradients(curr_agent.critic)
-        torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 1)
+        #torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 1)
         curr_agent.critic_optimizer.step()
         curr_agent.policy_optimizer.zero_grad()
         
@@ -266,7 +275,7 @@ class MADDPG(object):
         pol_loss.backward()
         if parallel:
             average_gradients(curr_agent.policy)
-        torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
+        #torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
         hook.remove()
 

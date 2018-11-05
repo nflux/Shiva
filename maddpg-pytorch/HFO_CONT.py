@@ -86,7 +86,7 @@ USE_CUDA = False
 final_OU_noise_scale = 0.0
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-steps_per_update = 1
+steps_per_update = 10
 untouched_time = 500
 
 #Saving the NNs, currently set to save after each episode
@@ -99,13 +99,15 @@ ep_save_every = 20
 load_critic = False
 load_actor = False
 
-batch_size = 32
+batch_size = 128
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
 # Mixed target beta (0 = 1-step, 1 = MC update)
-beta = 1.0
+initial_beta = 1.0
+final_beta = 0.1 #
+num_beta_episodes = 1000
 t = 0
 time_step = 0
 kickable_counter = 0
@@ -149,7 +151,7 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   c_lr=c_lr,
                                   hidden_dim=hidden_dim ,discrete_action=discrete_action,
                                   vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
-                              REWARD_STEPS=REWARD_STEPS,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=beta)
+                              REWARD_STEPS=REWARD_STEPS,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta)
 
 
 
@@ -184,8 +186,10 @@ for ep_i in range(0, num_episodes):
         explr_pct_remaining = 1.0
     else:
         explr_pct_remaining = max(0, num_explore_episodes - ep_i + burn_in_episodes) / (num_explore_episodes)
+    beta_pct_remaining = max(0, num_beta_episodes - ep_i + burn_in_episodes) / (num_beta_episodes)
     maddpg.scale_noise(final_OU_noise_scale + (init_noise_scale - final_OU_noise_scale) * explr_pct_remaining)
     maddpg.reset_noise()
+    maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
     #for the duration of 100 episode with maximum length of 500 time steps
     time_step = 0
     kickable_counter = 0
@@ -219,14 +223,17 @@ for ep_i in range(0, num_episodes):
         noisey_actions_for_buffer = [ac.data.numpy() for ac in noisey_actions]
         noisey_actions_for_buffer = np.asarray([ac[0] for ac in noisey_actions_for_buffer])
 
-        agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes 
+        
         obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
         
         # use random unif parameters if e_greedy
         if randoms:
+            noisey_actions_for_buffer = np.asarray([[val for val in (np.random.uniform(-1,1,3))]])
             params = np.asarray([[val for val in (np.random.uniform(-1,1,5))]])
         else:
             noisey_actions_for_buffer = np.asarray(actions[0])
+            
+        agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes 
         params_for_buffer = params
 
         actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params_for_buffer)] for i in range(1)]).reshape(
