@@ -402,12 +402,42 @@ class HFO_env():
         reward=0.0
         #---------------------------
 
-        ########################### keep the ball kickable ####################################
+
+        # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
+        if self.d:
+            if s=='Goal':
+                reward+=5
+            #---------------------------
+            #elif s=='CapturedByDefense':
+            #    reward+=-100
+            #---------------------------
+            #elif s=='OutOfBounds':
+            #    reward+=-0.5
+            #---------------------------
+            #Cause Unknown Do Nothing
+            #elif s=='OutOfTime':
+            #    reward+=-100
+            #---------------------------
+            #elif s=='InGame':
+            #    reward+=0
+            #---------------------------
+            #elif s=='SERVER_DOWN':
+            #    reward+=0
+            #---------------------------
+            #else:
+            #    print("Error: Unknown GameState", s)
+            #    reward = -1
+            return reward
+    
+    
+    
+    
+            ########################### keep the ball kickable ####################################
         #team_kickable = False
         #team_kickable = np.array([self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)]).any() # kickable by team
         #if team_kickable :
         #    reward+= 1
-        
+    
         if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous) and not self.been_kicked: # uses action just performed, with previous obs, (both at T)
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
             self.been_kicked = True
@@ -446,6 +476,7 @@ class HFO_env():
         r,_,_ = self.ball_distance_to_goal(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         reward += (3)*(r_prev - r)*.6
+        
         ##################################################################################
         
         if s=='Goal':
@@ -514,7 +545,7 @@ class HFO_env():
         while(True):
             while(self.start):
                 j = 0 # j to maximum episode length
-                d = False
+                self.d = False
                 self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                 self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                 self.been_kicked = False
@@ -590,14 +621,16 @@ class HFO_env():
                     self.world_status = self.team_envs[agent_ID].step() # update world
                  
                     self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
-                    self.team_rewards[agent_ID] = self.getReward(
-                    self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
-                    self.team_should_act_flag = False
-
+                    
                     if self.world_status == hfo.IN_GAME:
                         self.d = False
                     else:
                         self.d = True
+
+                    self.team_rewards[agent_ID] = self.getReward(
+                    self.team_envs[agent_ID].statusToString(self.world_status),agent_ID) # update reward
+                    self.team_should_act_flag = False
+
 
                     while self.just_another_flag:
                         time.sleep(self.sleep_timer)

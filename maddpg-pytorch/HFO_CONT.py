@@ -80,7 +80,7 @@ episode_length = 500 # FPS
 
 replay_memory_size = 1000000
 num_explore_episodes = 20  # Haus uses over 10,000 updates --
-burn_in_iterations = 10000 # for time step
+burn_in_iterations = 100000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
 final_OU_noise_scale = 0.0
@@ -107,7 +107,7 @@ tau = 0.001 # soft update rate
 # Mixed target beta (0 = 1-step, 1 = MC update)
 initial_beta = 1.0
 final_beta = 0.1 #
-num_beta_episodes = 1000
+num_beta_episodes = 2000
 t = 0
 time_step = 0
 kickable_counter = 0
@@ -134,7 +134,7 @@ if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
         
 env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
-              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False)
+              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=True)
 
 # if you want viewer
 if use_viewer:
