@@ -83,7 +83,7 @@ num_explore_episodes = 20  # Haus uses over 10,000 updates --
 burn_in_iterations = 10000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
-
+final_OU_noise_scale = 0.0
 final_noise_scale = 0.1
 init_noise_scale = 1.00
 steps_per_update = 1
@@ -184,7 +184,7 @@ for ep_i in range(0, num_episodes):
         explr_pct_remaining = 1.0
     else:
         explr_pct_remaining = max(0, num_explore_episodes - ep_i + burn_in_episodes) / (num_explore_episodes)
-    maddpg.scale_noise(final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)
+    maddpg.scale_noise(final_OU_noise_scale + (init_noise_scale - final_OU_noise_scale) * explr_pct_remaining)
     maddpg.reset_noise()
     #for the duration of 100 episode with maximum length of 500 time steps
     time_step = 0
