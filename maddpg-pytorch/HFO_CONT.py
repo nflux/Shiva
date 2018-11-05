@@ -134,7 +134,7 @@ if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
         
 env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
-              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=True)
+              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False)
 
 # if you want viewer
 if use_viewer:
@@ -307,7 +307,7 @@ for ep_i in range(0, num_episodes):
 
             #print(step_logger_df) 
         #if t%30000 == 0 and use_viewer:
-        if t%30000 == 0 and use_viewer and ep_i > 400:
+        if t%30000 == 0 and use_viewer and ep_i > 1000:
             env._start_viewer()       
 
     #ep_rews = replay_buffer.get_average_rewards(time_step)
