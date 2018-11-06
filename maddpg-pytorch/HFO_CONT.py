@@ -68,7 +68,7 @@ def zero_params(num_TA,params,action_index):
     return params
 
 # options
-D4PG = False
+D4PG = True
 action_level = 'low'
 feature_level = 'low'
 
@@ -105,8 +105,8 @@ a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
 # Mixed target beta (0 = 1-step, 1 = MC update)
-initial_beta = 1.0
-final_beta = 0.1 #
+initial_beta = 0.0
+final_beta = 0.0 #
 num_beta_episodes = 2000
 t = 0
 time_step = 0

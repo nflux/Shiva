@@ -55,7 +55,7 @@ class HFO_env():
                  goalie = False, num_trials = 10000,fpt = 100,feat_lvl = 'high',
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
                  offense_on_ball=0, fullstate = False, seed = 123,
-                 ball_x_min = 0.3, ball_x_max = 0.5, verbose = False, log_game=False,
+                 ball_x_min = 0.0, ball_x_max = 0.2, verbose = False, log_game=False,
                  log_dir="log"):
         
 
