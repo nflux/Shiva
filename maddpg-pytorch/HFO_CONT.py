@@ -45,9 +45,9 @@ N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 5 # n-step update size
 # Mixed target beta (0 = 1-step, 1 = MC update)
-initial_beta = 0.0
-final_beta = 0.0 #
-num_beta_episodes = 2000
+initial_beta = 0.4
+final_beta = 0.1 #
+num_beta_episodes = 1000
 #---------------------------------------
 # default settings
 num_episodes = 100000
@@ -68,7 +68,7 @@ explore = True
 final_OU_noise_scale = 0.0
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 200  # Haus uses over 10,000 updates --
+num_explore_episodes = 500  # Haus uses over 10,000 updates --
 # -------------------------------------
 #Save/load ---------------------------
 save_critic = False
@@ -261,10 +261,8 @@ for ep_i in range(0, num_episodes):
                     n_step_target = MC_target
                     n_step_next_ob = n_step_next_obs[-1]
                     n_step_done = n_step_dones[-1]
-                if n != et_i: # push next actions
-                    replay_buffer.push(n_step_ob, n_step_ac,np.hstack([n_step_target]),n_step_next_ob,n_step_done,np.hstack([MC_target]),n_step_acs[n+1]) 
-                else: # push any action as next, it will be zero'd by the dones mask
-                    replay_buffer.push(n_step_ob, n_step_ac,np.hstack([n_step_target]),n_step_next_ob,n_step_done,np.hstack([MC_target]),n_step_acs[n])
+                # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
+                replay_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target])) 
                                        
             # log
             if time_step > 0 and ep_i > 1:

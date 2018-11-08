@@ -49,8 +49,6 @@ def zero_params(num_TA,params,action_index):
 # returns the distribution projection
 def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, cum_rewards_v, gamma, device="cpu"):
     next_distr = next_distr_v.data.cpu().numpy()
-    print(self.beta)
-    print(self.Vmin)
     rewards = rewards_v.data.cpu().numpy()
     cum_rewards = cum_rewards_v.data.cpu().numpy()
     dones_mask = dones_mask_t.cpu().numpy().astype(np.bool)

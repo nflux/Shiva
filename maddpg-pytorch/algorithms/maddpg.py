@@ -132,7 +132,7 @@ class MADDPG(object):
                 If passed in, important quantities will be logged
         """
         # rews = 1-step, cum-rews = n-step
-        obs, acs, rews, next_obs, dones,cum_rews,nacs = sample
+        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews = sample
         curr_agent = self.agents[agent_i]
         zero_values = False
         # Train critic ------------------------
@@ -157,14 +157,14 @@ class MADDPG(object):
         
         if self.D4PG:
             trgt_vf_distr = F.softmax(curr_agent.target_critic(trgt_vf_in),dim=1) # critic distribution
-            trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,rews[agent_i],dones[agent_i],cum_rews[agent_i],
+            trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
                                               gamma=self.gamma**self.n_steps,device='cpu') 
             # distribution distance function
             prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
             vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
         else: # single critic value
-            target_value = (1-self.beta)*(rews[agent_i].view(-1, 1) + self.gamma *
-                        curr_agent.target_critic(trgt_vf_in) * (1 - dones[agent_i].view(-1, 1))) + self.beta*(cum_rews[agent_i].view(-1,1))
+            target_value = (1-self.beta)*(n_step_rews[agent_i].view(-1, 1) + (self.gamma**n_steps) *
+                        curr_agent.target_critic(trgt_vf_in) * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
             #vf_loss = MSELoss(actual_value, target_value)
             vf_loss = MSELoss(actual_value, target_value.detach())
             
