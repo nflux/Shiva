@@ -4,6 +4,7 @@ from gym.spaces import Box, Discrete
 from utils.networks import MLPNetwork
 from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbel_softmax
 from utils.agents import DDPGAgent
+from utils.misc import distr_projection
 import numpy as np
 MSELoss = torch.nn.MSELoss()
 
@@ -13,7 +14,7 @@ class MADDPG(object):
     """
     def __init__(self, agent_init_params, alg_types,
                  gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
-                 discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51, REWARD_STEPS = 5,
+                 discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5,
                  DELTA_Z = 20.0/50,D4PG=False,beta = 0):
         """
         Inputs:
@@ -49,7 +50,7 @@ class MADDPG(object):
         self.trgt_pol_dev = 'cpu'  # device for target policies
         self.trgt_critic_dev = 'cpu'  # device for target critics
         self.niter = 0
-        self.REWARD_STEPS = REWARD_STEPS
+        self.n_steps = n_steps
         self.beta = beta
         self.N_ATOMS = N_ATOMS
         self.Vmax = vmax
@@ -97,47 +98,6 @@ class MADDPG(object):
         """
         return [a.step(obs, explore=explore) for a, obs in zip(self.agents,
                                                        observations)]
-    
-    # returns the distribution projection
-    def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, cum_rewards_v, gamma, device="cpu"):
-        next_distr = next_distr_v.data.cpu().numpy()
-        rewards = rewards_v.data.cpu().numpy()
-        cum_rewards = cum_rewards_v.data.cpu().numpy()
-        dones_mask = dones_mask_t.cpu().numpy().astype(np.bool)
-        batch_size = len(rewards)
-        proj_distr = np.zeros((batch_size, self.N_ATOMS), dtype=np.float32)
-
-        for atom in range(self.N_ATOMS):
-            tz_j = np.minimum(self.Vmax, np.maximum(self.Vmin, 
-                                                    (1-self.beta)*(rewards + (self.Vmin + atom * self.DELTA_Z) * gamma) + (self.beta)*cum_rewards))
-            b_j = (tz_j - self.Vmin) / self.DELTA_Z
-            l = np.floor(b_j).astype(np.int64)
-            u = np.ceil(b_j).astype(np.int64)
-            eq_mask = u == l
-            proj_distr[eq_mask, l[eq_mask]] += next_distr[eq_mask, atom]
-            ne_mask = u != l
-            proj_distr[ne_mask, l[ne_mask]] += next_distr[ne_mask, atom] * (u - b_j)[ne_mask]
-            proj_distr[ne_mask, u[ne_mask]] += next_distr[ne_mask, atom] * (b_j - l)[ne_mask]
-
-            
-        if dones_mask.any():
-            proj_distr[dones_mask] = 0.0
-            tz_j = np.minimum(self.Vmax, np.maximum(self.Vmin, rewards[dones_mask]))
-            b_j = (tz_j - self.Vmin) / self.DELTA_Z
-            l = np.floor(b_j).astype(np.int64)
-            u = np.ceil(b_j).astype(np.int64)
-            eq_mask = u == l
-            eq_dones = dones_mask.copy()
-            eq_dones[dones_mask] = eq_mask
-            if eq_dones.any():
-                proj_distr[eq_dones, l] = 1.0
-            ne_mask = u != l
-            ne_dones = dones_mask.copy()
-            ne_dones[dones_mask] = ne_mask
-            if ne_dones.any():
-                proj_distr[ne_dones, l] = (u - b_j)[ne_mask]
-                proj_distr[ne_dones, u] = (b_j - l)[ne_mask]
-        return torch.FloatTensor(proj_distr).to(device)
     
     # zeros the params corresponding to the non-chosen actions
     def zero_params(self,params,actions_oh):
@@ -197,8 +157,8 @@ class MADDPG(object):
         
         if self.D4PG:
             trgt_vf_distr = F.softmax(curr_agent.target_critic(trgt_vf_in),dim=1) # critic distribution
-            trgt_vf_distr_proj = self.distr_projection(trgt_vf_distr,rews[agent_i],dones[agent_i],cum_rews[agent_i],
-                                              gamma=self.gamma**self.REWARD_STEPS,device='cpu') 
+            trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,rews[agent_i],dones[agent_i],cum_rews[agent_i],
+                                              gamma=self.gamma**self.n_steps,device='cpu') 
             # distribution distance function
             prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
             vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
@@ -429,7 +389,7 @@ class MADDPG(object):
     @classmethod
     def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",
                       gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,
-                      vmax = 10,vmin = -10, N_ATOMS = 51, REWARD_STEPS = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0):
+                      vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -471,7 +431,7 @@ class MADDPG(object):
                      'vmax': vmax,
                      'vmin': vmin,
                      'N_ATOMS': N_ATOMS,
-                     'REWARD_STEPS': REWARD_STEPS,
+                     'n_steps': n_steps,
                      'DELTA_Z': DELTA_Z,
                      'D4PG': D4PG,
                      'beta': beta}

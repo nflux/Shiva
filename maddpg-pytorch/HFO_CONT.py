@@ -25,118 +25,76 @@ from utils.make_env import make_env
 from utils.buffer import ReplayBuffer
 #from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
-
+from utils.misc import e_greedy
+from utils.misc import zero_params
 from HFO_env import *
-def e_greedy(logits, eps=0.0):
-    """
-    Given batch of logits, return one-hot sample using epsilon greedy strategy
-    (based on given epsilon)
-    
-    ** Modified to return True if random action is taken, else return False
-    """
-    # get best (according to current policy) actions in one-hot form
-    argmax_acs = (logits == logits.max(1, keepdim=True)[0]).float()
-    if eps == 0.0:
-        return argmax_acs,False
-    # get random actions in one-hot form
-    rand_acs = Variable(torch.eye(logits.shape[1])[[np.random.choice(
-        range(logits.shape[1]), size=logits.shape[0])]], requires_grad=False)
-    # chooses between best and random actions using epsilon greedy
-    explore = False
-    rand = torch.rand(logits.shape[0])
-    for i,r in enumerate(rand):
-        if r < eps:
-            explore = True        
-    return torch.stack([argmax_acs[i] if r > eps else rand_acs[i] for i, r in
-                        enumerate(rand)]) , explore
-
-def zero_params(num_TA,params,action_index):
-    for i in range(num_TA):
-        if action_index[i] == 0:
-            params[i][2] = 0
-            params[i][3] = 0
-            params[i][4] = 0
-        if action_index[i] == 1:
-            params[i][0] = 0
-            params[i][1] = 0
-            params[i][3] = 0
-            params[i][4] = 0
-        if action_index[i] == 2:
-            params[i][0] = 0
-            params[i][1] = 0
-            params[i][2] = 0
-    return params
 
 # options
-D4PG = True
 action_level = 'low'
 feature_level = 'low'
-
-# default settings
-
-
-num_episodes = 100000
-episode_length = 500 # FPS
-
-replay_memory_size = 1000000
-num_explore_episodes = 20  # Haus uses over 10,000 updates --
-burn_in_iterations = 100000 # for time step
-burn_in_episodes = float(burn_in_iterations)/episode_length
 USE_CUDA = False 
-final_OU_noise_scale = 0.0
-final_noise_scale = 0.1
-init_noise_scale = 1.00
-steps_per_update = 10
-untouched_time = 500
-
-#Saving the NNs, currently set to save after each episode
-save_critic = False
-save_actor = False
-#The NNs saved every #th episode.
-ep_save_every = 20
-
-#Load previous NNs, currently set to load only at initialization.
-load_critic = False
-load_actor = False
-
-batch_size = 128
-hidden_dim = int(1024)
-a_lr = 0.00001 # actor learning rate
-c_lr = 0.001 # critic learning rate
-tau = 0.001 # soft update rate
-# Mixed target beta (0 = 1-step, 1 = MC update)
-initial_beta = 0.0
-final_beta = 0.0 #
-num_beta_episodes = 2000
-t = 0
-time_step = 0
-kickable_counter = 0
-n_training_threads = 8
-explore = True
 use_viewer = True
-
-# D4PG atoms
-gamma = 0.99
+n_training_threads = 8
+use_viewer_after = 1000 # If using viewer, uses after x episodes
+#D4PG Options --------------------------
+D4PG = True
+gamma = 0.99 # discount
 Vmax = 10
 Vmin = -10
 N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-REWARD_STEPS = 1
+n_steps = 5 # n-step update size
+# Mixed target beta (0 = 1-step, 1 = MC update)
+initial_beta = 0.0
+final_beta = 0.0 #
+num_beta_episodes = 2000
+#---------------------------------------
+# default settings
+num_episodes = 100000
+replay_memory_size = 1000000
+episode_length = 500 # FPS
+untouched_time = 500
+burn_in_iterations = 500 # for time step
+burn_in_episodes = float(burn_in_iterations)/episode_length
+# hyperparams-----------------------
+batch_size = 256
+hidden_dim = int(1024)
+a_lr = 0.00001 # actor learning rate
+c_lr = 0.001 # critic learning rate
+tau = 0.001 # soft update rate
+steps_per_update = 10
+# exploration --------------------------
+explore = True
+final_OU_noise_scale = 0.0
+final_noise_scale = 0.1
+init_noise_scale = 1.00
+num_explore_episodes = 200  # Haus uses over 10,000 updates --
+# -------------------------------------
+#Save/load ---------------------------
+save_critic = False
+save_actor = False
+#The NNs saved every #th episode.
+ep_save_every = 20
+#Load previous NNs, currently set to load only at initialization.
+load_critic = False
+load_actor = False
+# --------------------------------------
 
+# initialization ------------------------
+t = 0
+time_step = 0
+kickable_counter = 0
 # if using low level actions use non discrete settings
 if action_level == 'high':
     discrete_action = True
 else:
     discrete_action = False
-    
-    
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
-        
+    
 env = HFO_env(num_TA=1, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
               feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False)
 
-# if you want viewer
 if use_viewer:
     env._start_viewer()
 
@@ -151,7 +109,7 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   c_lr=c_lr,
                                   hidden_dim=hidden_dim ,discrete_action=discrete_action,
                                   vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
-                              REWARD_STEPS=REWARD_STEPS,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta)
+                              n_steps=n_steps,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta)
 
 
 
@@ -170,6 +128,7 @@ num_steps_per_episode = []
 end_actions = []
 logger_df = pd.DataFrame()
 step_logger_df = pd.DataFrame()
+# -------------------------------------
 
 # for the duration of 1000 episodes 
 for ep_i in range(0, num_episodes):
@@ -256,17 +215,12 @@ for ep_i in range(0, num_episodes):
  
 
 
-        # Store n-steps reward| Here we are using full episodic rollout 
+        # Store variables for calculation of MC and n-step targets
         n_step_rewards.append(rewards)
         n_step_obs.append(obs)
         n_step_next_obs.append(next_obs)
         n_step_acs.append(actions_params_for_buffer)
         n_step_dones.append(dones)
-        time_step += 1
-
-        t += 1
-        if t%1000 == 0:
-            step_logger_df.to_csv('history.csv')
 
         if (len(replay_buffer) >= batch_size and
             (t % steps_per_update) < 1) and t > burn_in_iterations:
@@ -281,19 +235,37 @@ for ep_i in range(0, num_episodes):
                     maddpg.update(sample, a_i )
                 maddpg.update_all_targets()
             maddpg.prep_rollouts(device='cpu')
-        if d == True:
-            # push all experiences for episode with reward rollout
+            
+            
+        time_step += 1
+        t += 1
+        if t%1000 == 0:
+            step_logger_df.to_csv('history.csv')
+            
+        # why don't we push the reward with gamma already instead of storing gammas?                     
+        if d == True: # Episode done
+            # Calculate n-step and MC targets
             for n in range(et_i+1):
-                n_step_reward = 0
-                for step in range(et_i+1 - n):
-                    n_step_reward += n_step_rewards[et_i - step] * gamma**(et_i - n - step)
-                    #n_step_rewards[n] is the single step rew, n_step_reward is the rolled out value
+                MC_target = 0
+                n_step_target = 0
+                n_step_ob = n_step_obs[n]
+                n_step_ac = n_step_acs[n]    
+                for step in range(et_i+1 - n): # sum MC target
+                    MC_target += n_step_rewards[et_i - step] * gamma**(et_i - n - step)
+                if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
+                    for step in range(n_steps): 
+                        n_step_target += n_step_rewards[n + step] * gamma**(step)
+                    n_step_next_ob = n_step_next_obs[n - 1 + n_steps]
+                    n_step_done = n_step_dones[n - 1 + n_steps]
+                else: # n-step = MC if less than n steps remaining
+                    n_step_target = MC_target
+                    n_step_next_ob = n_step_next_obs[-1]
+                    n_step_done = n_step_dones[-1]
                 if n != et_i: # push next actions
-                    replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],np.hstack([n_step_reward]),n_step_acs[n+1]) 
+                    replay_buffer.push(n_step_ob, n_step_ac,np.hstack([n_step_target]),n_step_next_ob,n_step_done,np.hstack([MC_target]),n_step_acs[n+1]) 
                 else: # push any action as next, it will be zero'd by the dones mask
-                    replay_buffer.push(n_step_obs[n], n_step_acs[n], n_step_rewards[n],n_step_next_obs[n],n_step_dones[n],np.hstack([n_step_reward]),n_step_acs[n]) 
-
-                    
+                    replay_buffer.push(n_step_ob, n_step_ac,np.hstack([n_step_target]),n_step_next_ob,n_step_done,np.hstack([MC_target]),n_step_acs[n])
+                                       
             # log
             if time_step > 0 and ep_i > 1:
                 step_logger_df = step_logger_df.append({'time_steps': time_step, 
@@ -307,7 +279,7 @@ for ep_i in range(0, num_episodes):
 
             #print(step_logger_df) 
         #if t%30000 == 0 and use_viewer:
-        if t%30000 == 0 and use_viewer and ep_i > 1000:
+        if t%30000 == 0 and use_viewer and ep_i > use_viewer_after:
             env._start_viewer()       
 
     #ep_rews = replay_buffer.get_average_rewards(time_step)
