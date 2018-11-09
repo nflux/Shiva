@@ -35,7 +35,7 @@ feature_level = 'low'
 USE_CUDA = False 
 use_viewer = True
 n_training_threads = 8
-use_viewer_after = 1000 # If using viewer, uses after x episodes
+use_viewer_after = 1500 # If using viewer, uses after x episodes
 #D4PG Options --------------------------
 D4PG = True
 gamma = 0.99 # discount
@@ -57,7 +57,7 @@ untouched_time = 500
 burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # hyperparams-----------------------
-batch_size = 256
+batch_size = 512
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
