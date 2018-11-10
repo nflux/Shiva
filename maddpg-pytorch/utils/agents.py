@@ -14,7 +14,7 @@ class DDPGAgent(object):
     critic, exploration noise)
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, hidden_dim=64,
-                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True):
+                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False):
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -35,17 +35,17 @@ class DDPGAgent(object):
         self.policy = MLPNetwork(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action, is_actor= True,
-                                 norm_in= False,agent=self,D4PG=D4PG)
+                                 norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
         self.critic = MLPNetwork(num_in_critic, 1,
                                  hidden_dim=hidden_dim,is_actor=False,
-                                 norm_in= False,agent=self,D4PG=D4PG)
+                                 norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
         self.target_policy = MLPNetwork(num_in_pol, num_out_pol,
                                         hidden_dim=hidden_dim,is_actor=True,
                                         discrete_action=discrete_action,
-                                        norm_in= False,agent=self,D4PG=D4PG)
+                                        norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
         self.target_critic = MLPNetwork(num_in_critic, 1,
                                         hidden_dim=hidden_dim,is_actor=False,
-                                        norm_in= False,agent=self,D4PG=D4PG)
+                                        norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)
 

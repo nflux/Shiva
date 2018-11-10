@@ -29,13 +29,35 @@ from utils.misc import e_greedy
 from utils.misc import zero_params
 from HFO_env import *
 
-# options
+# options ------------------------------
 action_level = 'low'
 feature_level = 'low'
 USE_CUDA = False 
 use_viewer = True
 n_training_threads = 8
 use_viewer_after = 1500 # If using viewer, uses after x episodes
+# default settings
+num_episodes = 100000
+replay_memory_size = 1000000
+episode_length = 500 # FPS
+untouched_time = 500
+burn_in_iterations = 500 # for time step
+burn_in_episodes = float(burn_in_iterations)/episode_length
+# --------------------------------------
+# hyperparams---------------------------
+batch_size = 128
+hidden_dim = int(1024)
+a_lr = 0.00005 # actor learning rate
+c_lr = 0.001 # critic learning rate
+tau = 0.005 # soft update rate
+steps_per_update = 2
+# exploration --------------------------
+explore = True
+final_OU_noise_scale = 0.1
+final_noise_scale = 0.1
+init_noise_scale = 1.00
+num_explore_episodes = 200  # Haus uses over 10,000 updates --
+# --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
 gamma = 0.99 # discount
@@ -46,31 +68,15 @@ DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 5 # n-step update size
 # Mixed target beta (0 = 1-step, 1 = MC update)
 initial_beta = 0.4
-final_beta = 0.1 #
-num_beta_episodes = 1000
+final_beta = 0.0 #
+num_beta_episodes = 200
 #---------------------------------------
-# default settings
-num_episodes = 100000
-replay_memory_size = 1000000
-episode_length = 500 # FPS
-untouched_time = 500
-burn_in_iterations = 500 # for time step
-burn_in_episodes = float(burn_in_iterations)/episode_length
-# hyperparams-----------------------
-batch_size = 512
-hidden_dim = int(1024)
-a_lr = 0.00001 # actor learning rate
-c_lr = 0.001 # critic learning rate
-tau = 0.001 # soft update rate
-steps_per_update = 10
-# exploration --------------------------
-explore = True
-final_OU_noise_scale = 0.0
-final_noise_scale = 0.1
-init_noise_scale = 1.00
-num_explore_episodes = 500  # Haus uses over 10,000 updates --
-# -------------------------------------
-#Save/load ---------------------------
+#TD3 Options ---------------------------
+TD3 = True
+TD3_delay_steps = 5
+TD3_noise = 0.2
+# --------------------------------------
+#Save/load -----------------------------
 save_critic = False
 save_actor = False
 #The NNs saved every #th episode.
@@ -79,8 +85,7 @@ ep_save_every = 20
 load_critic = False
 load_actor = False
 # --------------------------------------
-
-# initialization ------------------------
+# initialization -----------------------
 t = 0
 time_step = 0
 kickable_counter = 0
@@ -109,7 +114,8 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   c_lr=c_lr,
                                   hidden_dim=hidden_dim ,discrete_action=discrete_action,
                                   vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
-                              n_steps=n_steps,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta)
+                              n_steps=n_steps,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta,
+                              TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps)
 
 
 

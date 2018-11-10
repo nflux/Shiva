@@ -6,6 +6,8 @@ from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbe
 from utils.agents import DDPGAgent
 from utils.misc import distr_projection
 import numpy as np
+from torch.autograd import Variable
+
 MSELoss = torch.nn.MSELoss()
 
 class MADDPG(object):
@@ -15,7 +17,7 @@ class MADDPG(object):
     def __init__(self, agent_init_params, alg_types,
                  gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
                  discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5,
-                 DELTA_Z = 20.0/50,D4PG=False,beta = 0):
+                 DELTA_Z = 20.0/50,D4PG=False,beta = 0,TD3=False,TD3_noise = 0.2,TD3_delay_steps=2):
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -37,6 +39,7 @@ class MADDPG(object):
                                  hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
                                  n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
                                  delta = DELTA_Z,D4PG=D4PG,
+                                 TD3=TD3,
                                  **params)
                        for params in agent_init_params]
         self.agent_init_params = agent_init_params
@@ -57,6 +60,10 @@ class MADDPG(object):
         self.Vmin = vmin
         self.DELTA_Z = DELTA_Z
         self.D4PG = D4PG
+        self.TD3 = TD3
+        self.TD3_noise = TD3_noise
+        self.TD3_delay_steps = TD3_delay_steps
+        self.count = 0
     @property
     def policies(self):
         return [a.policy for a in self.agents]
@@ -135,6 +142,7 @@ class MADDPG(object):
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews = sample
         curr_agent = self.agents[agent_i]
         zero_values = False
+        
         # Train critic ------------------------
         curr_agent.critic_optimizer.zero_grad()
         
@@ -143,30 +151,72 @@ class MADDPG(object):
             (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),
              self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
                         for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
+            if self.TD3:
+                noise = torch.randn_like(acs)*self.TD3_noise
+                all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+            (onehot_from_logits((pi(nobs) + noise)[:,:curr_agent.action_dim]),
+             self.zero_params((pi(nobs)+noise),onehot_from_logits((pi(nobs)+noise)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
+                        for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
         else:
-            all_trgt_acs = [pi(nobs) for pi, nobs in zip(self.target_policies,next_obs)]  
+            if self.TD3:
+                noise = torch.randn_like(acs[0]) * self.TD3_noise
+                all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(self.target_policies,next_obs)]                  
+            else:
+                all_trgt_acs = [pi(nobs) for pi, nobs in zip(self.target_policies,next_obs)]  
+            
             
 
         # Target critic values
         trgt_vf_in = torch.cat((*next_obs, *all_trgt_acs), dim=1)
-        #trgt_vf_in = torch.cat((*next_obs, *nacs), dim=1)
-
+        if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
+                     # and build the combination of distr choosing the minimums
+            trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
+            if self.D4PG:
+                arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().data.numpy(),
+                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean().data.numpy()])
+                if arg: 
+                    trgt_Q = trgt_Q1
+                else:
+                    trgt_Q = trgt_Q2
+            else:
+                trgt_Q = torch.min(trgt_Q1,trgt_Q2)
+        else:
+            trgt_Q = curr_agent.target_critic(trgt_vf_in)
         # Actual critic values
         vf_in = torch.cat((*obs, *acs), dim=1)
-        actual_value = curr_agent.critic(vf_in)
+        if self.TD3:
+            actual_value_1, actual_value_2 = curr_agent.critic(vf_in)
+        else:
+            actual_value = curr_agent.critic(vf_in)
         
         if self.D4PG:
-            trgt_vf_distr = F.softmax(curr_agent.target_critic(trgt_vf_in),dim=1) # critic distribution
-            trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
-                                              gamma=self.gamma**self.n_steps,device='cpu') 
-            # distribution distance function
-            prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
-            vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
+                # Q1
+                trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
+                trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
+                                                  gamma=self.gamma**self.n_steps,device='cpu') 
+                if self.TD3:
+                    prob_dist_1 = -F.log_softmax(actual_value_1,dim=1) * trgt_vf_distr_proj # Q1
+                    prob_dist_2 = -F.log_softmax(actual_value_2,dim=1) * trgt_vf_distr_proj # Q2
+                    # distribution distance function
+                    vf_loss = prob_dist_1.sum(dim=1).mean() + prob_dist_2.sum(dim=1).mean() # critic loss based on distribution distance
+                else:
+                    prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
+                    trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
+                    trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
+                                                      gamma=self.gamma**self.n_steps,device='cpu') 
+                    # distribution distance function
+                    prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
+                    vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
         else: # single critic value
-            target_value = (1-self.beta)*(n_step_rews[agent_i].view(-1, 1) + (self.gamma**n_steps) *
-                        curr_agent.target_critic(trgt_vf_in) * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
-            #vf_loss = MSELoss(actual_value, target_value)
-            vf_loss = MSELoss(actual_value, target_value.detach())
+            target_value = (1-self.beta)*(n_step_rews[agent_i].view(-1, 1) + (self.gamma**self.n_steps) *
+                        trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
+            target_value.detach()
+            if self.TD3: # handle double critic
+                vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
+            else:
+                vf_loss = F.mse_loss(actual_value, target_value)
+
+                
             
         vf_loss.backward() 
         if parallel:
@@ -176,69 +226,70 @@ class MADDPG(object):
         curr_agent.policy_optimizer.zero_grad()
         
         # Train actor -----------------------
-        
-        if self.discrete_action:
-            # Forward pass as if onehot (hard=True) but backprop through a differentiable
-            # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
-            # through discrete categorical samples, but I'm not sure if that is
-            # correct since it removes the assumption of a deterministic policy for
-            # DDPG. Regardless, discrete policies don't seem to learn properly without it.
-            curr_pol_out = curr_agent.policy(obs[agent_i])
-            curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
-        else:
-            curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
-
-            self.curr_pol_out = curr_pol_out.clone() # for inverting action space
-            #gumbel = gumbel_softmax(torch.softmax(curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
-            #log_pol_out = curr_pol_out[:,:curr_agent.action_dim].clone()
-
-            #gumbel = gumbel_softmax((curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
-
-            #log_pol_out = torch.log(curr_pol_out[:,:curr_agent.action_dim].clone())
-            #gumbel = gumbel_softmax(log_pol_out,hard=True)
-            #gumbel = onehot_from_logits(log_pol_out,eps=0.0)
-            
-
-            # concat one-hot actions with params zero'd along indices non-chosen actions
-            if zero_values:
-                curr_pol_vf_in = torch.cat((gumbel, 
-                                      self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
+        if self.count % self.TD3_delay_steps == 0:
+            if self.discrete_action:
+                # Forward pass as if onehot (hard=True) but backprop through a differentiable
+                # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
+                # through discrete categorical samples, but I'm not sure if that is
+                # correct since it removes the assumption of a deterministic policy for
+                # DDPG. Regardless, discrete policies don't seem to learn properly without it.
+                curr_pol_out = curr_agent.policy(obs[agent_i])
+                curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
             else:
-                curr_pol_vf_in = curr_pol_out
-                
-            #print(curr_pol_vf_in)
-        all_pol_acs = []
-        for i, pi, ob in zip(range(self.nagents), self.policies, obs):
-            if i == agent_i:
-                all_pol_acs.append(curr_pol_vf_in)
-            elif self.discrete_action:
-                all_pol_acs.append(onehot_from_logits(pi(ob)))
-            else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
-                a = pi(ob)
-                g = onehot_from_logits(torch.log(a[:,:curr_agent.action_dim]),hard=True)
-                c = torch.cat((g,self.zero_params(a,g)[:,curr_agent.action_dim:]),1)
-                all_pol_acs.append(c) # 
+                curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
 
-        vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
-        # invert gradient --------------------------------------
-        self.params = vf_in.data
-        self.param_dim = curr_agent.param_dim
-        hook = vf_in.register_hook(self.inject)
-        # ------------------------------------------------------
-        if self.D4PG:
-            critic_out = curr_agent.critic(vf_in)
-            distr_q = curr_agent.critic.distr_to_q(critic_out)
-            pol_loss = -distr_q.mean()
-        else: # non-distributional
-            pol_loss = -curr_agent.critic(vf_in).mean()
-        #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
-        pol_loss.backward()
-        if parallel:
-            average_gradients(curr_agent.policy)
-        #torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
-        curr_agent.policy_optimizer.step()
-        hook.remove()
+                self.curr_pol_out = curr_pol_out.clone() # for inverting action space
+                #gumbel = gumbel_softmax(torch.softmax(curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
+                #log_pol_out = curr_pol_out[:,:curr_agent.action_dim].clone()
 
+                #gumbel = gumbel_softmax((curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
+
+                #log_pol_out = torch.log(curr_pol_out[:,:curr_agent.action_dim].clone())
+                #gumbel = gumbel_softmax(log_pol_out,hard=True)
+                #gumbel = onehot_from_logits(log_pol_out,eps=0.0)
+
+
+                # concat one-hot actions with params zero'd along indices non-chosen actions
+                if zero_values:
+                    curr_pol_vf_in = torch.cat((gumbel, 
+                                          self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
+                else:
+                    curr_pol_vf_in = curr_pol_out
+
+                #print(curr_pol_vf_in)
+            all_pol_acs = []
+            for i, pi, ob in zip(range(self.nagents), self.policies, obs):
+                if i == agent_i:
+                    all_pol_acs.append(curr_pol_vf_in)
+                elif self.discrete_action:
+                    all_pol_acs.append(onehot_from_logits(pi(ob)))
+                else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
+                    a = pi(ob)
+                    g = onehot_from_logits(torch.log(a[:,:curr_agent.action_dim]),hard=True)
+                    c = torch.cat((g,self.zero_params(a,g)[:,curr_agent.action_dim:]),1)
+                    all_pol_acs.append(c) # 
+
+            vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
+            # invert gradient --------------------------------------
+            self.params = vf_in.data
+            self.param_dim = curr_agent.param_dim
+            hook = vf_in.register_hook(self.inject)
+            # ------------------------------------------------------
+            if self.D4PG:
+                critic_out = curr_agent.critic.Q1(vf_in)
+                distr_q = curr_agent.critic.distr_to_q(critic_out)
+                pol_loss = -distr_q.mean()
+            else: # non-distributional
+                pol_loss = -curr_agent.critic.Q1(vf_in).mean()
+            #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
+            pol_loss.backward()
+            if parallel:
+                average_gradients(curr_agent.policy)
+            #torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
+            curr_agent.policy_optimizer.step()
+            hook.remove()
+
+        self.count += 1
         # ------------------------------------
         if logger is not None:
             logger.add_scalars('agent%i/losses' % agent_i,
@@ -389,7 +440,8 @@ class MADDPG(object):
     @classmethod
     def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",
                       gamma=0.95, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,
-                      vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0):
+                      vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
+                      TD3=False,TD3_noise = 0.2,TD3_delay_steps=2):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -434,7 +486,10 @@ class MADDPG(object):
                      'n_steps': n_steps,
                      'DELTA_Z': DELTA_Z,
                      'D4PG': D4PG,
-                     'beta': beta}
+                     'beta': beta,
+                     'TD3': TD3,
+                     'TD3_noise': TD3_noise,
+                     'TD3_delay_steps': TD3_delay_steps}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
