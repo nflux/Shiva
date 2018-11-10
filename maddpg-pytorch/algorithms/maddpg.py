@@ -63,6 +63,8 @@ class MADDPG(object):
         self.TD3 = TD3
         self.TD3_noise = TD3_noise
         self.TD3_delay_steps = TD3_delay_steps
+        if not TD3:
+            self.TD3_delay_steps = 1
         self.count = 0
     @property
     def policies(self):
