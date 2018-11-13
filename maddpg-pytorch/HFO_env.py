@@ -51,7 +51,7 @@ class HFO_env():
         * Functionality for synchronizing team actions with opponent team actions
         """
     # class constructor
-    def __init__(self, num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'left',
+    def __init__(self, num_TNPC=0,num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'left',
                  goalie = False, num_trials = 10000,fpt = 100,feat_lvl = 'high',
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
                  offense_on_ball=0, fullstate = False, seed = 123,
@@ -79,11 +79,10 @@ class HFO_env():
 
         """
 
-        
         self.hfo_path = hfo_py.get_hfo_path()
         self._start_hfo_server(frames_per_trial = fpt, untouched_time = untouched_time,
                                offense_agents = num_TA, defense_agents = num_OA,
-                               offense_npcs = 0, defense_npcs = num_ONPC,
+                               offense_npcs = num_TNPC, defense_npcs = num_ONPC,
                                sync_mode = sync_mode, port = port,
                                offense_on_ball = offense_on_ball,
                                fullstate = fullstate, seed = seed,
@@ -112,6 +111,8 @@ class HFO_env():
         self.num_OA = num_OA
         self.num_ONPC = num_ONPC
 
+        self.fpt = fpt
+        self.base = base
         self.been_kicked = False
         self.act_lvl = act_lvl
         self.feat_lvl = feat_lvl
@@ -138,7 +139,6 @@ class HFO_env():
         # talks to the agents
         self.wait = np.array([0]*num_TA)
         self.wait_flag = False
-
 
         # Initialization of mutable lists to be passsed to threads
         # action each team mate is supposed to take when its time to act
@@ -170,33 +170,25 @@ class HFO_env():
         # keeps track of world state
         self.world_status = 0
 
-        # Create thread for each teammate
-        for i in range(num_TA):
-            print("Connecting player %i" % i , "on team %s to the server" % base)
-            thread.start_new_thread(self.connect,(feat_lvl, base,
-                                             False,i,fpt,act_lvl,))
-            time.sleep(0.5)
-
 
         # Create thread for each opponent (set one to goalie)
-        if base == 'left':
-            opp_base = 'right'
-        elif base == 'right':
-            opp_base = 'left'
+        if self.base == 'left':
+            self.opp_base = 'right'
+        elif self.base == 'right':
+            self.opp_base = 'left'
 
-#         for i in range(num_OA):
-#             if i==0:
-#                 thread.start_new_thread(connect,(self, feat_lvl, opp_base,
-#                                                  True,i,))
-#             else:
-#                 thread.start_new_thread(connect,(self, feat_lvl, opp_base,
-#                                                  False,i,))
-#             time.sleep(1)
 
+    def launch(self):
+        # Create thread for each teammate
+        for i in range(self.num_TA):
+            print("Connecting player %i" % i , "on team %s to the server" % self.base)
+            thread.start_new_thread(self.connect,(self.feat_lvl, self.base,
+                                             False,i,self.fpt,self.act_lvl,))
+            time.sleep(0.5)
         print("All players connected to server")
         self.start = True
 
-
+        
 
     def Observation(self,agent_id,side):
         """ Requests and returns observation from an agent from either team.
@@ -397,6 +389,14 @@ class HFO_env():
 
         return distance
 
+    def getPretrainRew(self,s,agentID,d):
+        reward=0.0
+        if d:
+            if s==1:
+                reward+=8
+        return reward
+    
+    
     # Engineered Reward Function
     def getReward(self,s,agentID):
         reward=0.0
