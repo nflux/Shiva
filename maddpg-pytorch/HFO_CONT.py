@@ -73,10 +73,9 @@ TD3_noise = 0.05
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
 Imitation_exploration = True
-pt_critic_updates = 10
-pt_actor_updates = 25000
-pt_episodes = 10 # num of episodes that you observed in the gameplay between npcs
-pt_beta = 0.5
+pt_updates = 25000
+pt_episodes = 3000 # num of episodes that you observed in the gameplay between npcs
+pt_beta = 1.0
 #---------------------------------------
 #Save/load -----------------------------
 save_critic = False
@@ -171,11 +170,6 @@ if Imitation_exploration:
             rewards = np.hstack([env.getPretrainRew(world_stat,i,d) for i in range(env.num_TA) ])            
             dones = np.hstack([d for i in range(env.num_TA)])
 
-            print("R",rewards)
-            print("D",dones)
-            print("A",agent_actions)
-            print("O",obs)
-            print("NO",next_obs)
             # Store variables for calculation of MC and n-step targets
             n_step_rewards.append(rewards)
             n_step_obs.append(obs)
@@ -206,8 +200,9 @@ if Imitation_exploration:
                 break
 
     # update critic and policy
-    for i in range(pt_critic_updates):
+    for i in range(pt_updates):
         if i%100 == 0:
+            maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
             print("Petrain critic/actor update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
@@ -308,13 +303,7 @@ for ep_i in range(0, num_episodes):
 
         next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
         dones = np.hstack([env.d for i in range(env.num_TA)])
- 
 
-        print(next_obs)
-
-        print(actions_params_for_buffer)
-        print(dones)
-        print(rewards)
         # Store variables for calculation of MC and n-step targets
         n_step_rewards.append(rewards)
         n_step_obs.append(obs)

@@ -300,6 +300,10 @@ class MADDPG(object):
                                self.niter)
 
             
+        if self.niter % 100 == 0:
+            print("Q loss",vf_loss)
+            print("Actor loss",pol_loss)
+            
     def inject(self,grad):
         new_grad = grad.clone()
         new_grad = self.invert(new_grad,self.params,self.param_dim)
@@ -607,6 +611,9 @@ class MADDPG(object):
                 vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
             else:
                 vf_loss = F.mse_loss(actual_value, target_value)
+        
+        if self.niter % 100 == 0:
+            print("Q loss",vf_loss)
 
                 
             
@@ -701,4 +708,8 @@ class MADDPG(object):
         #torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
         hook.remove()
+        
+        
+        if self.niter % 100 == 0:
+            print("Actor loss",pol_loss)
         
