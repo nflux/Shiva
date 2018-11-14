@@ -362,6 +362,11 @@ class MADDPG(object):
         for a in self.agents:
             hard_update(a.target_critic, a.critic)
 
+             
+    def update_hard_policy(self):
+        for a in self.agents:
+            hard_update(a.target_policy, a.policy)
+
     def update_all_targets(self):
         """
         Update all target networks (called after normal updates have been
@@ -610,11 +615,7 @@ class MADDPG(object):
             average_gradients(curr_agent.critic)
         #torch.nn.utils.clip_grad_norm(curr_agent.critic.parameters(), 1)
         curr_agent.critic_optimizer.step()
-        curr_agent.critic_optimizer.zero_grad()
-        curr_agent.policy_optimizer.zero_grad()
-        
-        
-        
+
         
         
     def update_actor(self, sample, agent_i, parallel=False, logger=None):
@@ -700,7 +701,4 @@ class MADDPG(object):
         #torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
         hook.remove()
-        
-        curr_agent.critic_optimizer.zero_grad()
-        curr_agent.policy_optimizer.zero_grad()
         

@@ -76,7 +76,7 @@ Imitation_exploration = True
 pt_critic_updates = 20000
 pt_actor_updates = 20000
 pt_episodes = 3000 # num of episodes that you observed in the gameplay between npcs
-pt_beta = 1.0
+pt_beta = 0.8
 #---------------------------------------
 #Save/load -----------------------------
 save_critic = False
@@ -200,9 +200,7 @@ if Imitation_exploration:
                     pretrain_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target])) 
                 break
 
-
-
-
+    # update critic and policy
     for i in range(pt_critic_updates):
         if i%100 == 0:
             print("Petrain critic update:",i)
@@ -213,6 +211,7 @@ if Imitation_exploration:
                 maddpg.update_critic(sample, a_i )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
+    maddpg.update_hard_critic()
 
     for i in range(pt_actor_updates):
         if i%100 == 0:
@@ -224,6 +223,7 @@ if Imitation_exploration:
                 maddpg.update_actor(sample, a_i )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
+    maddpg.update_hard_policy()
     if use_viewer:
         env._start_viewer()       
 
