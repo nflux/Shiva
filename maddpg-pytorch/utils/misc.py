@@ -78,11 +78,11 @@ def pretrain_process(fname,pt_episodes,episode_length,num_features):
                     a[2] = 1.0
                     a[6] = (power/100.0)*2 - 1
                     a[7] = direction/180.0
-                pt_actions.append(a)
+                pt_actions.append([x for x in a])
 
     pt_obs = np.asarray(pt_obs)
     pt_status = np.asarray(pt_status)
-    pt_actions = np.asarray(pt_actions)
+    pt_actions = pt_actions
     return pt_obs,pt_status,pt_actions
 
 

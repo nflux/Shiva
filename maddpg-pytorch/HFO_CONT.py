@@ -49,7 +49,7 @@ explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 20  # Haus uses over 10,000 updates --
+num_explore_episodes = 5  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -73,10 +73,10 @@ TD3_noise = 0.05
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
 Imitation_exploration = True
-pt_critic_updates = 50000
-pt_actor_updates = 50000
-pt_episodes = 3000 # num of episodes that you observed in the gameplay between npcs
-pt_beta = 0.8
+pt_critic_updates = 10
+pt_actor_updates = 25000
+pt_episodes = 10 # num of episodes that you observed in the gameplay between npcs
+pt_beta = 0.5
 #---------------------------------------
 #Save/load -----------------------------
 save_critic = False
@@ -142,7 +142,7 @@ step_logger_df = pd.DataFrame()
 if Imitation_exploration:
 
     pt_obs, pt_status,pt_actions = pretrain_process(fname = 'Pretrain_Files/base_left-11.log',pt_episodes = pt_episodes,episode_length = episode_length,num_features = env.num_features)
-    time_step = 0
+    time_step = 1
     for ep_i in range(0, pt_episodes):
         if ep_i % 100 == 0:
             print("Pushing Pretrain Episode:",ep_i)
@@ -164,13 +164,18 @@ if Imitation_exploration:
             agent_actions = [pt_actions[time_step]]
             obs =  np.array([pt_obs[time_step] for i in range(maddpg.nagents)]).T
             next_obs =  np.array([pt_obs[time_step+1] for i in range(maddpg.nagents)]).T
-            world_stat = pt_status[time_step+1]
+            world_stat = pt_status[time_step-1]
             d = False
             if world_stat != 0.0:
                 d = True
             rewards = np.hstack([env.getPretrainRew(world_stat,i,d) for i in range(env.num_TA) ])            
             dones = np.hstack([d for i in range(env.num_TA)])
 
+            print("R",rewards)
+            print("D",dones)
+            print("A",agent_actions)
+            print("O",obs)
+            print("NO",next_obs)
             # Store variables for calculation of MC and n-step targets
             n_step_rewards.append(rewards)
             n_step_obs.append(obs)
@@ -305,7 +310,11 @@ for ep_i in range(0, num_episodes):
         dones = np.hstack([env.d for i in range(env.num_TA)])
  
 
+        print(next_obs)
 
+        print(actions_params_for_buffer)
+        print(dones)
+        print(rewards)
         # Store variables for calculation of MC and n-step targets
         n_step_rewards.append(rewards)
         n_step_obs.append(obs)
