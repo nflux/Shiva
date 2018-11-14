@@ -73,8 +73,8 @@ TD3_noise = 0.05
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
 Imitation_exploration = True
-pt_critic_updates = 20000
-pt_actor_updates = 20000
+pt_critic_updates = 50000
+pt_actor_updates = 50000
 pt_episodes = 3000 # num of episodes that you observed in the gameplay between npcs
 pt_beta = 0.8
 #---------------------------------------
@@ -203,27 +203,18 @@ if Imitation_exploration:
     # update critic and policy
     for i in range(pt_critic_updates):
         if i%100 == 0:
-            print("Petrain critic update:",i)
+            print("Petrain critic/actor update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
                 sample = pretrain_buffer.sample(batch_size,
                                               to_gpu=False,norm_rews=False)
                 maddpg.update_critic(sample, a_i )
-            maddpg.update_all_targets()
-        maddpg.prep_rollouts(device='cpu')
-    maddpg.update_hard_critic()
-
-    for i in range(pt_actor_updates):
-        if i%100 == 0:
-            print("Petrain actor update:",i)
-        for u_i in range(1):
-            for a_i in range(maddpg.nagents):
-                sample = pretrain_buffer.sample(batch_size,
-                                              to_gpu=False,norm_rews=False)
                 maddpg.update_actor(sample, a_i )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
+    maddpg.update_hard_critic()
     maddpg.update_hard_policy()
+
     if use_viewer:
         env._start_viewer()       
 
