@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from gym.spaces import Box, Discrete
 from utils.networks import MLPNetwork
-from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbel_softmax
+from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbel_softmax,hard_update
 from utils.agents import DDPGAgent
 from utils.misc import distr_projection
 import numpy as np
