@@ -365,7 +365,9 @@ class HFO_env():
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,param):
         if param == 0: # dash power
-            return ((self.action_params[agentID][0].clip(-1,1) + 1)/2)*100
+            #return ((self.action_params[agentID][0].clip(-1,1) + 1)/2)*100
+            return self.action_params[agentID][0].clip(-1,1)*100
+
         elif param == 1: # dash deg
             return self.action_params[agentID][1].clip(-1,1)*180
         elif param == 2: # turn deg

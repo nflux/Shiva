@@ -1,3 +1,4 @@
+import re
 import os
 import torch
 import torch.nn.functional as F
@@ -27,6 +28,63 @@ def e_greedy(logits, eps=0.0):
             explore = True        
     return torch.stack([argmax_acs[i] if r > eps else rand_acs[i] for i, r in
                         enumerate(rand)]) , explore
+def pretrain_process(fname,pt_episodes,episode_length,num_features):
+    with open(fname) as f:
+        content = f.readlines()
+
+    content = [x.strip() for x in content]
+    pt_obs = []
+    pt_status = []
+    pt_actions = []
+    garbage = True
+    print("Loading pretrain data")
+    for c in content[:episode_length*pt_episodes*3]:
+        if c.split(' ')[3] != 'StateFeatures' and garbage:
+            next
+        else:
+            garbage = False
+        if not garbage:
+            if c.split(' ' )[3] == 'StateFeatures':
+                ob = []
+                for j in range(num_features):
+                    ob.append(float(c.split(' ')[4+j]))
+                pt_obs.append(ob)
+            elif c.split(' ' )[3] == 'GameStatus':
+                s = []
+                pt_status.append(float(c.split(' ')[4]))
+            else:
+                action_string = c.split(' ')[4]
+                #print(action_string)
+                if "Dash"  in action_string: 
+                    result = re.search('Dash((.*),*)', action_string)
+                    power = float(result.group(1).split(',')[0][1:])
+                    direction = float(result.group(1).split(',')[1][:-1])
+                    a = np.random.uniform(-1,1,8)
+                    a[0] = 1.0
+                    a[3] = power/100.0
+                    a[4] = direction/180.0
+                elif "Turn"  in action_string:
+                    result = re.search('Turn((.*))', action_string)
+                    direction =float(result.group(1)[1:-1])
+                    power = float(-1440)
+                    a = np.random.uniform(-1,1,8)
+                    a[1] = 1.0
+                    a[5] = direction/180.0
+                elif "Kick"  in action_string: 
+                    result = re.search('Kick((.*),*)', action_string)
+                    power = float(result.group(1).split(',')[0][1:])
+                    direction = float(result.group(1).split(',')[1][:-1])
+                    a = np.random.uniform(-1,1,8)
+                    a[2] = 1.0
+                    a[6] = (power/100.0)*2 - 1
+                    a[7] = direction/180.0
+                pt_actions.append(a)
+
+    pt_obs = np.asarray(pt_obs)
+    pt_status = np.asarray(pt_status)
+    pt_actions = np.asarray(pt_actions)
+    return pt_obs,pt_status,pt_actions
+
 
 def zero_params(num_TA,params,action_index):
     for i in range(num_TA):
