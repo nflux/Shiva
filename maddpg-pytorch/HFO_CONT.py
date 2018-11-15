@@ -40,7 +40,7 @@ burn_in_episodes = float(burn_in_iterations)/episode_length
 # hyperparams---------------------------
 batch_size = 256
 hidden_dim = int(1024)
-a_lr = 0.000001 # actor learning rate
+a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.005 # soft update rate
 steps_per_update = 2
@@ -73,7 +73,7 @@ TD3_noise = 0.05
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
 Imitation_exploration = True
-test_imitation = False # After pretrain, infinitely runs the current pretrained policy
+test_imitation = True  # After pretrain, infinitely runs the current pretrained policy
 pt_critic_updates = 3000
 pt_actor_updates = 5000
 pt_episodes = 50 # num of episodes that you observed in the gameplay between npcs
@@ -229,11 +229,11 @@ if Imitation_exploration:
                 sample = pretrain_buffer.sample(batch_size,
                                                 to_gpu=False,norm_rews=False)
                 #sample = replay_buffer.sample(batch_size,
-                maddpg.update_actor(sample, a_i )
+                maddpg.update_actor(sample, a_i,Imitation_exploration )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_policy()
-
+    '''
     for i in range(pt_actor_updates):
         if i%100 == 0:
             #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
@@ -247,7 +247,7 @@ if Imitation_exploration:
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_policy()
-
+    '''
     if use_viewer:
         env._start_viewer()       
 

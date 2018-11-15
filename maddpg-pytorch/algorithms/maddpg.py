@@ -625,7 +625,7 @@ class MADDPG(object):
 
         
         
-    def update_actor(self, sample, agent_i, parallel=False, logger=None):
+    def update_actor(self, sample, agent_i, parallel=False, logger=None,Imitation = False):
         """
         Update parameters of agent model based on sample from replay buffer
         Inputs:
@@ -693,21 +693,27 @@ class MADDPG(object):
         # invert gradient --------------------------------------
         self.params = vf_in.data
         self.param_dim = curr_agent.param_dim
-        hook = vf_in.register_hook(self.inject)
+        if not Imitation:
+            hook = vf_in.register_hook(self.inject)
         # ------------------------------------------------------
         if self.D4PG:
             critic_out = curr_agent.critic.Q1(vf_in)
             distr_q = curr_agent.critic.distr_to_q(critic_out)
             pol_loss = -distr_q.mean()
         else: # non-distributional
-            pol_loss = -curr_agent.critic.Q1(vf_in).mean()
+            if Imitation:
+                pol_loss = F.mse_loss(curr_pol_out,acs)
+            else:
+                pol_loss = -curr_agent.critic.Q1(vf_in).mean()
+            # testing imitation
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
         if parallel:
             average_gradients(curr_agent.policy)
         torch.nn.utils.clip_grad_norm(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
-        hook.remove()
+        if not Imitation:
+            hook.remove()
         
         
         if self.niter % 100 == 0:
