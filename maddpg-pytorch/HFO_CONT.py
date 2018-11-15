@@ -40,7 +40,7 @@ burn_in_episodes = float(burn_in_iterations)/episode_length
 # hyperparams---------------------------
 batch_size = 256
 hidden_dim = int(1024)
-a_lr = 0.00005 # actor learning rate
+a_lr = 0.000001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.005 # soft update rate
 steps_per_update = 2
@@ -52,7 +52,7 @@ init_noise_scale = 1.00
 num_explore_episodes = 5  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
-D4PG = True
+D4PG = False
 gamma = 0.99 # discount
 Vmax = 10
 Vmin = -10
@@ -60,8 +60,8 @@ N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 5 # n-step update size
 # Mixed target beta (0 = 1-step, 1 = MC update)
-initial_beta = 0.2
-final_beta = 0.0 #
+initial_beta = 1.0
+final_beta = 1.0 #
 num_beta_episodes = 20
 #---------------------------------------
 #TD3 Options ---------------------------
@@ -73,8 +73,10 @@ TD3_noise = 0.05
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
 Imitation_exploration = True
-pt_updates = 25000
-pt_episodes = 3000 # num of episodes that you observed in the gameplay between npcs
+test_imitation = False # After pretrain, infinitely runs the current pretrained policy
+pt_critic_updates = 3000
+pt_actor_updates = 5000
+pt_episodes = 50 # num of episodes that you observed in the gameplay between npcs
 pt_beta = 1.0
 #---------------------------------------
 #Save/load -----------------------------
@@ -141,6 +143,7 @@ step_logger_df = pd.DataFrame()
 if Imitation_exploration:
 
     pt_obs, pt_status,pt_actions = pretrain_process(fname = 'Pretrain_Files/base_left-11.log',pt_episodes = pt_episodes,episode_length = episode_length,num_features = env.num_features)
+    print(len(pt_obs))
     time_step = 1
     for ep_i in range(0, pt_episodes):
         if ep_i % 100 == 0:
@@ -157,17 +160,19 @@ if Imitation_exploration:
         beta_pct_remaining = 0.0
         maddpg.scale_noise(0.0)
         maddpg.reset_noise()
-        maddpg.scale_beta(pt_beta)
+        maddpg.scale_beta(1.0)
+        #maddpg.scale_beta(pt_beta)
         d = False
         for et_i in range(0, episode_length):
             agent_actions = [pt_actions[time_step]]
             obs =  np.array([pt_obs[time_step] for i in range(maddpg.nagents)]).T
-            next_obs =  np.array([pt_obs[time_step+1] for i in range(maddpg.nagents)]).T
             world_stat = pt_status[time_step-1]
             d = False
             if world_stat != 0.0:
                 d = True
-            rewards = np.hstack([env.getPretrainRew(world_stat,i,d) for i in range(env.num_TA) ])            
+            next_obs =  np.array([pt_obs[time_step+1] for i in range(maddpg.nagents)]).T
+
+            rewards = np.hstack([env.getPretrainRew(world_stat,i,d,obs,next_obs) for i in range(env.num_TA) ])            
             dones = np.hstack([d for i in range(env.num_TA)])
 
             # Store variables for calculation of MC and n-step targets
@@ -197,22 +202,50 @@ if Imitation_exploration:
                         n_step_done = n_step_dones[-1]
                     # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
                     pretrain_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target])) 
+                    #replay_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target])) 
+                time_step +=1
                 break
 
     # update critic and policy
-    for i in range(pt_updates):
+    for i in range(pt_critic_updates):
         if i%100 == 0:
-            maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
-            print("Petrain critic/actor update:",i)
+            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
+            print("Petrain critic update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
+                #sample = replay_buffer.sample(batch_size,
                 sample = pretrain_buffer.sample(batch_size,
-                                              to_gpu=False,norm_rews=False)
+                                                to_gpu=False,norm_rews=False)
                 maddpg.update_critic(sample, a_i )
-                maddpg.update_actor(sample, a_i )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_critic()
+    for i in range(pt_actor_updates):
+        if i%100 == 0:
+            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
+            print("Petrain actor update:",i)
+        for u_i in range(1):
+            for a_i in range(maddpg.nagents):
+                sample = pretrain_buffer.sample(batch_size,
+                                                to_gpu=False,norm_rews=False)
+                #sample = replay_buffer.sample(batch_size,
+                maddpg.update_actor(sample, a_i )
+            maddpg.update_all_targets()
+        maddpg.prep_rollouts(device='cpu')
+    maddpg.update_hard_policy()
+
+    for i in range(pt_actor_updates):
+        if i%100 == 0:
+            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
+            print("Petrain actor/critic update:",i)
+        for u_i in range(1):
+            for a_i in range(maddpg.nagents):
+                # sample = replay_buffer.sample(batch_size,
+                sample = pretrain_buffer.sample(batch_size,
+                                              to_gpu=False,norm_rews=False)
+                maddpg.update(sample, a_i )
+            maddpg.update_all_targets()
+        maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_policy()
 
     if use_viewer:
@@ -221,6 +254,28 @@ if Imitation_exploration:
 # END PRETRAIN ###################
 # --------------------------------
 env.launch()
+time.sleep(2)
+while test_imitation:
+    torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
+                          requires_grad=False)
+                 for i in range(maddpg.nagents)]
+    torch_agent_actions = maddpg.step(torch_obs, explore=explore)
+    agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
+    params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions]) 
+    actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
+    noisey_actions = [e_greedy(torch.tensor(a).view(1,len(env.action_list)),eps = 0.01) for a in actions]     # get eps greedy action
+    # modify for multi agent
+    randoms = noisey_actions[0][1]
+    noisey_actions = [noisey_actions[0][0]]
+    noisey_actions_for_buffer = [ac.data.numpy() for ac in noisey_actions]
+    noisey_actions_for_buffer = np.asarray([ac[0] for ac in noisey_actions_for_buffer])
+    noisey_actions_for_buffer = np.asarray(actions[0])
+    agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes 
+    params_for_buffer = params
+    actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params_for_buffer)] for i in range(1)]).reshape(
+        env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+    _,_,d,world_stat = env.Step(agents_actions, 'team',params)
+
 # for the duration of 1000 episodes 
 for ep_i in range(0, num_episodes):
 

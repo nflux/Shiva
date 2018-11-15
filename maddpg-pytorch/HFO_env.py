@@ -391,8 +391,17 @@ class HFO_env():
 
         return distance
 
-    def getPretrainRew(self,s,agentID,d):
+    def getPretrainRew(self,s,agentID,d,obs,nobs):
         reward=0.0
+        prox_cur = self.ball_proximity(nobs)
+        prox_prev = self.ball_proximity(obs)
+        reward   += prox_cur - prox_prev # if cur > prev --> +
+        ##################################################################################
+        
+        ####################### reduce ball distance to goal - using delta  ##################
+        r,_,_ = self.ball_distance_to_goal(nobs) #r is maxed at 2sqrt(2)--> 2.8
+        r_prev,_,_ = self.ball_distance_to_goal(obs) #r is maxed at 2sqrt(2)--> 2.8
+        reward += (3)*(r_prev - r)*.6
         if d:
             if s==1:
                 reward+=8
