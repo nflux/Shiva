@@ -74,8 +74,8 @@ TD3_noise = 0.05
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
 Imitation_exploration = True
 test_imitation = True  # After pretrain, infinitely runs the current pretrained policy
-pt_critic_updates = 3000
-pt_actor_updates = 5000
+pt_critic_updates = 10
+pt_actor_updates = 10000
 pt_episodes = 50 # num of episodes that you observed in the gameplay between npcs
 pt_beta = 1.0
 #---------------------------------------
@@ -229,7 +229,7 @@ if Imitation_exploration:
                 sample = pretrain_buffer.sample(batch_size,
                                                 to_gpu=False,norm_rews=False)
                 #sample = replay_buffer.sample(batch_size,
-                maddpg.update_actor(sample, a_i,Imitation_exploration )
+                maddpg.update_actor(sample, a_i,Imitation = Imitation_exploration )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_policy()

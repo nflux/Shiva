@@ -702,7 +702,11 @@ class MADDPG(object):
             pol_loss = -distr_q.mean()
         else: # non-distributional
             if Imitation:
-                pol_loss = F.mse_loss(curr_pol_out,acs)
+                pol_out = curr_pol_out
+                actual_out = Variable(torch.stack(acs)[agent_i],requires_grad=True)
+                #print(pol_out)
+                #print(actual_out)
+                pol_loss = F.mse_loss(pol_out,actual_out)
             else:
                 pol_loss = -curr_agent.critic.Q1(vf_in).mean()
             # testing imitation
