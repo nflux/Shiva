@@ -38,7 +38,7 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams---------------------------
-batch_size = 256
+batch_size = 32
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -52,7 +52,7 @@ init_noise_scale = 1.00
 num_explore_episodes = 5  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
-D4PG = True
+D4PG = False
 gamma = 0.99 # discount
 Vmax = 10
 Vmin = -10
@@ -211,13 +211,13 @@ if Imitation_exploration:
     maddpg.scale_beta(pt_beta)
     for i in range(pt_actor_updates):
         if i%100 == 0:
-            print("Petrain actor/critic update:",i)
+            print("Petrain actor update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
                 # sample = replay_buffer.sample(batch_size,
                 sample = pretrain_buffer.sample(batch_size,
                                               to_gpu=False,norm_rews=False)
-                maddpg.update_actor(sample, a_i )
+                maddpg.update_actor(sample, a_i,Imitation=Imitation_exploration)
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_policy()
