@@ -236,7 +236,7 @@ if Imitation_exploration:
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_critic()
 
-    '''
+    
     if use_viewer:
         env._start_viewer()       
 
