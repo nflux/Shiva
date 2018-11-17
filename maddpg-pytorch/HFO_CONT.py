@@ -52,7 +52,7 @@ init_noise_scale = 1.00
 num_explore_episodes = 5  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
-D4PG = False
+D4PG = True
 gamma = 0.99 # discount
 Vmax = 10
 Vmin = -10
@@ -73,7 +73,7 @@ TD3_noise = 0.05
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
 Imitation_exploration = True
-test_imitation = True  # After pretrain, infinitely runs the current pretrained policy
+test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
 pt_critic_updates = 25000
 pt_actor_updates = 25000
 pt_episodes = 6000 # num of episodes that you observed in the gameplay between npcs
@@ -217,7 +217,7 @@ if Imitation_exploration:
                 # sample = replay_buffer.sample(batch_size,
                 sample = pretrain_buffer.sample(batch_size,
                                               to_gpu=False,norm_rews=False)
-                maddpg.update(sample, a_i )
+                maddpg.update_actor(sample, a_i )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_policy()
@@ -235,6 +235,22 @@ if Imitation_exploration:
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_critic()
+
+    maddpg.scale_beta(initial_beta)
+    for i in range(pt_critic_updates):
+        if i%100 == 0:
+            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
+            print("Petrain critic/actor update:",i)
+        for u_i in range(1):
+            for a_i in range(maddpg.nagents):
+                #sample = replay_buffer.sample(batch_size,
+                sample = pretrain_buffer.sample(batch_size,
+                                                to_gpu=False,norm_rews=False)
+                maddpg.update(sample, a_i )
+            maddpg.update_all_targets()
+        maddpg.prep_rollouts(device='cpu')
+    maddpg.update_hard_critic()
+    maddpg.update_hard_policy()
 
     
     if use_viewer:
