@@ -9,6 +9,7 @@ import numpy as np
 from torch.autograd import Variable
 
 MSELoss = torch.nn.MSELoss()
+CELoss = torch.nn.CrossEntropyLoss()
 
 class MADDPG(object):
     """
@@ -108,6 +109,16 @@ class MADDPG(object):
         return [a.step(obs, explore=explore) for a, obs in zip(self.agents,
                                                        observations)]
     
+    
+    def discrete_param_indices(self,discrete):
+        if discrete == 0:
+            return [0,1]
+        elif discrete == 1:
+            return [2]
+        if discrete == 2:
+            return [3,4]
+                     
+                     
     # zeros the params corresponding to the non-chosen actions
     def zero_params(self,params,actions_oh):
         for a,p in zip(actions_oh,params):
@@ -702,11 +713,19 @@ class MADDPG(object):
             pol_loss = -distr_q.mean()
         else: # non-distributional
             if Imitation:
-                pol_out = curr_pol_out
-                actual_out = Variable(torch.stack(acs)[agent_i],requires_grad=True)
+                pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
+                actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
+                pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
+                actual_out_params = Variable(torch.stack(acs)[agent_i],requires_grad=True)[:,curr_agent.action_dim:]
+                
+                target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
+                
+                MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])
+
                 #print(pol_out)
                 #print(actual_out)
-                pol_loss = F.mse_loss(pol_out,actual_out)
+                #pol_loss = MSE + CELoss(pol_out_actions,target_classes)
+                pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
             else:
                 pol_loss = -curr_agent.critic.Q1(vf_in).mean()
             # testing imitation
@@ -723,3 +742,4 @@ class MADDPG(object):
         if self.niter % 100 == 0:
             print("Actor loss",pol_loss)
         
+       

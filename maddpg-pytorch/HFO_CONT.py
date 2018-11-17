@@ -75,8 +75,8 @@ TD3_noise = 0.05
 Imitation_exploration = True
 test_imitation = True  # After pretrain, infinitely runs the current pretrained policy
 pt_critic_updates = 10
-pt_actor_updates = 10000
-pt_episodes = 50 # num of episodes that you observed in the gameplay between npcs
+pt_actor_updates = 100000
+pt_episodes = 8000 # num of episodes that you observed in the gameplay between npcs
 pt_beta = 1.0
 #---------------------------------------
 #Save/load -----------------------------
@@ -143,8 +143,8 @@ step_logger_df = pd.DataFrame()
 if Imitation_exploration:
 
     pt_obs, pt_status,pt_actions = pretrain_process(fname = 'Pretrain_Files/base_left-11.log',pt_episodes = pt_episodes,episode_length = episode_length,num_features = env.num_features)
-    print(len(pt_obs))
-    time_step = 1
+    print("Length of obs,stats,actions",len(pt_obs),len(pt_status),len(pt_actions))
+    time_step = 0
     for ep_i in range(0, pt_episodes):
         if ep_i % 100 == 0:
             print("Pushing Pretrain Episode:",ep_i)
@@ -166,7 +166,7 @@ if Imitation_exploration:
         for et_i in range(0, episode_length):
             agent_actions = [pt_actions[time_step]]
             obs =  np.array([pt_obs[time_step] for i in range(maddpg.nagents)]).T
-            world_stat = pt_status[time_step-1]
+            world_stat = pt_status[time_step]
             d = False
             if world_stat != 0.0:
                 d = True
@@ -207,33 +207,8 @@ if Imitation_exploration:
                 break
 
     # update critic and policy
-    for i in range(pt_critic_updates):
-        if i%100 == 0:
-            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
-            print("Petrain critic update:",i)
-        for u_i in range(1):
-            for a_i in range(maddpg.nagents):
-                #sample = replay_buffer.sample(batch_size,
-                sample = pretrain_buffer.sample(batch_size,
-                                                to_gpu=False,norm_rews=False)
-                maddpg.update_critic(sample, a_i )
-            maddpg.update_all_targets()
-        maddpg.prep_rollouts(device='cpu')
-    maddpg.update_hard_critic()
-    for i in range(pt_actor_updates):
-        if i%100 == 0:
-            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
-            print("Petrain actor update:",i)
-        for u_i in range(1):
-            for a_i in range(maddpg.nagents):
-                sample = pretrain_buffer.sample(batch_size,
-                                                to_gpu=False,norm_rews=False)
-                #sample = replay_buffer.sample(batch_size,
-                maddpg.update_actor(sample, a_i,Imitation = Imitation_exploration )
-            maddpg.update_all_targets()
-        maddpg.prep_rollouts(device='cpu')
-    maddpg.update_hard_policy()
-    '''
+
+
     for i in range(pt_actor_updates):
         if i%100 == 0:
             #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
@@ -247,6 +222,21 @@ if Imitation_exploration:
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_policy()
+    
+    for i in range(pt_critic_updates):
+        if i%100 == 0:
+            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
+            print("Petrain critic update:",i)
+        for u_i in range(1):
+            for a_i in range(maddpg.nagents):
+                #sample = replay_buffer.sample(batch_size,
+                sample = pretrain_buffer.sample(batch_size,
+                                                to_gpu=False,norm_rews=False)
+                maddpg.update_critic(sample, a_i )
+            maddpg.update_all_targets()
+        maddpg.prep_rollouts(device='cpu')
+    maddpg.update_hard_critic()
+
     '''
     if use_viewer:
         env._start_viewer()       
@@ -254,7 +244,7 @@ if Imitation_exploration:
 # END PRETRAIN ###################
 # --------------------------------
 env.launch()
-time.sleep(2)
+time.sleep(4)
 while test_imitation:
     torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
                           requires_grad=False)
@@ -274,6 +264,8 @@ while test_imitation:
     params_for_buffer = params
     actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params_for_buffer)] for i in range(1)]).reshape(
         env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+    #print(params)
+    print(agent_actions)
     _,_,d,world_stat = env.Step(agents_actions, 'team',params)
 
 # for the duration of 1000 episodes 
