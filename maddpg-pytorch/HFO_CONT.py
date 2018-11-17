@@ -60,8 +60,8 @@ N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 5 # n-step update size
 # Mixed target beta (0 = 1-step, 1 = MC update)
-initial_beta = 1.0
-final_beta = 1.0 #
+initial_beta = 0.0
+final_beta = 0.0 #
 num_beta_episodes = 20
 #---------------------------------------
 #TD3 Options ---------------------------
@@ -74,9 +74,9 @@ TD3_noise = 0.05
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
 Imitation_exploration = True
 test_imitation = True  # After pretrain, infinitely runs the current pretrained policy
-pt_critic_updates = 10
-pt_actor_updates = 100000
-pt_episodes = 8000 # num of episodes that you observed in the gameplay between npcs
+pt_critic_updates = 25000
+pt_actor_updates = 25000
+pt_episodes = 6000 # num of episodes that you observed in the gameplay between npcs
 pt_beta = 1.0
 #---------------------------------------
 #Save/load -----------------------------
@@ -208,10 +208,9 @@ if Imitation_exploration:
 
     # update critic and policy
 
-
+    maddpg.scale_beta(pt_beta)
     for i in range(pt_actor_updates):
         if i%100 == 0:
-            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
             print("Petrain actor/critic update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
