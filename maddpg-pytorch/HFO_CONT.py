@@ -26,7 +26,7 @@ from HFO_env import *
 action_level = 'low'
 feature_level = 'low'
 USE_CUDA = False 
-use_viewer = True
+use_viewer = False
 n_training_threads = 8
 use_viewer_after = 1500 # If using viewer, uses after x episodes
 # default settings
@@ -38,7 +38,7 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams---------------------------
-batch_size = 32
+batch_size = 128
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -52,7 +52,7 @@ init_noise_scale = 1.00
 num_explore_episodes = 5  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
-D4PG = False
+D4PG = True
 gamma = 0.99 # discount
 Vmax = 10
 Vmin = -10
@@ -72,13 +72,19 @@ TD3_noise = 0.05
 #Pretrain Options ----------------------
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
-Imitation_exploration = True
+Imitation_exploration = False
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-pt_critic_updates = 25000
-pt_actor_updates = 25000
+pt_critic_updates = 50000
+pt_actor_updates = 500000
 pt_episodes = 6000 # num of episodes that you observed in the gameplay between npcs
 pt_beta = 1.0
 #---------------------------------------
+#I2A Options ---------------------------
+I2A = True
+EM_lr = 0.001
+obs_weight = 10.0
+rew_weight = 1.0
+ws_weight = 1.0
 #Save/load -----------------------------
 save_critic = False
 save_actor = False
@@ -112,13 +118,15 @@ print("Done connecting to the server ")
 # initializing the maddpg 
 maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   adversary_alg= "MADDPG",
+                                  batch_size=batch_size,
                                   tau=tau,
                                   a_lr=a_lr,
                                   c_lr=c_lr,
                                   hidden_dim=hidden_dim ,discrete_action=discrete_action,
                                   vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
                               n_steps=n_steps,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta,
-                              TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps)
+                              TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps,
+                              I2A = I2A, EM_lr = EM_lr,obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight)
 
 
 
@@ -135,7 +143,7 @@ replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA,
 
 reward_total = [ ]
 num_steps_per_episode = []
-end_actions = []
+end_actions = [] 
 logger_df = pd.DataFrame()
 step_logger_df = pd.DataFrame()
 # -------------------------------------
@@ -160,8 +168,7 @@ if Imitation_exploration:
         beta_pct_remaining = 0.0
         maddpg.scale_noise(0.0)
         maddpg.reset_noise()
-        maddpg.scale_beta(1.0)
-        #maddpg.scale_beta(pt_beta)
+        maddpg.scale_beta(pt_beta)
         d = False
         for et_i in range(0, episode_length):
             agent_actions = [pt_actions[time_step]]
@@ -201,14 +208,14 @@ if Imitation_exploration:
                         n_step_next_ob = n_step_next_obs[-1]
                         n_step_done = n_step_dones[-1]
                     # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                    pretrain_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target])) 
+                    pretrain_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,
+                                         np.hstack([MC_target]),np.hstack([n_step_target]),np.hstack([world_stat])) 
                     #replay_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target])) 
                 time_step +=1
                 break
 
     # update critic and policy
 
-    maddpg.scale_beta(pt_beta)
     for i in range(pt_actor_updates):
         if i%100 == 0:
             print("Petrain actor update:",i)
@@ -237,7 +244,7 @@ if Imitation_exploration:
     maddpg.update_hard_critic()
 
     maddpg.scale_beta(initial_beta)
-    for i in range(pt_critic_updates):
+    for i in range(1):
         if i%100 == 0:
             #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
             print("Petrain critic/actor update:",i)
@@ -413,7 +420,7 @@ for ep_i in range(0, num_episodes):
                     n_step_next_ob = n_step_next_obs[-1]
                     n_step_done = n_step_dones[-1]
                 # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                replay_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target])) 
+                replay_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target]),np.hstack([world_stat])) 
                                        
             # log
             if time_step > 0 and ep_i > 1:

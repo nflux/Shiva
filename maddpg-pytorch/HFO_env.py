@@ -240,7 +240,7 @@ class HFO_env():
         """
         [self.Queue_action(i,actions[i],side,params) for i in range(len(actions))]
 
-        return np.asarray(self.team_obs),self.team_rewards,self.d, self.team_envs[0].statusToString(self.world_status)
+        return np.asarray(self.team_obs),self.team_rewards,self.d, self.world_status
 
 
 
