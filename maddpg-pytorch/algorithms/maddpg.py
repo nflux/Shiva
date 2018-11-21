@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
-from gym.spaces import Box, Discrete
-from utils.networks import MLPNetwork
+from utils.networks import MLPNetwork_Actor,MLPNetwork_Critic
 from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbel_softmax,hard_update
 from utils.agents import DDPGAgent
 from utils.misc import distr_projection
@@ -19,7 +18,7 @@ class MADDPG(object):
                  gamma=0.95, batch_size=0,tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
                  discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5,
                  DELTA_Z = 20.0/50,D4PG=False,beta = 0,TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
-                 I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0):
+                 I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5):
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -42,7 +41,9 @@ class MADDPG(object):
                                  hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
                                  n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
                                  delta = DELTA_Z,D4PG=D4PG,
-                                 TD3=TD3,world_status_dim=self.world_status_dim,
+                                 TD3=TD3,
+                                 I2A = I2A,EM_lr=EM_lr,
+                                 world_status_dim=self.world_status_dim,rollout_steps = rollout_steps,
                                  **params)
                        for params in agent_init_params]
         self.agent_init_params = agent_init_params
@@ -340,7 +341,6 @@ class MADDPG(object):
             self.ws_onehot.zero_() # reset OH tensor
             self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
             EM_in = torch.cat((*obs, *acs),dim=1)
-            EM_in = torch.cat((EM_in,self.ws_onehot),dim=1)
             est_obs_diff,est_rews,est_ws = curr_agent.EM(EM_in)
             actual_obs_diff = next_obs[agent_i] - obs[agent_i]
             actual_rews = rews[agent_i].view(-1,1)
@@ -366,9 +366,10 @@ class MADDPG(object):
         if self.niter % 100 == 0:
             print("Q loss",vf_loss)
             print("Actor loss",pol_loss)
-            print("Policy Prime loss",pol_prime_loss)
-            print("Environment Model loss",EM_loss)
-            
+            if self.I2A:
+                print("Policy Prime loss",pol_prime_loss)
+                print("Environment Model loss",EM_loss)
+
     def inject(self,grad):
         new_grad = grad.clone()
         new_grad = self.invert(new_grad,self.params,self.param_dim)
@@ -435,6 +436,7 @@ class MADDPG(object):
     def update_hard_policy(self):
         for a in self.agents:
             hard_update(a.target_policy, a.policy)
+    
 
     def update_all_targets(self):
         """
@@ -517,7 +519,7 @@ class MADDPG(object):
 
 
     
-    def update_critic(self, sample, agent_i, parallel=False, logger=None):
+    def pretrain_critic(self, sample, agent_i, parallel=False, logger=None):
         """
         Update parameters of agent model based on sample from replay buffer
         Inputs:
@@ -531,7 +533,7 @@ class MADDPG(object):
                 If passed in, important quantities will be logged
         """
         # rews = 1-step, cum-rews = n-step
-        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews = sample
+        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
         curr_agent = self.agents[agent_i]
         zero_values = False
         
@@ -637,7 +639,7 @@ class MADDPG(object):
             logger (SummaryWriter from Tensorboard-Pytorch):
                 If passed in, important quantities will be logged
         """
-        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews = sample
+        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
         curr_agent = self.agents[agent_i]
        
         # Update policy prime
@@ -666,7 +668,6 @@ class MADDPG(object):
         self.ws_onehot.zero_() # reset OH tensor
         self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
         EM_in = torch.cat((*obs, *acs),dim=1)
-        EM_in = torch.cat((EM_in,self.ws_onehot),dim=1)
         est_obs_diff,est_rews,est_ws = curr_agent.EM(EM_in)
         actual_obs_diff = next_obs[agent_i] - obs[agent_i]
         actual_rews = rews[agent_i].view(-1,1)
@@ -685,7 +686,7 @@ class MADDPG(object):
         self.niter += 1
         
         
-    def update_actor(self, sample, agent_i, parallel=False, logger=None,Imitation = False):
+    def pretrain_actor(self, sample, agent_i, parallel=False, logger=None,Imitation = False):
         """
         Update parameters of actor based on sample from replay buffer for policy imitation (fits policy to observed actions)
         Inputs:
@@ -699,7 +700,7 @@ class MADDPG(object):
                 If passed in, important quantities will be logged
         """
         # rews = 1-step, cum-rews = n-step
-        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews = sample
+        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
         curr_agent = self.agents[agent_i]
         zero_values = False
         
@@ -753,43 +754,52 @@ class MADDPG(object):
         # invert gradient --------------------------------------
         self.params = vf_in.data
         self.param_dim = curr_agent.param_dim
-        if not Imitation:
-            hook = vf_in.register_hook(self.inject)
-        # ------------------------------------------------------
-        if self.D4PG:
-            critic_out = curr_agent.critic.Q1(vf_in)
-            distr_q = curr_agent.critic.distr_to_q(critic_out)
-            pol_loss = -distr_q.mean()
-        else: # non-distributional
-            if Imitation:
-                pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
-                actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
-                pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
-                actual_out_params = Variable(torch.stack(acs)[agent_i],requires_grad=True)[:,curr_agent.action_dim:]
-                
-                target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
-                
-                MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])
+        hook = vf_in.register_hook(self.inject)
 
-                #print(pol_out)
-                #print(actual_out)
-                pol_loss = MSE + CELoss(pol_out_actions,target_classes)
-                #pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
-            else:
-                pol_loss = -curr_agent.critic.Q1(vf_in).mean()
-            # testing imitation
-        #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
+        pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
+        actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
+        pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
+        actual_out_params = Variable(torch.stack(acs)[agent_i],requires_grad=True)[:,curr_agent.action_dim:]
+
+        target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
+
+        MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])
+
+        pol_loss = MSE + CELoss(pol_out_actions,target_classes)
+        #pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
+    # testing imitation
+#pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
         if parallel:
             average_gradients(curr_agent.policy)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
-        if not Imitation:
-            hook.remove()
-        
-        
+        hook.remove()
+
+        # I2A --------------------------------------
+        if self.I2A:
+            # Update policy prime
+            curr_agent.policy_prime_optimizer.zero_grad()
+            # We take the loss between the current policy's behavior and policy prime which is estimating the current policy
+            pol_prime_out = curr_agent.policy_prime(obs[agent_i]) # uses gumbel across the actions
+            pol_prime_out_actions = pol_prime_out[:,:curr_agent.action_dim].float()
+            pol_prime_out_params = pol_prime_out[:,curr_agent.action_dim:]
+            pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
+            pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
+            target_classes = torch.argmax(pol_out_actions,dim=1) # categorical integer for predicted class
+            MSE =np.sum([F.mse_loss(prime[self.discrete_param_indices(target_class)],current[self.discrete_param_indices(target_class)]) for prime,current,target_class in zip(pol_prime_out_params,pol_out_params, target_classes)])
+            #pol_loss = MSE + CELoss(pol_out_actions,target_classes)
+            pol_prime_loss = MSE + F.mse_loss(pol_prime_out_actions,pol_out_actions)
+            pol_prime_loss.backward()
+            if parallel:
+                average_gradients(curr_agent.policy_prime)
+            torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
+            curr_agent.policy_prime_optimizer.step()
         if self.niter % 100 == 0:
             print("Actor loss",pol_loss)
+            if self.I2A:
+                print("Policy Prime loss",pol_prime_loss)
+
         
        
 
@@ -798,7 +808,7 @@ class MADDPG(object):
                       gamma=0.95, batch_size=0, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
-                      I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0):
+                      I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -852,7 +862,8 @@ class MADDPG(object):
                      'EM_lr': EM_lr,
                      'obs_weight': obs_weight,
                      'rew_weight': rew_weight,
-                     'ws_weight': ws_weight}
+                     'ws_weight': ws_weight,
+                     'rollout_steps': rollout_steps}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance

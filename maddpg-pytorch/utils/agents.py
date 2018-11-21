@@ -2,7 +2,7 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.optim import Adam,SGD
 import torch
-from .networks import MLPNetwork
+from .networks import MLPNetwork_Actor,MLPNetwork_Critic,I2A_Network
 import torch.nn.functional as F
 from .i2a import *
 from .misc import hard_update, gumbel_softmax, onehot_from_logits
@@ -15,7 +15,7 @@ class DDPGAgent(object):
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, hidden_dim=64,
                  a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
-                I2A = False,EM_lr=0.001,world_status_dim = 6):
+                I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5):
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -26,37 +26,46 @@ class DDPGAgent(object):
 
         self.param_dim = 5
         self.action_dim = 3
-        
+        self.n_actions = 1
         self.delta = (float(vmax)-vmin)/(n_atoms-1)
         # D4PG
         self.n_atoms = n_atoms
         self.vmax = vmax
         self.vmin = vmin
         self.world_status_dim = world_status_dim
-        self.num_in_EM = num_in_critic + world_status_dim # obs + actions + ws
-        self.num_out_EM = num_in_critic - num_out_pol # obs + actions - actions = obs head
-        self.policy = MLPNetwork(num_in_pol, num_out_pol,
-                                 hidden_dim=hidden_dim,
-                                 discrete_action=discrete_action, is_actor= True,
-                                 norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
-        # policy prime for I2A
-        self.policy_prime = MLPNetwork(num_in_pol, num_out_pol,
-                                 hidden_dim=hidden_dim,
-                                 discrete_action=discrete_action, is_actor= True,
-                                 norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
-        self.critic = MLPNetwork(num_in_critic, 1,
-                                 hidden_dim=hidden_dim,is_actor=False,
-                                 norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
-        self.target_policy = MLPNetwork(num_in_pol, num_out_pol,
-                                        hidden_dim=hidden_dim,is_actor=True,
-                                        discrete_action=discrete_action,
-                                        norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
-        self.target_critic = MLPNetwork(num_in_critic, 1,
-                                        hidden_dim=hidden_dim,is_actor=False,
-                                        norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
+        self.num_in_EM = num_in_critic  # obs + actions 
+        self.num_out_obs_EM = num_in_critic - num_out_pol # obs + actions - actions  = obs head, (this does not include the ws head that is handled internally by network)
+        
+        self.num_total_out_EM = self.num_out_obs_EM + self.world_status_dim + 1
         # EM for I2A
-        self.EM = EnvironmentModel(self.num_in_EM,self.num_out_EM,hidden_dim=hidden_dim,
+        self.EM = EnvironmentModel(self.num_in_EM,self.num_out_obs_EM,hidden_dim=hidden_dim,
                                   norm_in=False,agent=self)
+        # policy prime for I2A
+        self.policy_prime = MLPNetwork_Actor(num_in_pol, num_out_pol,
+                                 hidden_dim=hidden_dim,
+                                 discrete_action=discrete_action, 
+                                 norm_in= False,agent=self)
+       
+        self.policy = I2A_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
+                          hidden_dim=hidden_dim,
+                          discrete_action=discrete_action,
+                          norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                          EM = self.EM, pol_prime = self.policy_prime)
+        
+        self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
+                                 hidden_dim=hidden_dim,
+                                 discrete_action=discrete_action,
+                                 norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                                 EM = self.EM, pol_prime = self.policy_prime)
+        
+        self.critic = MLPNetwork_Critic(num_in_critic, 1,
+                                 hidden_dim=hidden_dim,
+                                 norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
+
+        self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
+                                               hidden_dim=hidden_dim,
+                                               norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
+
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)
 

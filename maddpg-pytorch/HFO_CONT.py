@@ -26,7 +26,7 @@ from HFO_env import *
 action_level = 'low'
 feature_level = 'low'
 USE_CUDA = False 
-use_viewer = False
+use_viewer = True
 n_training_threads = 8
 use_viewer_after = 1500 # If using viewer, uses after x episodes
 # default settings
@@ -72,19 +72,21 @@ TD3_noise = 0.05
 #Pretrain Options ----------------------
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
-Imitation_exploration = False
+Imitation_exploration = True
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
 pt_critic_updates = 50000
 pt_actor_updates = 500000
+pt_actor_critic_updates = 25000
 pt_episodes = 6000 # num of episodes that you observed in the gameplay between npcs
 pt_beta = 1.0
 #---------------------------------------
 #I2A Options ---------------------------
-I2A = True
+I2A = False
 EM_lr = 0.001
 obs_weight = 10.0
 rew_weight = 1.0
 ws_weight = 1.0
+rollout_steps = 3
 #Save/load -----------------------------
 save_critic = False
 save_actor = False
@@ -126,7 +128,9 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                   vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
                               n_steps=n_steps,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta,
                               TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps,
-                              I2A = I2A, EM_lr = EM_lr,obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight)
+                              I2A = I2A, EM_lr = EM_lr,
+                              obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight, 
+                              rollout_steps = rollout_steps)
 
 
 
@@ -215,7 +219,6 @@ if Imitation_exploration:
                 break
 
     # update critic and policy
-
     for i in range(pt_actor_updates):
         if i%100 == 0:
             print("Petrain actor update:",i)
@@ -224,29 +227,44 @@ if Imitation_exploration:
                 # sample = replay_buffer.sample(batch_size,
                 sample = pretrain_buffer.sample(batch_size,
                                               to_gpu=False,norm_rews=False)
-                maddpg.update_actor(sample, a_i,Imitation=Imitation_exploration)
+                maddpg.pretrain_actor(sample, a_i,Imitation=Imitation_exploration)
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_policy()
     
     for i in range(pt_critic_updates):
         if i%100 == 0:
-            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
             print("Petrain critic update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
                 #sample = replay_buffer.sample(batch_size,
                 sample = pretrain_buffer.sample(batch_size,
                                                 to_gpu=False,norm_rews=False)
-                maddpg.update_critic(sample, a_i )
+                maddpg.pretrain_critic(sample, a_i )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_critic()
 
+    
+    if I2A:
+        # pretrain EM
+        for i in range(pt_EM_updates):
+            if i%100 == 0:
+                print("Petrain EM update:",i)
+            for u_i in range(1):
+                for a_i in range(maddpg.nagents):
+                    #sample = replay_buffer.sample(batch_size,
+                    sample = pretrain_buffer.sample(batch_size,
+                                                    to_gpu=False,norm_rews=False)
+                    maddpg.update_EM(sample, a_i )
+            maddpg.prep_rollouts(device='cpu')
+
+    
+
+    # pretrain true actor-critic (non-imitation) + policy prime
     maddpg.scale_beta(initial_beta)
-    for i in range(1):
+    for i in range(pt_actor_critic_updates):
         if i%100 == 0:
-            #maddpg.scale_beta(pt_beta*(pt_updates-i)/(pt_updates*1.0))
             print("Petrain critic/actor update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
@@ -258,6 +276,7 @@ if Imitation_exploration:
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_critic()
     maddpg.update_hard_policy()
+
 
     
     if use_viewer:
