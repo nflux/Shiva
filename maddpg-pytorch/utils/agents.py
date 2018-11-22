@@ -15,7 +15,7 @@ class DDPGAgent(object):
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, hidden_dim=64,
                  a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
-                I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5):
+                I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64):
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -26,7 +26,7 @@ class DDPGAgent(object):
 
         self.param_dim = 5
         self.action_dim = 3
-        self.n_actions = 1
+        self.n_actions = 4 # number of imagination branches
         self.delta = (float(vmax)-vmin)/(n_atoms-1)
         # D4PG
         self.n_atoms = n_atoms
@@ -50,13 +50,13 @@ class DDPGAgent(object):
                           hidden_dim=hidden_dim,
                           discrete_action=discrete_action,
                           norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                          EM = self.EM, pol_prime = self.policy_prime)
+                          EM = self.EM, pol_prime = self.policy_prime,LSTM_hidden=LSTM_hidden)
         
         self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action,
                                  norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                                 EM = self.EM, pol_prime = self.policy_prime)
+                                 EM = self.EM, pol_prime = self.policy_prime,LSTM_hidden=LSTM_hidden)
         
         self.critic = MLPNetwork_Critic(num_in_critic, 1,
                                  hidden_dim=hidden_dim,

@@ -18,7 +18,7 @@ class MADDPG(object):
                  gamma=0.95, batch_size=0,tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
                  discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5,
                  DELTA_Z = 20.0/50,D4PG=False,beta = 0,TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
-                 I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5):
+                 I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64):
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -43,7 +43,7 @@ class MADDPG(object):
                                  delta = DELTA_Z,D4PG=D4PG,
                                  TD3=TD3,
                                  I2A = I2A,EM_lr=EM_lr,
-                                 world_status_dim=self.world_status_dim,rollout_steps = rollout_steps,
+                                 world_status_dim=self.world_status_dim,rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
                                  **params)
                        for params in agent_init_params]
         self.agent_init_params = agent_init_params
@@ -808,7 +808,7 @@ class MADDPG(object):
                       gamma=0.95, batch_size=0, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
-                      I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5):
+                      I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -863,7 +863,8 @@ class MADDPG(object):
                      'obs_weight': obs_weight,
                      'rew_weight': rew_weight,
                      'ws_weight': ws_weight,
-                     'rollout_steps': rollout_steps}
+                     'rollout_steps': rollout_steps,
+                     'LSTM_hidden': LSTM_hidden}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance

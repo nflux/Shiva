@@ -69,7 +69,10 @@ class MLPNetwork_Actor(nn.Module):
         if not self.discrete_action:
             self.final_out_action = self.out_action_fn(self.out_action(h4))
             self.final_out_params = self.out_param_fn(self.out_param(h4))
-            out = torch.cat((self.final_out_action, self.final_out_params),1)
+            if self.final_out_action.shape[0] == 3:
+                out = np.asarray(torch.cat((self.final_out_action, self.final_out_params)).data.numpy())
+            else:
+                out = torch.cat((self.final_out_action, self.final_out_params),1)
             #if self.count % 100 == 0:
             #    print(out)
             self.count += 1
@@ -193,7 +196,7 @@ class I2A_Network(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,):
+    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,LSTM_hidden=64):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -295,9 +298,13 @@ class I2A_Network(nn.Module):
             obs_batch_v = obs_batch_v.expand(batch_size, self.n_actions, *batch_rest)
             obs_batch_v = obs_batch_v.contiguous().view(-1, *batch_rest)
         #actions = np.tile(np.arange(0, self.n_actions, dtype=np.int64), batch_size)
-        actions = self.pol_prime(obs_batch_v)
-        #actions = np.asarray([[1.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0],[0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,1.0,0.0,0.0,0.0,1.0,0.0]] *batch_size)
-
+        actions = []
+        for item in batch:
+            actions.append(self.pol_prime(item))
+            actions.append(np.array([1.0,0.0,0.0,np.random.uniform(-1,1),np.random.uniform(-1,1),0.0,0.0,0.0]))
+            actions.append(np.array([0.0,1.0,0.0,0.0,0.0,np.random.uniform(-1,1),0.0,0.0]))
+            actions.append(np.array([0.0,0.0,1.0,0.0,0.0,0.0,np.random.uniform(-1,1),np.random.uniform(-1,1)]))
+                           
         step_obs, step_rewards,step_ws = [], [],[]
         for step_idx in range(self.rollout_steps):
             actions_t = torch.tensor(actions).float()

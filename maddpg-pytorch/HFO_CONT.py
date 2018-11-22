@@ -21,12 +21,11 @@ from utils.buffer import ReplayBuffer
 #from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
 from HFO_env import *
-
 # options ------------------------------
 action_level = 'low'
 feature_level = 'low'
 USE_CUDA = False 
-use_viewer = True
+use_viewer = False
 n_training_threads = 8
 use_viewer_after = 1500 # If using viewer, uses after x episodes
 # default settings
@@ -37,8 +36,8 @@ untouched_time = 500
 burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
-# hyperparams---------------------------
-batch_size = 128
+# hyperparams--------------------------
+batch_size = 32
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -49,7 +48,7 @@ explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 5  # Haus uses over 10,000 updates --
+num_explore_episodes = 20  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -58,9 +57,9 @@ Vmax = 10
 Vmin = -10
 N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-n_steps = 5 # n-step update size
+n_steps = 5 # n-step update size 
 # Mixed target beta (0 = 1-step, 1 = MC update)
-initial_beta = 0.0
+initial_beta = 0.2
 final_beta = 0.0 #
 num_beta_episodes = 20
 #---------------------------------------
@@ -72,7 +71,7 @@ TD3_noise = 0.05
 #Pretrain Options ----------------------
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
-Imitation_exploration = True
+Imitation_exploration = False
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
 pt_critic_updates = 50000
 pt_actor_updates = 500000
@@ -81,12 +80,13 @@ pt_episodes = 6000 # num of episodes that you observed in the gameplay between n
 pt_beta = 1.0
 #---------------------------------------
 #I2A Options ---------------------------
-I2A = False
+I2A = True
 EM_lr = 0.001
 obs_weight = 10.0
 rew_weight = 1.0
 ws_weight = 1.0
-rollout_steps = 3
+rollout_steps = 5
+LSTM_hidden=32
 #Save/load -----------------------------
 save_critic = False
 save_actor = False
@@ -130,7 +130,7 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                               TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps,
                               I2A = I2A, EM_lr = EM_lr,
                               obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight, 
-                              rollout_steps = rollout_steps)
+                              rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden)
 
 
 
