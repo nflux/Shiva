@@ -682,7 +682,7 @@ class MADDPG(object):
 
         if self.niter % 100 == 0:
             print("Policy Prime Loss",pol_prime_loss)
-            print("EM Loss",EM_Loss)
+            print("EM Loss",EM_loss)
         self.niter += 1
         
         
@@ -769,7 +769,7 @@ class MADDPG(object):
         #pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
     # testing imitation
 #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
-        pol_loss.backward()
+        pol_loss.backward(retain_graph=True)
         if parallel:
             average_gradients(curr_agent.policy)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?

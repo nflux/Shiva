@@ -37,7 +37,7 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams--------------------------
-batch_size = 32
+batch_size = 128
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -71,12 +71,13 @@ TD3_noise = 0.05
 #Pretrain Options ----------------------
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
-Imitation_exploration = False
+Imitation_exploration = True
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
 pt_critic_updates = 50000
-pt_actor_updates = 500000
+pt_actor_updates = 150000
 pt_actor_critic_updates = 25000
 pt_episodes = 6000 # num of episodes that you observed in the gameplay between npcs
+pt_EM_updates = 15000
 pt_beta = 1.0
 #---------------------------------------
 #I2A Options ---------------------------
