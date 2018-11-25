@@ -37,7 +37,7 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams--------------------------
-batch_size = 128
+batch_size = 256
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -48,7 +48,7 @@ explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 20  # Haus uses over 10,000 updates --
+num_explore_episodes = 1  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -74,10 +74,10 @@ TD3_noise = 0.05
 Imitation_exploration = True
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
 pt_critic_updates = 50000
-pt_actor_updates = 150000
-pt_actor_critic_updates = 25000
-pt_episodes = 6000 # num of episodes that you observed in the gameplay between npcs
-pt_EM_updates = 15000
+pt_actor_updates = 500000
+pt_actor_critic_updates = 100
+pt_episodes = 10000 # num of episodes that you observed in the gameplay between npcs
+pt_EM_updates = 50000
 pt_beta = 1.0
 #---------------------------------------
 #I2A Options ---------------------------
@@ -86,7 +86,7 @@ EM_lr = 0.001
 obs_weight = 10.0
 rew_weight = 1.0
 ws_weight = 1.0
-rollout_steps = 5
+rollout_steps = 10
 LSTM_hidden=32
 #Save/load -----------------------------
 save_critic = False
@@ -213,20 +213,36 @@ if Imitation_exploration:
                         n_step_next_ob = n_step_next_obs[-1]
                         n_step_done = n_step_dones[-1]
                     # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                    pretrain_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,
+                    #pretrain_buffer.push
+                    replay_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,
                                          np.hstack([MC_target]),np.hstack([n_step_target]),np.hstack([world_stat])) 
-                    #replay_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target])) 
                 time_step +=1
                 break
 
+    
+    if I2A:
+        # pretrain EM
+        for i in range(pt_EM_updates):
+            if i%100 == 0:
+                print("Petrain EM update:",i)
+            for u_i in range(1):
+                for a_i in range(maddpg.nagents):
+                    #sample = pretrain_buffer.sample(batch_size,
+                    sample = replay_buffer.sample(batch_size,
+                                                    to_gpu=False,norm_rews=False)
+                    maddpg.update_EM(sample, a_i )
+            maddpg.prep_rollouts(device='cpu')
+
+
+            
     # update critic and policy
     for i in range(pt_actor_updates):
         if i%100 == 0:
             print("Petrain actor update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
-                # sample = replay_buffer.sample(batch_size,
-                sample = pretrain_buffer.sample(batch_size,
+                #sample = pretrain_buffer.sample(batch_size,
+                sample = replay_buffer.sample(batch_size,
                                               to_gpu=False,norm_rews=False)
                 maddpg.pretrain_actor(sample, a_i,Imitation=Imitation_exploration)
             maddpg.update_all_targets()
@@ -238,27 +254,14 @@ if Imitation_exploration:
             print("Petrain critic update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
-                #sample = replay_buffer.sample(batch_size,
-                sample = pretrain_buffer.sample(batch_size,
+                #sample = pretrain_buffer.sample(batch_size,
+                sample = replay_buffer.sample(batch_size,
                                                 to_gpu=False,norm_rews=False)
                 maddpg.pretrain_critic(sample, a_i )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
     maddpg.update_hard_critic()
 
-    
-    if I2A:
-        # pretrain EM
-        for i in range(pt_EM_updates):
-            if i%100 == 0:
-                print("Petrain EM update:",i)
-            for u_i in range(1):
-                for a_i in range(maddpg.nagents):
-                    #sample = replay_buffer.sample(batch_size,
-                    sample = pretrain_buffer.sample(batch_size,
-                                                    to_gpu=False,norm_rews=False)
-                    maddpg.update_EM(sample, a_i )
-            maddpg.prep_rollouts(device='cpu')
 
     
 
@@ -269,9 +272,9 @@ if Imitation_exploration:
             print("Petrain critic/actor update:",i)
         for u_i in range(1):
             for a_i in range(maddpg.nagents):
-                #sample = replay_buffer.sample(batch_size,
-                sample = pretrain_buffer.sample(batch_size,
-                                                to_gpu=False,norm_rews=False)
+                #sample = pretrain_buffer.sample(batch_size,
+                sample = replay_buffer.sample(batch_size,
+                                              to_gpu=False,norm_rews=False)
                 maddpg.update(sample, a_i )
             maddpg.update_all_targets()
         maddpg.prep_rollouts(device='cpu')
@@ -326,14 +329,19 @@ for ep_i in range(0, num_episodes):
     else:
         explr_pct_remaining = max(0, num_explore_episodes - ep_i + burn_in_episodes) / (num_explore_episodes)
     beta_pct_remaining = max(0, num_beta_episodes - ep_i + burn_in_episodes) / (num_beta_episodes)
-    maddpg.scale_noise(final_OU_noise_scale + (init_noise_scale - final_OU_noise_scale) * explr_pct_remaining)
+    
+    if ep_i % 50 == 0:
+        maddpg.scale_noise(0.0)
+    if ep_i % 100 == 0:
+        maddpg.scale_noise(final_OU_noise_scale + (init_noise_scale - final_OU_noise_scale) * explr_pct_remaining)
+    
+        
     maddpg.reset_noise()
     maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
     #for the duration of 100 episode with maximum length of 500 time steps
     time_step = 0
     kickable_counter = 0
     for et_i in range(0, episode_length):
-        maddpg.reset_noise()
 
         # gather all the observations into a torch tensor 
         torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),

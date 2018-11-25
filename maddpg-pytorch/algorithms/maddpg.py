@@ -622,23 +622,7 @@ class MADDPG(object):
         torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
         curr_agent.critic_optimizer.step()
 
-        
-   
-        
-        
-    def update_EM(self, sample, agent_i, parallel=False, logger=None,Imitation = False):
-        """
-        Update parameters of Environment Model and policy prime based on sample from replay buffer
-        Inputs:
-            sample: tuple of (observations, actions, rewards, next
-                    observations, and episode end masks, cumulative discounted reward) sampled randomly from
-                    the replay buffer. Each is a list with entries
-                    corresponding to each agent
-            agent_i (int): index of agent to update
-            parallel (bool): If true, will average gradients across threads
-            logger (SummaryWriter from Tensorboard-Pytorch):
-                If passed in, important quantities will be logged
-        """
+    def update_prime(self, sample, agent_i, parallel=False, logger=None):
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
         curr_agent = self.agents[agent_i]
        
@@ -661,6 +645,29 @@ class MADDPG(object):
         torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_prime_optimizer.step()
 
+        if self.niter % 100 == 0:
+            print("Policy Prime Loss",pol_prime_loss)
+        self.niter += 1
+        
+   
+        
+        
+    def update_EM(self, sample, agent_i, parallel=False, logger=None,Imitation = False):
+        """
+        Update parameters of Environment Model based on sample from replay buffer
+        Inputs:
+            sample: tuple of (observations, actions, rewards, next
+                    observations, and episode end masks, cumulative discounted reward) sampled randomly from
+                    the replay buffer. Each is a list with entries
+                    corresponding to each agent
+            agent_i (int): index of agent to update
+            parallel (bool): If true, will average gradients across threads
+            logger (SummaryWriter from Tensorboard-Pytorch):
+                If passed in, important quantities will be logged
+        """
+        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
+        curr_agent = self.agents[agent_i]
+       
         # Train Environment Model -----------------------------------------------------            
         curr_agent.EM_optimizer.zero_grad()
 
@@ -681,7 +688,6 @@ class MADDPG(object):
         curr_agent.EM_optimizer.step()
 
         if self.niter % 100 == 0:
-            print("Policy Prime Loss",pol_prime_loss)
             print("EM Loss",EM_loss)
         self.niter += 1
         
