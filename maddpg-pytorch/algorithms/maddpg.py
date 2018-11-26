@@ -844,7 +844,7 @@ class MADDPG(object):
 
         if self.niter % 100 == 0:
             print("Actor loss",pol_loss)
-
+        self.niter += 1
         
        
 
