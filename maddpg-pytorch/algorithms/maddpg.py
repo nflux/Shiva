@@ -653,12 +653,40 @@ class MADDPG(object):
     def pretrain_prime(self, sample, agent_i, parallel=False, logger=None):
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
         curr_agent = self.agents[agent_i]
-       
+        zero_values = False
+        if self.discrete_action:
+            # Forward pass as if onehot (hard=True) but backprop through a differentiable
+            # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
+            # through discrete categorical samples, but I'm not sure if that is
+            # correct since it removes the assumption of a deterministic policy for
+            # DDPG. Regardless, discrete policies don't seem to learn properly without it.
+            curr_pol_out = curr_agent.policy(obs[agent_i])
+            curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
+        else:
+            curr_pol_out = curr_agent.policy_prime(obs[agent_i]) # uses gumbel across the actions
+
+            self.curr_pol_out = curr_pol_out.clone() # for inverting action space
+
+            # concat one-hot actions with params zero'd along indices non-chosen actions
+            if zero_values:
+                curr_pol_vf_in = torch.cat((gumbel, 
+                                      self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
+            else:
+                curr_pol_vf_in = curr_pol_out
+
+        
+        all_pol_acs = []
+        all_pol_acs.append(curr_pol_vf_in)
+            
+
+        vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
+        # invert gradient --------------------------------------
+        self.params = vf_in.data
+        self.param_dim = curr_agent.param_dim
+        hook = vf_in.register_hook(self.inject)
+
         curr_agent.policy_prime_optimizer.zero_grad()
-
-    
-        curr_pol_out = curr_agent.policy_prime(obs[agent_i])
-
+        
         pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
         actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
         pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
@@ -676,6 +704,7 @@ class MADDPG(object):
             average_gradients(curr_agent.policy_prime)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_prime_optimizer.step()
+        hook.remove()
 
         if self.niter % 100 == 0:
             print("Policy Prime Loss",pol_prime_loss)
@@ -806,7 +835,7 @@ class MADDPG(object):
         #pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
     # testing imitation
 #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
-        pol_loss.backward(retain_graph=True)
+        pol_loss.backward()
         if parallel:
             average_gradients(curr_agent.policy)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?

@@ -37,7 +37,7 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams--------------------------
-batch_size = 256
+batch_size = 32
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -86,8 +86,8 @@ EM_lr = 0.001
 obs_weight = 10.0
 rew_weight = 1.0
 ws_weight = 1.0
-rollout_steps = 10
-LSTM_hidden=32
+rollout_steps = 2
+LSTM_hidden=16
 #Save/load -----------------------------
 save_critic = False
 save_actor = False
