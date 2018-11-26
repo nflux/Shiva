@@ -650,9 +650,40 @@ class MADDPG(object):
         self.niter += 1
         
    
+    def pretrain_prime(self, sample, agent_i, parallel=False, logger=None):
+        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
+        curr_agent = self.agents[agent_i]
+       
+        curr_agent.policy_prime_optimizer.zero_grad()
+
+    
+        curr_pol_out = curr_agent.policy_prime(obs[agent_i])
+
+        pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
+        actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
+        pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
+        actual_out_params = Variable(torch.stack(acs)[agent_i],requires_grad=True)[:,curr_agent.action_dim:]
+
+        target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
+
+        MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])
+
+        pol_prime_loss = MSE + CELoss(pol_out_actions,target_classes)
+        #pol_prime_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
+        #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
+        pol_prime_loss.backward()
+        if parallel:
+            average_gradients(curr_agent.policy_prime)
+        torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
+        curr_agent.policy_prime_optimizer.step()
+
+        if self.niter % 100 == 0:
+            print("Policy Prime Loss",pol_prime_loss)
+        self.niter += 1
         
+   
         
-    def update_EM(self, sample, agent_i, parallel=False, logger=None,Imitation = False):
+    def update_EM(self, sample, agent_i, parallel=False, logger=None):
         """
         Update parameters of Environment Model based on sample from replay buffer
         Inputs:
@@ -692,7 +723,7 @@ class MADDPG(object):
         self.niter += 1
         
         
-    def pretrain_actor(self, sample, agent_i, parallel=False, logger=None,Imitation = False):
+    def pretrain_actor(self, sample, agent_i, parallel=False, logger=None):
         """
         Update parameters of actor based on sample from replay buffer for policy imitation (fits policy to observed actions)
         Inputs:
@@ -782,29 +813,8 @@ class MADDPG(object):
         curr_agent.policy_optimizer.step()
         hook.remove()
 
-        # I2A --------------------------------------
-        if self.I2A:
-            # Update policy prime
-            curr_agent.policy_prime_optimizer.zero_grad()
-            # We take the loss between the current policy's behavior and policy prime which is estimating the current policy
-            pol_prime_out = curr_agent.policy_prime(obs[agent_i]) # uses gumbel across the actions
-            pol_prime_out_actions = pol_prime_out[:,:curr_agent.action_dim].float()
-            pol_prime_out_params = pol_prime_out[:,curr_agent.action_dim:]
-            pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
-            pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
-            target_classes = torch.argmax(pol_out_actions,dim=1) # categorical integer for predicted class
-            MSE =np.sum([F.mse_loss(prime[self.discrete_param_indices(target_class)],current[self.discrete_param_indices(target_class)]) for prime,current,target_class in zip(pol_prime_out_params,pol_out_params, target_classes)])
-            #pol_loss = MSE + CELoss(pol_out_actions,target_classes)
-            pol_prime_loss = MSE + F.mse_loss(pol_prime_out_actions,pol_out_actions)
-            pol_prime_loss.backward()
-            if parallel:
-                average_gradients(curr_agent.policy_prime)
-            torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
-            curr_agent.policy_prime_optimizer.step()
         if self.niter % 100 == 0:
             print("Actor loss",pol_loss)
-            if self.I2A:
-                print("Policy Prime loss",pol_prime_loss)
 
         
        
