@@ -73,8 +73,8 @@ class MLPNetwork_Actor(nn.Module):
                 out = np.asarray(torch.cat((self.final_out_action, self.final_out_params)).data.numpy())
             else:
                 out = torch.cat((self.final_out_action, self.final_out_params),1)
-            #if self.count % 100 == 0:
-            #    print(out)
+            if self.count % 100 == 0:
+                print(out)
             self.count += 1
 
         return out

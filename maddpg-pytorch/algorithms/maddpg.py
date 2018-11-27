@@ -517,7 +517,8 @@ class MADDPG(object):
                      'critic_params': [a.get_critic_params() for a in self.agents]}
         torch.save(save_dict, filename)
 
-
+# ----------------------------
+# - Pretraining Functions ----
     
     def pretrain_critic(self, sample, agent_i, parallel=False, logger=None):
         """
@@ -696,8 +697,8 @@ class MADDPG(object):
 
         MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])
 
-        pol_prime_loss = MSE + CELoss(pol_out_actions,target_classes)
-        #pol_prime_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
+        #pol_prime_loss = MSE + CELoss(pol_out_actions,target_classes)
+        pol_prime_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_prime_loss.backward()
         if parallel:
@@ -745,10 +746,10 @@ class MADDPG(object):
         EM_loss = self.obs_weight * loss_obs + self.rew_weight * loss_rew + self.ws_weight * loss_ws
         EM_loss.backward()
         torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
-        curr_agent.EM_optimizer.step()
+        curr_agent.EM_optimizer.step()e
 
         if self.niter % 100 == 0:
-            print("EM Loss",EM_loss)
+            print("EM Loss",EM_loss,"Obs Loss",loss_obs,"Rew Loss:",loss_rew,"WS Loss":,loss_ws)
         self.niter += 1
         
         
@@ -831,8 +832,8 @@ class MADDPG(object):
 
         MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])
 
-        pol_loss = MSE + CELoss(pol_out_actions,target_classes)
-        #pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
+        #pol_loss = MSE + CELoss(pol_out_actions,target_classes)
+        pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
     # testing imitation
 #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
