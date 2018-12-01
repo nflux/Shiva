@@ -81,7 +81,8 @@ pt_EM_updates = 25000
 pt_beta = 1.0
 #---------------------------------------
 #I2A Options ---------------------------
-I2A = False
+I2A = True
+decent_EM = True
 EM_lr = 0.001
 obs_weight = 10.0
 rew_weight = 1.0
@@ -109,7 +110,7 @@ else:
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
     
-env = HFO_env(num_TNPC = 0,num_TA=2, num_OA=3, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
+env = HFO_env(num_TNPC = 0,num_TA=2, num_OA=2, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
               feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False)
 
 if use_viewer:
@@ -131,7 +132,7 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                               TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps,
                               I2A = I2A, EM_lr = EM_lr,
                               obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight, 
-                              rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden)
+                              rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden, decent_EM=decent_EM)
 
 
 
@@ -433,7 +434,6 @@ for ep_i in range(0, num_episodes):
         opp_obs =  np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
         
         # use random unif parameters if e_greedy
-        print('This is the team actions', str(team_actions[0]))
         team_noisey_actions_for_buffer = np.asarray([[val for val in (np.random.uniform(-1,1,3))] if ran else action for ran,action in zip(team_randoms,team_actions[0])])
         team_params = np.asarray([[val for val in (np.random.uniform(-1,1,5))] if ran else p for ran,p in zip(team_randoms,team_params)])
         
@@ -471,8 +471,6 @@ for ep_i in range(0, num_episodes):
 
         _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params)
 
-
-        print('this is the world status', str(world_stat))
         team_rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA)])
         opp_rewards = np.hstack([env.Reward(i,'opp') for i in range(env.num_OA)])
 
@@ -498,7 +496,7 @@ for ep_i in range(0, num_episodes):
             opp_n_step_acs[i].append(opp_actions_params_for_buffer)
             opp_n_step_dones[i].append(opp_dones)
 
-        print('This is the length of the buffers', str(len(team_replay_buffer)), str(len(opp_replay_buffer)))
+        # print('This is the length of the buffers', str(len(team_replay_buffer)), str(len(opp_replay_buffer)))
         training = ((len(team_replay_buffer) >= batch_size and len(opp_replay_buffer) >= batch_size and 
                     (t % steps_per_update) < 1) and t > burn_in_iterations)
 
@@ -520,7 +518,9 @@ for ep_i in range(0, num_episodes):
                 maddpg.update_all_targets()
             maddpg.prep_rollouts(device='cpu')
             
-            
+        
+        print('This is the time step', str(time_step))
+
         time_step += 1
         t += 1
         if t%1000 == 0:

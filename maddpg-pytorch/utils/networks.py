@@ -301,9 +301,7 @@ class I2A_Network(nn.Module):
         actions = []
         for item in batch:
             actions.append(self.pol_prime(item))
-            actions.append(np.array([1.0,0.0,0.0,np.random.uniform(-1,1),np.random.uniform(-1,1),0.0,0.0,0.0]))
-            actions.append(np.array([0.0,1.0,0.0,0.0,0.0,np.random.uniform(-1,1),0.0,0.0]))
-            actions.append(np.array([0.0,0.0,1.0,0.0,0.0,0.0,np.random.uniform(-1,1),np.random.uniform(-1,1)]))
+
                            
         step_obs, step_rewards,step_ws = [], [],[]
         for step_idx in range(self.rollout_steps):
