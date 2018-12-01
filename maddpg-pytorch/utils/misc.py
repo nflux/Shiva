@@ -6,7 +6,7 @@ import torch.distributed as dist
 from torch.autograd import Variable
 import numpy as np
 
-def e_greedy(logits, eps=0.0):
+def e_greedy(logits, numAgents, eps=0.0):
     """
     Given batch of logits, return one-hot sample using epsilon greedy strategy
     (based on given epsilon)
@@ -16,18 +16,20 @@ def e_greedy(logits, eps=0.0):
     # get best (according to current policy) actions in one-hot form
     argmax_acs = (logits == logits.max(1, keepdim=True)[0]).float()
     if eps == 0.0:
-        return argmax_acs,False
+        return argmax_acs, [False] * numAgents
     # get random actions in one-hot form
     rand_acs = Variable(torch.eye(logits.shape[1])[[np.random.choice(
         range(logits.shape[1]), size=logits.shape[0])]], requires_grad=False)
     # chooses between best and random actions using epsilon greedy
-    explore = False
+    # explore = False
+    ex_list = [False] * numAgents
     rand = torch.rand(logits.shape[0])
     for i,r in enumerate(rand):
         if r < eps:
-            explore = True        
+            ex_list[i] = True
     return torch.stack([argmax_acs[i] if r > eps else rand_acs[i] for i, r in
-                        enumerate(rand)]) , explore
+                        enumerate(rand)]) , ex_list
+
 def pretrain_process(fname,pt_episodes,episode_length,num_features):
     with open(fname) as f:
         content = f.readlines()
@@ -107,8 +109,8 @@ def pretrain_process(fname,pt_episodes,episode_length,num_features):
     return pt_obs,pt_status,pt_actions
 
 
-def zero_params(num_TA,params,action_index):
-    for i in range(num_TA):
+def zero_params(num_Agents,params,action_index):
+    for i in range(num_Agents):
         if action_index[i] == 0:
             params[i][2] = 0
             params[i][3] = 0

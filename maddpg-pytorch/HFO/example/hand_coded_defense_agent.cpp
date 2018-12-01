@@ -245,7 +245,7 @@ int main(int argc, char** argv) {
       //hfo.act(hfo::INTERCEPT);
       status = hfo.step();
     }
-    if (status==GOAL)
+    if (status==GOAL_BY_LEFT)
             numGoals = numGoals+1;
     // Check what the outcome of the episode was
     cout << "Episode " << episode << " ended with status: "

@@ -75,6 +75,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // self.inertiaPoint(n_steps);
 
   // ======================== LANDMARK FEATURES ======================== //
+  //###########Need to add the left goal here#####################
   // Top Bottom Center of Goal
   rcsc::Vector2D goalCenter(pitchHalfLength, 0);
   addLandmarkFeatures(goalCenter, self_pos, self_ang);
@@ -96,21 +97,31 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // Corners of the Playable Area
   rcsc::Vector2D centerField(0, 0);
   addLandmarkFeatures(centerField, self_pos, self_ang);
-  rcsc::Vector2D cornerTopLeft(0, -pitchHalfWidth);
+
+  //The code below is the original HFO, it was replaced by full field
+  //rcsc::Vector2D cornerTopLeft(0, -pitchHalfWidth);
+  rcsc::Vector2D cornerTopLeft(-pitchHalfLength, -pitchHalfWidth);
   addLandmarkFeatures(cornerTopLeft, self_pos, self_ang);
+
   rcsc::Vector2D cornerTopRight(pitchHalfLength, -pitchHalfWidth);
   addLandmarkFeatures(cornerTopRight, self_pos, self_ang);
+
   rcsc::Vector2D cornerBotRight(pitchHalfLength, pitchHalfWidth);
   addLandmarkFeatures(cornerBotRight, self_pos, self_ang);
-  rcsc::Vector2D cornerBotLeft(0, pitchHalfWidth);
+
+  //The code below is the original HFO, it was replaced by full field
+  //rcsc::Vector2D cornerBotLeft(0, pitchHalfWidth);
+  rcsc::Vector2D cornerBotLeft(-pitchHalfLength, pitchHalfWidth);
   addLandmarkFeatures(cornerBotLeft, self_pos, self_ang);
 
   // Distances to the edges of the playable area
   if (self.posValid()) {
-    // Distance to Left field line
-    addDistFeature(self_pos.x, pitchHalfLength);
+    // Distance to Left field line, replaced by full field original code below. Might need to be modified for negative values.
+    //addDistFeature(self_pos.x, pitchHalfLength);
+    addDistFeature(self_pos.x, pitchLength);
     // Distance to Right field line
-    addDistFeature(pitchHalfLength - self_pos.x, pitchHalfLength);
+    //addDistFeature(pitchHalfLength - self_pos.x, pitchHalfLength);
+    addDistFeature(self_pos.x, pitchLength);
     // Distance to top field line
     addDistFeature(pitchHalfWidth + self_pos.y, pitchWidth);
     // Distance to Bottom field line

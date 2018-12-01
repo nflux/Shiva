@@ -61,10 +61,10 @@ Possible game statuses:
   [SERVER_DOWN] Server is not alive
 """
 NUM_GAME_STATUS_STATES = 6
-IN_GAME, GOAL, CAPTURED_BY_DEFENSE, OUT_OF_BOUNDS, OUT_OF_TIME, SERVER_DOWN = list(range(NUM_GAME_STATUS_STATES))
+IN_GAME, GOAL_BY_LEFT, GOAL_BY_RIGHT, OUT_OF_BOUNDS, OUT_OF_TIME, SERVER_DOWN = list(range(NUM_GAME_STATUS_STATES))
 STATUS_STRINGS = {IN_GAME: "InGame",
-                  GOAL: "Goal",
-                  CAPTURED_BY_DEFENSE: "CapturedByDefense",
+                  GOAL_BY_LEFT: "Goal_By_Left",
+                  GOAL_BY_RIGHT: "Goal_By_Right",
                   OUT_OF_BOUNDS: "OutOfBounds",
                   OUT_OF_TIME: "OutOfTime",
                   SERVER_DOWN: "ServerDown"}

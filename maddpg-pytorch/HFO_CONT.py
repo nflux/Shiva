@@ -9,7 +9,7 @@ import itertools
 import numpy as np
 from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process
 from torch import Tensor
-import hfo
+from HFO import hfo
 import time
 import _thread as thread
 import argparse
@@ -25,7 +25,7 @@ from HFO_env import *
 action_level = 'low'
 feature_level = 'low'
 USE_CUDA = False 
-use_viewer = False
+use_viewer = True
 n_training_threads = 8
 use_viewer_after = 1500 # If using viewer, uses after x episodes
 # default settings
@@ -37,7 +37,7 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams--------------------------
-batch_size = 128
+batch_size = 4
 hidden_dim = int(1024)
 a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
@@ -71,7 +71,7 @@ TD3_noise = 0.05
 #Pretrain Options ----------------------
 # To use imitation exporation run 1 TNPC vs 0/1 ONPC (currently set up for 1v1, or 1v0)
 # Copy the base_left-11.log to Pretrain_Files and rerun this file with 1v1 or 1v0 controlled vs npc respectively
-Imitation_exploration = True
+Imitation_exploration = False
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
 pt_critic_updates = 25000
 pt_actor_updates = 20000
@@ -81,7 +81,7 @@ pt_EM_updates = 25000
 pt_beta = 1.0
 #---------------------------------------
 #I2A Options ---------------------------
-I2A = True
+I2A = False
 EM_lr = 0.001
 obs_weight = 10.0
 rew_weight = 1.0
@@ -109,7 +109,7 @@ else:
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
     
-env = HFO_env(num_TNPC = 0,num_TA=1, num_ONPC=1, num_trials = num_episodes, fpt = episode_length, 
+env = HFO_env(num_TNPC = 0,num_TA=2, num_OA=3, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
               feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False)
 
 if use_viewer:
@@ -135,22 +135,30 @@ maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
 
 
 
-print('maddpg.nagents ', maddpg.nagents)
-print('env.num_TA ', env.num_TA)  
-print('env.num_features : ' , env.num_features)
+# print('maddpg.nagents ', maddpg.nagents)
+# print('env.num_TA ', env.num_TA)  
+# print('env.num_features : ' , env.num_features)
 #initialize the replay buffer of size 10000 for number of agent with their observations & actions 
 pretrain_buffer = ReplayBuffer(replay_memory_size , env.num_TA,
-                                 [env.num_features for i in range(env.num_TA)],
-                                 [env.action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
-replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA,
-                                 [env.num_features for i in range(env.num_TA)],
-                                 [env.action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
+                                 [env.team_num_features for i in range(env.num_TA)],
+                                 [env.team_action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
+
+team_replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA,
+                                 [env.team_num_features for i in range(env.num_TA)],
+                                 [env.team_action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
+
+#initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
+opp_replay_buffer = ReplayBuffer(replay_memory_size , env.num_OA,
+                                 [env.opp_num_features for i in range(env.num_OA)],
+                                 [env.opp_action_params.shape[1] + len(env.action_list) for i in range(env.num_OA)])
 
 reward_total = [ ]
 num_steps_per_episode = []
 end_actions = [] 
-logger_df = pd.DataFrame()
-step_logger_df = pd.DataFrame()
+# logger_df = pd.DataFrame()
+team_step_logger_df = pd.DataFrame()
+opp_step_logger_df = pd.DataFrame()
+
 # -------------------------------------
 # PRETRAIN ############################
 if Imitation_exploration:
@@ -321,15 +329,32 @@ while test_imitation:
     print(agent_actions)
     _,_,d,world_stat = env.Step(agents_actions, 'team',params)
 
+
+
+
+
+
+
+
 # for the duration of 1000 episodes 
 for ep_i in range(0, num_episodes):
 
-    n_step_rewards = []
-    n_step_reward = 0.0
-    n_step_obs = []
-    n_step_acs = []
-    n_step_next_obs = []
-    n_step_dones = []
+    # team n-step
+    team_n_step_rewards = [[] for i in range(env.num_TA)]
+    # team_n_step_reward = [0.0] * env.num_TA
+    team_n_step_obs = [[] for i in range(env.num_TA)]
+    team_n_step_acs = [[] for i in range(env.num_TA)]
+    team_n_step_next_obs = [[] for i in range(env.num_TA)]
+    team_n_step_dones = [[] for i in range(env.num_TA)]
+
+    # opp n-step
+    opp_n_step_rewards = [[] for i in range(env.num_OA)]
+    # opp_n_step_reward = [0.0] * env.num_OA
+    opp_n_step_obs = [[] for i in range(env.num_OA)]
+    opp_n_step_acs = [[] for i in range(env.num_OA)]
+    opp_n_step_next_obs = [[] for i in range(env.num_OA)]
+    opp_n_step_dones = [[] for i in range(env.num_OA)]
+
     maddpg.prep_rollouts(device='cpu')
     #define/update the noise used for exploration
     if ep_i < burn_in_episodes:
@@ -348,85 +373,150 @@ for ep_i in range(0, num_episodes):
     maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
     #for the duration of 100 episode with maximum length of 500 time steps
     time_step = 0
-    kickable_counter = 0
+    team_kickable_counter = 0
+    opp_kickable_counter = 0
     for et_i in range(0, episode_length):
 
         # gather all the observations into a torch tensor 
-        torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
-                              requires_grad=False)
-                     for i in range(maddpg.nagents)]
-        # get actions as torch Variables
-        torch_agent_actions = maddpg.step(torch_obs, explore=explore)
+        torch_obs_team = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
+                                requires_grad=False)
+                        for i in range(maddpg.nagents_team)]
+
+        # gather all the opponent observations into a torch tensor 
+        torch_obs_opp = [Variable(torch.Tensor(np.vstack(env.Observation(i,'opp')).T),
+                                requires_grad=False)
+                        for i in range(maddpg.nagents_opp)]
+
+        # get actions as torch Variables for both team and opp
+        team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp, explore=explore)
         # convert actions to numpy arrays
-        agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
+        team_agent_actions = [ac.data.numpy() for ac in team_torch_agent_actions]
+        #Converting actions to numpy arrays for opp agents
+        opp_agent_actions = [ac.data.numpy() for ac in opp_torch_agent_actions]
+
         # rearrange actions to be per environment
+        team_params = np.asarray([ac[0][len(env.action_list):] for ac in team_agent_actions]) 
+        # rearrange actions to be per environment for the opponent
+        opp_params = np.asarray([ac[0][len(env.action_list):] for ac in opp_agent_actions])
+
+        # this is returning one-hot-encoded action for each team agent
+        team_actions = [[ac[0][:len(env.action_list)] for ac in team_agent_actions]]
+        # this is returning one-hot-encoded action for each opp agent 
+        opp_actions = [[ac[0][:len(env.action_list)] for ac in opp_agent_actions]]
         
-        # Get egreedy action
-        params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions]) 
-        actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
+        tensors = []
+        rands = []
         if explore:
-            noisey_actions = [e_greedy(torch.tensor(a).view(1,len(env.action_list)),
-                                                 eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in actions]     # get eps greedy action
+            team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA,
+                                                 eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in team_actions]
+
+            opp_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_OA,len(env.action_list)), env.num_OA,
+                                                 eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in opp_actions]
         else:
-            noisey_actions = [e_greedy(torch.tensor(a).view(1,len(env.action_list)),eps = 0) for a in actions]     # get eps greedy action
+            team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA, eps = 0) for a in team_actions]
+            opp_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_OA,len(env.action_list)), env.num_OA, eps = 0) for a in opp_actions]
 
+        team_randoms = [team_noisey_actions[0][1][i] for i in range(env.num_TA)]
+        # team_noisey_actions = [team_noisey_actions[0][0][i] for i in range(env.num_TA)]
 
-        # modify for multi agent
-        randoms = noisey_actions[0][1]
-        noisey_actions = [noisey_actions[0][0]]
+        opp_randoms = [opp_noisey_actions[0][1][i] for i in range(env.num_OA)]
+        # opp_noisey_actions = [opp_noisey_actions[0][0][i] for i in range(env.num_OA)]
         
-        noisey_actions_for_buffer = [ac.data.numpy() for ac in noisey_actions]
-        noisey_actions_for_buffer = np.asarray([ac[0] for ac in noisey_actions_for_buffer])
+        # ***********************May use in future**************************************
+        # team_noisey_actions_for_buffer = [ac.data.numpy() for ac in team_noisey_actions]
+        # team_noisey_actions_for_buffer = np.asarray([ac[0] for ac in team_noisey_actions_for_buffer])
 
-        
-        obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
+        # opp_noisey_actions_for_buffer = [ac.data.numpy() for ac in opp_noisey_actions]
+        # opp_noisey_actions_for_buffer = np.asarray([ac[0] for ac in opp_noisey_actions_for_buffer])
+
+        team_obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
+        opp_obs =  np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
         
         # use random unif parameters if e_greedy
-        if randoms:
-            noisey_actions_for_buffer = np.asarray([[val for val in (np.random.uniform(-1,1,3))]])
-            params = np.asarray([[val for val in (np.random.uniform(-1,1,5))]])
-        else:
-            noisey_actions_for_buffer = np.asarray(actions[0])
-            
-        agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes 
-        params_for_buffer = params
+        print('This is the team actions', str(team_actions[0]))
+        team_noisey_actions_for_buffer = np.asarray([[val for val in (np.random.uniform(-1,1,3))] if ran else action for ran,action in zip(team_randoms,team_actions[0])])
+        team_params = np.asarray([[val for val in (np.random.uniform(-1,1,5))] if ran else p for ran,p in zip(team_randoms,team_params)])
+        
+        opp_noisey_actions_for_buffer = np.asarray([[val for val in (np.random.uniform(-1,1,3))] if ran else action for ran,action in zip(opp_randoms,opp_actions[0])])
+        opp_params = np.asarray([[val for val in (np.random.uniform(-1,1,5))] if ran else p for ran,p in zip(opp_randoms,opp_params)])
 
-        actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params_for_buffer)] for i in range(1)]).reshape(
-            env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+        # print('These are the opp params', str(opp_params))
+        
+        # if randoms:
+        #     noisey_actions_for_buffer = np.asarray([[val for val in (np.random.uniform(-1,1,3))]])
+        #     params = np.asarray([[val for val in (np.random.uniform(-1,1,5))]])
+        # else:
+        #     noisey_actions_for_buffer = np.asarray(actions[0])
+            
+        team_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in team_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
+        team_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(team_noisey_actions_for_buffer,team_params)] for i in range(1)]).reshape(
+            env.num_TA,env.team_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+        
+        opp_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in opp_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
+        opp_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(opp_noisey_actions_for_buffer,opp_params)] for i in range(1)]).reshape(
+            env.num_OA,env.opp_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
 
         # If kickable is True one of the teammate agents has possession of the ball
         kickable = False
-        kickable = np.array([env.get_kickable_status(i,obs.T) for i in range(env.num_TA)]).any()
+        kickable = np.array([env.get_kickable_status(i,team_obs.T) for i in range(env.num_TA)]).any()
         if kickable == True:
-            kickable_counter += 1
+            team_kickable_counter += 1
+            
+        # If kickable is True one of the teammate agents has possession of the ball
+        kickable = False
+        kickable = np.array([env.get_kickable_status(i,opp_obs.T) for i in range(env.num_OA)]).any()
+        if kickable == True:
+            opp_kickable_counter += 1
 
 
-        _,_,d,world_stat = env.Step(agents_actions, 'team',params)
-        # if d == True agent took an end action such as scoring a goal
+        _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params)
 
-        rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA) ])            
 
-        next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents)]).T
-        dones = np.hstack([env.d for i in range(env.num_TA)])
+        print('this is the world status', str(world_stat))
+        team_rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA)])
+        opp_rewards = np.hstack([env.Reward(i,'opp') for i in range(env.num_OA)])
 
-        # Store variables for calculation of MC and n-step targets
-        n_step_rewards.append(rewards)
-        n_step_obs.append(obs)
-        n_step_next_obs.append(next_obs)
-        n_step_acs.append(actions_params_for_buffer)
-        n_step_dones.append(dones)
+        team_next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
+        opp_next_obs = np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
 
-        if (len(replay_buffer) >= batch_size and
-            (t % steps_per_update) < 1) and t > burn_in_iterations:
+        team_dones = np.hstack([env.d for i in range(env.num_TA)])
+        opp_dones = np.hstack([env.d for i in range(env.num_OA)])
+
+        # Store variables for calculation of MC and n-step targets for team
+        for i in range(env.num_TA):
+            team_n_step_rewards[i].append(team_rewards)
+            team_n_step_obs[i].append(team_obs)
+            team_n_step_next_obs[i].append(team_next_obs)
+            team_n_step_acs[i].append(team_actions_params_for_buffer)
+            team_n_step_dones[i].append(team_dones)
+
+        # Store variables for calculation of MC and n-step targets for opp
+        for i in range(env.num_OA):
+            opp_n_step_rewards[i].append(opp_rewards)
+            opp_n_step_obs[i].append(opp_obs)
+            opp_n_step_next_obs[i].append(opp_next_obs)
+            opp_n_step_acs[i].append(opp_actions_params_for_buffer)
+            opp_n_step_dones[i].append(opp_dones)
+
+        print('This is the length of the buffers', str(len(team_replay_buffer)), str(len(opp_replay_buffer)))
+        training = ((len(team_replay_buffer) >= batch_size and len(opp_replay_buffer) >= batch_size and 
+                    (t % steps_per_update) < 1) and t > burn_in_iterations)
+
+        if training:
+            print('****************We are now training*********************')
             #if USE_CUDA:
             #    maddpg.prep_training(device='gpu')
             #else:
             maddpg.prep_training(device='cpu')
             for u_i in range(1):
-                for a_i in range(maddpg.nagents):
-                    sample = replay_buffer.sample(batch_size,
+                for a_i in range(maddpg.nagents_team):
+                    sample = team_replay_buffer.sample(batch_size,
                                                   to_gpu=False,norm_rews=False)
-                    maddpg.update(sample, a_i )
+                    maddpg.update(sample, a_i, 'team')
+                for a_i in range(maddpg.nagents_opp):
+                    sample = opp_replay_buffer.sample(batch_size,
+                                                  to_gpu=False,norm_rews=False)
+                    maddpg.update(sample, a_i, 'opp')
                 maddpg.update_all_targets()
             maddpg.prep_rollouts(device='cpu')
             
@@ -434,70 +524,81 @@ for ep_i in range(0, num_episodes):
         time_step += 1
         t += 1
         if t%1000 == 0:
-            step_logger_df.to_csv('history.csv')
+            team_step_logger_df.to_csv('team_history.csv')
+            opp_step_logger_df.to_csv('opp_history.csv')
             
-        # why don't we push the reward with gamma already instead of storing gammas?                     
+        # why don't we push the reward with gamma already instead of storing gammas?                    
         if d == True: # Episode done
             # Calculate n-step and MC targets
-            for n in range(et_i+1):
-                MC_target = 0
-                n_step_target = 0
-                n_step_ob = n_step_obs[n]
-                n_step_ac = n_step_acs[n]    
-                for step in range(et_i+1 - n): # sum MC target
-                    MC_target += n_step_rewards[et_i - step] * gamma**(et_i - n - step)
-                if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
-                    for step in range(n_steps): 
-                        n_step_target += n_step_rewards[n + step] * gamma**(step)
-                    n_step_next_ob = n_step_next_obs[n - 1 + n_steps]
-                    n_step_done = n_step_dones[n - 1 + n_steps]
-                else: # n-step = MC if less than n steps remaining
-                    n_step_target = MC_target
-                    n_step_next_ob = n_step_next_obs[-1]
-                    n_step_done = n_step_dones[-1]
-                # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                replay_buffer.push(n_step_ob, n_step_ac,n_step_rewards[n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target]),np.hstack([world_stat])) 
+            # ws = [world_stat] * env.num_TA
+            for a in range(env.num_TA):
+                for n in range(et_i+1):
+                    MC_target = 0
+                    n_step_target = 0
+                    n_step_ob = team_n_step_obs[a][n]
+                    n_step_ac = team_n_step_acs[a][n]    
+                    for step in range(et_i+1 - n): # sum MC target
+                        MC_target += team_n_step_rewards[a][et_i - step] * gamma**(et_i - n - step)
+                    if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
+                        for step in range(n_steps): 
+                            n_step_target += team_n_step_rewards[a][n + step] * gamma**(step)
+                        n_step_next_ob = team_n_step_next_obs[a][n - 1 + n_steps]
+                        n_step_done = team_n_step_dones[a][n - 1 + n_steps]
+                    else: # n-step = MC if less than n steps remaining
+                        n_step_target = MC_target
+                        n_step_next_ob = team_n_step_next_obs[a][-1]
+                        n_step_done = team_n_step_dones[a][-1]
+                    # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
+                    team_replay_buffer.push(n_step_ob, n_step_ac,team_n_step_rewards[a][n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target]),np.hstack([world_stat]))
+            
+            # ws = [world_stat] * env.num_OA
+            for a in range(env.num_OA):
+                for n in range(et_i+1):
+                    MC_target = 0
+                    n_step_target = 0
+                    n_step_ob = opp_n_step_obs[a][n]
+                    n_step_ac = opp_n_step_acs[a][n]
+                    for step in range(et_i+1 - n): # sum MC target
+                        MC_target += opp_n_step_rewards[a][et_i - step] * gamma**(et_i - n - step)
+                    if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
+                        for step in range(n_steps): 
+                            n_step_target += opp_n_step_rewards[a][n + step] * gamma**(step)
+                        n_step_next_ob = opp_n_step_next_obs[a][n - 1 + n_steps]
+                        n_step_done = opp_n_step_dones[a][n - 1 + n_steps]
+                    else: # n-step = MC if less than n steps remaining
+                        n_step_target = MC_target
+                        n_step_next_ob = opp_n_step_next_obs[a][-1]
+                        n_step_done = opp_n_step_dones[a][-1]
+                    # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
+                    opp_replay_buffer.push(n_step_ob, n_step_ac,opp_n_step_rewards[a][n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target]),np.hstack([world_stat]))
                                        
             # log
             if time_step > 0 and ep_i > 1:
-                step_logger_df = step_logger_df.append({'time_steps': time_step, 
-                                                    'why': world_stat,
-                                                    'kickable_percentages': (kickable_counter/time_step) * 100,
-                                                    'average_reward': replay_buffer.get_average_rewards(time_step-1),
-                                                   'cumulative_reward': replay_buffer.get_cumulative_rewards(time_step)}, 
-                                                    ignore_index=True)
+                team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
+                                                        'why': env.team_envs[0].statusToString(world_stat),
+                                                        'kickable_percentages': (team_kickable_counter/time_step) * 100,
+                                                        'average_reward': team_replay_buffer.get_average_rewards(time_step),
+                                                        'cumulative_reward': team_replay_buffer.get_cumulative_rewards(time_step),
+                                                        'goals_scored': env.scored_counter_left/env.num_TA}, 
+                                                        ignore_index=True)
+
+                opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
+                                                        'why': env.opp_team_envs[0].statusToString(world_stat),
+                                                        'kickable_percentages': (opp_kickable_counter/time_step) * 100,
+                                                        'average_reward': opp_replay_buffer.get_average_rewards(time_step),
+                                                        'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step),
+                                                        'goals_scored': env.scored_counter_right/env.num_OA}, 
+                                                        ignore_index=True)
             break;  
-        obs = next_obs
+        team_obs = team_next_obs
+        opp_obs = opp_next_obs
 
             #print(step_logger_df) 
         #if t%30000 == 0 and use_viewer:
-        if t%30000 == 0 and use_viewer and ep_i > use_viewer_after:
+        if t%20000 == 0 and use_viewer and ep_i > use_viewer_after:
             env._start_viewer()       
 
     #ep_rews = replay_buffer.get_average_rewards(time_step)
-
-    #Saves Actor/Critic every particular number of episodes
-    if ep_i%ep_save_every == 0 and ep_i != 0:
-        #Saving the actor NN in local path, needs to be tested by loading
-        if save_actor:
-            ('Saving Actor NN')
-            current_day_time = datetime.datetime.now()
-            maddpg.save_actor('saved_NN/Actor/actor_' + str(current_day_time.month) + 
-                                            '_' + str(current_day_time.day) + 
-                                            '_'  + str(current_day_time.year) + 
-                                            '_' + str(current_day_time.hour) + 
-                                            ':' + str(current_day_time.minute) + 
-                                            '_episode_' + str(ep_i) + '.pth')
-
-        #Saving the critic in local path, needs to be tested by loading
-        if save_critic:
-            print('Saving Critic NN')
-            maddpg.save_critic('saved_NN/Critic/critic_' + str(current_day_time.month) + 
-                                            '_' + str(current_day_time.day) + 
-                                            '_'  + str(current_day_time.year) + 
-                                            '_' + str(current_day_time.hour) + 
-                                            ':' + str(current_day_time.minute) + 
-                                            '_episode_' + str(ep_i) + '.pth')
 
 
 

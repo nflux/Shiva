@@ -28,7 +28,8 @@ class Trainer(object):
     self._lastTrialStart = -1 # Frame Id in which the last trial started
     # =============== TRIAL RESULTS =============== #
     self._numTrials = 0 # Total number of HFO trials
-    self._numGoals = 0 # Trials in which the offense scored a goal
+    self._numGoalsByLeft = 0 # Trials in which the left scored a goal
+    self._numGoalsByRight = 0 # Trials in which the right scored a goal
     self._numBallsCaptured = 0 # Trials in which defense captured the ball
     self._numBallsOOB = 0 # Trials in which ball went out of bounds
     self._numOutOfTime = 0 # Trials that ran out of time
@@ -162,8 +163,12 @@ class Trainer(object):
     _,ts,event = body
     self._frame = int(ts)
     endOfTrial = False
-    if 'GOAL' in event:
-      self._numGoals += 1
+    if 'GOAL_BY_LEFT' in event:
+      self._numGoalsByLeft += 1
+      self._numGoalFrames += self._frame - self._lastTrialStart
+      endOfTrial = True
+    elif 'GOAL_BY_RIGHT' in event:
+      self._numGoalsByRight += 1
       self._numGoalFrames += self._frame - self._lastTrialStart
       endOfTrial = True
     elif event == 'OUT_OF_BOUNDS':
@@ -179,8 +184,8 @@ class Trainer(object):
       self._done = True
     if endOfTrial:
       self._numTrials += 1
-      print('EndOfTrial: %d / %d %d %s'%\
-        (self._numGoals, self._numTrials, self._frame, event))
+      print('EndOfTrial: %d %d / %d %d %s'%\
+        (self._numGoalsByLeft, self._numGoalsByRight, self._numTrials, self._frame, event))
       self._numFrames += self._frame - self._lastTrialStart
       self._lastTrialStart = self._frame
       self.getConnectedPlayers()
@@ -360,9 +365,10 @@ class Trainer(object):
     print('TotalFrames = %i, AvgFramesPerTrial = %.1f, AvgFramesPerGoal = %.1f'\
       %(self._numFrames,
         self._numFrames / float(self._numTrials) if self._numTrials > 0 else float('nan'),
-        self._numGoalFrames / float(self._numGoals) if self._numGoals > 0 else float('nan')))
+        self._numGoalFrames / float(self._numGoalsByLeft + self._numGoalsByRight) if (self._numGoalsByLeft + self._numGoalsByRight) > 0 else float('nan')))
     print('Trials             : %i' % self._numTrials)
-    print('Goals              : %i' % self._numGoals)
+    print('Goals by Left      : %i' % self._numGoalsByLeft)
+    print('Goals by Right     : %i' % self._numGoalsByRight)
     print('Defense Captured   : %i' % self._numBallsCaptured)
     print('Balls Out of Bounds: %i' % self._numBallsOOB)
     print('Out of Time        : %i' % self._numOutOfTime)

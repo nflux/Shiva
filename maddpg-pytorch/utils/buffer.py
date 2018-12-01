@@ -80,7 +80,7 @@ class ReplayBuffer(object):
                 next_observations[:, agent_i]).T # added .T
             self.done_buffs[agent_i][self.curr_i:self.curr_i + nentries] = dones[agent_i]
             self.n_step_buffs[agent_i][self.curr_i:self.curr_i + nentries] = n_step[agent_i]
-            self.ws_buffs[agent_i][self.curr_i:self.curr_i + nentries] = ws[agent_i]
+            self.ws_buffs[agent_i][self.curr_i:self.curr_i + nentries] = ws[0]
 
         self.curr_i += nentries
         if self.filled_i < self.max_steps:

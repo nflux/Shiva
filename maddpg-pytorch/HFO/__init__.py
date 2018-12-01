@@ -1,7 +1,4 @@
-try:
-  from hfo_py.hfo import *
-except ImportError:
-  from hfo import *
+#from hfo import *
 
 import os
 

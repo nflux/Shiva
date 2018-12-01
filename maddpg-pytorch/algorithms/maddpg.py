@@ -14,7 +14,7 @@ class MADDPG(object):
     """
     Wrapper class for DDPG-esque (i.e. also MADDPG) agents in multi-agent task
     """
-    def __init__(self, agent_init_params, alg_types,
+    def __init__(self, team_agent_init_params, opp_agent_init_params, team_alg_types, opp_alg_types,
                  gamma=0.95, batch_size=0,tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
                  discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5,
                  DELTA_Z = 20.0/50,D4PG=False,beta = 0,TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
@@ -35,9 +35,13 @@ class MADDPG(object):
             discrete_action (bool): Whether or not to use discrete action space
         """
         self.world_status_dim = 6 # number of possible world statuses
-        self.nagents = len(alg_types)
-        self.alg_types = alg_types
-        self.agents = [DDPGAgent(discrete_action=discrete_action,
+        self.nagents_team = len(team_alg_types)
+        self.nagents_opp = len(opp_alg_types)
+
+        self.team_alg_types = team_alg_types
+        self.opp_alg_types = opp_alg_types
+
+        self.team_agents = [DDPGAgent(discrete_action=discrete_action,
                                  hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
                                  n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
                                  delta = DELTA_Z,D4PG=D4PG,
@@ -45,8 +49,21 @@ class MADDPG(object):
                                  I2A = I2A,EM_lr=EM_lr,
                                  world_status_dim=self.world_status_dim,rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
                                  **params)
-                       for params in agent_init_params]
-        self.agent_init_params = agent_init_params
+                       for params in team_agent_init_params]
+        
+        self.opp_agents = [DDPGAgent(discrete_action=discrete_action,
+                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
+                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
+                                 delta = DELTA_Z,D4PG=D4PG,
+                                 TD3=TD3,
+                                 I2A = I2A,EM_lr=EM_lr,
+                                 world_status_dim=self.world_status_dim,rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
+                                 **params)
+                       for params in opp_agent_init_params]
+
+        self.team_agent_init_params = team_agent_init_params
+        self.opp_agent_init_params = opp_agent_init_params
+
         self.gamma = gamma
         self.batch_size = batch_size
         self.tau = tau
@@ -77,13 +94,22 @@ class MADDPG(object):
         self.ws_weight = ws_weight
         self.ws_onehot = torch.FloatTensor(self.batch_size,self.world_status_dim)
         self.count = 0
-    @property
-    def policies(self):
-        return [a.policy for a in self.agents]
 
     @property
-    def target_policies(self):
-        return [a.target_policy for a in self.agents]
+    def team_policies(self):
+        return [a.policy for a in self.team_agents]
+    
+    @property
+    def opp_policies(self):
+        return [a.policy for a in self.opp_agents]
+
+    @property
+    def team_target_policies(self):
+        return [a.target_policy for a in self.team_agents]
+
+    @property
+    def opp_target_policies(self):
+        return [a.target_policy for a in self.opp_agents]
     
     def scale_beta(self, beta):
         """
@@ -100,14 +126,20 @@ class MADDPG(object):
         Inputs:
             scale (float): scale of noise
         """
-        for a in self.agents:
+        for a in self.team_agents:
+            a.scale_noise(scale)
+
+        for a in self.opp_agents:
             a.scale_noise(scale)
 
     def reset_noise(self):
-        for a in self.agents:
+        for a in self.team_agents:
+            a.reset_noise()
+        
+        for a in self.opp_agents:
             a.reset_noise()
 
-    def step(self, observations, explore=False):
+    def step(self, team_observations, opp_observations, explore=False):
         """
         Take a step forward in environment with all agents
         Inputs:
@@ -116,8 +148,8 @@ class MADDPG(object):
         Outputs:
             actions: List of actions for each agent
         """
-        return [a.step(obs, explore=explore) for a, obs in zip(self.agents,
-                                                       observations)]
+        return [a.step(obs, explore=explore) for a, obs in zip(self.team_agents, team_observations)], \
+                [a.step(obs, explore=explore) for a, obs in zip(self.opp_agents, opp_observations)]
     
     
     def discrete_param_indices(self,discrete):
@@ -148,7 +180,7 @@ class MADDPG(object):
         return params
 
 
-    def update(self, sample, agent_i, parallel=False, logger=None):
+    def update(self, sample, agent_i, side, parallel=False, logger=None):
         """
         Update parameters of agent model based on sample from replay buffer
         Inputs:
@@ -163,29 +195,51 @@ class MADDPG(object):
         """
         # rews = 1-step, cum-rews = n-step
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
-        curr_agent = self.agents[agent_i]
+        if side == 'team':
+            curr_agent = self.team_agents[agent_i]
+        else:
+            curr_agent = self.opp_agents[agent_i]
         zero_values = False
         
         # Train critic ------------------------
         curr_agent.critic_optimizer.zero_grad()
         
         if zero_values:
-            all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-            (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),
-             self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
-                        for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
-            if self.TD3:
-                noise = torch.randn_like(acs)*self.TD3_noise
+            if side == 'team':
                 all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-            (onehot_from_logits((pi(nobs) + noise)[:,:curr_agent.action_dim]),
-             self.zero_params((pi(nobs)+noise),onehot_from_logits((pi(nobs)+noise)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
-                        for pi, nobs in zip(self.target_policies, next_obs)]    # onehot the action space but not param
-        else:
-            if self.TD3:
-                noise = torch.randn_like(acs[0]) * self.TD3_noise
-                all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(self.target_policies,next_obs)]                  
+                (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),
+                self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
+                            for pi, nobs in zip(self.team_target_policies, next_obs)]    # onehot the action space but not param
+                if self.TD3:
+                    noise = torch.randn_like(acs)*self.TD3_noise
+                    all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+                        (onehot_from_logits((pi(nobs) + noise)[:,:curr_agent.action_dim]),
+                        self.zero_params((pi(nobs)+noise),onehot_from_logits((pi(nobs)+noise)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
+                            for pi, nobs in zip(self.team_target_policies, next_obs)]    # onehot the action space but not param
             else:
-                all_trgt_acs = [pi(nobs) for pi, nobs in zip(self.target_policies,next_obs)]  
+                all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+                (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),
+                self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
+                            for pi, nobs in zip(self.opp_target_policies, next_obs)]    # onehot the action space but not param
+                if self.TD3:
+                    noise = torch.randn_like(acs)*self.TD3_noise
+                    all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
+                        (onehot_from_logits((pi(nobs) + noise)[:,:curr_agent.action_dim]),
+                        self.zero_params((pi(nobs)+noise),onehot_from_logits((pi(nobs)+noise)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
+                            for pi, nobs in zip(self.opp_target_policies, next_obs)]    # onehot the action space but not param
+        else:
+            if side == 'team':
+                if self.TD3:
+                    noise = torch.randn_like(acs[0]) * self.TD3_noise
+                    all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(self.team_target_policies,next_obs)]                  
+                else:
+                    all_trgt_acs = [pi(nobs) for pi, nobs in zip(self.team_target_policies,next_obs)]
+            else:
+                if self.TD3:
+                    noise = torch.randn_like(acs[0]) * self.TD3_noise
+                    all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(self.opp_target_policies,next_obs)]                  
+                else:
+                    all_trgt_acs = [pi(nobs) for pi, nobs in zip(self.opp_target_policies,next_obs)]
             
             
 
@@ -216,7 +270,7 @@ class MADDPG(object):
                 # Q1
                 trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
                 trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
-                                                  gamma=self.gamma**self.n_steps,device='cpu') 
+                                                  gamma=self.gamma**self.n_steps,device='cpu')
                 if self.TD3:
                     prob_dist_1 = -F.log_softmax(actual_value_1,dim=1) * trgt_vf_distr_proj # Q1
                     prob_dist_2 = -F.log_softmax(actual_value_2,dim=1) * trgt_vf_distr_proj # Q2
@@ -281,16 +335,28 @@ class MADDPG(object):
 
                 #print(curr_pol_vf_in)
             all_pol_acs = []
-            for i, pi, ob in zip(range(self.nagents), self.policies, obs):
-                if i == agent_i:
-                    all_pol_acs.append(curr_pol_vf_in)
-                elif self.discrete_action:
-                    all_pol_acs.append(onehot_from_logits(pi(ob)))
-                else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
-                    a = pi(ob)
-                    g = onehot_from_logits(torch.log(a[:,:curr_agent.action_dim]),hard=True)
-                    c = torch.cat((g,self.zero_params(a,g)[:,curr_agent.action_dim:]),1)
-                    all_pol_acs.append(c) # 
+            if side == 'team':
+                for i, pi, ob in zip(range(self.nagents_team), self.team_policies, obs):
+                    if i == agent_i:
+                        all_pol_acs.append(curr_pol_vf_in)
+                    elif self.discrete_action:
+                        all_pol_acs.append(onehot_from_logits(pi(ob)))
+                    else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
+                        a = pi(ob)
+                        # g = onehot_from_logits(torch.log(a[:,:curr_agent.action_dim]),hard=True)
+                        # c = torch.cat((g,self.zero_params(a,g)[:,curr_agent.action_dim:]),1)
+                        all_pol_acs.append(a)
+            else:
+                for i, pi, ob in zip(range(self.nagents_opp), self.opp_policies, obs):
+                    if i == agent_i:
+                        all_pol_acs.append(curr_pol_vf_in)
+                    elif self.discrete_action:
+                        all_pol_acs.append(onehot_from_logits(pi(ob)))
+                    else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
+                        a = pi(ob)
+                        # g = onehot_from_logits(torch.log(a[:,:curr_agent.action_dim]),hard=True)
+                        # c = torch.cat((g,self.zero_params(a,g)[:,curr_agent.action_dim:]),1)
+                        all_pol_acs.append(a)
 
             vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
             # invert gradient --------------------------------------
@@ -356,16 +422,16 @@ class MADDPG(object):
             #---------------------------------------------------------------------------------
         self.count += 1
         # ------------------------------------
-        if logger is not None:
-            logger.add_scalars('agent%i/losses' % agent_i,
-                               {'vf_loss': vf_loss,
-                                'pol_loss': pol_loss},
-                               self.niter)
+        # if logger is not None:
+        #     logger.add_scalars('agent%i/losses' % agent_i,
+        #                        {'vf_loss': vf_loss,
+        #                         'pol_loss': pol_loss},
+        #                        self.niter)
 
             
         if self.niter % 100 == 0:
             print("Q loss",vf_loss)
-            print("Actor loss",pol_loss)
+            # print("Actor loss",pol_loss)
             if self.I2A:
                 print("Policy Prime loss",pol_prime_loss)
                 print("Environment Model loss",EM_loss)
@@ -443,48 +509,78 @@ class MADDPG(object):
         Update all target networks (called after normal updates have been
         performed for each agent)
         """
-        for a in self.agents:
+        for a in self.team_agents:
             soft_update(a.target_critic, a.critic, self.tau)
             soft_update(a.target_policy, a.policy, self.tau)
+
+        for a in self.opp_agents:
+            soft_update(a.target_critic, a.critic, self.tau)
+            soft_update(a.target_policy, a.policy, self.tau)
+
         self.niter += 1
 
     def prep_training(self, device='gpu'):
-        for a in self.agents:
+        for a in self.team_agents:
             a.policy.train()
             a.critic.train()
             a.target_policy.train()
             a.target_critic.train()
+        
+        for a in self.opp_agents:
+            a.policy.train()
+            a.critic.train()
+            a.target_policy.train()
+            a.target_critic.train()
+
         if device == 'gpu':
             fn = lambda x: x.cuda()
         else:
             fn = lambda x: x.cpu()
+
         if not self.pol_dev == device:
-            for a in self.agents:
+            for a in self.team_agents:
+                a.policy = fn(a.policy)
+            for a in self.opp_agents:
                 a.policy = fn(a.policy)
             self.pol_dev = device
+
         if not self.critic_dev == device:
-            for a in self.agents:
+            for a in self.team_agents:
+                a.critic = fn(a.critic)
+            for a in self.opp_agents:
                 a.critic = fn(a.critic)
             self.critic_dev = device
+
         if not self.trgt_pol_dev == device:
-            for a in self.agents:
+            for a in self.team_agents:
+                a.target_policy = fn(a.target_policy)
+            for a in self.opp_agents:
                 a.target_policy = fn(a.target_policy)
             self.trgt_pol_dev = device
+
         if not self.trgt_critic_dev == device:
-            for a in self.agents:
+            for a in self.team_agents:
+                a.target_critic = fn(a.target_critic)
+            for a in self.opp_agents:
                 a.target_critic = fn(a.target_critic)
             self.trgt_critic_dev = device
 
     def prep_rollouts(self, device='cpu'):
-        for a in self.agents:
+        for a in self.team_agents:
             a.policy.eval()
+        for a in self.opp_agents:
+            a.policy.eval()
+
         if device == 'gpu':
             fn = lambda x: x.cuda()
         else:
             fn = lambda x: x.cpu()
+
         # only need main policy for rollouts
         if not self.pol_dev == device:
-            for a in self.agents:
+            for a in self.team_agents:
+                a.policy = fn(a.policy)
+            for a in self.opp_agents:
                 a.policy = fn(a.policy)
             self.pol_dev = device
 
@@ -746,10 +842,10 @@ class MADDPG(object):
         EM_loss = self.obs_weight * loss_obs + self.rew_weight * loss_rew + self.ws_weight * loss_ws
         EM_loss.backward()
         torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
-        curr_agent.EM_optimizer.step()e
+        curr_agent.EM_optimizer.step()
 
         if self.niter % 100 == 0:
-            print("EM Loss",EM_loss,"Obs Loss",loss_obs,"Rew Loss:",loss_rew,"WS Loss":,loss_ws)
+            print("EM Loss",EM_loss,"Obs Loss",loss_obs,"Rew Loss:",loss_rew,"WS Loss:",loss_ws)
         self.niter += 1
         
         
@@ -858,11 +954,11 @@ class MADDPG(object):
         """
         Instantiate instance of this class from multi-agent environment
         """
-        agent_init_params = []
+        team_agent_init_params = []
         
-        alg_types = [ agent_alg for
+        team_alg_types = [ agent_alg for
                      atype in range(env.num_TA)]
-        for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs, alg_types):
+        for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs, team_alg_types):
             
             # changed acsp to be action_list for each agent 
                 # giving dimension num_TA x action_list so they may zip properly    
@@ -870,29 +966,57 @@ class MADDPG(object):
             num_in_pol = obsp.shape[0]
         
             num_out_pol =  len(env.action_list)
-            
+            # num_in_EM = num_out_pol * env.num_TA + num_in_pol
             
     
             # if cont
             if not discrete_action:
-                num_out_pol = len(env.action_list) + len(env.action_params[0])
+                num_out_pol = len(env.action_list) + len(env.team_action_params[0])
                 
                 
             # obs space and action space are concatenated before sending to
             # critic network
             num_in_critic = (num_in_pol + num_out_pol) *env.num_TA
             
-            agent_init_params.append({'num_in_pol': num_in_pol,
+            team_agent_init_params.append({'num_in_pol': num_in_pol,
                                       'num_out_pol': num_out_pol,
                                       'num_in_critic': num_in_critic})
+
+        """
+        Instantiate instance of this class from multi-agent environment for the 'opp' type agents
+        """
+        opp_agent_init_params = []
+        
+        opp_alg_types = [ adversary_alg for atype in range(env.num_OA)]
+        for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_OA)], env.opp_team_obs, opp_alg_types):
             
+            num_in_pol = obsp.shape[0]
+
+            num_out_pol =  len(env.action_list)
+            
+    
+            # if cont
+            if not discrete_action:
+                num_out_pol = len(env.action_list) + len(env.opp_action_params[0])
+                
+                
+            # obs space and action space are concatenated before sending to
+            # critic network
+            num_in_critic = (num_in_pol + num_out_pol) *env.num_OA
+            
+            opp_agent_init_params.append({'num_in_pol': num_in_pol,
+                                      'num_out_pol': num_out_pol,
+                                      'num_in_critic': num_in_critic})
+
         ## change for continuous
         init_dict = {'gamma': gamma, 'batch_size': batch_size,
                      'tau': tau, 'a_lr': a_lr,
                      'c_lr':c_lr,
                      'hidden_dim': hidden_dim,
-                     'alg_types': alg_types,
-                     'agent_init_params': agent_init_params,
+                     'team_alg_types': team_alg_types,
+                     'opp_alg_types': opp_alg_types,
+                     'team_agent_init_params': team_agent_init_params,
+                     'opp_agent_init_params': opp_agent_init_params,
                      'discrete_action': discrete_action,
                      'vmax': vmax,
                      'vmin': vmin,

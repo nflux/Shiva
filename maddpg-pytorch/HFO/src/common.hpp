@@ -45,8 +45,8 @@ enum action_t
 enum status_t
 {
   IN_GAME,             // Game is currently active
-  GOAL,                // A goal has been scored by the offense
-  CAPTURED_BY_DEFENSE, // The defense has captured the ball
+  GOAL_BY_LEFT,                // A goal has been scored by the left
+  GOAL_BY_RIGHT,           // A goal has been scored by the right
   OUT_OF_BOUNDS,       // Ball has gone out of bounds
   OUT_OF_TIME,         // Trial has ended due to time limit
   SERVER_DOWN          // Server is not alive
@@ -182,10 +182,10 @@ inline std::string StatusToString(status_t status) {
   switch (status) {
     case IN_GAME:
       return "InGame";
-    case GOAL:
-      return "Goal";
-    case CAPTURED_BY_DEFENSE:
-      return "CapturedByDefense";
+    case GOAL_BY_LEFT:
+      return "Goal_By_Left";
+    case GOAL_BY_RIGHT:
+      return "Goal_By_Right";
     case OUT_OF_BOUNDS:
       return "OutOfBounds";
     case OUT_OF_TIME:
@@ -248,10 +248,10 @@ inline bool ParseConfig(const std::string& message, Config& config) {
  * Parse a trainer message to extract the player on the ball
  */
 inline bool ParsePlayerOnBall(const std::string& message, Player& player) {
-  if (message.find("GOAL") != std::string::npos){
+  if (message.find("GOAL_BY_LEFT") != std::string::npos){
     player.unum = atoi((message.substr(message.find("-")+1)).c_str());
     player.side = LEFT;
-  } else if (message.find("CAPTURED_BY_DEFENSE") != std::string::npos) {
+  } else if (message.find("GOAL_BY_RIGHT") != std::string::npos){
     player.unum = atoi((message.substr(message.find("-")+1)).c_str());
     player.side = RIGHT;
   } else if (message.find("IN_GAME") != std::string::npos){
@@ -278,15 +278,15 @@ inline bool ParsePlayerOnBall(const std::string& message, Player& player) {
  */
 inline bool ParseGameStatus(const std::string& message, status_t& status) {
   status = IN_GAME;
-  if (message.find("GOAL") != std::string::npos){
-    status = GOAL;
-  } else if (message.find("CAPTURED_BY_DEFENSE") != std::string::npos) {
-    status = CAPTURED_BY_DEFENSE;
+  if (message.find("GOAL_BY_LEFT") != std::string::npos){
+    status = GOAL_BY_LEFT;
+  } else if (message.find("GOAL_BY_RIGHT") != std::string::npos){
+    status = GOAL_BY_RIGHT;
   } else if (message.compare("OUT_OF_BOUNDS") == 0) {
     status = OUT_OF_BOUNDS;
   } else if (message.compare("OUT_OF_TIME") == 0) {
     status = OUT_OF_TIME;
-  } else if (message.find("IN_GAME") != std::string::npos){
+  } else if ((message.find("IN_GAME")) != std::string::npos){
     status = IN_GAME;
   } else if (message.find("HFO_FINISHED") != std::string::npos){
     status = SERVER_DOWN;

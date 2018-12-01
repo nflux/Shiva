@@ -14,7 +14,7 @@ find_package(FLEX REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 ExternalProject_Add(rcssserver
-  GIT_REPOSITORY "https://github.com/mhauskn/rcssserver.git"
+  GIT_REPOSITORY "https://github.com/mehrzadshabez/rcssserver.git"
   GIT_TAG "master"
   CMAKE_ARGS -DCMAKE_BUILD_TYPE=MinSizeRel
   UPDATE_COMMAND ""
@@ -122,7 +122,7 @@ add_library(hfo-lib SHARED ${SOURCE_DIR}/HFO.hpp ${SOURCE_DIR}/HFO.cpp ${SOURCE_
 set_target_properties(hfo-lib PROPERTIES OUTPUT_NAME hfo)
 set_target_properties(hfo-lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-add_library(hfo-c-lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/hfo/hfo_c_wrapper.cpp ${SOURCE_DIR}/HFO.cpp ${SOURCE_DIR}/agent.cpp)
+add_library(hfo-c-lib SHARED ${SOURCE_DIR}/common.hpp ${CMAKE_CURRENT_SOURCE_DIR}/hfo/hfo_c_wrapper.h ${CMAKE_CURRENT_SOURCE_DIR}/hfo/hfo_c_wrapper.cpp ${SOURCE_DIR}/HFO.cpp ${SOURCE_DIR}/agent.cpp)
 set_target_properties(hfo-c-lib PROPERTIES OUTPUT_NAME hfo_c)
 set_target_properties(hfo-c-lib PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/hfo)
 
