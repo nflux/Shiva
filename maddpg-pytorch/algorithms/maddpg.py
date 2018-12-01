@@ -14,11 +14,12 @@ class MADDPG(object):
     """
     Wrapper class for DDPG-esque (i.e. also MADDPG) agents in multi-agent task
     """
-    def __init__(self, team_agent_init_params, opp_agent_init_params, team_net_params, team_alg_types, opp_alg_types,
+    def __init__(self, team_agent_init_params, opp_agent_init_params, team_net_params, team_alg_types='MADDPG', opp_alg_types='MADDPG',device='cpu',
                  gamma=0.95, batch_size=0,tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
                  discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5,
                  DELTA_Z = 20.0/50,D4PG=False,beta = 0,TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
-                 I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True):
+                 I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
+                 LSTM_hidden=64, decent_EM=True,imagination_policy_branch = False):
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -949,11 +950,11 @@ class MADDPG(object):
        
 
     @classmethod
-    def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",
+    def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",device='cpu'
                       gamma=0.95, batch_size=0, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
-                      I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True):
+                      I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True,imagination_policy=False):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -1035,6 +1036,7 @@ class MADDPG(object):
                      'hidden_dim': hidden_dim,
                      'team_alg_types': team_alg_types,
                      'opp_alg_types': opp_alg_types,
+                     'device': device
                      'team_agent_init_params': team_agent_init_params,
                      'opp_agent_init_params': opp_agent_init_params,
                      'team_net_params': team_net_params,
