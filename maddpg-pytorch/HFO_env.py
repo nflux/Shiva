@@ -258,7 +258,7 @@ class HFO_env():
 
         while self.wait_for_connect_vals:
             time.sleep(self.sleep_timer)
-        print('Actions, Obs, rewards, and status ready')
+        #print('Actions, Obs, rewards, and status ready')
 
         return np.asarray(self.team_obs),self.team_rewards,np.asarray(self.opp_team_obs),self.opp_rewards, \
                 self.d, self.world_status
@@ -400,19 +400,62 @@ class HFO_env():
 
     def getPretrainRew(self,s,agentID,d,obs,nobs):
         reward=0.0
-        prox_cur = self.ball_proximity(nobs)
-        prox_prev = self.ball_proximity(obs)
-        reward   += prox_cur - prox_prev # if cur > prev --> +
-        ##################################################################################
-        
-        ####################### reduce ball distance to goal - using delta  ##################
-        r,_,_ = self.ball_distance_to_goal(nobs) #r is maxed at 2sqrt(2)--> 2.8
-        r_prev,_,_ = self.ball_distance_to_goal(obs) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (3)*(r_prev - r)*.6
-        if d:
-            if s==1:
-                reward+=8
-        return reward
+        if self.team_base == base:
+            # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
+            if self.d:
+                if s==1: # Goal by left
+                    reward+=5
+                elif s==2: # Goal by right
+                    reward+=-5
+                elif s==3: # OOB
+                    reward+=-0.5
+                #---------------------------
+                #Cause Unknown Do Nothing
+                #elif s=='OutOfTime':
+                #    reward+=-100
+                #---------------------------
+                #elif s=='InGame':
+                #    reward+=0
+                #---------------------------
+                #elif s=='SERVER_DOWN':
+                #    reward+=0
+                #---------------------------
+                #else:
+                #    print("Error: Unknown GameState", s)
+                #    reward = -1
+
+                return reward
+
+            prox_cur = self.ball_proximity(nobs)
+            prox_prev = self.ball_proximity(obs)
+            reward   += prox_cur - prox_prev # if cur > prev --> +
+            ##################################################################################
+
+            ####################### reduce ball distance to goal - using delta  ##################
+            r,_,_ = self.ball_distance_to_goal(nobs) #r is maxed at 2sqrt(2)--> 2.8
+            r_prev,_,_ = self.ball_distance_to_goal(obs) #r is maxed at 2sqrt(2)--> 2.8
+            reward += (3)*(r_prev - r)*.6
+            return reward
+        else:
+            if d:
+                if s==1:
+                    reward+=-5
+                if s==2:
+                    reward+=5
+                if s==3:
+                    reward+=-0.5
+                return reward
+            prox_cur = self.ball_proximity(nobs)
+            prox_prev = self.ball_proximity(obs)
+            reward   += prox_cur - prox_prev # if cur > prev --> +
+            ##################################################################################
+
+            ####################### reduce ball distance to goal - using delta  ##################
+            r,_,_ = self.ball_distance_to_goal(nobs) #r is maxed at 2sqrt(2)--> 2.8
+            r_prev,_,_ = self.ball_distance_to_goal(obs) #r is maxed at 2sqrt(2)--> 2.8
+            reward += (3)*(r_prev - r)*.6
+            return reward
+
     
     
     # Engineered Reward Function
@@ -427,12 +470,8 @@ class HFO_env():
                     reward+=5
                 elif s=='Goal_By_Right':
                     reward+=-5
-                #---------------------------
-                #elif s=='CapturedByDefense':
-                #    reward+=-100
-                #---------------------------
                 elif s=='OutOfBounds':
-                   reward+=-0.5
+                    reward+=-0.5
                 #---------------------------
                 #Cause Unknown Do Nothing
                 #elif s=='OutOfTime':
@@ -450,9 +489,6 @@ class HFO_env():
 
                 return reward
         
-        
-        
-        
                 ########################### keep the ball kickable ####################################
             #team_kickable = False
             #team_kickable = np.array([self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)]).any() # kickable by team
@@ -462,14 +498,7 @@ class HFO_env():
             if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous) and not self.been_kicked: # uses action just performed, with previous obs, (both at T)
                 reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
                 self.been_kicked = True
-            
-            # out of bounds penalty
-            #if self.team_obs[agentID][46] > .99 or self.team_obs[agentID][47] > .99 or self.team_obs[agentID][48] > .99  or self.team_obs[agentID][49] > .99:
-            #    reward += -.1
-            
-            
-            # add a penalty for rnning out of stamina?
-            
+
 
             ####################### penalty based on sum of square distances of excess params ##############
             #reward += -self.get_excess_param_distance(agentID)*0.1
@@ -505,12 +534,8 @@ class HFO_env():
 
             elif s=='Goal_By_Right':
                 reward+=-5
-            #---------------------------
-            #elif s=='CapturedByDefense':
-            #    reward+=-100
-            #---------------------------
             elif s=='OutOfBounds':
-               reward+=-0.5
+                reward+=-0.5
             #---------------------------
             #Cause Unknown Do Nothing
             #elif s=='OutOfTime':
@@ -532,12 +557,8 @@ class HFO_env():
                     reward+=5
                 elif s=='Goal_By_Left':
                     reward+=-5
-                #---------------------------
-                #elif s=='CapturedByDefense':
-                #    reward+=-100
-                #---------------------------
                 elif s=='OutOfBounds':
-                   reward+=-0.5
+                    reward+=-0.5
                 #---------------------------
                 #Cause Unknown Do Nothing
                 #elif s=='OutOfTime':
@@ -698,7 +719,7 @@ class HFO_env():
 
                     while self.wait_for_queue:
                         time.sleep(self.sleep_timer)
-                    print('Done queueing actions')
+                    #print('Done queueing actions')
 
                     
                     
@@ -818,7 +839,7 @@ class HFO_env():
 
                     # Break if episode done
                     if self.d == True:
-                        print('This is becoming true!!!!!!!!')
+                        #print('This is becoming true!!!!!!!!')
                         break
 
 

@@ -39,7 +39,7 @@ history = args.log
 # options ------------------------------
 action_level = 'low'
 feature_level = 'low'
-USE_CUDA = False 
+USE_CUDA = True 
 if USE_CUDA:
     device = 'cuda'
     to_gpu = True
@@ -59,7 +59,7 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams--------------------------
-batch_size = 4
+batch_size = 128
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -80,10 +80,13 @@ Vmin = -10
 N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 5 # n-step update size 
-# Mixed target beta (0 = 1-step, 1 = MC update)
+# Mixed taqrget beta (0 = 1-step, 1 = MC update)
 initial_beta = 0.0
 final_beta = 0.0 #
 num_beta_episodes = 20
+#---------------------------------------
+train_team = True
+train_opp = False
 #---------------------------------------
 #TD3 Options ---------------------------
 TD3 = True
@@ -104,21 +107,23 @@ pt_EM_updates = 30000
 pt_beta = 1.0
 #---------------------------------------
 #I2A Options ---------------------------
-I2A = False
+I2A = True
 decent_EM = True
 EM_lr = 0.005
 decent_EM = True
 obs_weight = 10.0
 rew_weight = 1.0
 ws_weight = 1.0
-rollout_steps = 2
+rollout_steps = 1
 LSTM_hidden=16
 imagination_policy_branch = False
 #---------------------------------------
 # Self-Imitation Learning Options ------
-SIL = True
+SIL = False
 SIL_update_ratio = 3
-
+#---------------------------------------
+# Self-play ----------------------------
+train_switch_iterations = 5000
 #Save/load -----------------------------
 save_critic = False
 save_actor = False
@@ -140,7 +145,7 @@ else:
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
     
-env = HFO_env(num_TNPC = 0,num_TA=1, num_ONPC=1, num_trials = num_episodes, fpt = episode_length, 
+env = HFO_env(num_TNPC = 0,num_TA=2,num_OA=2, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
               feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False,port=port,log_dir=log_dir)
 if use_viewer:
     env._start_viewer()
@@ -194,12 +199,60 @@ opp_step_logger_df = pd.DataFrame()
 # PRETRAIN ############################
 if Imitation_exploration:
 
-    pt_obs, pt_status,pt_actions = pretrain_process(fname = 'Pretrain_Files/base_left-11.log',pt_episodes = pt_episodes,episode_length = episode_length,num_features = env.num_features)
+    team_pt_obs = []
+    team_pt_statuses = []
+    team_pt_actions = []
+
+    opp_pt_obs = []
+    opp_pt_statuses = []
+    opp_pt_actions = []
+    
+    pt_ob, pt_status,pt_action = pretrain_process(fname = 'Pretrain_Files/base_left-11.log',pt_episodes = pt_episodes,episode_length = episode_length,num_features = env.num_features)
+    team_pt_obs.append(pt_ob)
+    team_pt_statuses.append(pt_status)
+    team_pt_actions.append(pt_action)
+    
+    pt_ob, pt_status,pt_action = pretrain_process(fname = 'Pretrain_Files/base_left-7.log',pt_episodes = pt_episodes,episode_length = episode_length,num_features = env.num_features)
+    team_pt_obs.append(pt_ob)
+    team_pt_statuses.append(pt_status)
+    team_pt_actions.append(pt_action)
+    
+        
+    pt_ob, pt_status,pt_action = pretrain_process(fname = 'Pretrain_Files/base_right-1.log',pt_episodes = pt_episodes,episode_length = episode_length,num_features = env.num_features)
+    opp_pt_obs.append(pt_ob)
+    opp_pt_statuses.append(pt_status)
+    opp_pt_actions.append(pt_action)
+    
+    pt_ob, pt_status,pt_action = pretrain_process(fname = 'Pretrain_Files/base_right-2.log',pt_episodes = pt_episodes,episode_length = episode_length,num_features = env.num_features)
+    opp_pt_obs.append(pt_ob)
+    opp_pt_statuses.append(pt_status)
+    opp_pt_actions.append(pt_action)
+    
     print("Length of obs,stats,actions",len(pt_obs),len(pt_status),len(pt_actions))
     time_step = 0
     for ep_i in range(0, pt_episodes):
         if ep_i % 100 == 0:
             print("Pushing Pretrain Episode:",ep_i)
+            
+            
+            
+        # team n-step
+        team_n_step_rewards = []
+        team_n_step_obs = []
+        team_n_step_acs = []
+        team_n_step_next_obs = []
+        team_n_step_dones = []
+        team_n_step_ws = []
+
+
+        # opp n-step
+        opp_n_step_rewards = []
+        opp_n_step_obs = []
+        opp_n_step_acs = []
+        opp_n_step_next_obs = []
+        opp_n_step_dones = []
+        opp_n_step_ws = []
+
         n_step_rewards = []
         n_step_reward = 0.0
         n_step_obs = []
@@ -271,7 +324,9 @@ if Imitation_exploration:
                     #sample = pretrain_buffer.sample(batch_size,
                     sample = replay_buffer.sample(batch_size,
                                                   to_gpu=to_gpu,norm_rews=False)
-                    maddpg.update_EM(sample, a_i )
+                    maddpg.update_EM(sample, a_i,'team' )
+                    maddpg.update_EM(sample, a_i,'opp' )
+
 
     if I2A:
         if Imitation_exploration:
@@ -284,7 +339,9 @@ if Imitation_exploration:
                         #sample = pretrain_buffer.sample(batch_size,
                         sample = replay_buffer.sample(batch_size,
                                                       to_gpu=to_gpu,norm_rews=False)
-                        maddpg.pretrain_prime(sample, a_i)
+                        maddpg.pretrain_prime(sample, a_i,'team')
+                        maddpg.pretrain_prime(sample, a_i,'opp')
+
                      
     # pretrain policy
     for i in range(pt_actor_updates):
@@ -295,7 +352,9 @@ if Imitation_exploration:
                 #sample = pretrain_buffer.sample(batch_size,
                 sample = replay_buffer.sample(batch_size,
                                               to_gpu=to_gpu,norm_rews=False)
-                maddpg.pretrain_actor(sample, a_i)
+                maddpg.pretrain_actor(sample, a_i,'team')
+                maddpg.pretrain_actor(sample, a_i,'opp')
+
     maddpg.update_hard_policy()
     
     
@@ -308,7 +367,8 @@ if Imitation_exploration:
                 #sample = pretrain_buffer.sample(batch_size,
                 sample = replay_buffer.sample(batch_size,
                                                 to_gpu=to_gpu,norm_rews=False)
-                maddpg.pretrain_critic(sample, a_i )
+                maddpg.pretrain_critic(sample, a_i,'team')
+                maddpg.pretrain_critic(sample, a_i,'opp')
     maddpg.update_hard_critic()
 
     # pretrain true actor-critic (non-imitation) + policy prime
@@ -320,9 +380,12 @@ if Imitation_exploration:
                 #sample = pretrain_buffer.sample(batch_size,
                 sample = replay_buffer.sample(batch_size,
                                               to_gpu=to_gpu,norm_rews=False)
-                maddpg.update(sample, a_i )
+                maddpg.update(sample, a_i, 'team' )
+                maddpg.update(sample, a_i, 'opp' )
+                maddpg.update_all_targets()
                 if SIL:
-                    [maddpg.SIL_update(sample, a_i) for i in range(SIL_update_ratio)]
+                    [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
+                    [maddpg.SIL_update(sample, a_i,'opp') for i in range(SIL_update_ratio)]
             maddpg.update_all_targets()
     maddpg.update_hard_critic()
     maddpg.update_hard_policy()
@@ -339,14 +402,14 @@ while test_imitation:
                           requires_grad=False)
                  for i in range(maddpg.nagents)]
     torch_agent_actions = maddpg.step(torch_obs, explore=explore)
-    agent_actions = [ac.data.numpy() for ac in torch_agent_actions]
+    agent_actions = [ac.cpu().data.numpy() for ac in torch_agent_actions]
     params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions]) 
     actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
     noisey_actions = [e_greedy(torch.tensor(a).view(1,len(env.action_list)),eps = 0.01) for a in actions]     # get eps greedy action
     # modify for multi agent
     randoms = noisey_actions[0][1]
     noisey_actions = [noisey_actions[0][0]]
-    noisey_actions_for_buffer = [ac.data.numpy() for ac in noisey_actions]
+    noisey_actions_for_buffer = [ac.cpu().data.numpy() for ac in noisey_actions]
     noisey_actions_for_buffer = np.asarray([ac[0] for ac in noisey_actions_for_buffer])
     noisey_actions_for_buffer = np.asarray(actions[0])
     agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes 
@@ -361,14 +424,6 @@ while test_imitation:
 for ep_i in range(0, num_episodes):
 
     # team n-step
-    team_n_step_rewards = [[] for i in range(env.num_TA)]
-    team_n_step_obs = [[] for i in range(env.num_TA)]
-    team_n_step_acs = [[] for i in range(env.num_TA)]
-    team_n_step_next_obs = [[] for i in range(env.num_TA)]
-    team_n_step_dones = [[] for i in range(env.num_TA)]
-    team_n_step_ws = [[] for i in range(env.num_TA)]
-                      
-                      
     team_n_step_rewards = []
     team_n_step_obs = []
     team_n_step_acs = []
@@ -378,13 +433,6 @@ for ep_i in range(0, num_episodes):
 
 
     # opp n-step
-    opp_n_step_rewards = [[] for i in range(env.num_OA)]
-    opp_n_step_obs = [[] for i in range(env.num_OA)]
-    opp_n_step_acs = [[] for i in range(env.num_OA)]
-    opp_n_step_next_obs = [[] for i in range(env.num_OA)]
-    opp_n_step_dones = [[] for i in range(env.num_OA)]
-    opp_n_step_ws = [[] for i in range(env.num_OA)]
-                     
     opp_n_step_rewards = []
     opp_n_step_obs = []
     opp_n_step_acs = []
@@ -392,8 +440,8 @@ for ep_i in range(0, num_episodes):
     opp_n_step_dones = []
     opp_n_step_ws = []
     #maddpg.prep_rollouts(device='cpu')
-                     
-    
+              
+
     
     
     #define/update the noise used for exploration
@@ -418,6 +466,10 @@ for ep_i in range(0, num_episodes):
     opp_kickable_counter = 0
     for et_i in range(0, episode_length):
         
+        if t % train_switch_iterations == 0:
+            train_team = not train_team
+            train_opp = not train_opp
+
         maddpg.prep_training(device=device) # GPU for forward passes?? 
 
         # gather all the observations into a torch tensor 
@@ -433,9 +485,9 @@ for ep_i in range(0, num_episodes):
         # get actions as torch Variables for both team and opp
         team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp, explore=explore)
         # convert actions to numpy arrays
-        team_agent_actions = [ac.data.numpy() for ac in team_torch_agent_actions]
+        team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
         #Converting actions to numpy arrays for opp agents
-        opp_agent_actions = [ac.data.numpy() for ac in opp_torch_agent_actions]
+        opp_agent_actions = [ac.cpu().data.numpy() for ac in opp_torch_agent_actions]
 
         # rearrange actions to be per environment
         team_params = np.asarray([ac[0][len(env.action_list):] for ac in team_agent_actions]) 
@@ -513,52 +565,26 @@ for ep_i in range(0, num_episodes):
         team_next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
         opp_next_obs = np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
 
-        team_dones = np.hstack([env.d for i in range(env.num_TA)])
-        opp_dones = np.hstack([env.d for i in range(env.num_OA)])
+        
+        team_done = env.d
+        opp_done = env.d 
 
         # Store variables for calculation of MC and n-step targets for team
-        #or i in range(env.num_TA):
-        #   team_n_step_rewards[i].append(team_rewards)
-        #   team_n_step_obs[i].append(team_obs)
-        #   team_n_step_next_obs[i].append(team_next_obs)
-        #   team_n_step_acs[i].append(team_actions_params_for_buffer)
-        #   team_n_step_dones[i].append(team_dones)
-        #   team_n_step_ws[i].append(world_stat)
+        team_n_step_rewards.append(team_rewards)
+        team_n_step_obs.append(team_obs)
+        team_n_step_next_obs.append(team_next_obs)
+        team_n_step_acs.append(team_actions_params_for_buffer)
+        team_n_step_dones.append(team_done)
+        team_n_step_ws.append(world_stat)
+        
+        opp_n_step_rewards.append(opp_rewards)
+        opp_n_step_obs.append(opp_obs)
+        opp_n_step_next_obs.append(opp_next_obs)
+        opp_n_step_acs.append(opp_actions_params_for_buffer)
+        opp_n_step_dones.append(opp_done)
+        opp_n_step_ws.append(world_stat)
+        # ----------------------------------------------------------------
 
-        for i in range(env.num_TA):
-            team_n_step_rewards.append(team_rewards)
-            team_n_step_obs.append(team_obs)
-            team_n_step_next_obs.append(team_next_obs)
-            team_n_step_acs.append(team_actions_params_for_buffer)
-            team_n_step_dones.append(team_dones)
-            team_n_step_ws.append(world_stat)
-                     
-                     
-        # Store variables for calculation of MC and n-step targets for opp
-        #for i in range(env.num_OA):
-        #    opp_n_step_rewards[i].append(opp_rewards)
-        #    opp_n_step_obs[i].append(opp_obs)
-        #    opp_n_step_next_obs[i].append(opp_next_obs)
-        #    opp_n_step_acs[i].append(opp_actions_params_for_buffer)
-        #    opp_n_step_dones[i].append(opp_dones)
-        #    opp_n_step_ws[i].append(world_stat)
-        for i in range(env.num_OA):
-            opp_n_step_rewards.append(opp_rewards)
-            opp_n_step_obs.append(opp_obs)
-            opp_n_step_next_obs.append(opp_next_obs)
-            opp_n_step_acs.append(opp_actions_params_for_buffer)
-            opp_n_step_dones.append(opp_dones)
-            opp_n_step_ws.append(world_stat)
-
-        print("Trying to push to buffer")
-        team_replay_buffer.push(team_n_step_obs[0], team_n_step_ac[0],team_n_step_rewards[0],
-                                team_n_step_obs[0],team_n_step_dones[0],team_n_step_rewards[0],
-                                team_n_step_rewards[0],team_n_step_rewards[0])
-        print("Buffer push complete")
-                                
-                                
-                                #np.hstack([MC_target]),
-                                #np.hstack([n_step_target]),np.hstack([world_stat]))
 
         # print('This is the length of the buffers', str(len(team_replay_buffer)), str(len(opp_replay_buffer)))
         training = ((len(team_replay_buffer) >= batch_size and len(opp_replay_buffer) >= batch_size and 
@@ -573,19 +599,17 @@ for ep_i in range(0, num_episodes):
                         sample = team_replay_buffer.sample(batch_size,
                                                       to_gpu=to_gpu,norm_rews=False)
                         maddpg.update(sample, a_i, 'team')
-                        maddpg.update_all_targets()
                         if SIL:
                             [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
-                        maddpg.update_all_targets()                        
+
                 if train_opp: # train opp team
                     for a_i in range(maddpg.nagents_opp):
                         sample = opp_replay_buffer.sample(batch_size,
                                                       to_gpu=to_gpu,norm_rews=False)
                         maddpg.update(sample, a_i, 'opp')
-                    maddpg.update_all_targets()
-                    if SIL:
-                        [maddpg.SIL_update(sample, a_i,'opp') for i in range(SIL_update_ratio)]
-                    maddpg.update_all_targets()
+                        if SIL:
+                            [maddpg.SIL_update(sample, a_i,'opp') for i in range(SIL_update_ratio)]
+                maddpg.update_all_targets()
             # maddpg.prep_rollouts(device='cpu') convert back to cpu for pushing?
             
                      
@@ -594,70 +618,66 @@ for ep_i in range(0, num_episodes):
         if t%1000 == 0:
                       
             team_step_logger_df.to_csv('team_%s.csv' % history)
-            opp_step_logger_df.to_csv('opp_%s.csv')
+            opp_step_logger_df.to_csv('opp_%s.csv' % history)
                       
-        
-                     
-            
-                      
-       
                     
         if d == True: # Episode done
             # Calculate n-step and MC targets
             # ws = [world_stat] * env.num_TA
             for n in range(et_i+1):
                 MC_targets = [] # gather for each agent, and push to buffer once with all agents
-                n_step_obs = []
-                n_step_acs = []
-                n_step_rewards = []
-                n_step_next_obs = []
-                n_step_dones = []
                 n_step_targets = []
-                world_stats = []
                 for a in range(env.num_TA):
                     MC_target = 0
                     n_step_target = 0
-                    #n_step_obs.append(team_n_step_obs[a][n])
-                    #n_step_acs.append(team_n_step_acs[a][n])
-                    #n_step_rewards.append(team_n_step_rewards[a][n])
                     
                     for step in range(et_i+1 - n): # sum MC target
-                        MC_target += team_n_step_rewards[a][et_i - step] * gamma**(et_i - n - step)
+                        MC_target += team_n_step_rewards[et_i - step][a] * gamma**(et_i - n - step)
+                    MC_targets.append(MC_target)
                     if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
                         for step in range(n_steps): 
-                            n_step_target += team_n_step_rewards[a][n + step] * gamma**(step)
-                        n_step_next_ob = team_n_step_next_obs[a][n - 1 + n_steps]
-                        n_step_done = team_n_step_dones[a][n - 1 + n_steps]
+                            n_step_target += team_n_step_rewards[n + step][a] * gamma**(step)
+                        n_step_targets.append(n_step_target)
+                        n_step_next_ob = team_n_step_next_obs[n - 1 + n_steps]
+                        n_step_done = team_n_step_dones[n - 1 + n_steps]
                     else: # n-step = MC if less than n steps remaining
                         n_step_target = MC_target
-                        n_step_next_ob = team_n_step_next_obs[a][-1]
-                        n_step_done = team_n_step_dones[a][-1]
+                        n_step_targets.append(n_step_target)
+                        n_step_next_ob = team_n_step_next_obs[-1]
+                        n_step_done = team_n_step_dones[-1] 
                     # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                    team_replay_buffer.push(n_step_ob, n_step_ac,team_n_step_rewards[a][n],
-                                            n_step_next_ob,n_step_done,np.hstack([MC_target]),
-                                            np.hstack([n_step_target]),np.hstack([world_stat]))
-            
+                team_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
+                                        n_step_next_ob,[n_step_done for i in range(env.num_TA)],MC_targets,
+                                        n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
+                                        
+
             # ws = [world_stat] * env.num_OA
-            for a in range(env.num_OA):
-                for n in range(et_i+1):
+            for n in range(et_i+1):
+                MC_targets = []
+                n_step_targets = []
+                for a in range(env.num_OA):
                     MC_target = 0
                     n_step_target = 0
-                    n_step_ob = opp_n_step_obs[a][n]
-                    n_step_ac = opp_n_step_acs[a][n]
                     for step in range(et_i+1 - n): # sum MC target
-                        MC_target += opp_n_step_rewards[a][et_i - step] * gamma**(et_i - n - step)
+                        MC_target += opp_n_step_rewards[et_i - step][a] * gamma**(et_i - n - step)
+                    MC_targets.append(MC_target)
                     if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
                         for step in range(n_steps): 
-                            n_step_target += opp_n_step_rewards[a][n + step] * gamma**(step)
-                        n_step_next_ob = opp_n_step_next_obs[a][n - 1 + n_steps]
-                        n_step_done = opp_n_step_dones[a][n - 1 + n_steps]
+                            n_step_target += opp_n_step_rewards[n + step][a] * gamma**(step)
+                        n_step_targets.append(n_step_target)
+                        n_step_next_ob = opp_n_step_next_obs[n - 1 + n_steps]
+                        n_step_done = opp_n_step_dones[n - 1 + n_steps]
                     else: # n-step = MC if less than n steps remaining
                         n_step_target = MC_target
-                        n_step_next_ob = opp_n_step_next_obs[a][-1]
-                        n_step_done = opp_n_step_dones[a][-1]
+                        n_step_targets.append(n_step_target)
+                        n_step_next_ob = opp_n_step_next_obs[-1]
+                        n_step_done = opp_n_step_dones[-1]
                     # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                    opp_replay_buffer.push(n_step_ob, n_step_ac,opp_n_step_rewards[a][n],n_step_next_ob,n_step_done,np.hstack([MC_target]),np.hstack([n_step_target]),np.hstack([world_stat]))
+                opp_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
+                                        n_step_next_ob,[n_step_done for i in range(env.num_OA)],MC_targets,
+                                        n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                                        
+                    
             # log
             if time_step > 0 and ep_i > 1:
                 team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 

@@ -6,6 +6,15 @@ import torch.distributed as dist
 from torch.autograd import Variable
 import numpy as np
 
+
+def processor(tensor,device):
+    if device == 'cuda':
+        fn = lambda x: x.cuda()
+    else:
+        fn = lambda x: x.cpu()
+    return fn(tensor)
+
+
 def e_greedy(logits, numAgents, eps=0.0):
     """
     Given batch of logits, return one-hot sample using epsilon greedy strategy
@@ -63,30 +72,30 @@ def pretrain_process(fname,pt_episodes,episode_length,num_features):
                     power = float(result.group(1).split(',')[0][1:])
                     direction = float(result.group(1).split(',')[1][:-1])
                     #a = np.random.uniform(-1,1,8)
-                    a = np.random.uniform(-.2,.2,8)
-                    a[0] += 1.0 
-                    a[1] += -0.8 
-                    a[2] += -0.8 
+                    a = np.random.uniform(-0.01,0.01,8)
+                    a[0] += 0.8  + np.random.uniform(-.2,.2,1)
+                    a[1] += -0.8 + np.random.uniform(-.2,.2,1)
+                    a[2] += -0.8 + np.random.uniform(-.2,.2,1)
                     a[3] = power/100.0
                     a[4] = direction/180.0
                 elif "Turn"  in action_string:
                     result = re.search('Turn((.*))', action_string)
                     direction =float(result.group(1)[1:-1])
                     power = float(-1440)
-                    a = np.random.uniform(-0.2,0.2,8)
-                    a[0] += -0.8
-                    a[1] += 1.0
-                    a[2] += -0.8
+                    a = np.random.uniform(-0.01,0.01,8)
+                    a[0] += -0.8 + np.random.uniform(-.2,.2,1)
+                    a[1] += 0.8 + np.random.uniform(-.2,.2,1)
+                    a[2] += -0.8 + np.random.uniform(-.2,.2,1)
                     a[5] = direction/180.0
                 elif "Kick"  in action_string: 
                     result = re.search('Kick((.*),*)', action_string)
                     power = float(result.group(1).split(',')[0][1:])
                     direction = float(result.group(1).split(',')[1][:-1])
                     #a = np.random.uniform(-1,1,8)
-                    a = np.random.uniform(-.2,.2,8)
-                    a[0] += -0.8
-                    a[1] += -0.8 
-                    a[2] += 1.0
+                    a = np.random.uniform(-0.01,0.01,8)
+                    a[0] += -0.8 +np.random.uniform(-.2,.2,1)
+                    a[1] += -0.8 +np.random.uniform(-.2,.2,1)
+                    a[2] += 0.8 + np.random.uniform(-.2,.2,1)
                     a[6] = (power/100.0)*2 - 1
                     a[7] = direction/180.0
                 elif "Tackle"  in action_string: 

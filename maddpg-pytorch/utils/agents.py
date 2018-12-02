@@ -5,7 +5,7 @@ import torch
 from .networks import MLPNetwork_Actor,MLPNetwork_Critic,I2A_Network
 import torch.nn.functional as F
 from .i2a import *
-from .misc import hard_update, gumbel_softmax, onehot_from_logits
+from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor
 from .noise import OUNoise
 import numpy as np
 class DDPGAgent(object):
@@ -15,7 +15,8 @@ class DDPGAgent(object):
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, maddpg=object, hidden_dim=64,
                  a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
-                I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64):
+                I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
+                device='cpu',imagination_policy_branch=True):
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -26,12 +27,13 @@ class DDPGAgent(object):
         self.maddpg = maddpg
         self.param_dim = 5
         self.action_dim = 3
-        self.n_actions = 1 # number of imagination branches
+        self.imagination_policy_branch = imagination_policy_branch
+        self.device = device
+        self.n_actions = 1 + imagination_policy_branch# number of imagination branches
         self.delta = (float(vmax)-vmin)/(n_atoms-1)
         # D4PG
         self.n_atoms = n_atoms
         self.vmax = vmax
-        print('This is out in em', str(maddpg.num_out_EM))
         self.vmin = vmin
         self.world_status_dim = world_status_dim
         self.num_out_obs_EM = num_in_critic - num_out_pol # obs + actions - actions  = obs head, (this does not include the ws head that is handled internally by network)
@@ -47,12 +49,19 @@ class DDPGAgent(object):
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action, 
                                  norm_in= False,agent=self)
+
+        # Stores a policy such as Helios to be used as one of the branches in imagination
+        self.imagination_policy = MLPNetwork_Actor(num_in_pol, num_out_pol,
+                                 hidden_dim=hidden_dim,
+                                 discrete_action=discrete_action, 
+                                 norm_in= False,agent=self)
        
         self.policy = I2A_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
                           hidden_dim=hidden_dim,
                           discrete_action=discrete_action,
                           norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                          EM = self.EM, pol_prime = self.policy_prime,LSTM_hidden=LSTM_hidden)
+                          EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                  LSTM_hidden=LSTM_hidden)
         
         self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
                                  hidden_dim=hidden_dim,
@@ -74,7 +83,7 @@ class DDPGAgent(object):
         self.critic_grad_by_action = np.zeros(self.param_dim)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=a_lr, weight_decay =0)
         self.policy_prime_optimizer = Adam(self.policy_prime.parameters(), lr=a_lr, weight_decay =0)
-
+        self.imagination_policy_optimizer = Adam(self.imagination_policy.parameters(), lr=a_lr, weight_decay =0)
         #self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
         self.EM_optimizer = Adam(self.EM.parameters(), lr=EM_lr)
@@ -110,7 +119,7 @@ class DDPGAgent(object):
         # mixed disc/cont
         if explore:     
             a = action[0,:self.action_dim].view(1,self.action_dim)
-            p = (action[0,self.action_dim:].view(1,self.param_dim) + Variable(Tensor(self.exploration.noise()),requires_grad=False)) # get noisey params (OU)
+            p = (action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)) # get noisey params (OU)
             self.exploration.reset()
             action = torch.cat((a,p),1) 
         #print(action)

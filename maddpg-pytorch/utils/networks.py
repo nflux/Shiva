@@ -4,6 +4,7 @@ import torch
 from torch.autograd import Variable
 from .i2a import RolloutEncoder
 import numpy as np
+from utils.misc import processor
 class MLPNetwork_Actor(nn.Module):
     """
     MLP network (can be used as value or policy)
@@ -29,7 +30,11 @@ class MLPNetwork_Actor(nn.Module):
             self.in_fn.weight.data.fill_(1)
             self.in_fn.bias.data.fill_(0)
         else:
-            self.in_fn = lambda x: x
+            if self.agent.device == 'cuda':
+                self.in_fn = lambda x: x.cuda()
+            else:
+                self.in_fn = lambda x: x.cpu()
+                
         self.fc1 = nn.Linear(input_dim, 1024)
         
         self.fc1.weight.data.normal_(0, 0.01) 
@@ -70,13 +75,12 @@ class MLPNetwork_Actor(nn.Module):
             self.final_out_action = self.out_action_fn(self.out_action(h4))
             self.final_out_params = self.out_param_fn(self.out_param(h4))
             if self.final_out_action.shape[0] == 3:
-                out = np.asarray(torch.cat((self.final_out_action, self.final_out_params)).data.numpy())
+                out = np.asarray(torch.cat((self.final_out_action, self.final_out_params)).cpu().data.numpy())
             else:
                 out = torch.cat((self.final_out_action, self.final_out_params),1)
-            if self.count % 100 == 0:
-                print(out)
+            #if self.count % 100 == 0:
+            #    print(out)
             self.count += 1
-
         return out
 
     def distr_to_q(self, distr):
@@ -113,7 +117,10 @@ class MLPNetwork_Critic(nn.Module):
             self.in_fn.weight.data.fill_(1)
             self.in_fn.bias.data.fill_(0)
         else:
-            self.in_fn = lambda x: x
+            if self.agent.device == 'cuda':
+                self.in_fn = lambda x: x.cuda()
+            else:
+                self.in_fn = lambda x: x.cpu()  
         self.fc1 = nn.Linear(input_dim, 1024)
         
         self.fc1.weight.data.normal_(0, 0.01) 
@@ -196,7 +203,7 @@ class I2A_Network(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,LSTM_hidden=64):
+    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -213,14 +220,14 @@ class I2A_Network(nn.Module):
         self.count = 0
         self.n_actions = self.agent.n_actions
         self.rollout_steps = rollout_steps
-        ROLLOUT_HIDDEN = 64 # ??
 
         self.I2A = I2A
-        self.encoder = RolloutEncoder(EM_out_dim,hidden_size=ROLLOUT_HIDDEN)
+        self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
 
         # save refs without registering
         object.__setattr__(self, "EM", EM)
         object.__setattr__(self, "pol_prime", pol_prime)
+        object.__setattr__(self, "imagined_pol",imagined_pol)
 
         
         if norm_in:  # normalize inputs
@@ -228,10 +235,12 @@ class I2A_Network(nn.Module):
             self.in_fn.weight.data.fill_(1)
             self.in_fn.bias.data.fill_(0)
         else:
-            self.in_fn = lambda x: x
-            
+            if self.agent.device == 'cuda':
+                self.in_fn = lambda x: x.cuda()
+            else:
+                self.in_fn = lambda x: x.cpu()            
         if I2A:
-            self.fc1 = nn.Linear(input_dim + ROLLOUT_HIDDEN * self.n_actions, 1024)
+            self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_actions, 1024)
         else:
             self.fc1 = nn.Linear(input_dim, 1024)
 
@@ -299,13 +308,14 @@ class I2A_Network(nn.Module):
             obs_batch_v = obs_batch_v.contiguous().view(-1, *batch_rest)
         #actions = np.tile(np.arange(0, self.n_actions, dtype=np.int64), batch_size)
         actions = []
-        for item in batch:
-            actions.append(self.pol_prime(item))
-
+        if self.agent.imagination_policy_branch:
+            actions = torch.stack((self.pol_prime(batch).view(batch_size,-1),self.imagined_pol(batch).view(batch_size,-1)),dim=1).view(self.n_actions*batch_size,-1) # use our agent and another pretrained policy as a branch
+        else:
+            actions = self.pol_prime(batch) # use just our agents actions for rollout
                            
         step_obs, step_rewards,step_ws = [], [],[]
         for step_idx in range(self.rollout_steps):
-            actions_t = torch.tensor(actions).float()
+            actions_t = processor(torch.tensor(actions).float(),device=self.agent.device)
             #EM_in = torch.cat((*obs_batch_v, *actions_t),dim=1)
 
             obs_next_v, reward_v,ws_v = self.EM(torch.cat((obs_batch_v, actions_t),dim=1))                
