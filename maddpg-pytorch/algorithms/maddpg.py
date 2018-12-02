@@ -950,11 +950,11 @@ class MADDPG(object):
        
 
     @classmethod
-    def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",device='cpu'
+    def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",device='cpu',
                       gamma=0.95, batch_size=0, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
-                      I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True,imagination_policy=False):
+                      I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True,imagination_policy_branch=False):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -1036,7 +1036,7 @@ class MADDPG(object):
                      'hidden_dim': hidden_dim,
                      'team_alg_types': team_alg_types,
                      'opp_alg_types': opp_alg_types,
-                     'device': device
+                     'device': device,
                      'team_agent_init_params': team_agent_init_params,
                      'opp_agent_init_params': opp_agent_init_params,
                      'team_net_params': team_net_params,
@@ -1058,7 +1058,8 @@ class MADDPG(object):
                      'ws_weight': ws_weight,
                      'rollout_steps': rollout_steps,
                      'LSTM_hidden': LSTM_hidden,
-                     'decent_EM': decent_EM}
+                     'decent_EM': decent_EM,
+                     'imagination_policy_branch': imagination_policy_branch}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
