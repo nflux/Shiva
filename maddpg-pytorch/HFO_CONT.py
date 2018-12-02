@@ -49,7 +49,7 @@ else:
 
 use_viewer = True
 n_training_threads = 8
-use_viewer_after = 1500 # If using viewer, uses after x episodes
+use_viewer_after = 200 # If using viewer, uses after x episodes
 # default settings
 num_episodes = 100000
 replay_memory_size = 1000000
@@ -59,10 +59,10 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams--------------------------
-batch_size = 128
+batch_size = 32
 hidden_dim = int(1024)
-a_lr = 0.00005 # actor learning rate
-c_lr = 0.0005 # critic learning rate
+a_lr = 0.0001 # actor learning rate
+c_lr = 0.001 # critic learning rate
 tau = 0.005 # soft update rate
 steps_per_update = 2
 # exploration --------------------------
@@ -70,7 +70,7 @@ explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 1  # Haus uses over 10,000 updates --
+num_explore_episodes = 50  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -81,9 +81,9 @@ N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 5 # n-step update size 
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
-initial_beta = 0.0
+initial_beta = 1.0
 final_beta = 0.0 #
-num_beta_episodes = 20
+num_beta_episodes = 500
 #---------------------------------------
 train_team = True
 train_opp = False
@@ -107,7 +107,7 @@ pt_EM_updates = 30000
 pt_beta = 1.0
 #---------------------------------------
 #I2A Options ---------------------------
-I2A = True
+I2A = False
 decent_EM = True
 EM_lr = 0.005
 decent_EM = True
@@ -264,7 +264,7 @@ if Imitation_exploration:
         #define/update the noise used for exploration
         explr_pct_remaining = 0.0
         beta_pct_remaining = 0.0
-        maddpg.scale_noise(0.0)
+        maddpg.scale_q(0.0)
         maddpg.reset_noise()
         maddpg.scale_beta(pt_beta)
         d = False

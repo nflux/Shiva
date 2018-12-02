@@ -357,7 +357,7 @@ class MADDPG(object):
             # invert gradient --------------------------------------
             self.params = vf_in.data
             self.param_dim = curr_agent.param_dim
-            #hook = vf_in.register_hook(self.inject)
+            hook = vf_in.register_hook(self.inject)
             # ------------------------------------------------------
             if self.D4PG:
                 critic_out = curr_agent.critic.Q1(vf_in)
@@ -371,7 +371,7 @@ class MADDPG(object):
                 average_gradients(curr_agent.policy)
             torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
             curr_agent.policy_optimizer.step()
-            #hook.remove()
+            hook.remove()
             if self.niter % 100 == 0:
                 print("Team (%s) Agent (%i) Actor loss:" % (side,agent_i),pol_loss)
 
