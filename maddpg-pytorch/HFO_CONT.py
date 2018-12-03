@@ -49,7 +49,7 @@ else:
 
 use_viewer = True
 n_training_threads = 8
-use_viewer_after = 200 # If using viewer, uses after x episodes
+use_viewer_after = 5000 # If using viewer, uses after x episodes
 # default settings
 num_episodes = 100000
 replay_memory_size = 1000000
@@ -61,8 +61,8 @@ burn_in_episodes = float(burn_in_iterations)/episode_length
 # hyperparams--------------------------
 batch_size = 32
 hidden_dim = int(1024)
-a_lr = 0.0001 # actor learning rate
-c_lr = 0.001 # critic learning rate
+a_lr = 0.00005 # actor learning rate
+c_lr = 0.0005 # critic learning rate
 tau = 0.005 # soft update rate
 steps_per_update = 2
 # exploration --------------------------
@@ -83,7 +83,7 @@ n_steps = 5 # n-step update size
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
 initial_beta = 1.0
 final_beta = 0.0 #
-num_beta_episodes = 500
+num_beta_episodes = 1000
 #---------------------------------------
 train_team = True
 train_opp = False

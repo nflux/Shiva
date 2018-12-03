@@ -495,9 +495,9 @@ class HFO_env():
             #if team_kickable :
             #    reward+= 1
         
-            if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous) and not self.been_kicked: # uses action just performed, with previous obs, (both at T)
+            if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous) and not self.been_kicked_team: # uses action just performed, with previous obs, (both at T)
                 reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
-                self.been_kicked = True
+                self.been_kicked_team = True
 
 
             ####################### penalty based on sum of square distances of excess params ##############
@@ -585,9 +585,9 @@ class HFO_env():
             #if team_kickable :
             #    reward+= 1
         
-            if self.action_list[self.opp_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.opp_team_obs_previous) and not self.been_kicked: # uses action just performed, with previous obs, (both at T)
+            if self.action_list[self.opp_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.opp_team_obs_previous) and not self.been_kicked_opp: # uses action just performed, with previous obs, (both at T)
                 reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
-                self.been_kicked = True
+                self.been_kicked_opp = True
             
             # out of bounds penalty
             #if self.team_obs[agentID][46] > .99 or self.team_obs[agentID][47] > .99 or self.team_obs[agentID][48] > .99  or self.team_obs[agentID][49] > .99:
