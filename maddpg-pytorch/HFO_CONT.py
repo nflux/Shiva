@@ -49,7 +49,7 @@ else:
 
 use_viewer = True
 n_training_threads = 8
-use_viewer_after = 5000 # If using viewer, uses after x episodes
+use_viewer_after = 5 # If using viewer, uses after x episodes
 # default settings
 num_episodes = 100000
 replay_memory_size = 1000000
