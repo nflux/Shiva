@@ -880,7 +880,7 @@ class HFO_env():
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
-                  " --ball-x-max %f --ball-y-min %f --ball-y-max %f --log-dir %s --record"\git
+                  " --ball-x-max %f --ball-y-min %f --ball-y-max %f --log-dir %s --record"\
                   % (frames_per_trial, untouched_time, offense_agents,
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,
