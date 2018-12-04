@@ -61,13 +61,13 @@ class DDPGAgent(object):
                           discrete_action=discrete_action,
                           norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                           EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                  LSTM_hidden=LSTM_hidden)
+                                  LSTM_hidden=LSTM_hidden,maddpg=maddpg)
         
         self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action,
                                  norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                                 EM = self.EM, pol_prime = self.policy_prime,LSTM_hidden=LSTM_hidden)
+                                 EM = self.EM, pol_prime = self.policy_prime,LSTM_hidden=LSTM_hidden,maddpg=maddpg)
         
         self.critic = MLPNetwork_Critic(num_in_critic, 1,
                                  hidden_dim=hidden_dim,
@@ -142,8 +142,16 @@ class DDPGAgent(object):
                 'critic': self.critic.state_dict(),
                 'target_policy': self.target_policy.state_dict(),
                 'target_critic': self.target_critic.state_dict(),
+                'policy_prime': self.policy_prime.state_dict(),
+                'imagination_policy': self.imagination_policy.state_dict(),
+                'EM': self.EM.state_dict(),
+                
                 'policy_optimizer': self.policy_optimizer.state_dict(),
-                'critic_optimizer': self.critic_optimizer.state_dict()}
+                'critic_optimizer': self.critic_optimizer.state_dict(),
+                'policy_prime_optimizer': self.policy_prime_optimizer.state_dict(),
+                'imagination_policy_optimizer': self.imagination_policy_optimizer.state_dict(),
+                'EM_optimizer': self.EM_optimizer.state_dict(),                
+               }
 
     #Used to get just the actor weights and params.
     def get_actor_params(self):
@@ -158,6 +166,12 @@ class DDPGAgent(object):
         self.critic.load_state_dict(params['critic'])
         self.target_policy.load_state_dict(params['target_policy'])
         self.target_critic.load_state_dict(params['target_critic'])
+        self.policy_prime.load_state_dict(params['policy_prime'])
+        self.imagination_policy.load_state_dict(params['imagination_policy'])
+        self.EM.load_state_dict(params['EM'])
+
         self.policy_optimizer.load_state_dict(params['policy_optimizer'])
         self.critic_optimizer.load_state_dict(params['critic_optimizer'])
-
+        self.policy_prime_optimizer.load_state_dict(params['policy_prime_optimizer'])
+        self.imagination_policy_optimizer.load_state_dict(params['imagination_policy_optimizer'])
+        self.EM_optimizer.load_state_dict(params['EM_optimizer'])

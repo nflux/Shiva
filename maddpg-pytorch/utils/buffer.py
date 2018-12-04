@@ -70,6 +70,7 @@ class ReplayBuffer(object):
             self.curr_i = 0
             self.filled_i = self.max_steps
         for agent_i in range(self.num_agents):
+
             self.obs_buffs[agent_i][self.curr_i:self.curr_i + nentries] = np.vstack(
                 observations[:, agent_i]).T # added .T
             # actions are already batched by agent, so they are indexed differently

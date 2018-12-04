@@ -5,6 +5,7 @@ import datetime
 import os 
 import csv
 import itertools 
+import argparse
 #import tensorflow.contrib.slim as slim
 import numpy as np
 from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process
@@ -12,16 +13,15 @@ from torch import Tensor
 from HFO import hfo
 import time
 import _thread as thread
-import argparse
 import torch
 from pathlib import Path
-import argparse
 from torch.autograd import Variable#from tensorboardX import SummaryWriter
 from utils.make_env import make_env
 from utils.buffer import ReplayBuffer
 #from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
 from HFO_env import *
+from utils.trainer import launch_eval
 parser = argparse.ArgumentParser(description='Load port and log directory')
 parser.add_argument('-port', type=int,default=6000,
                    help='An integer for port number')
@@ -49,7 +49,7 @@ else:
 
 use_viewer = True
 n_training_threads = 8
-use_viewer_after = 5000 # If using viewer, uses after x episodes
+use_viewer_after = 10 # If using viewer, uses after x episodes
 # default settings
 num_episodes = 100000
 replay_memory_size = 1000000
@@ -59,7 +59,7 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams--------------------------
-batch_size = 32
+batch_size = 1
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -70,7 +70,7 @@ explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 50  # Haus uses over 10,000 updates --
+num_explore_episodes = 25  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -123,16 +123,21 @@ SIL = False
 SIL_update_ratio = 3
 #---------------------------------------
 # Self-play ----------------------------
-train_switch_iterations = 5000
 #Save/load -----------------------------
-save_critic = False
-save_actor = False
-#The NNs saved every #th episode.
-ep_save_every = 20
+save_nns = True
+ep_save_every = 2 # episodes
 #Load previous NNs, currently set to load only at initialization.
-load_critic = False
-load_actor = False
+load_nets = False
+load_path = "models"
+folder_path = None
+current_day_time = datetime.datetime.now()
+first_save = False
 # --------------------------------------
+# Evaluation ---------------------------
+evaluate = True
+eval_after = 2
+eval_episodes = 5
+#---------------------------------------
 # initialization -----------------------
 t = 0
 time_step = 0
@@ -145,16 +150,32 @@ else:
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
     
-env = HFO_env(num_TNPC = 0,num_TA=2,num_OA=2, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, 
+env = HFO_env(num_TNPC = 0,num_TA=2,num_OA=2, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, # create environment
               feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False,port=port,log_dir=log_dir)
+
 if use_viewer:
     env._start_viewer()
+
+if save_nns:
+    folder_path = 'models/' + str(env.num_TA) + '_vs_' + str(env.num_OA) + '/time' + \
+                                '_' + str(current_day_time.month) + \
+                                '_' + str(current_day_time.day) + \
+                                '_' + str(current_day_time.hour) +'/'
+if not os.path.exists(os.path.dirname(folder_path)):
+    try:
+        os.makedirs(os.path.dirname(folder_path))
+    except OSError as exc: # Guard against race condition
+        if exc.errno != errno.EEXIST:
+            raise
 
 time.sleep(3)
 print("Done connecting to the server ")
 
 # initializing the maddpg 
-maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
+if load_nets:
+    maddpg = MADDPG.init_from_save(load_path,num_TA)
+else:
+    maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                               adversary_alg= "MADDPG",device=device,
                               gamma=gamma,batch_size=batch_size,
                               tau=tau,
@@ -397,30 +418,6 @@ if Imitation_exploration:
 # --------------------------------
 env.launch()
 time.sleep(2)
-while test_imitation:
-    torch_obs = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
-                          requires_grad=False)
-                 for i in range(maddpg.nagents)]
-    torch_agent_actions = maddpg.step(torch_obs, explore=explore)
-    agent_actions = [ac.cpu().data.numpy() for ac in torch_agent_actions]
-    params = np.asarray([ac[0][len(env.action_list):] for ac in agent_actions]) 
-    actions = [[ac[i][:len(env.action_list)] for ac in agent_actions] for i in range(1)] # this is returning one-hot-encoded action for each agent 
-    noisey_actions = [e_greedy(torch.tensor(a).view(1,len(env.action_list)),eps = 0.01) for a in actions]     # get eps greedy action
-    # modify for multi agent
-    randoms = noisey_actions[0][1]
-    noisey_actions = [noisey_actions[0][0]]
-    noisey_actions_for_buffer = [ac.cpu().data.numpy() for ac in noisey_actions]
-    noisey_actions_for_buffer = np.asarray([ac[0] for ac in noisey_actions_for_buffer])
-    noisey_actions_for_buffer = np.asarray(actions[0])
-    agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes 
-    params_for_buffer = params
-    actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(noisey_actions_for_buffer,params_for_buffer)] for i in range(1)]).reshape(
-        env.num_TA,env.action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
-    _,_,d,world_stat = env.Step(agents_actions, 'team',params)
-
-
-
-
 for ep_i in range(0, num_episodes):
 
     # team n-step
@@ -465,10 +462,6 @@ for ep_i in range(0, num_episodes):
     team_kickable_counter = 0
     opp_kickable_counter = 0
     for et_i in range(0, episode_length):
-        
-        if t % train_switch_iterations == 0:
-            train_team = not train_team
-            train_opp = not train_opp
 
         maddpg.prep_training(device=device) # GPU for forward passes?? 
 
@@ -673,6 +666,7 @@ for ep_i in range(0, num_episodes):
                         n_step_next_ob = opp_n_step_next_obs[-1]
                         n_step_done = opp_n_step_dones[-1]
                     # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
+                
                 opp_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
                                         n_step_next_ob,[n_step_done for i in range(env.num_OA)],MC_targets,
                                         n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
@@ -695,6 +689,31 @@ for ep_i in range(0, num_episodes):
                                                         'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step),
                                                         'goals_scored': env.scored_counter_right/env.num_OA}, 
                                                         ignore_index=True)
+                
+  
+            if first_save:
+                if ep_i > 1 and ep_i%ep_save_every == 0 and save_nns:
+
+                    file_name = folder_path + 'current_model_' + str(ep_i)
+                    maddpg.first_save(file_name,num_copies = 3)
+                first_save = False
+            else:
+                if ep_i > 1 and ep_i%ep_save_every == 0 and save_nns:
+                    file_name = folder_path + 'model_episode_' + str(ep_i) 
+                    maddpg.save(file_name)
+
+#            if ep_i > 1 and ep_i % eval_after == 0 and evaluate:
+#                
+#                cmd = "python trainer.py -port2 %i -log_dir2 %s -log2 %s -eval_episodes %i"\
+#                  " -ONPC %i -num_TA %i -device2 %s -filename2 %s" \
+#                  % (("evaluation_ep" + str(ep_i)),"evaluation_log_dir",7000,eval_episodes,env.ONPC,
+#                     env.num_TA,device,(file_name + "_agent_"))
+#                self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
+#                time.sleep(2) # Wait for server to startup before connecting a player
+
+                
+#                launch_eval(filenames=[file_name + ("_agent_%i" % i) + ".pth" for i in range(env.num_TA)],eval_episodes = eval_episodes,log_dir = "",log = "evaluation_ep" + str(ep_i),port = 8000,
+#                            num_TA = env.num_TA, num_ONPC = env.num_OA,device=device)
             break;  
         team_obs = team_next_obs
         opp_obs = opp_next_obs
@@ -703,38 +722,5 @@ for ep_i in range(0, num_episodes):
         #if t%30000 == 0 and use_viewer:
         if t%20000 == 0 and use_viewer and ep_i > use_viewer_after:
             env._start_viewer()       
-           
-        
-           #Saves Actor/Critic every particular number of episodes
-    if ep_i%ep_save_every == 0 and ep_i != 0:
-        #Saving the actor NN in local path, needs to be tested by loading
-        if save_actor:
-            ('Saving Actor NN')
-            current_day_time = datetime.datetime.now()
-            maddpg.save_actor('saved_NN/Actor/actor_' + str(current_day_time.month) + 
-                                            '_' + str(current_day_time.day) + 
-                                            '_'  + str(current_day_time.year) + 
-                                            '_' + str(current_day_time.hour) + 
-                                            ':' + str(current_day_time.minute) + 
-                                            '_episode_' + str(ep_i) + '.pth')
 
-        #Saving the critic in local path, needs to be tested by loading
-        if save_critic:
-            print('Saving Critic NN')
-            maddpg.save_critic('saved_NN/Critic/critic_' + str(current_day_time.month) + 
-                                            '_' + str(current_day_time.day) + 
-                                            '_'  + str(current_day_time.year) + 
-                                            '_' + str(current_day_time.hour) + 
-                                            ':' + str(current_day_time.minute) + 
-                                            '_episode_' + str(ep_i) + '.pth')
-
- 
- 
-             
-
-
-
-
-
-            
-    
+      

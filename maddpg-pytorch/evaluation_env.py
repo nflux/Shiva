@@ -11,7 +11,7 @@ import os, subprocess, time, signal
 
 
 
-class HFO_env():
+class evaluation_env():
     """HFO_env() extends the HFO environment to allow for centralized execution.
 
     Attributes:
@@ -247,12 +247,15 @@ class HFO_env():
         # Queue actions for team
         [self.Queue_action(i,self.team_base,team_actions[i],team_params) for i in range(len(team_actions))]
         # Queue actions for opposing team
-        [self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
+        #[self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
 
         self.sync_after_queue_team += 1
         self.sync_after_queue_opp += 1
+
         while (self.sync_after_queue_team.sum() + self.sync_after_queue_opp.sum()) % ((self.num_TA + self.num_OA) * 2) != 0:
             time.sleep(self.sleep_timer)
+
+
             
         self.wait_for_queue = False
         self.wait_for_connect_vals = True
@@ -677,17 +680,19 @@ class HFO_env():
             feat_lvl = hfo.LOW_LEVEL_FEATURE_SET
         elif feat_lvl == 'high':
             feat_lvl = hfo.HIGH_LEVEL_FEATURE_SET
-
         config_dir=get_config_path() 
+
         recorder_dir = 'log/'
         if self.team_base == base:
             self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                 server_port=port, server_addr='localhost', team_name=base,
                                                     play_goalie=goalie,record_dir =recorder_dir)
+
         else:
             self.opp_team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                 server_port=port, server_addr='localhost', team_name=base, 
                                                     play_goalie=goalie,record_dir =recorder_dir)
+
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -715,7 +720,6 @@ class HFO_env():
 
                     if self.team_base == base:
                         self.sync_after_queue_team[agent_ID] += 1
-                    else:
                         self.sync_after_queue_opp[agent_ID] += 1
 
                     while self.wait_for_queue:
@@ -763,6 +767,8 @@ class HFO_env():
                                 self.team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3,base),self.get_valid_scaled_param(agent_ID,4,base))
 
                             self.sync_at_status_team[agent_ID] += 1
+                            self.sync_at_status_opp[agent_ID] += 1
+
                     else:
                         # take the action
                         if act_lvl == 'high':
@@ -808,6 +814,8 @@ class HFO_env():
                         self.world_status = self.team_envs[agent_ID].step() # update world
                         self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
                         self.sync_at_reward_team[agent_ID] += 1
+                        self.sync_at_reward_opp[agent_ID] += 1
+
                     else:
                         self.opp_team_obs_previous[agent_ID] = self.opp_team_obs[agent_ID]
                         self.world_status = self.opp_team_envs[agent_ID].step() # update world
@@ -826,6 +834,8 @@ class HFO_env():
                         self.team_rewards[agent_ID] = self.getReward(
                             self.team_envs[agent_ID].statusToString(self.world_status),agent_ID,base) # update reward
                         self.sync_before_step_team[agent_ID] += 1
+                        self.sync_before_step_opp[agent_ID] += 1
+
                     else:
                         self.opp_rewards[agent_ID] = self.getReward(
                             self.opp_team_envs[agent_ID].statusToString(self.world_status),agent_ID,base) # update reward
@@ -876,6 +886,7 @@ class HFO_env():
             log_dir: Directory to place game logs (*.rcg).
             """
             self.server_port = port
+            print(self.hfo_path)
             cmd = self.hfo_path + \
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\

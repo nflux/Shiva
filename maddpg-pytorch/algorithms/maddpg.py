@@ -5,6 +5,7 @@ from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbe
 from utils.agents import DDPGAgent
 from utils.misc import distr_projection,processor
 import numpy as np
+import random
 from torch.autograd import Variable
 
 MSELoss = torch.nn.MSELoss()
@@ -163,6 +164,7 @@ class MADDPG(object):
         Outputs:
             actions: List of actions for each agent
         """
+        
         return [a.step(obs, explore=explore) for a, obs in zip(self.team_agents, team_observations)], \
                 [a.step(obs, explore=explore) for a, obs in zip(self.opp_agents, opp_observations)]
     
@@ -210,6 +212,7 @@ class MADDPG(object):
         """
         # rews = 1-step, cum-rews = n-step
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
+
         if side == 'team':
             count = self.team_count[agent_i]
             curr_agent = self.team_agents[agent_i]
@@ -617,16 +620,7 @@ class MADDPG(object):
                 a.imagination_policy = fn(a.imagination_policy)
             self.pol_dev = device
 
-                                          
-    def save(self, filename):
-        """
-        Save trained parameters of all agents into one file
-        """
-        self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dict = {'init_dict': self.init_dict,
-                     'agent_params': [a.get_params() for a in self.agents]}
-        torch.save(save_dict, filename)
-
+    
     #Needs to be tested
     def save_actor(self, filename):
         """
@@ -634,7 +628,7 @@ class MADDPG(object):
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
         save_dict = {'init_dict': self.init_dict,
-                     'actor_params': [a.get_actor_params() for a in self.agents]}
+                     'actor_params': [a.get_actor_params() for a in (self.team_agents+self.opp_agents)]}
         torch.save(save_dict, filename)
 
     #Needs to be tested
@@ -1310,15 +1304,57 @@ class MADDPG(object):
         instance.init_dict = init_dict
         return instance
 
+    
+                                          
+    #def first_save(self, filename,num_copies=1):
+    #    """
+    #    Save trained parameters of all agents into one file
+    #    """
+    #    self.prep_training(device='cpu')  # move parameters to CPU before saving
+    #    save_dicts = np.asarray([{'init_dict': self.init_dict,
+    #                 'agent_params': a.get_params() } for a in (self.team_agents)])
+    #    [torch.save(save_dicts[i], filename + "_agent_%i" % i) for in i in range(len(self.team_agents))]
+
+    def save(self, filename):
+        """
+        Save trained parameters of all agents into one file
+        """
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
+        save_dicts = np.asarray([{'init_dict': self.init_dict,
+                     'agent_params': a.get_params() } for a in (self.team_agents)])
+        [torch.save(save_dicts[i], filename +("_agent_%i" % i) + '.pth') for i in range(len(self.team_agents))]
+        self.prep_training(device=self.device)
+        
     @classmethod
-    def init_from_save(cls, filename):
+    def init_from_save_selfplay(cls, filenames=list,nagents=1):
         """
         Instantiate instance of this class from file created by 'save' method
         """
-        save_dict = torch.load(filename)
-        instance = cls(**save_dict['init_dict'])
-        instance.init_dict = save_dict['init_dict']
-        for a, params in zip(instance.agents, save_dict['agent_params']):
+        random_sessions = random.sample(filenames,nagents)
+        save_dicts =  [torch.load(filename) for filename in random_sessions]
+        instance = cls(**save_dicts[0]['init_dict'])
+        instance.init_dict = save_dicts[0]['init_dict']
+        
+        for a, params in zip(instance.nagents_team, random.sample(random.sample(save_dicts,1)['agent_params'],1)):
             a.load_params(params)
+
+        for a, params in zip(instance.opp_agents,  random.sample(random.sample(save_dicts,1)['agent_params'],1)):
+            a.load_params(params)
+
+        return instance
+
+    @classmethod
+    def init_from_save_evaluation(cls, filenames,nagents=1):
+        """
+        Instantiate instance of this class from file created by 'save' method
+        """
+
+        save_dicts =np.asarray([torch.load(filename) for filename in filenames]) # use only filename
+        instance = cls(**save_dicts[0]['init_dict'])
+        instance.init_dict = save_dicts[0]['init_dict']
+
+        for i in range(nagents):
+            instance.team_agents[i].load_params(save_dicts[i]['agent_params'] ) # first n agents
+
         return instance
     
