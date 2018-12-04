@@ -183,7 +183,7 @@ class evaluation_env():
         for i in range(self.num_TA):
             print("Connecting player %i" % i , "on team %s to the server" % self.base)
             thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
-                                             False,i,self.fpt,self.act_lvl,))
+                                             False,i,self.fpt,self.act_lvl,"eval_log/",))
             time.sleep(0.5)
         
         for i in range(self.num_OA):
@@ -250,7 +250,7 @@ class evaluation_env():
         #[self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
 
         self.sync_after_queue_team += 1
-        self.sync_after_queue_opp += 1
+        self.sync_after_queue_team += 1
 
         while (self.sync_after_queue_team.sum() + self.sync_after_queue_opp.sum()) % ((self.num_TA + self.num_OA) * 2) != 0:
             time.sleep(self.sleep_timer)
@@ -660,7 +660,7 @@ class evaluation_env():
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl):
+    def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl,recorder_dir='log/'):
         """ Connect threaded agent to server
 
         Args:
@@ -675,24 +675,29 @@ class evaluation_env():
 
         """
 
-
+        if not os.path.exists(os.path.dirname(recorder_dir)):
+            try:
+                os.makedirs(os.path.dirname(recorder_dir))
+            except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
         if feat_lvl == 'low':
             feat_lvl = hfo.LOW_LEVEL_FEATURE_SET
         elif feat_lvl == 'high':
             feat_lvl = hfo.HIGH_LEVEL_FEATURE_SET
         config_dir=get_config_path() 
 
-        recorder_dir = 'log/'
         if self.team_base == base:
+
             self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                 server_port=port, server_addr='localhost', team_name=base,
                                                     play_goalie=goalie,record_dir =recorder_dir)
 
-        else:
-            self.opp_team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
-                                server_port=port, server_addr='localhost', team_name=base, 
-                                                    play_goalie=goalie,record_dir =recorder_dir)
-
+        #else:
+        #    self.opp_team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
+        #                        server_port=port, server_addr='localhost', team_name=base, 
+       #                                             play_goalie=goalie,record_dir =recorder_dir)
+#
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -720,7 +725,7 @@ class evaluation_env():
 
                     if self.team_base == base:
                         self.sync_after_queue_team[agent_ID] += 1
-                        self.sync_after_queue_opp[agent_ID] += 1
+                        self.sync_after_queue_team[agent_ID] += 1
 
                     while self.wait_for_queue:
                         time.sleep(self.sleep_timer)

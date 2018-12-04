@@ -21,7 +21,7 @@ from utils.buffer import ReplayBuffer
 #from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
 from HFO_env import *
-from utils.trainer import launch_eval
+from trainer import launch_eval
 parser = argparse.ArgumentParser(description='Load port and log directory')
 parser.add_argument('-port', type=int,default=6000,
                    help='An integer for port number')
@@ -135,7 +135,7 @@ first_save = False
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = True
-eval_after = 2
+eval_after = 3
 eval_episodes = 5
 #---------------------------------------
 # initialization -----------------------
@@ -702,7 +702,11 @@ for ep_i in range(0, num_episodes):
                     file_name = folder_path + 'model_episode_' + str(ep_i) 
                     maddpg.save(file_name)
 
-#            if ep_i > 1 and ep_i % eval_after == 0 and evaluate:
+            if ep_i > 1 and ep_i % eval_after == 0 and evaluate:
+                launch_eval(filenames=[file_name + ("_agent_%i" % i) + ".pth" for i in range(env.num_TA)],eval_episodes = eval_episodes,
+                            log_dir = "evaluation_log_dir",log = "evaluation_ep" + str(ep_i),port = 7000,
+                            num_TA = env.num_TA, num_ONPC = env.num_OA,device=device)
+            break;  
 #                
 #                cmd = "python trainer.py -port2 %i -log_dir2 %s -log2 %s -eval_episodes %i"\
 #                  " -ONPC %i -num_TA %i -device2 %s -filename2 %s" \
@@ -712,9 +716,7 @@ for ep_i in range(0, num_episodes):
 #                time.sleep(2) # Wait for server to startup before connecting a player
 
                 
-#                launch_eval(filenames=[file_name + ("_agent_%i" % i) + ".pth" for i in range(env.num_TA)],eval_episodes = eval_episodes,log_dir = "",log = "evaluation_ep" + str(ep_i),port = 8000,
-#                            num_TA = env.num_TA, num_ONPC = env.num_OA,device=device)
-            break;  
+               
         team_obs = team_next_obs
         opp_obs = opp_next_obs
 

@@ -22,38 +22,10 @@ from utils.buffer import ReplayBuffer
 from algorithms.maddpg import MADDPG
 from evaluation_env import *
 
-'''parser = argparse.ArgumentParser(description='Load port and log directory')
-parser.add_argument('-port2', type=int,default=6000,
-                   help='An integer for port number')
-parser.add_argument('-log_dir2', type=str, default='log',
-                   help='A name for log directory')
-parser.add_argument('-log2', type=str, default='history',
-                   help='A name for log file ')
-parser.add_argument('-eval_episodes', type=int, default=10,
-                   help='num eval ep ')
-parser.add_argument('-ONPC', type=int, default=1,
-                   help='number of onpc ')
-parser.add_argument('-num_TA', type=int, default=1,
-                   help='A name for log file ')
-parser.add_argument('-device2', type=str, default='cpu',
-                   help='A name for log file ')
-parser.add_argument('-filename2', type=str, default='cpu',
-                   help='A name for log file ')
-args = parser.parse_args()
-print(args)
-port = args.port2
-log_dir = args.log_dir2
-history = args.log2
-eval_episodes = args.eval_episodes
-num_ONPC = args.ONPC
-num_TA = args.num_TA
-device = args.device2
-filename = args.filename2
-print(filename)
-filenames = [filename + ("%i" %i) + ".pth" for i in range(num_TA)]'''
+
 def launch_eval(filenames,eval_episodes = 10,log_dir = "eval",log='eval',port=7000,num_TNPC = 0,num_TA=1,num_OA=0, num_ONPC=0, fpt = 500,device="cpu"):
     
-    env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_TA, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
+    env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
                          untouched_time = 500,fullstate=True,offense_on_ball=False,
                          port=port,log_dir=log_dir)
     time.sleep(2.0)
@@ -124,7 +96,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval",log='eval',port=70
     team_step_logger_df.to_csv('%s.csv' % log)
 
     
-    
+#launch_eval(['models/2_vs_2/time_12_4_9/model_episode_2_agent_0.pth','models/2_vs_2/time_12_4_9/model_episode_2_agent_1.pth'],eval_episodes = 10,log_dir = "eval",log='eval',port=6000,num_TNPC = 0,num_TA=2,num_OA=0, num_ONPC=0, fpt = 500,device="cuda")
 
 #launch_eval(filenames,eval_episodes,log_dir = log_dir,log=history,port=port,num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, fpt = 500,device=device)
 
