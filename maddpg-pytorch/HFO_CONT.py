@@ -49,7 +49,11 @@ else:
 
 use_viewer = True
 n_training_threads = 8
+<<<<<<< HEAD
 use_viewer_after = 10 # If using viewer, uses after x episodes
+=======
+use_viewer_after = 5 # If using viewer, uses after x episodes
+>>>>>>> 0e38562b7759b3e6a230ac695aab64c817389fa6
 # default settings
 num_episodes = 100000
 replay_memory_size = 1000000
@@ -59,7 +63,11 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # hyperparams--------------------------
+<<<<<<< HEAD
 batch_size = 1
+=======
+batch_size = 128
+>>>>>>> 0e38562b7759b3e6a230ac695aab64c817389fa6
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate

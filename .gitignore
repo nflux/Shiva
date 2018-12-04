@@ -4,3 +4,10 @@ __pycache__/
 *.ipynb_checkpoints
 *.csv
 *.log
+maddpg-pytorch/HFO/bin/rcssserver
+maddpg-pytorch/HFO/bin/soccerwindow2
+maddpg-pytorch/HFO/bin/teams/base/agent
+maddpg-pytorch/HFO/bin/teams/base/sample_coach
+maddpg-pytorch/HFO/bin/teams/base/sample_player
+maddpg-pytorch/HFO/bin/teams/base/sample_trainer
+maddpg-pytorch/HFO/example/thread_agents
