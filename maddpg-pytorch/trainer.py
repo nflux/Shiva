@@ -23,7 +23,8 @@ from algorithms.maddpg import MADDPG
 from evaluation_env import *
 
 
-def launch_eval(filenames,eval_episodes = 10,log_dir = "eval",log='eval',port=7000,num_TNPC = 0,num_TA=1,num_OA=0, num_ONPC=0, fpt = 500,device="cpu"):
+def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',port=7000,
+                num_TA=1,num_ONPC=0, fpt = 500,device="cpu",use_viewer=False):
     
     env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
                          untouched_time = 500,fullstate=True,offense_on_ball=False,
@@ -42,7 +43,8 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval",log='eval',port=70
     time_step = 0
     maddpg.prep_training(device=device) # GPU for forward passes?? 
 
-    env._start_viewer()
+    if use_viewer:
+        env._start_viewer()
     # launch evaluation episodes
     for ep_i in range(eval_episodes):
         for et_i in range(fpt):
@@ -94,7 +96,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval",log='eval',port=70
             team_obs =  team_next_obs
                 
     team_step_logger_df.to_csv('%s.csv' % log)
-
+    env.kill_viewer()
     
 #launch_eval(['models/2_vs_2/time_12_4_9/model_episode_2_agent_0.pth','models/2_vs_2/time_12_4_9/model_episode_2_agent_1.pth'],eval_episodes = 10,log_dir = "eval",log='eval',port=6000,num_TNPC = 0,num_TA=2,num_OA=0, num_ONPC=0, fpt = 500,device="cuda")
 

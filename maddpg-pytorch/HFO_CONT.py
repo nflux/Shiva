@@ -22,6 +22,10 @@ from utils.buffer import ReplayBuffer
 from algorithms.maddpg import MADDPG
 from HFO_env import *
 from trainer import launch_eval
+import _thread as thread
+import shutil
+
+# Parseargs --------------------------------------------------------------
 parser = argparse.ArgumentParser(description='Load port and log directory')
 parser.add_argument('-port', type=int,default=6000,
                    help='An integer for port number')
@@ -34,7 +38,7 @@ args = parser.parse_args()
 log_dir = args.log_dir
 port = args.port
 history = args.log
-
+# --------------------------------------
     
 # options ------------------------------
 action_level = 'low'
@@ -47,10 +51,10 @@ else:
     to_gpu = False
     device = 'cpu'
 
-use_viewer = True
+use_viewer = False
 n_training_threads = 8
 use_viewer_after = 10 # If using viewer, uses after x episodes
-# default settings
+# default settings ---------------------
 num_episodes = 100000
 replay_memory_size = 1000000
 episode_length = 500 # FPS
@@ -58,8 +62,14 @@ untouched_time = 500
 burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
+# Team ---------------------------------
+num_TA = 2
+num_OA = 2
+num_TNPC = 0
+num_ONPC = 0
+team_rew_anneal_ep = 1000
 # hyperparams--------------------------
-batch_size = 1
+batch_size = 32
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -110,7 +120,6 @@ pt_beta = 1.0
 I2A = False
 decent_EM = True
 EM_lr = 0.005
-decent_EM = True
 obs_weight = 10.0
 rew_weight = 1.0
 ws_weight = 1.0
@@ -122,26 +131,48 @@ imagination_policy_branch = False
 SIL = False
 SIL_update_ratio = 3
 #---------------------------------------
+#Critic Input Modification 
+critic_mod = False
+# NOTE: When both are False but critic_mod is true the critic takes both
+# actions and observations from the opposing side
+critic_mod_act = False
+critic_mod_obs = False
+critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
+#---------------------------------------
 # Self-play ----------------------------
+load_random_nets = True
+load_random_every = 10
+# --------------------------------------
 #Save/load -----------------------------
 save_nns = True
-ep_save_every = 2 # episodes
-#Load previous NNs, currently set to load only at initialization.
-load_nets = False
-load_path = "models"
-folder_path = None
-current_day_time = datetime.datetime.now()
-first_save = False
+ep_save_every = 10 # episodes
+load_nets = False # load networks from file
+first_save = False # build multiple master policies for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = True
-eval_after = 3
-eval_episodes = 5
-#---------------------------------------
+eval_after = 10
+eval_episodes = 10
+# --------------------------------------
+# Logging ------------------------------
+session_path = None
+current_day_time = datetime.datetime.now()
+session_path = 'training_sessions/' + \
+                                str(current_day_time.month) + \
+                                '_' + str(current_day_time.day) + \
+                                '_' + str(current_day_time.hour) + '_' + \
+                                str(num_TA) + '_vs_' + str(num_OA) + "/"
+hist_dir = session_path +"history"
+eval_hist_dir = session_path +"eval_history"
+eval_log_dir = session_path +"eval_log" # evaluation logfiles
+load_path = session_path +"models/"
+directories = [session_path,eval_log_dir, eval_hist_dir,load_path, hist_dir, log_dir]
+[shutil.rmtree(path) for path in directories if os.path.isdir(path)]
+[os.makedirs(path) for path in directories if not os.path.exists(path)] # generate directories 
+# --------------------------------------
 # initialization -----------------------
 t = 0
 time_step = 0
-kickable_counter = 0
 # if using low level actions use non discrete settings
 if action_level == 'high':
     discrete_action = True
@@ -150,23 +181,13 @@ else:
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
     
-env = HFO_env(num_TNPC = 0,num_TA=2,num_OA=2, num_ONPC=0, num_trials = num_episodes, fpt = episode_length, # create environment
-              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False,port=port,log_dir=log_dir)
+
+env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, num_trials = num_episodes, fpt = episode_length, # create environment
+              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False,port=port,log_dir=log_dir,team_rew_anneal_ep=team_rew_anneal_ep)
 
 if use_viewer:
     env._start_viewer()
 
-if save_nns:
-    folder_path = 'models/' + str(env.num_TA) + '_vs_' + str(env.num_OA) + '/time' + \
-                                '_' + str(current_day_time.month) + \
-                                '_' + str(current_day_time.day) + \
-                                '_' + str(current_day_time.hour) +'/'
-if not os.path.exists(os.path.dirname(folder_path)):
-    try:
-        os.makedirs(os.path.dirname(folder_path))
-    except OSError as exc: # Guard against race condition
-        if exc.errno != errno.EEXIST:
-            raise
 
 time.sleep(3)
 print("Done connecting to the server ")
@@ -187,7 +208,9 @@ else:
                               TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps,
                               I2A = I2A, EM_lr = EM_lr,
                               obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight, 
-                              rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,imagination_policy_branch = imagination_policy_branch)
+                              rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,
+                              imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
+                              critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs) 
 
 
 # print('maddpg.nagents ', maddpg.nagents)
@@ -586,32 +609,58 @@ for ep_i in range(0, num_episodes):
         if training:
             #print('****************We are now training*********************')
             maddpg.prep_training(device=device)
-            for u_i in range(1):
-                if train_team: # train team
-                    for a_i in range(maddpg.nagents_team):
-                        sample = team_replay_buffer.sample(batch_size,
-                                                      to_gpu=to_gpu,norm_rews=False)
-                        maddpg.update(sample, a_i, 'team')
-                        if SIL:
-                            [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
+            if not critic_mod:
+                for u_i in range(1):
+                    if train_team: # train team
+                        for a_i in range(maddpg.nagents_team):
+                            inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                            sample = team_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+                            maddpg.update(sample, a_i, 'team')
+                            if SIL:
+                                [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
+                    if train_opp: # train opp team
+                        for a_i in range(maddpg.nagents_opp):
+                            inds = np.random.choice(np.arange(len(opp_replay_buffer)), size=batch_size, replace=False)
+                            sample = opp_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+                            maddpg.update(sample, a_i, 'opp')
+                            if SIL:
+                                [maddpg.SIL_update(sample, a_i,'opp') for i in range(SIL_update_ratio)]
+                    maddpg.update_all_targets()
+                # maddpg.prep_rollouts(device='cpu') convert back to cpu for pushing?
+            else:
+                for u_i in range(1):
+                    # NOTE: Only works for m vs m
+                    if train_team: # train team
 
-                if train_opp: # train opp team
-                    for a_i in range(maddpg.nagents_opp):
-                        sample = opp_replay_buffer.sample(batch_size,
-                                                      to_gpu=to_gpu,norm_rews=False)
-                        maddpg.update(sample, a_i, 'opp')
-                        if SIL:
-                            [maddpg.SIL_update(sample, a_i,'opp') for i in range(SIL_update_ratio)]
-                maddpg.update_all_targets()
-            # maddpg.prep_rollouts(device='cpu') convert back to cpu for pushing?
+                        for a_i in range(maddpg.nagents_team):
+                            inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                            team_sample = team_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+                            opp_sample = opp_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+
+                            maddpg.update_centralized_critic(team_sample, opp_sample, a_i, 'team', 
+                                                             act_only=critic_mod_act, obs_only=critic_mod_obs)
+                    if train_opp: # train opp team
+                        for a_i in range(maddpg.nagents_opp):
+                            inds = np.random.choice(np.arange(len(opp_replay_buffer)), size=batch_size, replace=False)
+                            team_sample = team_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+                            opp_sample = opp_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+                            maddpg.update_centralized_critic(team_sample, opp_sample, a_i, 'opp', 
+                                                             act_only=critic_mod_act, obs_only=critic_mod_obs)
+                    maddpg.update_all_targets()
             
                      
         time_step += 1
         t += 1
         if t%1000 == 0:
                       
-            team_step_logger_df.to_csv('team_%s.csv' % history)
-            opp_step_logger_df.to_csv('opp_%s.csv' % history)
+            team_step_logger_df.to_csv(hist_dir + '/team_%s.csv' % history)
+            opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
                       
                     
         if d == True: # Episode done
@@ -691,29 +740,28 @@ for ep_i in range(0, num_episodes):
                                                         ignore_index=True)
                 
   
-            if first_save:
+            if first_save: # Generate list of ensemble networks
                 if ep_i > 1 and ep_i%ep_save_every == 0 and save_nns:
 
-                    file_name = folder_path + 'current_model_' + str(ep_i)
+                    file_name = 'master_model' + str(ep_i)
                     maddpg.first_save(file_name,num_copies = 3)
                 first_save = False
-            else:
+            else: # Save networks
                 if ep_i > 1 and ep_i%ep_save_every == 0 and save_nns:
-                    file_name = folder_path + 'model_episode_' + str(ep_i) 
+                    file_name = load_path + 'model_episode_' + str(ep_i) 
                     maddpg.save(file_name)
 
+            # Launch evaluation session
             if ep_i > 1 and ep_i % eval_after == 0 and evaluate:
-                launch_eval(filenames=[file_name + ("_agent_%i" % i) + ".pth" for i in range(env.num_TA)],eval_episodes = eval_episodes,
-                            log_dir = "evaluation_log_dir",log = "evaluation_ep" + str(ep_i),port = 7000,
-                            num_TA = env.num_TA, num_ONPC = env.num_OA,device=device)
+                thread.start_new_thread(launch_eval,(
+                    [file_name + ("_agent_%i" % i) + ".pth" for i in range(env.num_TA)],
+                    eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation_ep" + str(ep_i),
+                    7000,env.num_TA,env.num_OA,episode_length,device,use_viewer,))
+            
+            # Load random networks into opponent
+            if ep_i > 1 and ep_i % load_random_every == 0 and load_random_nets:
+                maddpg.load_random_networks(side='opp',nagents = num_OA,models_path = load_path)
             break;  
-#                
-#                cmd = "python trainer.py -port2 %i -log_dir2 %s -log2 %s -eval_episodes %i"\
-#                  " -ONPC %i -num_TA %i -device2 %s -filename2 %s" \
-#                  % (("evaluation_ep" + str(ep_i)),"evaluation_log_dir",7000,eval_episodes,env.ONPC,
-#                     env.num_TA,device,(file_name + "_agent_"))
-#                self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-#                time.sleep(2) # Wait for server to startup before connecting a player
 
                 
                

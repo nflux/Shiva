@@ -16,13 +16,22 @@ class DDPGAgent(object):
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, maddpg=object, hidden_dim=64,
                  a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
-                device='cpu',imagination_policy_branch=True):
+                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False): 
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
             num_out_pol (int): number of dimensions for policy output
             num_in_critic (int): number of dimensions for critic input
         """
+        # NOTE: Only works for m vs m
+        if critic_mod_both:
+            num_in_critic = num_in_critic + ((num_in_pol + num_out_pol) * maddpg.nagents_team)
+        elif critic_mod_act:
+            num_in_critic = num_in_critic + (num_out_pol * maddpg.nagents_team)
+        elif critic_mod_obs:
+            num_in_critic = num_in_critic + (num_in_pol * maddpg.nagents_team)
+
+        
         self.updating_actor = False
         self.maddpg = maddpg
         self.param_dim = 5

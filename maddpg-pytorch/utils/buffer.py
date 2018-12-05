@@ -89,9 +89,9 @@ class ReplayBuffer(object):
         if self.curr_i == self.max_steps:
             self.curr_i = 0
 
-    def sample(self, N, to_gpu=False, norm_rews=True):
-        inds = np.random.choice(np.arange(self.filled_i), size=N,
-                                replace=False)
+    def sample(self, inds, to_gpu=False, norm_rews=True):
+        # inds = np.random.choice(np.arange(self.filled_i), size=N,
+        #                         replace=False)
         if to_gpu:
             cast = lambda x: Variable(Tensor(x), requires_grad=False).cuda()
         else:
@@ -125,8 +125,7 @@ class ReplayBuffer(object):
                 [cast(self.done_buffs[i][inds]) for i in range(self.num_agents)],
                 ret_mc,
                 ret_n_step,
-                [cast(self.ws_buffs[i][inds]) for i in range(self.num_agents)]
-)
+                [cast(self.ws_buffs[i][inds]) for i in range(self.num_agents)])
 
     def get_average_rewards(self, N):
         if self.filled_i == self.max_steps:

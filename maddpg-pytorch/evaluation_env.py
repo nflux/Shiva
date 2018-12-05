@@ -250,9 +250,8 @@ class evaluation_env():
         #[self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
 
         self.sync_after_queue_team += 1
-        self.sync_after_queue_team += 1
 
-        while (self.sync_after_queue_team.sum() + self.sync_after_queue_opp.sum()) % ((self.num_TA + self.num_OA) * 2) != 0:
+        while (self.sync_after_queue_team.sum()) % ((self.num_TA) * 2) != 0:
             time.sleep(self.sleep_timer)
 
 
@@ -264,7 +263,7 @@ class evaluation_env():
             time.sleep(self.sleep_timer)
         #print('Actions, Obs, rewards, and status ready')
 
-        return np.asarray(self.team_obs),self.team_rewards,np.asarray(self.opp_team_obs),self.opp_rewards, \
+        return np.asarray(self.team_obs),self.team_rewards,\
                 self.d, self.world_status
 
 
@@ -725,7 +724,6 @@ class evaluation_env():
 
                     if self.team_base == base:
                         self.sync_after_queue_team[agent_ID] += 1
-                        self.sync_after_queue_team[agent_ID] += 1
 
                     while self.wait_for_queue:
                         time.sleep(self.sleep_timer)
@@ -772,7 +770,6 @@ class evaluation_env():
                                 self.team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3,base),self.get_valid_scaled_param(agent_ID,4,base))
 
                             self.sync_at_status_team[agent_ID] += 1
-                            self.sync_at_status_opp[agent_ID] += 1
 
                     else:
                         # take the action
@@ -809,9 +806,9 @@ class evaluation_env():
                                 #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
                                 self.opp_team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3,base),self.get_valid_scaled_param(agent_ID,4,base))
 
-                            self.sync_at_status_opp[agent_ID] += 1
+                            #self.sync_at_status_opp[agent_ID] += 1
 
-                    while (self.sync_at_status_team.sum() + self.sync_at_status_opp.sum()) % (self.num_TA + self.num_OA) != 0:
+                    while (self.sync_at_status_team.sum()) % (self.num_TA ) != 0:
                         time.sleep(self.sleep_timer)
                     
                     if self.team_base == base:
@@ -819,15 +816,13 @@ class evaluation_env():
                         self.world_status = self.team_envs[agent_ID].step() # update world
                         self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
                         self.sync_at_reward_team[agent_ID] += 1
-                        self.sync_at_reward_opp[agent_ID] += 1
 
                     else:
                         self.opp_team_obs_previous[agent_ID] = self.opp_team_obs[agent_ID]
                         self.world_status = self.opp_team_envs[agent_ID].step() # update world
                         self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # update obs after all agents have acted
-                        self.sync_at_reward_opp[agent_ID] += 1
                     
-                    while (self.sync_at_reward_team.sum() + self.sync_at_reward_opp.sum()) % (self.num_TA + self.num_OA) != 0:
+                    while (self.sync_at_reward_team.sum()) % (self.num_TA) != 0:
                         time.sleep(self.sleep_timer)
 
                     if self.world_status == hfo.IN_GAME:
@@ -839,16 +834,14 @@ class evaluation_env():
                         self.team_rewards[agent_ID] = self.getReward(
                             self.team_envs[agent_ID].statusToString(self.world_status),agent_ID,base) # update reward
                         self.sync_before_step_team[agent_ID] += 1
-                        self.sync_before_step_opp[agent_ID] += 1
 
                     else:
                         self.opp_rewards[agent_ID] = self.getReward(
                             self.opp_team_envs[agent_ID].statusToString(self.world_status),agent_ID,base) # update reward
-                        self.sync_before_step_opp[agent_ID] += 1
 
                     j+=1
 
-                    while (self.sync_before_step_team.sum() + self.sync_before_step_opp.sum()) % (self.num_TA + self.num_OA) != 0:
+                    while (self.sync_before_step_team.sum()) % (self.num_TA) != 0:
                         time.sleep(self.sleep_timer)
 
                     self.wait_for_connect_vals = False
@@ -921,3 +914,7 @@ class evaluation_env():
         cmd = get_viewer_path() +\
               " --connect --port %d" % (self.server_port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
+
+    def kill_viewer(self):
+        if self.viewer is not None:
+            os.kill(self.viewer.pid,signal.SIGKILL)

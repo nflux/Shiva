@@ -46,7 +46,7 @@ class HFO_env():
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
                  offense_on_ball=0, fullstate = False, seed = 123,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-                 verbose = False, log_game=False, log_dir="log"):
+                 verbose = False, log_game=False, log_dir="log",team_rew_anneal_ep=1000):
         
 
         """ Initializes HFO_Env
@@ -67,6 +67,7 @@ class HFO_env():
 
         """
 
+        self.team_rew_anneal_ep = team_rew_anneal_ep
         self.port = port
         self.hfo_path = get_hfo_path()
         self._start_hfo_server(frames_per_trial = fpt, untouched_time = untouched_time,
@@ -318,6 +319,29 @@ class HFO_env():
             print('no ball...')
             return -1
         
+    def closest_player_to_ball(self, team_obs, num_agents):
+        '''
+        teams receive reward based on the distance of their closest agent to the ball
+        '''
+        closest_player_index = 0
+        ball_prox = self.ball_proximity(team_obs[0])
+        for i in range(1, num_agents):
+            temp_prox = self.ball_proximity(team_obs[i])
+            if ball_prox < temp_prox:
+                closest_player_index = i
+                ball_prox = temp_prox
+        
+        return ball_prox, closest_player_index
+    
+    def possession_reward(self, been_kicked):
+        '''
+        teams receive reward based on possession defined by which side had the ball kickable last
+        '''
+        if been_kicked == True:
+            return 0.001
+        else:
+            return -0.001
+        
         
     def ball_distance_to_goal(self,obs):
         if self.feat_lvl == 'high': 
@@ -460,21 +484,21 @@ class HFO_env():
     
     
     # Engineered Reward Function
-    def getReward(self,s,agentID,base):
+    def getReward(self,s,agentID,base,ep_num):
         reward=0.0
+        team_reward = 0.0
         #---------------------------
 
-        if self.team_base == base:
+        if self.d:
+            if self.team_base == base:
             # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
-            if self.d:
                 if s=='Goal_By_Left':
                     reward+=5
                 elif s=='Goal_By_Right':
                     reward+=-5
                 elif s=='OutOfBounds':
-                    reward+=-0.5
+                    reward+=-0.2
                 #---------------------------
-                #Cause Unknown Do Nothing
                 #elif s=='OutOfTime':
                 #    reward+=-100
                 #---------------------------
@@ -487,79 +511,14 @@ class HFO_env():
                 #else:
                 #    print("Error: Unknown GameState", s)
                 #    reward = -1
-
                 return reward
-        
-                ########################### keep the ball kickable ####################################
-            #team_kickable = False
-            #team_kickable = np.array([self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)]).any() # kickable by team
-            #if team_kickable :
-            #    reward+= 1
-        
-            if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous) and not self.been_kicked_team: # uses action just performed, with previous obs, (both at T)
-                reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
-                self.been_kicked_team = True
-
-
-            ####################### penalty based on sum of square distances of excess params ##############
-            #reward += -self.get_excess_param_distance(agentID)*0.1
-            
-            ####################### penalty for invalid action  ###############################
-            '''if self.feat_lvl == 'high':        
-                    if self.team_obs[agentID][-2] == -1:
-                            reward+= -1
-            elif self.feat_lvl == 'low':        
-                    if  self.team_obs[agentID][-1] != 1:
-                            reward+= -1'''
-                            
-            ####################### reduce distance to ball - using delta  ##################
-            if self.feat_lvl == 'high':
-                r,_,_ = self.distance_to_ball(self.team_obs[agentID])
-                r_prev,_,_ = self.distance_to_ball(self.team_obs_previous[agentID])
-                reward += (r_prev - r) # if [prev > r] ---> positive; if [r > prev] ----> negative
-            elif self.feat_lvl == 'low':
-                prox_cur = self.ball_proximity(self.team_obs[agentID])
-                prox_prev = self.ball_proximity(self.team_obs_previous[agentID])
-                reward   += prox_cur - prox_prev # if cur > prev --> +     
-            ##################################################################################
-            
-            ####################### reduce ball distance to goal - using delta  ##################
-            r,_,_ = self.ball_distance_to_goal(self.team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-            r_prev,_,_ = self.ball_distance_to_goal(self.team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-            reward += (3)*(r_prev - r)*.6
-            
-            ##################################################################################
-            
-            if s=='Goal_By_Left':
-                reward+=5
-
-            elif s=='Goal_By_Right':
-                reward+=-5
-            elif s=='OutOfBounds':
-                reward+=-0.5
-            #---------------------------
-            #Cause Unknown Do Nothing
-            #elif s=='OutOfTime':
-            #    reward+=-100
-            #---------------------------
-            #elif s=='InGame':
-            #    reward+=0
-            #---------------------------
-            #elif s=='SERVER_DOWN':
-            #    reward+=0
-            #---------------------------
-            #else:
-            #    print("Error: Unknown GameState", s)
-            #    reward = -1
-        else:
-            # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
-            if self.d:
+            else:
                 if s=='Goal_By_Right':
                     reward+=5
                 elif s=='Goal_By_Left':
                     reward+=-5
                 elif s=='OutOfBounds':
-                    reward+=-0.5
+                    reward+=-0.2
                 #---------------------------
                 #Cause Unknown Do Nothing
                 #elif s=='OutOfTime':
@@ -574,86 +533,66 @@ class HFO_env():
                 #else:
                 #    print("Error: Unknown GameState", s)
                 #    reward = -1
-
                 return reward
-        
-        
-        
-        
-                ########################### keep the ball kickable ####################################
-            #team_kickable = False
-            #team_kickable = np.array([self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)]).any() # kickable by team
-            #if team_kickable :
-            #    reward+= 1
-        
-            if self.action_list[self.opp_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.opp_team_obs_previous) and not self.been_kicked_opp: # uses action just performed, with previous obs, (both at T)
-                reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
-                self.been_kicked_opp = True
             
-            # out of bounds penalty
-            #if self.team_obs[agentID][46] > .99 or self.team_obs[agentID][47] > .99 or self.team_obs[agentID][48] > .99  or self.team_obs[agentID][49] > .99:
-            #    reward += -.1
-            
-            
-            # add a penalty for rnning out of stamina?
-            
+        if self.team_base == base:
+            team_actions = self.team_actions
+            team_obs = self.team_obs
+            team_obs_previous = self.team_obs_previous
+            been_kicked = self.been_kicked_team
+            num_ag = self.num_TA
+        else:
+            team_actions = self.opp_actions
+            team_obs = self.opp_team_obs
+            team_obs_previous = self.opp_team_obs_previous
+            been_kicked = self.been_kicked_opp
+            num_ag = self.num_OA
+                
+        
 
-            ####################### penalty based on sum of square distances of excess params ##############
-            #reward += -self.get_excess_param_distance(agentID)*0.1
-            
+        if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous) and not been_kicked: # uses action just performed, with previous obs, (both at T)
+            reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
+            if self.team_base == base:
+                self.been_kicked_team = True
+            else:
+                self.been_kicked_base = True
+        team_reward += self.possession_reward(been_kicked) 
+
+
             ####################### penalty for invalid action  ###############################
-            '''if self.feat_lvl == 'high':        
-                    if self.team_obs[agentID][-2] == -1:
-                            reward+= -1
+        '''if self.feat_lvl == 'high':        
+                if team_obs[agentID][-2] == -1:
+                    reward+= -1
             elif self.feat_lvl == 'low':        
-                    if  self.team_obs[agentID][-1] != 1:
-                            reward+= -1'''
+                if  team_obs[agentID][-1] != 1:
+                    reward+= -1'''
                             
-            ####################### reduce distance to ball - using delta  ##################
-            if self.feat_lvl == 'high':
-                r,_,_ = self.distance_to_ball(self.opp_team_obs[agentID])
-                r_prev,_,_ = self.distance_to_ball(self.opp_team_obs_previous[agentID])
-                reward += (r_prev - r) # if [prev > r] ---> positive; if [r > prev] ----> negative
-            elif self.feat_lvl == 'low':
-                prox_cur = self.ball_proximity(self.opp_team_obs[agentID])
-                prox_prev = self.ball_proximity(self.opp_team_obs_previous[agentID])
-                reward   += prox_cur - prox_prev # if cur > prev --> +     
-            ##################################################################################
             
-            ####################### reduce ball distance to goal - using delta  ##################
-            r,_,_ = self.ball_distance_to_goal(self.opp_team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-            r_prev,_,_ = self.ball_distance_to_goal(self.opp_team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-            reward += (3)*(r_prev - r)*.6
+        ####################### reduce distance to ball - using delta  ##################
+        if self.feat_lvl == 'high':
+            r,_,_ = self.distance_to_ball(team_obs[agentID])
+            r_prev,_,_ = self.distance_to_ball(team_obs_previous[agentID])
+            reward += (r_prev - r) # if [prev > r] ---> positive; if [r > prev] ----> negative
+        elif self.feat_lvl == 'low':
+            prox_cur = self.ball_proximity(team_obs[agentID])
+            prox_prev = self.ball_proximity(team_obs_previous[agentID])
+            reward   += prox_cur - prox_prev # if cur > prev --> +   
+                
+        ####################### closest player to ball ###################################
+        if self.feat_lvl == 'low':
+            prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
+            prox_prev,_ = self.closest_player_to_ball(team_obs_previous, num_ag)
+            # print('This is the reward for getting closer to the ball for the team', str(prox_cur - prox_prev), 'for index', str(test), 'for agent', str(self.team_envs[test].getUnum()))
+            team_reward += prox_cur - prox_prev
+        ##################################################################################
             
-            ##################################################################################
-            
-            if s=='Goal_By_Left':
-                reward+=5
-
-            elif s=='Goal_By_Right':
-                reward+=-5
-            #---------------------------
-            #elif s=='CapturedByDefense':
-            #    reward+=-100
-            #---------------------------
-            elif s=='OutOfBounds':
-               reward+=-0.5
-            #---------------------------
-            #Cause Unknown Do Nothing
-            #elif s=='OutOfTime':
-            #    reward+=-100
-            #---------------------------
-            #elif s=='InGame':
-            #    reward+=0
-            #---------------------------
-            #elif s=='SERVER_DOWN':
-            #    reward+=0
-            #---------------------------
-            #else:
-            #    print("Error: Unknown GameState", s)
-            #    reward = -1
-
-        return reward
+        ####################### reduce ball distance to goal - using delta  ##################
+        r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+        r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+        team_reward += (3)*(r_prev - r)*.6
+        ##################################################################################
+        rew_percent = 1.0*(self.team_rew_anneal_ep - ep_num)/self.team_rew_anneal_ep
+        return team_reward + (reward * rew_percent)
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -693,8 +632,11 @@ class HFO_env():
 
         # Once all agents have been loaded,
         # wait for action command, take action, update: obs, reward, and world status
+        ep_num = 0
+
         while(True):
             while(self.start):
+                ep_num += 1
                 j = 0 # j to maximum episode length
                 self.sync_at_status_team = np.zeros(self.num_TA)
                 self.sync_at_status_opp = np.zeros(self.num_OA)
@@ -824,11 +766,11 @@ class HFO_env():
 
                     if self.team_base == base:
                         self.team_rewards[agent_ID] = self.getReward(
-                            self.team_envs[agent_ID].statusToString(self.world_status),agent_ID,base) # update reward
+                            self.team_envs[agent_ID].statusToString(self.world_status),agent_ID,base,ep_num) # update reward
                         self.sync_before_step_team[agent_ID] += 1
                     else:
                         self.opp_rewards[agent_ID] = self.getReward(
-                            self.opp_team_envs[agent_ID].statusToString(self.world_status),agent_ID,base) # update reward
+                            self.opp_team_envs[agent_ID].statusToString(self.world_status),agent_ID,base,ep_num) # update reward
                         self.sync_before_step_opp[agent_ID] += 1
 
                     j+=1
