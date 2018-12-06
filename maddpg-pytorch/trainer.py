@@ -25,7 +25,11 @@ import subprocess
 
 def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',port=7000,
                 num_TA=1,num_ONPC=0, fpt = 500,device="cpu",use_viewer=False):
-    
+
+    print('killing the evaluation server from inside the thread')
+
+    subprocess.Popen("ps -ef | grep 7000 | awk '{print $2}' | xargs kill",shell=True)
+    time.sleep(1)
     env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
                          untouched_time = 500,fullstate=True,offense_on_ball=False,
                          port=port,log_dir=log_dir)
@@ -97,8 +101,6 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
                 
     team_step_logger_df.to_csv('%s.csv' % log)
     env.kill_viewer()
-    subprocess.Popen("ps -ef | grep 7000 | awk 'NR!=1 {print $2}' | xargs sudo kill",shell=True)
-    
     
 #launch_eval(['models/2_vs_2/time_12_4_9/model_episode_2_agent_0.pth','models/2_vs_2/time_12_4_9/model_episode_2_agent_1.pth'],eval_episodes = 10,log_dir = "eval",log='eval',port=6000,num_TNPC = 0,num_TA=2,num_OA=0, num_ONPC=0, fpt = 500,device="cuda")
 
