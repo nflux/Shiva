@@ -46,7 +46,10 @@ class HFO_env():
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
                  offense_on_ball=0, fullstate = False, seed = 123,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-                 verbose = False, log_game=False, log_dir="log",team_rew_anneal_ep=1000):
+                 verbose = False, log_game=False, log_dir="log",team_rew_anneal_ep=1000,
+                 agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
+                 change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
+                 change_balls_y=0.1, control_rand_init=False):
         
 
         """ Initializes HFO_Env
@@ -78,7 +81,12 @@ class HFO_env():
                                fullstate = fullstate, seed = seed,
                                ball_x_min = ball_x_min, ball_x_max = ball_x_max,
                                ball_y_min= ball_y_min, ball_y_max= ball_y_max,
-                               verbose = verbose, log_game = log_game, log_dir = log_dir)
+                               verbose = verbose, log_game = log_game, log_dir = log_dir,
+                               agents_x_min=agents_x_min, agents_x_max=agents_x_max,
+                               agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+                               change_every_x=change_every_x, change_agents_x=change_agents_x,
+                               change_agents_y=change_agents_y, change_balls_x=change_balls_x,
+                               change_balls_y=change_balls_y, control_rand_init=control_rand_init)
 
         self.viewer = None
         self.sleep_timer = 0.0000001 # sleep timer
@@ -798,7 +806,12 @@ class HFO_env():
                               ball_x_min=-0.8, ball_x_max=0.8,
                               ball_y_min=-0.8, ball_y_max=0.8,
                               verbose=False, log_game=False,
-                              log_dir="log"):
+                              log_dir="log",
+                              agents_x_min=0.0, agents_x_max=0.0,
+                              agents_y_min=0.0, agents_y_max=0.0,
+                              change_every_x=1, change_agents_x=0.1,
+                              change_agents_y=0.1, change_balls_x=0.1,
+                              change_balls_y=0.1, control_rand_init=False):
             """
             Starts the Half-Field-Offense server.
             frames_per_trial: Episodes end after this many steps.
@@ -822,7 +835,8 @@ class HFO_env():
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
-                  " --ball-x-max %f --ball-y-min %f --ball-y-max %f --log-dir %s --record"\
+                  " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
+                  " --log-dir %s --record"\
                   % (frames_per_trial, untouched_time, offense_agents,
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,
@@ -831,6 +845,14 @@ class HFO_env():
             if fullstate:     cmd += " --fullstate"
             if verbose:       cmd += " --verbose"
             if not log_game:  cmd += " --no-logging"
+            if control_rand_init:
+                cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
+                        " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
+                        " --change-balls-x %f --change-balls-y %f --control-rand-init"\
+                        % (agents_x_min, agents_x_max, agents_y_min, agents_y_max,
+                            change_every_x, change_agents_x, change_agents_y,
+                            change_balls_x, change_balls_y)
+
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
             time.sleep(3) # Wait for server to startup before connecting a player

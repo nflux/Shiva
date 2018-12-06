@@ -43,7 +43,7 @@ history = args.log
 # options ------------------------------
 action_level = 'low'
 feature_level = 'low'
-USE_CUDA = True 
+USE_CUDA = False 
 if USE_CUDA:
     device = 'cuda'
     to_gpu = True
@@ -51,7 +51,7 @@ else:
     to_gpu = False
     device = 'cpu'
 
-use_viewer = False
+use_viewer = True
 n_training_threads = 8
 use_viewer_after = 10 # If using viewer, uses after x episodes
 # default settings ---------------------
@@ -132,25 +132,41 @@ SIL = False
 SIL_update_ratio = 3
 #---------------------------------------
 #Critic Input Modification 
-critic_mod = True
+critic_mod = False
 # NOTE: When both are False but critic_mod is true the critic takes both
 # actions and observations from the opposing side
 critic_mod_act = False
 critic_mod_obs = False
 critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
 #---------------------------------------
+# Control Random Initilization of Agents and Ball
+control_rand_init = True
+ball_x_min = -0.1
+ball_x_max = 0.1
+ball_y_min = -0.1
+ball_y_max = 0.1
+agents_x_min = -0.1
+agents_x_max = 0.1
+agents_y_min = -0.1
+agents_y_max = 0.1
+change_every_x = 5
+change_agents_x = 0.1
+change_agents_y = 0.1
+change_balls_x = 0.1
+change_balls_y = 0.1
+
 # Self-play ----------------------------
-load_random_nets = True
+load_random_nets = False
 load_random_every = 10
 # --------------------------------------
 #Save/load -----------------------------
-save_nns = True
+save_nns = False
 ep_save_every = 3 # episodes
 load_nets = False # load networks from file
 first_save = False # build multiple master policies for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
-evaluate = True
+evaluate = False
 eval_after = 4
 eval_episodes = 3
 # --------------------------------------
@@ -182,8 +198,14 @@ if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
     
 
-env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, num_trials = num_episodes, fpt = episode_length, # create environment
-              feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,offense_on_ball=False,port=port,log_dir=log_dir,team_rew_anneal_ep=team_rew_anneal_ep)
+env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, 
+                num_trials = num_episodes, fpt = episode_length, # create environment
+                feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
+                ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
+                offense_on_ball=False,port=port,log_dir=log_dir,team_rew_anneal_ep=team_rew_anneal_ep,
+                agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+                change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
+                change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init)
 
 if use_viewer:
     env._start_viewer()

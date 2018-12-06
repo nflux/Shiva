@@ -80,6 +80,16 @@ def main(args):
                   'server::hfo_max_ball_pos_x=%f ' \
                   'server::hfo_min_ball_pos_y=%f ' \
                   'server::hfo_max_ball_pos_y=%f ' \
+                  'server::agents_min_pos_x=%f ' \
+                  'server::agents_max_pos_x=%f ' \
+                  'server::agents_min_pos_y=%f ' \
+                  'server::agents_max_pos_y=%f ' \
+                  'server::increment_every_x_episodes=%i ' \
+                  'server::increment_agents_x_pos=%f ' \
+                  'server::increment_agents_y_pos=%f ' \
+                  'server::increment_ball_x_pos=%f ' \
+                  'server::increment_ball_y_pos=%f ' \
+                  'server::control_random_initialization=%i ' \
                   'server::say_msg_size=%i ' \
                   'server::record_messages=%i' \
                   %(server_port, coach_port, olcoach_port,
@@ -90,6 +100,10 @@ def main(args):
                     args.offenseOnBall, args.seed, args.maxUntouchedTime,
                     args.min_ball_x, args.max_ball_x,
                     args.min_ball_y, args.max_ball_y,
+                    args.min_agents_x, args.max_agents_x,
+                    args.min_agents_y, args.max_agents_y,
+                    args.change_every_x_ep, args.change_agents_x, args.change_agents_y,
+                    args.change_balls_x, args.change_balls_y, args.control_rand_init,
                     args.messageSize,
                     args.verbose)
 
@@ -198,14 +212,34 @@ def parseArgs():
                  help='Seed the server\'s RNG. Default: time.')
   p.add_argument('--message-size', dest='messageSize', type=int, default=1000,
                  help='Message size limit for communication')
-  p.add_argument('--ball-x-min', dest='min_ball_x', type=float, default=0.0,
-                 help='Ball initialization min x position: [0,1]. Default: 0')
-  p.add_argument('--ball-x-max', dest='max_ball_x', type=float, default=0.2,
-                 help='Ball initialization max x position: [0,1]. Default: .2')
+  p.add_argument('--ball-x-min', dest='min_ball_x', type=float, default=-0.8,
+                 help='Ball initialization min x position: [-1,1]. Default: -0.8')
+  p.add_argument('--ball-x-max', dest='max_ball_x', type=float, default=0.8,
+                 help='Ball initialization max x position: [-1,1]. Default: 0.8')
   p.add_argument('--ball-y-min', dest='min_ball_y', type=float, default=-0.8,
                  help='Ball initialization min y position: [-1,1]. Default: -0.8')
   p.add_argument('--ball-y-max', dest='max_ball_y', type=float, default=0.8,
                  help='Ball initialization max y position: [-1,1]. Default: 0.8')
+  p.add_argument('--agents-x-min', dest='min_agents_x', type=float, default=-0.8,
+                 help='Agents initialization min x position: [-1,1]. Default: -0.8')
+  p.add_argument('--agents-x-max', dest='max_agents_x', type=float, default=0.8,
+                 help='Agents initialization max x position: [-1,1]. Default: 0.8')
+  p.add_argument('--agents-y-min', dest='min_agents_y', type=float, default=-0.8,
+                 help='Agents initialization min y position: [-1,1]. Default: -0.8')
+  p.add_argument('--agents-y-max', dest='max_agents_y', type=float, default=0.8,
+                 help='Agents initialization max y position: [-1,1]. Default: 0.8')
+  p.add_argument('--change-every-x-ep', dest='change_every_x_ep', type=int, default=5,
+                 help='Changes the range of randomization of the ball and agents. Default: 5')
+  p.add_argument('--change-agents-x', dest='change_agents_x', type=float, default=0.1,
+                 help='Changes agents random range on x: [0,1]. Default: 0.1')
+  p.add_argument('--change-agents-y', dest='change_agents_y', type=float, default=0.1,
+                 help='Changes agents random range on y: [0,1]. Default: 0.1')
+  p.add_argument('--change-balls-x', dest='change_balls_x', type=float, default=0.1,
+                 help='Changes balls random range on x: [0,1]. Default: 0.1')
+  p.add_argument('--change-balls-y', dest='change_balls_y', type=float, default=0.1,
+                 help='Changes balls random range on y: [0,1]. Default: 0.1')
+  p.add_argument('--control-rand-init', dest='control_rand_init', action='store_true',
+                 default=False, help='Allows control over the randomization of the field')
   p.add_argument('--verbose', dest='verbose', action='store_true',
                  default=False, help='Print verbose output.')
   p.add_argument('--deterministic', dest='deterministic', action='store_true',
