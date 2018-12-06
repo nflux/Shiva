@@ -140,11 +140,11 @@ critic_mod_obs = False
 critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
 #---------------------------------------
 # Control Random Initilization of Agents and Ball
-control_rand_init = True
-ball_x_min = -0.1
-ball_x_max = 0.1
-ball_y_min = -0.1
-ball_y_max = 0.1
+control_rand_init = False
+ball_x_min = -0.8
+ball_x_max = 0.8
+ball_y_min = -0.8
+ball_y_max = 0.8
 agents_x_min = -0.1
 agents_x_max = 0.1
 agents_y_min = -0.1
