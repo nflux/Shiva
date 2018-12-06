@@ -80,7 +80,7 @@ explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 25  # Haus uses over 10,000 updates --
+num_explore_episodes = 50  # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -132,7 +132,7 @@ SIL = False
 SIL_update_ratio = 3
 #---------------------------------------
 #Critic Input Modification 
-critic_mod = False
+critic_mod = True
 # NOTE: When both are False but critic_mod is true the critic takes both
 # actions and observations from the opposing side
 critic_mod_act = False
@@ -145,14 +145,14 @@ load_random_every = 10
 # --------------------------------------
 #Save/load -----------------------------
 save_nns = True
-ep_save_every = 10 # episodes
+ep_save_every = 3 # episodes
 load_nets = False # load networks from file
 first_save = False # build multiple master policies for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = True
-eval_after = 10
-eval_episodes = 10
+eval_after = 4
+eval_episodes = 3
 # --------------------------------------
 # Logging ------------------------------
 session_path = None

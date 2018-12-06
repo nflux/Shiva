@@ -487,6 +487,9 @@ class MADDPG(object):
         # Train critic ------------------------
         curr_agent.critic_optimizer.zero_grad()
         
+        start = time.time()
+        #print("time critic")
+
         if zero_values:
             all_trgt_acs = [torch.cat(
                 # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
@@ -516,7 +519,7 @@ class MADDPG(object):
                 opp_all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(opp_target_policies,opp_next_obs)]
             else:
                 all_trgt_acs = [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]
-                opp_all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+                opp_all_trgt_acs = [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
         if act_only:
             mod_next_obs = next_obs
             mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1) # team actions is last for inv grad indices
@@ -586,16 +589,23 @@ class MADDPG(object):
                 vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
             else:
                 vf_loss = F.mse_loss(actual_value, target_value)
-                
-            
+                        
+        end = time.time()
+        #print(end - start)
+        
         vf_loss.backward() 
+        
         if parallel:
             average_gradients(curr_agent.critic)
         torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
         curr_agent.critic_optimizer.step()
         curr_agent.policy_optimizer.zero_grad()
         
+
         # Train actor -----------------------
+                
+        start = time.time()
+        #print("time actor")
         if count % self.TD3_delay_steps == 0:
             if self.discrete_action:
                 # Forward pass as if onehot (hard=True) but backprop through a differentiable
@@ -678,6 +688,9 @@ class MADDPG(object):
             hook.remove()
             if self.niter % 100 == 0:
                 print("Team (%s) Agent (%i) Actor loss:" % (side,agent_i),pol_loss)
+                
+        end = time.time()
+        #print(end - start)
         # I2A --------------------------------------
         if self.I2A:
             # Update policy prime

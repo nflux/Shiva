@@ -291,8 +291,8 @@ class I2A_Network(nn.Module):
             self.final_out_action = self.out_action_fn(self.out_action(h4))
             self.final_out_params = self.out_param_fn(self.out_param(h4))
             out = torch.cat((self.final_out_action, self.final_out_params),1)
-            if self.count % 100 == 0:
-                print(out)
+            #if self.count % 100 == 0:
+            #    print(out)
             self.count += 1
 
         return out

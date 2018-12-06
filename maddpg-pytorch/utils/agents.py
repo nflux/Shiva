@@ -32,6 +32,7 @@ class DDPGAgent(object):
             num_in_critic = num_in_critic + (num_in_pol * maddpg.nagents_team)
 
         
+        self.counter = 0
         self.updating_actor = False
         self.maddpg = maddpg
         self.param_dim = 5
@@ -124,6 +125,9 @@ class DDPGAgent(object):
         """
         
         action = self.policy(obs)
+        #if self.counter % 100 == 0:
+            #print(action)
+        self.counter +=1
         #print(action)
         # mixed disc/cont
         if explore:     
