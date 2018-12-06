@@ -43,7 +43,7 @@ history = args.log
 # options ------------------------------
 action_level = 'low'
 feature_level = 'low'
-USE_CUDA = False 
+USE_CUDA = True 
 if USE_CUDA:
     device = 'cuda'
     to_gpu = True
@@ -69,7 +69,7 @@ num_TNPC = 0
 num_ONPC = 0
 team_rew_anneal_ep = 1000
 # hyperparams--------------------------
-batch_size = 32
+batch_size = 128
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -93,7 +93,7 @@ n_steps = 5 # n-step update size
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
 initial_beta = 1.0
 final_beta = 0.0 #
-num_beta_episodes = 1000
+num_beta_episodes = 10
 #---------------------------------------
 train_team = True
 train_opp = False
@@ -156,19 +156,19 @@ change_balls_x = 0.1
 change_balls_y = 0.1
 
 # Self-play ----------------------------
-load_random_nets = False
+load_random_nets = True
 load_random_every = 10
 # --------------------------------------
 #Save/load -----------------------------
-save_nns = False
-ep_save_every = 3 # episodes
+save_nns = True
+ep_save_every = 99 # episodes
 load_nets = False # load networks from file
 first_save = False # build multiple master policies for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
-evaluate = False
-eval_after = 4
-eval_episodes = 3
+evaluate = True
+eval_after = 101
+eval_episodes = 20
 # --------------------------------------
 # Logging ------------------------------
 session_path = None
