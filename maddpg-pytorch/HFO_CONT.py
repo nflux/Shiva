@@ -8,7 +8,7 @@ import itertools
 import argparse
 #import tensorflow.contrib.slim as slim
 import numpy as np
-from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process
+from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process,prep_session
 from torch import Tensor
 from HFO import hfo
 import time
@@ -23,7 +23,6 @@ from algorithms.maddpg import MADDPG
 from HFO_env import *
 from trainer import launch_eval
 import _thread as thread
-import shutil
 
 # Parseargs --------------------------------------------------------------
 parser = argparse.ArgumentParser(description='Load port and log directory')
@@ -51,7 +50,7 @@ else:
     to_gpu = False
     device = 'cpu'
 
-use_viewer = True
+use_viewer = False
 n_training_threads = 8
 use_viewer_after = 10 # If using viewer, uses after x episodes
 # default settings ---------------------
@@ -59,7 +58,7 @@ num_episodes = 100000
 replay_memory_size = 1000000
 episode_length = 500 # FPS
 untouched_time = 500
-burn_in_iterations = 500 # for time step
+burn_in_iterations = 10000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # Team ---------------------------------
@@ -141,10 +140,10 @@ critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and c
 #---------------------------------------
 # Control Random Initilization of Agents and Ball
 control_rand_init = False
-ball_x_min = -0.8
-ball_x_max = 0.8
-ball_y_min = -0.8
-ball_y_max = 0.8
+ball_x_min = -0.1
+ball_x_max = 0.1
+ball_y_min = -0.1
+ball_y_max = 0.1
 agents_x_min = -0.1
 agents_x_max = 0.1
 agents_y_min = -0.1
@@ -158,19 +157,21 @@ change_balls_y = 0.1
 # Self-play ----------------------------
 load_random_nets = True
 load_random_every = 10
+k_ensembles = 3
+current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
 save_nns = True
-ep_save_every = 99 # episodes
+ep_save_every = 10 # episodes
 load_nets = False # load networks from file
-first_save = False # build multiple master policies for ensemble
+first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = True
-eval_after = 101
+eval_after = 100
 eval_episodes = 20
 # --------------------------------------
-# Logging ------------------------------
+# Prep Session Files ------------------------------
 session_path = None
 current_day_time = datetime.datetime.now()
 session_path = 'training_sessions/' + \
@@ -182,9 +183,8 @@ hist_dir = session_path +"history"
 eval_hist_dir = session_path +"eval_history"
 eval_log_dir = session_path +"eval_log" # evaluation logfiles
 load_path = session_path +"models/"
-directories = [session_path,eval_log_dir, eval_hist_dir,load_path, hist_dir, log_dir]
-[shutil.rmtree(path) for path in directories if os.path.isdir(path)]
-[os.makedirs(path) for path in directories if not os.path.exists(path)] # generate directories 
+ensemble_path = session_path +"ensemble_models/"
+prep_session(session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,log_dir,num_TA) # Generates directories and files for the session
 # --------------------------------------
 # initialization -----------------------
 t = 0
@@ -763,26 +763,25 @@ for ep_i in range(0, num_episodes):
                 
   
             if first_save: # Generate list of ensemble networks
-                if ep_i > 1 and ep_i%ep_save_every == 0 and save_nns:
-
-                    file_name = 'master_model' + str(ep_i)
-                    maddpg.first_save(file_name,num_copies = 3)
+                file_path = ensemble_path
+                maddpg.first_save(file_path,num_copies = k_ensembles)
                 first_save = False
-            else: # Save networks
-                if ep_i > 1 and ep_i%ep_save_every == 0 and save_nns:
-                    file_name = load_path + 'model_episode_' + str(ep_i) 
-                    maddpg.save(file_name)
+            # Save networks
+            if ep_i > 1 and ep_i%ep_save_every == 0 and save_nns:
+                maddpg.save(load_path,ep_i)
+                maddpg.save_ensembles(ensemble_path,current_ensembles)
 
             # Launch evaluation session
             if ep_i > 1 and ep_i % eval_after == 0 and evaluate:
                 thread.start_new_thread(launch_eval,(
-                    [file_name + ("_agent_%i" % i) + ".pth" for i in range(env.num_TA)],
+                    [load_path + ("/agent_%i/model_episode_%i.pth" % (i,ep_i)) for i in range(env.num_TA)], # models directory -> agent -> most current episode
                     eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation_ep" + str(ep_i),
                     7000,env.num_TA,env.num_OA,episode_length,device,use_viewer,))
             
-            # Load random networks into opponent
+            # Load random networks into team from ensemble and opponent from all models
             if ep_i > 1 and ep_i % load_random_every == 0 and load_random_nets:
                 maddpg.load_random_networks(side='opp',nagents = num_OA,models_path = load_path)
+                current_ensembles = maddpg.load_random_networks(side='team',nagents=num_TA,models_path = ensemble_path)
             break;  
 
                 

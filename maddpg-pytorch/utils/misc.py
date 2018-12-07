@@ -5,7 +5,24 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from torch.autograd import Variable
 import numpy as np
+import shutil
 
+def prep_session(session_path="",hist_dir="history",eval_hist_dir= "eval_history",eval_log_dir = "eval_log",load_path = "models/",ensemble_path = "ensemble_models/",log_dir="log",num_TA=1):
+    hist_dir = hist_dir
+    eval_hist_dir = eval_hist_dir
+    eval_log_dir =  eval_log_dir
+    load_path =  load_path
+    ensemble_path = ensemble_path
+    directories = [session_path,eval_log_dir, eval_hist_dir,load_path, hist_dir, log_dir,ensemble_path]
+
+    [shutil.rmtree(path) for path in directories if os.path.isdir(path)]
+    [shutil.rmtree(path) for path in [ensemble_path + ("ensemble_agent_%i" % j) for j in range(num_TA)] if os.path.isdir(path)] 
+    [shutil.rmtree(path) for path in [load_path + ("agent_%i" % j) for j in range(num_TA)] if os.path.isdir(path)] 
+    [os.makedirs(path) for path in [ensemble_path + ("ensemble_agent_%i" % j) for j in range(num_TA)] if not os.path.exists(path)] # generate ensemble model paths for each agent
+    [os.makedirs(path) for path in [load_path + ("agent_%i" % j) for j in range(num_TA)] if not os.path.exists(path)] # generate model paths for each agent
+    [os.makedirs(path) for path in directories if not os.path.exists(path)] # generate directories 
+    
+    
 
 def processor(tensor,device):
     if device == 'cuda':

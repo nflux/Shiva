@@ -11,3 +11,4 @@ maddpg-pytorch/HFO/bin/teams/base/sample_coach
 maddpg-pytorch/HFO/bin/teams/base/sample_player
 maddpg-pytorch/HFO/bin/teams/base/sample_trainer
 maddpg-pytorch/HFO/example/thread_agents
+maddpg-pytorch/training_sessions

@@ -1639,38 +1639,47 @@ class MADDPG(object):
     def load_random_networks(self,side='team',nagents=1,models_path="models"):
         """
         Load new networks into the currently running session
+        Returns the index chosen for each agent
         """
-        files = os.listdir(models_path)
-        random_files = random.sample(files,nagents)
-        filenames = [models_path + rf for rf in random_files]        
-        save_dicts = np.asarray([torch.load(filename) for filename in filenames])
+        folders = os.listdir(models_path)
+        folders.sort()
         
+        ind = [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
+        folder = [folder for folder in folders] # the folder names for each agents model
+        filenames = []
+        for i,f in zip(ind,folder):
+            current = os.listdir(models_path +f)
+            if side == 'team':
+                current.sort()
+            filenames.append(current[i])
+        
+        save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
         for i in range(nagents):
             if side=='team':
                 self.team_agents[i].load_params(save_dicts[i]['agent_params'])
             else:
                 self.opp_agents[i].load_params(save_dicts[i]['agent_params'])
+        return ind
                 
             
                                           
-    #def first_save(self, filename,num_copies=1):
-    #    """
-    #    Save trained parameters of all agents into one file
-    #    """
-    #    self.prep_training(device='cpu')  # move parameters to CPU before saving
-    #    save_dicts = np.asarray([{'init_dict': self.init_dict,
-    #                 'agent_params': a.get_params() } for a in (self.team_agents)])
-    #    [torch.save(save_dicts[i], filename + "_agent_%i" % i) for in i in range(len(self.team_agents))]
-
-    def save(self, filename):
+    def first_save(self, file_path,num_copies=1):
         """
-        Save trained parameters of all agents into one file
-        """
+        Makes K clones of each agent to be used as the ensemble agents"""
         self.prep_training(device='cpu')  # move parameters to CPU before saving
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
-        [torch.save(save_dicts[i], filename +("_agent_%i" % i) + '.pth') for i in range(len(self.team_agents))]
-        self.prep_training(device=self.device)
+        [torch.save(save_dicts[i], file_path + ("ensemble_agent_%i" % i) + "/model_%i.pth" % j) for i in range(len(self.team_agents)) for j in range(num_copies)]
+
+    def save(self, filename,ep_i):
+        """
+        Save trained parameters of all agents into one file
+        """
+        #self.prep_training(device='cpu')  # move parameters to CPU before saving
+        save_dicts = np.asarray([{'init_dict': self.init_dict,
+                     'agent_params': a.get_params() } for a in (self.team_agents)])
+        [torch.save(save_dicts[i], filename +("agent_%i/model_episode_%i.pth" % (i,ep_i))) for i in range(len(self.team_agents))]
+        #self.prep_training(device=self.device)
         
     @classmethod
     def init_from_save_selfplay(cls, filenames=list,nagents=1):
@@ -1704,3 +1713,17 @@ class MADDPG(object):
             instance.team_agents[i].load_params(save_dicts[i]['agent_params'] ) # first n agents
 
         return instance
+    
+    def save_ensembles(self, ensemble_path,current_ensembles):
+        """
+        Save trained parameters of all agents into one file
+        """
+        #self.prep_training(device='cpu')  # move parameters to CPU before saving
+        
+        save_dicts = np.asarray([{'init_dict': self.init_dict,
+                     'agent_params': a.get_params() } for a in (self.team_agents)])
+        [torch.save(save_dicts[i], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (i,j))) for i,j in zip(range(len(self.team_agents)),current_ensembles)]
+       
+    
+        #self.prep_training(device=self.device)
+        
