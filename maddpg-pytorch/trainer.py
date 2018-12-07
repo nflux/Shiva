@@ -42,15 +42,15 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     time.sleep(1.5)
     maddpg.scale_noise(0.0)
     maddpg.reset_noise()
-    team_kickable_counter = 0
     t = 0
-    time_step = 0
     maddpg.prep_training(device=device) # GPU for forward passes?? 
 
     if use_viewer:
         env._start_viewer()
     # launch evaluation episodes
     for ep_i in range(eval_episodes):
+        time_step = 0
+        team_kickable_counter = 0
         for et_i in range(fpt):
             torch_obs_team = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
                                     requires_grad=False)
@@ -89,7 +89,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
             time_step += 1
             t += 1
             if d == True:
-                team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
+                team_step_logger_df = team_step_logger_df.append({'time_steps': time_step,
                                                         'why': env.team_envs[0].statusToString(world_stat),
                                                         'kickable_percentages': (team_kickable_counter/time_step) * 100,
                                                         'goals_scored': env.scored_counter_left/env.num_TA}, 
