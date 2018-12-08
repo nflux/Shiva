@@ -46,7 +46,7 @@ class evaluation_env():
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
                  offense_on_ball=0, fullstate = False, seed = 123,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-                 verbose = False, log_game=False, log_dir="log"):
+                 verbose = False, log_game=False, log_dir="log",record=True):
         
 
         """ Initializes HFO_Env
@@ -77,7 +77,7 @@ class evaluation_env():
                                fullstate = fullstate, seed = seed,
                                ball_x_min = ball_x_min, ball_x_max = ball_x_max,
                                ball_y_min= ball_y_min, ball_y_max= ball_y_max,
-                               verbose = verbose, log_game = log_game, log_dir = self.log_dir)
+                               verbose = verbose, log_game = log_game, log_dir = log_dir,record=record)
 
         self.viewer = None
         self.sleep_timer = 0.0000001 # sleep timer
@@ -102,6 +102,7 @@ class evaluation_env():
         self.num_OA = num_OA
         self.num_ONPC = num_ONPC
 
+        self.exit = False
         self.base = base
         self.fpt = fpt
         self.been_kicked_team = False
@@ -685,7 +686,7 @@ class evaluation_env():
         elif feat_lvl == 'high':
             feat_lvl = hfo.HIGH_LEVEL_FEATURE_SET
         config_dir=get_config_path() 
-
+        trial = 0
         if self.team_base == base:
             self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                 server_port=port, server_addr='localhost', team_name=base,
@@ -701,8 +702,11 @@ class evaluation_env():
 
         # Once all agents have been loaded,
         # wait for action command, take action, update: obs, reward, and world status
-        while(True):
+        while not self.exit:
             while(self.start):
+                if trial == 10:
+                    self.exit = True
+                    break
                 j = 0 # j to maximum episode length
                 self.sync_at_status_team = np.zeros(self.num_TA)
                 self.sync_at_status_opp = np.zeros(self.num_OA)
@@ -847,8 +851,10 @@ class evaluation_env():
 
                     # Break if episode done
                     if self.d == True:
-                        #print('This is becoming true!!!!!!!!')
+                        trial += 1
                         break
+        print("Exiting evaluation env")            
+            
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -863,7 +869,7 @@ class evaluation_env():
                               ball_x_min=-0.8, ball_x_max=0.8,
                               ball_y_min=-0.8, ball_y_max=0.8,
                               verbose=False, log_game=False,
-                              log_dir="log"):
+                              log_dir="log",record=True):
             """
             Starts the Half-Field-Offense server.
             frames_per_trial: Episodes end after this many steps.
@@ -888,7 +894,7 @@ class evaluation_env():
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
-                  " --ball-x-max %f --ball-y-min %f --ball-y-max %f --log-dir %s --record"\
+                  " --ball-x-max %f --ball-y-min %f --ball-y-max %f --log-dir %s"\
                   % (frames_per_trial, untouched_time, offense_agents,
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,
@@ -897,6 +903,7 @@ class evaluation_env():
             if fullstate:     cmd += " --fullstate"
             if verbose:       cmd += " --verbose"
             if not log_game:  cmd += " --no-logging"
+            if record:        cmd += " --record"
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
             time.sleep(3) # Wait for server to startup before connecting a player

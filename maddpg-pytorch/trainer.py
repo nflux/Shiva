@@ -32,7 +32,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     time.sleep(1)
     env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
                          untouched_time = 500,fullstate=True,offense_on_ball=False,
-                         port=port,log_dir=log_dir)
+                         port=port,log_dir=log_dir,record=False)
     time.sleep(2.0)
     maddpg = MADDPG.init_from_save_evaluation(filenames,num_TA)
     time.sleep(1.5)
@@ -102,7 +102,3 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     team_step_logger_df.to_csv('%s.csv' % log)
     env.kill_viewer()
     
-#launch_eval(['models/2_vs_2/time_12_4_9/model_episode_2_agent_0.pth','models/2_vs_2/time_12_4_9/model_episode_2_agent_1.pth'],eval_episodes = 10,log_dir = "eval",log='eval',port=6000,num_TNPC = 0,num_TA=2,num_OA=0, num_ONPC=0, fpt = 500,device="cuda")
-
-#launch_eval(filenames,eval_episodes,log_dir = log_dir,log=history,port=port,num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, fpt = 500,device=device)
-

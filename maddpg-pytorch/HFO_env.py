@@ -49,7 +49,7 @@ class HFO_env():
                  verbose = False, log_game=False, log_dir="log",team_rew_anneal_ep=1000,
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
                  change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
-                 change_balls_y=0.1, control_rand_init=False):
+                 change_balls_y=0.1, control_rand_init=False,record=True):
         
 
         """ Initializes HFO_Env
@@ -86,7 +86,7 @@ class HFO_env():
                                agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                                change_every_x=change_every_x, change_agents_x=change_agents_x,
                                change_agents_y=change_agents_y, change_balls_x=change_balls_x,
-                               change_balls_y=change_balls_y, control_rand_init=control_rand_init)
+                               change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record)
 
         self.viewer = None
         self.sleep_timer = 0.0000001 # sleep timer
@@ -811,7 +811,7 @@ class HFO_env():
                               agents_y_min=0.0, agents_y_max=0.0,
                               change_every_x=1, change_agents_x=0.1,
                               change_agents_y=0.1, change_balls_x=0.1,
-                              change_balls_y=0.1, control_rand_init=False):
+                              change_balls_y=0.1, control_rand_init=False,record=True):
             """
             Starts the Half-Field-Offense server.
             frames_per_trial: Episodes end after this many steps.
@@ -836,7 +836,7 @@ class HFO_env():
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --record"\
+                  " --log-dir %s"\
                   % (frames_per_trial, untouched_time, offense_agents,
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,
@@ -845,6 +845,7 @@ class HFO_env():
             if fullstate:     cmd += " --fullstate"
             if verbose:       cmd += " --verbose"
             if not log_game:  cmd += " --no-logging"
+            if record:        cmd += " --record"
             if control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

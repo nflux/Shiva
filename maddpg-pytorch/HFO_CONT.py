@@ -52,13 +52,13 @@ else:
 
 use_viewer = False
 n_training_threads = 8
-use_viewer_after = 10 # If using viewer, uses after x episodes
+use_viewer_after = 2000 # If using viewer, uses after x episodes
 # default settings ---------------------
 num_episodes = 100000
-replay_memory_size = 1000000
+replay_memory_size = 250000
 episode_length = 500 # FPS
 untouched_time = 500
-burn_in_iterations = 10000 # for time step
+burn_in_iterations = 2000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # Team ---------------------------------
@@ -66,14 +66,14 @@ num_TA = 2
 num_OA = 2
 num_TNPC = 0
 num_ONPC = 0
-team_rew_anneal_ep = 1000
+team_rew_anneal_ep = 5000
 # hyperparams--------------------------
-batch_size = 128
+batch_size = 512
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
 tau = 0.005 # soft update rate
-steps_per_update = 2
+steps_per_update = 1
 # exploration --------------------------
 explore = True
 final_OU_noise_scale = 0.1
@@ -156,20 +156,20 @@ change_balls_y = 0.1
 
 # Self-play ----------------------------
 load_random_nets = True
-load_random_every = 10
+load_random_every = 25
 k_ensembles = 3
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
 save_nns = True
-ep_save_every = 10 # episodes
+ep_save_every = 25 # episodes
 load_nets = False # load networks from file
 first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = True
 eval_after = 100
-eval_episodes = 20
+eval_episodes = 10
 # --------------------------------------
 # Prep Session Files ------------------------------
 session_path = None
@@ -205,7 +205,7 @@ env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC
                 offense_on_ball=False,port=port,log_dir=log_dir,team_rew_anneal_ep=team_rew_anneal_ep,
                 agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                 change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-                change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init)
+                change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=False)
 
 if use_viewer:
     env._start_viewer()
@@ -774,7 +774,7 @@ for ep_i in range(0, num_episodes):
             # Launch evaluation session
             if ep_i > 1 and ep_i % eval_after == 0 and evaluate:
                 thread.start_new_thread(launch_eval,(
-                    [load_path + ("/agent_%i/model_episode_%i.pth" % (i,ep_i)) for i in range(env.num_TA)], # models directory -> agent -> most current episode
+                    [load_path + ("agent_%i/model_episode_%i.pth" % (i,ep_i)) for i in range(env.num_TA)], # models directory -> agent -> most current episode
                     eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation_ep" + str(ep_i),
                     7000,env.num_TA,env.num_OA,episode_length,device,use_viewer,))
             
