@@ -66,7 +66,7 @@ class evaluation_env():
             HFO_Env
 
         """
-
+        self.log_dir = log_dir
         self.port = port
         self.hfo_path = get_hfo_path()
         self._start_hfo_server(frames_per_trial = fpt, untouched_time = untouched_time,
@@ -77,7 +77,7 @@ class evaluation_env():
                                fullstate = fullstate, seed = seed,
                                ball_x_min = ball_x_min, ball_x_max = ball_x_max,
                                ball_y_min= ball_y_min, ball_y_max= ball_y_max,
-                               verbose = verbose, log_game = log_game, log_dir = log_dir)
+                               verbose = verbose, log_game = log_game, log_dir = self.log_dir)
 
         self.viewer = None
         self.sleep_timer = 0.0000001 # sleep timer
@@ -183,7 +183,7 @@ class evaluation_env():
         for i in range(self.num_TA):
             print("Connecting player %i" % i , "on team %s to the server" % self.base)
             thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
-                                             False,i,self.fpt,self.act_lvl,"eval_log/",))
+                                             False,i,self.fpt,self.act_lvl,self.log_dir,))
             time.sleep(0.5)
         
         for i in range(self.num_OA):
@@ -674,12 +674,12 @@ class evaluation_env():
 
         """
 
-        if not os.path.exists(os.path.dirname(recorder_dir)):
-            try:
-                os.makedirs(os.path.dirname(recorder_dir))
-            except OSError as exc: # Guard against race condition
-                if exc.errno != errno.EEXIST:
-                    raise
+        # if not os.path.exists(os.path.dirname(recorder_dir)):
+        #     try:
+        #         os.makedirs(os.path.dirname(recorder_dir))
+        #     except OSError as exc: # Guard against race condition
+        #         if exc.errno != errno.EEXIST:
+        #             raise
         if feat_lvl == 'low':
             feat_lvl = hfo.LOW_LEVEL_FEATURE_SET
         elif feat_lvl == 'high':
@@ -687,7 +687,6 @@ class evaluation_env():
         config_dir=get_config_path() 
 
         if self.team_base == base:
-
             self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                 server_port=port, server_addr='localhost', team_name=base,
                                                     play_goalie=goalie,record_dir =recorder_dir)
