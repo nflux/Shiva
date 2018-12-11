@@ -71,7 +71,7 @@ class HFO_env():
             HFO_Env
 
         """
-
+        self.goalie = goalie
         self.team_rew_anneal_ep = team_rew_anneal_ep
         self.port = port
         self.hfo_path = get_hfo_path()
@@ -192,15 +192,25 @@ class HFO_env():
     def launch(self):
         # Create thread for each teammate
         for i in range(self.num_TA):
-            print("Connecting player %i" % i , "on team %s to the server" % self.base)
-            thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
-                                             False,i,self.fpt,self.act_lvl,))
+            if i == 0:
+                print("Connecting player %i" % i , "on team %s to the server" % self.base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                                                self.goalie,i,self.fpt,self.act_lvl,))
+            else:
+                print("Connecting player %i" % i , "on team %s to the server" % self.base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                                                False,i,self.fpt,self.act_lvl,))
             time.sleep(0.5)
         
         for i in range(self.num_OA):
-            print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
-            thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
-                                             False,i,self.fpt,self.act_lvl,))
+            if i == 0:
+                print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+                                                self.goalie,i,self.fpt,self.act_lvl,))
+            else:
+                print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+                                                False,i,self.fpt,self.act_lvl,))
             time.sleep(0.5)
         print("All players connected to server")
         self.start = True
@@ -851,7 +861,7 @@ class HFO_env():
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s"\
+                  " --log-dir %s --message-size 256"\
                   % (frames_per_trial, untouched_time, offense_agents,
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,

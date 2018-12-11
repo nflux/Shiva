@@ -174,9 +174,6 @@ class Trainer(object):
     elif event == 'OUT_OF_BOUNDS':
       self._numBallsOOB += 1
       endOfTrial = True
-    elif 'CAPTURED_BY_DEFENSE' in event:
-      self._numBallsCaptured += 1
-      endOfTrial = True
     elif event == 'OUT_OF_TIME':
       self._numOutOfTime += 1
       endOfTrial = True
@@ -347,7 +344,7 @@ class Trainer(object):
   def sendHFOConfig(self):
     """ Broadcast the HFO configuration """
     offense_nums = ' '.join([str(self.convertToExtPlayer(self._offenseTeamName, i))
-                             for i in range(1, self._numOffense + 1)])
+                             for i in range(self._numOffense)])
     defense_nums = ' '.join([str(self.convertToExtPlayer(self._defenseTeamName, i))
                              for i in range(self._numDefense)])
     self.send('(say HFO_SETUP offense_name %s defense_name %s num_offense %d'\
@@ -369,7 +366,6 @@ class Trainer(object):
     print('Trials             : %i' % self._numTrials)
     print('Goals by Left      : %i' % self._numGoalsByLeft)
     print('Goals by Right     : %i' % self._numGoalsByRight)
-    print('Defense Captured   : %i' % self._numBallsCaptured)
     print('Balls Out of Bounds: %i' % self._numBallsOOB)
     print('Out of Time        : %i' % self._numOutOfTime)
 
@@ -388,8 +384,10 @@ class Trainer(object):
     """ Run the trainer """
     try:
       (offenseTeam, defenseTeam) = self.getTeams(offense_team_name, defense_team_name)
-      offense_unums = self._offenseOrder[1: self._numOffense + 1]
-      sorted_offense_agent_unums = sorted(self._offenseOrder[1:self._offenseAgents+1])
+      offense_unums = sorted(self._offenseOrder[: self._numOffense])
+      sorted_offense_agent_unums = \
+        offense_unums[:self._offenseAgents] if self._agentPlayGoalie \
+        else offense_unums[-self._offenseAgents:]
       defense_unums = sorted(self._defenseOrder[: self._numDefense])
       sorted_defense_agent_unums = \
         defense_unums[:self._defenseAgents] if self._agentPlayGoalie \
@@ -437,7 +435,7 @@ class Trainer(object):
       while not self.allPlayersConnected():
         self.getConnectedPlayers()
 
-      time.sleep(0.1)
+      time.sleep(1)
       self.sendHFOConfig()
 
       print('Starting game')

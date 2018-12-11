@@ -90,7 +90,7 @@ def main(args):
                   'server::increment_ball_x_pos=%f ' \
                   'server::increment_ball_y_pos=%f ' \
                   'server::control_random_initialization=%i ' \
-                  'server::say_msg_size=%i ' \
+                  'server::say_coach_msg_size=%i ' \
                   'server::record_messages=%i' \
                   %(server_port, coach_port, olcoach_port,
                     args.logging, args.logging, args.hfo_logging,
@@ -245,10 +245,10 @@ def parseArgs():
   p.add_argument('--deterministic', dest='deterministic', action='store_true',
                  default=False, help='Make environment deterministic.')
   args = p.parse_args()
-  if args.offenseAgents not in list(range(0, 11)):
+  if args.offenseAgents not in list(range(0, 12)):
     p.error('argument --offense-agents: invalid choice: '\
             + str(args.offenseAgents) + ' (choose from [0-10])')
-  if args.offenseNPCs not in list(range(0, 11)):
+  if args.offenseNPCs not in list(range(0, 12)):
     p.error('argument --offense-npcs: invalid choice: '\
             + str(args.offenseNPCs) + ' (choose from [0-10])')
   if args.defenseAgents not in list(range(0, 12)):
@@ -257,7 +257,7 @@ def parseArgs():
   if args.defenseNPCs not in list(range(0, 12)):
     p.error('argument --offense-npcs: invalid choice: '\
             + str(args.defenseNPCs) + ' (choose from [0-11])')
-  if args.offenseAgents + args.offenseNPCs not in list(range(1, 11)):
+  if args.offenseAgents + args.offenseNPCs not in list(range(0, 12)):
     p.error('Offense players (offense-agents + offense-npcs): '\
             'invalid choice: ' + str(args.offenseAgents + args.offenseNPCs) +\
             ' (choose from [1,10])')

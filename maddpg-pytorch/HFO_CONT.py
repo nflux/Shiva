@@ -50,7 +50,7 @@ else:
     to_gpu = False
     device = 'cpu'
 
-use_viewer = False
+use_viewer = True
 n_training_threads = 8
 use_viewer_after = 200000 # If using viewer, uses after x episodes
 # default settings ---------------------
@@ -62,10 +62,11 @@ burn_in_iterations = 2000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 2
-num_OA = 2
+num_TA = 11
+num_OA = 11
 num_TNPC = 0
 num_ONPC = 0
+goalie = True
 team_rew_anneal_ep = 5
 # hyperparams--------------------------
 batch_size = 512
@@ -139,7 +140,7 @@ critic_mod_obs = False
 critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
 #---------------------------------------
 # Control Random Initilization of Agents and Ball
-control_rand_init = True
+control_rand_init = False
 ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
@@ -154,19 +155,19 @@ change_agents_y = 0.01
 change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
-load_random_nets = True
+load_random_nets = False
 load_random_every = 25
 k_ensembles = 3
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
-save_nns = True
+save_nns = False
 ep_save_every = 25 # episodes
 load_nets = False # load networks from file
-first_save = True # build model clones for ensemble
+first_save = False # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
-evaluate = True
+evaluate = False
 eval_after = 100
 eval_episodes = 10
 # --------------------------------------
@@ -197,7 +198,7 @@ if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
     
 
-env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, 
+env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
                 num_trials = num_episodes, fpt = episode_length, # create environment
                 feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
                 ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
