@@ -52,7 +52,7 @@ else:
 
 use_viewer = False
 n_training_threads = 8
-use_viewer_after = 2000 # If using viewer, uses after x episodes
+use_viewer_after = 200000 # If using viewer, uses after x episodes
 # default settings ---------------------
 num_episodes = 100000
 replay_memory_size = 250000
@@ -66,7 +66,7 @@ num_TA = 2
 num_OA = 2
 num_TNPC = 0
 num_ONPC = 0
-team_rew_anneal_ep = 5000
+team_rew_anneal_ep = 5
 # hyperparams--------------------------
 batch_size = 512
 hidden_dim = int(1024)
@@ -139,7 +139,7 @@ critic_mod_obs = False
 critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
 #---------------------------------------
 # Control Random Initilization of Agents and Ball
-control_rand_init = False
+control_rand_init = True
 ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
@@ -148,12 +148,11 @@ agents_x_min = -0.1
 agents_x_max = 0.1
 agents_y_min = -0.1
 agents_y_max = 0.1
-change_every_x = 5
-change_agents_x = 0.1
-change_agents_y = 0.1
-change_balls_x = 0.1
-change_balls_y = 0.1
-
+change_every_x = 10
+change_agents_x = 0.01
+change_agents_y = 0.01
+change_balls_x = 0.01
+change_balls_y = 0.01
 # Self-play ----------------------------
 load_random_nets = True
 load_random_every = 25

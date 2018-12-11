@@ -341,14 +341,22 @@ class HFO_env():
         
         return ball_prox, closest_player_index
     
-    def possession_reward(self, been_kicked):
+    def possession_reward(self, possession_side):
         '''
         teams receive reward based on possession defined by which side had the ball kickable last
         '''
-        if been_kicked == True:
-            return 0.001
-        else:
-            return -0.001
+        if self.team_base == base:
+            if possession_side == 'L':
+                    return 0.001
+            if possession_side == 'R':
+                    return -0.001
+        else: 
+            if possession_side == 'R':
+                    return 0.001
+            if possession_side == 'L':
+                    return -0.001
+        else
+            return 0.0
         
         
     def ball_distance_to_goal(self,obs):
@@ -519,6 +527,7 @@ class HFO_env():
                 #else:
                 #    print("Error: Unknown GameState", s)
                 #    reward = -1
+                possession_side = 'N' # at the end of each episode we set this to none 
                 return reward
             else:
                 if s=='Goal_By_Right':
@@ -541,30 +550,33 @@ class HFO_env():
                 #else:
                 #    print("Error: Unknown GameState", s)
                 #    reward = -1
+                possession_side = 'N'
                 return reward
             
         if self.team_base == base:
             team_actions = self.team_actions
             team_obs = self.team_obs
             team_obs_previous = self.team_obs_previous
-            been_kicked = self.been_kicked_team
+            #been_kicked = self.been_kicked_team
             num_ag = self.num_TA
         else:
             team_actions = self.opp_actions
             team_obs = self.opp_team_obs
             team_obs_previous = self.opp_team_obs_previous
-            been_kicked = self.been_kicked_opp
+            #been_kicked = self.been_kicked_opp
             num_ag = self.num_OA
                 
         
-
+         
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous) and not been_kicked: # uses action just performed, with previous obs, (both at T)
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
             if self.team_base == base:
-                self.been_kicked_team = True
+                #self.been_kicked_team = True
+                possession_side = 'L'    
             else:
-                self.been_kicked_base = True
-        team_reward += self.possession_reward(been_kicked) 
+                #self.been_kicked_opp = True
+                possession_side = 'R'
+        team_reward += self.possession_reward(possession_side) 
 
 
             ####################### penalty for invalid action  ###############################
