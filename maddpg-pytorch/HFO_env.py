@@ -347,15 +347,15 @@ class HFO_env():
         '''
         if self.team_base == base:
             if possession_side == 'L':
-                    return 0.001
+                return 0.001
             if possession_side == 'R':
-                    return -0.001
+                return -0.001
         else: 
             if possession_side == 'R':
-                    return 0.001
+                return 0.001
             if possession_side == 'L':
-                    return -0.001
-        else
+                return -0.001
+        else:
             return 0.0
         
         
