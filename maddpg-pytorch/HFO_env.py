@@ -11,6 +11,8 @@ import os, subprocess, time, signal
 
 
 
+possession_side = 'N'
+
 class HFO_env():
     """HFO_env() extends the HFO environment to allow for centralized execution.
 
@@ -176,7 +178,7 @@ class HFO_env():
 
         # keeps track of world state
         self.world_status = 0
-
+        
         self.team_base = base
         self.opp_base = ''
 
@@ -186,7 +188,7 @@ class HFO_env():
         elif base == 'base_right':
             self.opp_base = 'base_left'
 
-
+        
     def launch(self):
         # Create thread for each teammate
         for i in range(self.num_TA):
@@ -341,22 +343,23 @@ class HFO_env():
         
         return ball_prox, closest_player_index
     
-    def possession_reward(self, possession_side):
+    def possession_reward(self,base):
         '''
         teams receive reward based on possession defined by which side had the ball kickable last
         '''
+        global possession_side
         if self.team_base == base:
-            if possession_side == 'L':
+            if  possession_side == 'L':
                     return 0.001
-            if possession_side == 'R':
+            if  possession_side == 'R':
                     return -0.001
         else: 
-            if possession_side == 'R':
+            if  possession_side == 'R':
                     return 0.001
-            if possession_side == 'L':
+            if  possession_side == 'L':
                     return -0.001
-        else
-            return 0.0
+        
+        return 0.0
         
         
     def ball_distance_to_goal(self,obs):
@@ -504,7 +507,7 @@ class HFO_env():
         reward=0.0
         team_reward = 0.0
         #---------------------------
-
+        global possession_side
         if self.d:
             if self.team_base == base:
             # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
@@ -566,9 +569,9 @@ class HFO_env():
             #been_kicked = self.been_kicked_opp
             num_ag = self.num_OA
                 
-        
+
          
-        if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous) and not been_kicked: # uses action just performed, with previous obs, (both at T)
+        if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous): # and not been_kicked: # uses action just performed, with previous obs, (both at T)
             reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
             if self.team_base == base:
                 #self.been_kicked_team = True
@@ -576,7 +579,7 @@ class HFO_env():
             else:
                 #self.been_kicked_opp = True
                 possession_side = 'R'
-        team_reward += self.possession_reward(possession_side) 
+        team_reward += self.possession_reward(base) 
 
 
             ####################### penalty for invalid action  ###############################
