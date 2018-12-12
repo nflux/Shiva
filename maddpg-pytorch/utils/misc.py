@@ -79,6 +79,8 @@ def pretrain_process(fnames,timesteps,num_features):
     double_action_counter = np.array([0]*len(fnames))
     print("Loading pretrain data")
     while c < (timesteps*3):
+        if c % 30000 == 0:
+            print("reading line",c/3)
         #print(c)
         #print(contents[0][team_counters[0]])
         #print(contents[1][team_counters[1]])

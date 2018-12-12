@@ -52,7 +52,7 @@ else:
 
 use_viewer = True
 n_training_threads = 8
-use_viewer_after = 500 # If using viewer, uses after x episodes
+use_viewer_after = 1000 # If using viewer, uses after x episodes
 # default settings ---------------------
 num_episodes = 100000
 replay_memory_size = 1500000
@@ -108,12 +108,12 @@ TD3_noise = 0.01
 # (Also we must delete all the "garbage" at the beginning of the log files. The first line should be the second instance of 0 4 M StateFeatures)
 Imitation_exploration = True
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-pt_critic_updates = 250000
-pt_actor_updates = 250000
-pt_actor_critic_updates = 0
+pt_critic_updates = 150000
+pt_actor_updates = 150000
+pt_actor_critic_updates = 50000
 pt_imagination_branch_pol_updates = 500
-pt_episodes = 10000# num of episodes that you observed in the gameplay between npcs
-pt_timesteps = 1000000 # number of timesteps to load in from files
+pt_episodes = 5000# num of episodes that you observed in the gameplay between npcs
+pt_timesteps = 675000# number of timesteps to load in from files
 pt_EM_updates = 300
 pt_beta = 1.0
 #---------------------------------------
@@ -352,7 +352,9 @@ if Imitation_exploration:
                 pt_time_step +=1
                 break
 
-                
+    del team_pt_obs
+    del team_pt_status
+    del team_pt_actions
     maddpg.prep_training(device=device)
     
     if I2A:
@@ -424,6 +426,8 @@ if Imitation_exploration:
             maddpg.niter +=1
     maddpg.update_hard_critic()
 
+    
+    maddpg.scale_beta(initial_beta) # 
     # pretrain true actor-critic (non-imitation) + policy prime
     for i in range(pt_actor_critic_updates):
         if i%100 == 0:
