@@ -56,35 +56,60 @@ def e_greedy(logits, numAgents, eps=0.0):
     return torch.stack([argmax_acs[i] if r > eps else rand_acs[i] for i, r in
                         enumerate(rand)]) , ex_list
 
-def pretrain_process(fname,pt_episodes,episode_length,num_features):
-    with open(fname) as f:
-        content = f.readlines()
+def pretrain_process(fnames,timesteps,num_features):
+    contents = []
+    for fname in fnames:
+        with open(fname) as f:
+            contents.append(f.readlines())
+                          
+    for i in range(len(fnames)):
+        contents[i] = [x.strip() for x in contents[i]]
 
-    content = [x.strip() for x in content]
-    pt_obs = []
-    pt_status = []
-    pt_actions = []
-    garbage = True
-    skip_counter = 0
+        
+    team_pt_status = []
+    team_pt_obs = []
+    team_pt_actions = []
     Tackle = False
+    team_counters = np.array([0]*len(fnames))
+    team_tackles = np.array([False]*len(fnames))
+    screwy_tackle_counter = 0
+    c = 0
+
+    use_garbage_action = np.array([0]*len(fnames))
+    double_action_counter = np.array([0]*len(fnames))
     print("Loading pretrain data")
-    for c in content[:episode_length*pt_episodes*3]:
-        if c.split(' ')[3] != 'StateFeatures' and garbage:
-            next
-        else:
-            garbage = False
-        if not garbage and skip_counter < 2:
-            skip_counter +=1
-            next
-        if not garbage:
-            if c.split(' ' )[3] == 'StateFeatures':
+    while c < (timesteps*3):
+        #print(c)
+        #print(contents[0][team_counters[0]])
+        #print(contents[1][team_counters[1]])
+        #print(contents[2][team_counters[2]])
+        screwy_tackle_counter = 0
+        if contents[0][team_counters[0]].split(' ' )[3] == 'StateFeatures':
+            obs = []
+            for agent in range(len(fnames)):
                 ob = []
                 for j in range(num_features):
-                    ob.append(float(c.split(' ')[4+j]))
-            elif 'agent' in c.split(' ')[3]:
-                action_string = c.split(' ')[4]
-                #print(action_string)
-                if "Dash"  in action_string: 
+                    ob.append(float(contents[agent][team_counters[agent]].split(' ')[4+j]))
+                obs.append(ob)
+            Tackle = False
+            for agent in range(len(fnames)): #  handle no action in line
+                if contents[agent][team_counters[agent] + 1].split(' ')[3] == 'GameStatus':
+                    use_garbage_action[agent] = True
+
+        elif 'agent' in contents[0][team_counters[0]].split(' ')[3]:
+            for agent in range(len(fnames)):
+                while "agent" in contents[agent][team_counters[agent]+1].split(' ')[3]:
+                    action_string = contents[agent][team_counters[agent]+1].split(' ')[4] # If double Turn- Error
+                    team_counters[agent] += 1 # Skip index for that agent
+            all_as = []
+            for agent in range(len(fnames)):
+                action_string = contents[agent][team_counters[agent]].split(' ')[4]
+                if use_garbage_action[agent]: # if action is missing for this timestep push 0's as action and do not consume 
+                    # that line by += -1
+                    a = np.random.uniform(-0.01,0.01,8)
+                    use_garbage_action[aggent] = False
+                    team_counters[agent] += -1
+                elif "Dash"  in action_string: 
                     result = re.search('Dash((.*),*)', action_string)
                     power = float(result.group(1).split(',')[0][1:])
                     direction = float(result.group(1).split(',')[1][:-1])
@@ -121,18 +146,46 @@ def pretrain_process(fname,pt_episodes,episode_length,num_features):
                     direction = float(result.group(1).split(',')[1][:-1])
                     # Throw away entry
                     Tackle = True
-            elif c.split(' ' )[3] == 'GameStatus':
-                stat = float(c.split(' ' )[4])
-                if not Tackle:
-                    pt_actions.append([x for x in a])
-                    pt_status.append(stat)
-                    pt_obs.append(ob)
-                else:
-                    Tackle = False
-    pt_obs = np.asarray(pt_obs)
-    pt_status = np.asarray(pt_status)
-    pt_actions = pt_actions
-    return pt_obs,pt_status,pt_actions
+                    team_tackles[agent] = True
+                else: # catch?
+                    a = np.random.uniform(-0.01,0.01,8)
+                all_as.append(a)
+        elif contents[0][team_counters[0]].split(' ')[3] == 'GameStatus':
+            stat = float(contents[0][team_counters[0]].split(' ' )[4])
+            if not Tackle:
+                team_pt_actions.append([[x for x in ac] for ac in all_as])
+                team_pt_obs.append(obs)
+                team_pt_status.append(stat)
+            else:
+                tackler = np.where(team_tackles)[0][0] # convert to number from bool
+                team_tackles = np.array([False]*len(fnames))
+
+                #### Screwy offsets for tackle stun ####
+                if not "agent" in contents[tackler][team_counters[tackler]+2].split(' ')[3]:
+                    while not "agent" in contents[tackler][team_counters[tackler]].split(' ')[3]:
+                        screwy_tackle_counter +=1
+                        team_counters[tackler] +=1
+                    screwy_tackle_counter += -2
+                    team_counters[tackler] += -2
+                    for ag in range(len(fnames)):
+                        counter = 0
+                        additional_counter = 0
+                        while counter < (screwy_tackle_counter*3/2) + additional_counter:
+                            if (ag != tackler):
+                                while "agent" in contents[ag][team_counters[ag]+counter].split(' ')[3] and "agent" in contents[ag][team_counters[ag]+counter+1].split(' ')[3]:
+                                    team_counters[ag] += 1
+                                    additional_counter += 1
+                            counter += 1
+                                
+                    team_counters += int((screwy_tackle_counter )* 3 / 2)
+                    team_counters[tackler] += - int(screwy_tackle_counter *3/2) 
+                    # agent who tackled
+                
+        team_counters += 1
+        c += 1
+    #team_pt_obs = np.asarray(np.asarray(pt_obs))
+    team_pt_status = np.asarray(team_pt_status)
+    return team_pt_obs,team_pt_status,team_pt_actions
 
 
 def zero_params(num_Agents,params,action_index):

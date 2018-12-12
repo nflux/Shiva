@@ -388,11 +388,11 @@ class Trainer(object):
     """ Run the trainer """
     try:
       (offenseTeam, defenseTeam) = self.getTeams(offense_team_name, defense_team_name)
-      offense_unums = self._offenseOrder[1: self._numOffense + 1]
+      offense_unums = self._offenseOrder[1: self._numOffense+1]
       sorted_offense_agent_unums = sorted(self._offenseOrder[1:self._offenseAgents+1])
-      defense_unums = sorted(self._defenseOrder[: self._numDefense])
+      defense_unums = sorted(self._defenseOrder[1: self._numDefense+1])
       sorted_defense_agent_unums = \
-        defense_unums[:self._defenseAgents] if self._agentPlayGoalie \
+        defense_unums[1:self._defenseAgents+1] if self._agentPlayGoalie \
         else defense_unums[-self._defenseAgents:]
 
       # Launch offense

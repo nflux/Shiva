@@ -396,7 +396,8 @@ class MADDPG(object):
             pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
             pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
             target_classes = torch.argmax(pol_out_actions,dim=1) # categorical integer for predicted class
-            MSE =np.sum([F.mse_loss(prime[self.discrete_param_indices(target_class)],current[self.discrete_param_indices(target_class)]) for prime,current,target_class in zip(pol_prime_out_params,pol_out_params, target_classes)])/(1.0*self.batch_size)
+            #MSE =np.sum([F.mse_loss(prime[self.discrete_param_indices(target_class)],current[self.discrete_param_indices(target_class)]) for prime,current,target_class in zip(pol_prime_out_params,pol_out_params, target_classes)])/(1.0*self.batch_size)
+            MSE = F.mse_loss(pol_prime_out_params,pol_out_params)
             #pol_prime_loss = MSE + 
             pol_prime_loss = MSE + F.mse_loss(pol_prime_out_actions,pol_out_actions)
             pol_prime_loss.backward()
@@ -829,18 +830,18 @@ class MADDPG(object):
  
     def update_hard_critic(self):
         for a in self.team_agents:
-            hard_update(a.target_critic, a.critic, self.tau)
+            hard_update(a.target_critic, a.critic)
 
         for a in self.opp_agents:
-            hard_update(a.target_critic, a.critic, self.tau)
+            hard_update(a.target_critic, a.critic)
 
              
     def update_hard_policy(self):
         for a in self.team_agents:
-            hard_update(a.target_policy, a.policy, self.tau)
+            hard_update(a.target_policy, a.policy)
 
         for a in self.opp_agents:
-            hard_update(a.target_policy, a.policy, self.tau)
+            hard_update(a.target_policy, a.policy)
 
     def update_all_targets(self):
         """
@@ -1072,8 +1073,9 @@ class MADDPG(object):
             else:
                 vf_loss = F.mse_loss(actual_value, target_value)
         
-        if self.niter % 100 == 0:
-            print("Team (%s) Q loss" % side,vf_loss)
+        if self.niter*1.0 % 100 == 0:
+            print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
+
         
 
                 
@@ -1084,6 +1086,7 @@ class MADDPG(object):
         torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
         curr_agent.critic_optimizer.step()
 
+        
     def update_prime(self, sample, agent_i, parallel=False, logger=None):
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
         if side == 'team':
@@ -1116,14 +1119,20 @@ class MADDPG(object):
         self.niter += 1
         
    
-    def pretrain_prime(self, sample, agent_i, parallel=False, logger=None):
+    def pretrain_prime(self, sample, agent_i,side='team', parallel=False, logger=None):
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
         if side == 'team':
             curr_agent = self.team_agents[agent_i]
+            target_policies = self.team_target_policies
+            nagents = self.nagents_team
+            policies = self.team_policies
         else:
             curr_agent = self.opp_agents[agent_i]
-            
+            target_policies = self.opp_target_policies
+            nagents = self.nagents_opp
+            policies = self.opp_policies
         zero_values = False
+        
         if self.discrete_action:
             # Forward pass as if onehot (hard=True) but backprop through a differentiable
             # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
@@ -1137,25 +1146,6 @@ class MADDPG(object):
 
             self.curr_pol_out = curr_pol_out.clone() # for inverting action space
 
-            # concat one-hot actions with params zero'd along indices non-chosen actions
-            if zero_values:
-                curr_pol_vf_in = torch.cat((gumbel, 
-                                      self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
-            else:
-                curr_pol_vf_in = curr_pol_out
-
-        
-        all_pol_acs = []
-        all_pol_acs.append(curr_pol_vf_in)
-            
-                                          
-
-        vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
-        # invert gradient --------------------------------------
-        self.params = vf_in.data
-        self.param_dim = curr_agent.param_dim
-        hook = vf_in.register_hook(self.inject)
-
         curr_agent.policy_prime_optimizer.zero_grad()
         
         pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
@@ -1165,8 +1155,9 @@ class MADDPG(object):
 
         target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
 
-        MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])/(1.0*self.batch_size)
+        #MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])/(1.0*self.batch_size)
 
+        MSE = F.mse_loss(pol_out_params,actual_out_params)
         #pol_prime_loss = MSE + CELoss(pol_out_actions,target_classes)
         pol_prime_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
@@ -1175,11 +1166,9 @@ class MADDPG(object):
             average_gradients(curr_agent.policy_prime)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_prime_optimizer.step()
-        hook.remove()
 
         if self.niter % 100 == 0:
             print("Team (%s) Policy Prime Loss" % side,pol_prime_loss)
-        self.niter += 1
         
    
 
@@ -1187,14 +1176,21 @@ class MADDPG(object):
                                           
     # pretrain a policy from another team to use in imagination
     
-    def pretrain_imagination_policy(self, sample, agent_i, parallel=False, logger=None):
+    def pretrain_imagination_policy(self, sample, agent_i, side='team',parallel=False, logger=None):
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
         if side == 'team':
             curr_agent = self.team_agents[agent_i]
+            target_policies = self.team_target_policies
+            nagents = self.nagents_team
+            policies = self.team_policies
         else:
             curr_agent = self.opp_agents[agent_i]
-
+            target_policies = self.opp_target_policies
+            nagents = self.nagents_opp
+            policies = self.opp_policies
+            
         zero_values = False
+        
         if self.discrete_action:
             # Forward pass as if onehot (hard=True) but backprop through a differentiable
             # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
@@ -1209,22 +1205,6 @@ class MADDPG(object):
             self.curr_pol_out = curr_pol_out.clone() # for inverting action space
 
             # concat one-hot actions with params zero'd along indices non-chosen actions
-            if zero_values:
-                curr_pol_vf_in = torch.cat((gumbel, 
-                                      self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
-            else:
-                curr_pol_vf_in = curr_pol_out
-
-        
-        all_pol_acs = []
-        all_pol_acs.append(curr_pol_vf_in)
-            
-
-        vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
-        # invert gradient --------------------------------------
-        self.params = vf_in.data
-        self.param_dim = curr_agent.param_dim
-        hook = vf_in.register_hook(self.inject)
 
         curr_agent.imagination_policy_optimizer.zero_grad()
         
@@ -1235,8 +1215,9 @@ class MADDPG(object):
 
         target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
 
-        MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])/(1.0*self.batch_size)
+        #MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])/(1.0*self.batch_size)
 
+        MSE = F.mse_loss(pol_out_params,actual_out_params)
         #imagination_pol_loss = MSE + CELoss(pol_out_actions,target_classes)
         imagination_pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
@@ -1245,16 +1226,14 @@ class MADDPG(object):
             average_gradients(curr_agent.imagination_policy)
         torch.nn.utils.clip_grad_norm_(curr_agent.imagination_policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.imagination_policy_optimizer.step()
-        hook.remove()
 
         if self.niter % 100 == 0:
             print("Team (%s) Imagination Pol Loss:" % side,np.round(imagination_pol_loss.item(),4))
-        self.niter += 1
     
                                           
                                           
                                           
-    def update_EM(self, sample, agent_i, parallel=False, logger=None):
+    def update_EM(self, sample, agent_i, side='team',parallel=False, logger=None):
         """
         Update parameters of Environment Model based on sample from replay buffer
         Inputs:
@@ -1268,15 +1247,25 @@ class MADDPG(object):
                 If passed in, important quantities will be logged
         """
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
-        curr_agent = self.agents[agent_i]
-       
+        if side == 'team':
+            curr_agent = self.team_agents[agent_i]
+            target_policies = self.team_target_policies
+            nagents = self.nagents_team
+            policies = self.team_policies
+        else:
+            curr_agent = self.opp_agents[agent_i]
+            target_policies = self.opp_target_policies
+            nagents = self.nagents_opp
+            policies = self.opp_policies
+            
         # Train Environment Model -----------------------------------------------------            
         curr_agent.EM_optimizer.zero_grad()
 
         labels = ws[0].long().view(-1,1) % self.world_status_dim # categorical labels for OH
         self.ws_onehot.zero_() # reset OH tensor
         self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
-        EM_in = torch.cat((*obs, *acs),dim=1)
+        #EM_in = torch.cat((*obs, *acs),dim=1) this is centralized
+        EM_in = torch.cat((obs[agent_i],acs[agent_i]),dim=1)
         est_obs_diff,est_rews,est_ws = curr_agent.EM(EM_in)
         actual_obs_diff = next_obs[agent_i] - obs[agent_i]
         actual_rews = rews[agent_i].view(-1,1)
@@ -1291,7 +1280,6 @@ class MADDPG(object):
 
         if self.niter % 100 == 0:
             print("Team (%s) EM Loss:" % side,np.round(EM_loss.item(),2),"{Obs Loss:",np.round(loss_obs.item(),2),",","Rew Loss:",np.round(loss_rew.item(),2),",","WS Loss:",np.round(loss_ws.item(),2),"}")
-        self.niter += 1
         
         
     def pretrain_actor(self, sample, agent_i, side='team',parallel=False, logger=None):
@@ -1309,7 +1297,6 @@ class MADDPG(object):
         """
         # rews = 1-step, cum-rews = n-step
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
-        curr_agent = self.agents[agent_i]
         if side == 'team':
             curr_agent = self.team_agents[agent_i]
             target_policies = self.team_target_policies
@@ -1335,44 +1322,10 @@ class MADDPG(object):
             curr_pol_out = curr_agent.policy(obs[agent_i])
             curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
         else:
-            curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
+            curr_pol_out = curr_agent.policy(obs[agent_i]) 
 
             self.curr_pol_out = curr_pol_out.clone() # for inverting action space
-            #gumbel = gumbel_softmax(torch.softmax(curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
-            #log_pol_out = curr_pol_out[:,:curr_agent.action_dim].clone()
-
-            #gumbel = gumbel_softmax((curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
-
-            #log_pol_out = torch.log(curr_pol_out[:,:curr_agent.action_dim].clone())
-            #gumbel = gumbel_softmax(log_pol_out,hard=True)
-            #gumbel = onehot_from_logits(log_pol_out,eps=0.0)
-
-
-            # concat one-hot actions with params zero'd along indices non-chosen actions
-            if zero_values:
-                curr_pol_vf_in = torch.cat((gumbel, 
-                                      self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
-            else:
-                curr_pol_vf_in = curr_pol_out
-
-            #print(curr_pol_vf_in)
-        all_pol_acs = []
-        for i, pi, ob in zip(range(nagents), policies, obs):
-            if i == agent_i:
-                all_pol_acs.append(curr_pol_vf_in)
-            elif self.discrete_action:
-                all_pol_acs.append(onehot_from_logits(pi(ob)))
-            else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
-                a = pi(ob)
-                g = onehot_from_logits(torch.log(a[:,:curr_agent.action_dim]),hard=True)
-                c = torch.cat((g,self.zero_params(a,g)[:,curr_agent.action_dim:]),1)
-                all_pol_acs.append(c) # 
-
-        vf_in = torch.cat((*obs, *all_pol_acs), dim=1)
-        # invert gradient --------------------------------------
-        self.params = vf_in.data
-        self.param_dim = curr_agent.param_dim
-        hook = vf_in.register_hook(self.inject)
+  
 
         pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
         actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
@@ -1381,7 +1334,8 @@ class MADDPG(object):
 
         target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
 
-        MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])/(1.0*self.batch_size)
+        #MSE =np.sum([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)])/(1.0*self.batch_size) # needs to be tensorized
+        MSE = F.mse_loss(pol_out_params,actual_out_params)
 
         #pol_loss = MSE + CELoss(pol_out_actions,target_classes)
         pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
@@ -1392,11 +1346,9 @@ class MADDPG(object):
             average_gradients(curr_agent.policy)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
-        hook.remove()
 
         if self.niter % 100 == 0:
-            print("Team (%s) Actor loss" % side,pol_loss)
-        self.niter += 1
+            print("Team (%s) Agent(%i) Policy loss" % (side, agent_i),pol_loss)
         
     def SIL_update(self, sample, agent_i, side='team', parallel=False, logger=None):
         """
