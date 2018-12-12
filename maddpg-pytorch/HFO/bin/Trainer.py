@@ -62,7 +62,7 @@ class Trainer(object):
       team_name = self._offenseTeamName
       self._agentTeams.append(team_name)
       # First offense number is reserved for inactive offensive goalie
-      internal_player_num = agent_num + 1
+      internal_player_num = agent_num
       self._agentNumInt.append(internal_player_num)
     else:
       assert self._numDefense > 0

@@ -200,7 +200,7 @@ class HFO_env():
                 print("Connecting player %i" % i , "on team %s to the server" % self.base)
                 thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
                                                 False,i,self.fpt,self.act_lvl,))
-            time.sleep(0.5)
+            time.sleep(1)
         
         for i in range(self.num_OA):
             if i == 0:
@@ -211,7 +211,7 @@ class HFO_env():
                 print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
                 thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
                                                 False,i,self.fpt,self.act_lvl,))
-            time.sleep(0.5)
+            time.sleep(1)
         print("All players connected to server")
         self.start = True
 

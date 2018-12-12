@@ -62,8 +62,8 @@ burn_in_iterations = 2000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 11
-num_OA = 11
+num_TA = 2
+num_OA = 2
 num_TNPC = 0
 num_ONPC = 0
 goalie = True
