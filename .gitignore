@@ -4,6 +4,7 @@ __pycache__/
 *.ipynb_checkpoints
 *.csv
 *.log
+.vscode/
 maddpg-pytorch/HFO/bin/rcssserver
 maddpg-pytorch/HFO/bin/soccerwindow2
 maddpg-pytorch/HFO/bin/teams/base/agent
