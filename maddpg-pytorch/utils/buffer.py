@@ -96,6 +96,10 @@ class ReplayBuffer(object):
             cast = lambda x: Variable(Tensor(x), requires_grad=False).cuda()
         else:
             cast = lambda x: Variable(Tensor(x), requires_grad=False)
+        if to_gpu:
+            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True).cuda() # obs need gradient for cent-Q
+        else:
+            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True)
         if norm_rews:
             ret_rews = [cast((self.rew_buffs[i][inds] -
                               self.rew_buffs[i][:self.filled_i].mean()) /
@@ -118,7 +122,7 @@ class ReplayBuffer(object):
             ret_n_step = [cast(self.n_step_buffs[i][inds]) for i in range(self.num_agents)]
 
             
-        return ([cast(self.obs_buffs[i][inds]) for i in range(self.num_agents)],
+        return ([cast_obs(self.obs_buffs[i][inds]) for i in range(self.num_agents)],
                 [cast(self.ac_buffs[i][inds]) for i in range(self.num_agents)],
                 ret_rews,
                 [cast(self.next_obs_buffs[i][inds]) for i in range(self.num_agents)],
