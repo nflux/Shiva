@@ -593,7 +593,7 @@ class MADDPG(object):
         end = time.time()
         #print(end - start)
         
-        vf_loss.backward() 
+        vf_loss.backward(retain_graph=True) 
         
         if parallel:
             average_gradients(curr_agent.critic)
@@ -659,26 +659,21 @@ class MADDPG(object):
                 else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
                     opp_pol_acs.append(pi(ob))
 
-            team_vf_in = torch.cat((*obs, *team_pol_acs), dim=1)
-            if act_only:
-                mod_acs = torch.cat(opp_pol_acs,team_pol_acs)
-                mod_vf_in = torch.cat((*obs, *mod_acs), dim=1)
-            elif obs_only:
-                mod_obs = torch.cat(opp_obs + obs)
-                mod_vf_in = torch.cat((*mod_obs, *team_pol_acs), dim=1)
-            else:
-                opp_vf_in = torch.cat((*opp_obs, *opp_pol_acs), dim=1)
-                mod_vf_in = torch.cat((opp_vf_in,team_vf_in), dim=1)
+                    
+            obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
+            acs_vf_in = torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)
+            mod_vf_in = torch.cat((mod_obs, mod_acs), dim=1)
             # invert gradient --------------------------------------
             self.param_dim = curr_agent.param_dim
-            hook = team_vf_in.register_hook(self.inject)
+            hook = mod_vf_in.register_hook(self.inject)
             # ------------------------------------------------------
             if self.D4PG:
                 critic_out = curr_agent.critic.Q1(mod_vf_in)
                 distr_q = curr_agent.critic.distr_to_q(critic_out)
                 pol_loss = -distr_q.mean()
             else: # non-distributional
-                pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean()
+                pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean()              
+      
             #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
             pol_loss.backward(retain_graph=True)
             if parallel:
