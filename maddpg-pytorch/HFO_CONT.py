@@ -50,7 +50,7 @@ else:
     to_gpu = False
     device = 'cpu'
 
-use_viewer = True
+use_viewer = False
 n_training_threads = 8
 use_viewer_after = 200000 # If using viewer, uses after x episodes
 # default settings ---------------------
@@ -62,14 +62,14 @@ burn_in_iterations = 2000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 2
-num_OA = 2
+num_TA = 1
+num_OA = 1
 num_TNPC = 0
 num_ONPC = 0
 goalie = True
 team_rew_anneal_ep = 5
 # hyperparams--------------------------
-batch_size = 512
+batch_size = 256
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -132,7 +132,7 @@ SIL = False
 SIL_update_ratio = 3
 #---------------------------------------
 #Critic Input Modification 
-critic_mod = False
+critic_mod = True
 # NOTE: When both are False but critic_mod is true the critic takes both
 # actions and observations from the opposing side
 critic_mod_act = False
@@ -140,35 +140,35 @@ critic_mod_obs = False
 critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
 #---------------------------------------
 # Control Random Initilization of Agents and Ball
-control_rand_init = False
+control_rand_init = True
 ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
 ball_y_max = 0.1
-agents_x_min = -0.1
-agents_x_max = 0.1
-agents_y_min = -0.1
-agents_y_max = 0.1
-change_every_x = 10
+agents_x_min = -0.5
+agents_x_max = 0.5
+agents_y_min = -0.5
+agents_y_max = 0.5
+change_every_x = 10000
 change_agents_x = 0.01
 change_agents_y = 0.01
 change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
-load_random_nets = False
+load_random_nets = True
 load_random_every = 25
-k_ensembles = 3
+k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
-save_nns = False
+save_nns = True
 ep_save_every = 25 # episodes
 load_nets = False # load networks from file
 first_save = False # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = False
-eval_after = 100
+eval_after = 10000
 eval_episodes = 10
 # --------------------------------------
 # Prep Session Files ------------------------------
