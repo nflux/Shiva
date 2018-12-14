@@ -200,7 +200,7 @@ class HFO_env():
                 print("Connecting player %i" % i , "on team %s to the server" % self.base)
                 thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
                                                 False,i,self.fpt,self.act_lvl,))
-            time.sleep(0.5)
+            time.sleep(1)
         
         for i in range(self.num_OA):
             if i == 0:
@@ -211,7 +211,7 @@ class HFO_env():
                 print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
                 thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
                                                 False,i,self.fpt,self.act_lvl,))
-            time.sleep(0.5)
+            time.sleep(1)
         print("All players connected to server")
         self.start = True
 
@@ -582,13 +582,18 @@ class HFO_env():
 
          
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous): # and not been_kicked: # uses action just performed, with previous obs, (both at T)
-            reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
+            # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
             if self.team_base == base:
                 #self.been_kicked_team = True
-                possession_side = 'L'    
+                if possession_side != 'L': 
+                    possession_side = 'L'    
+                    reward+=1  
             else:
                 #self.been_kicked_opp = True
-                possession_side = 'R'
+                if possession_side != 'R': 
+                    possession_side = 'R'    
+                    reward+=1 
+                
         team_reward += self.possession_reward(base) 
 
 
@@ -622,10 +627,11 @@ class HFO_env():
         ####################### reduce ball distance to goal - using delta  ##################
         r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+        reward += (3)*(r_prev - r)*.6
         team_reward += (3)*(r_prev - r)*.6
         ##################################################################################
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
-        return team_reward + (reward * rew_percent)
+        return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

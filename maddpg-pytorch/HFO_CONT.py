@@ -67,7 +67,7 @@ num_OA = 1
 num_TNPC = 0
 num_ONPC = 0
 goalie = True
-team_rew_anneal_ep = 5
+team_rew_anneal_ep = 500 # reward would be
 # hyperparams--------------------------
 batch_size = 256
 hidden_dim = int(1024)
@@ -132,7 +132,7 @@ SIL = False
 SIL_update_ratio = 3
 #---------------------------------------
 #Critic Input Modification 
-critic_mod = True
+critic_mod = False
 # NOTE: When both are False but critic_mod is true the critic takes both
 # actions and observations from the opposing side
 critic_mod_act = False
@@ -164,7 +164,7 @@ current_ensembles = [0]*num_TA # initialize which ensembles we start with
 save_nns = True
 ep_save_every = 25 # episodes
 load_nets = False # load networks from file
-first_save = False # build model clones for ensemble
+first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = False

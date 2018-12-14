@@ -653,7 +653,7 @@ class MADDPG(object):
                     a = pi(ob)
                     team_pol_acs.append(a)
             
-            for i, pi, ob in zip(range(nagents), opp_policies, opp_obs):
+            for i, pi, ob in zip(range(nagents), opp_target_policies, opp_obs):
                 if self.discrete_action:
                     opp_pol_acs.append(onehot_from_logits(pi(ob)))
                 else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
