@@ -662,7 +662,7 @@ class MADDPG(object):
                     
             obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
             acs_vf_in = torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)
-            mod_vf_in = torch.cat((mod_obs, mod_acs), dim=1)
+            mod_vf_in = torch.cat((obs_vf_in, acs_vf_in1), dim=1)
             # invert gradient --------------------------------------
             self.param_dim = curr_agent.param_dim
             hook = mod_vf_in.register_hook(self.inject)
