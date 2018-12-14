@@ -51,8 +51,8 @@ else:
     device = 'cpu'
 
 use_viewer = True
+use_viewer_after = 10 # If using viewer, uses after x episodes
 n_training_threads = 8
-use_viewer_after = 1000 # If using viewer, uses after x episodes
 # default settings ---------------------
 num_episodes = 100000
 replay_memory_size = 1500000
@@ -79,7 +79,7 @@ explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 5 # Haus uses over 10,000 updates --
+num_explore_episodes = 1 # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -108,12 +108,12 @@ TD3_noise = 0.01
 # (Also we must delete all the "garbage" at the beginning of the log files. The first line should be the second instance of 0 4 M StateFeatures)
 Imitation_exploration = True
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-pt_critic_updates = 150000
-pt_actor_updates = 150000
-pt_actor_critic_updates = 50000
-pt_imagination_branch_pol_updates = 500
+pt_critic_updates = 100
+pt_actor_updates = 100
+pt_actor_critic_updates = 100
+pt_imagination_branch_pol_updates = 100
 pt_episodes = 5000# num of episodes that you observed in the gameplay between npcs
-pt_timesteps = 675000# number of timesteps to load in from files
+pt_timesteps = 550000# number of timesteps to load in from files
 pt_EM_updates = 300
 pt_beta = 1.0
 #---------------------------------------
@@ -133,7 +133,7 @@ SIL = False
 SIL_update_ratio = 3
 #---------------------------------------
 #Critic Input Modification 
-critic_mod = False
+critic_mod = True
 # NOTE: When both are False but critic_mod is true the critic takes both
 # actions and observations from the opposing side
 critic_mod_act = False
@@ -165,7 +165,8 @@ current_ensembles = [0]*num_TA # initialize which ensembles we start with
 #Save/load -----------------------------
 save_nns = True
 ep_save_every = 25 # episodes
-load_nets = False # load networks from file
+load_nets = False # load previous sessions' networks from file for initialization
+initial_models = ["Trained_3v3/agent_0.pth","Trained_3v3/agent_1.pth","Trained_3v3/agent_2.pth"] # models to load
 first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
@@ -187,6 +188,7 @@ eval_log_dir = session_path +"eval_log" # evaluation logfiles
 load_path = session_path +"models/"
 ensemble_path = session_path +"ensemble_models/"
 prep_session(session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,log_dir,num_TA) # Generates directories and files for the session
+
 # --------------------------------------
 # initialization -----------------------
 t = 0
@@ -209,16 +211,12 @@ env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC
                 change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
                 change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True)
 
-if use_viewer:
-    env._start_viewer()
-
-
 time.sleep(3)
 print("Done connecting to the server ")
 
 # initializing the maddpg 
 if load_nets:
-    maddpg = MADDPG.init_from_save(load_path,num_TA)
+    maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
 else:
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                               adversary_alg= "MADDPG",device=device,
@@ -247,7 +245,7 @@ else:
 #                                 [env.team_action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
 
 team_replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA,
-                                 [env.team_num_features for i in range(env.num_TA)],
+                                     [env.team_num_features for i in range(env.num_TA)],
                                  [env.team_action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
 
 #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
@@ -267,24 +265,22 @@ opp_step_logger_df = pd.DataFrame()
 # PRETRAIN ############################
 if Imitation_exploration:
 
-    team_files = ['Pretrain_Files/3v3_No_Goalie/base_left-11.log','Pretrain_Files/3v3_No_Goalie/base_left-7.log','Pretrain_Files/3v3_No_Goalie/base_left-8.log']    
+    team_files = ['Pretrain_Files/3v3_CentQ/base_left-11.log','Pretrain_Files/3v3_CentQ/base_left-7.log','Pretrain_Files/3v3_CentQ/base_left-8.log','Pretrain_Files/3v3_CentQ/base_right-2.log','Pretrain_Files/3v3_CentQ/base_right-3.log','Pretrain_Files/3v3_CentQ/base_right-4.log']
     #opp_files = ['Pretrain_Files/base_left-1.log','Pretrain_Files/base_left-2.log']
 
-    team_pt_obs, team_pt_status,team_pt_actions = pretrain_process(fnames = team_files,timesteps = pt_timesteps,num_features = env.team_num_features)
+    team_pt_obs, team_pt_status,team_pt_actions,opp_pt_obs, opp_pt_status,opp_pt_actions = pretrain_process(fnames = team_files,timesteps = pt_timesteps,num_features = env.team_num_features)
 
 
-    #opp_pt_obs, opp_pt_status,opp_pt_actions = pretrain_process(fname = opp_files,pt_episodes = pt_episodes,episode_length = episode_length,num_features = env.opp_num_features)
-    #print((opp_pt_status == team_pt_status).all())
-    
     print("Length of team obs,stats,actions",len(team_pt_obs),len(team_pt_status),len(team_pt_actions))
-    #print("Length of opp obs,stats,actions",len(opp_pt_obs),len(opp_pt_status),len(opp_pt_actions))
+    print("Length of opp obs,stats,actions",len(opp_pt_obs),len(opp_pt_status),len(opp_pt_actions))
 
+    ################## Base Left #########################
     pt_time_step = 0
     for ep_i in range(0, pt_episodes):
         if ep_i % 100 == 0:
-            print("Pushing Pretrain Episode:",ep_i)
+            print("Pushing Pretrain Base-Left Episode:",ep_i)
             
-            
+        
         # team n-step
         team_n_step_rewards = []
         team_n_step_obs = []
@@ -351,10 +347,91 @@ if Imitation_exploration:
 
                 pt_time_step +=1
                 break
-
+    
     del team_pt_obs
     del team_pt_status
     del team_pt_actions
+    ################## Base Right ########################
+
+    pt_time_step = 0
+    for ep_i in range(0, pt_episodes):
+        if ep_i % 100 == 0:
+            print("Pushing Pretrain Base Right Episode:",ep_i)
+            
+            
+        # team n-step
+        team_n_step_rewards = []
+        team_n_step_obs = []
+        team_n_step_acs = []
+        n_step_next_obs = []
+        team_n_step_dones = []
+        team_n_step_ws = []
+
+        #define/update the noise used for exploration
+        explr_pct_remaining = 0.0
+        beta_pct_remaining = 0.0
+        maddpg.scale_noise(0.0)
+        maddpg.reset_noise()
+        maddpg.scale_beta(pt_beta)
+        d = False
+        
+        for et_i in range(0, episode_length):            
+            world_stat = opp_pt_status[pt_time_step]
+            d = False
+            if world_stat != 0.0:
+                d = True
+
+            #### Team ####
+            team_n_step_acs.append(opp_pt_actions[pt_time_step])
+            team_n_step_obs.append(np.array(opp_pt_obs[pt_time_step]).T)
+            team_n_step_ws.append(world_stat)
+            n_step_next_obs.append(np.array(opp_pt_obs[pt_time_step+1]).T)
+            team_n_step_rewards.append(np.hstack([env.getPretrainRew(world_stat,d,"base_left") for i in range(env.num_TA) ]))          
+            team_n_step_dones.append(d)
+
+            # Store variables for calculation of MC and n-step targets for team
+            pt_time_step += 1
+            if d == True: # Episode done
+                # Calculate n-step and MC targets
+                for n in range(et_i+1):
+                    MC_targets = []
+                    n_step_targets = []
+                    for a in range(env.num_TA):
+                        MC_target = 0
+                        n_step_target = 0
+                        
+                        for step in range(et_i+1 - n): # sum MC target
+                            MC_target += team_n_step_rewards[et_i - step][a] * gamma**(et_i - n - step)
+                        MC_targets.append(MC_target)
+                        if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
+                            for step in range(n_steps): 
+                                n_step_target += team_n_step_rewards[n + step][a] * gamma**(step)
+                            n_step_targets.append(n_step_target)
+                            n_step_next_ob = n_step_next_obs[n - 1 + n_steps]
+                            n_step_done = team_n_step_dones[n - 1 + n_steps]
+                        else: # n-step = MC if less than n steps remaining
+                            n_step_target = MC_target
+                            n_step_targets.append(n_step_target)
+                            n_step_next_ob = n_step_next_obs[-1]
+                            n_step_done = team_n_step_dones[-1]
+                    # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
+                    #pretrain_buffer.push
+                    #team_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],n_step_next_ob,
+                    #                        [n_step_done for i in range(env.num_TA)],MC_targets, n_step_targets,
+                    #                        [team_n_step_ws[n] for i in range(env.num_TA)])
+                    team_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],n_step_next_ob,
+                                            [n_step_done for i in range(env.num_TA)],MC_targets, n_step_targets,
+                                            [team_n_step_ws[n] for i in range(env.num_TA)])
+
+                pt_time_step +=1
+                break
+                
+
+    del opp_pt_obs
+    del opp_pt_status
+    del opp_pt_actions
+                ##################################################
+
     maddpg.prep_training(device=device)
     
     if I2A:
@@ -413,43 +490,81 @@ if Imitation_exploration:
     maddpg.update_hard_policy()
     
     
-    # pretrain critic
-    for i in range(pt_critic_updates):
-        if i%100 == 0:
-            print("Petrain critic update:",i)
-        for u_i in range(1):
-            for a_i in range(env.num_TA):
-                inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                sample = team_replay_buffer.sample(inds,
-                                                to_gpu=to_gpu,norm_rews=False)
-                maddpg.pretrain_critic(sample, a_i,'team')
-            maddpg.niter +=1
-    maddpg.update_hard_critic()
+    
+    if not critic_mod: # non-centralized Q
+        # pretrain critic
+        for i in range(pt_critic_updates):
+            if i%100 == 0:
+                print("Petrain critic update:",i)
+            for u_i in range(1):
+                for a_i in range(env.num_TA):
+                    inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                    sample = team_replay_buffer.sample(inds,
+                                                    to_gpu=to_gpu,norm_rews=False)
+                    maddpg.pretrain_critic(sample, a_i,'team')
+                maddpg.niter +=1
+        maddpg.update_hard_critic()
+
+
+        maddpg.scale_beta(initial_beta) # 
+        # pretrain true actor-critic (non-imitation) + policy prime
+        for i in range(pt_actor_critic_updates):
+            if i%100 == 0:
+                print("Petrain critic/actor update:",i)
+            for u_i in range(1):
+                for a_i in range(env.num_TA):
+                    inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                    sample = team_replay_buffer.sample(inds,
+                                                  to_gpu=to_gpu,norm_rews=False)
+                    maddpg.update(sample, a_i, 'team' )
+                    if SIL:
+                        [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
+                maddpg.update_all_targets()
+    else: # centralized Q
+        for i in range(pt_critic_updates):
+            if i%100 == 0:
+                print("Petrain critic update:",i)
+            for u_i in range(1):
+                for a_i in range(env.num_TA):
+                    inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                    team_sample = team_replay_buffer.sample(inds,
+                                                            to_gpu=to_gpu,norm_rews=False)
+                    opp_sample = opp_replay_buffer.sample(inds,
+                                                          to_gpu=to_gpu,norm_rews=False)
+                    maddpg.pretrain_centralized_critic(team_sample, opp_sample, a_i, 'team', 
+                                                     act_only=critic_mod_act, obs_only=critic_mod_obs)
+                maddpg.niter +=1
+        maddpg.update_hard_critic()
+        
+        maddpg.scale_beta(initial_beta) # 
+        # pretrain true actor-critic update
+        for i in range(pt_actor_critic_updates):
+            if i%100 == 0:
+                print("Petrain critic/actor update:",i)
+            for u_i in range(1):
+                for a_i in range(env.num_TA):
+                    inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                    team_sample = team_replay_buffer.sample(inds,
+                                                            to_gpu=to_gpu,norm_rews=False)
+                    opp_sample = opp_replay_buffer.sample(inds,
+                                                          to_gpu=to_gpu,norm_rews=False)
+                    maddpg.update_centralized_critic(team_sample, opp_sample, a_i, 'team', 
+                                                     act_only=critic_mod_act, obs_only=critic_mod_obs)
+                    if SIL:
+                        [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
+                maddpg.update_all_targets()
+        
+        
 
     
-    maddpg.scale_beta(initial_beta) # 
-    # pretrain true actor-critic (non-imitation) + policy prime
-    for i in range(pt_actor_critic_updates):
-        if i%100 == 0:
-            print("Petrain critic/actor update:",i)
-        for u_i in range(1):
-            for a_i in range(env.num_TA):
-                inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                sample = team_replay_buffer.sample(inds,
-                                              to_gpu=to_gpu,norm_rews=False)
-                maddpg.update(sample, a_i, 'team' )
-                if SIL:
-                    [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
-            maddpg.update_all_targets()
-
-    
-    if use_viewer:
-        env._start_viewer()       
 
 # END PRETRAIN ###################
 # --------------------------------
 env.launch()
-time.sleep(2)
+if use_viewer:
+    env._start_viewer()       
+
+time.sleep(3)
 for ep_i in range(0, num_episodes):
 
     # team n-step
@@ -701,7 +816,7 @@ for ep_i in range(0, num_episodes):
                                         n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
                                         
 
-            if train_opp:
+            if train_opp or critic_mod: # only create experiences if critic mod or training opp
                 for n in range(et_i+1):
                     MC_targets = []
                     n_step_targets = []

@@ -79,6 +79,7 @@ class MADDPG(object):
         self.opp_agent_init_params = opp_agent_init_params
         self.team_net_params = team_net_params
         self.device = device
+        self.torch_device = torch.device(device)
         self.gamma = gamma
         self.batch_size = batch_size
         self.tau = tau
@@ -217,6 +218,8 @@ class MADDPG(object):
         """
         # rews = 1-step, cum-rews = n-step
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
+
+
         self.curr_agent_index = agent_i
         if side == 'team':
             count = self.team_count[agent_i]
@@ -280,7 +283,6 @@ class MADDPG(object):
             actual_value_1, actual_value_2 = curr_agent.critic(vf_in)
         else:
             actual_value = curr_agent.critic(vf_in)
-        
         if self.D4PG:
                 # Q1
                 trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
@@ -526,8 +528,7 @@ class MADDPG(object):
             mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1) # team actions is last for inv grad indices
         elif obs_only:
             mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
-            mod_all_trgt_acs = all_trgt_acs
-            
+            mod_all_trgt_acs = all_trgt_acs     
         else: # both
             mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
             mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
@@ -585,7 +586,7 @@ class MADDPG(object):
         else: # single critic value
             target_value = (1-self.beta)*(n_step_rews[agent_i].view(-1, 1) + (self.gamma**self.n_steps) *
                         trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
-            target_value.detach()
+            #target_value.detach()
             if self.TD3: # handle double critic
                 vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
             else:
@@ -648,8 +649,6 @@ class MADDPG(object):
             for i, pi, ob in zip(range(nagents), policies, obs):
                 if i == agent_i:
                     team_pol_acs.append(curr_pol_vf_in)
-                elif self.discrete_action:
-                    team_pol_acs.append(onehot_from_logits(pi(ob)))
                 else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
                     a = pi(ob)
                     team_pol_acs.append(a)
@@ -660,28 +659,24 @@ class MADDPG(object):
                 else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
                     opp_pol_acs.append(pi(ob))
 
-            team_vf_in = torch.cat((*obs, *team_pol_acs), dim=1)
-            if act_only:
-                mod_acs = torch.cat(opp_pol_acs,team_pol_acs)
-                mod_vf_in = torch.cat((*obs, *mod_acs), dim=1)
-            elif obs_only:
-                mod_obs = torch.cat(opp_obs + obs)
-                mod_vf_in = torch.cat((*mod_obs, *team_pol_acs), dim=1)
-            else:
-                opp_vf_in = torch.cat((*opp_obs, *opp_pol_acs), dim=1)
-                mod_vf_in = torch.cat((opp_vf_in,team_vf_in), dim=1)
+            obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
+            acs_vf_in = torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)
+            mod_vf_in = torch.cat((obs_vf_in, acs_vf_in),dim=1)
+
             # invert gradient --------------------------------------
             self.param_dim = curr_agent.param_dim
-            hook = team_vf_in.register_hook(self.inject)
+            hook = mod_vf_in.register_hook(self.inject)
             # ------------------------------------------------------
             if self.D4PG:
                 critic_out = curr_agent.critic.Q1(mod_vf_in)
                 distr_q = curr_agent.critic.distr_to_q(critic_out)
                 pol_loss = -distr_q.mean()
             else: # non-distributional
-                pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean()
+                pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean()              
+      
             #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
             pol_loss.backward(retain_graph=True)
+            #pol_loss.backward()
             if parallel:
                 average_gradients(curr_agent.policy)
             torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
@@ -973,7 +968,7 @@ class MADDPG(object):
 # ----------------------------
 # - Pretraining Functions ----
     
-    def pretrain_critic(self, sample, agent_i,side='team', parallel=False, logger=None):
+    def pretrain_critic(self, team,sample, agent_i,side='team', parallel=False, logger=None):
         """
         Update parameters of agent model based on sample from replay buffer
         Inputs:
@@ -1172,7 +1167,158 @@ class MADDPG(object):
         
    
 
-                                          
+                            
+    
+    def pretrain_centralized_critic(self, team_sample, opp_sample,agent_i,side='team', parallel=False, logger=None,act_only=False,obs_only=False):
+        """
+        Update parameters of agent model based on sample from replay buffer
+        Inputs:
+            sample: tuple of (observations, actions, rewards, next
+                    observations, and episode end masks, cumulative discounted reward) sampled randomly from
+                    the replay buffer. Each is a list with entries
+                    corresponding to each agent
+            agent_i (int): index of agent to update
+            parallel (bool): If true, will average gradients across threads
+            logger (SummaryWriter from Tensorboard-Pytorch):
+                If passed in, important quantities will be logged
+        """
+        # rews = 1-step, cum-rews = n-step
+        if side == 'team':
+            curr_agent = self.team_agents[agent_i]
+            target_policies = self.team_target_policies
+            opp_target_policies = self.opp_target_policies
+            nagents = self.nagents_team
+            policies = self.team_policies
+            opp_policies = self.opp_policies
+            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = team_sample
+            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = opp_sample
+        else:
+            curr_agent = self.opp_agents[agent_i]
+            target_policies = self.opp_target_policies
+            opp_target_policies = self.team_target_policies
+            nagents = self.nagents_opp
+            policies = self.opp_policies
+            opp_policies = self.team_policies
+            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
+            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
+            
+        zero_values = False
+        
+        # Train critic ------------------------
+        curr_agent.critic_optimizer.zero_grad()
+        
+        
+        if self.TD3:
+            noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise 
+            all_trgt_acs = [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)] 
+            opp_all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+
+        else:
+            all_trgt_acs = [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]
+            opp_all_trgt_acs = [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+
+
+        mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
+        mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
+
+    # Target critic values
+        trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
+        if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
+                     # and build the combination of distr choosing the minimums
+            trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
+            if self.D4PG:
+                arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().cpu().data.numpy(),
+                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean().cpu().data.numpy()])
+                if arg: 
+                    trgt_Q = trgt_Q1
+                else:
+                    trgt_Q = trgt_Q2
+            else:
+                trgt_Q = torch.min(trgt_Q1,trgt_Q2)
+        else:
+            trgt_Q = curr_agent.target_critic(trgt_vf_in)
+        # Actual critic values
+        mod_obs = torch.cat((*opp_obs,*obs),dim=1)
+        mod_acs = torch.cat((*opp_acs,*acs),dim=1)
+        vf_in = torch.cat((mod_obs, mod_acs), dim=1)
+        if self.TD3:
+            actual_value_1, actual_value_2 = curr_agent.critic(vf_in)
+        else:
+            actual_value = curr_agent.critic(vf_in)
+        
+        if self.D4PG:
+                # Q1
+                trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
+                trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
+                                                  gamma=self.gamma**self.n_steps,device=self.device) 
+                if self.TD3:
+                    prob_dist_1 = -F.log_softmax(actual_value_1,dim=1) * trgt_vf_distr_proj # Q1
+                    prob_dist_2 = -F.log_softmax(actual_value_2,dim=1) * trgt_vf_distr_proj # Q2
+                    # distribution distance function
+                    vf_loss = prob_dist_1.sum(dim=1).mean() + prob_dist_2.sum(dim=1).mean() # critic loss based on distribution distance
+                else:
+                    prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
+                    trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
+                    trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
+                                                      gamma=self.gamma**self.n_steps,device=self.device) 
+                    # distribution distance function
+                    prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
+                    vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
+        else: # single critic value
+            target_value = (1-self.beta)*(n_step_rews[agent_i].view(-1, 1) + (self.gamma**self.n_steps) *
+                        trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
+            target_value.detach()
+            if self.TD3: # handle double critic
+                vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
+            else:
+                vf_loss = F.mse_loss(actual_value, target_value)
+        
+        if self.niter*1.0 % 100 == 0:
+            print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
+
+        
+
+                
+            
+        vf_loss.backward() 
+        if parallel:
+            average_gradients(curr_agent.critic)
+        torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
+        curr_agent.critic_optimizer.step()
+
+        
+    def update_prime(self, sample, agent_i, parallel=False, logger=None):
+        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
+        if side == 'team':
+            curr_agent = self.team_agents[agent_i]
+        else:
+            curr_agent = self.opp_agents[agent_i]
+            
+       
+        # Update policy prime
+        curr_agent.policy_prime_optimizer.zero_grad()
+        curr_pol_out = curr_agent.policy(obs[agent_i])
+        # We take the loss between the current policy's behavior and policy prime which is estimating the current policy
+        pol_prime_out = curr_agent.policy_prime(obs[agent_i]) # uses gumbel across the actions
+        pol_prime_out_actions = pol_prime_out[:,:curr_agent.action_dim].float()
+        pol_prime_out_params = pol_prime_out[:,curr_agent.action_dim:]
+        pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
+        pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
+        target_classes = torch.argmax(pol_out_actions,dim=1) # categorical integer for predicted class
+        MSE =np.sum([F.mse_loss(prime[self.discrete_param_indices(target_class)],current[self.discrete_param_indices(target_class)]) for prime,current,target_class in zip(pol_prime_out_params,pol_out_params, target_classes)])/(1.0*self.batch_size)
+        #pol_prime_loss = MSE + CELoss(pol_out_actions,target_classes)
+        pol_prime_loss = MSE + F.mse_loss(pol_prime_out_actions,pol_out_actions)
+        pol_prime_loss.backward()
+        if parallel:
+            average_gradients(curr_agent.policy_prime)
+        torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
+        curr_agent.policy_prime_optimizer.step()
+
+        if self.niter % 100 == 0:
+            print("Team (%s) Policy Prime Loss" % side,pol_prime_loss)
+        self.niter += 1
+        
+        
                                           
     # pretrain a policy from another team to use in imagination
     
@@ -1618,7 +1764,7 @@ class MADDPG(object):
     def first_save(self, file_path,num_copies=1):
         """
         Makes K clones of each agent to be used as the ensemble agents"""
-        self.prep_training(device='cpu')  # move parameters to CPU before saving
+        #self.prep_training(device='cpu')  # move parameters to CPU before saving
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], file_path + ("ensemble_agent_%i" % i) + "/model_%i.pth" % j) for i in range(len(self.team_agents)) for j in range(num_copies)]
@@ -1656,7 +1802,6 @@ class MADDPG(object):
         """
         Instantiate instance of this class from file created by 'save' method
         """
-
         save_dicts = np.asarray([torch.load(filename) for filename in filenames]) # use only filename
         instance = cls(**save_dicts[0]['init_dict'])
         instance.init_dict = save_dicts[0]['init_dict']

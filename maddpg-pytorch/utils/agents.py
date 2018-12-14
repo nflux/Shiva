@@ -77,7 +77,8 @@ class DDPGAgent(object):
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action,
                                  norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                                 EM = self.EM, pol_prime = self.policy_prime,LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+                                 EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                         LSTM_hidden=LSTM_hidden,maddpg=maddpg)
         
         self.critic = MLPNetwork_Critic(num_in_critic, 1,
                                  hidden_dim=hidden_dim,
@@ -90,6 +91,9 @@ class DDPGAgent(object):
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)
 
+        self.a_lr = a_lr
+        self.c_lr = c_lr
+        self.EM_lr = EM_lr
         self.critic_grad_by_action = np.zeros(self.param_dim)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=a_lr, weight_decay =0)
         self.policy_prime_optimizer = Adam(self.policy_prime.parameters(), lr=a_lr, weight_decay =0)
@@ -175,6 +179,10 @@ class DDPGAgent(object):
         return {'critic': self.critic.state_dict()}
 
     def load_params(self, params):
+        if self.device == 'cuda':
+            dev = torch.device("cuda")
+        else:
+            dev = torch.device('cpu')
         self.policy.load_state_dict(params['policy'])
         self.critic.load_state_dict(params['critic'])
         self.target_policy.load_state_dict(params['target_policy'])
@@ -183,6 +191,23 @@ class DDPGAgent(object):
         self.imagination_policy.load_state_dict(params['imagination_policy'])
         self.EM.load_state_dict(params['EM'])
 
+
+        self.policy.to(dev)
+        self.critic.to(dev)
+        self.target_policy.to(dev)
+        self.target_critic.to(dev)
+        self.policy_prime.to(dev)
+        self.imagination_policy.to(dev)
+        self.EM.to(dev)
+      
+        
+        self.critic_grad_by_action = np.zeros(self.param_dim)
+        self.policy_optimizer = Adam(self.policy.parameters(), lr=self.a_lr, weight_decay =0)
+        self.policy_prime_optimizer = Adam(self.policy_prime.parameters(), lr=self.a_lr, weight_decay =0)
+        self.imagination_policy_optimizer = Adam(self.imagination_policy.parameters(), lr=self.a_lr, weight_decay =0)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=self.c_lr, weight_decay=0)
+        self.EM_optimizer = Adam(self.EM.parameters(), lr=self.EM_lr)
+        
         self.policy_optimizer.load_state_dict(params['policy_optimizer'])
         self.critic_optimizer.load_state_dict(params['critic_optimizer'])
         self.policy_prime_optimizer.load_state_dict(params['policy_prime_optimizer'])

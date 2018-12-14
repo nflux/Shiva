@@ -14,3 +14,7 @@ maddpg-pytorch/HFO/example/thread_agents
 maddpg-pytorch/training_sessions
 maddpg-pytorch/HFO/log_pt
 maddpg-pytorch/Pretrain_Files
+
+maddpg-pytorch/Pretrained_3v3/
+
+maddpg-pytorch/Trained_3v3/

@@ -194,13 +194,13 @@ class HFO_env():
             print("Connecting player %i" % i , "on team %s to the server" % self.base)
             thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
                                              False,i,self.fpt,self.act_lvl,))
-            time.sleep(0.5)
+            time.sleep(1.5)
         
         for i in range(self.num_OA):
             print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
             thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
                                              False,i,self.fpt,self.act_lvl,))
-            time.sleep(0.5)
+            time.sleep(1.5)
         print("All players connected to server")
         self.start = True
 
@@ -443,9 +443,9 @@ class HFO_env():
             if self.team_base == base:
             # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
                 if s==1: # Goal left
-                    reward+=8
+                    reward+=10
                 elif s==2: # Goal right
-                    reward+=-8
+                    reward+=-10
                 elif s==3: # OOB
                     reward+=-0.2
                 #---------------------------
@@ -464,9 +464,9 @@ class HFO_env():
                 return reward
             else:
                 if s==1: # Goal left
-                    reward+=-8
+                    reward+=-10
                 elif s==2: # Goal right
-                    reward+=+8
+                    reward+=+10
                 elif s==3: # OOB
                     reward+=-0.2
                 #---------------------------
@@ -497,9 +497,9 @@ class HFO_env():
             if self.team_base == base:
             # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
                 if s=='Goal_By_Left':
-                    reward+=5
+                    reward+=8
                 elif s=='Goal_By_Right':
-                    reward+=-5
+                    reward+=-8
                 elif s=='OutOfBounds':
                     reward+=-0.2
                 #---------------------------
@@ -518,9 +518,9 @@ class HFO_env():
                 return reward
             else:
                 if s=='Goal_By_Right':
-                    reward+=5
+                    reward+=8
                 elif s=='Goal_By_Left':
-                    reward+=-5
+                    reward+=-8
                 elif s=='OutOfBounds':
                     reward+=-0.2
                 #---------------------------
@@ -558,10 +558,14 @@ class HFO_env():
         ############ Anyone kicked reward #################
         if np.array([self.action_list[team_actions[ag]] in self.kick_actions and self.get_kickable_status(ag,team_obs_previous) for ag in range(self.num_TA)]).any() and not been_kicked: 
             team_reward+= 1 # team kicked when avaialable and hasn't been kicked before
+            if self.team_base == base:
+                self.been_kicked_team= True # been kicked now
+            else:
+                self.been_kicked_opp = True 
         ####################################################
         
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous): 
-            reward+= 0.3 # kicked when avaialable (personal repeatable reward)
+            reward+= 0.1 # kicked when avaialable (personal repeatable reward)
             
             
         ########### possession reward ######################
