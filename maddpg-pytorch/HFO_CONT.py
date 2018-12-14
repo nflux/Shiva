@@ -51,7 +51,7 @@ else:
     device = 'cpu'
 
 use_viewer = True
-use_viewer_after = 10 # If using viewer, uses after x episodes
+use_viewer_after = 1000 # If using viewer, uses after x episodes
 n_training_threads = 8
 # default settings ---------------------
 num_episodes = 100000
@@ -62,13 +62,13 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 3
-num_OA = 3
+num_TA = 2
+num_OA = 2
 num_TNPC = 0
 num_ONPC = 0
 team_rew_anneal_ep = 5000
 # hyperparams--------------------------
-batch_size = 32
+batch_size = 64
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -108,12 +108,12 @@ TD3_noise = 0.01
 # (Also we must delete all the "garbage" at the beginning of the log files. The first line should be the second instance of 0 4 M StateFeatures)
 Imitation_exploration = True
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-pt_critic_updates = 100
-pt_actor_updates = 100
-pt_actor_critic_updates = 100
+pt_critic_updates = 200000
+pt_actor_updates = 200000
+pt_actor_critic_updates = 0
 pt_imagination_branch_pol_updates = 100
-pt_episodes = 5000# num of episodes that you observed in the gameplay between npcs
-pt_timesteps = 550000# number of timesteps to load in from files
+pt_episodes = 4000# num of episodes that you observed in the gameplay between npcs
+pt_timesteps = 450000# number of timesteps to load in from files
 pt_EM_updates = 300
 pt_beta = 1.0
 #---------------------------------------
@@ -146,16 +146,15 @@ ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
 ball_y_max = 0.1
-agents_x_min = -0.1
-agents_x_max = 0.1
-agents_y_min = -0.1
-agents_y_max = 0.1
-change_every_x = 10
+agents_x_min = -0.5
+agents_x_max = 0.5
+agents_y_min = -0.5
+agents_y_max = 0.5
+change_every_x = 10000
 change_agents_x = 0.01
 change_agents_y = 0.01
 change_balls_x = 0.01
 change_balls_y = 0.01
-
 # Self-play ----------------------------
 load_random_nets = True
 load_random_every = 25
@@ -166,11 +165,11 @@ current_ensembles = [0]*num_TA # initialize which ensembles we start with
 save_nns = True
 ep_save_every = 25 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
-initial_models = ["Trained_3v3/agent_0.pth","Trained_3v3/agent_1.pth","Trained_3v3/agent_2.pth"] # models to load
+initial_models = ["Trained_3v3/Cent_Q/agent_0.pth","Trained_3v3/Cent_Q/agent_1.pth","Trained_3v3/Cent_Q/agent_2.pth"] # models to load
 first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
-evaluate = True
+evaluate = False
 eval_after = 100
 eval_episodes = 10
 # --------------------------------------
@@ -265,7 +264,7 @@ opp_step_logger_df = pd.DataFrame()
 # PRETRAIN ############################
 if Imitation_exploration:
 
-    team_files = ['Pretrain_Files/3v3_CentQ/base_left-11.log','Pretrain_Files/3v3_CentQ/base_left-7.log','Pretrain_Files/3v3_CentQ/base_left-8.log','Pretrain_Files/3v3_CentQ/base_right-2.log','Pretrain_Files/3v3_CentQ/base_right-3.log','Pretrain_Files/3v3_CentQ/base_right-4.log']
+    team_files = ['Pretrain_Files/2v2_CentQ/base_left-11.log','Pretrain_Files/2v2_CentQ/base_left-7.log','Pretrain_Files/2v2_CentQ/base_right-2.log','Pretrain_Files/2v2_CentQ/base_right-3.log']
     #opp_files = ['Pretrain_Files/base_left-1.log','Pretrain_Files/base_left-2.log']
 
     team_pt_obs, team_pt_status,team_pt_actions,opp_pt_obs, opp_pt_status,opp_pt_actions = pretrain_process(fnames = team_files,timesteps = pt_timesteps,num_features = env.team_num_features)

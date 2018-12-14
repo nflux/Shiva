@@ -111,14 +111,14 @@ def pretrain_process(fnames,timesteps,num_features):
                 if contents[agent][team_counters[agent] + 1].split(' ')[3] == 'GameStatus':
                     use_garbage_action[agent] = True
                 elif contents[agent][team_counters[agent] + 1].split(' ')[3] == 'StateFeatures':
-                    #print("double state")
+                    print("double state")
         elif 'agent' in contents[0][team_counters[0]].split(' ')[3]:
             for agent in range(len(fnames)):
                 while "agent" in contents[agent][team_counters[agent]+1].split(' ')[3]:
                     action_string = contents[agent][team_counters[agent]+1].split(' ')[4] # If double Turn- Error
                     team_counters[agent] += 1 # Skip index for that agent
                 if not contents[agent][team_counters[agent] + 1].split(' ')[3] == 'GameStatus':
-                    #print("error after action")
+                    print("error after action")
             team_all_as = []
             opp_all_as = []
             for agent in range(len(fnames)):
@@ -167,7 +167,7 @@ def pretrain_process(fnames,timesteps,num_features):
                     Tackle = True
                     team_tackles[agent] = True # turned off for now ^
                 else: # catch?
-                    #print("catch?")
+                    print("catch?")
                     a = np.random.uniform(-0.01,0.01,8)
                 if agent < num_TA:
                     team_all_as.append(a)
@@ -176,7 +176,7 @@ def pretrain_process(fnames,timesteps,num_features):
         elif contents[0][team_counters[0]].split(' ')[3] == 'GameStatus':
             stat = float(contents[0][team_counters[0]].split(' ' )[4])
             if not contents[0][team_counters[0]+1].split(' ')[3] == 'StateFeatures':
-                #print("error after GS")
+                print("error after GS")
             if not Tackle:
                 team_pt_actions.append([[x for x in ac] for ac in team_all_as])
                 team_pt_obs.append(team_obs)
