@@ -71,6 +71,8 @@ class HFO_env():
             HFO_Env
 
         """
+        self.team_possession_counter = [0] * num_TA
+        self.opp_possession_counter = [0] * num_OA
         self.goalie = goalie
         self.team_rew_anneal_ep = team_rew_anneal_ep
         self.port = port
@@ -154,9 +156,6 @@ class HFO_env():
         self.sync_at_status_opp = np.zeros(num_OA)
         self.sync_at_reward_team = np.zeros(num_TA)
         self.sync_at_reward_opp = np.zeros(num_OA)
-
-        self.scored_counter_right = 0
-        self.scored_counter_left = 0
 
         # Initialization of mutable lists to be passsed to threads
         # action each team mate is supposed to take when its time to act
@@ -585,12 +584,14 @@ class HFO_env():
             # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
             if self.team_base == base:
                 #self.been_kicked_team = True
+                self.team_possession_counter[agentID] += 1
                 if possession_side != 'L': 
                     possession_side = 'L'    
                     reward+=1
                     team_reward+=1
             else:
                 #self.been_kicked_opp = True
+                self.opp_possession_counter[agentID] += 1
                 if possession_side != 'R': 
                     possession_side = 'R'    
                     reward+=1 
