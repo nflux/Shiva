@@ -506,6 +506,8 @@ for ep_i in range(0, num_episodes):
     time_step = 0
     team_kickable_counter = [0] * num_TA
     opp_kickable_counter = [0] * num_OA
+    env.team_possession_counter = [0] * num_TA
+    env.opp_possession_counter = [0] * num_OA
     for et_i in range(0, episode_length):
 
         maddpg.prep_training(device=device) # GPU for forward passes?? 
@@ -746,15 +748,17 @@ for ep_i in range(0, num_episodes):
                 team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.team_envs[0].statusToString(world_stat),
                                                         'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
+                                                        'possession_percentages': [(tpc/time_step)*100 for tpc in env.team_possession_counter],
                                                         'average_reward': team_replay_buffer.get_average_rewards(time_step),
-                                                        'cumulative_reward': team_replay_buffer.get_cumulative_rewards(time_step),
+                                                        'cumulative_reward': team_replay_buffer.get_cumulative_rewards(time_step)},
                                                         ignore_index=True)
 
                 opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.opp_team_envs[0].statusToString(world_stat),
                                                         'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
+                                                        'possession_percentages': [(opc/time_step)*100 for opc in env.opp_possession_counter],
                                                         'average_reward': opp_replay_buffer.get_average_rewards(time_step),
-                                                        'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step),
+                                                        'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step)},
                                                         ignore_index=True)
                 
   

@@ -71,6 +71,8 @@ class HFO_env():
             HFO_Env
 
         """
+        self.team_possession_counter = [0] * num_TA
+        self.opp_possession_counter = [0] * num_OA
         self.goalie = goalie
         self.team_rew_anneal_ep = team_rew_anneal_ep
         self.port = port
@@ -582,11 +584,13 @@ class HFO_env():
             # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
             if self.team_base == base:
                 #self.been_kicked_team = True
+                self.team_possession_counter[agentID] += 1
                 if possession_side != 'L': 
                     possession_side = 'L'    
                     reward+=1  
             else:
                 #self.been_kicked_opp = True
+                self.opp_possession_counter[agentID] += 1
                 if possession_side != 'R': 
                     possession_side = 'R'    
                     reward+=1 
