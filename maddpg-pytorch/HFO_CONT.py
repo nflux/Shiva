@@ -504,8 +504,8 @@ for ep_i in range(0, num_episodes):
     maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
     #for the duration of 100 episode with maximum length of 500 time steps
     time_step = 0
-    team_kickable_counter = 0
-    opp_kickable_counter = 0
+    team_kickable_counter = [0] * num_TA
+    opp_kickable_counter = [0] * num_OA
     for et_i in range(0, episode_length):
 
         maddpg.prep_training(device=device) # GPU for forward passes?? 
@@ -583,16 +583,14 @@ for ep_i in range(0, num_episodes):
             env.num_OA,env.opp_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
 
         # If kickable is True one of the teammate agents has possession of the ball
-        kickable = False
-        kickable = np.array([env.get_kickable_status(i,team_obs.T) for i in range(env.num_TA)]).any()
-        if kickable == True:
-            team_kickable_counter += 1
+        kickable = np.array([env.get_kickable_status(i,team_obs.T) for i in range(env.num_TA)])
+        if kickable.any():
+            team_kickable_counter = [tkc + 1 if kickable[i] else tkc for i,tkc in enumerate(team_kickable_counter)]
             
         # If kickable is True one of the teammate agents has possession of the ball
-        kickable = False
-        kickable = np.array([env.get_kickable_status(i,opp_obs.T) for i in range(env.num_OA)]).any()
-        if kickable == True:
-            opp_kickable_counter += 1
+        kickable = np.array([env.get_kickable_status(i,opp_obs.T) for i in range(env.num_OA)])
+        if kickable.any():
+            opp_kickable_counter = [okc + 1 if kickable[i] else okc for i,okc in enumerate(opp_kickable_counter)]
 
 
         _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params)
@@ -747,18 +745,16 @@ for ep_i in range(0, num_episodes):
             if time_step > 0 and ep_i > 1:
                 team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.team_envs[0].statusToString(world_stat),
-                                                        'kickable_percentages': (team_kickable_counter/time_step) * 100,
+                                                        'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
                                                         'average_reward': team_replay_buffer.get_average_rewards(time_step),
                                                         'cumulative_reward': team_replay_buffer.get_cumulative_rewards(time_step),
-                                                        'goals_scored': env.scored_counter_left/env.num_TA}, 
                                                         ignore_index=True)
 
                 opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.opp_team_envs[0].statusToString(world_stat),
-                                                        'kickable_percentages': (opp_kickable_counter/time_step) * 100,
+                                                        'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
                                                         'average_reward': opp_replay_buffer.get_average_rewards(time_step),
                                                         'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step),
-                                                        'goals_scored': env.scored_counter_right/env.num_OA}, 
                                                         ignore_index=True)
                 
   

@@ -155,9 +155,6 @@ class HFO_env():
         self.sync_at_reward_team = np.zeros(num_TA)
         self.sync_at_reward_opp = np.zeros(num_OA)
 
-        self.scored_counter_right = 0
-        self.scored_counter_left = 0
-
         # Initialization of mutable lists to be passsed to threads
         # action each team mate is supposed to take when its time to act
         self.team_actions = np.array([2]*num_TA)
