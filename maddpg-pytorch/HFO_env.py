@@ -71,6 +71,8 @@ class HFO_env():
             HFO_Env
 
         """
+        self.agent_possession_team = ['N'] * num_TA
+        self.agent_possession_opp = ['N'] * num_OA
         self.team_possession_counter = [0] * num_TA
         self.opp_possession_counter = [0] * num_OA
         self.goalie = goalie
@@ -320,8 +322,18 @@ class HFO_env():
             if obs[agentID][12] == 1:
                 ball_kickable = True
         return ball_kickable
+    
+    def get_agent_possession_status(self,agentID,base):
+        if self.team_base == base:
+            if self.agent_possession_team[agentID] == 'L':
+                self.team_possession_counter[agentID] += 1
             
+            return self.team_possession_counter[agentID]
+        else:
+            if self.agent_possession_opp[agentID] == 'R':
+                self.opp_possession_counter[agentID] += 1
             
+            return self.opp_possession_counter[agentID]  
 
     def apprx_to_goal(self, obs):
         # return the proximity of the agent to the goal center 
@@ -539,7 +551,8 @@ class HFO_env():
                 #else:
                 #    print("Error: Unknown GameState", s)
                 #    reward = -1
-                possession_side = 'N' # at the end of each episode we set this to none 
+                possession_side = 'N' # at the end of each episode we set this to none
+                self.agent_possession_team = ['N'] * self.num_TA
                 return reward
             else:
                 if s=='Goal_By_Right':
@@ -563,6 +576,7 @@ class HFO_env():
                 #    print("Error: Unknown GameState", s)
                 #    reward = -1
                 possession_side = 'N'
+                self.agent_possession_opp = ['N'] * self.num_OA
                 return reward
             
         if self.team_base == base:
@@ -584,15 +598,21 @@ class HFO_env():
             # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
             if self.team_base == base:
                 #self.been_kicked_team = True
-                self.team_possession_counter[agentID] += 1
-                if possession_side != 'L': 
+                # self.team_possession_counter[agentID] += 1
+                self.agent_possession_team = ['N'] * self.num_TA
+                self.agent_possession_opp = ['N'] * self.num_OA
+                self.agent_possession_team[agentID] = 'L'
+                if possession_side != 'L':
                     possession_side = 'L'    
                     reward+=1
                     team_reward+=1
             else:
                 #self.been_kicked_opp = True
-                self.opp_possession_counter[agentID] += 1
-                if possession_side != 'R': 
+                # self.opp_possession_counter[agentID] += 1
+                self.agent_possession_team = ['N'] * self.num_TA
+                self.agent_possession_opp = ['N'] * self.num_OA
+                self.agent_possession_opp[agentID] = 'R'
+                if possession_side != 'R':
                     possession_side = 'R'    
                     reward+=1 
                     team_reward+=1

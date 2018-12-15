@@ -539,8 +539,6 @@ for ep_i in range(0, num_episodes):
         # this is returning one-hot-encoded action for each opp agent 
         opp_actions = [[ac[0][:len(env.action_list)] for ac in opp_agent_actions]]
         
-        tensors = []
-        rands = []
         if explore:
             team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA,
                                                  eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in team_actions]
@@ -593,7 +591,9 @@ for ep_i in range(0, num_episodes):
         kickable = np.array([env.get_kickable_status(i,opp_obs.T) for i in range(env.num_OA)])
         if kickable.any():
             opp_kickable_counter = [okc + 1 if kickable[i] else okc for i,okc in enumerate(opp_kickable_counter)]
-
+        
+        team_possession_counter = [env.get_agent_possession_status(i, env.team_base) for i in range(num_TA)]
+        opp_possession_counter = [env.get_agent_possession_status(i, env.opp_base) for i in range(num_OA)]
 
         _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params)
 
@@ -748,7 +748,7 @@ for ep_i in range(0, num_episodes):
                 team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.team_envs[0].statusToString(world_stat),
                                                         'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
-                                                        'possession_percentages': [(tpc/time_step)*100 for tpc in env.team_possession_counter],
+                                                        'possession_percentages': [(tpc/time_step)*100 for tpc in team_possession_counter],
                                                         'average_reward': team_replay_buffer.get_average_rewards(time_step),
                                                         'cumulative_reward': team_replay_buffer.get_cumulative_rewards(time_step)},
                                                         ignore_index=True)
@@ -756,7 +756,7 @@ for ep_i in range(0, num_episodes):
                 opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.opp_team_envs[0].statusToString(world_stat),
                                                         'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
-                                                        'possession_percentages': [(opc/time_step)*100 for opc in env.opp_possession_counter],
+                                                        'possession_percentages': [(opc/time_step)*100 for opc in opp_possession_counter],
                                                         'average_reward': opp_replay_buffer.get_average_rewards(time_step),
                                                         'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step)},
                                                         ignore_index=True)
