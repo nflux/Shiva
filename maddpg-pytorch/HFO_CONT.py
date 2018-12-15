@@ -50,9 +50,9 @@ else:
     to_gpu = False
     device = 'cpu'
 
-use_viewer = False
+use_viewer = True
 n_training_threads = 8
-use_viewer_after = 200000 # If using viewer, uses after x episodes
+use_viewer_after = 4000 # If using viewer, uses after x episodes
 # default settings ---------------------
 num_episodes = 100000
 replay_memory_size = 250000
@@ -66,7 +66,7 @@ num_TA = 1
 num_OA = 1
 num_TNPC = 0
 num_ONPC = 0
-goalie = True
+goalie = False
 team_rew_anneal_ep = 500 # reward would be
 # hyperparams--------------------------
 batch_size = 256
@@ -89,7 +89,7 @@ Vmax = 10
 Vmin = -10
 N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-n_steps = 5 # n-step update size 
+n_steps = 20 # n-step update size 
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
 initial_beta = 1.0
 final_beta = 0.0 #
@@ -132,7 +132,7 @@ SIL = False
 SIL_update_ratio = 3
 #---------------------------------------
 #Critic Input Modification 
-critic_mod = False
+critic_mod = True
 # NOTE: When both are False but critic_mod is true the critic takes both
 # actions and observations from the opposing side
 critic_mod_act = False
@@ -156,7 +156,7 @@ change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
 load_random_nets = True
-load_random_every = 25
+load_random_every = 1
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
@@ -779,7 +779,7 @@ for ep_i in range(0, num_episodes):
                     7000,env.num_TA,env.num_OA,episode_length,device,use_viewer,))
             
             # Load random networks into team from ensemble and opponent from all models
-            if ep_i > 1 and ep_i % load_random_every == 0 and load_random_nets:
+            if ep_i > ep_save_every and ep_i % load_random_every == 0 and load_random_nets:
                 maddpg.load_random_networks(side='opp',nagents = num_OA,models_path = load_path)
                 current_ensembles = maddpg.load_random_networks(side='team',nagents=num_TA,models_path = ensemble_path)
             break;  

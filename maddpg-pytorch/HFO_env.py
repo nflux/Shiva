@@ -587,12 +587,14 @@ class HFO_env():
                 #self.been_kicked_team = True
                 if possession_side != 'L': 
                     possession_side = 'L'    
-                    reward+=1  
+                    reward+=1
+                    team_reward+=1
             else:
                 #self.been_kicked_opp = True
                 if possession_side != 'R': 
                     possession_side = 'R'    
                     reward+=1 
+                    team_reward+=1
                 
         team_reward += self.possession_reward(base) 
 
