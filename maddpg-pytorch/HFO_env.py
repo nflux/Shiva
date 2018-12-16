@@ -11,6 +11,8 @@ import os, subprocess, time, signal
 
 
 
+possession_side = 'N'
+
 class HFO_env():
     """HFO_env() extends the HFO environment to allow for centralized execution.
 
@@ -69,7 +71,11 @@ class HFO_env():
             HFO_Env
 
         """
-
+        self.agent_possession_team = ['N'] * num_TA
+        self.agent_possession_opp = ['N'] * num_OA
+        self.team_possession_counter = [0] * num_TA
+        self.opp_possession_counter = [0] * num_OA
+        self.goalie = goalie
         self.team_rew_anneal_ep = team_rew_anneal_ep
         self.port = port
         self.hfo_path = get_hfo_path()
@@ -154,9 +160,6 @@ class HFO_env():
         self.sync_at_reward_team = np.zeros(num_TA)
         self.sync_at_reward_opp = np.zeros(num_OA)
 
-        self.scored_counter_right = 0
-        self.scored_counter_left = 0
-
         # Initialization of mutable lists to be passsed to threads
         # action each team mate is supposed to take when its time to act
         self.team_actions = np.array([2]*num_TA)
@@ -177,7 +180,7 @@ class HFO_env():
 
         # keeps track of world state
         self.world_status = 0
-
+        
         self.team_base = base
         self.opp_base = ''
 
@@ -187,20 +190,30 @@ class HFO_env():
         elif base == 'base_right':
             self.opp_base = 'base_left'
 
-
+        
     def launch(self):
         # Create thread for each teammate
         for i in range(self.num_TA):
-            print("Connecting player %i" % i , "on team %s to the server" % self.base)
-            thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
-                                             False,i,self.fpt,self.act_lvl,))
-            time.sleep(1.5)
+            if i == 0:
+                print("Connecting player %i" % i , "on team %s to the server" % self.base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                                                self.goalie,i,self.fpt,self.act_lvl,))
+            else:
+                print("Connecting player %i" % i , "on team %s to the server" % self.base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                                                False,i,self.fpt,self.act_lvl,))
+            time.sleep(1)
         
         for i in range(self.num_OA):
-            print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
-            thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
-                                             False,i,self.fpt,self.act_lvl,))
-            time.sleep(1.5)
+            if i == 0:
+                print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+                                                self.goalie,i,self.fpt,self.act_lvl,))
+            else:
+                print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
+                                                False,i,self.fpt,self.act_lvl,))
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+            time.sleep(1)
         print("All players connected to server")
         self.start = True
 
@@ -310,8 +323,18 @@ class HFO_env():
             if obs[agentID][12] == 1:
                 ball_kickable = True
         return ball_kickable
+    
+    def get_agent_possession_status(self,agentID,base):
+        if self.team_base == base:
+            if self.agent_possession_team[agentID] == 'L':
+                self.team_possession_counter[agentID] += 1
             
+            return self.team_possession_counter[agentID]
+        else:
+            if self.agent_possession_opp[agentID] == 'R':
+                self.opp_possession_counter[agentID] += 1
             
+            return self.opp_possession_counter[agentID]  
 
     def apprx_to_goal(self, obs):
         # return the proximity of the agent to the goal center 
@@ -342,14 +365,23 @@ class HFO_env():
         
         return ball_prox, closest_player_index
     
-    def possession_reward(self, possession):
+    def possession_reward(self,base):
         '''
         teams receive reward based on possession defined by which side had the ball kickable last
         '''
-        if possession == True:
-            return 0.003
-        else:
-            return -0.003
+        global possession_side
+        if self.team_base == base:
+            if  possession_side == 'L':
+                    return 0.001
+            if  possession_side == 'R':
+                    return -0.001
+        else: 
+            if  possession_side == 'R':
+                    return 0.001
+            if  possession_side == 'L':
+                    return -0.001
+        
+        return 0.0
         
         
     def ball_distance_to_goal(self,obs):
@@ -492,7 +524,7 @@ class HFO_env():
         reward=0.0
         team_reward = 0.0
         #---------------------------
-
+        global possession_side
         if self.d:
             if self.team_base == base:
             # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
@@ -515,6 +547,8 @@ class HFO_env():
                 #else:
                 #    print("Error: Unknown GameState", s)
                 #    reward = -1
+                possession_side = 'N' # at the end of each episode we set this to none
+                self.agent_possession_team = ['N'] * self.num_TA
                 return reward
             else:
                 if s=='Goal_By_Right':
@@ -537,45 +571,57 @@ class HFO_env():
                 #else:
                 #    print("Error: Unknown GameState", s)
                 #    reward = -1
+                possession_side = 'N'
+                self.agent_possession_opp = ['N'] * self.num_OA
                 return reward
             
         if self.team_base == base:
             team_actions = self.team_actions
             team_obs = self.team_obs
             team_obs_previous = self.team_obs_previous
+<<<<<<<
             been_kicked = self.been_kicked_team
 
+=======
+            #been_kicked = self.been_kicked_team
+>>>>>>>
             num_ag = self.num_TA
         else:
             team_actions = self.opp_actions
             team_obs = self.opp_team_obs
             team_obs_previous = self.opp_team_obs_previous
+<<<<<<<
             num_ag = self.num_OA
             been_kicked = self.been_kicked_opp
 
         
+=======
+            #been_kicked = self.been_kicked_opp
+            num_ag = self.num_OA
+                
+>>>>>>>
 
         ############ Anyone kicked reward #################
         if np.array([self.action_list[team_actions[ag]] in self.kick_actions and self.get_kickable_status(ag,team_obs_previous) for ag in range(self.num_TA)]).any() and not been_kicked: 
-            team_reward+= 1 # team kicked when avaialable and hasn't been kicked before
             if self.team_base == base:
-                self.been_kicked_team= True # been kicked now
+                # self.team_possession_counter[agentID] += 1
+                self.agent_possession_team = ['N'] * self.num_TA
+                self.agent_possession_opp = ['N'] * self.num_OA
+                self.agent_possession_team[agentID] = 'L'
+                if possession_side != 'L':
+                    possession_side = 'L'    
+                    reward+=1
+                    team_reward+=1
             else:
-                self.been_kicked_opp = True 
-        ####################################################
-        
-        if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous): 
-            reward+= 0.1 # kicked when avaialable (personal repeatable reward)
-            
-            
-        ########### possession reward ######################
-        if np.array([self.action_list[team_actions[ag]] in self.kick_actions and self.get_kickable_status(ag,team_obs_previous) for ag in range(self.num_TA)]).any():   # if anyone on team kicks  
-            if self.team_base == base:
-                self.team_possession = True
-                self.opp_possession = False
-            else:
-                self.opp_possession = True
-                self.team_possession = False
+                # self.opp_possession_counter[agentID] += 1
+                self.agent_possession_team = ['N'] * self.num_TA
+                self.agent_possession_opp = ['N'] * self.num_OA
+                self.agent_possession_opp[agentID] = 'R'
+                if possession_side != 'R':
+                    possession_side = 'R'    
+                    reward+=1 
+                    team_reward+=1
+        team_reward += self.possession_reward(base) 
 
         if self.team_base == base:
             possession = self.team_possession
@@ -615,10 +661,11 @@ class HFO_env():
         ####################### reduce ball distance to goal - using delta  ##################
         r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+        reward += (3)*(r_prev - r)*.6
         team_reward += (3)*(r_prev - r)*.6
         ##################################################################################
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
-        return team_reward + (reward * rew_percent)
+        return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -854,7 +901,7 @@ class HFO_env():
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s"\
+                  " --log-dir %s --message-size 256"\
                   % (frames_per_trial, untouched_time, offense_agents,
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,

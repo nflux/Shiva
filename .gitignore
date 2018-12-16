@@ -4,6 +4,7 @@ __pycache__/
 *.ipynb_checkpoints
 *.csv
 *.log
+.vscode/
 maddpg-pytorch/HFO/bin/rcssserver
 maddpg-pytorch/HFO/bin/soccerwindow2
 maddpg-pytorch/HFO/bin/teams/base/agent
@@ -12,8 +13,8 @@ maddpg-pytorch/HFO/bin/teams/base/sample_player
 maddpg-pytorch/HFO/bin/teams/base/sample_trainer
 maddpg-pytorch/HFO/example/thread_agents
 maddpg-pytorch/training_sessions
-maddpg-pytorch/HFO/log_pt
 maddpg-pytorch/Pretrain_Files
+maddpg-pytorch/HFO/log_pt
 
 maddpg-pytorch/Pretrained_3v3/
 

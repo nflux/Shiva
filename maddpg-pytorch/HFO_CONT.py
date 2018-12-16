@@ -62,13 +62,14 @@ burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 2
-num_OA = 2
+num_TA = 1
+num_OA = 1
 num_TNPC = 0
 num_ONPC = 0
-team_rew_anneal_ep = 5000
+goalie = False
+team_rew_anneal_ep = 500 # reward would be
 # hyperparams--------------------------
-batch_size = 64
+batch_size = 256
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -88,7 +89,7 @@ Vmax = 10
 Vmin = -10
 N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-n_steps = 5 # n-step update size 
+n_steps = 20 # n-step update size 
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
 initial_beta = 0.0
 final_beta = 0.0 #
@@ -141,7 +142,7 @@ critic_mod_obs = False
 critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
 #---------------------------------------
 # Control Random Initilization of Agents and Ball
-control_rand_init = False
+control_rand_init = True
 ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
@@ -157,7 +158,7 @@ change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
 load_random_nets = True
-load_random_every = 25
+load_random_every = 1
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
@@ -170,7 +171,7 @@ first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = False
-eval_after = 100
+eval_after = 10000
 eval_episodes = 10
 # --------------------------------------
 # Prep Session Files ------------------------------
@@ -201,7 +202,7 @@ if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
     
 
-env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, 
+env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
                 num_trials = num_episodes, fpt = episode_length, # create environment
                 feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
                 ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
@@ -605,8 +606,10 @@ for ep_i in range(0, num_episodes):
     maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
     #for the duration of 100 episode with maximum length of 500 time steps
     time_step = 0
-    team_kickable_counter = 0
-    opp_kickable_counter = 0
+    team_kickable_counter = [0] * num_TA
+    opp_kickable_counter = [0] * num_OA
+    env.team_possession_counter = [0] * num_TA
+    env.opp_possession_counter = [0] * num_OA
     for et_i in range(0, episode_length):
 
         maddpg.prep_training(device=device) # GPU for forward passes?? 
@@ -638,8 +641,6 @@ for ep_i in range(0, num_episodes):
         # this is returning one-hot-encoded action for each opp agent 
         opp_actions = [[ac[0][:len(env.action_list)] for ac in opp_agent_actions]]
         
-        tensors = []
-        rands = []
         if explore:
             team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA,
                                                  eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in team_actions]
@@ -684,17 +685,17 @@ for ep_i in range(0, num_episodes):
             env.num_OA,env.opp_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
 
         # If kickable is True one of the teammate agents has possession of the ball
-        kickable = False
-        kickable = np.array([env.get_kickable_status(i,team_obs.T) for i in range(env.num_TA)]).any()
-        if kickable == True:
-            team_kickable_counter += 1
+        kickable = np.array([env.get_kickable_status(i,team_obs.T) for i in range(env.num_TA)])
+        if kickable.any():
+            team_kickable_counter = [tkc + 1 if kickable[i] else tkc for i,tkc in enumerate(team_kickable_counter)]
             
         # If kickable is True one of the teammate agents has possession of the ball
-        kickable = False
-        kickable = np.array([env.get_kickable_status(i,opp_obs.T) for i in range(env.num_OA)]).any()
-        if kickable == True:
-            opp_kickable_counter += 1
-
+        kickable = np.array([env.get_kickable_status(i,opp_obs.T) for i in range(env.num_OA)])
+        if kickable.any():
+            opp_kickable_counter = [okc + 1 if kickable[i] else okc for i,okc in enumerate(opp_kickable_counter)]
+        
+        team_possession_counter = [env.get_agent_possession_status(i, env.team_base) for i in range(num_TA)]
+        opp_possession_counter = [env.get_agent_possession_status(i, env.opp_base) for i in range(num_OA)]
 
         _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params)
 
@@ -847,18 +848,18 @@ for ep_i in range(0, num_episodes):
             if ep_i > 1:
                 team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.team_envs[0].statusToString(world_stat),
-                                                        'kickable_percentages': (team_kickable_counter/time_step) * 100,
+                                                        'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
+                                                        'possession_percentages': [(tpc/time_step)*100 for tpc in team_possession_counter],
                                                         'average_reward': team_replay_buffer.get_average_rewards(time_step),
-                                                        'cumulative_reward': team_replay_buffer.get_cumulative_rewards(time_step),
-                                                        'goals_scored': env.scored_counter_left/env.num_TA}, 
+                                                        'cumulative_reward': team_replay_buffer.get_cumulative_rewards(time_step)},
                                                         ignore_index=True)
 
                 opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.opp_team_envs[0].statusToString(world_stat),
-                                                        'kickable_percentages': (opp_kickable_counter/time_step) * 100,
+                                                        'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
+                                                        'possession_percentages': [(opc/time_step)*100 for opc in opp_possession_counter],
                                                         'average_reward': opp_replay_buffer.get_average_rewards(time_step),
-                                                        'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step),
-                                                        'goals_scored': env.scored_counter_right/env.num_OA}, 
+                                                        'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step)},
                                                         ignore_index=True)
                 
   
@@ -879,7 +880,7 @@ for ep_i in range(0, num_episodes):
                     7000,env.num_TA,env.num_OA,episode_length,device,use_viewer,))
             
             # Load random networks into team from ensemble and opponent from all models
-            if ep_i > 1 and ep_i % load_random_every == 0 and load_random_nets:
+            if ep_i > ep_save_every and ep_i % load_random_every == 0 and load_random_nets:
                 maddpg.load_random_networks(side='opp',nagents = num_OA,models_path = load_path)
                 current_ensembles = maddpg.load_random_networks(side='team',nagents=num_TA,models_path = ensemble_path)
             break;  
