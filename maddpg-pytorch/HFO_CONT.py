@@ -50,26 +50,26 @@ else:
     to_gpu = False
     device = 'cpu'
 
-use_viewer = True
+use_viewer = False
 use_viewer_after = 1000 # If using viewer, uses after x episodes
 n_training_threads = 8
 # default settings ---------------------
 num_episodes = 100000
-replay_memory_size = 1500000
+replay_memory_size = 1000000
 episode_length = 500 # FPS
 untouched_time = 500
 burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 1
-num_OA = 1
+num_TA = 2
+num_OA = 2
 num_TNPC = 0
 num_ONPC = 0
 goalie = False
 team_rew_anneal_ep = 500 # reward would be
 # hyperparams--------------------------
-batch_size = 256
+batch_size = 64
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -89,7 +89,7 @@ Vmax = 10
 Vmin = -10
 N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-n_steps = 20 # n-step update size 
+n_steps = 25 # n-step update size 
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
 initial_beta = 0.0
 final_beta = 0.0 #
@@ -107,14 +107,14 @@ TD3_noise = 0.01
 # To use imitation exporation run N TNPC vs N ONPC for the desired number of episodes
 # Copy the base_left-11.log and -7.log (for 2v2)  to Pretrain_Files and rerun this file.
 # (Also we must delete all the "garbage" at the beginning of the log files. The first line should be the second instance of 0 4 M StateFeatures)
-Imitation_exploration = True
+Imitation_exploration = False
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-pt_critic_updates = 200000
-pt_actor_updates = 200000
+pt_critic_updates = 0
+pt_actor_updates = 0
 pt_actor_critic_updates = 0
 pt_imagination_branch_pol_updates = 100
-pt_episodes = 4000# num of episodes that you observed in the gameplay between npcs
-pt_timesteps = 450000# number of timesteps to load in from files
+pt_episodes = 1000# num of episodes that you observed in the gameplay between npcs
+pt_timesteps = 150000# number of timesteps to load in from files
 pt_EM_updates = 300
 pt_beta = 1.0
 #---------------------------------------
@@ -142,7 +142,7 @@ critic_mod_obs = False
 critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
 #---------------------------------------
 # Control Random Initilization of Agents and Ball
-control_rand_init = True
+control_rand_init = False
 ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
@@ -164,9 +164,9 @@ current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
 save_nns = True
-ep_save_every = 25 # episodes
+ep_save_every = 10 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
-initial_models = ["Trained_3v3/Cent_Q/agent_0.pth","Trained_3v3/Cent_Q/agent_1.pth","Trained_3v3/Cent_Q/agent_2.pth"] # models to load
+initial_models = ["Pretrained_2v2/Cent_Q/agent_0.pth","Pretrained_2v2/Cent_Q/agent_1.pth"] # models to load
 first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------

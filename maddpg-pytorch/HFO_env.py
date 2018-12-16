@@ -202,7 +202,7 @@ class HFO_env():
                 print("Connecting player %i" % i , "on team %s to the server" % self.base)
                 thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
                                                 False,i,self.fpt,self.act_lvl,))
-            time.sleep(1)
+            time.sleep(1.5)
         
         for i in range(self.num_OA):
             if i == 0:
@@ -211,9 +211,10 @@ class HFO_env():
                                                 self.goalie,i,self.fpt,self.act_lvl,))
             else:
                 print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
-                                                False,i,self.fpt,self.act_lvl,))
                 thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
-            time.sleep(1)
+                                                False,i,self.fpt,self.act_lvl,))
+
+            time.sleep(1.5)
         print("All players connected to server")
         self.start = True
 
@@ -579,36 +580,24 @@ class HFO_env():
             team_actions = self.team_actions
             team_obs = self.team_obs
             team_obs_previous = self.team_obs_previous
-<<<<<<<
-            been_kicked = self.been_kicked_team
-
-=======
-            #been_kicked = self.been_kicked_team
->>>>>>>
             num_ag = self.num_TA
         else:
             team_actions = self.opp_actions
             team_obs = self.opp_team_obs
             team_obs_previous = self.opp_team_obs_previous
-<<<<<<<
             num_ag = self.num_OA
-            been_kicked = self.been_kicked_opp
 
         
-=======
-            #been_kicked = self.been_kicked_opp
-            num_ag = self.num_OA
-                
->>>>>>>
-
         ############ Anyone kicked reward #################
-        if np.array([self.action_list[team_actions[ag]] in self.kick_actions and self.get_kickable_status(ag,team_obs_previous) for ag in range(self.num_TA)]).any() and not been_kicked: 
+        if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            
+            
             if self.team_base == base:
                 # self.team_possession_counter[agentID] += 1
                 self.agent_possession_team = ['N'] * self.num_TA
                 self.agent_possession_opp = ['N'] * self.num_OA
                 self.agent_possession_team[agentID] = 'L'
                 if possession_side != 'L':
+                    print("possession change")
                     possession_side = 'L'    
                     reward+=1
                     team_reward+=1
@@ -623,11 +612,7 @@ class HFO_env():
                     team_reward+=1
         team_reward += self.possession_reward(base) 
 
-        if self.team_base == base:
-            possession = self.team_possession
-        else:
-            possession = self.opp_possession    
-        team_reward += self.possession_reward(possession) 
+    
         #######################################################
 
 
