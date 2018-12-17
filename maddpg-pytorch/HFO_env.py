@@ -597,7 +597,6 @@ class HFO_env():
                 self.agent_possession_opp = ['N'] * self.num_OA
                 self.agent_possession_team[agentID] = 'L'
                 if possession_side != 'L':
-                    print("possession change")
                     possession_side = 'L'    
                     reward+=1
                     team_reward+=1
@@ -610,7 +609,8 @@ class HFO_env():
                     possession_side = 'R'    
                     reward+=1 
                     team_reward+=1
-        team_reward += self.possession_reward(base) 
+        team_reward += self.possession_reward(base)
+        reward += self.possession_reward(base)
 
     
         #######################################################

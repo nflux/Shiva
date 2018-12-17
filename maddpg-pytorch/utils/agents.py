@@ -213,3 +213,21 @@ class DDPGAgent(object):
         self.policy_prime_optimizer.load_state_dict(params['policy_prime_optimizer'])
         self.imagination_policy_optimizer.load_state_dict(params['imagination_policy_optimizer'])
         self.EM_optimizer.load_state_dict(params['EM_optimizer'])
+
+        
+    def load_policy_params(self, params):
+        if self.device == 'cuda':
+            dev = torch.device("cuda")
+        else:
+            dev = torch.device('cpu')
+        self.policy.load_state_dict(params['policy'])
+        self.policy_prime.load_state_dict(params['policy_prime'])
+        self.imagination_policy.load_state_dict(params['imagination_policy'])
+        self.EM.load_state_dict(params['EM'])
+
+
+        self.policy.to(dev)
+        self.policy_prime.to(dev)
+        self.imagination_policy.to(dev)
+        self.EM.to(dev)
+      

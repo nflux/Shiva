@@ -67,9 +67,9 @@ num_OA = 2
 num_TNPC = 0
 num_ONPC = 0
 goalie = False
-team_rew_anneal_ep = 500 # reward would be
+team_rew_anneal_ep = 1500 # reward would be
 # hyperparams--------------------------
-batch_size = 64
+batch_size = 32
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -80,7 +80,7 @@ explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 1 # Haus uses over 10,000 updates --
+num_explore_episodes = 50 # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -142,7 +142,7 @@ critic_mod_obs = False
 critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
 #---------------------------------------
 # Control Random Initilization of Agents and Ball
-control_rand_init = False
+control_rand_init = True
 ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
@@ -881,8 +881,8 @@ for ep_i in range(0, num_episodes):
             
             # Load random networks into team from ensemble and opponent from all models
             if ep_i > ep_save_every and ep_i % load_random_every == 0 and load_random_nets:
-                maddpg.load_random_networks(side='opp',nagents = num_OA,models_path = load_path)
-                current_ensembles = maddpg.load_random_networks(side='team',nagents=num_TA,models_path = ensemble_path)
+                maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path)
+                current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path)
             break;  
 
                 

@@ -1733,7 +1733,33 @@ class MADDPG(object):
         return instance
 
         
-    def load_random_networks(self,side='team',nagents=1,models_path="models"):
+    def load_random_policy(self,side='team',nagents=1,models_path="models"):
+        """
+        Load new networks into the currently running session
+        Returns the index chosen for each agent
+        """
+        folders = os.listdir(models_path)
+        folders.sort()
+        
+        ind = [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
+        folder = [folder for folder in folders] # the folder names for each agents model
+        filenames = []
+        for i,f in zip(ind,folder):
+            current = os.listdir(models_path +f)
+            if side == 'team':
+                current.sort()
+            filenames.append(current[i])
+        
+        save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
+        for i in range(nagents):
+            if side=='team':
+                self.team_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+            else:
+                self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+        return ind
+                
+                    
+    def load_random_ensemble(self,side='team',nagents=1,models_path="models"):
         """
         Load new networks into the currently running session
         Returns the index chosen for each agent
@@ -1758,7 +1784,6 @@ class MADDPG(object):
                 self.opp_agents[i].load_params(save_dicts[i]['agent_params'])
         return ind
                 
-            
                                           
     def first_save(self, file_path,num_copies=1):
         """
