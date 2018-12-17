@@ -646,8 +646,8 @@ class HFO_env():
         ####################### reduce ball distance to goal - using delta  ##################
         r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (3)*(r_prev - r)*.6
-        team_reward += (3)*(r_prev - r)*.6
+        reward += (3)*(r_prev - r)
+        team_reward += (3)*(r_prev - r)
         ##################################################################################
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
         return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
