@@ -646,7 +646,7 @@ for ep_i in range(0, num_episodes):
                                                  eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in team_actions]
 
             opp_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_OA,len(env.action_list)), env.num_OA,
-                                                 eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in opp_actions]
+                                                 eps = 0.000000001) for a in opp_actions]
         else:
             team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA, eps = 0) for a in team_actions]
             opp_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_OA,len(env.action_list)), env.num_OA, eps = 0) for a in opp_actions]
