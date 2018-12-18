@@ -31,7 +31,7 @@ class DDPGAgent(object):
         elif critic_mod_obs:
             num_in_critic = num_in_critic + (num_in_pol * maddpg.nagents_team)
 
-        
+        self.norm_in = False
         self.counter = 0
         self.updating_actor = False
         self.maddpg = maddpg
@@ -58,35 +58,35 @@ class DDPGAgent(object):
         self.policy_prime = MLPNetwork_Actor(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action, 
-                                 norm_in= False,agent=self)
+                                 norm_in= self.norm_in,agent=self)
 
         # Stores a policy such as Helios to be used as one of the branches in imagination
         self.imagination_policy = MLPNetwork_Actor(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action, 
-                                 norm_in= False,agent=self)
+                                 norm_in= self.norm_in,agent=self)
        
         self.policy = I2A_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
                           hidden_dim=hidden_dim,
                           discrete_action=discrete_action,
-                          norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                          norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                           EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                   LSTM_hidden=LSTM_hidden,maddpg=maddpg)
         
         self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action,
-                                 norm_in= False,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                                 norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                                  EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                          LSTM_hidden=LSTM_hidden,maddpg=maddpg)
         
         self.critic = MLPNetwork_Critic(num_in_critic, 1,
                                  hidden_dim=hidden_dim,
-                                 norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
+                                 norm_in= self.norm_in,agent=self,D4PG=D4PG,TD3=TD3)
 
         self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
                                                hidden_dim=hidden_dim,
-                                               norm_in= False,agent=self,D4PG=D4PG,TD3=TD3)
+                                               norm_in= self.norm_in,agent=self,D4PG=D4PG,TD3=TD3)
 
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)

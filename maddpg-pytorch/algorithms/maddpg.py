@@ -269,6 +269,7 @@ class MADDPG(object):
             if self.D4PG:
                 arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().cpu().data.numpy(),
                                  curr_agent.target_critic.distr_to_q(trgt_Q2).mean().cpu().data.numpy()])
+
                 if arg: 
                     trgt_Q = trgt_Q1
                 else:
@@ -384,6 +385,7 @@ class MADDPG(object):
             hook.remove()
             if self.niter % 100 == 0:
                 print("Team (%s) Agent (%i) Actor loss:" % (side,agent_i),pol_loss)
+
 
 
         # I2A --------------------------------------
@@ -541,6 +543,7 @@ class MADDPG(object):
             if self.D4PG:
                 arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().cpu().data.numpy(),
                                  curr_agent.target_critic.distr_to_q(trgt_Q2).mean().cpu().data.numpy()])
+
                 if arg: 
                     trgt_Q = trgt_Q1
                 else:
@@ -1495,7 +1498,7 @@ class MADDPG(object):
         if self.niter % 100 == 0:
             print("Team (%s) Agent(%i) Policy loss" % (side, agent_i),pol_loss)
         
-    def SIL_update(self, sample, agent_i, side='team', parallel=False, logger=None):
+    def SIL_update(self, team_sample, opp_sample,agent_i,side='team', parallel=False, logger=None,centQ=False):
         """
         Update parameters of agent model based on sample from replay buffer using Self-Imitation Learning update:
         sil_policy_loss = (MSE(Action,Policy(obs))) * (R - Q) if R > Q
@@ -1510,51 +1513,54 @@ class MADDPG(object):
             logger (SummaryWriter from Tensorboard-Pytorch):
                 If passed in, important quantities will be logged
         """
-        # rews = 1-step, cum-rews = n-step
-        obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample
-        curr_agent = self.agents[agent_i]
-                                          
+            
         if side == 'team':
+            count = self.team_count[agent_i]
             curr_agent = self.team_agents[agent_i]
             target_policies = self.team_target_policies
+            opp_target_policies = self.opp_target_policies
             nagents = self.nagents_team
             policies = self.team_policies
+            opp_policies = self.opp_policies
+            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = team_sample
+            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = opp_sample
         else:
+            count = self.opp_count[agent_i]
             curr_agent = self.opp_agents[agent_i]
             target_policies = self.opp_target_policies
+            opp_target_policies = self.team_target_policies
             nagents = self.nagents_opp
             policies = self.opp_policies
-                                          
+            opp_policies = self.team_policies
+            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
+            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
+      
         curr_agent.critic_optimizer.zero_grad()
 
-        if self.discrete_action:
-            # Forward pass as if onehot (hard=True) but backprop through a differentiable
-            # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
-            # through discrete categorical samples, but I'm not sure if that is
-            # correct since it removes the assumption of a deterministic policy for
-            # DDPG. Regardless, discrete policies don't seem to learn properly without it.
-            curr_pol_out = curr_agent.policy(obs[agent_i])
-            curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
-        else:
-            curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
 
-            self.curr_pol_out = curr_pol_out.clone() # for inverting action space
-        
-            curr_pol_vf_in = curr_pol_out
+        curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
 
-        all_pol_acs = []
+
+        curr_pol_vf_in = curr_pol_out
+
+        team_pol_acs = []
+        opp_pol_acs = []
         for i, pi, ob in zip(range(nagents), policies, obs):
             if i == agent_i:
-                all_pol_acs.append(curr_pol_vf_in)
-            elif self.discrete_action:
-                all_pol_acs.append(onehot_from_logits(pi(ob)))
+                team_pol_acs.append(curr_pol_vf_in)
             else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
                 a = pi(ob)
-                g = onehot_from_logits(torch.log(a[:,:curr_agent.action_dim]),hard=True)
-                c = torch.cat((g,self.zero_params(a,g)[:,curr_agent.action_dim:]),1)
-                all_pol_acs.append(c) # 
+                team_pol_acs.append(a) # 
+        if centQ:
+            for i, pi, ob in zip(range(nagents), opp_policies, opp_obs):
+                a = pi(ob)
+                opp_pol_acs.append(pi(ob)) # 
 
-        vf_in = torch.cat((*obs, *all_pol_acs), dim=1)       
+        if not centQ:
+            vf_in = torch.cat((*obs, *team_pol_acs), dim=1)     
+        else:
+            vf_in = torch.cat((torch.cat((*opp_obs,*obs),dim=1),torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)),dim=1)
+            
         # Train critic ------------------------
         # Uses MSE between MC values and Q if MC > Q
         if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
@@ -1563,28 +1569,30 @@ class MADDPG(object):
             if self.D4PG:
                 Q1 = curr_agent.critic.distr_to_q(Q1_distr)
                 Q2 = curr_agent.critic.distr_to_q(Q2_distr)
-                arg = np.argmin([curr_agent.critic.distr_to_q(Q1).mean().cpu().data.numpy(),
-                                 curr_agent.critic.distr_to_q(Q2).mean().cpu().data.numpy()])
+                arg = np.argmin([Q1.mean().cpu().data.numpy(),
+                                 Q2.mean().cpu().data.numpy()])
                 if arg: 
-                    Q = curr_agent.critic.distr_to_q(Q1)
+                    Q = Q1
                 else:
-                    Q = curr_agent.critic.distr_to_q(Q2)
+                    Q = Q2
             else:
                 Q = torch.min(Q1,Q2)
         else:
-            Q = curr_agent.target_critic(vf_in)
+            Q = curr_agent.critic(vf_in)
         # Critic assessment of current policy actions
         vf_in = torch.cat((*obs, *acs), dim=1)
 
         returns = MC_rews[agent_i].view(-1,1)
 
         if self.TD3: # handle double critic
-            clipped_differences_Q1 = torch.clamp(returns - Q1,min=0.0)
-            clipped_differences_Q2 = torch.clamp(returns - Q2,min=0.0)
-            vf_loss = torch.norm(clipped_differences_Q1**2)/2.0 + torch.norm(clipped_differences_Q2**2)/2.0
+            clipped_differences_Q1 = torch.clamp(returns - Q1,min=0.0).view(-1,1)
+            clipped_differences_Q2 = torch.clamp(returns - Q2,min=0.0).view(-1,1)
+            #print(Q)
+            vf_loss = torch.norm(clipped_differences_Q1)/2.0 + torch.norm(clipped_differences_Q2)/2.0
+            clipped_differences = torch.clamp(returns - Q,min=0.0).view(-1,1)
         else:
             clipped_differences = torch.clamp(returns - Q,min=0.0).view(-1,1)
-            vf_loss = torch.norm(clipped_differences**2)/2.0
+            vf_loss = torch.norm(clipped_differences)
             
         vf_loss.backward(retain_graph=True) 
         if parallel:
@@ -1597,41 +1605,33 @@ class MADDPG(object):
 
         
         
-        # invert gradient --------------------------------------
-        self.params = vf_in.data
-        self.param_dim = curr_agent.param_dim
 
         pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
         actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
         pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
         actual_out_params = Variable(torch.stack(acs)[agent_i],requires_grad=True)[:,curr_agent.action_dim:]
-        target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
+        #target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
         
-        param_errors = Variable(torch.tensor([F.mse_loss(estimation[self.discrete_param_indices(target_class)],actual[self.discrete_param_indices(target_class)]) for estimation,actual,target_class in zip(pol_out_params,actual_out_params, target_classes)],device=self.device)).view(-1,1)
+        param_errors = (pol_out_params - actual_out_params)**2
         action_errors = (pol_out_actions - actual_out_actions)**2
         
-        if self.TD3:
-            param_errors *= clipped_differences_Q1
-            action_errors *= clipped_differences_Q1
-        else:
-            param_errors *= clipped_differences
-            action_errors *= clipped_differences
-        param_loss = torch.norm(param_errors)
-        action_loss = torch.norm(action_errors)
+        param_errors *= clipped_differences
+        action_errors *= clipped_differences
 
-        #pol_loss = MSE + CELoss(pol_out_actions,target_classes)
+        param_loss = torch.sum(torch.abs(param_errors))
+        action_loss = torch.sum(torch.abs(action_errors))
+
         pol_loss = action_loss + param_loss # Weighted MSE based on how off Q was.
-#pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
         if parallel:
             average_gradients(curr_agent.policy)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
 
-        if self.niter % 101 == 0:
-            
+        if self.niter % 100 == 0:
             print("Team (%s) SIL Actor loss:" % side,np.round(pol_loss.item(),6))
             print("Team (%s) SIL Critic loss:" % side,np.round(vf_loss.item(),6))
+
         
         # ------------------------------------
 

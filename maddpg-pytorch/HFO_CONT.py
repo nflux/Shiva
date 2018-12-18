@@ -58,18 +58,20 @@ num_episodes = 100000
 replay_memory_size = 1000000
 episode_length = 500 # FPS
 untouched_time = 500
-burn_in_iterations = 500 # for time step
+burn_in_iterations = 5000 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
+train_team = True
+train_opp = False
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 2
-num_OA = 2
+num_TA = 1
+num_OA = 1
 num_TNPC = 0
 num_ONPC = 0
 goalie = False
 team_rew_anneal_ep = 1500 # reward would be
 # hyperparams--------------------------
-batch_size = 32
+batch_size = 128
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.0005 # critic learning rate
@@ -91,12 +93,10 @@ N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 25 # n-step update size 
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
-initial_beta = 0.0
-final_beta = 0.0 #
-num_beta_episodes = 10
-#---------------------------------------
-train_team = True
-train_opp = False
+initial_beta = 1.0
+final_beta = 0.1 #
+num_beta_episodes = 1
+
 #---------------------------------------
 #TD3 Options ---------------------------
 TD3 = True
@@ -518,7 +518,8 @@ if Imitation_exploration:
                                                   to_gpu=to_gpu,norm_rews=False)
                     maddpg.update(sample, a_i, 'team' )
                     if SIL:
-                        [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
+                        [maddpg.SIL_update(team_sample, team_sample, a_i, 'team', 
+                                                    centQ=critic_mod) for i in range(SIL_update_ratio)]
                 maddpg.update_all_targets()
     else: # centralized Q
         for i in range(pt_critic_updates):
@@ -551,7 +552,8 @@ if Imitation_exploration:
                     maddpg.update_centralized_critic(team_sample, opp_sample, a_i, 'team', 
                                                      act_only=critic_mod_act, obs_only=critic_mod_obs)
                     if SIL:
-                        [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
+                        [maddpg.SIL_update(team_sample, opp_sample, a_i, 'team', 
+                                                    centQ=critic_mod) for i in range(SIL_update_ratio)]
                 maddpg.update_all_targets()
         
         
@@ -741,7 +743,12 @@ for ep_i in range(0, num_episodes):
                                                         to_gpu=to_gpu,norm_rews=False)
                             maddpg.update(sample, a_i, 'team')
                             if SIL:
-                                [maddpg.SIL_update(sample, a_i,'team') for i in range(SIL_update_ratio)]
+                                for i in range(SIL_update_ratio):
+                                    inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                                    sample = team_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+                                    maddpg.SIL_update(sample, sample, a_i, 'team', # send team_sample twice, second will not be used
+                                                    centQ=critic_mod)
                     if train_opp: # train opp team
                         for a_i in range(maddpg.nagents_opp):
                             inds = np.random.choice(np.arange(len(opp_replay_buffer)), size=batch_size, replace=False)
@@ -749,7 +756,12 @@ for ep_i in range(0, num_episodes):
                                                         to_gpu=to_gpu,norm_rews=False)
                             maddpg.update(sample, a_i, 'opp')
                             if SIL:
-                                [maddpg.SIL_update(sample, a_i,'opp') for i in range(SIL_update_ratio)]
+                                for i in range(SIL_update_ratio):
+                                    inds = np.random.choice(np.arange(len(opp_replay_buffer)), size=batch_size, replace=False)
+                                    sample = opp_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+                                    maddpg.SIL_update(sample, sample, a_i, 'opp', # send team_sample twice, second will not be used
+                                                    centQ=critic_mod)
                     maddpg.update_all_targets()
                 # maddpg.prep_rollouts(device='cpu') convert back to cpu for pushing?
             else:
@@ -766,6 +778,13 @@ for ep_i in range(0, num_episodes):
 
                             maddpg.update_centralized_critic(team_sample, opp_sample, a_i, 'team', 
                                                              act_only=critic_mod_act, obs_only=critic_mod_obs)
+                            if SIL:
+                                for i in range(SIL_update_ratio):
+                                    inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                                    sample = team_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+                                    maddpg.SIL_update(sample, sample, a_i, 'team', # send team_sample twice, second will not be used
+                                                    centQ=critic_mod)
                     if train_opp: # train opp team
                         for a_i in range(maddpg.nagents_opp):
                             inds = np.random.choice(np.arange(len(opp_replay_buffer)), size=batch_size, replace=False)
@@ -775,6 +794,13 @@ for ep_i in range(0, num_episodes):
                                                         to_gpu=to_gpu,norm_rews=False)
                             maddpg.update_centralized_critic(team_sample, opp_sample, a_i, 'opp', 
                                                              act_only=critic_mod_act, obs_only=critic_mod_obs)
+                            if SIL:
+                                for i in range(SIL_update_ratio):
+                                    inds = np.random.choice(np.arange(len(opp_replay_buffer)), size=batch_size, replace=False)
+                                    sample = opp_replay_buffer.sample(inds,
+                                                        to_gpu=to_gpu,norm_rews=False)
+                                    maddpg.SIL_update(sample, sample, a_i, 'opp', # send team_sample twice, second will not be used
+                                                    centQ=critic_mod)
                     maddpg.update_all_targets()
             
                      

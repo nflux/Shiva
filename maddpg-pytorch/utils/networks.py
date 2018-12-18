@@ -25,16 +25,19 @@ class MLPNetwork_Actor(nn.Module):
         self.param_size = 5
         self.count = 0
 
+        if self.agent.device == 'cuda':
+            self.cast = lambda x: x.cuda()
+        else:
+            self.cast = lambda x: x.cpu()
+              
+        
         if norm_in:  # normalize inputs
             self.in_fn = nn.BatchNorm1d(input_dim)
-            self.in_fn.weight.data.fill_(1)
+            self.in_fn.weight.data.normal_(.01)
             self.in_fn.bias.data.fill_(0)
         else:
-            if self.agent.device == 'cuda':
-                self.in_fn = lambda x: x.cuda()
-            else:
-                self.in_fn = lambda x: x.cpu()
-                
+            self.in_fn = self.cast
+  
         self.fc1 = nn.Linear(input_dim, 1024)
         
         self.fc1.weight.data.normal_(0, 0.01) 
@@ -66,7 +69,7 @@ class MLPNetwork_Actor(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        h1 = self.nonlin(self.fc1(self.in_fn(X)))
+        h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
         h2 = self.nonlin(self.fc2(h1))
         h3 = self.nonlin(self.fc3(h2))
         h4 = self.nonlin(self.fc4(h3))
@@ -112,15 +115,19 @@ class MLPNetwork_Critic(nn.Module):
             self.out_dim = n_atoms
         else:
             self.out_dim = 1
+       
+        if self.agent.device == 'cuda':
+            self.cast = lambda x: x.cuda()
+        else:
+            self.cast = lambda x: x.cpu()
+              
         if norm_in:  # normalize inputs
             self.in_fn = nn.BatchNorm1d(input_dim)
-            self.in_fn.weight.data.fill_(1)
+            self.in_fn.weight.data.normal_(.01)
             self.in_fn.bias.data.fill_(0)
         else:
-            if self.agent.device == 'cuda':
-                self.in_fn = lambda x: x.cuda()
-            else:
-                self.in_fn = lambda x: x.cpu()  
+            self.in_fn = self.cast
+  
         self.fc1 = nn.Linear(input_dim, 1024)
         
         self.fc1.weight.data.normal_(0, 0.01) 
@@ -162,7 +169,7 @@ class MLPNetwork_Critic(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of critic Q1
         """
-        h1 = self.nonlin(self.fc1(self.in_fn(X)))
+        h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
         h2 = self.nonlin(self.fc2(h1))
         h3 = self.nonlin(self.fc3(h2))
         h4 = self.nonlin(self.fc4(h3))
@@ -182,7 +189,7 @@ class MLPNetwork_Critic(nn.Module):
         h4 = self.nonlin(self.fc4(h3))
         
         if self.TD3:
-            Q2_h1 = self.nonlin(self.Q2_fc1(self.in_fn(X)))
+            Q2_h1 = self.nonlin(self.Q2_fc1(self.in_fn(self.cast(X))))
             Q2_h2 = self.nonlin(self.Q2_fc2(Q2_h1))
             Q2_h3 = self.nonlin(self.Q2_fc3(Q2_h2))
             Q2_h4 = self.nonlin(self.Q2_fc4(Q2_h3))
@@ -230,15 +237,17 @@ class I2A_Network(nn.Module):
         object.__setattr__(self, "imagined_pol",imagined_pol)
 
         
-        if norm_in:  # normalize inputs
-            self.in_fn = nn.BatchNorm1d(input_dim)
-            self.in_fn.weight.data.fill_(1)
-            self.in_fn.bias.data.fill_(0)
+        
+        if self.agent.device == 'cuda':
+            self.cast = lambda x: x.cuda()
         else:
-            if self.agent.device == 'cuda':
-                self.in_fn = lambda x: x.cuda()
-            else:
-                self.in_fn = lambda x: x.cpu()            
+            self.cast = lambda x: x.cpu()
+        self.norm_in = norm_in
+
+        self.in_fn = nn.BatchNorm1d(input_dim)
+        self.in_fn.weight.data.normal_(.01)
+        self.in_fn.bias.data.fill_(0)
+   
         if I2A:
             self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_actions, 1024)
         else:
@@ -274,14 +283,17 @@ class I2A_Network(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        
+        if X.size()[0] == 1 or not self.norm_in:
+            self.in_fn.train(False)
+        else:
+            self.in_fn.train(True)
         if self.I2A:
-            fx = self.in_fn(X).float()
+            fx = self.in_fn(self.cast(X)).float()
             enc_rollouts = self.rollouts_batch(fx)
             fc_in = torch.cat((fx,enc_rollouts),dim=1)
             h1 = self.nonlin(self.fc1(fc_in))
         else:
-            h1 = self.nonlin(self.fc1(self.in_fn(X)))
+            h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
 
         h2 = self.nonlin(self.fc2(h1))
         h3 = self.nonlin(self.fc3(h2))
