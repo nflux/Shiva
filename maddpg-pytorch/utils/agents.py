@@ -53,7 +53,7 @@ class DDPGAgent(object):
         self.num_total_out_EM = maddpg.num_out_EM + self.world_status_dim + 1
         # EM for I2A
         self.EM = EnvironmentModel(maddpg.num_in_EM,maddpg.num_out_EM,hidden_dim=hidden_dim,
-                                  norm_in=False,agent=self)
+                                  norm_in=self.norm_in,agent=self)
         # policy prime for I2A
         self.policy_prime = MLPNetwork_Actor(num_in_pol, num_out_pol,
                                  hidden_dim=hidden_dim,

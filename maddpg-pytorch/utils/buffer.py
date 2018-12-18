@@ -25,6 +25,7 @@ class ReplayBuffer(object):
         self.next_obs_buffs = []
         self.done_buffs = []
         self.ws_buffs = []
+        self.SIL_priority = []
         for odim, adim in zip(obs_dims, ac_dims):
             self.obs_buffs.append(np.zeros((max_steps, odim)))
             self.ac_buffs.append(np.zeros((max_steps, adim)))
@@ -34,9 +35,8 @@ class ReplayBuffer(object):
             self.done_buffs.append(np.zeros(max_steps))
             self.n_step_buffs.append(np.zeros(max_steps))
             self.ws_buffs.append(np.zeros(max_steps))
+            self.SIL_priority.append(np.zeros(max_steps))
             
-
-
 
         self.filled_i = 0  # index of first empty location in buffer (last index when full)
         self.curr_i = 0  # current index to write to (ovewrite oldest data)
@@ -67,6 +67,9 @@ class ReplayBuffer(object):
                                                  rollover)
                 self.ws_buffs[agent_i] = np.roll(self.ws_buffs[agent_i],
                                                    rollover)
+                self.SIL_priority[agent_i] = np.roll(self.SIL_priority[agent_i],
+                                                     rollover)
+
             self.curr_i = 0
             self.filled_i = self.max_steps
         for agent_i in range(self.num_agents):
@@ -82,6 +85,7 @@ class ReplayBuffer(object):
             self.done_buffs[agent_i][self.curr_i:self.curr_i + nentries] = dones[agent_i]
             self.n_step_buffs[agent_i][self.curr_i:self.curr_i + nentries] = n_step[agent_i]
             self.ws_buffs[agent_i][self.curr_i:self.curr_i + nentries] = ws[agent_i]
+            self.SIL_priority[agent_i][self.curr_i:self.curr_i +nentries] = 1.0
 
         self.curr_i += nentries
         if self.filled_i < self.max_steps:
@@ -89,7 +93,7 @@ class ReplayBuffer(object):
         if self.curr_i == self.max_steps:
             self.curr_i = 0
 
-    def sample(self, inds, to_gpu=False, norm_rews=True):
+    def sample(self, inds, to_gpu=False, norm_rews=False):
         # inds = np.random.choice(np.arange(self.filled_i), size=N,
         #                         replace=False)
         if to_gpu:
@@ -144,3 +148,63 @@ class ReplayBuffer(object):
         else:
             inds = np.arange(max(0, self.curr_i - N), self.curr_i)
         return [self.rew_buffs[i][inds].sum() for i in range(self.num_agents)]
+
+    
+
+
+    def sample_SIL(self,agentID=0,batch_size=32,to_gpu=False, norm_rews=False):
+        '''Returns a sample prioritized using MC_Targets - Q for the Self-Imitation update and the indices used'''
+        # inds = np.random.choice(np.arange(self.filled_i), size=N,
+        #                         replace=False)
+        if to_gpu:
+            cast = lambda x: Variable(Tensor(x), requires_grad=False).cuda()
+        else:
+            cast = lambda x: Variable(Tensor(x), requires_grad=False)
+        if to_gpu:
+            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True).cuda() # obs need gradient for cent-Q
+        else:
+            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True)
+            
+            
+        prios = self.SIL_priority[agentID][:self.filled_i]
+        if prios.sum() == 0:
+            probs = [1.0/len(prios)]*len(prios)
+        else:
+            probs = prios/prios.sum()
+
+        inds  = np.random.choice(self.filled_i,batch_size,p=probs)
+        if norm_rews:
+            ret_rews = [cast((self.rew_buffs[i][inds] -
+                              self.rew_buffs[i][:self.filled_i].mean()) /
+                             self.rew_buffs[i][:self.filled_i].std())
+                        for i in range(self.num_agents)]
+        if norm_rews:
+            ret_mc = [cast((self.mc_buffs[i][inds] -
+                              self.mc_buffs[i][:self.filled_i].mean()) /
+                             self.mc_buffs[i][:self.filled_i].std())
+                        for i in range(self.num_agents)]
+        if norm_rews:
+            ret_n_step = [cast((self.n_step_buffs[i][inds] -
+                              self.n_step_buffs[i][:self.filled_i].mean()) /
+                             self.n_step_buffs[i][:self.filled_i].std())
+                        for i in range(self.num_agents)]
+
+        else:
+            ret_rews = [cast(self.rew_buffs[i][inds]) for i in range(self.num_agents)]
+            ret_mc = [cast(self.mc_buffs[i][inds]) for i in range(self.num_agents)]
+            ret_n_step = [cast(self.n_step_buffs[i][inds]) for i in range(self.num_agents)]
+
+
+       
+        return ([cast_obs(self.obs_buffs[i][inds]) for i in range(self.num_agents)],
+                [cast(self.ac_buffs[i][inds]) for i in range(self.num_agents)],
+                ret_rews,
+                [cast(self.next_obs_buffs[i][inds]) for i in range(self.num_agents)],
+                [cast(self.done_buffs[i][inds]) for i in range(self.num_agents)],
+                ret_mc,
+                ret_n_step,
+                [cast(self.ws_buffs[i][inds]) for i in range(self.num_agents)]),inds
+    
+    def update_priorities(self, agentID,inds, prio):
+        for i, p in zip(inds,prio):
+            self.SIL_priority[agentID][i] = p

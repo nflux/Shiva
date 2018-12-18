@@ -1498,7 +1498,7 @@ class MADDPG(object):
         if self.niter % 100 == 0:
             print("Team (%s) Agent(%i) Policy loss" % (side, agent_i),pol_loss)
         
-    def SIL_update(self, team_sample, opp_sample,agent_i,side='team', parallel=False, logger=None,centQ=False):
+    def SIL_update(self, team_sample=[], opp_sample=[],agent_i=0,side='team', parallel=False, logger=None,centQ=False):
         """
         Update parameters of agent model based on sample from replay buffer using Self-Imitation Learning update:
         sil_policy_loss = (MSE(Action,Policy(obs))) * (R - Q) if R > Q
@@ -1631,6 +1631,8 @@ class MADDPG(object):
         if self.niter % 100 == 0:
             print("Team (%s) SIL Actor loss:" % side,np.round(pol_loss.item(),6))
             print("Team (%s) SIL Critic loss:" % side,np.round(vf_loss.item(),6))
+        
+        return clipped_differences
 
         
         # ------------------------------------
