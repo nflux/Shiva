@@ -125,38 +125,48 @@ def pretrain_process(fnames,timesteps,num_features):
                 action_string = contents[agent][team_counters[agent]].split(' ')[4]
                 if use_garbage_action[agent]: # if action is missing for this timestep push 0's as action and do not consume 
                     # that line by += -1
-                    a = np.random.uniform(-0.01,0.01,8)
-                    use_garbage_action[aggent] = False
+                    a = np.zeros(8)
+                    use_garbage_action[agent] = False
                     team_counters[agent] += -1
                 elif "Dash"  in action_string: 
                     result = re.search('Dash((.*),*)', action_string)
                     power = float(result.group(1).split(',')[0][1:])
                     direction = float(result.group(1).split(',')[1][:-1])
                     #a = np.random.uniform(-1,1,8)
-                    a = np.random.uniform(-0.01,0.01,8)
-                    a[0] += 0.8  + np.random.uniform(-.2,.2,1)
-                    a[1] += -0.8 + np.random.uniform(-.2,.2,1)
-                    a[2] += -0.8 + np.random.uniform(-.2,.2,1)
+                    a = np.zeros(8)
+                    a[0] += 1.0  
+                    a[1] += 0.0 
+                    a[2] += 0.0 
                     a[3] = power/100.0
                     a[4] = direction/180.0
+                    a[5] = np.random.uniform(-.2,.2,1)
+                    a[6] = np.random.uniform(-.2,.2,1)
+                    a[7] = np.random.uniform(-.2,.2,1)
+
                 elif "Turn"  in action_string:
                     result = re.search('Turn((.*))', action_string)
                     direction =float(result.group(1)[1:-1])
                     power = float(-1440)
-                    a = np.random.uniform(-0.01,0.01,8)
-                    a[0] += -0.8 + np.random.uniform(-.2,.2,1)
-                    a[1] += 0.8 + np.random.uniform(-.2,.2,1)
-                    a[2] += -0.8 + np.random.uniform(-.2,.2,1)
+                    a = np.zeros(8)
+                    a[0] += 0.0  
+                    a[1] += 1.0 
+                    a[2] += 0.0 
+                    a[3] = np.random.uniform(-.2,.2,1)
+                    a[4] = np.random.uniform(-.2,.2,1)
                     a[5] = direction/180.0
+                    a[6] = np.random.uniform(-.2,.2,1)
+                    a[7] = np.random.uniform(-.2,.2,1)
                 elif "Kick"  in action_string: 
                     result = re.search('Kick((.*),*)', action_string)
                     power = float(result.group(1).split(',')[0][1:])
                     direction = float(result.group(1).split(',')[1][:-1])
-                    #a = np.random.uniform(-1,1,8)
-                    a = np.random.uniform(-0.01,0.01,8)
-                    a[0] += -0.8 +np.random.uniform(-.2,.2,1)
-                    a[1] += -0.8 +np.random.uniform(-.2,.2,1)
-                    a[2] += 0.8 + np.random.uniform(-.2,.2,1)
+                    a = np.zeros(8)
+                    a[0] += 0.0  
+                    a[1] += 0.0 
+                    a[2] += 1.0 
+                    a[3] = np.random.uniform(-.2,.2,1)
+                    a[4] = np.random.uniform(-.2,.2,1)
+                    a[5] = np.random.uniform(-.2,.2,1)
                     a[6] = (power/100.0)*2 - 1
                     a[7] = direction/180.0
                 elif "Tackle"  in action_string: 
@@ -334,19 +344,19 @@ def onehot_from_logits(logits, eps=0.0):
                         enumerate(torch.rand(logits.shape[0]))])
 
 # modified for PyTorch from https://github.com/ericjang/gumbel-softmax/blob/master/Categorical%20VAE.ipynb
-def sample_gumbel(shape,eps=1e-20,tens_type=torch.FloatTensor):  
+def sample_gumbel(shape,eps=1e-20,tens_type=torch.FloatTensor,device="cuda"):  
     """Sample from Gumbel(0, 1)"""
-    U = Variable(tens_type(*shape).uniform_(), requires_grad=False)
+    U = Variable(tens_type(*shape).uniform_(), requires_grad=False).to(device)
     return -torch.log(-torch.log(U + eps) + eps)
 
 # modified for PyTorch from https://github.com/ericjang/gumbel-softmax/blob/master/Categorical%20VAE.ipynb
-def gumbel_softmax_sample(logits, temperature):
+def gumbel_softmax_sample(logits, temperature,device="cuda"):
     """ Draw a sample from the Gumbel-Softmax distribution"""
-    y = logits + sample_gumbel(logits.shape, tens_type=type(logits.data))
+    y = logits + sample_gumbel(logits.shape, tens_type=type(logits.data),device=device)
     return F.softmax(y / temperature, dim=1)
 
 # modified for PyTorch from https://github.com/ericjang/gumbel-softmax/blob/master/Categorical%20VAE.ipynb
-def gumbel_softmax(logits, temperature=1.0, hard=False):
+def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda"):
     """Sample from the Gumbel-Softmax distribution and optionally discretize.
     Args:
       logits: [batch_size, n_class] unnormalized log-probs
@@ -357,7 +367,7 @@ def gumbel_softmax(logits, temperature=1.0, hard=False):
       If hard=True, then the returned sample will be one-hot, otherwise it will
       be a probabilitiy distribution that sums to 1 across classes
     """
-    y = gumbel_softmax_sample(logits, temperature)
+    y = gumbel_softmax_sample(logits, temperature,device)
     if hard:
         y_hard = onehot_from_logits(y)
         y = (y_hard - y).detach() + y

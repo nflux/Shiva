@@ -57,32 +57,32 @@ n_training_threads = 8
 num_episodes = 100000
 replay_memory_size = 1000000
 episode_length = 500 # FPS
-untouched_time = 500
+untouched_time = 100
 burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 train_team = True
 train_opp = False
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 3
-num_OA = 3
+num_TA = 1
+num_OA = 1
 num_TNPC = 0
 num_ONPC = 0
 goalie = False
 team_rew_anneal_ep = 1500 # reward would be
 # hyperparams--------------------------
-batch_size = 128
+batch_size = 256
 hidden_dim = int(1024)
-a_lr = 0.0001 # actor learning rate
+a_lr = 0.00001 # actor learning rate
 c_lr = 0.001 # critic learning rate
-tau = 0.005 # soft update rate
-steps_per_update = 1
+tau = 0.001 # soft update rate
+steps_per_update = 10
 # exploration --------------------------
 explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 1 # Haus uses over 10,000 updates --
+num_explore_episodes = 1000 # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -91,30 +91,31 @@ Vmax = 10
 Vmin = -10
 N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-n_steps = 25 # n-step update size 
+n_steps = 5
+# n-step update size 
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
-initial_beta = 1.0
-final_beta = 0.1 #
-num_beta_episodes = 1
+initial_beta = 0.2
+final_beta = 0.2
+num_beta_episodes = 10000000000
 
 #---------------------------------------
 #TD3 Options ---------------------------
 TD3 = True
-TD3_delay_steps = 5
+TD3_delay_steps = 1
 TD3_noise = 0.01
-# --------------------------------------
+# -------------------------------------- 
 #Pretrain Options ----------------------
 # To use imitation exporation run N TNPC vs N ONPC for the desired number of episodes
 # Copy the base_left-11.log and -7.log (for 2v2)  to Pretrain_Files and rerun this file.
 # (Also we must delete all the "garbage" at the beginning of the log files. The first line should be the second instance of 0 4 M StateFeatures)
-Imitation_exploration = True
+Imitation_exploration = False
 test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-pt_critic_updates = 0
-pt_actor_updates = 0
+pt_critic_updates = 30000
+pt_actor_updates = 30000
 pt_actor_critic_updates = 0
 pt_imagination_branch_pol_updates = 100
 pt_episodes = 1000# num of episodes that you observed in the gameplay between npcs
-pt_timesteps = 120000# number of timesteps to load in from files
+pt_timesteps = 125000# number of timesteps to load in from files
 pt_EM_updates = 300
 pt_beta = 1.0
 #---------------------------------------
@@ -130,7 +131,7 @@ LSTM_hidden=16
 imagination_policy_branch = True
 #---------------------------------------
 # Self-Imitation Learning Options ------
-SIL = True
+SIL = False
 SIL_update_ratio = 1
 #---------------------------------------
 #Critic Input Modification 
@@ -142,37 +143,37 @@ critic_mod_obs = False
 critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
 #---------------------------------------
 # Control Random Initilization of Agents and Ball
-control_rand_init = False
+control_rand_init = True
 ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
 ball_y_max = 0.1
-agents_x_min = -0.5
-agents_x_max = 0.5
-agents_y_min = -0.5
-agents_y_max = 0.5
-change_every_x = 10000
+agents_x_min = -0.3
+agents_x_max = 0.3
+agents_y_min = -0.3
+agents_y_max = 0.3
+change_every_x = 1000000000
 change_agents_x = 0.01
 change_agents_y = 0.01
 change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
 load_random_nets = True
-load_random_every = 1
+load_random_every = 10000000000000000
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
 save_nns = True
 ep_save_every = 10 # episodes
-load_nets = True # load previous sessions' networks from file for initialization
+load_nets = False # load previous sessions' networks from file for initialization
 initial_models = ["Pretrained_3v3/Cent_Q/agent_0.pth","Pretrained_3v3/Cent_Q/agent_1.pth","Pretrained_3v3/Cent_Q/agent_2.pth"] # models to load
 first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = False
-eval_after = 10000
-eval_episodes = 10
+eval_after = 50
+eval_episodes = 5
 # --------------------------------------
 # Prep Session Files ------------------------------
 session_path = None
@@ -256,7 +257,7 @@ opp_step_logger_df = pd.DataFrame()
 # PRETRAIN ############################
 if Imitation_exploration:
 
-    team_files = ['Pretrain_Files/1v1_CentQ/base_left-3.log','Pretrain_Files/1v1_CentQ/base_right-3.log']
+    team_files = ['Pretrain_Files/3v3_CentQ/base_left-11.log','Pretrain_Files/3v3_CentQ/base_left-7.log','Pretrain_Files/3v3_CentQ/base_left-8.log','Pretrain_Files/3v3_CentQ/base_right-2.log','Pretrain_Files/3v3_CentQ/base_right-3.log','Pretrain_Files/3v3_CentQ/base_right-4.log']
     #opp_files = ['Pretrain_Files/base_left-1.log','Pretrain_Files/base_left-2.log']
 
     team_pt_obs, team_pt_status,team_pt_actions,opp_pt_obs, opp_pt_status,opp_pt_actions = pretrain_process(fnames = team_files,timesteps = pt_timesteps,num_features = env.team_num_features)
@@ -594,8 +595,8 @@ for ep_i in range(0, num_episodes):
     if ep_i < burn_in_episodes:
         explr_pct_remaining = 1.0
     else:
-        explr_pct_remaining = max(0, num_explore_episodes - ep_i + burn_in_episodes) / (num_explore_episodes)
-    beta_pct_remaining = max(0, num_beta_episodes - ep_i + burn_in_episodes) / (num_beta_episodes)
+        explr_pct_remaining = max(0.0, 1.0*num_explore_episodes - ep_i + burn_in_episodes) / (num_explore_episodes)
+    beta_pct_remaining = max(0.0, 1.0*num_beta_episodes - ep_i + burn_in_episodes) / (num_beta_episodes)
     
     # evaluation for 10 episodes every 100
     if ep_i % 10 == 0:
@@ -627,7 +628,7 @@ for ep_i in range(0, num_episodes):
                         for i in range(maddpg.nagents_opp)]
 
         # get actions as torch Variables for both team and opp
-        team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp, explore=explore)
+        team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp, explore=False) # leave off or will gumbel sample
         # convert actions to numpy arrays
         team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
         #Converting actions to numpy arrays for opp agents
@@ -643,16 +644,22 @@ for ep_i in range(0, num_episodes):
         # this is returning one-hot-encoded action for each opp agent 
         opp_actions = [[ac[0][:len(env.action_list)] for ac in opp_agent_actions]]
         
+        
+        if ep_i % 10 == 0:
+            explore = True
+        if ep_i % 100 == 0:
+            explore = False
         if explore:
             team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA,
-                                                 eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in team_actions]
+            eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in team_actions]
 
             opp_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_OA,len(env.action_list)), env.num_OA,
                                                  eps = 0.000000001) for a in opp_actions]
         else:
-            team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA, eps = 0) for a in team_actions]
-            opp_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_OA,len(env.action_list)), env.num_OA, eps = 0) for a in opp_actions]
+            team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA, eps = 0.000000000000001) for a in team_actions]
+            opp_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_OA,len(env.action_list)), env.num_OA, eps = 00.000000000001) for a in opp_actions]
 
+        
         team_randoms = [team_noisey_actions[0][1][i] for i in range(env.num_TA)]
         # team_noisey_actions = [team_noisey_actions[0][0][i] for i in range(env.num_TA)]
 
@@ -670,18 +677,17 @@ for ep_i in range(0, num_episodes):
         opp_obs =  np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
         
         # use random unif parameters if e_greedy
-        team_noisey_actions_for_buffer = np.asarray([[val for val in (np.random.uniform(-1,1,3))] if ran else action for ran,action in zip(team_randoms,team_actions[0])])
+        team_noisey_actions_for_buffer = np.asarray([[val for val in onehot_from_logits(torch.tensor(np.random.uniform(-1,1,len(env.action_list))).view(1,len(env.action_list))).cpu().data.numpy()[0]] if ran else action for ran,action in zip(team_randoms,team_actions[0])])
         team_params = np.asarray([[val for val in (np.random.uniform(-1,1,5))] if ran else p for ran,p in zip(team_randoms,team_params)])
-        
-        opp_noisey_actions_for_buffer = np.asarray([[val for val in (np.random.uniform(-1,1,3))] if ran else action for ran,action in zip(opp_randoms,opp_actions[0])])
+        opp_noisey_actions_for_buffer =  np.asarray([[val for val in onehot_from_logits(torch.tensor(np.random.uniform(-1,1,len(env.action_list))).view(1,len(env.action_list))).cpu().data.numpy()[0]] if ran else action for ran,action in zip(opp_randoms,opp_actions[0])])
         opp_params = np.asarray([[val for val in (np.random.uniform(-1,1,5))] if ran else p for ran,p in zip(opp_randoms,opp_params)])
+
 
         # print('These are the opp params', str(opp_params))
 
         team_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in team_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
         team_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(team_noisey_actions_for_buffer,team_params)] for i in range(1)]).reshape(
             env.num_TA,env.team_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
-        
         opp_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in opp_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
         opp_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(opp_noisey_actions_for_buffer,opp_params)] for i in range(1)]).reshape(
             env.num_OA,env.opp_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer

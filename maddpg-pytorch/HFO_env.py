@@ -609,8 +609,8 @@ class HFO_env():
                     possession_side = 'R'    
                     reward+=1 
                     team_reward+=1
-        team_reward += self.possession_reward(base)
-        reward += self.possession_reward(base)
+        #team_reward += self.possession_reward(base)
+        #reward += self.possession_reward(base)
 
     
         #######################################################
@@ -633,21 +633,22 @@ class HFO_env():
         elif self.feat_lvl == 'low':
             prox_cur = self.ball_proximity(team_obs[agentID])
             prox_prev = self.ball_proximity(team_obs_previous[agentID])
-            reward   += prox_cur - prox_prev # if cur > prev --> +   
+            reward   += (prox_cur - prox_prev) # if cur > prev --> +   
                 
         ####################### closest player to ball ###################################
         if self.feat_lvl == 'low':
             prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
             prox_prev,_ = self.closest_player_to_ball(team_obs_previous, num_ag)
             # print('This is the reward for getting closer to the ball for the team', str(prox_cur - prox_prev), 'for index', str(test), 'for agent', str(self.team_envs[test].getUnum()))
-            team_reward += prox_cur - prox_prev
+            team_reward += (prox_cur - prox_prev)
+            
         ##################################################################################
             
         ####################### reduce ball distance to goal - using delta  ##################
         r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (3)*(r_prev - r)
-        team_reward += (3)*(r_prev - r)
+        reward += (3)*(r_prev - r)*2
+        team_reward += (3)*(r_prev - r)*2
         ##################################################################################
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
         return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)

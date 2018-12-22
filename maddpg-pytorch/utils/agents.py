@@ -129,19 +129,26 @@ class DDPGAgent(object):
         """
         
         action = self.policy(obs)
-        #if self.counter % 100 == 0:
-            #print(action)
-        self.counter +=1
+        if self.counter % 250 == 0:
+            print(torch.softmax(action[:,:self.action_dim],dim=1))
         #print(action)
         # mixed disc/cont
         if explore:     
-            a = action[0,:self.action_dim].view(1,self.action_dim)
-            p = (action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)) # get noisey params (OU)
-            self.exploration.reset()
+            a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True)
+            p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
             action = torch.cat((a,p),1) 
-        #print(action)
+            #if self.counter % 100 == 0:
+                #print(action)
+            self.counter +=1
+        else:
+            a = onehot_from_logits(action[0,:self.action_dim].view(1,self.action_dim))
+            #p = torch.clamp(action[0,self.action_dim:].view(1,self.param_dim),min=-1.0,max=1.0) # get noisey params (OU)
+            p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+            action = torch.cat((a,p),1) 
+            self.counter +=1
         return action
             
+
         '''if self.discrete_action:
             if explore:
                 action = gumbel_softmax(action, hard=True)

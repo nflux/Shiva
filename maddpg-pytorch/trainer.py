@@ -64,7 +64,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
             rands = []
 
 
-            team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA, eps = 0.000001) for a in team_actions]
+            team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA, eps = 0.0000000001) for a in team_actions]
 
             team_randoms = [team_noisey_actions[0][1][i] for i in range(env.num_TA)]
 

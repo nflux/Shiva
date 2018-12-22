@@ -486,7 +486,6 @@ class MADDPG(object):
             opp_policies = self.team_policies
             obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
-        zero_values = False
 
         self.curr_agent_index = agent_i
         # Train critic ------------------------
@@ -495,45 +494,21 @@ class MADDPG(object):
         start = time.time()
         #print("time critic")
 
-        if zero_values:
+        if self.TD3:
+            noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
             all_trgt_acs = [torch.cat(
-                # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-                (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),
-                 self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
-                            for pi, nobs in zip(target_policies, next_obs)]    # onehot the action space but not param
-            
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
+
             opp_all_trgt_acs = [torch.cat(
-                # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-                (onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]),
-                 self.zero_params(pi(nobs),onehot_from_logits(pi(nobs)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
-                            for pi, nobs in zip(opp_target_policies, opp_next_obs)]    # onehot the action space but not param
-            if self.TD3:
-                noise = torch.randn_like(acs)*self.TD3_noise
-                all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-                        (onehot_from_logits((pi(nobs) + noise)[:,:curr_agent.action_dim]),
-                        self.zero_params((pi(nobs)+noise),onehot_from_logits((pi(nobs)+noise)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
-                            for pi, nobs in zip(target_policies, next_obs)]    # onehot the action space but not param
-                opp_all_trgt_acs = [torch.cat( # concat one-hot actions with params (that are zero'd along the indices of the non-chosen actions)
-                        (onehot_from_logits((pi(nobs) + noise)[:,:curr_agent.action_dim]),
-                        self.zero_params((pi(nobs)+noise),onehot_from_logits((pi(nobs)+noise)[:,:curr_agent.action_dim]))[:,curr_agent.action_dim:]),1)
-                            for pi, nobs in zip(opp_target_policies, opp_next_obs)]    # onehot the action space but not param
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
         else:
-            if self.TD3:
-                noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
-                all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(target_policies,next_obs)]
-                opp_all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(opp_target_policies,opp_next_obs)]
-            else:
-                all_trgt_acs = [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]
-                opp_all_trgt_acs = [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
-        if act_only:
-            mod_next_obs = next_obs
-            mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1) # team actions is last for inv grad indices
-        elif obs_only:
-            mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
-            mod_all_trgt_acs = all_trgt_acs     
-        else: # both
-            mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
-            mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
+            all_trgt_acs = [torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
+            opp_all_trgt_acs =[torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+   
+        mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
+        mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
 
         # Target critic values
         trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
@@ -552,15 +527,9 @@ class MADDPG(object):
                 trgt_Q = torch.min(trgt_Q1,trgt_Q2)
         else:
             trgt_Q = curr_agent.target_critic(trgt_vf_in)
-        if act_only:
-            mod_obs = obs
-            mod_acs = torch.cat(opp_acs + acs)
-        elif obs_only:
-            mod_obs = torch.cat(opp_obs,obs)
-            mod_acs = acs
-        else:
-            mod_obs = torch.cat((*opp_obs,*obs),dim=1)
-            mod_acs = torch.cat((*opp_acs,*acs),dim=1)
+
+        mod_obs = torch.cat((*opp_obs,*obs),dim=1)
+        mod_acs = torch.cat((*opp_acs,*acs),dim=1)
         # Actual critic values
         vf_in = torch.cat((mod_obs, mod_acs), dim=1)
         if self.TD3:
@@ -589,7 +558,7 @@ class MADDPG(object):
         else: # single critic value
             target_value = (1-self.beta)*(n_step_rews[agent_i].view(-1, 1) + (self.gamma**self.n_steps) *
                         trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
-            #target_value.detach()
+            target_value.detach()
             if self.TD3: # handle double critic
                 vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
             else:
@@ -612,41 +581,8 @@ class MADDPG(object):
         start = time.time()
         #print("time actor")
         if count % self.TD3_delay_steps == 0:
-            if self.discrete_action:
-                # Forward pass as if onehot (hard=True) but backprop through a differentiable
-                # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
-                # through discrete categorical samples, but I'm not sure if that is
-                # correct since it removes the assumption of a deterministic policy for
-                # DDPG. Regardless, discrete policies don't seem to learn properly without it.
-                if side == 'team':
-                    curr_pol_out = curr_agent.policy(obs[agent_i])
-                    curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
-                else:
-                    curr_pol_out = curr_agent.policy(obs[agent_i])
-                    curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
-            else:
-                if side == 'team':
-                    curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
-                    # self.curr_pol_out = curr_pol_out.clone() # for inverting action space
-                else:
-                    curr_pol_out = curr_agent.policy(obs[agent_i])
-                    
-                self.curr_pol_out = curr_pol_out.clone() # for inverting action space
-                #gumbel = gumbel_softmax(torch.softmax(curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
-                #log_pol_out = curr_pol_out[:,:curr_agent.action_dim].clone()
-                #gumbel = gumbel_softmax((curr_pol_out[:,:curr_agent.action_dim].clone()),hard=True)
-                #log_pol_out = torch.log(curr_pol_out[:,:curr_agent.action_dim].clone())
-                #gumbel = gumbel_softmax(log_pol_out,hard=True)
-                #gumbel = onehot_from_logits(log_pol_out,eps=0.0)
-                # concat one-hot actions with params zero'd along indices non-chosen actions
-                if zero_values:
-                    curr_pol_vf_in = torch.cat((gumbel, 
-                                          self.zero_params(curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
-                    opp_curr_pol_vf_in = torch.cat((gumbel, 
-                                          self.zero_params(opp_curr_pol_out,gumbel)[:,curr_agent.action_dim:]),1)
-                else:
-                    curr_pol_vf_in = curr_pol_out
-                #print(curr_pol_vf_in)
+            curr_pol_out = curr_agent.policy(obs[agent_i])
+            curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
             team_pol_acs = []
             opp_pol_acs = []
             for i, pi, ob in zip(range(nagents), policies, obs):
@@ -654,20 +590,16 @@ class MADDPG(object):
                     team_pol_acs.append(curr_pol_vf_in)
                 else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
                     a = pi(ob)
-                    team_pol_acs.append(a)
+                    team_pol_acs.append(torch.cat((onehot_from_logits(a[:,:curr_agent.action_dim]),a[:,curr_agent.action_dim:]),dim=1))
             
             for i, pi, ob in zip(range(nagents), opp_policies, opp_obs):
-                if self.discrete_action:
-                    opp_pol_acs.append(onehot_from_logits(pi(ob)))
-                else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
-                    opp_pol_acs.append(pi(ob))
+                a = pi(ob)
+                opp_pol_acs.append(torch.cat((onehot_from_logits(a[:,:curr_agent.action_dim]),a[:,curr_agent.action_dim:]),dim=1))
 
             obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
             acs_vf_in = torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)
             mod_vf_in = torch.cat((obs_vf_in, acs_vf_in), dim=1)
-            # invert gradient --------------------------------------
-            self.param_dim = curr_agent.param_dim
-            hook = mod_vf_in.register_hook(self.inject)
+
             # ------------------------------------------------------
             if self.D4PG:
                 critic_out = curr_agent.critic.Q1(mod_vf_in)
@@ -676,17 +608,20 @@ class MADDPG(object):
             else: # non-distributional
                 pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean()              
       
-            #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
-            pol_loss.backward(retain_graph=True)
-            #pol_loss.backward()
+
+            param_reg = torch.clamp((curr_pol_out[:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out[:,curr_agent.action_dim:]),min=0.0).sum(dim=1).mean()
+            entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/5.0 # regularize using log probabilities
+            #pol_loss += ((curr_pol_out**2)[:,:curr_agent.action_dim].mean() * 1e-3)/3.0 #Shariq-style regularizer on size of linear outputs
+            pol_loss += param_reg
+            pol_loss += entropy_reg
+            #pol_loss.backward(retain_graph=True)
+            pol_loss.backward()
             if parallel:
                 average_gradients(curr_agent.policy)
             torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
             curr_agent.policy_optimizer.step()
-            hook.remove()
             if self.niter % 100 == 0:
                 print("Team (%s) Agent (%i) Actor loss:" % (side,agent_i),pol_loss)
-                
         end = time.time()
         #print(end - start)
         # I2A --------------------------------------
@@ -1204,20 +1139,24 @@ class MADDPG(object):
             obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
             
-        zero_values = False
         
         # Train critic ------------------------
         curr_agent.critic_optimizer.zero_grad()
         
         
         if self.TD3:
-            noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise 
-            all_trgt_acs = [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)] 
-            opp_all_trgt_acs = [pi(nobs) + noise for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+            noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
+            all_trgt_acs = [torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
 
+            opp_all_trgt_acs = [torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
         else:
-            all_trgt_acs = [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]
-            opp_all_trgt_acs = [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+            all_trgt_acs = [torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
+            opp_all_trgt_acs =[torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+   
 
 
         mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
@@ -1455,29 +1394,16 @@ class MADDPG(object):
             target_policies = self.opp_target_policies
             nagents = self.nagents_opp
             policies = self.opp_policies
-        zero_values = False
         
         
         curr_agent.policy_optimizer.zero_grad()
-        
-        # Train actor -----------------------
-        if self.discrete_action:
-            # Forward pass as if onehot (hard=True) but backprop through a differentiable
-            # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
-            # through discrete categorical samples, but I'm not sure if that is
-            # correct since it removes the assumption of a deterministic policy for
-            # DDPG. Regardless, discrete policies don't seem to learn properly without it.
-            curr_pol_out = curr_agent.policy(obs[agent_i])
-            curr_pol_vf_in = gumbel_softmax(curr_pol_out, hard=True)
-        else:
-            curr_pol_out = curr_agent.policy(obs[agent_i]) 
+        curr_pol_out = curr_agent.policy(obs[agent_i])
+        curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
 
-            self.curr_pol_out = curr_pol_out.clone() # for inverting action space
-  
 
-        pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
+        pol_out_actions = curr_pol_vf_in[:,:curr_agent.action_dim].float()
         actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
-        pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
+        pol_out_params = curr_pol_vf_in[:,curr_agent.action_dim:]
         actual_out_params = Variable(torch.stack(acs)[agent_i],requires_grad=True)[:,curr_agent.action_dim:]
 
         target_classes = torch.argmax(actual_out_actions,dim=1) # categorical integer for predicted class
@@ -1538,11 +1464,9 @@ class MADDPG(object):
         curr_agent.critic_optimizer.zero_grad()
 
 
+
         curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
-
-
-        curr_pol_vf_in = curr_pol_out
-
+        curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
         team_pol_acs = []
         opp_pol_acs = []
         for i, pi, ob in zip(range(nagents), policies, obs):
@@ -1550,11 +1474,11 @@ class MADDPG(object):
                 team_pol_acs.append(curr_pol_vf_in)
             else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
                 a = pi(ob)
-                team_pol_acs.append(a) # 
+                team_pol_acs.append(torch.cat((onehot_from_logits(torch.log(a[:,:curr_agent.action_dim])),a[:,curr_agent.action_dim:]),dim=1))
         if centQ:
             for i, pi, ob in zip(range(nagents), opp_policies, opp_obs):
                 a = pi(ob)
-                opp_pol_acs.append(pi(ob)) # 
+                opp_pol_acs.append(torch.cat((onehot_from_logits(a[:,:curr_agent.action_dim]),a[:,curr_agent.action_dim:]),dim=1))
 
         if not centQ:
             vf_in = torch.cat((*obs, *team_pol_acs), dim=1)     
@@ -1606,7 +1530,7 @@ class MADDPG(object):
         
         
 
-        pol_out_actions = curr_pol_out[:,:curr_agent.action_dim].float()
+        pol_out_actions = torch.softmax(curr_pol_out[:,:curr_agent.action_dim],dim=1).float()
         actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
         pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
         actual_out_params = Variable(torch.stack(acs)[agent_i],requires_grad=True)[:,curr_agent.action_dim:]
