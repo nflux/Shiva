@@ -54,10 +54,10 @@ use_viewer = False
 use_viewer_after = 1000 # If using viewer, uses after x episodes
 n_training_threads = 8
 # default settings ---------------------
-num_episodes = 100000
-replay_memory_size = 1000000
+num_episodes = 10000000
+replay_memory_size = 500000
 episode_length = 500 # FPS
-untouched_time = 100
+untouched_time = 200
 burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 train_team = True
@@ -159,21 +159,21 @@ change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
 load_random_nets = True
-load_random_every = 10000000000000000
+load_random_every = 100
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
 save_nns = True
-ep_save_every = 10 # episodes
+ep_save_every = 25 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
 initial_models = ["Pretrained_3v3/Cent_Q/agent_0.pth","Pretrained_3v3/Cent_Q/agent_1.pth","Pretrained_3v3/Cent_Q/agent_2.pth"] # models to load
 first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = False
-eval_after = 50
-eval_episodes = 5
+eval_after = 500
+eval_episodes = 11
 # --------------------------------------
 # Prep Session Files ------------------------------
 session_path = None
@@ -628,7 +628,7 @@ for ep_i in range(0, num_episodes):
                         for i in range(maddpg.nagents_opp)]
 
         # get actions as torch Variables for both team and opp
-        team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp, explore=False) # leave off or will gumbel sample
+        team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp, explore=explore) # leave off or will gumbel sample
         # convert actions to numpy arrays
         team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
         #Converting actions to numpy arrays for opp agents
