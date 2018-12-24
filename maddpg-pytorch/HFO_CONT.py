@@ -55,9 +55,9 @@ use_viewer_after = 1000 # If using viewer, uses after x episodes
 n_training_threads = 8
 # default settings ---------------------
 num_episodes = 10000000
-replay_memory_size = 500000
+replay_memory_size = 25000
 episode_length = 500 # FPS
-untouched_time = 200
+untouched_time = 100
 burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/episode_length
 train_team = True
@@ -69,20 +69,20 @@ num_OA = 1
 num_TNPC = 0
 num_ONPC = 0
 goalie = False
-team_rew_anneal_ep = 1500 # reward would be
+team_rew_anneal_ep = 3500 # reward would be
 # hyperparams--------------------------
 batch_size = 256
 hidden_dim = int(1024)
-a_lr = 0.00001 # actor learning rate
-c_lr = 0.001 # critic learning rate
-tau = 0.001 # soft update rate
+a_lr = 0.001 # actor learning rate
+c_lr = 0.01 # critic learning rate
+tau = 0.01 # soft update rate
 steps_per_update = 10
 # exploration --------------------------
 explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 1000 # Haus uses over 10,000 updates --
+num_explore_episodes = 500 # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
@@ -645,10 +645,10 @@ for ep_i in range(0, num_episodes):
         opp_actions = [[ac[0][:len(env.action_list)] for ac in opp_agent_actions]]
         
         
-        if ep_i % 10 == 0:
-            explore = True
-        if ep_i % 100 == 0:
-            explore = False
+        #if ep_i % 10 == 0:
+        #    explore = True
+        #if ep_i % 100 == 0:
+        #    explore = False
         if explore:
             team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA,
             eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in team_actions]

@@ -24,15 +24,33 @@ from evaluation_env import *
 import subprocess
 
 def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',port=7000,
-                num_TA=1,num_ONPC=0, fpt = 500,device="cpu",use_viewer=False):
+                num_TA=1,num_ONPC=0, fpt = 500,device="cpu",use_viewer=False,goalie=False):
 
+
+    control_rand_init = True
+    ball_x_min = -0.1
+    ball_x_max = 0.1
+    ball_y_min = -0.1
+    ball_y_max = 0.1
+    agents_x_min = -0.3
+    agents_x_max = 0.3
+    agents_y_min = -0.3
+    agents_y_max = 0.3
+    change_every_x = 1000000000
+    change_agents_x = 0.01
+    change_agents_y = 0.01
+    change_balls_x = 0.01
+    change_balls_y = 0.01
     print('killing the evaluation server from inside the thread')
 
+    print(eval_episodes)
     subprocess.Popen("ps -ef | grep 7000 | awk '{print $2}' | xargs kill",shell=True)
     time.sleep(1)
     env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
                          untouched_time = 500,fullstate=True,offense_on_ball=False,
-                         port=port,log_dir=log_dir,record=False)
+                         port=port,log_dir=log_dir,record=False,goalie=goalie,agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+                change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
+                change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init)
     time.sleep(2.0)
     maddpg = MADDPG.init_from_save_evaluation(filenames,num_TA)
     time.sleep(1.5)
@@ -98,7 +116,8 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
                 
                 break;  
             team_obs =  team_next_obs
+            
                 
     team_step_logger_df.to_csv('%s.csv' % log)
-    env.kill_viewer()
+    #env.kill_viewer()
     

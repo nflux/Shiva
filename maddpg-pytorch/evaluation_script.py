@@ -25,16 +25,20 @@ from trainer import launch_eval
 import _thread as thread
 
 eval_episodes = 50
-session_path = "training_sessions/12_22_14_1_vs_1"
+session_path = "training_sessions/12_23_1_1_vs_1/"
 load_path = session_path +"ensemble_models/"
 eval_log_dir = session_path +"eval_log" # evaluation logfiles
 eval_hist_dir = session_path +"eval_history"
-num_TA = 1
-num_OA = 1
-episode_length = 3000
+num_TA = 2
+num_OA = 2
+episode_length = 500
 device = "cuda"
 use_viewer = True
-    thread.start_new_thread(launch_eval,(
-        [load_path + ("ensemble_agent_%i/model_%i.pth" % i) for i in range(num_TA)], # models directory -> agent -> most current episode
-        eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation",
-        7000,num_TA,num_OA,episode_length,device,use_viewer,))
+launch_eval(
+    [load_path + ("ensemble_agent_%i/model_%i.pth" % (i,i)) for i in range(num_TA)], # models directory -> agent -> most current episode
+    eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation",
+    7000,num_TA,num_OA,episode_length,device,use_viewer)
+'''launch_eval(
+    ['1v1/model_%i.pth' % i for i in range(num_TA)], # models directory -> agent -> most current episode
+    eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation",
+    7000,num_TA,num_OA,episode_length,device,use_viewer)'''

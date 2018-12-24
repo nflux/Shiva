@@ -46,7 +46,10 @@ class evaluation_env():
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
                  offense_on_ball=0, fullstate = False, seed = 123,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-                 verbose = False, log_game=False, log_dir="log",record=True):
+                 verbose = False, log_game=False, log_dir="log",
+                 agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,change_every_x=5,
+                 change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,change_balls_y=0.1, 
+                 control_rand_init=False,record=True):
         
 
         """ Initializes HFO_Env
@@ -77,8 +80,14 @@ class evaluation_env():
                                fullstate = fullstate, seed = seed,
                                ball_x_min = ball_x_min, ball_x_max = ball_x_max,
                                ball_y_min= ball_y_min, ball_y_max= ball_y_max,
-                               verbose = verbose, log_game = log_game, log_dir = log_dir,record=record)
+                               verbose = verbose, log_game = log_game, log_dir = log_dir,record=record,
+                               agents_x_min=agents_x_min, agents_x_max=agents_x_max,
+                               agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+                               change_every_x=change_every_x, change_agents_x=change_agents_x,
+                               change_agents_y=change_agents_y, change_balls_x=change_balls_x,
+                               change_balls_y=change_balls_y, control_rand_init=control_rand_init)
 
+        self.num_trials = num_trials
         self.viewer = None
         self.sleep_timer = 0.0000001 # sleep timer
         
@@ -102,6 +111,7 @@ class evaluation_env():
         self.num_OA = num_OA
         self.num_ONPC = num_ONPC
 
+        self.goalie = goalie
         self.exit = False
         self.base = base
         self.fpt = fpt
@@ -182,19 +192,29 @@ class evaluation_env():
     def launch(self):
         # Create thread for each teammate
         for i in range(self.num_TA):
-            print("Connecting player %i" % i , "on team %s to the server" % self.base)
-            thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
-                                             False,i,self.fpt,self.act_lvl,self.log_dir,))
-            time.sleep(0.5)
+            if i == 0:
+                print("Connecting player %i" % i , "on team %s to the server" % self.base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                                                self.goalie,i,self.fpt,self.act_lvl,))
+            else:
+                print("Connecting player %i" % i , "on team %s to the server" % self.base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                                                False,i,self.fpt,self.act_lvl,))
+            time.sleep(1.5)
         
         for i in range(self.num_OA):
-            print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
-            thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
-                                             False,i,self.fpt,self.act_lvl,))
-            time.sleep(0.5)
+            if i == 0:
+                print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+                                                self.goalie,i,self.fpt,self.act_lvl,))
+            else:
+                print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
+                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+                                                False,i,self.fpt,self.act_lvl,))
+
+            time.sleep(1.5)
         print("All players connected to server")
         self.start = True
-
         
 
     def Observation(self,agent_id,side):
@@ -687,6 +707,7 @@ class evaluation_env():
             feat_lvl = hfo.HIGH_LEVEL_FEATURE_SET
         config_dir=get_config_path() 
         trial = 0
+        print(goalie)
         if self.team_base == base:
             self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                 server_port=port, server_addr='localhost', team_name=base,
@@ -704,7 +725,7 @@ class evaluation_env():
         # wait for action command, take action, update: obs, reward, and world status
         while not self.exit:
             while(self.start):
-                if trial == 10:
+                if trial == self.num_trials:
                     self.exit = True
                     break
                 j = 0 # j to maximum episode length
@@ -869,7 +890,12 @@ class evaluation_env():
                               ball_x_min=-0.8, ball_x_max=0.8,
                               ball_y_min=-0.8, ball_y_max=0.8,
                               verbose=False, log_game=False,
-                              log_dir="log",record=True):
+                              log_dir="log",
+                              agents_x_min=0.0, agents_x_max=0.0,
+                              agents_y_min=0.0, agents_y_max=0.0,
+                              change_every_x=1, change_agents_x=0.1,
+                              change_agents_y=0.1, change_balls_x=0.1,
+                              change_balls_y=0.1, control_rand_init=False,record=True):
             """
             Starts the Half-Field-Offense server.
             frames_per_trial: Episodes end after this many steps.
@@ -889,12 +915,12 @@ class evaluation_env():
             log_dir: Directory to place game logs (*.rcg).
             """
             self.server_port = port
-            print(self.hfo_path)
             cmd = self.hfo_path + \
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
-                  " --ball-x-max %f --ball-y-min %f --ball-y-max %f --log-dir %s"\
+                  " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
+                  " --log-dir %s --message-size 256"\
                   % (frames_per_trial, untouched_time, offense_agents,
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,
@@ -904,9 +930,18 @@ class evaluation_env():
             if verbose:       cmd += " --verbose"
             if not log_game:  cmd += " --no-logging"
             if record:        cmd += " --record"
+            if control_rand_init:
+                cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
+                        " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
+                        " --change-balls-x %f --change-balls-y %f --control-rand-init"\
+                        % (agents_x_min, agents_x_max, agents_y_min, agents_y_max,
+                            change_every_x, change_agents_x, change_agents_y,
+                            change_balls_x, change_balls_y)
+
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
             time.sleep(3) # Wait for server to startup before connecting a player
+
 
     def _start_viewer(self):
         """

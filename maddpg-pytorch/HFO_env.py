@@ -609,8 +609,8 @@ class HFO_env():
                     possession_side = 'R'    
                     reward+=1 
                     team_reward+=1
-        team_reward += self.possession_reward(base)
-        reward += self.possession_reward(base)
+        #team_reward += self.possession_reward(base)
+        #reward += self.possession_reward(base)
 
     
         #######################################################
@@ -634,6 +634,7 @@ class HFO_env():
             prox_cur = self.ball_proximity(team_obs[agentID])
             prox_prev = self.ball_proximity(team_obs_previous[agentID])
             reward   += (prox_cur - prox_prev) # if cur > prev --> +   
+            team_reward +=(prox_cur - prox_prev)
                 
         ####################### closest player to ball ###################################
         if self.feat_lvl == 'low':
