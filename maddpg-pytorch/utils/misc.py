@@ -56,6 +56,23 @@ def e_greedy(logits, numAgents, eps=0.0):
     return torch.stack([argmax_acs[i] if r > eps else rand_acs[i] for i, r in
                         enumerate(rand)]) , ex_list
 
+def e_greedy_bool(numAgents, eps=0.0):
+    """
+
+    
+    Return True if random action is should be takent (determined by e-greedy), else return False
+    """
+    # get best (according to current policy) actions in one-hot form
+    if eps == 0.0:
+        return np.zeros(numAgents)
+    # get random actions in one-hot form
+    # chooses between best and random actions using epsilon greedy
+    # explore = False
+    eps_list = np.full(numAgents,eps)
+    rand = np.random.uniform(0,1,numAgents)
+    return (rand < eps)
+
+
 def pretrain_process(fnames,timesteps,num_features):
     contents = []
     for fname in fnames:

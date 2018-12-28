@@ -8,7 +8,7 @@ import itertools
 import argparse
 #import tensorflow.contrib.slim as slim
 import numpy as np
-from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process,prep_session
+from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process,prep_session,e_greedy_bool
 from torch import Tensor
 from HFO import hfo
 import time
@@ -55,11 +55,11 @@ use_viewer_after = 1000 # If using viewer, uses after x episodes
 n_training_threads = 8
 # default settings ---------------------
 num_episodes = 10000000
-replay_memory_size = 25000
+replay_memory_size = 75000
 episode_length = 500 # FPS
-untouched_time = 100
+untouched_time = 200
 burn_in_iterations = 500 # for time step
-burn_in_episodes = float(burn_in_iterations)/episode_length
+burn_in_episodes = float(burn_in_iterations)/untouched_time
 train_team = True
 train_opp = False
 # --------------------------------------
@@ -73,9 +73,9 @@ team_rew_anneal_ep = 3500 # reward would be
 # hyperparams--------------------------
 batch_size = 256
 hidden_dim = int(1024)
-a_lr = 0.001 # actor learning rate
-c_lr = 0.01 # critic learning rate
-tau = 0.01 # soft update rate
+a_lr = 0.00005 # actor learning rate
+c_lr = 0.00005 # critic learning rate
+tau = 0.005 # soft update rate
 steps_per_update = 10
 # exploration --------------------------
 explore = True
@@ -87,9 +87,9 @@ num_explore_episodes = 500 # Haus uses over 10,000 updates --
 #D4PG Options --------------------------
 D4PG = True
 gamma = 0.99 # discount
-Vmax = 10
-Vmin = -10
-N_ATOMS = 51
+Vmax = 15
+Vmin = -15
+N_ATOMS = 151
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 5
 # n-step update size 
@@ -148,10 +148,10 @@ ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
 ball_y_max = 0.1
-agents_x_min = -0.3
-agents_x_max = 0.3
-agents_y_min = -0.3
-agents_y_max = 0.3
+agents_x_min = -0.4
+agents_x_max = 0.4
+agents_y_min = -0.4
+agents_y_max = 0.4
 change_every_x = 1000000000
 change_agents_x = 0.01
 change_agents_y = 0.01
@@ -159,13 +159,13 @@ change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
 load_random_nets = True
-load_random_every = 100
+load_random_every = 1
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
 save_nns = True
-ep_save_every = 25 # episodes
+ep_save_every = 5 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
 initial_models = ["Pretrained_3v3/Cent_Q/agent_0.pth","Pretrained_3v3/Cent_Q/agent_1.pth","Pretrained_3v3/Cent_Q/agent_2.pth"] # models to load
 first_save = True # build model clones for ensemble
@@ -650,28 +650,11 @@ for ep_i in range(0, num_episodes):
         #if ep_i % 100 == 0:
         #    explore = False
         if explore:
-            team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA,
-            eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining)) for a in team_actions]
-
-            opp_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_OA,len(env.action_list)), env.num_OA,
-                                                 eps = 0.000000001) for a in opp_actions]
+            team_randoms = e_greedy_bool(env.num_TA,eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining))
+            opp_randoms = e_greedy_bool(env.num_OA,eps = 0)
         else:
-            team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA, eps = 0.000000000000001) for a in team_actions]
-            opp_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_OA,len(env.action_list)), env.num_OA, eps = 00.000000000001) for a in opp_actions]
-
-        
-        team_randoms = [team_noisey_actions[0][1][i] for i in range(env.num_TA)]
-        # team_noisey_actions = [team_noisey_actions[0][0][i] for i in range(env.num_TA)]
-
-        opp_randoms = [opp_noisey_actions[0][1][i] for i in range(env.num_OA)]
-        # opp_noisey_actions = [opp_noisey_actions[0][0][i] for i in range(env.num_OA)]
-        
-        # ***********************May use in future**************************************
-        # team_noisey_actions_for_buffer = [ac.data.numpy() for ac in team_noisey_actions]
-        # team_noisey_actions_for_buffer = np.asarray([ac[0] for ac in team_noisey_actions_for_buffer])
-
-        # opp_noisey_actions_for_buffer = [ac.data.numpy() for ac in opp_noisey_actions]
-        # opp_noisey_actions_for_buffer = np.asarray([ac[0] for ac in opp_noisey_actions_for_buffer])
+            team_randoms = e_greedy_bool(env.num_TA,eps = 0)
+            opp_randoms = e_greedy_bool(env.num_OA,eps = 0)
 
         team_obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
         opp_obs =  np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
@@ -788,20 +771,23 @@ for ep_i in range(0, num_episodes):
             team_step_logger_df.to_csv(hist_dir + '/team_%s.csv' % history)
             opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
                       
+                 
                     
-        if d == True: # Episode done
-            # Calculate n-step and MC targets
-            # ws = [world_stat] * env.num_TA
-            for n in range(et_i+1):
-                MC_targets = [] # gather for each agent, and push to buffer once with all agents
-                n_step_targets = []
+        if d == True: # Episode done            
+            all_MC_targets = []
+            # calculate MC
+            for n in range(et_i +1):
+                MC_targets = []
                 for a in range(env.num_TA):
                     MC_target = 0
+                    MC_target = team_n_step_rewards[et_i-n][a] + MC_target*gamma
+                    MC_targets.append(MC_target)    
+                all_MC_targets.append(MC_targets)
+            
+            for n in range(et_i+1):
+                n_step_targets = []
+                for a in range(env.num_TA):
                     n_step_target = 0
-                    
-                    for step in range(et_i+1 - n): # sum MC target
-                        MC_target += team_n_step_rewards[et_i - step][a] * gamma**(et_i - n - step)
-                    MC_targets.append(MC_target)
                     if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
                         for step in range(n_steps): 
                             n_step_target += team_n_step_rewards[n + step][a] * gamma**(step)
@@ -809,16 +795,17 @@ for ep_i in range(0, num_episodes):
                         n_step_next_ob = team_n_step_next_obs[n - 1 + n_steps]
                         n_step_done = team_n_step_dones[n - 1 + n_steps]
                     else: # n-step = MC if less than n steps remaining
-                        n_step_target = MC_target
+                        n_step_target = all_MC_targets[et_i-n][a]
                         n_step_targets.append(n_step_target)
                         n_step_next_ob = team_n_step_next_obs[-1]
                         n_step_done = team_n_step_dones[-1] 
                     # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
                 team_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
-                                        n_step_next_ob,[n_step_done for i in range(env.num_TA)],MC_targets,
+                                        n_step_next_ob,[n_step_done for i in range(env.num_TA)],all_MC_targets[et_i-n],
                                         n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
-                                        
+                
 
+                    
             if train_opp or critic_mod: # only create experiences if critic mod or training opp
                 for n in range(et_i+1):
                     MC_targets = []

@@ -82,11 +82,11 @@ class DDPGAgent(object):
         
         self.critic = MLPNetwork_Critic(num_in_critic, 1,
                                  hidden_dim=hidden_dim,
-                                 norm_in= self.norm_in,agent=self,D4PG=D4PG,TD3=TD3)
+                                 norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
 
         self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
                                                hidden_dim=hidden_dim,
-                                               norm_in= self.norm_in,agent=self,D4PG=D4PG,TD3=TD3)
+                                               norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
 
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)

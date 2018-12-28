@@ -641,7 +641,8 @@ class HFO_env():
             prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
             prox_prev,_ = self.closest_player_to_ball(team_obs_previous, num_ag)
             # print('This is the reward for getting closer to the ball for the team', str(prox_cur - prox_prev), 'for index', str(test), 'for agent', str(self.team_envs[test].getUnum()))
-            team_reward += (prox_cur - prox_prev)
+            #team_reward += (prox_cur - prox_prev)
+            #reward+= (prox_cur-prox_prev)
             
         ##################################################################################
             
