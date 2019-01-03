@@ -1,6 +1,7 @@
 import numpy as np
 from torch import Tensor
 from torch.autograd import Variable
+import operator
 
 class ReplayBuffer(object):
     """
@@ -129,6 +130,109 @@ class ReplayBuffer(object):
         return ([cast_obs(self.obs_buffs[i][inds]) for i in range(self.num_agents)],
                 [cast(self.ac_buffs[i][inds]) for i in range(self.num_agents)],
                 ret_rews,
+                [cast(self.next_obs_buffs[i][inds]) for i in range(self.num_agents)],
+                [cast(self.done_buffs[i][inds]) for i in range(self.num_agents)],
+                ret_mc,
+                ret_n_step,
+                [cast(self.ws_buffs[i][inds]) for i in range(self.num_agents)])
+    
+    def sample_LSTM(self, inds, trace_length, to_gpu=False, norm_rews=False):
+        # inds = np.random.choice(np.arange(self.filled_i), size=N,
+        #                         replace=False)
+        if to_gpu:
+            cast = lambda x: Variable(Tensor(x), requires_grad=False).cuda()
+        else:
+            cast = lambda x: Variable(Tensor(x), requires_grad=False)
+        if to_gpu:
+            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True).cuda() # obs need gradient for cent-Q
+        else:
+            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True)
+
+        if norm_rews:
+            ret_rews = [cast((self.rew_buffs[i][inds] -
+                              self.rew_buffs[i][:self.filled_i].mean()) /
+                             self.rew_buffs[i][:self.filled_i].std())
+                        for i in range(self.num_agents)]
+            
+            ret_mc = [cast((self.mc_buffs[i][inds] -
+                              self.mc_buffs[i][:self.filled_i].mean()) /
+                             self.mc_buffs[i][:self.filled_i].std())
+                        for i in range(self.num_agents)]
+            
+            ret_n_step = [cast((self.n_step_buffs[i][inds] -
+                              self.n_step_buffs[i][:self.filled_i].mean()) /
+                             self.n_step_buffs[i][:self.filled_i].std())
+                        for i in range(self.num_agents)]           
+        else:
+            ret_rews = [cast(self.rew_buffs[i][inds]) for i in range(self.num_agents)]
+            ret_mc = [cast(self.mc_buffs[i][inds]) for i in range(self.num_agents)]
+            ret_n_step = [cast(self.n_step_buffs[i][inds]) for i in range(self.num_agents)]
+
+        ret_obs = []
+        ret_next_obs = []
+        # Assume trace_length > 0
+        for a in range(self.num_agents):
+            temp_obs = []
+            temp_next_obs = []
+            for i in inds:
+                if not trace_length > i:
+                    if not self.done_buffs[a][i-trace_length:i+1].any():
+                        print('This is 1')
+                        temp_obs.append(self.obs_buffs[a][i-trace_length:i+1])
+                        temp_next_obs.append(self.next_obs_buffs[a][i-trace_length:i+1])
+                    else:
+                        print('This is 2')
+                        temp_dones = self.done_buffs[a][i-trace_length:i+1]
+                        max_index = max(reversed(list(enumerate(temp_dones))), key=operator.itemgetter(1))[0]
+                        if temp_dones[-1] != 1:
+                            print('This is 2.1')
+                            temp_obs.append(np.array(list(self.obs_buffs[a][i:i+1])*(trace_length - (max_index-1)) + list(self.obs_buffs[a][i-max_index+1:i+1])))
+                            temp_next_obs.append(np.array(list(self.next_obs_buffs[a][i:i+1])*(trace_length - (max_index-1)) + list(self.next_obs_buffs[a][i-max_index+1:i+1])))
+                        else:
+                            second_index_tuple = max(reversed(list(enumerate(temp_dones[:max_index]))), key=operator.itemgetter(1))
+                            if second_index_tuple[1] == 0:
+                                print('This is 2.2')
+                                temp_obs.append(self.obs_buffs[a][i-trace_length:i+1])
+                                temp_next_obs.append(self.next_obs_buffs[a][i-trace_length:i+1])
+                            else:
+                                print('This is 2.3')
+                                temp_obs.append(np.array(list(self.obs_buffs[a][i:i+1])*(second_index_tuple[0]+1) + list(self.obs_buffs[a][(i-trace_length)+second_index_tuple[0]+1:i+1])))
+                                temp_next_obs.append(np.array(list(self.next_obs_buffs[a][i:i+1])*(second_index_tuple[0]+1) + list(self.next_obs_buffs[a][(i-trace_length)+second_index_tuple[0]+1:i+1])))
+                else:
+                    if not self.done_buffs[a][0:i+1].any():
+                        print('This is 3')
+                        temp_obs.append(np.array(list(self.obs_buffs[a][0:1])*(trace_length-i-1) + list(self.obs_buffs[a][0:i+1])))
+                        temp_next_obs.append(np.array(list(self.next_obs_buffs[a][0:1])*(trace_length-i-1) + list(self.next_obs_buffs[a][0:i+1])))
+                    else:
+                        print('This is 4')
+                        temp_dones = self.done_buffs[a][0:i+1]
+                        max_index = max(reversed(list(enumerate(temp_dones))), key=operator.itemgetter(1))[0]
+                        if temp_dones[-1] != 1:
+                            print('This is 4.1')
+                            temp_obs.append(np.array(list(self.obs_buffs[a][i:i+1])*(trace_length - (i - max_index)) + list(self.obs_buffs[a][max_index+1:i+1])))
+                            temp_next_obs.append(np.array(list(self.next_obs_buffs[a][i:i+1])*(trace_length - (i - max_index)) + list(self.next_obs_buffs[a][max_index+1:i+1])))
+                        else:
+                            second_index_tuple = max(reversed(list(enumerate(temp_dones[:max_index]))), key=operator.itemgetter(1))
+                            if second_index_tuple[1] == 0:
+                                print('This is 4.2')
+                                temp_obs.append(np.array(list(self.obs_buffs[a][0:1])*(trace_length-i-1) + list(self.obs_buffs[a][0:i+1])))
+                                temp_next_obs.append(np.array(list(self.next_obs_buffs[a][0:1])*(trace_length-i-1) + list(self.next_obs_buffs[a][0:i+1])))
+                            else:
+                                print('This is 4.3')
+                                temp_obs.append(np.array(list(self.obs_buffs[a][0:1])*(trace_length-i-1) + list(self.obs_buffs[a][0:1])*(second_index_tuple[0]+1) + list(self.obs_buffs[a][second_index_tuple[0]+1:i+1])))
+                                temp_next_obs.append(np.array(list(self.next_obs_buffs[a][0:1])*(trace_length-i-1) + list(self.next_obs_buffs[a][0:1])*(second_index_tuple[0]+1) + list(self.next_obs_buffs[a][second_index_tuple[0]+1:i+1])))
+            ret_obs.append(cast_obs(temp_obs))
+            ret_next_obs.append(cast(temp_next_obs))
+
+        # print('This is the last indexed obs',str([i[-1] for i in ret_obs[0]]))
+        # print('This is the length of ret_obs', str(ret_obs))
+        # print('This is to compare', str([cast_obs(self.obs_buffs[i][inds]) for i in range(self.num_agents)]))
+        # x = 1/0
+        return (ret_obs,
+                [cast_obs(self.obs_buffs[i][inds]) for i in range(self.num_agents)],
+                [cast(self.ac_buffs[i][inds]) for i in range(self.num_agents)],
+                ret_rews,
+                ret_next_obs,
                 [cast(self.next_obs_buffs[i][inds]) for i in range(self.num_agents)],
                 [cast(self.done_buffs[i][inds]) for i in range(self.num_agents)],
                 ret_mc,

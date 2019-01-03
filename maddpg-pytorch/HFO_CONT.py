@@ -42,7 +42,7 @@ history = args.log
 # options ------------------------------
 action_level = 'low'
 feature_level = 'low'
-USE_CUDA = True 
+USE_CUDA = False 
 if USE_CUDA:
     device = 'cuda'
     to_gpu = True
@@ -71,7 +71,7 @@ num_ONPC = 0
 goalie = False
 team_rew_anneal_ep = 3500 # reward would be
 # hyperparams--------------------------
-batch_size = 256
+batch_size = 2
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.00005 # critic learning rate
@@ -158,23 +158,24 @@ change_agents_y = 0.01
 change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
-load_random_nets = True
+load_random_nets = False
 load_random_every = 1
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
-save_nns = True
+save_nns = False
 ep_save_every = 5 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
 initial_models = ["Pretrained_3v3/Cent_Q/agent_0.pth","Pretrained_3v3/Cent_Q/agent_1.pth","Pretrained_3v3/Cent_Q/agent_2.pth"] # models to load
-first_save = True # build model clones for ensemble
+first_save = False # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = False
 eval_after = 500
 eval_episodes = 11
 # --------------------------------------
+trace_length = 1
 # Prep Session Files ------------------------------
 session_path = None
 current_day_time = datetime.datetime.now()
@@ -233,7 +234,7 @@ else:
                               obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight, 
                               rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,
                               imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
-                              critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs) 
+                              critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs, trace_length=trace_length) 
 
 
 team_replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA,
@@ -746,11 +747,11 @@ for ep_i in range(0, num_episodes):
                     if train_team: # train team
                         for a_i in range(maddpg.nagents_team):
                             inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                            team_sample = team_replay_buffer.sample(inds,
+                            team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
                                                         to_gpu=to_gpu,norm_rews=False)
-                            opp_sample = opp_replay_buffer.sample(inds,
+                            opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
                                                         to_gpu=to_gpu,norm_rews=False)
-                            maddpg.update_centralized_critic(team_sample, opp_sample, a_i, 'team', 
+                            maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, a_i, 'team', 
                                                              act_only=critic_mod_act, obs_only=critic_mod_obs)
                             if SIL:
                                 for i in range(SIL_update_ratio):
