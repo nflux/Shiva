@@ -360,7 +360,7 @@ class LSTM_Network(nn.Module):
     MLP network (can be used as value or policy)
     """
     def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,
-                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, LSTM=False, trace_length=1, device='cuda'):
+                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, LSTM=False, trace_length=1):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -379,9 +379,8 @@ class LSTM_Network(nn.Module):
         self.rollout_steps = rollout_steps
         self.batch_size = maddpg.batch_size
         self.hidden_dim_lstm = 512
-        self.device = device
 
-        if self.device == 'cuda':
+        if self.agent.device == 'cuda':
             self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda(),
                                 Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda())
             self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
@@ -448,7 +447,7 @@ class LSTM_Network(nn.Module):
         self.out_fn = lambda x: x
     
     def init_hidden(self, training = False):
-        if self.device == 'cuda'
+        if self.agent.device == 'cuda':
             if not training:
                 self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda(),
                                     Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda())
@@ -524,14 +523,15 @@ class LSTM_Network(nn.Module):
             h4 = self.nonlin(self.fc4(h3))
 
             if not self.discrete_action:
-            self.final_out_action = self.out_action_fn(self.out_action(h4))
-            self.final_out_params = self.out_param_fn(self.out_param(h4))
-            out = torch.cat((self.final_out_action, self.final_out_params),1)
-            #if self.count % 100 == 0:
-            #    print(out)
-            self.count += 1
+                self.final_out_action = self.out_action_fn(self.out_action(h4))
+                self.final_out_params = self.out_param_fn(self.out_param(h4))
 
-            return out
+                out = torch.cat((self.final_out_action, self.final_out_params),1)
+                #if self.count % 100 == 0:
+                #    print(out)
+                self.count += 1
+
+                return out
 
 
 

@@ -174,9 +174,10 @@ first_save = True # build model clones for ensemble
 evaluate = False
 eval_after = 500
 eval_episodes = 11
-# LSTM --------------------------------------
+# LSTM -------------------------------------------
 LSTM = True
 trace_length = 20
+# -------------------------------------------------
 # Prep Session Files ------------------------------
 session_path = None
 current_day_time = datetime.datetime.now()
