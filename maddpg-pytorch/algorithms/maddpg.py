@@ -22,7 +22,7 @@ class MADDPG(object):
                  DELTA_Z = 20.0/50,D4PG=False,beta = 0,TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, decent_EM=True,imagination_policy_branch = False,
-                 critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, trace_length = 1): 
+                 critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, trace_length = 1): 
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -61,7 +61,7 @@ class MADDPG(object):
                                       device=device,
                                       imagination_policy_branch=imagination_policy_branch,
                                       critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                      trace_length=trace_length,
+                                      trace_length=trace_length, LSTM=LSTM,
                                  **params)
                        for params in team_agent_init_params]
         
@@ -75,7 +75,7 @@ class MADDPG(object):
                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
                                      imagination_policy_branch=imagination_policy_branch,
                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                     trace_length=trace_length,
+                                     trace_length=trace_length, LSTM=LSTM,
                                  **params)
                        for params in opp_agent_init_params]
 
@@ -169,8 +169,8 @@ class MADDPG(object):
             for ta, oa in zip(self.team_agents, self.opp_agents):
                 ta.policy.init_hidden(training)
                 oa.policy.init_hidden(training)
-                ta.target_policy.init_hidden(training)
-                oa.target_policy.init_hidden(training)
+                ta.policy.training = training
+                oa.policy.training = training
         else:
             for ta, oa in zip(self.team_agents, self.opp_agents):
                 ta.policy.init_hidden(training)
@@ -1800,7 +1800,7 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True,imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, trace_length=1):
+                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, trace_length=1):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -1816,7 +1816,6 @@ class MADDPG(object):
             # giving dimension num_TA x action_list so they may zip properly    
 
             num_in_pol = obsp.shape[0]
-            num_in_pol_LSTM = num_in_pol
         
             num_out_pol =  len(env.action_list)
 
@@ -1846,17 +1845,14 @@ class MADDPG(object):
             
             
             team_agent_init_params.append({'num_in_pol': num_in_pol,
-                                        'num_in_pol_LSTM': num_in_pol_LSTM,
                                         'num_out_pol': num_out_pol,
                                         'num_in_critic': num_in_critic})
             
             opp_agent_init_params.append({'num_in_pol': num_in_pol,
-                                        'num_in_pol_LSTM': num_in_pol_LSTM,
                                         'num_out_pol': num_out_pol,
                                         'num_in_critic': num_in_critic})
             
             team_net_params.append({'num_in_pol': num_in_pol,
-                                    'num_in_pol_LSTM': num_in_pol_LSTM,
                                     'num_out_pol': num_out_pol,
                                     'num_in_critic': num_in_critic,
                                     'num_in_EM': num_in_EM,
@@ -1899,7 +1895,8 @@ class MADDPG(object):
                      'critic_mod_both': critic_mod_both,
                      'critic_mod_act': critic_mod_act,
                      'critic_mod_obs': critic_mod_obs,
-                     'trace_length': trace_length}
+                     'trace_length': trace_length,
+                     'LSTM':LSTM}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance

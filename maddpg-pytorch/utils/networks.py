@@ -360,7 +360,7 @@ class LSTM_Network(nn.Module):
     MLP network (can be used as value or policy)
     """
     def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,
-                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, trace_length=1):
+                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, LSTM=False, trace_length=1, device='cuda'):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -378,15 +378,24 @@ class LSTM_Network(nn.Module):
         self.n_actions = self.agent.n_actions
         self.rollout_steps = rollout_steps
         self.batch_size = maddpg.batch_size
-        self.hidden_dim = 512
-        self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim)).cuda(),
-                            Variable(torch.zeros(1, 1, self.hidden_dim)).cuda())
-        self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim)).cuda(),
-                                Variable(torch.zeros(1, self.batch_size, self.hidden_dim)).cuda())
+        self.hidden_dim_lstm = 512
+        self.device = device
+
+        if self.device == 'cuda':
+            self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda(),
+                                Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda())
+            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
+        else:
+            self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)),
+                                Variable(torch.zeros(1, 1, self.hidden_dim_lstm)))
+            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
         self.training = training
         self.trace_length = trace_length
 
         self.I2A = I2A
+        self.LSTM = LSTM
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
 
         # save refs without registering
@@ -402,9 +411,10 @@ class LSTM_Network(nn.Module):
             self.cast = lambda x: x.cpu()
         self.norm_in = norm_in
 
-        # self.in_fn = nn.BatchNorm1d(input_dim)
-        # self.in_fn.weight.data.normal_(.01)
-        # self.in_fn.bias.data.fill_(0)
+        if not self.LSTM:
+            self.in_fn = nn.BatchNorm1d(input_dim)
+            self.in_fn.weight.data.normal_(.01)
+            self.in_fn.bias.data.fill_(0)
    
         if I2A:
             self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_actions, 1024)
@@ -412,10 +422,12 @@ class LSTM_Network(nn.Module):
             self.fc1 = nn.Linear(input_dim, 1024)
 
         
-        self.fc1.weight.data.normal_(0, 0.01) 
-        # self.fc2 = nn.Linear(1024, 512)
-        # self.fc2.weight.data.normal_(0, 0.01)
-        self.lstm = nn.LSTM(1024, 512)
+        self.fc1.weight.data.normal_(0, 0.01)
+        if not self.LSTM:
+            self.fc2 = nn.Linear(1024, 512)
+            self.fc2.weight.data.normal_(0, 0.01)
+        else:
+            self.lstm = nn.LSTM(1024, 512)
         self.fc3 = nn.Linear(512, 256)
         self.fc3.weight.data.normal_(0, 0.01) 
         self.fc4 = nn.Linear(256, 128)
@@ -436,12 +448,20 @@ class LSTM_Network(nn.Module):
         self.out_fn = lambda x: x
     
     def init_hidden(self, training = False):
-        if not training:
-            self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim)).cuda(),
-                                Variable(torch.zeros(1, 1, self.hidden_dim)).cuda())
+        if self.device == 'cuda'
+            if not training:
+                self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda(),
+                                    Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda())
+            else:
+                self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
+                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
         else:
-            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim)).cuda(),
-                                        Variable(torch.zeros(1, self.batch_size, self.hidden_dim)).cuda())
+            if not training:
+                self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)),
+                                    Variable(torch.zeros(1, 1, self.hidden_dim_lstm)))
+            else:
+                self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
+                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
 
     def forward(self, X):
         """
@@ -450,59 +470,72 @@ class LSTM_Network(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        # if X.size()[0] == 1 or not self.norm_in:
-        #     self.in_fn.train(False)
-        # else:
-        #     self.in_fn.train(True)
+        if not self.LSTM:
+            if X.size()[0] == 1 or not self.norm_in:
+                self.in_fn.train(False)
+            else:
+                self.in_fn.train(True)
         if self.I2A:
             fx = self.in_fn(self.cast(X)).float()
             enc_rollouts = self.rollouts_batch(fx)
             fc_in = torch.cat((fx,enc_rollouts),dim=1)
             h1 = self.nonlin(self.fc1(fc_in))
         else:
-            # print('This is X', str(X.size()))
-            h1 = self.nonlin(self.fc1(self.cast(X)))
-            # h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
-
-        if not self.training:
-            h2, self.hidden_tuple = self.lstm(self.nonlin(h1.unsqueeze(0)), self.hidden_tuple)
-        else:
-            h2, self.hidden_tuple_train = self.lstm(self.nonlin(h1), self.hidden_tuple_train)
+            if self.LSTM:
+                h1 = self.nonlin(self.fc1(self.cast(X)))
+            else:
+                h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
         
-        h2 = self.nonlin(h2)
-        h3 = self.nonlin(self.fc3(h2))
-        h4 = self.nonlin(self.fc4(h3))
+        if self.LSTM:
+            if not self.training:
+                h2, self.hidden_tuple = self.lstm(self.nonlin(h1.unsqueeze(0)), self.hidden_tuple)
+            else:
+                h2, self.hidden_tuple_train = self.lstm(self.nonlin(h1), self.hidden_tuple_train)
+            
+            h2 = self.nonlin(h2)
+            h3 = self.nonlin(self.fc3(h2))
+            h4 = self.nonlin(self.fc4(h3))
 
-        if not self.training:
+            if not self.training:
+                if not self.discrete_action:
+                    self.final_out_action = self.out_action_fn(self.out_action(h4))[0]
+                    self.final_out_params = self.out_param_fn(self.out_param(h4))[0]
+
+                    out = torch.cat((self.final_out_action, self.final_out_params),dim=1)
+                    #if self.count % 100 == 0:
+                    #    print(out)
+                    self.count += 1
+
+                return out
+            else:
+                if not self.discrete_action:
+                    self.final_out_action = self.out_action_fn(self.out_action(h4))
+                    self.final_out_params = self.out_param_fn(self.out_param(h4))
+
+                    out = torch.cat((self.final_out_action, self.final_out_params),dim=2)
+                    #if self.count % 100 == 0:
+                    #    print(out)
+                    self.count += 1
+
+                return out[0]
+        else:
+            h2 = self.nonlin(self.fc2(h1))
+            h3 = self.nonlin(self.fc3(h2))
+            h4 = self.nonlin(self.fc4(h3))
+
             if not self.discrete_action:
-                # self.final_out_action = self.out_action_fn(self.out_action(h4)).view((1, 3))
-                # self.final_out_params = self.out_param_fn(self.out_param(h4)).view((1, 5))
-                self.final_out_action = self.out_action_fn(self.out_action(h4))[0]
-                self.final_out_params = self.out_param_fn(self.out_param(h4))[0]
-
-                out = torch.cat((self.final_out_action, self.final_out_params),dim=1)
-                #if self.count % 100 == 0:
-                #    print(out)
-                self.count += 1
+            self.final_out_action = self.out_action_fn(self.out_action(h4))
+            self.final_out_params = self.out_param_fn(self.out_param(h4))
+            out = torch.cat((self.final_out_action, self.final_out_params),1)
+            #if self.count % 100 == 0:
+            #    print(out)
+            self.count += 1
 
             return out
-        else:
-            if not self.discrete_action:
-                # self.final_out_action = self.out_action_fn(self.out_action(h4)).view((self.trace_length, self.batch_size, 3))
-                # self.final_out_params = self.out_param_fn(self.out_param(h4)).view((self.trace_length, self.batch_size, 5))
-                self.final_out_action = self.out_action_fn(self.out_action(h4))
-                self.final_out_params = self.out_param_fn(self.out_param(h4))
-                # print(self.final_out_action.size())
-                # print(self.final_out_params.size())
-                # exit(0)
 
-                out = torch.cat((self.final_out_action, self.final_out_params),dim=2)
-                #if self.count % 100 == 0:
-                #    print(out)
-                self.count += 1
 
-            return out[0]
 
+        
     def rollouts_batch(self, batch):
         batch_size = batch.size()[0]
         batch_rest = batch.size()[1:]

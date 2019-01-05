@@ -7,7 +7,7 @@ class ReplayBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, max_steps, num_agents, episode_length, obs_dims, ac_dims, batch_size):
+    def __init__(self, max_steps, num_agents, episode_length, obs_dims, ac_dims, batch_size, LSTM):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -33,6 +33,7 @@ class ReplayBuffer(object):
         self.done_step = False
         self.batch_size =  batch_size
         self.count = 0
+        self.LSTM = LSTM
         for odim, adim in zip(obs_dims, ac_dims):
             self.obs_buffs.append(np.zeros((max_steps, odim)))
             self.ac_buffs.append(np.zeros((max_steps, adim)))
@@ -48,11 +49,11 @@ class ReplayBuffer(object):
         self.filled_i = 0  # index of first empty location in buffer (last index when full)
         self.curr_i = 0  # current index to write to (ovewrite oldest data)
 
-    # def __len__(self):
-    #     return self.filled_i
-
     def __len__(self):
-        return len(self.episode_buff)
+        if self.LSTM:
+            return len(self.episode_buff)
+        else:
+            return self.filled_i
     
     def push(self, observations, actions, rewards, next_observations, dones,mc_targets,n_step,ws):
         #nentries = observations.shape[0]  # handle multiple parallel environments
@@ -266,7 +267,7 @@ class ReplayBuffer(object):
             for i,p in zip(inds,points)]) for a in range(self.num_agents)]
         ret_ws = [cast([self.episode_buff[i]['ws'][a][p:p+1]
             for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-            
+
 
         return ([ret_obs[a].permute(1,0,2) for a in range(self.num_agents)],
                 [ret_acs[a].view((self.batch_size, -1)) for a in range(self.num_agents)],
