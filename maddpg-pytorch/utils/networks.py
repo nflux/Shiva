@@ -379,10 +379,10 @@ class LSTM_Network(nn.Module):
         self.rollout_steps = rollout_steps
         self.batch_size = maddpg.batch_size
         self.hidden_dim = 512
-        self.hidden_tuple = (torch.zeros(1, 1, self.hidden_dim),
-                            torch.zeros(1, 1, self.hidden_dim))
-        self.hidden_tuple_train = (torch.zeros(1, self.batch_size, self.hidden_dim),
-                                torch.zeros(1, self.batch_size, self.hidden_dim))
+        self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim)).cuda(),
+                            Variable(torch.zeros(1, 1, self.hidden_dim)).cuda())
+        self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim)).cuda(),
+                                Variable(torch.zeros(1, self.batch_size, self.hidden_dim)).cuda())
         self.training = training
         self.trace_length = trace_length
 
@@ -437,11 +437,11 @@ class LSTM_Network(nn.Module):
     
     def init_hidden(self, training = False):
         if not training:
-            self.hidden_tuple = (torch.zeros(1, 1, self.hidden_dim),
-                                torch.zeros(1, 1, self.hidden_dim))
+            self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim)).cuda(),
+                                Variable(torch.zeros(1, 1, self.hidden_dim)).cuda())
         else:
-            self.hidden_tuple_train = (torch.zeros(1, self.batch_size, self.hidden_dim),
-                                        torch.zeros(1, self.batch_size, self.hidden_dim))
+            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim)).cuda(),
+                                        Variable(torch.zeros(1, self.batch_size, self.hidden_dim)).cuda())
 
     def forward(self, X):
         """

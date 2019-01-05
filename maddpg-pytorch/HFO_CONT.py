@@ -42,7 +42,7 @@ history = args.log
 # options ------------------------------
 action_level = 'low'
 feature_level = 'low'
-USE_CUDA = False 
+USE_CUDA = True 
 if USE_CUDA:
     device = 'cuda'
     to_gpu = True
@@ -55,9 +55,9 @@ use_viewer_after = 1000 # If using viewer, uses after x episodes
 n_training_threads = 8
 # default settings ---------------------
 num_episodes = 10000000
-replay_memory_size = 75000
+replay_memory_size = 500000
 episode_length = 500 # FPS
-untouched_time = 200
+untouched_time = 100
 burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/untouched_time
 train_team = True
@@ -69,27 +69,27 @@ num_OA = 1
 num_TNPC = 0
 num_ONPC = 0
 goalie = False
-team_rew_anneal_ep = 3500 # reward would be
+team_rew_anneal_ep = 1500 # reward would be
 # hyperparams--------------------------
-batch_size = 4
+batch_size = 256
 hidden_dim = int(1024)
-a_lr = 0.00005 # actor learning rate
-c_lr = 0.00005 # critic learning rate
-tau = 0.005 # soft update rate
+a_lr = 0.00001 # actor learning rate
+c_lr = 0.001 # critic learning rate
+tau = 0.001 # soft update rate
 steps_per_update = 10
 # exploration --------------------------
 explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 500 # Haus uses over 10,000 updates --
+num_explore_episodes = 1000 # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
 gamma = 0.99 # discount
-Vmax = 15
-Vmin = -15
-N_ATOMS = 151
+Vmax = 10
+Vmin = -10
+N_ATOMS = 51
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 5
 # n-step update size 
@@ -148,34 +148,34 @@ ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
 ball_y_max = 0.1
-agents_x_min = -0.4
-agents_x_max = 0.4
-agents_y_min = -0.4
-agents_y_max = 0.4
+agents_x_min = -0.3
+agents_x_max = 0.3
+agents_y_min = -0.3
+agents_y_max = 0.3
 change_every_x = 1000000000
 change_agents_x = 0.01
 change_agents_y = 0.01
 change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
-load_random_nets = False
-load_random_every = 1
+load_random_nets = True
+load_random_every = 100
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
-save_nns = False
-ep_save_every = 5 # episodes
+save_nns = True
+ep_save_every = 25 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
 initial_models = ["Pretrained_3v3/Cent_Q/agent_0.pth","Pretrained_3v3/Cent_Q/agent_1.pth","Pretrained_3v3/Cent_Q/agent_2.pth"] # models to load
-first_save = False # build model clones for ensemble
+first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = False
 eval_after = 500
 eval_episodes = 11
 # LSTM --------------------------------------
-trace_length = 10
+trace_length = 20
 # Prep Session Files ------------------------------
 session_path = None
 current_day_time = datetime.datetime.now()
