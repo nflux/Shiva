@@ -47,6 +47,7 @@ class MADDPG(object):
         self.num_in_EM = team_net_params[0]['num_in_EM']
         self.num_out_EM = team_net_params[0]['num_out_EM']
         self.batch_size = batch_size
+        self.trace_length = trace_length
 
         self.num_out_pol = team_net_params[0]['num_out_pol']
         self.team_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
@@ -59,7 +60,8 @@ class MADDPG(object):
                                       rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
                                       device=device,
                                       imagination_policy_branch=imagination_policy_branch,
-                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs, 
+                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
+                                      trace_length=trace_length,
                                  **params)
                        for params in team_agent_init_params]
         
@@ -72,7 +74,8 @@ class MADDPG(object):
                                  world_status_dim=self.world_status_dim,
                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
                                      imagination_policy_branch=imagination_policy_branch,
-                                     critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs, 
+                                     critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
+                                     trace_length=trace_length,
                                  **params)
                        for params in opp_agent_init_params]
 
@@ -160,6 +163,22 @@ class MADDPG(object):
         
         for a in self.opp_agents:
             a.reset_noise()
+    
+    def reset_hidden(self, training=False):
+        if not training:
+            for ta, oa in zip(self.team_agents, self.opp_agents):
+                ta.policy.init_hidden(training)
+                oa.policy.init_hidden(training)
+                ta.target_policy.init_hidden(training)
+                oa.target_policy.init_hidden(training)
+        else:
+            for ta, oa in zip(self.team_agents, self.opp_agents):
+                ta.policy.init_hidden(training)
+                oa.policy.init_hidden(training)
+                ta.target_policy.init_hidden(training)
+                oa.target_policy.init_hidden(training)
+                ta.policy.training = training
+                oa.policy.training = training
 
     def step(self, team_observations, opp_observations, explore=False):
         """
@@ -451,6 +470,16 @@ class MADDPG(object):
         start = time.time()
         #print("time critic")
 
+        # print('This is rews',str(rews))
+        # print('This is n-step-rews',str(n_step_rews))
+        # print('size rews',str(rews[0].size()))
+        # print('size n-step',str(n_step_rews[0].size()))
+        # print('This is actions',str(acs))
+        # print('This is the actions size', str(acs[0].size()))
+        # print('obs',str(obs))
+        # print('obs size',str(obs[0].size()))
+        # exit(0)
+
         if self.TD3:
             noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
             all_trgt_acs = [torch.cat(
@@ -662,8 +691,8 @@ class MADDPG(object):
             nagents = self.nagents_team
             policies = self.team_policies
             opp_policies = self.opp_policies
-            obs, obs_critic, acs, rews, next_obs, critic_next_obs, dones,MC_rews,n_step_rews,ws = team_sample
-            opp_obs, opp_obs_critic, opp_acs, opp_rews, opp_next_obs, critic_opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = opp_sample
+            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = team_sample
+            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = opp_sample
         else:
             count = self.opp_count[agent_i]
             curr_agent = self.opp_agents[agent_i]
@@ -672,19 +701,21 @@ class MADDPG(object):
             nagents = self.nagents_opp
             policies = self.opp_policies
             opp_policies = self.team_policies
-            obs, obs_critic, acs, rews, next_obs, critic_next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
-            opp_obs, opp_obs_critic, opp_acs, opp_rews, opp_next_obs, critic_opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
+            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
+            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
+        
+        obs_critic = [obs[a][0] for a in range(self.nagents_team)]
+        next_obs_critic = [next_obs[a][0] for a in range(self.nagents_team)]
+        opp_obs_critic = [opp_obs[a][0] for a in range(self.nagents_opp)]
+        opp_next_obs_critic = [opp_next_obs[a][0] for a in range(self.nagents_opp)]
         
         for tp,target_tp,op,target_op in zip(policies, target_policies, opp_policies, opp_target_policies):
-            tp.init_hidden()
-            target_tp.init_hidden()
-            op.init_hidden()
-            target_op.init_hidden()
+            tp.init_hidden(training=True)
+            target_tp.init_hidden(training=True)
+            op.init_hidden(training=True)
+            target_op.init_hidden(training=True)
             tp.training = True
-            target_tp.training = True
             op.training = True
-            target_op.training = True
-
 
         self.curr_agent_index = agent_i
         # Train critic ------------------------
@@ -692,15 +723,8 @@ class MADDPG(object):
         
         start = time.time()
         #print("time critic")
-        # print('next_obs', str(next_obs))
-        # print('next_obs tensor???',str(next_obs[0]))
-        # print('Grabbing from tensor')
-        # for i,no in enumerate(next_obs[0]):
-        #     print('This is i', str(i), 'for no', str(no))
-        # print('grabbing from list')
-        # for i,no in enumerate(next_obs):
-        #     print('This is i', str(i), 'for no', str(no.size()))
-        # x=1/0
+
+
         if self.TD3:
             noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
             all_trgt_acs = [torch.cat(
@@ -713,12 +737,13 @@ class MADDPG(object):
                 (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
             opp_all_trgt_acs =[torch.cat(
                 (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
-   
-        mod_next_obs = torch.cat((*critc_opp_next_obs,*critic_next_obs),dim=1)
+
+        mod_next_obs = torch.cat((*opp_next_obs_critic,*next_obs_critic),dim=1)
         mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
 
         # Target critic values
         trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
+
         if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
                      # and build the combination of distr choosing the minimums
             trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)

@@ -71,7 +71,7 @@ num_ONPC = 0
 goalie = False
 team_rew_anneal_ep = 3500 # reward would be
 # hyperparams--------------------------
-batch_size = 2
+batch_size = 4
 hidden_dim = int(1024)
 a_lr = 0.00005 # actor learning rate
 c_lr = 0.00005 # critic learning rate
@@ -174,8 +174,8 @@ first_save = False # build model clones for ensemble
 evaluate = False
 eval_after = 500
 eval_episodes = 11
-# --------------------------------------
-trace_length = 1
+# LSTM --------------------------------------
+trace_length = 10
 # Prep Session Files ------------------------------
 session_path = None
 current_day_time = datetime.datetime.now()
@@ -237,14 +237,14 @@ else:
                               critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs, trace_length=trace_length) 
 
 
-team_replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA,
+team_replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA, episode_length,
                                      [env.team_num_features for i in range(env.num_TA)],
-                                 [env.team_action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)])
+                                 [env.team_action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)], batch_size)
 
 #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
-opp_replay_buffer = ReplayBuffer(replay_memory_size , env.num_OA,
+opp_replay_buffer = ReplayBuffer(replay_memory_size , env.num_OA, episode_length,
                                  [env.opp_num_features for i in range(env.num_OA)],
-                                 [env.opp_action_params.shape[1] + len(env.action_list) for i in range(env.num_OA)])
+                                 [env.opp_action_params.shape[1] + len(env.action_list) for i in range(env.num_OA)], batch_size)
 
 reward_total = [ ]
 num_steps_per_episode = []
@@ -605,7 +605,7 @@ for ep_i in range(0, num_episodes):
     if ep_i % 100 == 0:
         maddpg.scale_noise(0.0)
 
-        
+    maddpg.reset_hidden(training=False)
     maddpg.reset_noise()
     maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
     #for the duration of 100 episode with maximum length of 500 time steps
@@ -774,7 +774,7 @@ for ep_i in range(0, num_episodes):
                       
                  
                     
-        if d == True: # Episode done            
+        if d == True and (et_i+1) >= trace_length: # Episode done            
             all_MC_targets = []
             # calculate MC
             for n in range(et_i +1):
@@ -801,7 +801,9 @@ for ep_i in range(0, num_episodes):
                         n_step_next_ob = team_n_step_next_obs[-1]
                         n_step_done = team_n_step_dones[-1] 
                     # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                team_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
+                if n == et_i:
+                    team_replay_buffer.done_step = True
+                team_replay_buffer.push_LSTM(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
                                         n_step_next_ob,[n_step_done for i in range(env.num_TA)],all_MC_targets[et_i-n],
                                         n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
                 
@@ -829,8 +831,9 @@ for ep_i in range(0, num_episodes):
                             n_step_next_ob = opp_n_step_next_obs[-1]
                             n_step_done = opp_n_step_dones[-1]
                         # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-
-                    opp_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
+                    if n == et_i:
+                        opp_replay_buffer.done_step = True
+                    opp_replay_buffer.push_LSTM(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
                                             n_step_next_ob,[n_step_done for i in range(env.num_OA)],MC_targets,
                                             n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                                        

@@ -359,7 +359,8 @@ class LSTM_Network(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object):
+    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,
+                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, trace_length=1):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -380,8 +381,10 @@ class LSTM_Network(nn.Module):
         self.hidden_dim = 512
         self.hidden_tuple = (torch.zeros(1, 1, self.hidden_dim),
                             torch.zeros(1, 1, self.hidden_dim))
-        self.training = False
-        print('This is training',str(self.training))
+        self.hidden_tuple_train = (torch.zeros(1, self.batch_size, self.hidden_dim),
+                                torch.zeros(1, self.batch_size, self.hidden_dim))
+        self.training = training
+        self.trace_length = trace_length
 
         self.I2A = I2A
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
@@ -399,9 +402,9 @@ class LSTM_Network(nn.Module):
             self.cast = lambda x: x.cpu()
         self.norm_in = norm_in
 
-        self.in_fn = nn.BatchNorm1d(input_dim)
-        self.in_fn.weight.data.normal_(.01)
-        self.in_fn.bias.data.fill_(0)
+        # self.in_fn = nn.BatchNorm1d(input_dim)
+        # self.in_fn.weight.data.normal_(.01)
+        # self.in_fn.bias.data.fill_(0)
    
         if I2A:
             self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_actions, 1024)
@@ -432,9 +435,13 @@ class LSTM_Network(nn.Module):
         self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
     
-    def init_hidden(self):
-        self.hidden_tuple = (torch.zeros(1, self.batch_size, self.hidden_dim),
-                            torch.zeros(1, self.batch_size, self.hidden_dim))
+    def init_hidden(self, training = False):
+        if not training:
+            self.hidden_tuple = (torch.zeros(1, 1, self.hidden_dim),
+                                torch.zeros(1, 1, self.hidden_dim))
+        else:
+            self.hidden_tuple_train = (torch.zeros(1, self.batch_size, self.hidden_dim),
+                                        torch.zeros(1, self.batch_size, self.hidden_dim))
 
     def forward(self, X):
         """
@@ -443,10 +450,10 @@ class LSTM_Network(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        if X.size()[0] == 1 or not self.norm_in:
-            self.in_fn.train(False)
-        else:
-            self.in_fn.train(True)
+        # if X.size()[0] == 1 or not self.norm_in:
+        #     self.in_fn.train(False)
+        # else:
+        #     self.in_fn.train(True)
         if self.I2A:
             fx = self.in_fn(self.cast(X)).float()
             enc_rollouts = self.rollouts_batch(fx)
@@ -454,34 +461,47 @@ class LSTM_Network(nn.Module):
             h1 = self.nonlin(self.fc1(fc_in))
         else:
             # print('This is X', str(X.size()))
-            if self.training:
-                print('This is printed', str(self.training))
-                test = self.in_fn(self.cast(X.permute(0,2,1)))
-                print('This is test', str(test))
-                x = 1/0
-            else:
-                test = self.in_fn(self.cast(X))
-            h1 = self.nonlin(self.fc1(test))
+            h1 = self.nonlin(self.fc1(self.cast(X)))
             # h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
 
-        # print('This is h1', str(h1.unsqueeze(0)))
-        h2, self.hidden_tuple = self.lstm(h1.unsqueeze(0), self.hidden_tuple)
+        if not self.training:
+            h2, self.hidden_tuple = self.lstm(self.nonlin(h1.unsqueeze(0)), self.hidden_tuple)
+        else:
+            h2, self.hidden_tuple_train = self.lstm(self.nonlin(h1), self.hidden_tuple_train)
+        
         h2 = self.nonlin(h2)
         h3 = self.nonlin(self.fc3(h2))
         h4 = self.nonlin(self.fc4(h3))
 
-        if not self.discrete_action:
-            self.final_out_action = torch.squeeze(self.out_action_fn(self.out_action(h4)))
-            self.final_out_params = torch.squeeze(self.out_param_fn(self.out_param(h4)))
-            # print('actions',str(self.final_out_action))
-            # print('params',str(self.final_out_params))
-            out = torch.cat((self.final_out_action, self.final_out_params),dim=0)
-            #if self.count % 100 == 0:
-            #    print(out)
-            self.count += 1
-            # print('This is out', str(out.unsqueeze(0)))
+        if not self.training:
+            if not self.discrete_action:
+                # self.final_out_action = self.out_action_fn(self.out_action(h4)).view((1, 3))
+                # self.final_out_params = self.out_param_fn(self.out_param(h4)).view((1, 5))
+                self.final_out_action = self.out_action_fn(self.out_action(h4))[0]
+                self.final_out_params = self.out_param_fn(self.out_param(h4))[0]
 
-        return out.unsqueeze(0)
+                out = torch.cat((self.final_out_action, self.final_out_params),dim=1)
+                #if self.count % 100 == 0:
+                #    print(out)
+                self.count += 1
+
+            return out
+        else:
+            if not self.discrete_action:
+                # self.final_out_action = self.out_action_fn(self.out_action(h4)).view((self.trace_length, self.batch_size, 3))
+                # self.final_out_params = self.out_param_fn(self.out_param(h4)).view((self.trace_length, self.batch_size, 5))
+                self.final_out_action = self.out_action_fn(self.out_action(h4))
+                self.final_out_params = self.out_param_fn(self.out_param(h4))
+                # print(self.final_out_action.size())
+                # print(self.final_out_params.size())
+                # exit(0)
+
+                out = torch.cat((self.final_out_action, self.final_out_params),dim=2)
+                #if self.count % 100 == 0:
+                #    print(out)
+                self.count += 1
+
+            return out[0]
 
     def rollouts_batch(self, batch):
         batch_size = batch.size()[0]

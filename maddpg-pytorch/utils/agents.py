@@ -16,7 +16,7 @@ class DDPGAgent(object):
     def __init__(self, num_in_pol, num_in_pol_LSTM, num_out_pol, num_in_critic, maddpg=object, hidden_dim=64,
                  a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
-                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False): 
+                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, trace_length=1): 
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -64,14 +64,14 @@ class DDPGAgent(object):
                           discrete_action=discrete_action,
                           norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                           EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                  LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+                                  LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=False, trace_length=trace_length)
         
         self.target_policy = LSTM_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
                                  hidden_dim=hidden_dim,
                                  discrete_action=discrete_action,
                                  norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                                  EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                         LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+                                         LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=True, trace_length=trace_length)
         
         self.critic = MLPNetwork_Critic(num_in_critic, 1,
                                  hidden_dim=hidden_dim,
@@ -120,8 +120,8 @@ class DDPGAgent(object):
         Outputs:
             action (PyTorch Variable): Actions for this agent
         """
-        # print('This is the obs', str(torch.cat((obs, obs),dim=1)))
-        self.policy.training = False
+        if self.policy.training == True:
+            self.policy.training = False
         action = self.policy(obs)
         if self.counter % 250 == 0:
             print(torch.softmax(action[:,:self.action_dim],dim=1))
