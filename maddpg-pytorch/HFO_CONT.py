@@ -175,8 +175,8 @@ evaluate = False
 eval_after = 500
 eval_episodes = 11
 # LSTM -------------------------------------------
-LSTM = True
-trace_length = 20
+LSTM = False
+trace_length = 0 # NOTE: Set to 0 if LSTM == False
 # -------------------------------------------------
 # Prep Session Files ------------------------------
 session_path = None
@@ -787,7 +787,7 @@ for ep_i in range(0, num_episodes):
                       
                  
                     
-        if d == True and (et_i+1) >= trace_length: # Episode done            
+        if d == True and et_i >= (trace_length-1): # Episode done            
             all_MC_targets = []
             # calculate MC
             for n in range(et_i +1):
