@@ -19,7 +19,7 @@ class ReplayBuffer(object):
         self.max_steps = max_steps
         self.max_episodes = int(max_steps/episode_length)
         self.num_agents = num_agents
-        self.prev_done_loc = 0
+        self.start_loc = 0
         self.obs_buffs = []
         self.ac_buffs = []
         self.n_step_buffs = []
@@ -34,7 +34,6 @@ class ReplayBuffer(object):
         self.batch_size =  batch_size
         self.count = 0
         self.LSTM = LSTM
-        self.ep_length = 0
         for odim, adim in zip(obs_dims, ac_dims):
             self.obs_buffs.append(np.zeros((max_steps, odim)))
             self.ac_buffs.append(np.zeros((max_steps, adim)))
@@ -156,19 +155,19 @@ class ReplayBuffer(object):
                 self.episode_buff[0:(1+len(self.episode_buff))-self.max_episodes] = []
             self.episode_buff.append(
                 {
-                    'obs': [self.obs_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'acs': [self.ac_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'rew': [self.rew_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'mc': [self.mc_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'next_obs': [self.next_obs_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'dones': [self.done_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'n_step': [self.n_step_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'ws': [self.ws_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'ep_length': self.ep_length
+                    'obs': [self.obs_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
+                    'acs': [self.ac_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
+                    'rew': [self.rew_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
+                    'mc': [self.mc_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
+                    'next_obs': [self.next_obs_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
+                    'dones': [self.done_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
+                    'n_step': [self.n_step_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
+                    'ws': [self.ws_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
+                    'ep_length': self.curr_i - self.start_loc + 1
                 }
             )
 
-            self.prev_done_loc = self.curr_i
+            self.start_loc = self.curr_i+1
             self.done_step = False
 
 
@@ -176,7 +175,28 @@ class ReplayBuffer(object):
         if self.filled_i < self.max_steps:
             self.filled_i += nentries
         if self.curr_i == self.max_steps:
-            self.curr_i = 0
+            roll_amount = self.curr_i - (self.start_loc+1)
+            for agent_i in range(self.num_agents):
+                self.obs_buffs[agent_i] = np.roll(self.obs_buffs[agent_i],
+                                                  roll_amount, axis=0)
+                self.ac_buffs[agent_i] = np.roll(self.ac_buffs[agent_i],
+                                                 roll_amount, axis=0)
+                self.rew_buffs[agent_i] = np.roll(self.rew_buffs[agent_i],
+                                                  roll_amount)
+                self.mc_buffs[agent_i] = np.roll(self.mc_buffs[agent_i],
+                                                  roll_amount)
+                self.next_obs_buffs[agent_i] = np.roll(
+                    self.next_obs_buffs[agent_i], roll_amount, axis=0)
+                self.done_buffs[agent_i] = np.roll(self.done_buffs[agent_i],
+                                                   roll_amount)
+                self.n_step_buffs[agent_i] = np.roll(self.n_step_buffs[agent_i],
+                                                 roll_amount)
+                self.ws_buffs[agent_i] = np.roll(self.ws_buffs[agent_i],
+                                                   roll_amount)
+                self.SIL_priority[agent_i] = np.roll(self.SIL_priority[agent_i],
+                                                     roll_amount)
+            self.curr_i = roll_amount
+            self.start_loc = 0
 
     def sample(self, inds, to_gpu=False, norm_rews=False):
         # inds = np.random.choice(np.arange(self.filled_i), size=N,

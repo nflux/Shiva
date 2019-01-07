@@ -817,7 +817,6 @@ for ep_i in range(0, num_episodes):
                 if LSTM:
                     if n == et_i:
                         team_replay_buffer.done_step = True
-                        team_replay_buffer.ep_length = et_i+1
                     team_replay_buffer.push_LSTM(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
                                             n_step_next_ob,[n_step_done for i in range(env.num_TA)],all_MC_targets[et_i-n],
                                             n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
@@ -853,7 +852,6 @@ for ep_i in range(0, num_episodes):
                     if LSTM:
                         if n == et_i:
                             opp_replay_buffer.done_step = True
-                            opp_replay_buffer.ep_length = et_i+1
                         opp_replay_buffer.push_LSTM(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
                                                 n_step_next_ob,[n_step_done for i in range(env.num_OA)],MC_targets,
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
