@@ -34,6 +34,7 @@ class ReplayBuffer(object):
         self.batch_size =  batch_size
         self.count = 0
         self.LSTM = LSTM
+        self.ep_length = 0
         for odim, adim in zip(obs_dims, ac_dims):
             self.obs_buffs.append(np.zeros((max_steps, odim)))
             self.ac_buffs.append(np.zeros((max_steps, adim)))
@@ -152,7 +153,6 @@ class ReplayBuffer(object):
         # print('This is the dones',str(dones[0]))
         if self.done_step == True:
             if len(self.episode_buff) >= self.max_episodes:
-                print('This is somehow printed')
                 self.episode_buff[0:(1+len(self.episode_buff))-self.max_episodes] = []
             self.episode_buff.append(
                 {
@@ -164,7 +164,7 @@ class ReplayBuffer(object):
                     'dones': [self.done_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
                     'n_step': [self.n_step_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
                     'ws': [self.ws_buffs[a][self.prev_done_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'ep_length': self.curr_i+1-self.prev_done_loc
+                    'ep_length': self.ep_length
                 }
             )
 
