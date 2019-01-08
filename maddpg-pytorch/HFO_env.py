@@ -15,7 +15,6 @@ possession_side = 'N'
 
 class HFO_env():
     """HFO_env() extends the HFO environment to allow for centralized execution.
-
     Attributes:
         num_TA (int): Number of teammate agents. (0-11)
         num_OA (int): Number of opponent agents. (0-11)
@@ -38,7 +37,6 @@ class HFO_env():
             for each agent on team.
         opp_xxx attributes: Extend the same functionality for user controlled team
             to opposing team.
-
     Todo:
         * Functionality for synchronizing team actions with opponent team actions
         """
@@ -55,7 +53,6 @@ class HFO_env():
         
 
         """ Initializes HFO_Env
-
         Args:
             num_TA (int): Number of teammate agents. (0-11)
             num_OA (int): Number of opponent agents. (0-11)
@@ -66,12 +63,15 @@ class HFO_env():
             fpt (int): Frames per trial
             feat_lvl (str): High or low feature level. ('high','low')
             act_lvl (str): High or low action level. ('high','low')
-
         Returns:
             HFO_Env
-
         """
+        self.pass_reward = 0.3
         self.agent_possession_team = ['N'] * num_TA
+        self.team_passer = [0]*num_TA
+        self.opp_passer = [0]*num_TA
+        self.team_lost_possession = [0]*num_TA
+        self.opp_lost_possession = [0]*num_TA
         self.agent_possession_opp = ['N'] * num_OA
         self.team_possession_counter = [0] * num_TA
         self.opp_possession_counter = [0] * num_OA
@@ -222,14 +222,11 @@ class HFO_env():
 
     def Observation(self,agent_id,side):
         """ Requests and returns observation from an agent from either team.
-
         Args:
             agent_id (int): Agent to receive observation from. (0-11)
             side (str): Which team agent belongs to. ('team', 'opp')
-
         Returns:
             Observation from requested agent.
-
         """
 
         if side == 'team':
@@ -239,14 +236,11 @@ class HFO_env():
 
     def Reward(self,agent_id,side):
         """ Requests and returns reward from an agent from either team.
-
         Args:
             agent_id (int): Agent to receive observation from. (0-11)
             side (str): Which team agent belongs to. ('team', 'opp')
-
         Returns:
             Reward from requested agent.
-
         """
         if side == 'team':
             return self.team_rewards[agent_id]
@@ -256,17 +250,13 @@ class HFO_env():
 
     def Step(self, team_actions, opp_actions, team_params=[], opp_params=[]):
         """ Performs each agents' action from actions and returns tuple (obs,rewards,world_status)
-
         Args:
             actions (list of ints); List of integers corresponding to the action each agent will take
             side (str): Which team agent belongs to. ('team', 'opp')
-
         Returns:
             Status of HFO World
-
         Todo:
             * Add functionality for opp team
-
         """
         # Queue actions for team
         [self.Queue_action(i,self.team_base,team_actions[i],team_params) for i in range(len(team_actions))]
@@ -285,18 +275,30 @@ class HFO_env():
             time.sleep(self.sleep_timer)
         #print('Actions, Obs, rewards, and status ready')
 
-        return np.asarray(self.team_obs),self.team_rewards,np.asarray(self.opp_team_obs),self.opp_rewards, \
+        team_rew = [rew + self.pass_reward if passer else rew for rew,passer in zip(self.team_rewards,self.team_passer)]
+        opp_rew =[rew + self.pass_reward if passer else rew for rew,passer in zip(self.opp_rewards,self.opp_passer)]
+        
+        from operator import sub
+        team_rew = map(sub, team_rew, self.team_lost_possession)
+        opp_rew = map(sub, opp_rew, self.opp_lost_possession)
+        
+        #team_rew -=  self.team_lost_possession
+        #opp_rew -=  self.opp_lost_possession
+        # rew + 1 list comprehension adds the reward for passer if pass was received
+        self.team_passer = [0]*self.num_TA
+        self.opp_passer = [0]*self.num_TA
+        self.team_lost_possession = [0]*self.num_TA
+        self.opp_lost_possession = [0]*self.num_TA
+        return np.asarray(self.team_obs),team_rew,np.asarray(self.opp_team_obs),opp_rew, \
                 self.d, self.world_status
 
 
 
     def Queue_action(self,agent_id,base,action,params=[]):
         """ Queues an action on agent, and if all agents have received action instructions performs the actions.
-
         Args:
             agent_id (int): Agent to receive observation from. (0-11)
             base (str): Which side an agent belongs to. ('base_left', 'base_right')
-
         """
 
         if self.team_base == base:
@@ -366,21 +368,37 @@ class HFO_env():
         
         return ball_prox, closest_player_index
     
-    def possession_reward(self,base):
+    def agent_possession_reward(self,base,agentID):
+        '''
+        agent receives reward for possessing ball
+        '''
+        rew_amount = 0.001
+        if self.team_base == base:
+            if self.agent_possession_team[agentID] == 'L':
+                return rew_amount
+        else:
+            if self.agent_possession_opp[agentID] == 'R':
+                return rew_amount
+        return 0.0
+                
+            
+    def team_possession_reward(self,base):
+
         '''
         teams receive reward based on possession defined by which side had the ball kickable last
         '''
+        rew_amount = 0.001
         global possession_side
         if self.team_base == base:
             if  possession_side == 'L':
-                    return 0.001
+                    return rew_amount
             if  possession_side == 'R':
-                    return -0.001
+                    return -rew_amount
         else: 
             if  possession_side == 'R':
-                    return 0.001
+                    return rew_amount
             if  possession_side == 'L':
-                    return -0.001
+                    return -rew_amount
         
         return 0.0
         
@@ -460,7 +478,7 @@ class HFO_env():
         distance += (self.action_params[agentID][0].clip(-1,1) - self.action_params[agentID][0])**2
         distance += (self.action_params[agentID][1].clip(-1,1) - self.action_params[agentID][1])**2
         distance += (self.action_params[agentID][2].clip(-1,1) - self.action_params[agentID][2])**2
-        distance += (self.action_params[agentID][3].clip(e-1,1) - self.action_params[agentID][3])**2
+        distance += (self.action_params[agentID][3].clip(-1,1) - self.action_params[agentID][3])**2
         distance += (self.action_params[agentID][4].clip(-1,1) - self.action_params[agentID][4])**2
 
         return distance
@@ -524,15 +542,18 @@ class HFO_env():
     def getReward(self,s,agentID,base,ep_num):
         reward=0.0
         team_reward = 0.0
+        goal_points = 8.0
         #---------------------------
         global possession_side
         if self.d:
             if self.team_base == base:
             # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
-                if s=='Goal_By_Left':
-                    reward+=8
+                if s=='Goal_By_Left' and self.agent_possession_team[agentID] == 'L':
+                    reward+= goal_points
+                elif s=='Goal_By_Left':
+                    reward+= goal_points/10.0 # teammates get 10% of points
                 elif s=='Goal_By_Right':
-                    reward+=-8
+                    reward+=-goal_points
                 elif s=='OutOfBounds':
                     reward+=-0.2
                 #---------------------------
@@ -552,10 +573,12 @@ class HFO_env():
                 self.agent_possession_team = ['N'] * self.num_TA
                 return reward
             else:
-                if s=='Goal_By_Right':
-                    reward+=8
+                if s=='Goal_By_Right' and self.agent_possession_opp[agentID] == 'R':
+                    reward+=goal_points
+                elif s=='Goal_By_Right':
+                    reward+=goal_points/10.0
                 elif s=='Goal_By_Left':
-                    reward+=-8
+                    reward+=-goal_points
                 elif s=='OutOfBounds':
                     reward+=-0.2
                 #---------------------------
@@ -588,11 +611,23 @@ class HFO_env():
             num_ag = self.num_OA
 
         
-        ############ Anyone kicked reward #################
+        ############ Kicked Ball #################
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            
             
+            ######## Pass Receiver Reward #########
             if self.team_base == base:
-                # self.team_possession_counter[agentID] += 1
+                if (np.array(self.agent_possession_team) == 'L').any():
+                    prev_poss = (np.array(self.agent_possession_team) == 'L').argmax()
+                    if not self.agent_possession_team[agentID] == 'L':
+                        self.team_passer[prev_poss] = True # sets passer flag to whoever passed
+                        # Passer reward is added in step function after all agents have been checked
+                        reward += self.pass_reward
+                        team_reward += self.pass_reward
+                if (np.array(self.agent_possession_opp) == 'R').any():
+                    enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
+                    self.opp_lost_possession[enemy_possessor] = True
+
+                ###### Change Possession Reward #######
                 self.agent_possession_team = ['N'] * self.num_TA
                 self.agent_possession_opp = ['N'] * self.num_OA
                 self.agent_possession_team[agentID] = 'L'
@@ -602,15 +637,32 @@ class HFO_env():
                     team_reward+=1
             else:
                 # self.opp_possession_counter[agentID] += 1
+                if (np.array(self.agent_possession_opp) == 'R').any():
+                    prev_poss = (np.array(self.agent_possession_opp) == 'R').argmax()
+                    if not self.agent_possession_opp[agentID] == 'R':
+                        self.opp_passer[prev_poss] = True # sets passer flag to whoever passed
+                        reward += self.pass_reward
+                        team_reward += self.pass_reward
+                if (np.array(self.agent_possession_team) == 'L').any():
+                    enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
+                    self.team_lost_possession[enemy_possessor] = True
+
                 self.agent_possession_team = ['N'] * self.num_TA
                 self.agent_possession_opp = ['N'] * self.num_OA
                 self.agent_possession_opp[agentID] = 'R'
                 if possession_side != 'R':
                     possession_side = 'R'    
-                    reward+=1 
+                    reward+=1
                     team_reward+=1
-        #team_reward += self.possession_reward(base)
-        #reward += self.possession_reward(base)
+
+        # Agent that has possession remains possession
+        #team_reward += self.agent_possession_reward(base,agentID)
+        #reward += self.agent_possession_reward(base,agentID)
+
+        # Team rewarded for possession
+        #team_reward += self.team_possession_reward(base)
+        #reward += self.team_possession_reward(base)
+
 
     
         #######################################################
@@ -636,40 +688,50 @@ class HFO_env():
             reward   += (prox_cur - prox_prev) # if cur > prev --> +   
             team_reward +=(prox_cur - prox_prev)
                 
-        ####################### closest player to ball ###################################
+        ####################### Rewards the closest player to ball for advancing toward ball ############
         if self.feat_lvl == 'low':
             prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
-            prox_prev,_ = self.closest_player_to_ball(team_obs_previous, num_ag)
-            # print('This is the reward for getting closer to the ball for the team', str(prox_cur - prox_prev), 'for index', str(test), 'for agent', str(self.team_envs[test].getUnum()))
-            #team_reward += (prox_cur - prox_prev)
-            #reward+= (prox_cur-prox_prev)
+            prox_prev,closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
+            if agentID == closest_agent:
+                team_reward += (prox_cur - prox_prev)
+                reward+= (prox_cur-prox_prev)
             
         ##################################################################################
             
-        ####################### reduce ball distance to goal - using delta  ##################
+        ####################### reduce ball distance to goal - For ball possessor  ##################
         r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (3)*(r_prev - r)*1.5
-        team_reward += (3)*(r_prev - r)*1.5
+        if self.team_base == base:
+            if self.agent_possession_team[agentID] == 'L':
+                reward += (3)*(r_prev - r)*1.5
+                team_reward += (3)*(r_prev - r)*1.5
+        else:
+            if self.agent_possession_team[agentID] == 'R':
+                reward += (3)*(r_prev - r)*1.5
+                team_reward += (3)*(r_prev - r)*1.5
+
+
         ##################################################################################
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
         return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
 
 
+        ################## Offensive Behavior #######################
+        # [Offense behavior]  agents will be rewarded based on maximizing their open angle to opponents goal
+        # [Offense behavior]  agents will be rewarded based on maximizing their open angle to the ball (to receive pass)
+        ################## Defensive behavior ######################
+        # [Defensive behavior]  agents will be rewarded based on minimizing the opponents open angle to our goal
+        # [Defensive behavior]  agents will be rewarded based on minimizing the ball open angle to other opponents (to block passes )
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl):
         """ Connect threaded agent to server
-
         Args:
             feat_lvl: Feature level to use. ('high', 'low')
             base: Which base to launch agent to. ('left', 'right)
             goalie: Play goalie. (True, False)
             agent_ID: Integer representing agent index. (0-11)
-
         Returns:
             None, thread runs on server continually.
-
-
         """
 
 
