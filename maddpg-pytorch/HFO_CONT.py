@@ -73,7 +73,7 @@ team_rew_anneal_ep = 1500 # reward would be
 # hyperparams--------------------------
 batch_size = 256
 hidden_dim = int(1024)
-a_lr = 0.00001 # actor learning rate
+a_lr = 0.0001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
 steps_per_update = 10
@@ -87,21 +87,21 @@ num_explore_episodes = 1000 # Haus uses over 10,000 updates --
 #D4PG Options --------------------------
 D4PG = True
 gamma = 0.99 # discount
-Vmax = 30
+Vmax = 20
 Vmin = -10
-N_ATOMS = 151
+N_ATOMS = 101
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 1
 # n-step update size 
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
 initial_beta = 0.2
-final_beta = 0.0
+final_beta = 0.001
 num_beta_episodes = 1000
 
 #---------------------------------------
 #TD3 Options ---------------------------
 TD3 = True
-TD3_delay_steps = 1
+TD3_delay_steps = 2
 TD3_noise = 0.01
 # -------------------------------------- 
 #Pretrain Options ----------------------

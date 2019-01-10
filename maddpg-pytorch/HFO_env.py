@@ -556,19 +556,7 @@ class HFO_env():
                     reward+=-goal_points
                 elif s=='OutOfBounds':
                     reward+=-0.2
-                #---------------------------
-                #elif s=='OutOfTime':
-                #    reward+=-100
-                #---------------------------
-                #elif s=='InGame':
-                #    reward+=0
-                #---------------------------
-                #elif s=='SERVER_DOWN':
-                #    reward+=0
-                #---------------------------
-                #else:
-                #    print("Error: Unknown GameState", s)
-                #    reward = -1
+
                 possession_side = 'N' # at the end of each episode we set this to none
                 self.agent_possession_team = ['N'] * self.num_TA
                 return reward
@@ -581,20 +569,7 @@ class HFO_env():
                     reward+=-goal_points
                 elif s=='OutOfBounds':
                     reward+=-0.2
-                #---------------------------
-                #Cause Unknown Do Nothing
-                #elif s=='OutOfTime':
-                #    reward+=-100
-                #---------------------------
-                #elif s=='InGame':
-                #    reward+=0
-                #---------------------------
-                #elif s=='SERVER_DOWN':
-                #    reward+=0
-                #---------------------------
-                #else:
-                #    print("Error: Unknown GameState", s)
-                #    reward = -1
+
                 possession_side = 'N'
                 self.agent_possession_opp = ['N'] * self.num_OA
                 return reward
@@ -611,9 +586,9 @@ class HFO_env():
             num_ag = self.num_OA
 
         if team_obs[agentID][7] < 0 :
-            reward -= 1
-            team_reward -= 1
-            #print ('low stamina')
+            reward -= 0.1
+            team_reward -= 0.1
+            print ('low stamina')
         ############ Kicked Ball #################
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            
             
@@ -631,7 +606,7 @@ class HFO_env():
                     enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
                     self.opp_lost_possession[enemy_possessor] -= 3
                     self.team_lost_possession[agentID] += 3
-                    #print('opponent lost possession')
+                    print('opponent lost possession')
 
                 ###### Change Possession Reward #######
                 self.agent_possession_team = ['N'] * self.num_TA
@@ -656,7 +631,7 @@ class HFO_env():
                     self.team_lost_possession[enemy_possessor] -= 3
                     self.opp_lost_possession[agentID] += 3
 
-                    #print('teammates lost possession ')
+                    print('teammates lost possession ')
 
                 self.agent_possession_team = ['N'] * self.num_TA
                 self.agent_possession_opp = ['N'] * self.num_OA
@@ -666,15 +641,6 @@ class HFO_env():
                     #reward+=1
                     #team_reward+=1
 
-
-            ####################### penalty for invalid action  ###############################
-        '''if self.feat_lvl == 'high':        
-                if team_obs[agentID][-2] == -1:
-                    reward+= -1
-            elif self.feat_lvl == 'low':        
-                if  team_obs[agentID][-1] != 1:
-                    reward+= -1'''
-                            
             
         ####################### reduce distance to ball - using delta  ##################
         if self.feat_lvl == 'high':
@@ -684,16 +650,16 @@ class HFO_env():
         elif self.feat_lvl == 'low':
             prox_cur = self.ball_proximity(team_obs[agentID])
             prox_prev = self.ball_proximity(team_obs_previous[agentID])
-            reward   += (prox_cur - prox_prev) # if cur > prev --> +   
-            team_reward +=(prox_cur - prox_prev)
+            reward   += (3)*(prox_cur - prox_prev) # if cur > prev --> +   
+            team_reward +=(3)*(prox_cur - prox_prev)
                 
         ####################### Rewards the closest player to ball for advancing toward ball ############
-        if self.feat_lvl == 'low':
-            prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
-            prox_prev,closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
-            if agentID == closest_agent:
-                team_reward += (prox_cur - prox_prev)
-                reward+= (prox_cur-prox_prev)
+        #if self.feat_lvl == 'low':
+        #    prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
+        #    prox_prev,closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
+        #    if agentID == closest_agent:
+        #        team_reward += (prox_cur - prox_prev)
+        #        reward+= (prox_cur-prox_prev)
             
         ##################################################################################
             
