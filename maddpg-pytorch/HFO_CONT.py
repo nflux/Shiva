@@ -175,8 +175,12 @@ evaluate = False
 eval_after = 500
 eval_episodes = 11
 # LSTM -------------------------------------------
-LSTM = True
-trace_length = 20 # NOTE: Set to 0 if LSTM == False
+LSTM = False
+LSTM_PC = True
+if LSTM and LSTM_PC:
+    print('Only one LSTM flag can be True or both False')
+    exit(0)
+trace_length = 20 # NOTE: Set to 0 when LSTM flags are False
 # -------------------------------------------------
 # Prep Session Files ------------------------------
 session_path = None
@@ -236,19 +240,20 @@ else:
                               obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight, 
                               rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,
                               imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
-                              critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs, LSTM=LSTM, trace_length=trace_length) 
+                              critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
+                              LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length) 
 
 
 team_replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA, episode_length,
                                      [env.team_num_features for i in range(env.num_TA)],
                                  [env.team_action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)], 
-                                 batch_size, LSTM)
+                                 batch_size, LSTM, LSTM_PC)
 
 #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
 opp_replay_buffer = ReplayBuffer(replay_memory_size , env.num_OA, episode_length,
                                  [env.opp_num_features for i in range(env.num_OA)],
                                  [env.opp_action_params.shape[1] + len(env.action_list) for i in range(env.num_OA)], 
-                                 batch_size, LSTM)
+                                 batch_size, LSTM, LSTM_PC)
 
 reward_total = [ ]
 num_steps_per_episode = []
@@ -609,7 +614,7 @@ for ep_i in range(0, num_episodes):
     if ep_i % 100 == 0:
         maddpg.scale_noise(0.0)
 
-    if LSTM:
+    if LSTM or LSTM_PC:
         maddpg.reset_hidden(training=False)
     maddpg.reset_noise()
     maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
@@ -759,6 +764,13 @@ for ep_i in range(0, num_episodes):
                                                             to_gpu=to_gpu,norm_rews=False)
                                 maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, a_i, 'team', 
                                                                 act_only=critic_mod_act, obs_only=critic_mod_obs)
+                            elif LSTM_PC:
+                                team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
+                                                            to_gpu=to_gpu,norm_rews=False)
+                                opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
+                                                            to_gpu=to_gpu,norm_rews=False)
+                                maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, a_i, 'team', 
+                                                                act_only=critic_mod_act, obs_only=critic_mod_obs)
                             else:
                                 team_sample = team_replay_buffer.sample(inds,
                                                             to_gpu=to_gpu,norm_rews=False)
@@ -814,7 +826,7 @@ for ep_i in range(0, num_episodes):
                         n_step_next_ob = team_n_step_next_obs[-1]
                         n_step_done = team_n_step_dones[-1] 
                     # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                if LSTM:
+                if LSTM or LSTM_PC:
                     if n == et_i:
                         team_replay_buffer.done_step = True
                     team_replay_buffer.push_LSTM(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
@@ -849,7 +861,7 @@ for ep_i in range(0, num_episodes):
                             n_step_next_ob = opp_n_step_next_obs[-1]
                             n_step_done = opp_n_step_dones[-1]
                         # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                    if LSTM:
+                    if LSTM or LSTM_PC:
                         if n == et_i:
                             opp_replay_buffer.done_step = True
                         opp_replay_buffer.push_LSTM(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
