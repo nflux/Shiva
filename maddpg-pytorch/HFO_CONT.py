@@ -175,8 +175,8 @@ evaluate = False
 eval_after = 500
 eval_episodes = 11
 # LSTM -------------------------------------------
-LSTM = True
-trace_length = 20 # NOTE: Set to 0 if LSTM == False
+LSTM = False
+trace_length = 0 # NOTE: Set to 0 if LSTM == False
 # -------------------------------------------------
 # Prep Session Files ------------------------------
 session_path = None

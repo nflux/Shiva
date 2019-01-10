@@ -278,9 +278,9 @@ class HFO_env():
         team_rew = [rew + self.pass_reward if passer else rew for rew,passer in zip(self.team_rewards,self.team_passer)]
         opp_rew =[rew + self.pass_reward if passer else rew for rew,passer in zip(self.opp_rewards,self.opp_passer)]
         
-        from operator import sub
-        team_rew = map(sub, team_rew, self.team_lost_possession)
-        opp_rew = map(sub, opp_rew, self.opp_lost_possession)
+
+        team_rew = np.add( team_rew, self.team_lost_possession)
+        opp_rew = np.add(opp_rew, self.opp_lost_possession)
         
         #team_rew -=  self.team_lost_possession
         #opp_rew -=  self.opp_lost_possession
@@ -619,13 +619,14 @@ class HFO_env():
                 if (np.array(self.agent_possession_team) == 'L').any():
                     prev_poss = (np.array(self.agent_possession_team) == 'L').argmax()
                     if not self.agent_possession_team[agentID] == 'L':
-                        self.team_passer[prev_poss] = True # sets passer flag to whoever passed
+                        self.team_passer[prev_poss] += 1 # sets passer flag to whoever passed
                         # Passer reward is added in step function after all agents have been checked
                         reward += self.pass_reward
                         team_reward += self.pass_reward
+                        print('team pass reward received ')
                 if (np.array(self.agent_possession_opp) == 'R').any():
                     enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-                    self.opp_lost_possession[enemy_possessor] = True
+                    self.opp_lost_possession[enemy_possessor] -= 3
 
                 ###### Change Possession Reward #######
                 self.agent_possession_team = ['N'] * self.num_TA
@@ -640,12 +641,14 @@ class HFO_env():
                 if (np.array(self.agent_possession_opp) == 'R').any():
                     prev_poss = (np.array(self.agent_possession_opp) == 'R').argmax()
                     if not self.agent_possession_opp[agentID] == 'R':
-                        self.opp_passer[prev_poss] = True # sets passer flag to whoever passed
+                        self.opp_passer[prev_poss] += 1 # sets passer flag to whoever passed
                         reward += self.pass_reward
                         team_reward += self.pass_reward
+                        print('opp pass reward received ')
+
                 if (np.array(self.agent_possession_team) == 'L').any():
                     enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-                    self.team_lost_possession[enemy_possessor] = True
+                    self.team_lost_possession[enemy_possessor] -= 3
 
                 self.agent_possession_team = ['N'] * self.num_TA
                 self.agent_possession_opp = ['N'] * self.num_OA
@@ -701,15 +704,9 @@ class HFO_env():
         ####################### reduce ball distance to goal - For ball possessor  ##################
         r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        if self.team_base == base:
-            if self.agent_possession_team[agentID] == 'L':
-                reward += (3)*(r_prev - r)*1.5
-                team_reward += (3)*(r_prev - r)*1.5
-        else:
-            if self.agent_possession_team[agentID] == 'R':
-                reward += (3)*(r_prev - r)*1.5
-                team_reward += (3)*(r_prev - r)*1.5
-
+        reward += (5)*(r_prev - r)
+        team_reward += (5)*(r_prev - r)
+        
 
         ##################################################################################
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
