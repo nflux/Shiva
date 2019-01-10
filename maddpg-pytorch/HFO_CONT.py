@@ -180,7 +180,10 @@ LSTM_PC = True
 if LSTM and LSTM_PC:
     print('Only one LSTM flag can be True or both False')
     exit(0)
-trace_length = 20 # NOTE: Set to 0 when LSTM flags are False
+if LSTM or LSTM_PC:
+    trace_length = 20
+else:
+    trace_length = 0
 # -------------------------------------------------
 # Prep Session Files ------------------------------
 session_path = None
