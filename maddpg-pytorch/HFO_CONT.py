@@ -87,16 +87,16 @@ num_explore_episodes = 1000 # Haus uses over 10,000 updates --
 #D4PG Options --------------------------
 D4PG = True
 gamma = 0.99 # discount
-Vmax = 10
+Vmax = 30
 Vmin = -10
-N_ATOMS = 51
+N_ATOMS = 151
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-n_steps = 5
+n_steps = 1
 # n-step update size 
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
 initial_beta = 0.2
-final_beta = 0.2
-num_beta_episodes = 10000000000
+final_beta = 0.0
+num_beta_episodes = 1000
 
 #---------------------------------------
 #TD3 Options ---------------------------
@@ -159,7 +159,7 @@ change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
 load_random_nets = True
-load_random_every = 100
+load_random_every = 1
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
@@ -167,7 +167,7 @@ current_ensembles = [0]*num_TA # initialize which ensembles we start with
 save_nns = True
 ep_save_every = 25 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
-initial_models = ["Pretrained_3v3/Cent_Q/agent_0.pth","Pretrained_3v3/Cent_Q/agent_1.pth","Pretrained_3v3/Cent_Q/agent_2.pth"] # models to load
+initial_models = ["training_sessions/1_9_15_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
 first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
@@ -175,8 +175,8 @@ evaluate = False
 eval_after = 500
 eval_episodes = 11
 # LSTM -------------------------------------------
-LSTM = False
-trace_length = 0 # NOTE: Set to 0 if LSTM == False
+LSTM = True
+trace_length = 20 # NOTE: Set to 0 if LSTM == False
 # -------------------------------------------------
 # Prep Session Files ------------------------------
 session_path = None

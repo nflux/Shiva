@@ -610,7 +610,10 @@ class HFO_env():
             team_obs_previous = self.opp_team_obs_previous
             num_ag = self.num_OA
 
-        
+        if team_obs[agentID][7] < 0 :
+            reward -= 1
+            team_reward -= 1
+            #print ('low stamina')
         ############ Kicked Ball #################
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            
             
@@ -627,6 +630,8 @@ class HFO_env():
                 if (np.array(self.agent_possession_opp) == 'R').any():
                     enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
                     self.opp_lost_possession[enemy_possessor] -= 3
+                    self.team_lost_possession[agentID] += 3
+                    #print('opponent lost possession')
 
                 ###### Change Possession Reward #######
                 self.agent_possession_team = ['N'] * self.num_TA
@@ -634,8 +639,8 @@ class HFO_env():
                 self.agent_possession_team[agentID] = 'L'
                 if possession_side != 'L':
                     possession_side = 'L'    
-                    reward+=1
-                    team_reward+=1
+                    #reward+=1
+                    #team_reward+=1
             else:
                 # self.opp_possession_counter[agentID] += 1
                 if (np.array(self.agent_possession_opp) == 'R').any():
@@ -649,26 +654,17 @@ class HFO_env():
                 if (np.array(self.agent_possession_team) == 'L').any():
                     enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
                     self.team_lost_possession[enemy_possessor] -= 3
+                    self.opp_lost_possession[agentID] += 3
+
+                    #print('teammates lost possession ')
 
                 self.agent_possession_team = ['N'] * self.num_TA
                 self.agent_possession_opp = ['N'] * self.num_OA
                 self.agent_possession_opp[agentID] = 'R'
                 if possession_side != 'R':
                     possession_side = 'R'    
-                    reward+=1
-                    team_reward+=1
-
-        # Agent that has possession remains possession
-        #team_reward += self.agent_possession_reward(base,agentID)
-        #reward += self.agent_possession_reward(base,agentID)
-
-        # Team rewarded for possession
-        #team_reward += self.team_possession_reward(base)
-        #reward += self.team_possession_reward(base)
-
-
-    
-        #######################################################
+                    #reward+=1
+                    #team_reward+=1
 
 
             ####################### penalty for invalid action  ###############################
