@@ -209,7 +209,7 @@ class LSTMNetwork_Critic(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, agent=object,n_atoms=51,D4PG=False,TD3=False):
+    def __init__(self, input_dim, out_dim, hidden_dim=int(512), nonlin=F.relu, norm_in=True, agent=object,n_atoms=51,D4PG=False,TD3=False):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -281,7 +281,7 @@ class LSTMNetwork_Critic(nn.Module):
             self.Q2_fc4.weight.data.normal_(0, 0.01) 
             
 
-        self.out = nn.Linear(128,self.out_dim)
+        self.out = nn.Linear(512,self.out_dim)
         self.register_buffer("supports",torch.arange(agent.vmin,agent.vmax + agent.delta, agent.delta))
             
         if TD3: # second critic
