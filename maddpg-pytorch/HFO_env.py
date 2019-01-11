@@ -542,7 +542,7 @@ class HFO_env():
     def getReward(self,s,agentID,base,ep_num):
         reward=0.0
         team_reward = 0.0
-        goal_points = 8.0
+        goal_points = 10.0
         #---------------------------
         global possession_side
         if self.d:
@@ -592,6 +592,11 @@ class HFO_env():
         ############ Kicked Ball #################
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            
             
+            if (np.array(self.agent_possession_team) == 'N').all() and (np.array(self.agent_possession_opp) == 'N').all():
+                reward =+ 0.1
+                team_reward +=0.1
+                print('first kick reward')
+
             ######## Pass Receiver Reward #########
             if self.team_base == base:
                 if (np.array(self.agent_possession_team) == 'L').any():
@@ -666,8 +671,8 @@ class HFO_env():
         ####################### reduce ball distance to goal - For ball possessor  ##################
         r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (5)*(r_prev - r)
-        team_reward += (5)*(r_prev - r)
+        reward += (10)*(r_prev - r)
+        team_reward += (10)*(r_prev - r)
         
 
         ##################################################################################

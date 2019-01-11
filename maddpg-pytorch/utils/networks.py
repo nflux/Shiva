@@ -258,26 +258,26 @@ class LSTMNetwork_Critic(nn.Module):
         # else:
         #    self.in_fn = self.cast
   
-        self.fc1 = nn.Linear(input_dim, 1024)
+        self.fc1 = nn.Linear(input_dim, 512)
         
         self.fc1.weight.data.normal_(0, 0.01)
-        self.lstm2 = nn.LSTM(1024, 512)
+        self.lstm2 = nn.LSTM(512, 512)
         # self.fc2 = nn.Linear(1024, 512)
         # self.fc2.weight.data.normal_(0, 0.01) 
-        self.fc3 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(512, 512)
         self.fc3.weight.data.normal_(0, 0.01) 
-        self.fc4 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(512, 512)
         self.fc4.weight.data.normal_(0, 0.01) 
         
         if TD3: # second critic
-            self.Q2_fc1 = nn.Linear(input_dim, 1024)
+            self.Q2_fc1 = nn.Linear(input_dim, 512)
             self.Q2_fc1.weight.data.normal_(0, 0.01) 
             # self.Q2_fc2 = nn.Linear(1024, 512)
             # self.Q2_fc2.weight.data.normal_(0, 0.01)
-            self.Q2_lstm2 = nn.LSTM(1024, 512) 
-            self.Q2_fc3 = nn.Linear(512, 256)
+            self.Q2_lstm2 = nn.LSTM(512, 512) 
+            self.Q2_fc3 = nn.Linear(512, 512)
             self.Q2_fc3.weight.data.normal_(0, 0.01) 
-            self.Q2_fc4 = nn.Linear(256, 128)
+            self.Q2_fc4 = nn.Linear(512, 512)
             self.Q2_fc4.weight.data.normal_(0, 0.01) 
             
 
@@ -285,7 +285,7 @@ class LSTMNetwork_Critic(nn.Module):
         self.register_buffer("supports",torch.arange(agent.vmin,agent.vmax + agent.delta, agent.delta))
             
         if TD3: # second critic
-            self.Q2_out = nn.Linear(128,self.out_dim) 
+            self.Q2_out = nn.Linear(512,self.out_dim) 
             self.Q2_out.weight.data.normal_(0,0.01)
 
         self.out.weight.data.normal_(0, 0.01)
@@ -561,20 +561,20 @@ class LSTM_Network(nn.Module):
         if I2A:
             self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_actions, 1024)
         else:
-            self.fc1 = nn.Linear(input_dim, 1024)
+            self.fc1 = nn.Linear(input_dim, 512)
 
         self.fc1.weight.data.normal_(0, 0.01)
-        self.lstm = nn.LSTM(1024, 512)
-        self.fc3 = nn.Linear(512, 256)
+        self.lstm = nn.LSTM(512, 512)
+        self.fc3 = nn.Linear(512, 512)
         self.fc3.weight.data.normal_(0, 0.01) 
-        self.fc4 = nn.Linear(256, 128)
+        self.fc4 = nn.Linear(512, 512)
         self.fc4.weight.data.normal_(0, 0.01) 
 
         # hard coded values
-        self.out_action = nn.Linear(128, self.action_size)
+        self.out_action = nn.Linear(512, self.action_size)
         self.out_action.weight.data.normal_(0, 0.01) 
 
-        self.out_param = nn.Linear(128, self.param_size)
+        self.out_param = nn.Linear(512, self.param_size)
         self.out_param.weight.data.normal_(0, 0.01) 
         self.out_param_fn = lambda x: x
         #self.out_action_fn = F.softmax
