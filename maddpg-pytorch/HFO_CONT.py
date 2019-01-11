@@ -174,6 +174,7 @@ first_save = True # build model clones for ensemble
 evaluate = False
 eval_after = 500
 eval_episodes = 11
+# --------------------------------------
 # LSTM -------------------------------------------
 LSTM = False
 LSTM_PC = True
@@ -184,6 +185,7 @@ if LSTM or LSTM_PC:
     trace_length = 20
 else:
     trace_length = 0
+hidden_dim_lstm = 512
 # -------------------------------------------------
 # Prep Session Files ------------------------------
 session_path = None
@@ -244,7 +246,7 @@ else:
                               rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,
                               imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                               critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                              LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length) 
+                              LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm) 
 
 
 team_replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA, episode_length,

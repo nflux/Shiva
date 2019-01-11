@@ -22,7 +22,8 @@ class MADDPG(object):
                  DELTA_Z = 20.0/50,D4PG=False,beta = 0,TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, decent_EM=True,imagination_policy_branch = False,
-                 critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length = 1): 
+                 critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
+                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256): 
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -61,7 +62,7 @@ class MADDPG(object):
                                       device=device,
                                       imagination_policy_branch=imagination_policy_branch,
                                       critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                      LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, 
+                                      LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,
                                  **params)
                        for params in team_agent_init_params]
         
@@ -75,7 +76,7 @@ class MADDPG(object):
                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
                                      imagination_policy_branch=imagination_policy_branch,
                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                     LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length,
+                                     LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,
                                  **params)
                        for params in opp_agent_init_params]
 
@@ -169,16 +170,16 @@ class MADDPG(object):
             for ta, oa in zip(self.team_agents, self.opp_agents):
                 ta.policy.init_hidden(training)
                 oa.policy.init_hidden(training)
-                ta.policy.training = training
-                oa.policy.training = training
+                ta.policy.training_lstm = training
+                oa.policy.training_lstm = training
         else:
             for ta, oa in zip(self.team_agents, self.opp_agents):
                 ta.policy.init_hidden(training)
                 oa.policy.init_hidden(training)
                 ta.target_policy.init_hidden(training)
                 oa.target_policy.init_hidden(training)
-                ta.policy.training = training
-                oa.policy.training = training
+                ta.policy.training_lstm = training
+                oa.policy.training_lstm = training
 
     def step(self, team_observations, opp_observations, explore=False):
         """
@@ -470,16 +471,6 @@ class MADDPG(object):
         start = time.time()
         #print("time critic")
 
-        # print('This is rews',str(rews))
-        # print('This is n-step-rews',str(n_step_rews))
-        # print('size rews',str(rews[0].size()))
-        # print('size n-step',str(n_step_rews[0].size()))
-        # print('This is actions',str(acs))
-        # print('This is the actions size', str(acs[0].size()))
-        # print('obs',str(obs))
-        # print('obs size',str(obs[0].size()))
-        # exit(0)
-
         if self.TD3:
             noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
             all_trgt_acs = [torch.cat(
@@ -714,8 +705,8 @@ class MADDPG(object):
             target_tp.init_hidden(training=True)
             op.init_hidden(training=True)
             target_op.init_hidden(training=True)
-            tp.training = True
-            op.training = True
+            tp.training_lstm = True
+            op.training_lstm = True
 
         self.curr_agent_index = agent_i
         # Train critic ------------------------
@@ -914,6 +905,11 @@ class MADDPG(object):
             if self.I2A:
                 print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
+        
+        if agent_i == nagents-1:
+            for tp,op in zip(policies, opp_policies):
+                tp.training_lstm = False
+                op.training_lstm = False
 
     def update_centralized_critic_LSTM_PC(self, team_sample, opp_sample, agent_i, side='team', parallel=False, logger=None, act_only=False, obs_only=False):
         """
@@ -960,8 +956,8 @@ class MADDPG(object):
             target_tp.init_hidden(training=True)
             op.init_hidden(training=True)
             target_op.init_hidden(training=True)
-            tp.training = True
-            op.training = True
+            tp.training_lstm = True
+            op.training_lstm = True
         
         curr_agent.critic.init_hidden()
         curr_agent.target_critic.init_hidden()
@@ -1163,6 +1159,11 @@ class MADDPG(object):
             if self.I2A:
                 print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
+        
+        if agent_i == nagents-1:
+            for tp,op in zip(policies, opp_policies):
+                tp.training_lstm = False
+                op.training_lstm = False
 
     def inject(self,grad):
         new_grad = grad.clone()
@@ -2049,7 +2050,7 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True,imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1):
+                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -2146,7 +2147,8 @@ class MADDPG(object):
                      'critic_mod_obs': critic_mod_obs,
                      'trace_length': trace_length,
                      'LSTM':LSTM,
-                     'LSTM_PC':LSTM_PC}
+                     'LSTM_PC':LSTM_PC,
+                     'hidden_dim_lstm': hidden_dim_lstm}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance

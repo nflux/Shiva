@@ -588,7 +588,7 @@ class HFO_env():
         if team_obs[agentID][7] < 0 :
             reward -= 0.1
             team_reward -= 0.1
-            print ('low stamina')
+            # print ('low stamina')
         ############ Kicked Ball #################
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            
             
@@ -601,12 +601,12 @@ class HFO_env():
                         # Passer reward is added in step function after all agents have been checked
                         reward += self.pass_reward
                         team_reward += self.pass_reward
-                        print('team pass reward received ')
+                        # print('team pass reward received ')
                 if (np.array(self.agent_possession_opp) == 'R').any():
                     enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
                     self.opp_lost_possession[enemy_possessor] -= 3
                     self.team_lost_possession[agentID] += 3
-                    print('opponent lost possession')
+                    # print('opponent lost possession')
 
                 ###### Change Possession Reward #######
                 self.agent_possession_team = ['N'] * self.num_TA
@@ -624,14 +624,14 @@ class HFO_env():
                         self.opp_passer[prev_poss] += 1 # sets passer flag to whoever passed
                         reward += self.pass_reward
                         team_reward += self.pass_reward
-                        print('opp pass reward received ')
+                        # print('opp pass reward received ')
 
                 if (np.array(self.agent_possession_team) == 'L').any():
                     enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
                     self.team_lost_possession[enemy_possessor] -= 3
                     self.opp_lost_possession[agentID] += 3
 
-                    print('teammates lost possession ')
+                    # print('teammates lost possession ')
 
                 self.agent_possession_team = ['N'] * self.num_TA
                 self.agent_possession_opp = ['N'] * self.num_OA

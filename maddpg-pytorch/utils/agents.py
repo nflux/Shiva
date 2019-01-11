@@ -18,7 +18,7 @@ class DDPGAgent(object):
                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, 
-                LSTM=False, LSTM_PC=False, trace_length=1): 
+                LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256): 
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -46,6 +46,7 @@ class DDPGAgent(object):
         # self.num_in_EM = num_in_critic - (self.num_out_obs_EM * (maddpg.nagents_team - 1)) # obs + actions
         self.LSTM = LSTM
         self.LSTM_PC = LSTM_PC
+        self.hidden_dim_lstm = hidden_dim_lstm
 
         self.num_total_out_EM = maddpg.num_out_EM + self.world_status_dim + 1
         # EM for I2A
@@ -148,9 +149,9 @@ class DDPGAgent(object):
         Outputs:
             action (PyTorch Variable): Actions for this agent
         """
-        if self.LSTM or self.LSTM_PC:
-            if self.policy.training == True:
-                self.policy.training = False
+        # if self.LSTM or self.LSTM_PC:
+        #     if self.policy.training == True:
+        #         self.policy.training = False
         action = self.policy(obs)
         if self.counter % 250 == 0:
             print(torch.softmax(action[:,:self.action_dim],dim=1))

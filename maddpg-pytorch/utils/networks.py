@@ -225,7 +225,7 @@ class LSTMNetwork_Critic(nn.Module):
         self.count = 0
         self.TD3 = TD3
         self.batch_size = self.agent.batch_size
-        self.hidden_dim_lstm = 512
+        self.hidden_dim_lstm = agent.hidden_dim_lstm
         if self.agent.device == 'cuda':
             self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
                                     Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
@@ -527,7 +527,7 @@ class LSTM_Network(nn.Module):
         self.n_actions = self.agent.n_actions
         self.rollout_steps = rollout_steps
         self.batch_size = maddpg.batch_size
-        self.hidden_dim_lstm = 512
+        self.hidden_dim_lstm = agent.hidden_dim_lstm
 
         if self.agent.device == 'cuda':
             self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda(),
@@ -539,7 +539,7 @@ class LSTM_Network(nn.Module):
                                 Variable(torch.zeros(1, 1, self.hidden_dim_lstm)))
             self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
                                     Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
-        self.training = training
+        self.training_lstm = training
         self.trace_length = trace_length
 
         self.I2A = I2A
@@ -616,7 +616,7 @@ class LSTM_Network(nn.Module):
         else:
             h1 = self.nonlin(self.fc1(self.cast(X)))
         
-        if not self.training:
+        if not self.training_lstm:
             h2, self.hidden_tuple = self.lstm(h1.unsqueeze(0), self.hidden_tuple)
         else:
             h2, self.hidden_tuple_train = self.lstm(h1, self.hidden_tuple_train)
@@ -625,7 +625,7 @@ class LSTM_Network(nn.Module):
         h3 = self.nonlin(self.fc3(h2))
         h4 = self.nonlin(self.fc4(h3))
 
-        if not self.training:
+        if not self.training_lstm:
             if not self.discrete_action:
                 self.final_out_action = self.out_action_fn(self.out_action(h4))[0]
                 self.final_out_params = self.out_param_fn(self.out_param(h4))[0]
