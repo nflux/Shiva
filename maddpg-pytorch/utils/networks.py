@@ -205,6 +205,157 @@ class MLPNetwork_Critic(nn.Module):
         res = weights.sum(dim=1)
         return res.unsqueeze(dim=-1)
 
+class LSTMNetwork_Critic(nn.Module):
+    """
+    MLP network (can be used as value or policy)
+    """
+    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, agent=object,n_atoms=51,D4PG=False,TD3=False):
+        """
+        Inputs:
+            input_dim (int): Number of dimensions in input
+            out_dim (intT): Number of dimensions in output
+            hidden_dim (int): Number of hidden dimensions
+            nonlin (PyTorch function): Nonlinearity to apply to hidden layers
+        """
+        super(LSTMNetwork_Critic, self).__init__()
+
+        self.agent=agent
+        self.action_size = 3
+        self.param_size = 5
+        self.count = 0
+        self.TD3 = TD3
+        self.batch_size = self.agent.batch_size
+        self.hidden_dim_lstm = 512
+        if self.agent.device == 'cuda':
+            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
+            self.hidden_tuple_train1 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
+            self.hidden_tuple_train2 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
+        else:
+            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
+            self.hidden_tuple_train1 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
+            self.hidden_tuple_train2 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
+
+        if D4PG:
+            self.out_dim = n_atoms
+        else:
+            self.out_dim = 1
+       
+        if self.agent.device == 'cuda':
+            self.cast = lambda x: x.cuda()
+        else:
+            self.cast = lambda x: x.cpu()
+              
+        # if norm_in:  # normalize inputs
+        #     self.in_fn = nn.BatchNorm1d(input_dim)
+        #     self.in_fn.weight.data.normal_(.01)
+        #     self.in_fn.bias.data.fill_(0)
+        # else:
+        #    self.in_fn = self.cast
+  
+        self.fc1 = nn.Linear(input_dim, 1024)
+        
+        self.fc1.weight.data.normal_(0, 0.01)
+        self.lstm2 = nn.LSTM(1024, 512)
+        # self.fc2 = nn.Linear(1024, 512)
+        # self.fc2.weight.data.normal_(0, 0.01) 
+        self.fc3 = nn.Linear(512, 256)
+        self.fc3.weight.data.normal_(0, 0.01) 
+        self.fc4 = nn.Linear(256, 128)
+        self.fc4.weight.data.normal_(0, 0.01) 
+        
+        if TD3: # second critic
+            self.Q2_fc1 = nn.Linear(input_dim, 1024)
+            self.Q2_fc1.weight.data.normal_(0, 0.01) 
+            # self.Q2_fc2 = nn.Linear(1024, 512)
+            # self.Q2_fc2.weight.data.normal_(0, 0.01)
+            self.Q2_lstm2 = nn.LSTM(1024, 512) 
+            self.Q2_fc3 = nn.Linear(512, 256)
+            self.Q2_fc3.weight.data.normal_(0, 0.01) 
+            self.Q2_fc4 = nn.Linear(256, 128)
+            self.Q2_fc4.weight.data.normal_(0, 0.01) 
+            
+
+        self.out = nn.Linear(128,self.out_dim)
+        self.register_buffer("supports",torch.arange(agent.vmin,agent.vmax + agent.delta, agent.delta))
+            
+        if TD3: # second critic
+            self.Q2_out = nn.Linear(128,self.out_dim) 
+            self.Q2_out.weight.data.normal_(0,0.01)
+
+        self.out.weight.data.normal_(0, 0.01)
+        self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
+        self.out_fn = lambda x: x
+    
+    def init_hidden(self):
+        if self.agent.device == 'cuda':
+            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
+                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
+            self.hidden_tuple_train1 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
+                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
+            self.hidden_tuple_train2 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
+                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
+        else:
+            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
+                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
+            self.hidden_tuple_train1 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
+                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
+            self.hidden_tuple_train2 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
+                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
+
+
+    def Q1(self, X):
+        """
+        This function is for the TD3 functionality to use only a single critic for the policy update.
+        Inputs:
+            X (PyTorch Matrix): Batch of observations
+        Outputs:
+            out (PyTorch Matrix): Output of critic Q1
+        """
+        h1 = self.nonlin(self.fc1(self.cast(X)))
+        # h2 = self.nonlin(self.fc2(h1))
+        h2, self.hidden_tuple_train1 = self.lstm2(h1, self.hidden_tuple_train1)
+        h3 = self.nonlin(self.fc3(h2))
+        h4 = self.nonlin(self.fc4(h3))
+        out = self.out_fn(self.out(h4))
+        return out[0]
+
+    def forward(self, X):
+        """
+        Inputs:
+            X (PyTorch Matrix): Batch of observations
+        Outputs:
+            out (PyTorch Matrix): Output of network (actions, values, etc)
+        """
+        h1 = self.nonlin(self.fc1(self.cast(X)))
+        # h2 = self.nonlin(self.fc2(h1))
+        h2, self.hidden_tuple_train = self.lstm2(h1, self.hidden_tuple_train)
+        h3 = self.nonlin(self.fc3(h2))
+        h4 = self.nonlin(self.fc4(h3))
+        
+        if self.TD3:
+            Q2_h1 = self.nonlin(self.Q2_fc1(self.cast(X)))
+            # Q2_h2 = self.nonlin(self.Q2_fc2(Q2_h1))
+            Q2_h2, self.hidden_tuple_train2 = self.Q2_lstm2(Q2_h1, self.hidden_tuple_train2)
+            Q2_h3 = self.nonlin(self.Q2_fc3(Q2_h2))
+            Q2_h4 = self.nonlin(self.Q2_fc4(Q2_h3))
+            
+        out = self.out_fn(self.out(h4))
+        if self.TD3: # 2nd critic
+            Q2_out = self.out_fn(self.Q2_out(Q2_h4))
+            return out[0],Q2_out[0]
+        return out[0]
+
+    def distr_to_q(self, distr):
+        weights = F.softmax(distr, dim=1) * self.supports
+        res = weights.sum(dim=1)
+        return res.unsqueeze(dim=-1)
+
     
 class I2A_Network(nn.Module):
     """
@@ -353,14 +504,12 @@ class I2A_Network(nn.Module):
         res = weights.sum(dim=1)
         return res.unsqueeze(dim=-1)
 
-
-
 class LSTM_Network(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
     def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,
-                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, LSTM=False, trace_length=1):
+                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, trace_length=1):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -394,7 +543,6 @@ class LSTM_Network(nn.Module):
         self.trace_length = trace_length
 
         self.I2A = I2A
-        self.LSTM = LSTM
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
 
         # save refs without registering
@@ -409,24 +557,14 @@ class LSTM_Network(nn.Module):
         else:
             self.cast = lambda x: x.cpu()
         self.norm_in = norm_in
-
-        if not self.LSTM:
-            self.in_fn = nn.BatchNorm1d(input_dim)
-            self.in_fn.weight.data.normal_(.01)
-            self.in_fn.bias.data.fill_(0)
    
         if I2A:
             self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_actions, 1024)
         else:
             self.fc1 = nn.Linear(input_dim, 1024)
 
-        
         self.fc1.weight.data.normal_(0, 0.01)
-        if not self.LSTM:
-            self.fc2 = nn.Linear(1024, 512)
-            self.fc2.weight.data.normal_(0, 0.01)
-        else:
-            self.lstm = nn.LSTM(1024, 512)
+        self.lstm = nn.LSTM(1024, 512)
         self.fc3 = nn.Linear(512, 256)
         self.fc3.weight.data.normal_(0, 0.01) 
         self.fc4 = nn.Linear(256, 128)
@@ -469,70 +607,49 @@ class LSTM_Network(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        if not self.LSTM:
-            if X.size()[0] == 1 or not self.norm_in:
-                self.in_fn.train(False)
-            else:
-                self.in_fn.train(True)
+
         if self.I2A:
             fx = self.in_fn(self.cast(X)).float()
             enc_rollouts = self.rollouts_batch(fx)
             fc_in = torch.cat((fx,enc_rollouts),dim=1)
             h1 = self.nonlin(self.fc1(fc_in))
         else:
-            if self.LSTM:
-                h1 = self.nonlin(self.fc1(self.cast(X)))
-            else:
-                h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
+            h1 = self.nonlin(self.fc1(self.cast(X)))
         
-        if self.LSTM:
-            if not self.training:
-                h2, self.hidden_tuple = self.lstm(self.nonlin(h1.unsqueeze(0)), self.hidden_tuple)
-            else:
-                h2, self.hidden_tuple_train = self.lstm(self.nonlin(h1), self.hidden_tuple_train)
-            
-            h2 = self.nonlin(h2)
-            h3 = self.nonlin(self.fc3(h2))
-            h4 = self.nonlin(self.fc4(h3))
-
-            if not self.training:
-                if not self.discrete_action:
-                    self.final_out_action = self.out_action_fn(self.out_action(h4))[0]
-                    self.final_out_params = self.out_param_fn(self.out_param(h4))[0]
-
-                    out = torch.cat((self.final_out_action, self.final_out_params),dim=1)
-                    #if self.count % 100 == 0:
-                    #    print(out)
-                    self.count += 1
-
-                return out
-            else:
-                if not self.discrete_action:
-                    self.final_out_action = self.out_action_fn(self.out_action(h4))
-                    self.final_out_params = self.out_param_fn(self.out_param(h4))
-
-                    out = torch.cat((self.final_out_action, self.final_out_params),dim=2)
-                    #if self.count % 100 == 0:
-                    #    print(out)
-                    self.count += 1
-
-                return out[0]
+        if not self.training:
+            h2, self.hidden_tuple = self.lstm(h1.unsqueeze(0), self.hidden_tuple)
         else:
-            h2 = self.nonlin(self.fc2(h1))
-            h3 = self.nonlin(self.fc3(h2))
-            h4 = self.nonlin(self.fc4(h3))
+            h2, self.hidden_tuple_train = self.lstm(h1, self.hidden_tuple_train)
+        
+        # h2 = self.nonlin(h2)
+        h3 = self.nonlin(self.fc3(h2))
+        h4 = self.nonlin(self.fc4(h3))
 
+        if not self.training:
             if not self.discrete_action:
-                self.final_out_action = self.out_action_fn(self.out_action(h4))
-                self.final_out_params = self.out_param_fn(self.out_param(h4))
-                out = torch.cat((self.final_out_action, self.final_out_params),1)
+                self.final_out_action = self.out_action_fn(self.out_action(h4))[0]
+                self.final_out_params = self.out_param_fn(self.out_param(h4))[0]
+
+                out = torch.cat((self.final_out_action, self.final_out_params),dim=1)
                 #if self.count % 100 == 0:
                 #    print(out)
                 self.count += 1
 
             return out
+        else:
+            if not self.discrete_action:
+                self.final_out_action = self.out_action_fn(self.out_action(h4))
+                self.final_out_params = self.out_param_fn(self.out_param(h4))
 
+                out = torch.cat((self.final_out_action, self.final_out_params),dim=2)
+                #if self.count % 100 == 0:
+                #    print(out)
+                self.count += 1
 
+            if self.agent.LSTM_PC:
+                return out
+            else:
+                return out[0]
 
         
     def rollouts_batch(self, batch):

@@ -7,7 +7,7 @@ class ReplayBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, max_steps, num_agents, episode_length, obs_dims, ac_dims, batch_size, LSTM):
+    def __init__(self, max_steps, num_agents, episode_length, obs_dims, ac_dims, batch_size, LSTM, LSTM_PC):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -34,6 +34,7 @@ class ReplayBuffer(object):
         self.batch_size =  batch_size
         self.count = 0
         self.LSTM = LSTM
+        self.LSTM_PC = LSTM_PC
         for odim, adim in zip(obs_dims, ac_dims):
             self.obs_buffs.append(np.zeros((max_steps, odim)))
             self.ac_buffs.append(np.zeros((max_steps, adim)))
@@ -50,7 +51,7 @@ class ReplayBuffer(object):
         self.curr_i = 0  # current index to write to (ovewrite oldest data)
 
     def __len__(self):
-        if self.LSTM:
+        if self.LSTM or self.LSTM_PC:
             return len(self.episode_buff)
         else:
             return self.filled_i
@@ -279,8 +280,13 @@ class ReplayBuffer(object):
 
         ret_obs = [cast_obs([self.episode_buff[i]['obs'][a][p:p+trace_length]
             for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        ret_acs = [cast([self.episode_buff[i]['acs'][a][p:p+1]
-            for i,p in zip(inds,points)]) for a in range(self.num_agents)]
+        
+        if self.LSTM_PC:
+            ret_acs = [cast([self.episode_buff[i]['acs'][a][p:p+trace_length]
+                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
+        else:
+            ret_acs = [cast([self.episode_buff[i]['acs'][a][p:p+1]
+                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
         ret_next_obs = [cast_obs([self.episode_buff[i]['next_obs'][a][p:p+trace_length]
             for i,p in zip(inds,points)]) for a in range(self.num_agents)]
         ret_dones = [cast([self.episode_buff[i]['dones'][a][p:p+1]
@@ -288,15 +294,24 @@ class ReplayBuffer(object):
         ret_ws = [cast([self.episode_buff[i]['ws'][a][p:p+1]
             for i,p in zip(inds,points)]) for a in range(self.num_agents)]
 
-
-        return ([ret_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                [ret_acs[a].view((self.batch_size, -1)) for a in range(self.num_agents)],
-                [ret_rews[a].view(self.batch_size) for a in range(self.num_agents)],
-                [ret_next_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                [ret_dones[a].view(self.batch_size) for a in range(self.num_agents)],
-                [ret_mc[a].view(self.batch_size) for a in range(self.num_agents)],
-                [ret_n_step[a].view(self.batch_size) for a in range(self.num_agents)],
-                [ret_ws[a].view(self.batch_size) for a in range(self.num_agents)])
+        if self.LSTM_PC:
+            return ([ret_obs[a].permute(1,0,2) for a in range(self.num_agents)],
+                    [ret_acs[a].permute(1,0,2) for a in range(self.num_agents)],
+                    [ret_rews[a].view(self.batch_size) for a in range(self.num_agents)],
+                    [ret_next_obs[a].permute(1,0,2) for a in range(self.num_agents)],
+                    [ret_dones[a].view(self.batch_size) for a in range(self.num_agents)],
+                    [ret_mc[a].view(self.batch_size) for a in range(self.num_agents)],
+                    [ret_n_step[a].view(self.batch_size) for a in range(self.num_agents)],
+                    [ret_ws[a].view(self.batch_size) for a in range(self.num_agents)])
+        else:
+            return ([ret_obs[a].permute(1,0,2) for a in range(self.num_agents)],
+                    [ret_acs[a].view((self.batch_size, -1)) for a in range(self.num_agents)],
+                    [ret_rews[a].view(self.batch_size) for a in range(self.num_agents)],
+                    [ret_next_obs[a].permute(1,0,2) for a in range(self.num_agents)],
+                    [ret_dones[a].view(self.batch_size) for a in range(self.num_agents)],
+                    [ret_mc[a].view(self.batch_size) for a in range(self.num_agents)],
+                    [ret_n_step[a].view(self.batch_size) for a in range(self.num_agents)],
+                    [ret_ws[a].view(self.batch_size) for a in range(self.num_agents)])
 
     def get_average_rewards(self, N):
         if self.filled_i == self.max_steps:

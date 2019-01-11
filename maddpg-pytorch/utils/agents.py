@@ -2,32 +2,34 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.optim import Adam,SGD
 import torch
-from .networks import MLPNetwork_Actor,MLPNetwork_Critic,LSTM_Network,I2A_Network
+from .networks import MLPNetwork_Actor,MLPNetwork_Critic,LSTM_Network,I2A_Network,LSTMNetwork_Critic
 import torch.nn.functional as F
 from .i2a import *
 from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor
 from .noise import OUNoise
 import numpy as np
+
 class DDPGAgent(object):
     """
     General class for DDPG agents (policy, critic, target policy, target
     critic, exploration noise)
     """
     def __init__(self, num_in_pol, num_out_pol, num_in_critic, maddpg=object, hidden_dim=64,
-                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
+                a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
-                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, LSTM=False, trace_length=1): 
+                device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, 
+                LSTM=False, LSTM_PC=False, trace_length=1): 
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
             num_out_pol (int): number of dimensions for policy output
             num_in_critic (int): number of dimensions for critic input
         """
-
         self.norm_in = False
         self.counter = 0
         self.updating_actor = False
         self.maddpg = maddpg
+        self.batch_size = maddpg.batch_size
         self.param_dim = 5
         self.action_dim = 3
         self.imagination_policy_branch = imagination_policy_branch
@@ -43,6 +45,7 @@ class DDPGAgent(object):
         # print('Num of maddpg agents and num out', str(maddpg.nagents_team), str(num_out_pol), str(self.num_out_obs_EM))
         # self.num_in_EM = num_in_critic - (self.num_out_obs_EM * (maddpg.nagents_team - 1)) # obs + actions
         self.LSTM = LSTM
+        self.LSTM_PC = LSTM_PC
 
         self.num_total_out_EM = maddpg.num_out_EM + self.world_status_dim + 1
         # EM for I2A
@@ -60,27 +63,51 @@ class DDPGAgent(object):
                                  discrete_action=discrete_action, 
                                  norm_in= self.norm_in,agent=self)
        
-        self.policy = LSTM_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
-                          hidden_dim=hidden_dim,
-                          discrete_action=discrete_action,
-                          norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                          EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                  LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=False, LSTM=LSTM, trace_length=trace_length)
-        
-        self.target_policy = LSTM_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
-                                 hidden_dim=hidden_dim,
-                                 discrete_action=discrete_action,
-                                 norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                                 EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                         LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=True, LSTM=LSTM, trace_length=trace_length)
-        
-        self.critic = MLPNetwork_Critic(num_in_critic, 1,
-                                 hidden_dim=hidden_dim,
-                                 norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+        if self.LSTM or self.LSTM_PC:
+            self.policy = LSTM_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
+                            hidden_dim=hidden_dim,
+                            discrete_action=discrete_action,
+                            norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                            EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                    LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=False, trace_length=trace_length)
+            
+            self.target_policy = LSTM_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
+                                    hidden_dim=hidden_dim,
+                                    discrete_action=discrete_action,
+                                    norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                                    EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                            LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=True, trace_length=trace_length)
+        else:
+            self.policy = I2A_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
+                            hidden_dim=hidden_dim,
+                            discrete_action=discrete_action,
+                            norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                            EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                    LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+            
+            self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
+                                    hidden_dim=hidden_dim,
+                                    discrete_action=discrete_action,
+                                    norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                                    EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                            LSTM_hidden=LSTM_hidden,maddpg=maddpg)
 
-        self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
-                                               hidden_dim=hidden_dim,
-                                               norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+        if self.LSTM_PC:
+            self.critic = LSTMNetwork_Critic(num_in_critic, 1,
+                                    hidden_dim=hidden_dim,
+                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+
+            self.target_critic = LSTMNetwork_Critic(num_in_critic, 1,
+                                                hidden_dim=hidden_dim,
+                                                norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+        else:
+            self.critic = MLPNetwork_Critic(num_in_critic, 1,
+                                    hidden_dim=hidden_dim,
+                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+
+            self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
+                                                hidden_dim=hidden_dim,
+                                                norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
 
         hard_update(self.target_policy, self.policy)
         hard_update(self.target_critic, self.critic)
@@ -121,7 +148,7 @@ class DDPGAgent(object):
         Outputs:
             action (PyTorch Variable): Actions for this agent
         """
-        if self.LSTM:
+        if self.LSTM or self.LSTM_PC:
             if self.policy.training == True:
                 self.policy.training = False
         action = self.policy(obs)
