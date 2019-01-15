@@ -25,12 +25,12 @@ from trainer import launch_eval
 import _thread as thread
 
 eval_episodes = 50
-session_path = "training_sessions/12_23_1_1_vs_1/"
+session_path = "training_sessions/1_12_7_1_vs_1/"
 load_path = session_path +"ensemble_models/"
 eval_log_dir = session_path +"eval_log" # evaluation logfiles
 eval_hist_dir = session_path +"eval_history"
-num_TA = 2
-num_OA = 2
+num_TA = 1
+num_OA = 1
 episode_length = 500
 device = "cuda"
 use_viewer = True

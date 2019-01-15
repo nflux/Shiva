@@ -55,7 +55,7 @@ use_viewer_after = 1000 # If using viewer, uses after x episodes
 n_training_threads = 8
 # default settings ---------------------
 num_episodes = 10000000
-replay_memory_size = 250000
+replay_memory_size = 500000
 episode_length = 500 # FPS
 untouched_time = 500
 burn_in_iterations = 500 # for time step
@@ -71,12 +71,12 @@ num_ONPC = 0
 goalie = False
 team_rew_anneal_ep = 1500 # reward would be
 # hyperparams--------------------------
-batch_size = 128
+batch_size = 256
 hidden_dim = int(512)
 a_lr = 0.0001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
-steps_per_update = 10
+steps_per_update = 5
 # exploration --------------------------
 explore = True
 final_OU_noise_scale = 0.1
@@ -167,7 +167,7 @@ current_ensembles = [0]*num_TA # initialize which ensembles we start with
 save_nns = True
 ep_save_every = 25 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
-initial_models = ["training_sessions/1_9_15_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
+initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
 first_save = True # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
@@ -176,8 +176,8 @@ eval_after = 500
 eval_episodes = 11
 # --------------------------------------
 # LSTM -------------------------------------------
-LSTM = False
-LSTM_PC = True
+LSTM = True
+LSTM_PC = False
 if LSTM and LSTM_PC:
     print('Only one LSTM flag can be True or both False')
     exit(0)
