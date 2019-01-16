@@ -1,0 +1,45 @@
+#!/bin/sh
+
+HOST=$1
+BASEDIR=$2
+NUM=$3
+
+LD_LIBRARY_PATH=${BASEDIR}/local/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH
+
+DIR="${BASEDIR}/helios/src"
+
+teamname="HELIOS2010"
+
+player="./helios_player"
+coach="./helios_coach"
+
+player_conf="./player.conf"
+config_dir="./formations-4231"
+param_file="./parameters/params"
+
+coach_conf="./coach.conf"
+
+opt="--player-config ${player_conf} --config_dir ${config_dir}"
+opt="${opt} --param-file ${param_file}"
+opt="${opt} -h ${HOST} -t ${teamname}"
+
+coachopt="--coach-config ${coach_conf}"
+coachopt="${coachopt} -h ${HOST} -t ${teamname}"
+
+cd $DIR
+
+case $NUM in
+    1)
+        echo "$player $opt -g"
+        $player $opt -g
+        ;;
+    12)
+        echo "$coach $coachopt"
+        $coach $coachopt
+        ;;
+    *)
+        echo "$player $opt"
+        $player $opt
+        ;;
+esac

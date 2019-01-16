@@ -1,0 +1,89 @@
+{
+	"name": "corner_kick wallcyrus_sidechange top",
+	"condition" : {
+		"playmode" : "corner_kick",
+		"ball_region" : "(c 52.5 -34.0 5.0)",
+		"team_name_list" : "HELIOS2017,CYRUS,Namira"
+	},
+	"plan" : {
+		"field_evaluator": "SetplayDefault",
+		"max_count": 130,
+		"action_list" : [
+			{
+				"start_count" : 0,
+				"type": "move",
+				"kicker": 9,
+				"formation" : "cornerkick-our-pre-formation-4231cyrus-sidechange.conf"
+			},
+			{
+				"start_count" : 70,
+				"type": "move",
+				"kicker": 9,
+				"formation" : "cornerkick-our-post-formation-4231cyrus-sidechange-top.conf"
+			},
+			{
+				"start_count" : 80,
+				"type": "pass",
+				"kicker": 9,
+				"target_player": 7,
+				"target_point_x": 37.0,
+				"target_point_y": -31.0,
+				"formation" : "cornerkick-our-post-formation-4231cyrus-sidechange-top.conf"
+			},
+			{
+				"start_count" : 85,
+				"type": "pass",
+				"kicker": 7,
+				"target_player": 4,
+				"target_point_x": 27.0,
+				"target_point_y": -24.0,
+				"formation" : "cornerkick-our-post-formation-4231cyrus-sidechange-top.conf"
+			},
+			{
+				"start_count" : 90,
+				"type": "pass",
+				"kicker": 4,
+				"target_player": 2,
+				"target_point_x": 20.0,
+				"target_point_y": -13.0,
+				"formation" : "cornerkick-our-post-formation-4231cyrus-sidechange-top.conf"
+			},
+			{
+				"start_count" : 100,
+				"type": "pass",
+				"kicker": 2,
+				"target_player": 3,
+				"target_point_x": 18.0,
+				"target_point_y": 0.0,
+				"formation" : "cornerkick-our-post-formation-4231cyrus-sidechange-top.conf"
+			},
+			{
+				"start_count" : 105,
+				"type": "pass",
+				"kicker": 3,
+				"target_player": 6,
+				"target_point_x": 18.0,
+				"target_point_y": 10.0,
+				"formation" : "cornerkick-our-post-formation-4231cyrus-sidechange-top.conf"
+			},
+			{
+				"start_count" : 110,
+				"type": "pass",
+				"kicker": 6,
+				"target_player": 8,
+				"target_point_x": 21.0,
+				"target_point_y": 23.0,
+				"formation" : "cornerkick-our-post-formation-4231cyrus-sidechange-top.conf"
+			},
+			{
+				"start_count" : 120,
+				"type": "pass",
+				"kicker": 8,
+				"target_player": 10,
+				"target_point_x": 42.0,
+				"target_point_y": 26.0,
+				"formation" : "cornerkick-our-post-formation-4231cyrus-sidechange-top.conf"
+			}
+		]
+	}
+}
