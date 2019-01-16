@@ -882,15 +882,20 @@ for ep_i in range(0, num_episodes):
 
                     
             if train_opp or critic_mod: # only create experiences if critic mod or training opp
-                for n in range(et_i+1):
+                all_MC_targets = []
+                # calculate MC
+                for n in range(et_i +1):
                     MC_targets = []
-                    n_step_targets = []
                     for a in range(env.num_OA):
                         MC_target = 0
+                        MC_target = opp_n_step_rewards[et_i-n][a] + MC_target*gamma
+                        MC_targets.append(MC_target)    
+                    all_MC_targets.append(MC_targets)
+                
+                for n in range(et_i+1):
+                    n_step_targets = []
+                    for a in range(env.num_OA):
                         n_step_target = 0
-                        for step in range(et_i+1 - n): # sum MC target
-                            MC_target += opp_n_step_rewards[et_i - step][a] * gamma**(et_i - n - step)
-                        MC_targets.append(MC_target)
                         if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
                             for step in range(n_steps): 
                                 n_step_target += opp_n_step_rewards[n + step][a] * gamma**(step)
@@ -898,21 +903,33 @@ for ep_i in range(0, num_episodes):
                             n_step_next_ob = opp_n_step_next_obs[n - 1 + n_steps]
                             n_step_done = opp_n_step_dones[n - 1 + n_steps]
                         else: # n-step = MC if less than n steps remaining
-                            n_step_target = MC_target
+                            n_step_target = all_MC_targets[et_i-n][a]
                             n_step_targets.append(n_step_target)
                             n_step_next_ob = opp_n_step_next_obs[-1]
-                            n_step_done = opp_n_step_dones[-1]
+                            n_step_done = opp_n_step_dones[-1] 
                         # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
+                    if LSTM or LSTM_PC:
+                        if n == et_i:
+                            team_replay_buffer.done_step = True
+                        team_replay_buffer.push_LSTM(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
+                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
+                                                n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
+                    else:
+                        team_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
+                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
+                                                n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
+                    
+       
                     if has_opp_Agents:
                         if LSTM or LSTM_PC:
                             if n == et_i:
                                 opp_replay_buffer.done_step = True
                             opp_replay_buffer.push_LSTM(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
-                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],MC_targets,
+                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                         else:
                             opp_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
-                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],MC_targets,
+                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                                        
                     
