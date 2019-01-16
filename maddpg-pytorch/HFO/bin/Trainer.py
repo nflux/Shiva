@@ -102,6 +102,109 @@ class Trainer(object):
                            binaryName='sample_player', logDir=self._logDir,
                            record=self._record, host='localhost',
                            port=self._serverPort)
+    elif requested_team_name == 'helios18':
+      print('Creating team Helios18')
+      team_name = 'HELIOS_18_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios18')
+      lib_dir = os.path.join(teams_dir, 'helios18', 'lib')
+      return Teams.Helios18(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    elif requested_team_name == 'helios17':
+      print('Creating team Helios17')
+      team_name = 'HELIOS_17_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios17')
+      lib_dir = os.path.join(teams_dir, 'helios17', 'lib')
+      return Teams.Helios17(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)                                                   
+    elif requested_team_name == 'helios16':
+      print('Creating team Helios16')
+      team_name = 'HELIOS_16_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios16')
+      lib_dir = os.path.join(teams_dir, 'helios16', 'lib')
+      return Teams.Helios16(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    elif requested_team_name == 'helios15':
+      print('Creating team Helios15')
+      team_name = 'HELIOS_15_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios15')
+      lib_dir = os.path.join(teams_dir, 'helios15', 'lib')
+      return Teams.Helios15(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)  
+    elif requested_team_name == 'helios14':
+      team_name = 'HELIOS_14_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios14', 'helios')
+      lib_dir = os.path.join(teams_dir, 'helios14', 'helios', 'local', 'lib')
+      return Teams.Helios14(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    if requested_team_name == 'helios':
+      print('Creating team Helios13')
+      team_name = 'HELIOS_13_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios', 'helios-13Eindhoven')
+      lib_dir = os.path.join(teams_dir, 'helios', 'local', 'lib')
+      return Teams.Helios(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    elif requested_team_name == 'helios12':
+      print('Creating team Helios12')
+      team_name = 'HELIOS_12_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios12')
+      lib_dir = os.path.join(teams_dir, 'helios12', 'local', 'lib')
+      return Teams.Helios12(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    elif requested_team_name == 'helios11':
+      print('Creating team Helios11')
+      team_name = 'HELIOS_11_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios11', 'helios2011', 'src')
+      lib_dir = os.path.join(teams_dir, 'helios11', 'helios2011')
+      return Teams.Helios11(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    elif requested_team_name == 'helios10':
+      print('Creating team Helios10')
+      team_name = 'HELIOS_10_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios10', 'helios', 'src')
+      lib_dir = os.path.join(teams_dir, 'helios10', 'local', 'lib')
+      return Teams.Helios10(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    elif requested_team_name == 'helios09':     #This needs to be implemented
+      print('Creating team Helios09')
+      team_name = 'HELIOS_09_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios09', 'helios')
+      lib_dir = os.path.join(teams_dir, 'helios09')
+      return Teams.Helios09(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    elif requested_team_name == 'helios08':     #This needs to be implemented
+      print('Creating team Helios08')
+      team_name = 'HELIOS_08_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios08', 'helios', 'src')
+      lib_dir = os.path.join(teams_dir, 'helios08', 'local', 'lib')
+      return Teams.Helios08(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    elif requested_team_name == 'helios07':     #This needs to be implemented
+      print('Creating team Helios07')
+      team_name = 'HELIOS_07_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'helios07', 'helios', 'src')
+      lib_dir = os.path.join(teams_dir, 'helios07', 'local', 'lib')
+      return Teams.Helios07(team_name, team_dir, lib_dir,
+                          binaryName='helios_player', host='localhost',
+                          port=self._serverPort)
+    elif requested_team_name == 'cyrus':
+      print('Creating team Cyrus')
+      team_name = 'Cyrus_' + ('left' if play_offense else 'right')
+      team_dir = os.path.join(teams_dir, 'cyrus', 'src')
+      lib_dir = os.path.join(teams_dir, 'cyrus', 'lib')
+      return Teams.Cyrus(team_name, team_dir, lib_dir,
+                           binaryName='sample_player',host='localhost',
+                           port=self._serverPort)
     else:
       print('Unknown team requested: ' + requested_team_name)
       sys.exit(1)

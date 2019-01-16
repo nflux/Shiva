@@ -39,6 +39,7 @@ class HFO_env():
             to opposing team.
     Todo:
         * Functionality for synchronizing team actions with opponent team actions
+        * Add the ability for team agents to function with npcs taking the place of opponents
         """
     # class constructor
     def __init__(self, num_TNPC=0,num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'base_left',
@@ -46,11 +47,11 @@ class HFO_env():
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
                  offense_on_ball=0, fullstate = False, seed = 123,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-                 verbose = False, log_game=False, log_dir="log",team_rew_anneal_ep=1000,
+                 verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
                  change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
-                 change_balls_y=0.1, control_rand_init=False,record=True):
-        
+                 change_balls_y=0.1, control_rand_init=False,record=True,
+                 defense_team_bin='helios15', offense_team_bin='helios16'):
 
         """ Initializes HFO_Env
         Args:
@@ -87,12 +88,13 @@ class HFO_env():
                                fullstate = fullstate, seed = seed,
                                ball_x_min = ball_x_min, ball_x_max = ball_x_max,
                                ball_y_min= ball_y_min, ball_y_max= ball_y_max,
-                               verbose = verbose, log_game = log_game, log_dir = log_dir,
+                               verbose = verbose, rcss_log_game = rcss_log_game, hfo_log_game=hfo_log_game, log_dir = log_dir,
                                agents_x_min=agents_x_min, agents_x_max=agents_x_max,
                                agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                                change_every_x=change_every_x, change_agents_x=change_agents_x,
                                change_agents_y=change_agents_y, change_balls_x=change_balls_x,
-                               change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record)
+                               change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,
+                               defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin)
 
         self.viewer = None
         self.sleep_timer = 0.0000001 # sleep timer
@@ -276,12 +278,18 @@ class HFO_env():
         #print('Actions, Obs, rewards, and status ready')
 
         team_rew = [rew + self.pass_reward if passer else rew for rew,passer in zip(self.team_rewards,self.team_passer)]
-        opp_rew =[rew + self.pass_reward if passer else rew for rew,passer in zip(self.opp_rewards,self.opp_passer)]
+        
+        if self.num_OA > 0:
+            opp_rew =[rew + self.pass_reward if passer else rew for rew,passer in zip(self.opp_rewards,self.opp_passer)]
         
 
         team_rew = np.add( team_rew, self.team_lost_possession)
-        opp_rew = np.add(opp_rew, self.opp_lost_possession)
         
+        if self.num_OA > 0:
+            opp_rew = np.add(opp_rew, self.opp_lost_possession)
+        else:
+            opp_rew = [0]*self.num_TA
+
         #team_rew -=  self.team_lost_possession
         #opp_rew -=  self.opp_lost_possession
         # rew + 1 list comprehension adds the reward for passer if pass was received
@@ -539,6 +547,7 @@ class HFO_env():
 
     
     # Engineered Reward Function
+    #   To-do: Add the ability of team agents to know if opponent npcs hold ball posession. For now, having npc opponent disables first kick award
     def getReward(self,s,agentID,base,ep_num):
         reward=0.0
         team_reward = 0.0
@@ -592,10 +601,12 @@ class HFO_env():
         ############ Kicked Ball #################
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            
             
-            if (np.array(self.agent_possession_team) == 'N').all() and (np.array(self.agent_possession_opp) == 'N').all():
-                reward =+ 0.1
-                team_reward +=0.1
-                print('first kick reward')
+            #Remove this check when npc ball posession can be measured
+            if self.num_OA > 0:
+                if (np.array(self.agent_possession_team) == 'N').all() and (np.array(self.agent_possession_opp) == 'N').all():
+                    reward =+ 0.1
+                    team_reward +=0.1
+                    print('first kick reward')
 
             ######## Pass Receiver Reward #########
             if self.team_base == base:
@@ -607,11 +618,13 @@ class HFO_env():
                         reward += self.pass_reward
                         team_reward += self.pass_reward
                         # print('team pass reward received ')
-                if (np.array(self.agent_possession_opp) == 'R').any():
-                    enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-                    self.opp_lost_possession[enemy_possessor] -= 3
-                    self.team_lost_possession[agentID] += 3
-                    # print('opponent lost possession')
+                #Remove this check when npc ball posession can be measured
+                if self.num_OA > 0:
+                    if (np.array(self.agent_possession_opp) == 'R').any():
+                        enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
+                        self.opp_lost_possession[enemy_possessor] -= 3
+                        self.team_lost_possession[agentID] += 3
+                        # print('opponent lost possession')
 
                 ###### Change Possession Reward #######
                 self.agent_possession_team = ['N'] * self.num_TA
@@ -884,13 +897,15 @@ class HFO_env():
                               offense_on_ball=0, fullstate=False, seed=123,
                               ball_x_min=-0.8, ball_x_max=0.8,
                               ball_y_min=-0.8, ball_y_max=0.8,
-                              verbose=False, log_game=False,
+                              verbose=False, rcss_log_game=False,
                               log_dir="log",
+                              hfo_log_game=True,
                               agents_x_min=0.0, agents_x_max=0.0,
                               agents_y_min=0.0, agents_y_max=0.0,
                               change_every_x=1, change_agents_x=0.1,
                               change_agents_y=0.1, change_balls_x=0.1,
-                              change_balls_y=0.1, control_rand_init=False,record=True):
+                              change_balls_y=0.1, control_rand_init=False,record=True,
+                              defense_team_bin='base', offense_team_bin='helios16'):
             """
             Starts the Half-Field-Offense server.
             frames_per_trial: Episodes end after this many steps.
@@ -920,11 +935,17 @@ class HFO_env():
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,
                      ball_y_min, ball_y_max, log_dir)
-            if not sync_mode: cmd += " --no-sync"
-            if fullstate:     cmd += " --fullstate"
-            if verbose:       cmd += " --verbose"
-            if not log_game:  cmd += " --no-logging"
-            if record:        cmd += " --record"
+            #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
+            if offense_npcs > 0:   cmd += " --offense-team %s" \
+                % (offense_team_bin)
+            if defense_npcs > 0:   cmd += " --defense-team %s" \
+                % (defense_team_bin)
+            if not sync_mode:      cmd += " --no-sync"
+            if fullstate:          cmd += " --fullstate"
+            if verbose:            cmd += " --verbose"
+            if not rcss_log_game:  cmd += " --no-logging"
+            if hfo_log_game:       cmd += " --hfo-logging"
+            if record:             cmd += " --record"
             if control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

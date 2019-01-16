@@ -50,9 +50,11 @@ else:
     to_gpu = False
     device = 'cpu'
 
-use_viewer = False
+use_viewer = True
 use_viewer_after = 1000 # If using viewer, uses after x episodes
 n_training_threads = 8
+rcss_log_game = False #Logs the game using rcssserver
+hfo_log_game = False #Logs the game using HFO
 # default settings ---------------------
 num_episodes = 10000000
 replay_memory_size = 250000
@@ -64,10 +66,12 @@ train_team = True
 train_opp = False
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 1
-num_OA = 1
+num_TA = 3
+num_OA = 0
 num_TNPC = 0
-num_ONPC = 0
+num_ONPC = 3
+offense_team_bin='helios10'
+defense_team_bin='helios11'  
 goalie = False
 team_rew_anneal_ep = 1500 # reward would be
 # hyperparams--------------------------
@@ -121,7 +125,7 @@ pt_beta = 1.0
 #---------------------------------------
 #I2A Options ---------------------------
 I2A = False
-decent_EM = True
+decent_EM = False
 EM_lr = 0.005
 obs_weight = 10.0
 rew_weight = 1.0
@@ -135,7 +139,7 @@ SIL = False
 SIL_update_ratio = 1
 #---------------------------------------
 #Critic Input Modification 
-critic_mod = True
+critic_mod = False
 # NOTE: When both are False but critic_mod is true the critic takes both
 # actions and observations from the opposing side
 critic_mod_act = False
@@ -158,17 +162,17 @@ change_agents_y = 0.01
 change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
-load_random_nets = True
+load_random_nets = False
 load_random_every = 1
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 # --------------------------------------
 #Save/load -----------------------------
-save_nns = True
+save_nns = False
 ep_save_every = 25 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
 initial_models = ["training_sessions/1_9_15_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
-first_save = True # build model clones for ensemble
+first_save = False # build model clones for ensemble
 # --------------------------------------
 # Evaluation ---------------------------
 evaluate = False
@@ -177,7 +181,7 @@ eval_episodes = 11
 # --------------------------------------
 # LSTM -------------------------------------------
 LSTM = False
-LSTM_PC = True
+LSTM_PC = False
 if LSTM and LSTM_PC:
     print('Only one LSTM flag can be True or both False')
     exit(0)
@@ -213,16 +217,31 @@ else:
     discrete_action = False
 if not USE_CUDA:
         torch.set_num_threads(n_training_threads)
-    
+
+ #Initialization for either M vs N, M vs 0, or N vs 0
+if num_TA > 0:
+    has_team_Agents = True
+else:
+    has_team_Agents = False
+
+if num_OA > 0:
+    has_opp_Agents = True
+else:
+    has_opp_Agents = False   
 
 env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
                 num_trials = num_episodes, fpt = episode_length, # create environment
                 feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
                 ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
-                offense_on_ball=False,port=port,log_dir=log_dir,team_rew_anneal_ep=team_rew_anneal_ep,
+                offense_on_ball=False,port=port,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
                 agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                 change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-                change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True)
+                change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
+                defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin)
+
+#The start_viewer here is added to automatically start viewer with npc Vs npcs
+if num_TNPC > 0 and num_ONPC > 0:
+    env._start_viewer() 
 
 time.sleep(3)
 print("Done connecting to the server ")
@@ -254,8 +273,10 @@ team_replay_buffer = ReplayBuffer(replay_memory_size , env.num_TA, episode_lengt
                                  [env.team_action_params.shape[1] + len(env.action_list) for i in range(env.num_TA)], 
                                  batch_size, LSTM, LSTM_PC)
 
-#initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
-opp_replay_buffer = ReplayBuffer(replay_memory_size , env.num_OA, episode_length,
+#Added to Disable/Enable the opp agents
+if has_opp_Agents:
+    #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
+    opp_replay_buffer = ReplayBuffer(replay_memory_size , env.num_OA, episode_length,
                                  [env.opp_num_features for i in range(env.num_OA)],
                                  [env.opp_action_params.shape[1] + len(env.action_list) for i in range(env.num_OA)], 
                                  batch_size, LSTM, LSTM_PC)
@@ -685,11 +706,15 @@ for ep_i in range(0, num_episodes):
         # print('These are the opp params', str(opp_params))
 
         team_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in team_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
-        team_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(team_noisey_actions_for_buffer,team_params)] for i in range(1)]).reshape(
-            env.num_TA,env.team_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+        #Added to Disable/Enable the team agents
+        if has_team_Agents:        
+            team_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(team_noisey_actions_for_buffer,team_params)] for i in range(1)]).reshape(
+                env.num_TA,env.team_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
         opp_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in opp_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
-        opp_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(opp_noisey_actions_for_buffer,opp_params)] for i in range(1)]).reshape(
-            env.num_OA,env.opp_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+        #Added to Disable/Enable the opp agents
+        if has_opp_Agents:
+            opp_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(opp_noisey_actions_for_buffer,opp_params)] for i in range(1)]).reshape(
+                env.num_OA,env.opp_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
 
         # If kickable is True one of the teammate agents has possession of the ball
         kickable = np.array([env.get_kickable_status(i,team_obs.T) for i in range(env.num_TA)])
@@ -706,30 +731,41 @@ for ep_i in range(0, num_episodes):
 
         _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params)
 
-        team_rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA)])
-        opp_rewards = np.hstack([env.Reward(i,'opp') for i in range(env.num_OA)])
+        #Added to Disable/Enable the team agents
+        if has_team_Agents:
+            team_rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA)])
+        #Added to Disable/Enable the opp agents
+        if has_opp_Agents:
+            opp_rewards = np.hstack([env.Reward(i,'opp') for i in range(env.num_OA)])
 
-        team_next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
-        opp_next_obs = np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
+        #Added to Disable/Enable the team agents
+        if has_team_Agents:
+            team_next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
+        #Added to Disable/Enable the opp agents
+        if has_opp_Agents:
+            opp_next_obs = np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
 
         
         team_done = env.d
         opp_done = env.d 
 
         # Store variables for calculation of MC and n-step targets for team
-        team_n_step_rewards.append(team_rewards)
-        team_n_step_obs.append(team_obs)
-        team_n_step_next_obs.append(team_next_obs)
-        team_n_step_acs.append(team_actions_params_for_buffer)
-        team_n_step_dones.append(team_done)
-        team_n_step_ws.append(world_stat)
-        
-        opp_n_step_rewards.append(opp_rewards)
-        opp_n_step_obs.append(opp_obs)
-        opp_n_step_next_obs.append(opp_next_obs)
-        opp_n_step_acs.append(opp_actions_params_for_buffer)
-        opp_n_step_dones.append(opp_done)
-        opp_n_step_ws.append(world_stat)
+        #Added to Disable/Enable the team agents
+        if has_team_Agents:
+            team_n_step_rewards.append(team_rewards)
+            team_n_step_obs.append(team_obs)
+            team_n_step_next_obs.append(team_next_obs)
+            team_n_step_acs.append(team_actions_params_for_buffer)
+            team_n_step_dones.append(team_done)
+            team_n_step_ws.append(world_stat)
+        #Added to Disable/Enable the opp agents
+        if has_opp_Agents:
+            opp_n_step_rewards.append(opp_rewards)
+            opp_n_step_obs.append(opp_obs)
+            opp_n_step_next_obs.append(opp_next_obs)
+            opp_n_step_acs.append(opp_actions_params_for_buffer)
+            opp_n_step_dones.append(opp_done)
+            opp_n_step_ws.append(world_stat)
         # ----------------------------------------------------------------
 
 
@@ -866,21 +902,24 @@ for ep_i in range(0, num_episodes):
                             n_step_next_ob = opp_n_step_next_obs[-1]
                             n_step_done = opp_n_step_dones[-1]
                         # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                    if LSTM or LSTM_PC:
-                        if n == et_i:
-                            opp_replay_buffer.done_step = True
-                        opp_replay_buffer.push_LSTM(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
+                    if has_opp_Agents:
+                        if LSTM or LSTM_PC:
+                            if n == et_i:
+                                opp_replay_buffer.done_step = True
+                            opp_replay_buffer.push_LSTM(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
                                                 n_step_next_ob,[n_step_done for i in range(env.num_OA)],MC_targets,
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
-                    else:
-                        opp_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
+                        else:
+                            opp_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
                                                 n_step_next_ob,[n_step_done for i in range(env.num_OA)],MC_targets,
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                                        
                     
             # log
             if ep_i > 1:
-                team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
+                #Added to Disable/Enable the team agents
+                if has_team_Agents:
+                    team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.team_envs[0].statusToString(world_stat),
                                                         'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
                                                         'possession_percentages': [(tpc/time_step)*100 for tpc in team_possession_counter],
@@ -888,7 +927,9 @@ for ep_i in range(0, num_episodes):
                                                         'cumulative_reward': team_replay_buffer.get_cumulative_rewards(time_step)},
                                                         ignore_index=True)
 
-                opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
+                #Added to Disable/Enable the opp agents
+                if has_opp_Agents:
+                    opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
                                                         'why': env.opp_team_envs[0].statusToString(world_stat),
                                                         'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
                                                         'possession_percentages': [(opc/time_step)*100 for opc in opp_possession_counter],
@@ -922,7 +963,9 @@ for ep_i in range(0, num_episodes):
                 
                
         team_obs = team_next_obs
-        opp_obs = opp_next_obs
+        #Added to Disable/Enable the opp agents
+        if has_opp_Agents:
+            opp_obs = opp_next_obs
 
             #print(step_logger_df) 
         #if t%30000 == 0 and use_viewer:
