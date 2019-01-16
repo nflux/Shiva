@@ -2202,7 +2202,7 @@ class MADDPG(object):
             if side=='team':
                 self.team_agents[i].load_params(save_dicts[i]['agent_params'])
             else:
-                self.opp_agents[i].load_params(save_dicts[i]['agent_params'])
+                self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
         return ind
                 
                                           

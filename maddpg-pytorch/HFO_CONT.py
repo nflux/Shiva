@@ -57,7 +57,7 @@ n_training_threads = 8
 num_episodes = 10000000
 replay_memory_size = 500000
 episode_length = 500 # FPS
-untouched_time = 500
+untouched_time = 200
 burn_in_iterations = 500 # for time step
 burn_in_episodes = float(burn_in_iterations)/untouched_time
 train_team = True
@@ -162,6 +162,7 @@ load_random_nets = True
 load_random_every = 1
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
+self_play_proba = 0.8
 # --------------------------------------
 #Save/load -----------------------------
 save_nns = True
@@ -177,7 +178,7 @@ eval_episodes = 11
 # --------------------------------------
 # LSTM -------------------------------------------
 LSTM = True
-LSTM_PC = False
+LSTM_PC = False # PC (Policy & Critic)
 if LSTM and LSTM_PC:
     print('Only one LSTM flag can be True or both False')
     exit(0)
@@ -915,9 +916,14 @@ for ep_i in range(0, num_episodes):
             
             # Load random networks into team from ensemble and opponent from all models
             if ep_i > ep_save_every and ep_i % load_random_every == 0 and load_random_nets:
-                maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path)
+                if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
+                    maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path)
+                else:
+                    maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path)
                 current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path)
-            break;  
+            break
+        elif d:
+            break
 
                 
                
