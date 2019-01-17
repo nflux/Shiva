@@ -468,8 +468,8 @@ class MADDPG(object):
         # Train critic ------------------------
         curr_agent.critic_optimizer.zero_grad()
         
-        start = time.time()
         #print("time critic")
+        #start = time.time()
 
         if self.TD3:
             noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
@@ -517,8 +517,10 @@ class MADDPG(object):
         if self.D4PG:
                 # Q1
                 trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
+
                 trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
                                                   gamma=self.gamma**self.n_steps,device=self.device)
+
                 if self.TD3:
                     prob_dist_1 = -F.log_softmax(actual_value_1,dim=1) * trgt_vf_distr_proj # Q1
                     prob_dist_2 = -F.log_softmax(actual_value_2,dim=1) * trgt_vf_distr_proj # Q2
@@ -541,8 +543,7 @@ class MADDPG(object):
             else:
                 vf_loss = F.mse_loss(actual_value, target_value)
                         
-        end = time.time()
-        #print(end - start)
+
         #vf_loss.backward()
         vf_loss.backward(retain_graph=True) 
         
@@ -551,11 +552,10 @@ class MADDPG(object):
         torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
         curr_agent.critic_optimizer.step()
         curr_agent.policy_optimizer.zero_grad()
-        
+ 
 
         # Train actor -----------------------
                 
-        start = time.time()
         #print("time actor")
         if count % self.TD3_delay_steps == 0:
             curr_pol_out = curr_agent.policy(obs[agent_i])
@@ -566,11 +566,13 @@ class MADDPG(object):
                 if i == agent_i:
                     team_pol_acs.append(curr_pol_vf_in)
                 else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
-                    a = pi(ob)
+                    with torch.no_grad():
+                        a = pi(ob)
                     team_pol_acs.append(torch.cat((onehot_from_logits(a[:,:curr_agent.action_dim]),a[:,curr_agent.action_dim:]),dim=1))
             
             for i, pi, ob in zip(range(nagents), opp_policies, opp_obs):
-                a = pi(ob)
+                with torch.no_grad():
+                    a = pi(ob)
                 opp_pol_acs.append(torch.cat((onehot_from_logits(a[:,:curr_agent.action_dim]),a[:,curr_agent.action_dim:]),dim=1))
 
             obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
@@ -599,8 +601,7 @@ class MADDPG(object):
             curr_agent.policy_optimizer.step()
             if self.niter % 100 == 0:
                 print("Team (%s) Agent (%i) Actor loss:" % (side,agent_i),pol_loss)
-        end = time.time()
-        #print(end - start)
+
         # I2A --------------------------------------
         if self.I2A:
             # Update policy prime
@@ -659,6 +660,7 @@ class MADDPG(object):
             if self.I2A:
                 print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
+
 
     def update_centralized_critic_LSTM(self, team_sample, opp_sample, agent_i, side='team', parallel=False, logger=None, act_only=False, obs_only=False):
         """

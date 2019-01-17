@@ -50,14 +50,14 @@ else:
     to_gpu = False
     device = 'cpu'
 
-use_viewer = True
+use_viewer = False
 use_viewer_after = 1000 # If using viewer, uses after x episodes
 n_training_threads = 8
 rcss_log_game = False #Logs the game using rcssserver
 hfo_log_game = False #Logs the game using HFO
 # default settings ---------------------
 num_episodes = 10000000
-replay_memory_size = 500000
+replay_memory_size = 250000
 episode_length = 500 # FPS
 untouched_time = 200
 burn_in_iterations = 500 # for time step
@@ -66,10 +66,10 @@ train_team = True
 train_opp = False
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 3
-num_OA = 0
+num_TA = 5
+num_OA = 5
 num_TNPC = 0
-num_ONPC = 3
+num_ONPC = 0
 offense_team_bin='helios10'
 defense_team_bin='helios11'  
 goalie = False
@@ -80,28 +80,28 @@ hidden_dim = int(512)
 a_lr = 0.0001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
-steps_per_update = 5
+steps_per_update = 10
+number_of_updates = 1
 # exploration --------------------------
 explore = True
 final_OU_noise_scale = 0.1
 final_noise_scale = 0.1
 init_noise_scale = 1.00
-num_explore_episodes = 1000 # Haus uses over 10,000 updates --
+num_explore_episodes = 500 # Haus uses over 10,000 updates --
 # --------------------------------------
 #D4PG Options --------------------------
 D4PG = True
 gamma = 0.99 # discount
 Vmax = 20
 Vmin = -20
-N_ATOMS = 101
+N_ATOMS = 25
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 1
 # n-step update size 
 # Mixed taqrget beta (0 = 1-step, 1 = MC update)
 initial_beta = 0.2
 final_beta = 0.001
-num_beta_episodes = 1000
-
+num_beta_episodes = 1000000000
 #---------------------------------------
 #TD3 Options ---------------------------
 TD3 = True
@@ -139,7 +139,7 @@ SIL = False
 SIL_update_ratio = 1
 #---------------------------------------
 #Critic Input Modification 
-critic_mod = False
+critic_mod = True
 # NOTE: When both are False but critic_mod is true the critic takes both
 # actions and observations from the opposing side
 critic_mod_act = False
@@ -162,14 +162,14 @@ change_agents_y = 0.01
 change_balls_x = 0.01
 change_balls_y = 0.01
 # Self-play ----------------------------
-load_random_nets = False
-load_random_every = 1
+load_random_nets = True
+load_random_every = 25
 k_ensembles = 1
 current_ensembles = [0]*num_TA # initialize which ensembles we start with
 self_play_proba = 0.8
 # --------------------------------------
 #Save/load -----------------------------
-save_nns = False
+save_nns = True
 ep_save_every = 25 # episodes
 load_nets = False # load previous sessions' networks from file for initialization
 initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
@@ -181,7 +181,7 @@ eval_after = 500
 eval_episodes = 11
 # --------------------------------------
 # LSTM -------------------------------------------
-LSTM = True
+LSTM = False
 LSTM_PC = False # PC (Policy & Critic)
 if LSTM and LSTM_PC:
     print('Only one LSTM flag can be True or both False')
@@ -606,7 +606,7 @@ if use_viewer:
 
 time.sleep(3)
 for ep_i in range(0, num_episodes):
-
+    start = time.time()
     # team n-step
     team_n_step_rewards = []
     team_n_step_obs = []
@@ -624,9 +624,8 @@ for ep_i in range(0, num_episodes):
     opp_n_step_dones = []
     opp_n_step_ws = []
     #maddpg.prep_rollouts(device='cpu')
-              
 
-    
+
     
     #define/update the noise used for exploration
     if ep_i < burn_in_episodes:
@@ -651,7 +650,10 @@ for ep_i in range(0, num_episodes):
     opp_kickable_counter = [0] * num_OA
     env.team_possession_counter = [0] * num_TA
     env.opp_possession_counter = [0] * num_OA
+
     for et_i in range(0, episode_length):
+
+
 
         maddpg.prep_training(device=device) # GPU for forward passes?? 
 
@@ -681,7 +683,7 @@ for ep_i in range(0, num_episodes):
         team_actions = [[ac[0][:len(env.action_list)] for ac in team_agent_actions]]
         # this is returning one-hot-encoded action for each opp agent 
         opp_actions = [[ac[0][:len(env.action_list)] for ac in opp_agent_actions]]
-        
+
         
         #if ep_i % 10 == 0:
         #    explore = True
@@ -769,7 +771,6 @@ for ep_i in range(0, num_episodes):
             opp_n_step_ws.append(world_stat)
         # ----------------------------------------------------------------
 
-
         # print('This is the length of the buffers', str(len(team_replay_buffer)), str(len(opp_replay_buffer)))
         training = ((len(team_replay_buffer) >= batch_size and (t % steps_per_update) < 1) and t > burn_in_iterations)
 
@@ -780,66 +781,74 @@ for ep_i in range(0, num_episodes):
                 for u_i in range(1):
                     if train_team: # train team
                         for a_i in range(maddpg.nagents_team):
-                            inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                            sample = team_replay_buffer.sample(inds,
-                                                        to_gpu=to_gpu,norm_rews=False)
-                            maddpg.update(sample, a_i, 'team')
-                            if SIL:
-                                for i in range(SIL_update_ratio):
-                                    team_sample,inds = team_replay_buffer.sample_SIL(agentID=a_i,batch_size=batch_size,
-                                                        to_gpu=to_gpu,norm_rews=False)
-                                    priorities = maddpg.SIL_update(team_sample=team_sample,agent_i= a_i, side='team', 
-                                                    centQ=critic_mod) #
-                                    team_replay_buffer.update_priorities(agentID=a_i,inds = inds, prio=priorities)
-                    maddpg.update_all_targets()
+                            for _ in range(number_of_updates):
+                                inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                                sample = team_replay_buffer.sample(inds,
+                                                            to_gpu=to_gpu,norm_rews=False)
+                                maddpg.update(sample, a_i, 'team')
+                                if SIL:
+                                    for i in range(SIL_update_ratio):
+                                        team_sample,inds = team_replay_buffer.sample_SIL(agentID=a_i,batch_size=batch_size,
+                                                            to_gpu=to_gpu,norm_rews=False)
+                                        priorities = maddpg.SIL_update(team_sample=team_sample,agent_i= a_i, side='team', 
+                                                        centQ=critic_mod) #
+                                        team_replay_buffer.update_priorities(agentID=a_i,inds = inds, prio=priorities)
+                        
+                        maddpg.update_all_targets()
                 # maddpg.prep_rollouts(device='cpu') convert back to cpu for pushing?
             else:
+
                 for u_i in range(1):
                     # NOTE: Only works for m vs m
-                    if train_team: # train team
-                        for a_i in range(maddpg.nagents_team):
-                            inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                            if LSTM:
-                                team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
-                                                            to_gpu=to_gpu,norm_rews=False)
-                                opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
-                                                            to_gpu=to_gpu,norm_rews=False)
-                                maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, a_i, 'team', 
-                                                                act_only=critic_mod_act, obs_only=critic_mod_obs)
-                            elif LSTM_PC:
-                                team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
-                                                            to_gpu=to_gpu,norm_rews=False)
-                                opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
-                                                            to_gpu=to_gpu,norm_rews=False)
-                                maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, a_i, 'team', 
-                                                                act_only=critic_mod_act, obs_only=critic_mod_obs)
-                            else:
-                                team_sample = team_replay_buffer.sample(inds,
-                                                            to_gpu=to_gpu,norm_rews=False)
-                                opp_sample = opp_replay_buffer.sample(inds,
-                                                            to_gpu=to_gpu,norm_rews=False)
-                                maddpg.update_centralized_critic(team_sample, opp_sample, a_i, 'team', 
-                                                                act_only=critic_mod_act, obs_only=critic_mod_obs)
-                            if SIL:
-                                for i in range(SIL_update_ratio):
-                                    team_sample,inds = team_replay_buffer.sample_SIL(agentID=a_i,batch_size=batch_size,
-                                                        to_gpu=to_gpu,norm_rews=False)
-                                    opp_sample = opp_replay_buffer.sample(inds,to_gpu=to_gpu,norm_rews=False)
-                                    priorities = maddpg.SIL_update(team_sample, opp_sample, a_i, 'team', 
-                                                    centQ=critic_mod) # 
-                                    team_replay_buffer.update_priorities(agentID=a_i,inds = inds, prio=priorities)
+                    if train_team: # train team      
+                        for _ in range(number_of_updates):
 
-                    maddpg.update_all_targets()
-            
-                     
+                            for a_i in range(maddpg.nagents_team):
+                                inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+
+                                if LSTM:
+                                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
+                                                                to_gpu=to_gpu,norm_rews=False)
+                                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
+                                                                to_gpu=to_gpu,norm_rews=False)
+                                    maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, a_i, 'team', 
+                                                                    act_only=critic_mod_act, obs_only=critic_mod_obs)
+                                elif LSTM_PC:
+                                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
+                                                                to_gpu=to_gpu,norm_rews=False)
+                                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
+                                                                to_gpu=to_gpu,norm_rews=False)
+                                    maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, a_i, 'team', 
+                                                                    act_only=critic_mod_act, obs_only=critic_mod_obs)
+                                else:
+                                    team_sample = team_replay_buffer.sample(inds,
+                                                                to_gpu=to_gpu,norm_rews=False)
+                                    opp_sample = opp_replay_buffer.sample(inds,
+                                                                to_gpu=to_gpu,norm_rews=False)
+
+
+                                    maddpg.update_centralized_critic(team_sample, opp_sample, a_i, 'team', 
+                                                                    act_only=critic_mod_act, obs_only=critic_mod_obs)
+
+                                if SIL:
+                                    for i in range(SIL_update_ratio):
+                                        team_sample,inds = team_replay_buffer.sample_SIL(agentID=a_i,batch_size=batch_size,
+                                                            to_gpu=to_gpu,norm_rews=False)
+                                        opp_sample = opp_replay_buffer.sample(inds,to_gpu=to_gpu,norm_rews=False)
+                                        priorities = maddpg.SIL_update(team_sample, opp_sample, a_i, 'team', 
+                                                        centQ=critic_mod) # 
+                                        team_replay_buffer.update_priorities(agentID=a_i,inds = inds, prio=priorities)
+                                
+                            maddpg.update_all_targets()
+
         time_step += 1
         t += 1
-        if t%1000 == 0:
-                      
+
+        if t%10000 == 0:
             team_step_logger_df.to_csv(hist_dir + '/team_%s.csv' % history)
             opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
                       
-                 
+       
                     
         if d == True and et_i >= (trace_length-1): # Episode done            
             all_MC_targets = []
@@ -919,7 +928,6 @@ for ep_i in range(0, num_episodes):
                                                 n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                     
-       
                     if has_opp_Agents:
                         if LSTM or LSTM_PC:
                             if n == et_i:
@@ -931,7 +939,8 @@ for ep_i in range(0, num_episodes):
                             opp_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
                                                 n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
-                                       
+
+
                     
             # log
             if ep_i > 1:
@@ -954,8 +963,7 @@ for ep_i in range(0, num_episodes):
                                                         'average_reward': opp_replay_buffer.get_average_rewards(time_step),
                                                         'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step)},
                                                         ignore_index=True)
-                
-  
+
             if first_save: # Generate list of ensemble networks
                 file_path = ensemble_path
                 maddpg.first_save(file_path,num_copies = k_ensembles)
@@ -971,7 +979,7 @@ for ep_i in range(0, num_episodes):
                     [load_path + ("agent_%i/model_episode_%i.pth" % (i,ep_i)) for i in range(env.num_TA)], # models directory -> agent -> most current episode
                     eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation_ep" + str(ep_i),
                     7000,env.num_TA,env.num_OA,episode_length,device,use_viewer,))
-            
+
             # Load random networks into team from ensemble and opponent from all models
             if ep_i > ep_save_every and ep_i % load_random_every == 0 and load_random_nets:
                 if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
@@ -979,6 +987,9 @@ for ep_i in range(0, num_episodes):
                 else:
                     maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path)
                 current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path)
+            end = time.time()
+            print(end-start)
+
             break
         elif d:
             break
@@ -995,4 +1006,3 @@ for ep_i in range(0, num_episodes):
         if t%20000 == 0 and use_viewer and ep_i > use_viewer_after:
             env._start_viewer()       
 
-      

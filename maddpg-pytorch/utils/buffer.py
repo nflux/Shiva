@@ -2,7 +2,7 @@ import numpy as np
 from torch import Tensor,squeeze
 from torch.autograd import Variable
 import operator
-
+import torch
 class ReplayBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
@@ -203,13 +203,13 @@ class ReplayBuffer(object):
         # inds = np.random.choice(np.arange(self.filled_i), size=N,
         #                         replace=False)
         if to_gpu:
-            cast = lambda x: Variable(Tensor(x), requires_grad=False).cuda()
+            cast = lambda x: Variable(torch.from_numpy(x).float(), requires_grad=False).cuda()
         else:
-            cast = lambda x: Variable(Tensor(x), requires_grad=False)
+            cast = lambda x: Variable(torch.from_numpy(x).float(), requires_grad=False)
         if to_gpu:
-            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True).cuda() # obs need gradient for cent-Q
+            cast_obs = lambda x: Variable(torch.from_numpy(x).float(), requires_grad=True).cuda() # obs need gradient for cent-Q
         else:
-            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True)
+            cast_obs = lambda x: Variable(torch.from_numpy(x).float(), requires_grad=True)
         if norm_rews:
             ret_rews = [cast((self.rew_buffs[i][inds] -
                               self.rew_buffs[i][:self.filled_i].mean()) /
@@ -386,3 +386,5 @@ class ReplayBuffer(object):
     def update_priorities(self, agentID,inds, prio):
         for i, p in zip(inds,prio):
             self.SIL_priority[agentID][i] = p
+
+    

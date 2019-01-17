@@ -6,7 +6,7 @@ import torch.distributed as dist
 from torch.autograd import Variable
 import numpy as np
 import shutil
-
+import time
 def prep_session(session_path="",hist_dir="history",eval_hist_dir= "eval_history",eval_log_dir = "eval_log",load_path = "models/",ensemble_path = "ensemble_models/",log_dir="log",num_TA=1):
     hist_dir = hist_dir
     eval_hist_dir = eval_hist_dir
@@ -261,8 +261,10 @@ def zero_params(num_Agents,params,action_index):
     return params
 
 
+
 # returns the distribution projection
 def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, cum_rewards_v, gamma, device="cpu"):
+
     next_distr = next_distr_v.data.cpu().numpy()
     rewards = rewards_v.data.cpu().numpy()
     cum_rewards = cum_rewards_v.data.cpu().numpy()
@@ -301,7 +303,74 @@ def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, cum_rewards_v, 
         if ne_dones.any():
             proj_distr[ne_dones, l[ne_mask]] = (u - b_j)[ne_mask]
             proj_distr[ne_dones, u[ne_mask]] = (b_j - l)[ne_mask]
-    return torch.FloatTensor(proj_distr).to(device)
+    return torch.from_numpy(proj_distr).float().to(device)
+
+# ---------------- Torch Tensorized ------------------------------
+    # with torch.no_grad():
+
+    #     #device='cpu'
+    #     next_distr = next_distr_v.to(device)
+    #     rewards = rewards_v.to(device)
+    #     cum_rewards = cum_rewards_v.to(device)
+
+
+    #     dones_mask = dones_mask_t.byte().to(device)
+    #     batch_size = len(rewards)
+    #     proj_distr = torch.zeros(batch_size, self.N_ATOMS,device=device)
+
+    #     tensor_Vmin = torch.ones(batch_size).to(device) * self.Vmin
+    #     tensor_Vmax = torch.ones(batch_size).to(device) * self.Vmax
+
+    #     eq_mask = torch.ByteTensor(batch_size,device=device)
+    #     ne_mask = torch.ByteTensor(batch_size,device=device)
+
+
+    #     # If we can parallize the atoms into matrices form maybe we can get an improvement
+    #     for atom in range(self.N_ATOMS):
+
+    #         tz_j = torch.min(tensor_Vmax, torch.max(tensor_Vmin, 
+    #                                                 (1-self.beta)*(rewards + (self.Vmin + atom * self.DELTA_Z) * gamma) + (self.beta)*cum_rewards))
+    #         b_j = torch.add(tz_j, - self.Vmin) / self.DELTA_Z
+
+    #         l = torch.floor(b_j).long()
+    #         u = torch.ceil(b_j).long()
+
+
+    #         eq_mask = (u == l)
+    #         ne_mask = (u != l)
+    #         #start = time.time()
+
+
+    #         #end = time.time()
+    #         #print(end-start)
+    #         proj_distr[eq_mask,l[eq_mask]] += next_distr[eq_mask,atom]
+
+    #         proj_distr[ne_mask,l[ne_mask]] += next_distr[ne_mask,atom] * (u.float() - b_j)[ne_mask]
+    #         proj_distr[ne_mask,u[ne_mask]] += next_distr[ne_mask,atom] * (b_j - l.float())[ne_mask]
+
+    #     if dones_mask.any():
+    #         proj_distr[dones_mask] = 0.0
+    #         tensor_Vmin = torch.ones_like(rewards[dones_mask]) * self.Vmin
+    #         tensor_Vmax = torch.ones_like(rewards[dones_mask]) * self.Vmax
+
+    #         tz_j = torch.min(tensor_Vmax, torch.max(tensor_Vmin, rewards[dones_mask]))
+    #         b_j =  torch.add(tz_j, - self.Vmin) / self.DELTA_Z
+    #         l = torch.floor(b_j).long()
+    #         u = torch.ceil(b_j).long()
+    #         eq_mask = (u == l)
+    #         eq_dones = dones_mask.clone()
+    #         eq_dones[dones_mask] = eq_mask
+    #         if eq_dones.any():
+    #             proj_distr[eq_dones, l[eq_mask]] = 1.0
+    #         ne_mask = (u != l)
+    #         ne_dones = dones_mask.clone()
+    #         ne_dones[dones_mask] = ne_mask
+    #         if ne_dones.any():
+    #             proj_distr[ne_dones, l[ne_mask]] = (u.float() - b_j)[ne_mask]
+    #             proj_distr[ne_dones, u[ne_mask]] = (b_j - l.float())[ne_mask]
+
+    # return proj_distr.to('cuda')
+# ------------------------------------------------------
 
 
 # https://github.com/ikostrikov/pytorch-ddpg-naf/blob/master/ddpg.py#L11
