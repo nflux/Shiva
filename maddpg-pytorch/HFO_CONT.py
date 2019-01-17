@@ -66,8 +66,8 @@ train_team = True
 train_opp = False
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 5
-num_OA = 5
+num_TA = 3
+num_OA = 3
 num_TNPC = 0
 num_ONPC = 0
 offense_team_bin='helios10'
@@ -808,27 +808,26 @@ for ep_i in range(0, num_episodes):
                     if train_team: # train team      
                         for _ in range(number_of_updates):
                             for a_i in range(maddpg.nagents_team):
-                                inds_team = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                                inds_opp = np.random.choice(np.arange(len(opp_replay_buffer)), size=batch_size, replace=False)
+                                inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
 
                                 if LSTM:
-                                    team_sample = team_replay_buffer.sample_LSTM(inds_team, trace_length,
+                                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
                                                                 to_gpu=to_gpu,norm_rews=False)
-                                    opp_sample = opp_replay_buffer.sample_LSTM(inds_opp, trace_length,
+                                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
                                                                 to_gpu=to_gpu,norm_rews=False)
                                     maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, a_i, 'team', 
                                                                     act_only=critic_mod_act, obs_only=critic_mod_obs)
                                 elif LSTM_PC:
-                                    team_sample = team_replay_buffer.sample_LSTM(inds_team, trace_length,
+                                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
                                                                 to_gpu=to_gpu,norm_rews=False)
-                                    opp_sample = opp_replay_buffer.sample_LSTM(inds_opp, trace_length,
+                                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
                                                                 to_gpu=to_gpu,norm_rews=False)
                                     maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, a_i, 'team', 
                                                                     act_only=critic_mod_act, obs_only=critic_mod_obs)
                                 else:
-                                    team_sample = team_replay_buffer.sample(inds_team,
+                                    team_sample = team_replay_buffer.sample(inds,
                                                                 to_gpu=to_gpu,norm_rews=False)
-                                    opp_sample = opp_replay_buffer.sample(inds_opp,
+                                    opp_sample = opp_replay_buffer.sample(inds,
                                                                 to_gpu=to_gpu,norm_rews=False)
 
 
@@ -855,8 +854,9 @@ for ep_i in range(0, num_episodes):
                       
        
                     
-        if d == True and et_i >= (trace_length-1): # Episode done            
-            all_MC_targets = []
+        if d == True and et_i >= (trace_length-1): # Episode done 
+            # ----------- Push Base Left's experiences to team buffer ---------------------        
+            team_all_MC_targets = []
             # calculate MC
             for n in range(et_i +1):
                 MC_targets = []
@@ -864,7 +864,7 @@ for ep_i in range(0, num_episodes):
                     MC_target = 0
                     MC_target = team_n_step_rewards[et_i-n][a] + MC_target*gamma
                     MC_targets.append(MC_target)    
-                all_MC_targets.append(MC_targets)
+                team_all_MC_targets.append(MC_targets)
             
             for n in range(et_i+1):
                 n_step_targets = []
@@ -886,17 +886,17 @@ for ep_i in range(0, num_episodes):
                     if n == et_i:
                         team_replay_buffer.done_step = True
                     team_replay_buffer.push_LSTM(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
-                                            n_step_next_ob,[n_step_done for i in range(env.num_TA)],all_MC_targets[et_i-n],
+                                            n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
                                             n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
                 else:
                     team_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
-                                            n_step_next_ob,[n_step_done for i in range(env.num_TA)],all_MC_targets[et_i-n],
+                                            n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
                                             n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
                 
 
-                    
+            # -------------------- Push Base Right's experiences opp buffer and team buffer --------------------------
             if train_opp or critic_mod_both: # only create experiences if critic mod or training opp
-                all_MC_targets = []
+                opp_all_MC_targets = []
                 # calculate MC
                 for n in range(et_i +1):
                     MC_targets = []
@@ -904,7 +904,7 @@ for ep_i in range(0, num_episodes):
                         MC_target = 0
                         MC_target = opp_n_step_rewards[et_i-n][a] + MC_target*gamma
                         MC_targets.append(MC_target)    
-                    all_MC_targets.append(MC_targets)
+                    opp_all_MC_targets.append(MC_targets)
                 
                 for n in range(et_i+1):
                     n_step_targets = []
@@ -921,16 +921,16 @@ for ep_i in range(0, num_episodes):
                             n_step_targets.append(n_step_target)
                             n_step_next_ob = opp_n_step_next_obs[-1]
                             n_step_done = opp_n_step_dones[-1] 
-                        # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
+                            # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
                     if LSTM or LSTM_PC:
                         if n == et_i:
                             team_replay_buffer.done_step = True
                         team_replay_buffer.push_LSTM(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
-                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
+                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],opp_all_MC_targets[et_i-n],
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                     else:
                         team_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
-                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
+                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],opp_all_MC_targets[et_i-n],
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                     
                     if has_opp_Agents:
@@ -938,14 +938,41 @@ for ep_i in range(0, num_episodes):
                             if n == et_i:
                                 opp_replay_buffer.done_step = True
                             opp_replay_buffer.push_LSTM(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
-                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
+                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],opp_all_MC_targets[et_i-n],
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                         else:
                             opp_replay_buffer.push(opp_n_step_obs[n], opp_n_step_acs[n],opp_n_step_rewards[n],
-                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],all_MC_targets[et_i-n],
+                                                n_step_next_ob,[n_step_done for i in range(env.num_OA)],opp_all_MC_targets[et_i-n],
                                                 n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
-
-
+                # ------------------- Push Base Left's Experiences to opp buffer to balance CentQ ------------------
+                ###################### Update this so that the n_step_targets and n_step_ob are in arrays so that we do not have to recalculate anything #####################
+                for n in range(et_i+1):
+                    n_step_targets = []
+                    for a in range(env.num_TA):
+                        n_step_target = 0
+                        if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
+                            for step in range(n_steps): 
+                                n_step_target += team_n_step_rewards[n + step][a] * gamma**(step)
+                            n_step_targets.append(n_step_target)
+                            n_step_next_ob = team_n_step_next_obs[n - 1 + n_steps]
+                            n_step_done = team_n_step_dones[n - 1 + n_steps]
+                        else: # n-step = MC if less than n steps remaining
+                            n_step_target = all_MC_targets[et_i-n][a]
+                            n_step_targets.append(n_step_target)
+                            n_step_next_ob = team_n_step_next_obs[-1]
+                            n_step_done = team_n_step_dones[-1] 
+                        # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
+                    if LSTM or LSTM_PC:
+                        if n == et_i:
+                            opp_replay_buffer.done_step = True
+                        opp_replay_buffer.push_LSTM(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
+                                                n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
+                                                n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
+                    else:
+                        opp_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
+                                                n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
+                                                n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
+                #############################################################################################################################################################
                     
             # log
             if ep_i > 1:
