@@ -181,7 +181,7 @@ class MADDPG(object):
                 ta.policy.training_lstm = training
                 oa.policy.training_lstm = training
 
-    def step(self, team_observations, opp_observations, explore=False):
+    def step(self, team_observations, opp_observations,team_e_greedy,opp_e_greedy, explore=False):
         """
         Take a step forward in environment with all agents
         Inputs:
@@ -191,8 +191,8 @@ class MADDPG(object):
             actions: List of actions for each agent
         """
         
-        return [a.step(obs, explore=explore) for a, obs in zip(self.team_agents, team_observations)], \
-                [a.step(obs, explore=explore) for a, obs in zip(self.opp_agents, opp_observations)]
+        return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
+                [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
     
     
     def discrete_param_indices(self,discrete):
@@ -274,10 +274,10 @@ class MADDPG(object):
                      # and build the combination of distr choosing the minimums
             trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
             if self.D4PG:
-                arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().cpu().data.numpy(),
-                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean().cpu().data.numpy()])
+                arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
+                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
 
-                if arg: 
+                if not arg: 
                     trgt_Q = trgt_Q1
                 else:
                     trgt_Q = trgt_Q2
@@ -442,6 +442,7 @@ class MADDPG(object):
             logger (SummaryWriter from Tensorboard-Pytorch):
                 If passed in, important quantities will be logged
         """
+        
         # rews = 1-step, cum-rews = n-step
         if side == 'team':
             count = self.team_count[agent_i]
@@ -493,10 +494,10 @@ class MADDPG(object):
                      # and build the combination of distr choosing the minimums
             trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
             if self.D4PG:
-                arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().cpu().data.numpy(),
-                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean().cpu().data.numpy()])
+                arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
+                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
 
-                if arg: 
+                if not arg: 
                     trgt_Q = trgt_Q1
                 else:
                     trgt_Q = trgt_Q2
@@ -741,10 +742,10 @@ class MADDPG(object):
                      # and build the combination of distr choosing the minimums
             trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
             if self.D4PG:
-                arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().cpu().data.numpy(),
-                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean().cpu().data.numpy()])
+                arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
+                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
 
-                if arg: 
+                if not arg: 
                     trgt_Q = trgt_Q1
                 else:
                     trgt_Q = trgt_Q2
@@ -995,10 +996,10 @@ class MADDPG(object):
                      # and build the combination of distr choosing the minimums
             trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
             if self.D4PG:
-                arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().cpu().data.numpy(),
-                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean().cpu().data.numpy()])
+                arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
+                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
 
-                if arg: 
+                if not arg: 
                     trgt_Q = trgt_Q1
                 else:
                     trgt_Q = trgt_Q2
@@ -1444,9 +1445,9 @@ class MADDPG(object):
                      # and build the combination of distr choosing the minimums
             trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
             if self.D4PG:
-                arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().cpu().data.numpy(),
-                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean().cpu().data.numpy()])
-                if arg: 
+                arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
+                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
+                if not arg: 
                     trgt_Q = trgt_Q1
                 else:
                     trgt_Q = trgt_Q2
@@ -1651,9 +1652,9 @@ class MADDPG(object):
                      # and build the combination of distr choosing the minimums
             trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
             if self.D4PG:
-                arg = np.argmin([curr_agent.target_critic.distr_to_q(trgt_Q1).mean().cpu().data.numpy(),
-                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean().cpu().data.numpy()])
-                if arg: 
+                arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
+                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
+                if not arg: 
                     trgt_Q = trgt_Q1
                 else:
                     trgt_Q = trgt_Q2
@@ -1976,9 +1977,9 @@ class MADDPG(object):
             if self.D4PG:
                 Q1 = curr_agent.critic.distr_to_q(Q1_distr)
                 Q2 = curr_agent.critic.distr_to_q(Q2_distr)
-                arg = np.argmin([Q1.mean().cpu().data.numpy(),
-                                 Q2.mean().cpu().data.numpy()])
-                if arg: 
+                arg = torch.argmin(torch.stack(Q1.mean(),
+                                 Q2.mean()),dim=0)
+                if not arg: 
                     Q = Q1
                 else:
                     Q = Q2

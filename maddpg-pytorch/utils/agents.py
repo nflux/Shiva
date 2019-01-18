@@ -5,7 +5,7 @@ import torch
 from .networks import MLPNetwork_Actor,MLPNetwork_Critic,LSTM_Network,I2A_Network,LSTMNetwork_Critic
 import torch.nn.functional as F
 from .i2a import *
-from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor
+from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor,e_greedy_bool
 from .noise import OUNoise
 import numpy as np
 
@@ -140,7 +140,7 @@ class DDPGAgent(object):
         else:
             self.exploration.scale = scale
 
-    def step(self, obs, explore=False):
+    def step(self, obs,ran, explore=False):
         """
         Take a step forward in environment for a minibatch of observations
         Inputs:
@@ -152,19 +152,24 @@ class DDPGAgent(object):
         # if self.LSTM or self.LSTM_PC:
         #     if self.policy.training == True:
         #         self.policy.training = False
-        action = self.policy(obs)
-        if self.counter % 250 == 0:
-            print(torch.softmax(action[:,:self.action_dim],dim=1))
+
+        # if self.counter % 250 == 0:
+        #     print(torch.softmax(action[:,:self.action_dim],dim=1))
         #print(action)
+    
         # mixed disc/cont
-        if explore:     
-            a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True, device=self.device)
-            p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
-            action = torch.cat((a,p),1) 
-            #if self.counter % 100 == 0:
-                #print(action)
-            self.counter +=1
+        if explore:
+            if not ran: # not random
+                action = self.policy(obs)
+                a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True, device=self.device)
+                p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+                action = torch.cat((a,p),1) 
+                self.counter +=1
+            else: # random
+                action = torch.cat((onehot_from_logits(torch.empty((1,self.action_dim),device=self.device,requires_grad=False).uniform_(-1,1)),
+                            torch.empty((1,self.param_dim),device=self.device,requires_grad=False).uniform_(-1,1) ),1)
         else:
+            action = self.policy(obs)
             a = onehot_from_logits(action[0,:self.action_dim].view(1,self.action_dim))
             #p = torch.clamp(action[0,self.action_dim:].view(1,self.param_dim),min=-1.0,max=1.0) # get noisey params (OU)
             p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)

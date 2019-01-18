@@ -56,7 +56,7 @@ def e_greedy(logits, numAgents, eps=0.0):
     return torch.stack([argmax_acs[i] if r > eps else rand_acs[i] for i, r in
                         enumerate(rand)]) , ex_list
 
-def e_greedy_bool(numAgents, eps=0.0):
+def e_greedy_bool(numAgents, eps=0.0,device='cpu'):
     """
 
     
@@ -64,12 +64,12 @@ def e_greedy_bool(numAgents, eps=0.0):
     """
     # get best (according to current policy) actions in one-hot form
     if eps == 0.0:
-        return np.zeros(numAgents)
+        return torch.zeros(numAgents,device=device,requires_grad=False)
     # get random actions in one-hot form
     # chooses between best and random actions using epsilon greedy
     # explore = False
-    eps_list = np.full(numAgents,eps)
-    rand = np.random.uniform(0,1,numAgents)
+    eps_list = torch.full((1,numAgents),eps)
+    rand = torch.empty(numAgents,device=device,requires_grad=False).uniform_(0,1)
     return (rand < eps)
 
 

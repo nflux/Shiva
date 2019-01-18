@@ -23,6 +23,16 @@ from algorithms.maddpg import MADDPG
 from HFO_env import *
 from trainer import launch_eval
 import _thread as thread
+def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer):
+
+
+    inds = np.random.choice(np.arange(buffer_size), size=batch_size, replace=False)
+    team_sample = team_replay_buffer.sample(inds,to_gpu=to_gpu,norm_rews=False)
+    opp_sample = opp_replay_buffer.sample(inds,to_gpu=to_gpu,norm_rews=False)
+    maddpg.update_centralized_critic(team_sample, opp_sample, agentID, 'team',
+                        act_only=critic_mod_act, obs_only=critic_mod_obs)
+    #print(agentID,"DONE")
+    
 
 # Parseargs --------------------------------------------------------------
 parser = argparse.ArgumentParser(description='Load port and log directory')
@@ -66,8 +76,8 @@ train_team = True
 train_opp = False
 # --------------------------------------
 # Team ---------------------------------
-num_TA = 3
-num_OA = 3
+num_TA = 1
+num_OA = 1
 num_TNPC = 0
 num_ONPC = 0
 offense_team_bin='helios10'
@@ -75,13 +85,13 @@ defense_team_bin='helios11'
 goalie = False
 team_rew_anneal_ep = 1500 # reward would be
 # hyperparams--------------------------
-batch_size = 256
+batch_size = 512
 hidden_dim = int(512)
 a_lr = 0.0001 # actor learning rate
 c_lr = 0.001 # critic learning rate
 tau = 0.001 # soft update rate
-steps_per_update = 10
-number_of_updates = 1
+steps_per_update = 500
+number_of_updates = 10
 # exploration --------------------------
 explore = True
 final_OU_noise_scale = 0.1
@@ -92,8 +102,8 @@ num_explore_episodes = 500 # Haus uses over 10,000 updates --
 #D4PG Options --------------------------
 D4PG = True
 gamma = 0.99 # discount
-Vmax = 20
-Vmin = -20
+Vmax = 35
+Vmin = -35
 N_ATOMS = 25
 DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
 n_steps = 1
@@ -659,23 +669,28 @@ for ep_i in range(0, num_episodes):
 
     for et_i in range(0, episode_length):
 
-
-
         maddpg.prep_training(device=device) # GPU for forward passes?? 
 
         # gather all the observations into a torch tensor 
-        torch_obs_team = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
-                                requires_grad=False)
-                        for i in range(maddpg.nagents_team)]
+        torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False).cuda(non_blocking=True)
+                       for i in range(maddpg.nagents_team)]
 
         # gather all the opponent observations into a torch tensor 
-        torch_obs_opp = [Variable(torch.Tensor(np.vstack(env.Observation(i,'opp')).T),
-                                requires_grad=False)
-                        for i in range(maddpg.nagents_opp)]
+        torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False).cuda(non_blocking=True)
+                       for i in range(maddpg.nagents_opp)]
+
+        # Get e-greedy decision
+        if explore:
+            team_randoms = e_greedy_bool(env.num_TA,eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining),device=device)
+            opp_randoms = e_greedy_bool(env.num_OA,eps = 0,device=device)
+        else:
+            team_randoms = e_greedy_bool(env.num_TA,eps = 0,device=device)
+            opp_randoms = e_greedy_bool(env.num_OA,eps = 0,device=device)
 
         # get actions as torch Variables for both team and opp
-        team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp, explore=explore) # leave off or will gumbel sample
+        team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp,team_randoms,opp_randoms,explore=explore) # leave off or will gumbel sample
         # convert actions to numpy arrays
+
         team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
         #Converting actions to numpy arrays for opp agents
         opp_agent_actions = [ac.cpu().data.numpy() for ac in opp_torch_agent_actions]
@@ -686,44 +701,34 @@ for ep_i in range(0, num_episodes):
         opp_params = np.asarray([ac[0][len(env.action_list):] for ac in opp_agent_actions])
 
         # this is returning one-hot-encoded action for each team agent
-        team_actions = [[ac[0][:len(env.action_list)] for ac in team_agent_actions]]
+        team_actions = np.asarray([[ac[0][:len(env.action_list)] for ac in team_agent_actions]])
         # this is returning one-hot-encoded action for each opp agent 
-        opp_actions = [[ac[0][:len(env.action_list)] for ac in opp_agent_actions]]
+        opp_actions = np.asarray([[ac[0][:len(env.action_list)] for ac in opp_agent_actions]])
 
         
         #if ep_i % 10 == 0:
         #    explore = True
         #if ep_i % 100 == 0:
         #    explore = False
-        if explore:
-            team_randoms = e_greedy_bool(env.num_TA,eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining))
-            opp_randoms = e_greedy_bool(env.num_OA,eps = 0)
-        else:
-            team_randoms = e_greedy_bool(env.num_TA,eps = 0)
-            opp_randoms = e_greedy_bool(env.num_OA,eps = 0)
 
         team_obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
         opp_obs =  np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
         
         # use random unif parameters if e_greedy
-        team_noisey_actions_for_buffer = np.asarray([[val for val in onehot_from_logits(torch.tensor(np.random.uniform(-1,1,len(env.action_list))).view(1,len(env.action_list))).cpu().data.numpy()[0]] if ran else action for ran,action in zip(team_randoms,team_actions[0])])
-        team_params = np.asarray([[val for val in (np.random.uniform(-1,1,5))] if ran else p for ran,p in zip(team_randoms,team_params)])
-        opp_noisey_actions_for_buffer =  np.asarray([[val for val in onehot_from_logits(torch.tensor(np.random.uniform(-1,1,len(env.action_list))).view(1,len(env.action_list))).cpu().data.numpy()[0]] if ran else action for ran,action in zip(opp_randoms,opp_actions[0])])
-        opp_params = np.asarray([[val for val in (np.random.uniform(-1,1,5))] if ran else p for ran,p in zip(opp_randoms,opp_params)])
-
-
+        team_noisey_actions_for_buffer = team_actions[0]
+        team_params = team_agent_actions[0][:,len(env.action_list):]
+        opp_noisey_actions_for_buffer = opp_actions[0]
+        opp_params = opp_agent_actions[0][:,len(env.action_list):]
         # print('These are the opp params', str(opp_params))
 
         team_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in team_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
         #Added to Disable/Enable the team agents
         if has_team_Agents:        
-            team_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(team_noisey_actions_for_buffer,team_params)] for i in range(1)]).reshape(
-                env.num_TA,env.team_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+            team_actions_params_for_buffer = team_agent_actions[0]
         opp_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in opp_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
         #Added to Disable/Enable the opp agents
         if has_opp_Agents:
-            opp_actions_params_for_buffer = np.array([[np.concatenate((ac,pm),axis=0) for ac,pm in zip(opp_noisey_actions_for_buffer,opp_params)] for i in range(1)]).reshape(
-                env.num_OA,env.opp_action_params.shape[1] + len(env.action_list)) # concatenated actions, params for buffer
+            opp_actions_params_for_buffer = opp_agent_actions[0]
 
         # If kickable is True one of the teammate agents has possession of the ball
         kickable = np.array([env.get_kickable_status(i,team_obs.T) for i in range(env.num_TA)])
@@ -802,26 +807,24 @@ for ep_i in range(0, num_episodes):
                             maddpg.update_all_targets()
                 # maddpg.prep_rollouts(device='cpu') convert back to cpu for pushing?
             else:
-
                 for u_i in range(1):
                     # NOTE: Only works for m vs m
                     if train_team: # train team      
                         for _ in range(number_of_updates):
                             for a_i in range(maddpg.nagents_team):
+                                #threads = []
+                                #thr = thread.start_new_thread(update_thread,(a_i,to_gpu,len(team_replay_buffer),batch_size,team_replay_buffer,opp_replay_buffer,))
+
                                 inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
 
                                 if LSTM:
-                                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
-                                                                to_gpu=to_gpu,norm_rews=False)
-                                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
-                                                                to_gpu=to_gpu,norm_rews=False)
+                                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
                                     maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, a_i, 'team', 
                                                                     act_only=critic_mod_act, obs_only=critic_mod_obs)
                                 elif LSTM_PC:
-                                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,
-                                                                to_gpu=to_gpu,norm_rews=False)
-                                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,
-                                                                to_gpu=to_gpu,norm_rews=False)
+                                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
                                     maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, a_i, 'team', 
                                                                     act_only=critic_mod_act, obs_only=critic_mod_obs)
                                 else:
@@ -842,7 +845,7 @@ for ep_i in range(0, num_episodes):
                                         priorities = maddpg.SIL_update(team_sample, opp_sample, a_i, 'team', 
                                                         centQ=critic_mod_both) # 
                                         team_replay_buffer.update_priorities(agentID=a_i,inds = inds, prio=priorities)
-                                
+
                             maddpg.update_all_targets()
 
         time_step += 1
@@ -855,7 +858,8 @@ for ep_i in range(0, num_episodes):
        
                     
         if d == True and et_i >= (trace_length-1): # Episode done 
-            # ----------- Push Base Left's experiences to team buffer ---------------------        
+            # ----------- Push Base Left's experiences to team buffer ---------------------    
+
             team_all_MC_targets = []
             # calculate MC
             for n in range(et_i +1):
@@ -865,7 +869,6 @@ for ep_i in range(0, num_episodes):
                     MC_target = team_n_step_rewards[et_i-n][a] + MC_target*gamma
                     MC_targets.append(MC_target)    
                 team_all_MC_targets.append(MC_targets)
-            
             for n in range(et_i+1):
                 n_step_targets = []
                 for a in range(env.num_TA):
@@ -892,7 +895,6 @@ for ep_i in range(0, num_episodes):
                     team_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
                                             n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
                                             n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
-                
 
             # -------------------- Push Base Right's experiences opp buffer and team buffer --------------------------
             if train_opp or critic_mod_both: # only create experiences if critic mod or training opp
@@ -973,7 +975,7 @@ for ep_i in range(0, num_episodes):
                                                 n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
                                                 n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
                 #############################################################################################################################################################
-                    
+   
             # log
             if ep_i > 1:
                 #Added to Disable/Enable the team agents
@@ -1019,6 +1021,7 @@ for ep_i in range(0, num_episodes):
                 else:
                     maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path)
                 current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path)
+
             end = time.time()
             print(end-start)
 
