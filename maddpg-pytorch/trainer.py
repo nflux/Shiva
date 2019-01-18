@@ -6,7 +6,7 @@ import csv
 import itertools 
 #import tensorflow.contrib.slim as slim
 import numpy as np
-from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process
+from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy_bool,zero_params,pretrain_process
 from torch import Tensor
 from HFO import hfo
 import time
@@ -73,23 +73,23 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
             torch_obs_team = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
                                     requires_grad=False)
                             for i in range(maddpg.nagents_team)]
-            team_torch_agent_actions,_ = maddpg.step(torch_obs_team,torch_obs_team, explore=False)
-            team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
-            team_params = np.asarray([ac[0][len(env.action_list):] for ac in team_agent_actions]) 
-            team_actions = [[ac[0][:len(env.action_list)] for ac in team_agent_actions]]
-
+  
             tensors = []
             rands = []
 
+        # Get e-greedy decision
+    
+            team_randoms = e_greedy_bool(env.num_TA,eps = 0,device=device)
+            opp_randoms = e_greedy_bool(env.num_OA,eps = 0,device=device)
+            team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_team,team_randoms,opp_randoms,explore=False) # leave off or will gumbel sample
+            team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
+            team_params = np.asarray([ac[0][len(env.action_list):] for ac in team_agent_actions]) 
 
-            team_noisey_actions = [e_greedy(torch.tensor(a).view(env.num_TA,len(env.action_list)), env.num_TA, eps = 0.0000000001) for a in team_actions]
-
-            team_randoms = [team_noisey_actions[0][1][i] for i in range(env.num_TA)]
+            team_actions = np.asarray([[ac[0][:len(env.action_list)] for ac in team_agent_actions]])
 
             team_obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
 
-            team_noisey_actions_for_buffer = np.asarray([[val for val in (np.random.uniform(-1,1,3))] if ran else action for ran,action in zip(team_randoms,team_actions[0])])
-            team_params = np.asarray([[val for val in (np.random.uniform(-1,1,5))] if ran else p for ran,p in zip(team_randoms,team_params)])
+            team_noisey_actions_for_buffer = team_actions[0]
 
             team_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in team_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
 
