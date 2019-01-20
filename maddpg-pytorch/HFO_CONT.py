@@ -44,7 +44,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
 
 
 if __name__ == "__main__":  
-    mp.set_start_method('spawn',force=True)
+    mp.set_start_method('forkserver',force=True)
 
     # Parseargs --------------------------------------------------------------
     parser = argparse.ArgumentParser(description='Load port and log directory')
@@ -97,12 +97,12 @@ if __name__ == "__main__":
     goalie = False
     team_rew_anneal_ep = 1500 # reward would be
     # hyperparams--------------------------
-    batch_size = 256
+    batch_size = 512
     hidden_dim = int(512)
     a_lr = 0.0001 # actor learning rate
     c_lr = 0.001 # critic learning rate
     tau = 0.001 # soft update rate
-    steps_per_update = 2500
+    steps_per_update = 5000
     number_of_updates = 500
     # exploration --------------------------
     explore = True
@@ -237,6 +237,7 @@ if __name__ == "__main__":
     # initialization -----------------------
     t = 0
     time_step = 0
+    threads = []
     # if using low level actions use non discrete settings
     if action_level == 'high':
         discrete_action = True
@@ -801,8 +802,9 @@ if __name__ == "__main__":
             # ----------------------------------------------------------------
 
             training = ((len(ptr_buff) >= batch_size and (t % steps_per_update) < 1) and t > burn_in_iterations)
-
+        
             if training:
+                [thr.join() for thr in threads]
                 #print('****************We are now training*********************')
                 maddpg.prep_training(device=device)
                 if not critic_mod_both:
@@ -886,7 +888,7 @@ if __name__ == "__main__":
                 opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
                         
         
-            start = time.time()
+            #start = time.time()
             if d == True and et_i >= (trace_length-1): # Episode done 
                 # ----------- Push Base Left's experiences to team buffer ---------------------    
 
@@ -963,28 +965,29 @@ if __name__ == "__main__":
                                                     n_step_targets,[opp_n_step_ws[n] for i in range(env.num_OA)])
                     # ------------------- Push Base Left's Experiences to opp buffer to balance CentQ ------------------
                     ###################### Update this so that the n_step_targets and n_step_ob are in arrays so that we do not have to recalculate anything #####################
-                    for n in range(et_i+1):
-                        n_step_targets = np.zeros(env.num_OA)
-                        if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
-                            for step in range(n_steps): 
-                                n_step_targets += opp_n_step_rewards[n + step] * gamma**(step)
-                            n_step_next_ob = opp_n_step_next_obs[n - 1 + n_steps]
-                            n_step_done = opp_n_step_dones[n - 1 + n_steps]
-                        else: # n-step = MC if less than n steps remaining
-                            n_step_targets = opp_all_MC_targets[et_i-n]
-                            n_step_next_ob = opp_n_step_next_obs[-1]
-                            n_step_done = opp_n_step_dones[-1] 
+
+                        for n in range(et_i+1):
+                            n_step_targets = np.zeros(env.num_TA)
+                            if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
+                                for step in range(n_steps): 
+                                    n_step_targets += team_n_step_rewards[n + step] * gamma**(step)
+                                n_step_next_ob = team_n_step_next_obs[n - 1 + n_steps]
+                                n_step_done = team_n_step_dones[n - 1 + n_steps]
+                            else: # n-step = MC if less than n steps remaining
+                                n_step_targets = team_all_MC_targets[et_i-n]
+                                n_step_next_ob = team_n_step_next_obs[-1]
+                                n_step_done = team_n_step_dones[-1] 
                             # obs, acs, immediate rewards, next_obs, dones, mc target, n-step target
-                        if LSTM or LSTM_PC:
-                            if n == et_i:
-                                opp_replay_buffer.done_step = True
-                            opp_replay_buffer.push_LSTM(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
-                                                    n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
-                                                    n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
-                        else:
-                            opp_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
-                                                    n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
-                                                    n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
+                                if LSTM or LSTM_PC:
+                                    if n == et_i:
+                                        opp_replay_buffer.done_step = True
+                                    opp_replay_buffer.push_LSTM(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
+                                                            n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
+                                                            n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
+                                else:
+                                    opp_replay_buffer.push(team_n_step_obs[n], team_n_step_acs[n],team_n_step_rewards[n],
+                                                            n_step_next_ob,[n_step_done for i in range(env.num_TA)],team_all_MC_targets[et_i-n],
+                                                            n_step_targets,[team_n_step_ws[n] for i in range(env.num_TA)])
                     #############################################################################################################################################################
 
                 # log
@@ -1008,7 +1011,7 @@ if __name__ == "__main__":
                                                             'average_reward': opp_replay_buffer.get_average_rewards(time_step),
                                                             'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step)},
                                                             ignore_index=True)
-                print(time.time()-start)
+                #print(time.time()-start)
                 if first_save: # Generate list of ensemble networks
                     file_path = ensemble_path
                     maddpg.first_save(file_path,num_copies = k_ensembles)
@@ -1029,8 +1032,6 @@ if __name__ == "__main__":
 
                 # Load random networks into team from ensemble and opponent from all models
                 if ep_i > ep_save_every and ep_i % load_random_every == 0 and load_random_nets:
-                    if parallel_process:
-                        [thr.join() for thr in threads] # join here before loading net
 
                     if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
                         maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path)

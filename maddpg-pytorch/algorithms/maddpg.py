@@ -232,9 +232,9 @@ class MADDPG(object):
             pi = copy.deepcopy(self.team_agents[0].policy)
             pi.share_memory()
             #pi.share_memory_()
-            team_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,5,
+            team_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,pi,
             action_dim,param_dim,device,noise)) for a_i,(ran,obs) in enumerate(zip(team_e_greedy,team_observations))]
-            opp_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,5,
+            opp_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,pi,
             action_dim,param_dim,device,noise)) for a_i,(ran,obs) in enumerate(zip(team_e_greedy,team_observations))]
             #team_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,dill.dumps(a.policy),action_dim,
             #    param_dim,device,noise)) for a_i,(a,ran,obs) in enumerate(zip(self.team_agents,team_e_greedy,team_observations))]
