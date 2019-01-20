@@ -39,8 +39,8 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
         maddpg.update_centralized_critic(team_sample, opp_sample, agentID, 'team',
                             act_only=critic_mod_act, obs_only=critic_mod_obs,forward_pass=forward_pass)
         maddpg.update_agent_targets(agentID)
-    maddpg.save(load_path,ep_i)
-    maddpg.save_ensembles(ensemble_path,current_ensembles)
+    maddpg.save_agent(load_path,ep_i,agentID)
+    maddpg.save_ensemble(ensemble_path,current_ensembles,agentID)
 
 
 if __name__ == "__main__":  
@@ -886,7 +886,7 @@ if __name__ == "__main__":
                 opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
                         
         
-                        
+            start = time.time()
             if d == True and et_i >= (trace_length-1): # Episode done 
                 # ----------- Push Base Left's experiences to team buffer ---------------------    
 
@@ -1008,7 +1008,7 @@ if __name__ == "__main__":
                                                             'average_reward': opp_replay_buffer.get_average_rewards(time_step),
                                                             'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step)},
                                                             ignore_index=True)
-
+                print(time.time()-start)
                 if first_save: # Generate list of ensemble networks
                     file_path = ensemble_path
                     maddpg.first_save(file_path,num_copies = k_ensembles)
