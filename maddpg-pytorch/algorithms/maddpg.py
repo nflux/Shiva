@@ -9,9 +9,32 @@ import random
 from torch.autograd import Variable
 import os
 import time
+import torch.multiprocessing as mp
+import dill
+import copy
 MSELoss = torch.nn.MSELoss()
 CELoss = torch.nn.CrossEntropyLoss()
+def parallel_step(results,a_i,ran,obs,explore,output,pi_pickle,action_dim=3,param_dim=5,device='cpu',exploration_noise=0.000001):
 
+    pi = dill.loads(pi_pickle)
+
+    if explore:
+        if not ran: # not random
+            action = pi(obs)
+            a = gumbel_softmax(action[0,:action_dim].view(1,action_dim),hard=True, device=device)
+            p = torch.clamp((action[0,action_dim:].view(1,param_dim) + Variable(processor(torch.Tensor(exploration_noise),device=device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+            action = torch.cat((a,p),1) 
+        else: # random
+            action = torch.cat((onehot_from_logits(torch.empty((1,action_dim),device=device,requires_grad=False).uniform_(-1,1)),
+                        torch.empty((1,param_dim),device=device,requires_grad=False).uniform_(-1,1) ),1)
+    else:
+        action = pi(obs)
+        a = onehot_from_logits(action[0,:action_dim].view(1,action_dim))
+        #p = torch.clamp(action[0,self.action_dim:].view(1,self.param_dim),min=-1.0,max=1.0) # get noisey params (OU)
+        p = torch.clamp((action[0,action_dim:].view(1,param_dim) + Variable(processor(torch.Tensor(exploration_noise),device=device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+        action = torch.cat((a,p),1) 
+    results[a_i] = action
+ 
 class MADDPG(object):
     """
     Wrapper class for DDPG-esque (i.e. also MADDPG) agents in multi-agent task
@@ -181,7 +204,8 @@ class MADDPG(object):
                 ta.policy.training_lstm = training
                 oa.policy.training_lstm = training
 
-    def step(self, team_observations, opp_observations,team_e_greedy,opp_e_greedy, explore=False):
+
+    def step(self, team_observations, opp_observations,team_e_greedy,opp_e_greedy,parallel, explore=False):
         """
         Take a step forward in environment with all agents
         Inputs:
@@ -190,11 +214,42 @@ class MADDPG(object):
         Outputs:
             actions: List of actions for each agent
         """
-        
-        return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
-                [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
-    
-    
+        if not parallel:
+            return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
+                    [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
+        else:
+            #[a for a_i,(a,ran,obs) in enumerate(zip(self.team_agents,team_e_greedy,team_observations))]
+
+            action_dim = self.team_agents[0].action_dim
+            param_dim = self.team_agents[0].param_dim
+            noise = self.team_agents[0].exploration.noise()
+
+            output = mp.Queue()
+            device = self.device
+            team_results = [torch.empty(1,8,requires_grad=False,device=self.device).share_memory_() for _ in range(self.nagents_team)]
+            opp_results = [torch.empty(1,8,requires_grad=False,device=self.device).share_memory_() for _ in range(self.nagents_team)]
+            
+            pi = copy.deepcopy(self.team_agents[0].policy)
+            pi.share_memory()
+            #pi.share_memory_()
+            team_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,5,
+            action_dim,param_dim,device,noise)) for a_i,(ran,obs) in enumerate(zip(team_e_greedy,team_observations))]
+            opp_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,5,
+            action_dim,param_dim,device,noise)) for a_i,(ran,obs) in enumerate(zip(team_e_greedy,team_observations))]
+            #team_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,dill.dumps(a.policy),action_dim,
+            #    param_dim,device,noise)) for a_i,(a,ran,obs) in enumerate(zip(self.team_agents,team_e_greedy,team_observations))]
+            #opp_processes = [mp.Process(target=parallel_step,args=(opp_results,a_i,ran,obs,explore,output,dill.dumps(a.policy),action_dim,
+            #    param_dim,device,noise)) for a_i,(a,ran,obs) in enumerate(zip(self.opp_agents,opp_e_greedy,opp_observations))]
+            for tp,op in team_processes,opp_processes:
+                tp.start()
+                op.start()
+            for tp,op in team_processes,opp_processes:
+                tp.join()
+                op.join()
+            return [team_results,opp_results]
+  
+
+
     def discrete_param_indices(self,discrete):
         if discrete == 0:
             return [0,1]
@@ -429,7 +484,7 @@ class MADDPG(object):
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
 
                 
-    def update_centralized_critic(self, team_sample, opp_sample, agent_i, side='team', parallel=False, logger=None, act_only=False, obs_only=False):
+    def update_centralized_critic(self, team_sample, opp_sample, agent_i, side='team', parallel=False, logger=None, act_only=False, obs_only=False,forward_pass=True):
         """
         Update parameters of agent model based on sample from replay buffer
         Inputs:
@@ -464,6 +519,26 @@ class MADDPG(object):
             opp_policies = self.team_policies
             obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
+
+        # obs = [o.cuda() for o in obs]
+        # acs = [a.cuda() for a in acs]
+        # rews = [r.cuda() for r in rews]
+        # next_obs =[n.cuda() for n in next_obs]
+        # dones = [d.cuda() for d in dones]
+        # MC_rews = [m.cuda() for m in MC_rews]
+        # n_step_rews= [n.cuda() for n in n_step_rews]
+        # ws = [w.cuda() for w in ws]
+
+        # opp_obs = [o.cuda() for o in opp_obs]
+        # opp_acs = [a.cuda() for a in opp_acs]
+        # opp_rews = [r.cuda() for r in opp_rews]
+        # opp_next_obs= [n.cuda() for n in opp_next_obs]
+
+        # opp_dones = [d.cuda() for d in opp_dones]
+        # opp_MC_rews = [m.cuda() for m in opp_MC_rews]
+        # opp_n_step_rews= [n.cuda() for n in opp_n_step_rews]
+        # opp_ws = [w.cuda() for w in opp_ws]
+
 
         self.curr_agent_index = agent_i
         # Train critic ------------------------
@@ -546,7 +621,7 @@ class MADDPG(object):
                         
 
         #vf_loss.backward()
-        vf_loss.backward(retain_graph=True) 
+        vf_loss.backward(retain_graph=False) 
         
         if parallel:
             average_gradients(curr_agent.critic)
@@ -1268,9 +1343,23 @@ class MADDPG(object):
             soft_update(a.target_critic, a.critic, self.tau)
             soft_update(a.target_policy, a.policy, self.tau)
 
-        for a in self.opp_agents:
-            soft_update(a.target_critic, a.critic, self.tau)
-            soft_update(a.target_policy, a.policy, self.tau)
+        #for a in self.opp_agents:
+        #    soft_update(a.target_critic, a.critic, self.tau)
+        #    soft_update(a.target_policy, a.policy, self.tau)
+
+        self.niter += 1
+
+    def update_agent_targets(self,agentID):
+        """
+        Update all target networks (called after normal updates have been
+        performed for each agent)
+        """
+        soft_update(self.team_agents[agentID].target_critic, self.team_agents[agentID].critic, self.tau)
+        soft_update(self.team_agents[agentID].target_policy, self.team_agents[agentID].policy, self.tau)
+
+        #for a in self.opp_agents:
+        #    soft_update(a.target_critic, a.critic, self.tau)
+        #    soft_update(a.target_policy, a.policy, self.tau)
 
         self.niter += 1
 
@@ -1319,26 +1408,27 @@ class MADDPG(object):
             for a in self.opp_agents:
                 a.target_critic = fn(a.target_critic)
             self.trgt_critic_dev = device
-            
-        if not self.EM_dev == device:
-            for a in self.team_agents:
-                a.EM = fn(a.EM)
-            self.EM_dev = device
-            for a in self.opp_agents:
-                a.EM = fn(a.EM)
-            self.EM_dev = device
-        if not self.prime_dev == device:
-            for a in self.team_agents:
-                a.policy_prime = fn(a.policy_prime)
-            for a in self.opp_agents:
-                a.policy_prime = fn(a.policy_prime)
-            self.prime_dev = device
-        if not self.imagination_pol_dev == device:
-            for a in self.team_agents:
-                a.imagination_policy = fn(a.imagination_policy)
-            for a in self.opp_agents:
-                a.imagination_policy = fn(a.imagination_policy)
-            self.imagination_pol_dev = device
+        if self.I2A:
+
+            if not self.EM_dev == device:
+                for a in self.team_agents:
+                    a.EM = fn(a.EM)
+                self.EM_dev = device
+                for a in self.opp_agents:
+                    a.EM = fn(a.EM)
+                self.EM_dev = device
+            if not self.prime_dev == device:
+                for a in self.team_agents:
+                    a.policy_prime = fn(a.policy_prime)
+                for a in self.opp_agents:
+                    a.policy_prime = fn(a.policy_prime)
+                self.prime_dev = device
+            if not self.imagination_pol_dev == device:
+                for a in self.team_agents:
+                    a.imagination_policy = fn(a.imagination_policy)
+                for a in self.opp_agents:
+                    a.imagination_policy = fn(a.imagination_policy)
+                self.imagination_pol_dev = device
 
     def prep_rollouts(self, device='cpu'):
         for a in self.team_agents:

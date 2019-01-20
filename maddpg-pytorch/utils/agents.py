@@ -25,6 +25,7 @@ class DDPGAgent(object):
             num_out_pol (int): number of dimensions for policy output
             num_in_critic (int): number of dimensions for critic input
         """
+        self.I2A = I2A
         self.norm_in = False
         self.counter = 0
         self.updating_actor = False
@@ -50,19 +51,25 @@ class DDPGAgent(object):
 
         self.num_total_out_EM = maddpg.num_out_EM + self.world_status_dim + 1
         # EM for I2A
-        self.EM = EnvironmentModel(maddpg.num_in_EM,maddpg.num_out_EM,hidden_dim=hidden_dim,
+        if I2A:
+            self.EM = EnvironmentModel(maddpg.num_in_EM,maddpg.num_out_EM,hidden_dim=hidden_dim,
                                   norm_in=self.norm_in,agent=self)
+            # Stores a policy such as Helios to be used as one of the branches in imagination
+            self.imagination_policy = MLPNetwork_Actor(num_in_pol, num_out_pol,
+                                    hidden_dim=hidden_dim,
+                                    discrete_action=discrete_action, 
+                                    norm_in= self.norm_in,agent=self)
         # policy prime for I2A
-        self.policy_prime = MLPNetwork_Actor(num_in_pol, num_out_pol,
-                                 hidden_dim=hidden_dim,
-                                 discrete_action=discrete_action, 
-                                 norm_in= self.norm_in,agent=self)
-
-        # Stores a policy such as Helios to be used as one of the branches in imagination
-        self.imagination_policy = MLPNetwork_Actor(num_in_pol, num_out_pol,
-                                 hidden_dim=hidden_dim,
-                                 discrete_action=discrete_action, 
-                                 norm_in= self.norm_in,agent=self)
+            self.policy_prime = MLPNetwork_Actor(num_in_pol, num_out_pol,
+                                    hidden_dim=hidden_dim,
+                                    discrete_action=discrete_action, 
+                                    norm_in= self.norm_in,agent=self)
+        else:
+            self.EM = None
+            self.imagination_policy = None
+            self.policy_prime = None
+        
+ 
        
         if self.LSTM or self.LSTM_PC:
             self.policy = LSTM_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
@@ -71,7 +78,7 @@ class DDPGAgent(object):
                             norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                             EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                     LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=False, trace_length=trace_length)
-            
+            #self.policy.share_memory()
             self.target_policy = LSTM_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
                                     hidden_dim=hidden_dim,
                                     discrete_action=discrete_action,
@@ -85,6 +92,7 @@ class DDPGAgent(object):
                             norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                             EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                     LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+            #self.policy.share_memory()
             
             self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
                                     hidden_dim=hidden_dim,
@@ -118,12 +126,13 @@ class DDPGAgent(object):
         self.EM_lr = EM_lr
         self.critic_grad_by_action = np.zeros(self.param_dim)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=a_lr, weight_decay =0)
-        self.policy_prime_optimizer = Adam(self.policy_prime.parameters(), lr=a_lr, weight_decay =0)
-        self.imagination_policy_optimizer = Adam(self.imagination_policy.parameters(), lr=a_lr, weight_decay =0)
+  
         #self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
-        self.EM_optimizer = Adam(self.EM.parameters(), lr=EM_lr)
-
+        if I2A:
+            self.EM_optimizer = Adam(self.EM.parameters(), lr=EM_lr)
+            self.policy_prime_optimizer = Adam(self.policy_prime.parameters(), lr=a_lr, weight_decay =0)
+            self.imagination_policy_optimizer = Adam(self.imagination_policy.parameters(), lr=a_lr, weight_decay =0)
         if not discrete_action: # input to OUNoise is size of param space # TODO change OUNoise param to # params
             self.exploration = OUNoise(self.param_dim) # hard coded
         else:
@@ -177,7 +186,7 @@ class DDPGAgent(object):
             self.counter +=1
         return action
             
-
+    
         '''if self.discrete_action:
             if explore:
                 action = gumbel_softmax(action, hard=True)
@@ -191,20 +200,25 @@ class DDPGAgent(object):
         return action
 '''
     def get_params(self):
-        return {'policy': self.policy.state_dict(),
+        dict =  {'policy': self.policy.state_dict(),
                 'critic': self.critic.state_dict(),
                 'target_policy': self.target_policy.state_dict(),
                 'target_critic': self.target_critic.state_dict(),
-                'policy_prime': self.policy_prime.state_dict(),
-                'imagination_policy': self.imagination_policy.state_dict(),
-                'EM': self.EM.state_dict(),
+
                 
                 'policy_optimizer': self.policy_optimizer.state_dict(),
                 'critic_optimizer': self.critic_optimizer.state_dict(),
-                'policy_prime_optimizer': self.policy_prime_optimizer.state_dict(),
-                'imagination_policy_optimizer': self.imagination_policy_optimizer.state_dict(),
-                'EM_optimizer': self.EM_optimizer.state_dict(),                
+
                }
+        if self.I2A:
+            dict['EM']=self.EM_state_dict()
+            dict['EM_optimizer'] = self.EM_optimizer.state_dict()
+            dict['policy_prime_optimizer'] =  self.policy_prime_optimizer.state_dict(),
+            dict['imagination_policy_optimizer']= self.imagination_policy_optimizer.state_dict(),
+            dict['policy_prime'] =  self.policy_prime.state_dict(),
+            dict['imagination_policy']= self.imagination_policy.state_dict()
+
+        return dict
 
     #Used to get just the actor weights and params.
     def get_actor_params(self):
@@ -223,33 +237,39 @@ class DDPGAgent(object):
         self.critic.load_state_dict(params['critic'])
         self.target_policy.load_state_dict(params['target_policy'])
         self.target_critic.load_state_dict(params['target_critic'])
-        self.policy_prime.load_state_dict(params['policy_prime'])
-        self.imagination_policy.load_state_dict(params['imagination_policy'])
-        self.EM.load_state_dict(params['EM'])
 
+        if self.I2A:
+            self.EM.load_state_dict(params['EM'])
+            self.policy_prime.load_state_dict(params['policy_prime'])
+            self.imagination_policy.load_state_dict(params['imagination_policy'])
 
         self.policy.to(dev)
         self.critic.to(dev)
         self.target_policy.to(dev)
         self.target_critic.to(dev)
-        self.policy_prime.to(dev)
-        self.imagination_policy.to(dev)
-        self.EM.to(dev)
-      
+
+        if self.I2A:
+            self.EM.to(dev)
+            self.policy_prime.to(dev)
+            self.imagination_policy.to(dev)
         
         self.critic_grad_by_action = np.zeros(self.param_dim)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=self.a_lr, weight_decay =0)
-        self.policy_prime_optimizer = Adam(self.policy_prime.parameters(), lr=self.a_lr, weight_decay =0)
-        self.imagination_policy_optimizer = Adam(self.imagination_policy.parameters(), lr=self.a_lr, weight_decay =0)
+
         self.critic_optimizer = Adam(self.critic.parameters(), lr=self.c_lr, weight_decay=0)
-        self.EM_optimizer = Adam(self.EM.parameters(), lr=self.EM_lr)
-        
+        if self.I2A:
+            self.policy_prime_optimizer = Adam(self.policy_prime.parameters(), lr=self.a_lr, weight_decay =0)
+            self.imagination_policy_optimizer = Adam(self.imagination_policy.parameters(), lr=self.a_lr, weight_decay =0)
+            self.EM_optimizer = Adam(self.EM.parameters(), lr=self.EM_lr)
+
         self.policy_optimizer.load_state_dict(params['policy_optimizer'])
         self.critic_optimizer.load_state_dict(params['critic_optimizer'])
-        self.policy_prime_optimizer.load_state_dict(params['policy_prime_optimizer'])
-        self.imagination_policy_optimizer.load_state_dict(params['imagination_policy_optimizer'])
-        self.EM_optimizer.load_state_dict(params['EM_optimizer'])
 
+        if self.I2A:
+            self.EM_optimizer.load_state_dict(params['EM_optimizer'])
+            self.policy_prime_optimizer.load_state_dict(params['policy_prime_optimizer'])
+            self.imagination_policy_optimizer.load_state_dict(params['imagination_policy_optimizer'])
+        
         
     def load_policy_params(self, params):
         if self.device == 'cuda':
@@ -257,13 +277,18 @@ class DDPGAgent(object):
         else:
             dev = torch.device('cpu')
         self.policy.load_state_dict(params['policy'])
-        self.policy_prime.load_state_dict(params['policy_prime'])
-        self.imagination_policy.load_state_dict(params['imagination_policy'])
-        self.EM.load_state_dict(params['EM'])
+
+
+        if self.I2A:
+            self.EM.load_state_dict(params['EM'])
+            self.policy_prime.load_state_dict(params['policy_prime'])
+            self.imagination_policy.load_state_dict(params['imagination_policy'])
 
 
         self.policy.to(dev)
-        self.policy_prime.to(dev)
-        self.imagination_policy.to(dev)
-        self.EM.to(dev)
+        if self.I2A:
+            self.EM.to(dev)
+            self.imagination_policy.to(dev)
+            self.policy_prime.to(dev)
+
       
