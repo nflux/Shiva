@@ -140,7 +140,8 @@ class HFO_env():
         self.opp_team_envs = [hfo.HFOEnvironment() for i in range(num_OA)]
 
         # flag that says when the episode is done
-        self.d = False
+        # Use number for tensor
+        self.d = 0
 
         # flag to wait for all the agents to load
         self.start = False
@@ -742,7 +743,7 @@ class HFO_env():
                 self.sync_at_status_opp = np.zeros(self.num_OA)
                 self.sync_at_reward_team = np.zeros(self.num_TA)
                 self.sync_at_reward_opp = np.zeros(self.num_OA)
-                # self.d = False
+
                 if self.team_base == base:
                     self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                     self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
@@ -860,9 +861,9 @@ class HFO_env():
                         time.sleep(self.sleep_timer)
 
                     if self.world_status == hfo.IN_GAME:
-                        self.d = False
+                        self.d = 0
                     else:
-                        self.d = True
+                        self.d = 1
 
                     if self.team_base == base:
                         self.team_rewards[agent_ID] = self.getReward(
@@ -882,7 +883,6 @@ class HFO_env():
 
                     # Break if episode done
                     if self.d == True:
-                        #print('This is becoming true!!!!!!!!')
                         break
 
 
