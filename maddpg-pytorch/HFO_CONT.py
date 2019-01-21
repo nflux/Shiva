@@ -79,7 +79,7 @@ if __name__ == "__main__":
     hfo_log_game = False #Logs the game using HFO
     # default settings ---------------------
     num_episodes = 10000000
-    replay_memory_size = 100000
+    replay_memory_size = 200000
     episode_length = 500 # FPS
     untouched_time = 200
     burn_in_iterations = 500 # for time step
@@ -88,8 +88,8 @@ if __name__ == "__main__":
     train_opp = False
     # --------------------------------------
     # Team ---------------------------------
-    num_TA = 2
-    num_OA = 2
+    num_TA = 1
+    num_OA = 1
     num_TNPC = 0
     num_ONPC = 0
     offense_team_bin='helios10'
@@ -102,8 +102,8 @@ if __name__ == "__main__":
     a_lr = 0.0001 # actor learning rate
     c_lr = 0.001 # critic learning rate
     tau = 0.001 # soft update rate
-    steps_per_update = 5000
-    number_of_updates = 500
+    steps_per_update = 2000
+    number_of_updates = 200
     # exploration --------------------------
     explore = True
     final_OU_noise_scale = 0.1
@@ -121,8 +121,8 @@ if __name__ == "__main__":
     n_steps = 1
     # n-step update size 
     # Mixed taqrget beta (0 = 1-step, 1 = MC update)
-    initial_beta = 0.4
-    final_beta = 0.4
+    initial_beta = 0.3
+    final_beta =0.3
     num_beta_episodes = 1000000000
     #---------------------------------------
     #TD3 Options ---------------------------
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     change_balls_y = 0.01
     # Self-play ----------------------------
     load_random_nets = True
-    load_random_every = 25
+    load_random_every = 100
     k_ensembles = 1
     current_ensembles = [0]*num_TA # initialize which ensembles we start with
     self_play_proba = 0.8
@@ -1015,6 +1015,8 @@ if __name__ == "__main__":
                 if first_save: # Generate list of ensemble networks
                     file_path = ensemble_path
                     maddpg.first_save(file_path,num_copies = k_ensembles)
+                    #maddpg.save_ensembles(ensemble_path,current_ensembles)
+
                     first_save = False
                 # Save networks
                 if not parallel_process: # if parallel saving occurs in update thread
@@ -1031,8 +1033,8 @@ if __name__ == "__main__":
                         7000,env.num_TA,env.num_OA,episode_length,device,use_viewer,))
 
                 # Load random networks into team from ensemble and opponent from all models
-                if ep_i > ep_save_every and ep_i % load_random_every == 0 and load_random_nets:
-
+                if ep_i % load_random_every == 0 and load_random_nets:
+                    [thr.join() for thr in threads]
                     if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
                         maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path)
                     else:
