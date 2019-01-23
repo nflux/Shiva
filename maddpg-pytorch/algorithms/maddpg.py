@@ -729,7 +729,7 @@ class MADDPG(object):
         #                        {'vf_loss': vf_loss,
         #                         'pol_loss': pol_loss},
         #                        self.niter)
-            
+        self.niter +=1
         if self.niter % 100 == 0:
             print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
             if self.I2A:
@@ -1348,13 +1348,13 @@ class MADDPG(object):
 
         self.niter += 1
 
-    def update_agent_targets(self,agentID):
+    def update_agent_targets(self,agentID,number_of_updates):
         """
         Update all target networks (called after normal updates have been
         performed for each agent)
         """
-        soft_update(self.team_agents[agentID].target_critic, self.team_agents[agentID].critic, self.tau)
-        soft_update(self.team_agents[agentID].target_policy, self.team_agents[agentID].policy, self.tau)
+        soft_update(self.team_agents[agentID].target_critic, self.team_agents[agentID].critic, self.tau*number_of_updates)
+        soft_update(self.team_agents[agentID].target_policy, self.team_agents[agentID].policy, self.tau*number_of_updates)
 
         #for a in self.opp_agents:
         #    soft_update(a.target_critic, a.critic, self.tau)

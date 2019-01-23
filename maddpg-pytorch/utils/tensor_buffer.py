@@ -225,9 +225,9 @@ class ReplayTensorBuffer(object):
                         for i in range(self.num_agents)]
             
         else:
-            ret_rews = [cast(self.rew_buffs[inds, i, :].squeeze()) for i in range(self.num_agents)]
-            ret_mc = [cast(self.mc_buffs[inds, i, :].squeeze()) for i in range(self.num_agents)]
-            ret_n_step = [cast(self.n_step_buffs[inds, i, :].squeeze()) for i in range(self.num_agents)]
+            ret_rews = [cast(self.rew_buffs[inds, i, :]).squeeze() for i in range(self.num_agents)]
+            ret_mc = [cast(self.mc_buffs[inds, i, :]).squeeze() for i in range(self.num_agents)]
+            ret_n_step = [cast(self.n_step_buffs[inds, i, :]).squeeze() for i in range(self.num_agents)]
 
 
         return ([cast_obs(self.obs_buffs[inds, i, :]) for i in range(self.num_agents)],
