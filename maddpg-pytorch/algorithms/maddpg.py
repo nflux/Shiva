@@ -519,7 +519,6 @@ class MADDPG(object):
             opp_policies = self.team_policies
             obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
-
         # obs = [o.cuda() for o in obs]
         # acs = [a.cuda() for a in acs]
         # rews = [r.cuda() for r in rews]
@@ -2297,7 +2296,21 @@ class MADDPG(object):
             else:
                 self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
         return ind
-                
+                               
+    def load_ensemble(self, ensemble_path,ensemble,agentID):
+        # Loads ensemble to team agent #agentID
+  
+        dict = torch.load(ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
+        self.team_agents[agentID].load_params(dict['agent_params'])
+
+    def load_same_ensembles(self, ensemble_path,ensemble,nagents):
+        # Loads ensemble to team agent #agentID
+  
+
+        dicts = [torch.load(ensemble_path +("ensemble_agent_%i/model_%i.pth" % (i,ensemble))) for i in range(nagents)]
+        [self.team_agents[i].load_params(dicts[i]['agent_params']) for i in range(nagents)]
+
+
                                           
     def first_save(self, file_path,num_copies=1):
         """
@@ -2371,7 +2384,7 @@ class MADDPG(object):
     
         #self.prep_training(device=self.device)
         
-    def save_ensemble(self, ensemble_path,current_ensembles,agentID):
+    def save_ensemble(self, ensemble_path,ensemble,agentID):
         """
         Save trained parameters of all agents into one file
         """
@@ -2379,7 +2392,7 @@ class MADDPG(object):
         
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
-        torch.save(save_dicts[agentID], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,current_ensembles[agentID])))
+        torch.save(save_dicts[agentID], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
        
     
         #self.prep_training(device=self.device)

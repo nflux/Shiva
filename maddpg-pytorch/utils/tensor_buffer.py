@@ -196,39 +196,48 @@ class ReplayTensorBuffer(object):
             self.curr_i = roll_amount
             self.start_loc = 0
 
-    def sample(self, to_gpu=False, norm_rews=False):
-        inds = torch.multinomial(torch.arange(self.filled_i).float(), self.batch_size)
+    def sample(self,inds, to_gpu=False, norm_rews=False,):
+
+        if to_gpu:
+            cast = lambda x: Variable(x,requires_grad=False).cuda()
+        else:
+            cast = lambda x: Variable(x, requires_grad=False)
+        if to_gpu:
+            cast_obs = lambda x: Variable(x,requires_grad=True).cuda() # obs need gradient for cent-Q
+        else:
+            cast_obs = lambda x: Variable(x, requires_grad=True)
+
 
         if norm_rews:
-            ret_rews = [(self.rew_buffs[inds, i:i+1, :] -
-                             self.rew_buffs[:self.filled_i, i:i+1, :].mean()) /
-                             self.rew_buffs[:self.filled_i, i:i+1, :].std()
+            ret_rews = [cast((self.rew_buffs[inds, i, :] -
+                             self.rew_buffs[:self.filled_i, i, :].mean()) /
+                             self.rew_buffs[:self.filled_i, i, :].std())
                         for i in range(self.num_agents)]
 
-            ret_mc = [(self.mc_buffs[inds, i:i+1, :] -
-                              self.mc_buffs[:self.filled_i, i:i+1, :].mean()) /
-                             self.mc_buffs[:self.filled_i, i:i+1, :].std()
+            ret_mc = [cast((self.mc_buffs[inds, i:i+1, :] -
+                              self.mc_buffs[:self.filled_i, i, :].mean()) /
+                             self.mc_buffs[:self.filled_i, i, :].std())
                         for i in range(self.num_agents)]
 
-            ret_n_step = [(self.n_step_buffs[inds, i:i+1, :] -
-                              self.n_step_buffs[:self.filled_i, i:i+1, :].mean()) /
-                             self.n_step_buffs[:self.filled_i, i:i+1, :].std()
+            ret_n_step = [cast((self.n_step_buffs[inds, i, :] -
+                              self.n_step_buffs[:self.filled_i, i, :].mean()) /
+                             self.n_step_buffs[:self.filled_i, i, :].std())
                         for i in range(self.num_agents)]
             
         else:
-            ret_rews = [self.rew_buffs[inds, i:i+1, :] for i in range(self.num_agents)]
-            ret_mc = [self.mc_buffs[inds, i:i+1, :] for i in range(self.num_agents)]
-            ret_n_step = [self.n_step_buffs[inds, i:i+1, :] for i in range(self.num_agents)]
+            ret_rews = [cast(self.rew_buffs[inds, i, :].squeeze()) for i in range(self.num_agents)]
+            ret_mc = [cast(self.mc_buffs[inds, i, :].squeeze()) for i in range(self.num_agents)]
+            ret_n_step = [cast(self.n_step_buffs[inds, i, :].squeeze()) for i in range(self.num_agents)]
 
 
-        return ([self.obs_buffs[inds, i:i+1, :] for i in range(self.num_agents)],
-                [self.ac_buffs[inds, i:i+1, :] for i in range(self.num_agents)],
+        return ([cast_obs(self.obs_buffs[inds, i, :]) for i in range(self.num_agents)],
+                [cast(self.ac_buffs[inds, i, :]) for i in range(self.num_agents)],
                 ret_rews,
-                [self.next_obs_buffs[inds, i:i+1, :] for i in range(self.num_agents)],
-                [self.done_buffs[inds, i:i+1, :] for i in range(self.num_agents)],
+                [cast(self.next_obs_buffs[inds, i, :]) for i in range(self.num_agents)],
+                [cast(self.done_buffs[inds, i, :]) for i in range(self.num_agents)],
                 ret_mc,
                 ret_n_step,
-                [self.ws_buffs[inds, i:i+1, :] for i in range(self.num_agents)])
+                [cast(self.ws_buffs[inds, i, :]) for i in range(self.num_agents)])
     
     def sample_LSTM(self, inds, trace_length, to_gpu=False, norm_rews=False):
         # inds = np.random.choice(np.arange(self.filled_i), size=N,
