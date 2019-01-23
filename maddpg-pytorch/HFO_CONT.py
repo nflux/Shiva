@@ -57,7 +57,6 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                                             to_gpu=to_gpu,norm_rews=False)
 
                 maddpg.update_centralized_critic(team_sample, opp_sample, agentID, 'team',forward_pass=forward_pass)
-
             if SIL:
                 for i in range(SIL_update_ratio):
                     team_sample,inds = team_replay_buffer.sample_SIL(agentID=a_i,batch_size=batch_size,
@@ -411,6 +410,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                 if halt.all(): # load when other process is loading buffer to make sure its not saving at the same time
                     num_updates[env_num] += float(np.floor(exp_i/steps_per_update))
                     #exps.cpu()
+                    shared_exps[:len(exps)] = exps
                     ready[env_num] = 1
                     if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
                         maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path)
@@ -502,7 +502,7 @@ if __name__ == "__main__":
         goalie = False
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 512
+        batch_size = 256
         hidden_dim = int(512)
         a_lr = 0.0001 # actor learning rate
         c_lr = 0.001 # critic learning rate
@@ -524,7 +524,7 @@ if __name__ == "__main__":
         Vmin = -35
         N_ATOMS = 25
         DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-        n_steps = 10
+        n_steps = 5
         # n-step update size 
         # Mixed taqrget beta (0 = 1-step, 1 = MC update)
         initial_beta = 0.3
@@ -735,7 +735,7 @@ if __name__ == "__main__":
     for p in processes:
         p.start()
 
-    iterations_per_push = 500
+    iterations_per_push = 3000
     maddpg_pick = dill.dumps(maddpg)
     while True: # get experiences, update
         while((np.asarray([counter.item() for counter in exp_indices]) < iterations_per_push).any()):
@@ -746,6 +746,8 @@ if __name__ == "__main__":
         for i in range(num_envs):
             team_replay_buffer.push(shared_exps[i][:exp_indices[i], :num_TA, :])
             opp_replay_buffer.push(shared_exps[i][:exp_indices[i],num_TA:2*num_TA,:])
+            team_replay_buffer.push(shared_exps[i][:exp_indices[i], num_TA:2*num_TA, :])
+            opp_replay_buffer.push(shared_exps[i][:exp_indices[i],:num_TA,:])
         # get num updates and reset counter
         # If the update rate is slower than the exp generation than this ratio will be greater than 1 when our experience tensor
         # is full (10,000 timesteps backlogged) so wait for updates to catch up

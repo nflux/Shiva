@@ -234,10 +234,10 @@ class ReplayTensorBuffer(object):
                 [cast(self.ac_buffs[inds, i, :]) for i in range(self.num_agents)],
                 ret_rews,
                 [cast(self.next_obs_buffs[inds, i, :]) for i in range(self.num_agents)],
-                [cast(self.done_buffs[inds, i, :]) for i in range(self.num_agents)],
+                [cast(self.done_buffs[inds, i, :]).squeeze() for i in range(self.num_agents)],
                 ret_mc,
                 ret_n_step,
-                [cast(self.ws_buffs[inds, i, :]) for i in range(self.num_agents)])
+                [cast(self.ws_buffs[inds, i, :]).squeeze() for i in range(self.num_agents)])
     
     def sample_LSTM(self, inds, trace_length, to_gpu=False, norm_rews=False):
         # inds = np.random.choice(np.arange(self.filled_i), size=N,
