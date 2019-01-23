@@ -17,14 +17,14 @@ import torch
 from pathlib import Path
 from torch.autograd import Variable
 # from tensorboardX import SummaryWriter
-from utils.buffer import ReplayBuffer
+from utils.tensor_buffer import ReplayTensorBuffer
 from algorithms.maddpg import MADDPG
 from HFO_env import HFO_env
 from trainer import launch_eval
 import torch.multiprocessing as mp
 import _thread as thread
 
-def run_envs(seed, port, torch_q, bar):
+def run_envs(seed, port, se, sfs, exp_i, env_id):
     
     # Parseargs --------------------------------------------------------------
     parser = argparse.ArgumentParser(description='Load port and log directory')
@@ -267,6 +267,7 @@ def run_envs(seed, port, torch_q, bar):
     time.sleep(3)
     t = 0
     time_step = 0
+    exps = None
 
     for ep_i in range(0, num_episodes):
         start = time.time()
@@ -438,7 +439,6 @@ def run_envs(seed, port, torch_q, bar):
 
                 #NOTE: Assume M vs M and critic_mod_both == True
                 if critic_mod_both:
-                    exps = torch.FloatTensor([])
                     team_all_MC_targets = []
                     opp_all_MC_targets = []
                     MC_targets_team = np.zeros(num_TA)
@@ -449,7 +449,6 @@ def run_envs(seed, port, torch_q, bar):
                         MC_targets_opp = opp_n_step_rewards[et_i-n] + MC_targets_opp*gamma
                         opp_all_MC_targets.append(MC_targets_opp)
                     for n in range(et_i+1):
-                        exp = torch.FloatTensor([])
                         n_step_targets_team = np.zeros(num_TA)
                         n_step_targets_opp = np.zeros(num_OA)
                         if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
@@ -490,63 +489,26 @@ def run_envs(seed, port, torch_q, bar):
                         
                         exp_comb = np.expand_dims(np.vstack((exp_team, exp_opp)), 0)
 
-                        if n == 0:
+                        if exps is None:
                             exps = torch.from_numpy(exp_comb)
                         else:
                             exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
 
-                    torch_q.put(exps)
-                    bar.wait()
+                    exp_i += et_i
+                    if (ep_i+1) % 5 == 0:
+                        # print('exps', exps[:len(exps)][0][0])
+                        se[:len(exps)] = exps
+                        sfs[env_id] = 1
+                        while sfs[env_id] == 1:
+                            time.sleep(0.0000001)
+                        exp_i = 0
+
+                        # print('The length', len(exps))
+                        # print(se)
+
                     print('torch write')
 
                 #############################################################################################################################################################
-
-                # log
-                # if ep_i > 1:
-                #     team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
-                #                                         'why': env.team_envs[0].statusToString(world_stat),
-                #                                         'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
-                #                                         'possession_percentages': [(tpc/time_step)*100 for tpc in team_possession_counter],
-                #                                         'average_reward': team_replay_buffer.get_average_rewards(time_step),
-                #                                         'cumulative_reward': team_replay_buffer.get_cumulative_rewards(time_step)},
-                #                                         ignore_index=True)
-
-                #     #Added to Disable/Enable the opp agents
-                #     if has_opp_Agents:
-                #         opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
-                #                                             'why': env.opp_team_envs[0].statusToString(world_stat),
-                #                                             'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
-                #                                             'possession_percentages': [(opc/time_step)*100 for opc in opp_possession_counter],
-                #                                             'average_reward': opp_replay_buffer.get_average_rewards(time_step),
-                #                                             'cumulative_reward': opp_replay_buffer.get_cumulative_rewards(time_step)},
-                #                                             ignore_index=True)
-                #print(time.time()-start)
-                # if first_save: # Generate list of ensemble networks
-                #     file_path = ensemble_path
-                #     maddpg.first_save(file_path,num_copies = k_ensembles)
-                #     first_save = False
-                # # Save networks
-                # if not parallel_process: # if parallel saving occurs in update thread
-                        
-                #     if ep_i > 1 and ep_i%ep_save_every == 0 and save_nns:
-                #         maddpg.save(load_path,ep_i)
-                #         maddpg.save_ensembles(ensemble_path,current_ensembles)
-
-                # # Launch evaluation session
-                # if ep_i > 1 and ep_i % eval_after == 0 and evaluate:
-                #     thread.start_new_thread(launch_eval,(
-                #         [load_path + ("agent_%i/model_episode_%i.pth" % (i,ep_i)) for i in range(num_TA)], # models directory -> agent -> most current episode
-                #         eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation_ep" + str(ep_i),
-                #         7000,num_TA,num_OA,episode_length,device,use_viewer,))
-
-                # # Load random networks into team from ensemble and opponent from all models
-                # if ep_i > ep_save_every and ep_i % load_random_every == 0 and load_random_nets:
-
-                #     if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
-                #         maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path)
-                #     else:
-                #         maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path)
-                #     current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path)
 
                 print(time.time()-start)
                 break
@@ -563,14 +525,41 @@ def run_envs(seed, port, torch_q, bar):
             if t%20000 == 0 and use_viewer and ep_i > use_viewer_after:
                 env._start_viewer()
 
-def read(queues, bars, num_envs):
+def read(ses, sfs, exps_i):
+
+    num_TA = 1
+    num_OA = 1
+    replay_memory_size = 100000
+    obs_dim_TA = 68+(18*(num_TA-1))
+    obs_dim_OA = 68+(18*(num_OA-1))
+    acs_dim = 8
+    batch_size = 512
+    LSTM = False
+    LSTM_PC = False
+
+    team_buffer = ReplayTensorBuffer(replay_memory_size, num_TA, obs_dim_TA, acs_dim, batch_size, LSTM, LSTM_PC)
+    opp_buffer = ReplayTensorBuffer(replay_memory_size, num_OA, obs_dim_OA, acs_dim, batch_size, LSTM, LSTM_PC)
+
     while(1):
-        ind = np.random.choice(range(num_envs), replace=False)
+        if sfs.byte().all():
+            start = time.time()
+            for i in range(num_TA):
+                # print('ses', ses[i][:exps_i[i]][0][0])
+                # print('exps_i', exps_i[i])
+                print('entering replay')
+                team_buffer.push(ses[i][:exps_i[i], :1, :])
+                sample = team_buffer.sample(to_gpu=False, norm_rews=False)
+                print('Done sampling', sample)
+                exit(0)
+                # team_buffer.push(ses[i][:exps_i[i], 1, :])
+
+            sfs[:len(sfs)] = 0
+            print('shared flag', sfs)
+            print('read', (time.time()-start))
+
+
         start = time.time()
-        bars[ind].wait()
-        temp = queues[ind].get()
-        print(temp.size())
-        print('torch read', time.time()-start)
+        # print('torch read', time.time()-start)
 
 
 
@@ -590,14 +579,18 @@ if __name__ == "__main__":
     # team_step_logger_df = pd.DataFrame()
     # opp_step_logger_df = pd.DataFrame()
     # --------------------------------
+    shared_exps = [torch.zeros(500*40, 2, 149) for _ in range(num_envs)]
+    exp_indeces = [torch.tensor(0) for _ in range(num_envs)]
+    share_flags = torch.zeros(num_envs)
+    share_flags.share_memory_()
     processes = []
-    queues = [mp.Queue() for _ in range(num_envs)]
-    barriers = [mp.Barrier(2) for _ in range(num_envs)]
 
     for i in range(num_envs):
-        processes.append(mp.Process(target=run_envs, args=(seed + (i * 100), port + (i * 1000), queues[i], barriers[i])))
+        shared_exps[i].share_memory_()
+        exp_indeces[i].share_memory_()
+        processes.append(mp.Process(target=run_envs, args=(seed + (i * 100), port + (i * 1000), shared_exps[i], share_flags, exp_indeces[i], i)))
     
-    read_proc = mp.Process(target=read, args=(queues, barriers, num_envs))
+    read_proc = mp.Process(target=read, args=(shared_exps, share_flags, exp_indeces))
     for p in processes:
         p.start()
     read_proc.start()
