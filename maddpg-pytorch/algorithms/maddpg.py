@@ -1445,13 +1445,15 @@ class MADDPG(object):
             for a in self.team_agents:
                 a.policy = fn(a.policy)
                 a.target_policy = fn(a.target_policy)
-                a.policy_prime = fn(a.policy_prime)
-                a.imagination_policy = fn(a.imagination_policy)
+                if self.I2A:
+                    a.policy_prime = fn(a.policy_prime)
+                    a.imagination_policy = fn(a.imagination_policy)
             for a in self.opp_agents:
                 a.policy = fn(a.policy)
                 a.target_policy = fn(a.target_policy)
-                a.policy_prime = fn(a.policy_prime)
-                a.imagination_policy = fn(a.imagination_policy)
+                if self.I2A:
+                    a.policy_prime = fn(a.policy_prime)
+                    a.imagination_policy = fn(a.imagination_policy)
             self.pol_dev = device
 
     
