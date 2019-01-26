@@ -67,7 +67,6 @@ class ReplayTensorBuffer(object):
     
     def push(self, exps):
         nentries = len(exps)
-        print('tensor size', exps.size())
 
         if self.curr_i + nentries > self.max_steps:
             rollover = self.max_steps - self.curr_i # num of indices to roll over

@@ -489,7 +489,7 @@ if __name__ == "__main__":
         # options ------------------------------
         action_level = 'low'
         feature_level = 'low'
-        USE_CUDA = False
+        USE_CUDA = True
         if USE_CUDA:
             device = 'cuda'
             to_gpu = True
