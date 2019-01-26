@@ -469,7 +469,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 4
+    num_envs = 1
     seed = 123
     port = 2000
     max_num_experiences = 10000
@@ -489,7 +489,7 @@ if __name__ == "__main__":
         # options ------------------------------
         action_level = 'low'
         feature_level = 'low'
-        USE_CUDA = True
+        USE_CUDA = False
         if USE_CUDA:
             device = 'cuda'
             to_gpu = True
@@ -765,10 +765,11 @@ if __name__ == "__main__":
         while not ready.all():
             time.sleep(0.01)
         for i in range(num_envs):
-            team_replay_buffer.push(shared_exps[i][:exp_indices[i], :num_TA, :])
-            opp_replay_buffer.push(shared_exps[i][:exp_indices[i],num_TA:2*num_TA,:])
-            team_replay_buffer.push(shared_exps[i][:exp_indices[i], num_TA:2*num_TA, :])
-            opp_replay_buffer.push(shared_exps[i][:exp_indices[i],:num_TA,:])
+            team_replay_buffer.push(shared_exps[i][:exp_indices[i], :num_TA*2, :])
+            opp_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], -num_TA:, :], shared_exps[i][:exp_indices[i], :num_TA, :]), dim=1))
+            # opp_replay_buffer.push(shared_exps[i][:exp_indices[i],num_TA:2*num_TA,:])
+            # team_replay_buffer.push(shared_exps[i][:exp_indices[i], num_TA:2*num_TA, :])
+            # opp_replay_buffer.push(shared_exps[i][:exp_indices[i],:num_TA,:])
 #         if len(team_replay_buffer) > 50000:
 #             start = time.time()
 #             for _ in range(10000):
