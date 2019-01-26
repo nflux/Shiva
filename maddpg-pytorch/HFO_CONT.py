@@ -98,7 +98,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                     change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
                     change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
-                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin)
+                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=True)
 
     #The start_viewer here is added to automatically start viewer with npc Vs npcs
     if num_TNPC > 0 and num_ONPC > 0:
@@ -194,13 +194,22 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
         for et_i in range(0, episode_length):
             maddpg.prep_training(device=device) # GPU for forward passes?? 
 
-            # gather all the observations into a torch tensor 
-            torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False).cuda(non_blocking=True)
-                        for i in range(maddpg.nagents_team)]
+            if device == 'cuda':
+                # gather all the observations into a torch tensor 
+                torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False).cuda(non_blocking=True)
+                            for i in range(num_TA)]
 
-            # gather all the opponent observations into a torch tensor 
-            torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False).cuda(non_blocking=True)
-                        for i in range(maddpg.nagents_opp)]
+                # gather all the opponent observations into a torch tensor 
+                torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False).cuda(non_blocking=True)
+                            for i in range(num_OA)]
+            else:
+                # gather all the observations into a torch tensor 
+                torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False)
+                            for i in range(num_TA)]
+
+                # gather all the opponent observations into a torch tensor 
+                torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False)
+                            for i in range(num_OA)]
 
             # Get e-greedy decision
             if explore:
@@ -697,7 +706,7 @@ if __name__ == "__main__":
                     agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                     change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
                     change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
-                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin)
+                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=False)
 
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                 adversary_alg= "MADDPG",device=device,

@@ -116,12 +116,12 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
 
   // Distances to the edges of the playable area
   if (self.posValid()) {
-    // Distance to Left field line, replaced by full field original code below. Might need to be modified for negative values.
+    // Based off left sides view the right side is reversed
     //addDistFeature(self_pos.x, pitchHalfLength);
-    addDistFeature(self_pos.x, pitchLength);
+    addDistFeature(pitchHalfLength + self_pos.x, pitchLength);
     // Distance to Right field line
     //addDistFeature(pitchHalfLength - self_pos.x, pitchHalfLength);
-    addDistFeature(self_pos.x, pitchLength);
+    addDistFeature(pitchHalfLength - self_pos.x, pitchLength);
     // Distance to top field line
     addDistFeature(pitchHalfWidth + self_pos.y, pitchWidth);
     // Distance to Bottom field line
