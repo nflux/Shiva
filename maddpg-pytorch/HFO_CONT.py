@@ -41,33 +41,36 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
     for ensemble in range(k_ensembles):
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team)
         for up in range(number_of_updates):
-            inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-            # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
+            inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
 
+            #inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+
+            # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
 
             if LSTM:
                 team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
                 opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, a_i, 'team')
+                maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, agentID, 'team')
             elif LSTM_PC:
                 team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
                 opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, a_i, 'team')
+                maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, agentID, 'team')
             else:
                 team_sample = team_replay_buffer.sample(inds,
                                             to_gpu=to_gpu,norm_rews=False)
                 opp_sample = opp_replay_buffer.sample(inds,
                                             to_gpu=to_gpu,norm_rews=False)
 
-                maddpg.update_centralized_critic(team_sample, opp_sample, agentID, 'team',forward_pass=forward_pass)
+                priorities = maddpg.update_centralized_critic(team_sample, opp_sample, agentID, 'team',forward_pass=forward_pass)
+                team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
             if SIL:
                 for i in range(SIL_update_ratio):
-                    team_sample,inds = team_replay_buffer.sample_SIL(agentID=a_i,batch_size=batch_size,
+                    team_sample,inds = team_replay_buffer.sample_SIL(agentID=agentID,batch_size=batch_size,
                                         to_gpu=to_gpu,norm_rews=False)
                     opp_sample = opp_replay_buffer.sample(inds,to_gpu=to_gpu,norm_rews=False)
-                    priorities = maddpg.SIL_update(team_sample, opp_sample, a_i, 'team', 
+                    priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team', 
                                     centQ=critic_mod_both) # 
-                    team_replay_buffer.update_priorities(agentID=a_i,inds = inds, prio=priorities)
+                    team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities)
 
         maddpg.update_agent_targets(agentID,number_of_updates)
         maddpg.save_agent(load_path,update_session,agentID)
@@ -84,7 +87,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
     LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim) = HP
+    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences) = HP
 
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
@@ -350,6 +353,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                             n_step_next_ob_opp = opp_n_step_next_obs[-1]
                             n_step_done_opp = opp_n_step_dones[-1]
 
+                        priorities = np.array([np.zeros(k_ensembles) for i in range(num_TA)])
                         exp_team = np.column_stack((np.transpose(team_n_step_obs[n]),
                                             team_n_step_acs[n],
                                             np.expand_dims(team_n_step_rewards[n], 1),
@@ -357,7 +361,9 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                             np.expand_dims([n_step_done_team for i in range(num_TA)], 1),
                                             np.expand_dims(team_all_MC_targets[et_i-n], 1),
                                             np.expand_dims(n_step_targets_team, 1),
-                                            np.expand_dims([team_n_step_ws[n] for i in range(num_TA)], 1)))
+                                            np.expand_dims([team_n_step_ws[n] for i in range(num_TA)], 1),
+                                            priorities))
+
 
                         exp_opp = np.column_stack((np.transpose(opp_n_step_obs[n]),
                                             opp_n_step_acs[n],
@@ -366,7 +372,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                             np.expand_dims([n_step_done_opp for i in range(num_OA)], 1),
                                             np.expand_dims(opp_all_MC_targets[et_i-n], 1),
                                             np.expand_dims(n_step_targets_opp, 1),
-                                            np.expand_dims([opp_n_step_ws[n] for i in range(num_OA)], 1)))
+                                            np.expand_dims([opp_n_step_ws[n] for i in range(num_OA)], 1),
+                                            priorities))
                         
                         exp_comb = np.expand_dims(np.vstack((exp_team, exp_opp)), 0)
 
@@ -424,7 +431,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path) # use for per ensemble update counter
                     while halt.all():
                         time.sleep(0.0001)
-                    shared_exps.copy_(torch.zeros(10000,2*num_TA,(obs_dim_TA*2 + acs_dim + 5))) # done loading
+                    shared_exps.copy_(torch.zeros(max_num_experiences,2*num_TA,(obs_dim_TA*2 + acs_dim + 5) + k_ensembles)) # done loading
                     #exp_i = 0 # reset experience builders
                     del exps
                     exps = None
@@ -453,9 +460,9 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 5
+    num_envs = 4
     seed = 123
-    port = 1000
+    port = 2000
     max_num_experiences = 10000
     update_threads = []
     if True: # all options 
@@ -495,8 +502,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 3
-        num_OA = 3
+        num_TA = 1
+        num_OA = 1
         num_TNPC = 0
         num_ONPC = 0
         obs_dim_TA = 68+(18*(num_TA-1))
@@ -512,14 +519,14 @@ if __name__ == "__main__":
         a_lr = 0.0001 # actor learning rate
         c_lr = 0.001 # critic learning rate
         tau = 0.001 # soft update rate
-        steps_per_update = 20
+        steps_per_update = 10
         number_of_updates = 0
         # exploration --------------------------
         explore = True
         final_OU_noise_scale = 0.1
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 500 # Haus uses over 10,000 updates --
+        num_explore_episodes = 200 # Haus uses over 10,000 updates --
 
         # --------------------------------------
         #D4PG Options --------------------------
@@ -679,7 +686,7 @@ if __name__ == "__main__":
         ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
         LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim)
+        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences)
 
     # dummy env that isn't used explicitly
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
@@ -718,17 +725,17 @@ if __name__ == "__main__":
         first_save = False
 
     team_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles)
 
     #Added to Disable/Enable the opp agents
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
     opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles)
 
     update_session = 0
     processes = []
 
-    shared_exps = [torch.zeros(max_num_experiences,2*num_TA,(obs_dim_TA*2 + acs_dim + 5),requires_grad=False).share_memory_() for _ in range(num_envs)]
+    shared_exps = [torch.zeros(max_num_experiences,2*num_TA,(obs_dim_TA*2 + acs_dim + 5) + k_ensembles,requires_grad=False).share_memory_() for _ in range(num_envs)]
     exp_indices = [torch.tensor(0,requires_grad=False).share_memory_() for _ in range(num_envs)]
 
     halt = Variable(torch.tensor(0).byte()).share_memory_()
@@ -753,6 +760,16 @@ if __name__ == "__main__":
             opp_replay_buffer.push(shared_exps[i][:exp_indices[i],num_TA:2*num_TA,:])
             team_replay_buffer.push(shared_exps[i][:exp_indices[i], num_TA:2*num_TA, :])
             opp_replay_buffer.push(shared_exps[i][:exp_indices[i],:num_TA,:])
+#         if len(team_replay_buffer) > 50000:
+#             start = time.time()
+#             for _ in range(10000):
+
+#                 inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+#                 team_sample = team_replay_buffer.sample(inds,
+#                                             to_gpu=to_gpu,norm_rews=False)
+#                 opp_sample = opp_replay_buffer.sample(inds,
+#                                             to_gpu=to_gpu,norm_rews=False)
+#             print("Time for 10000 samples ", time.time()-start)
         # get num updates and reset counter
         # If the update rate is slower than the exp generation than this ratio will be greater than 1 when our experience tensor
         # is full (10,000 timesteps backlogged) so wait for updates to catch up

@@ -519,25 +519,6 @@ class MADDPG(object):
             opp_policies = self.team_policies
             obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
-        # obs = [o.cuda() for o in obs]
-        # acs = [a.cuda() for a in acs]
-        # rews = [r.cuda() for r in rews]
-        # next_obs =[n.cuda() for n in next_obs]
-        # dones = [d.cuda() for d in dones]
-        # MC_rews = [m.cuda() for m in MC_rews]
-        # n_step_rews= [n.cuda() for n in n_step_rews]
-        # ws = [w.cuda() for w in ws]
-
-        # opp_obs = [o.cuda() for o in opp_obs]
-        # opp_acs = [a.cuda() for a in opp_acs]
-        # opp_rews = [r.cuda() for r in opp_rews]
-        # opp_next_obs= [n.cuda() for n in opp_next_obs]
-
-        # opp_dones = [d.cuda() for d in opp_dones]
-        # opp_MC_rews = [m.cuda() for m in opp_MC_rews]
-        # opp_n_step_rews= [n.cuda() for n in opp_n_step_rews]
-        # opp_ws = [w.cuda() for w in opp_ws]
-
 
         self.curr_agent_index = agent_i
         # Train critic ------------------------
@@ -637,18 +618,14 @@ class MADDPG(object):
             curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True, device=self.device),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
             team_pol_acs = []
             opp_pol_acs = []
-            for i, pi, ob in zip(range(nagents), policies, obs):
+            for i in range(nagents):
                 if i == agent_i:
                     team_pol_acs.append(curr_pol_vf_in)
                 else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
-                    with torch.no_grad():
-                        a = pi(ob)
-                    team_pol_acs.append(torch.cat((onehot_from_logits(a[:,:curr_agent.action_dim]),a[:,curr_agent.action_dim:]),dim=1))
+                    team_pol_acs.append(acs[i])
             
-            for i, pi, ob in zip(range(nagents), opp_policies, opp_obs):
-                with torch.no_grad():
-                    a = pi(ob)
-                opp_pol_acs.append(torch.cat((onehot_from_logits(a[:,:curr_agent.action_dim]),a[:,curr_agent.action_dim:]),dim=1))
+            for i in range(nagents):
+                opp_pol_acs.append(opp_acs[i])
 
             obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
             acs_vf_in = torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)
@@ -735,6 +712,12 @@ class MADDPG(object):
             if self.I2A:
                 print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
+        
+        # return priorities
+        if self.TD3:
+            return ((prob_dist_1.sum(dim=1) + prob_dist_2.sum(dim=1))/2.0).cpu()
+        else:
+            return prob_dist.sum(dim=1).cpu()
 
 
     def update_centralized_critic_LSTM(self, team_sample, opp_sample, agent_i, side='team', parallel=False, logger=None, act_only=False, obs_only=False):

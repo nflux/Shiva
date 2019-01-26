@@ -15,7 +15,7 @@ class ReplayTensorBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, LSTM_PC):
+    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, LSTM_PC,k):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -31,20 +31,22 @@ class ReplayTensorBuffer(object):
         self.obs_dim = obs_dim
         self.ac_dim = ac_dim
         self.obs_buffs = torch.zeros((max_steps, num_agents, obs_dim))
-        self.ac_buffs = torch.zeros((max_steps, num_agents, ac_dim))
-        self.n_step_buffs = torch.zeros((max_steps, num_agents, 1))
-        self.rew_buffs = torch.zeros((max_steps, num_agents, 1))
-        self.mc_buffs = torch.zeros((max_steps, num_agents, 1))
-        self.next_obs_buffs = torch.zeros((max_steps, num_agents, obs_dim))
-        self.done_buffs = torch.zeros((max_steps, num_agents, 1))
-        self.ws_buffs = torch.zeros((max_steps, num_agents, 1))
+        self.ac_buffs = torch.zeros((max_steps, num_agents, ac_dim),requires_grad=False)
+        self.n_step_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+        self.rew_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+        self.mc_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+        self.next_obs_buffs = torch.zeros((max_steps, num_agents, obs_dim),requires_grad=False)
+        self.done_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+        self.ws_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
         # self.SIL_priority = []
+        self.ensemble_priorities = torch.zeros((max_steps,num_agents,k),requires_grad=False)
         self.episode_buff = []
         self.done_step = False
         self.batch_size =  batch_size
         self.count = 0
         self.LSTM = LSTM
         self.LSTM_PC = LSTM_PC
+        self.k = k
         # for _ in range(num_agents):
         #     self.obs_buffs.append(torch.zeros((max_steps, obs_dim)))
         #     self.ac_buffs.append(torch.zeros((max_steps, ac_dim)))
@@ -76,6 +78,7 @@ class ReplayTensorBuffer(object):
             self.mc_buffs = roll(self.mc_buffs, rollover)
             self.n_step_buffs = roll(self.n_step_buffs, rollover)
             self.ws_buffs = roll(self.ws_buffs, rollover)
+            self.ensemble_priorities = roll(self.ensemble_priorities,rollover)
             # self.SIL_priority[agent_i] = np.roll(self.SIL_priority[agent_i],
             #                                          rollover)
 
@@ -95,6 +98,8 @@ class ReplayTensorBuffer(object):
         self.mc_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, next_oi+1:next_oi+2]
         self.n_step_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, next_oi+2:next_oi+3]
         self.ws_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, next_oi+3:next_oi+4]
+        self.ensemble_priorities[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.k] = exps[:, :, next_oi+4:next_oi+4+self.k]
+
         
         self.curr_i += nentries
         if self.filled_i < self.max_steps:
@@ -381,8 +386,21 @@ class ReplayTensorBuffer(object):
                 ret_n_step,
                 [cast(self.ws_buffs[i][inds]) for i in range(self.num_agents)]),inds
     
-    def update_priorities(self, agentID,inds, prio):
+    def update_SIL_priorities(self, agentID,inds, prio):
         for i, p in zip(inds,prio):
             self.SIL_priority[agentID][i] = p
 
-    
+    def update_priorities(self, agentID,inds, prio,k=1):
+        self.ensemble_priorities[inds,agentID,k] = prio
+
+    def get_PER_inds(self,agentID=0,batch_size=32,k=1):
+        '''Returns a sample prioritized using MC_Targets - Q for the Self-Imitation update and the indices used'''
+        # inds = np.random.choice(np.arange(self.filled_i), size=N,
+        #                         replace=False)   
+        prios = self.ensemble_priorities[:self.filled_i,agentID,k].detach()
+        if prios.sum() == 0:
+            reset = np.ones(len(prios))/(1.0*len(prios))
+            probs = reset/np.sum(reset)
+        else:
+            probs = prios.numpy()/prios.sum().numpy()
+        return np.random.choice(self.filled_i,batch_size,p=probs)
