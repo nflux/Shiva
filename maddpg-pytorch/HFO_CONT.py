@@ -765,8 +765,8 @@ if __name__ == "__main__":
         while not ready.all():
             time.sleep(0.01)
         for i in range(num_envs):
-            team_replay_buffer.push(shared_exps[i][:exp_indices[i], :num_TA*2, :])
-            opp_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], -num_TA:, :], shared_exps[i][:exp_indices[i], :num_TA, :]), dim=1))
+            team_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], :num_TA, :], shared_exps[i][:exp_indices[i], -num_TA:, :])))
+            opp_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], -num_TA:, :], shared_exps[i][:exp_indices[i], :num_TA, :])))
             # opp_replay_buffer.push(shared_exps[i][:exp_indices[i],num_TA:2*num_TA,:])
             # team_replay_buffer.push(shared_exps[i][:exp_indices[i], num_TA:2*num_TA, :])
             # opp_replay_buffer.push(shared_exps[i][:exp_indices[i],:num_TA,:])

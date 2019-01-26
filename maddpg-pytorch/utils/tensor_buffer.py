@@ -30,16 +30,16 @@ class ReplayTensorBuffer(object):
         self.start_loc = 0
         self.obs_dim = obs_dim
         self.ac_dim = ac_dim
-        self.obs_buffs = torch.zeros((max_steps, num_agents*2, obs_dim))
-        self.ac_buffs = torch.zeros((max_steps, num_agents*2, ac_dim),requires_grad=False)
-        self.n_step_buffs = torch.zeros((max_steps, num_agents*2, 1),requires_grad=False)
-        self.rew_buffs = torch.zeros((max_steps, num_agents*2, 1),requires_grad=False)
-        self.mc_buffs = torch.zeros((max_steps, num_agents*2, 1),requires_grad=False)
-        self.next_obs_buffs = torch.zeros((max_steps, num_agents*2, obs_dim),requires_grad=False)
-        self.done_buffs = torch.zeros((max_steps, num_agents*2, 1),requires_grad=False)
-        self.ws_buffs = torch.zeros((max_steps, num_agents*2, 1),requires_grad=False)
+        self.obs_buffs = torch.zeros((max_steps, num_agents, obs_dim))
+        self.ac_buffs = torch.zeros((max_steps, num_agents, ac_dim),requires_grad=False)
+        self.n_step_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+        self.rew_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+        self.mc_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+        self.next_obs_buffs = torch.zeros((max_steps, num_agents, obs_dim),requires_grad=False)
+        self.done_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+        self.ws_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
         # self.SIL_priority = []
-        self.ensemble_priorities = torch.zeros((max_steps,num_agents*2,k),requires_grad=False)
+        self.ensemble_priorities = torch.zeros((max_steps,num_agents,k),requires_grad=False)
         self.episode_buff = []
         self.done_step = False
         self.batch_size =  batch_size
@@ -66,6 +66,7 @@ class ReplayTensorBuffer(object):
         return self.filled_i
     
     def push(self, exps):
+        print(exps.size())
         nentries = len(exps)
 
         if self.curr_i + nentries > self.max_steps:
@@ -90,15 +91,15 @@ class ReplayTensorBuffer(object):
         rew_i = oa_i+1
         next_oi = rew_i+self.obs_dim
 
-        self.obs_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents*2, :self.obs_dim] = exps[:, :, :self.obs_dim]
-        self.ac_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents*2, :self.ac_dim] = exps[:, :, self.obs_dim:oa_i]
-        self.rew_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents*2, :1] = exps[:, :, oa_i:rew_i]
-        self.next_obs_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents*2, :self.obs_dim] = exps[:, :, rew_i:next_oi]
-        self.done_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents*2, :1] = exps[:, :, next_oi:next_oi+1]
-        self.mc_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents*2, :1] = exps[:, :, next_oi+1:next_oi+2]
-        self.n_step_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents*2, :1] = exps[:, :, next_oi+2:next_oi+3]
-        self.ws_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents*2, :1] = exps[:, :, next_oi+3:next_oi+4]
-        self.ensemble_priorities[self.curr_i:self.curr_i+nentries, :self.num_agents*2, :self.k] = exps[:, :, next_oi+4:next_oi+4+self.k]
+        self.obs_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.obs_dim] = exps[:, :, :self.obs_dim]
+        self.ac_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.ac_dim] = exps[:, :, self.obs_dim:oa_i]
+        self.rew_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, oa_i:rew_i]
+        self.next_obs_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.obs_dim] = exps[:, :, rew_i:next_oi]
+        self.done_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, next_oi:next_oi+1]
+        self.mc_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, next_oi+1:next_oi+2]
+        self.n_step_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, next_oi+2:next_oi+3]
+        self.ws_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, next_oi+3:next_oi+4]
+        self.ensemble_priorities[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.k] = exps[:, :, next_oi+4:next_oi+4+self.k]
 
         
         self.curr_i += nentries
