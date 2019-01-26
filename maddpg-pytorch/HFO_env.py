@@ -598,8 +598,8 @@ class HFO_env():
             num_ag = self.num_OA
 
         if team_obs[agentID][7] < 0 :
-            reward -= 0.1
-            team_reward -= 0.1
+            reward -= 0.02
+            team_reward -= 0.02
             # print ('low stamina')
         ############ Kicked Ball #################
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            

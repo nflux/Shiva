@@ -1982,7 +1982,7 @@ class MADDPG(object):
         if self.niter % 100 == 0:
             print("Team (%s) Agent(%i) Policy loss" % (side, agent_i),pol_loss)
         
-    def SIL_update(self, team_sample=[], opp_sample=[],agent_i=0,side='team', parallel=False, logger=None,centQ=False):
+    def SIL_update(self, team_sample=[], opp_sample=[],agent_i=0,side='team', parallel=False, logger=None):
         """
         Update parameters of agent model based on sample from replay buffer using Self-Imitation Learning update:
         sil_policy_loss = (MSE(Action,Policy(obs))) * (R - Q) if R > Q
@@ -2031,17 +2031,12 @@ class MADDPG(object):
             if i == agent_i:
                 team_pol_acs.append(curr_pol_vf_in)
             else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
-                a = pi(ob)
-                team_pol_acs.append(torch.cat((onehot_from_logits(torch.log(a[:,:curr_agent.action_dim])),a[:,curr_agent.action_dim:]),dim=1))
-        if centQ:
-            for i, pi, ob in zip(range(nagents), opp_policies, opp_obs):
-                a = pi(ob)
-                opp_pol_acs.append(torch.cat((onehot_from_logits(a[:,:curr_agent.action_dim]),a[:,curr_agent.action_dim:]),dim=1))
+                team_pol_acs.append(acs[i])
+            
+            for i in range(nagents):
+                opp_pol_acs.append(opp_acs[i])
 
-        if not centQ:
-            vf_in = torch.cat((*obs, *team_pol_acs), dim=1)     
-        else:
-            vf_in = torch.cat((torch.cat((*opp_obs,*obs),dim=1),torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)),dim=1)
+        vf_in = torch.cat((torch.cat((*opp_obs,*obs),dim=1),torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)),dim=1)
             
         # Train critic ------------------------
         # Uses MSE between MC values and Q if MC > Q
@@ -2051,8 +2046,8 @@ class MADDPG(object):
             if self.D4PG:
                 Q1 = curr_agent.critic.distr_to_q(Q1_distr)
                 Q2 = curr_agent.critic.distr_to_q(Q2_distr)
-                arg = torch.argmin(torch.stack(Q1.mean(),
-                                 Q2.mean()),dim=0)
+                arg = torch.argmin(torch.stack((Q1.mean(),
+                                 Q2.mean()),dim=0))
                 if not arg: 
                     Q = Q1
                 else:
@@ -2062,7 +2057,6 @@ class MADDPG(object):
         else:
             Q = curr_agent.critic(vf_in)
         # Critic assessment of current policy actions
-        vf_in = torch.cat((*obs, *acs), dim=1)
 
         returns = MC_rews[agent_i].view(-1,1)
 
@@ -2087,7 +2081,6 @@ class MADDPG(object):
 
         
         
-
         pol_out_actions = torch.softmax(curr_pol_out[:,:curr_agent.action_dim],dim=1).float()
         actual_out_actions = Variable(torch.stack(acs)[agent_i],requires_grad=True).float()[:,:curr_agent.action_dim]
         pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
@@ -2114,8 +2107,7 @@ class MADDPG(object):
             print("Team (%s) SIL Actor loss:" % side,np.round(pol_loss.item(),6))
             print("Team (%s) SIL Critic loss:" % side,np.round(vf_loss.item(),6))
         
-        return clipped_differences
-
+        return clipped_differences.cpu()
         
         # ------------------------------------
 

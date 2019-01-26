@@ -30,7 +30,7 @@ import dill
 
 
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,num_TA):
+                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA):
     
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
@@ -62,15 +62,18 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                                             to_gpu=to_gpu,norm_rews=False)
 
                 priorities = maddpg.update_centralized_critic(team_sample, opp_sample, agentID, 'team',forward_pass=forward_pass)
+                #print(priorities)
+
                 team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
             if SIL:
                 for i in range(SIL_update_ratio):
-                    team_sample,inds = team_replay_buffer.sample_SIL(agentID=agentID,batch_size=batch_size,
-                                        to_gpu=to_gpu,norm_rews=False)
-                    opp_sample = opp_replay_buffer.sample(inds,to_gpu=to_gpu,norm_rews=False)
-                    priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team', 
-                                    centQ=critic_mod_both) # 
-                    team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities)
+                    inds = team_replay_buffer.get_SIL_inds(agentID=agentID,batch_size=batch_size)
+                    team_sample = team_replay_buffer.sample(inds,
+                                            to_gpu=to_gpu,norm_rews=False)
+                    opp_sample = opp_replay_buffer.sample(inds,
+                                            to_gpu=to_gpu,norm_rews=False)
+                    priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
+                    team_replay_buffer.update_SIL_priorities(agentID=agentID,inds = inds, prio=priorities)
 
         maddpg.update_agent_targets(agentID,number_of_updates)
         maddpg.save_agent(load_path,update_session,agentID)
@@ -363,6 +366,9 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                             n_step_done_opp = opp_n_step_dones[-1]
 
                         priorities = np.array([np.zeros(k_ensembles) for i in range(num_TA)])
+                        priorities[:,current_ensembles] = 5.0
+                        if SIL:
+                            SIL_priorities = np.ones(num_TA)*5.0
                         exp_team = np.column_stack((np.transpose(team_n_step_obs[n]),
                                             team_n_step_acs[n],
                                             np.expand_dims(team_n_step_rewards[n], 1),
@@ -371,7 +377,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                             np.expand_dims(team_all_MC_targets[et_i-n], 1),
                                             np.expand_dims(n_step_targets_team, 1),
                                             np.expand_dims([team_n_step_ws[n] for i in range(num_TA)], 1),
-                                            priorities))
+                                            priorities,
+                                            np.expand_dims([5.0 for i in range(num_TA)],1)))
 
 
                         exp_opp = np.column_stack((np.transpose(opp_n_step_obs[n]),
@@ -382,8 +389,9 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                             np.expand_dims(opp_all_MC_targets[et_i-n], 1),
                                             np.expand_dims(n_step_targets_opp, 1),
                                             np.expand_dims([opp_n_step_ws[n] for i in range(num_OA)], 1),
-                                            priorities))
-                        
+                                            priorities,
+                                            np.expand_dims([5.0 for i in range(num_TA)],1)))
+                
                         exp_comb = np.expand_dims(np.vstack((exp_team, exp_opp)), 0)
 
                         if exps is None:
@@ -440,7 +448,9 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path) # use for per ensemble update counter
                     while halt.all():
                         time.sleep(0.0001)
-                    shared_exps.copy_(torch.zeros(max_num_experiences,2*num_TA,(obs_dim_TA*2 + acs_dim + 5) + k_ensembles)) # done loading
+                    total_dim = (obs_dim_TA*2 + acs_dim + 5) + k_ensembles + 1
+
+                    shared_exps.copy_(torch.zeros(max_num_experiences,2*num_TA,total_dim)) # done loading
                     #exp_i = 0 # reset experience builders
                     del exps
                     exps = None
@@ -469,7 +479,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 1
+    num_envs = 2
     seed = 123
     port = 2000
     max_num_experiences = 10000
@@ -734,17 +744,18 @@ if __name__ == "__main__":
         first_save = False
 
     team_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
 
     #Added to Disable/Enable the opp agents
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
     opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
 
     update_session = 0
     processes = []
+    total_dim = (obs_dim_TA*2 + acs_dim + 5) + k_ensembles + 1
 
-    shared_exps = [torch.zeros(max_num_experiences,2*num_TA,(obs_dim_TA*2 + acs_dim + 5) + k_ensembles,requires_grad=False).share_memory_() for _ in range(num_envs)]
+    shared_exps = [torch.zeros(max_num_experiences,2*num_TA,total_dim,requires_grad=False).share_memory_() for _ in range(num_envs)]
     exp_indices = [torch.tensor(0,requires_grad=False).share_memory_() for _ in range(num_envs)]
 
     halt = Variable(torch.tensor(0).byte()).share_memory_()
@@ -785,7 +796,7 @@ if __name__ == "__main__":
         # is full (10,000 timesteps backlogged) so wait for updates to catch up
         print("Generation/Max Shared memory at :",100*exp_indices[0].item()/max_num_experiences,"%")
 
-        if (exp_indices[0].item()/max_num_experiences) >= 1:
+        if (exp_indices[0].item()/max_num_experiences) >= .6:
             print("Training backlog (shared memory buffer full); halting experience generation until updates catch up")
 
             number_of_updates = int(update_counter.sum().item())
@@ -793,7 +804,7 @@ if __name__ == "__main__":
             for a_i in range(maddpg.nagents_team):
                 threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                     team_replay_buffer,opp_replay_buffer,number_of_updates,
-                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,num_TA)))
+                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA)))
 
             [thr.start() for thr in threads]
             print("Launching update")
@@ -818,7 +829,7 @@ if __name__ == "__main__":
             for a_i in range(maddpg.nagents_team):
                 threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                     team_replay_buffer,opp_replay_buffer,number_of_updates,
-                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,num_TA)))
+                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA)))
 
             [thr.start() for thr in threads]
             print("Launching update")

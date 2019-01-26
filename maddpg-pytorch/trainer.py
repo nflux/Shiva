@@ -81,7 +81,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     
             team_randoms = e_greedy_bool(env.num_TA,eps = 0,device=device)
             opp_randoms = e_greedy_bool(env.num_OA,eps = 0,device=device)
-            team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_team,team_randoms,opp_randoms,explore=False) # leave off or will gumbel sample
+            team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_team,team_randoms,opp_randoms,explore=False,parallel=False) # leave off or will gumbel sample
             team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
             team_params = np.asarray([ac[0][len(env.action_list):] for ac in team_agent_actions]) 
 

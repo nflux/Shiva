@@ -15,7 +15,7 @@ class ReplayTensorBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, LSTM_PC,k):
+    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, LSTM_PC,k,SIL):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -38,7 +38,7 @@ class ReplayTensorBuffer(object):
         self.next_obs_buffs = torch.zeros((max_steps, num_agents, obs_dim),requires_grad=False)
         self.done_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
         self.ws_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
-        # self.SIL_priority = []
+        self.SIL_priorities = torch.zeros((max_steps,num_agents,1),requires_grad=False)
         self.ensemble_priorities = torch.zeros((max_steps,num_agents,k),requires_grad=False)
         self.episode_buff = []
         self.done_step = False
@@ -47,6 +47,7 @@ class ReplayTensorBuffer(object):
         self.LSTM = LSTM
         self.LSTM_PC = LSTM_PC
         self.k = k
+        self.SIL = SIL
         # for _ in range(num_agents):
         #     self.obs_buffs.append(torch.zeros((max_steps, obs_dim)))
         #     self.ac_buffs.append(torch.zeros((max_steps, ac_dim)))
@@ -80,8 +81,8 @@ class ReplayTensorBuffer(object):
             self.n_step_buffs = roll(self.n_step_buffs, rollover)
             self.ws_buffs = roll(self.ws_buffs, rollover)
             self.ensemble_priorities = roll(self.ensemble_priorities,rollover)
-            # self.SIL_priority[agent_i] = np.roll(self.SIL_priority[agent_i],
-            #                                          rollover)
+            self.SIL_priorities = roll(self.SIL_priorities,rollover)
+
 
             self.curr_i = 0
             self.filled_i = self.max_steps
@@ -100,6 +101,7 @@ class ReplayTensorBuffer(object):
         self.n_step_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, next_oi+2:next_oi+3]
         self.ws_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, next_oi+3:next_oi+4]
         self.ensemble_priorities[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.k] = exps[:, :, next_oi+4:next_oi+4+self.k]
+        self.SIL_priorities[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.k] = exps[:, :, next_oi+4+self.k:next_oi+4+self.k+1]
 
         
         self.curr_i += nentries
@@ -150,7 +152,7 @@ class ReplayTensorBuffer(object):
             self.done_buffs[agent_i][self.curr_i:self.curr_i + nentries] = dones[agent_i]
             self.n_step_buffs[agent_i][self.curr_i:self.curr_i + nentries] = n_step[agent_i]
             self.ws_buffs[agent_i][self.curr_i:self.curr_i + nentries] = ws[agent_i]
-            self.SIL_priority[agent_i][self.curr_i:self.curr_i +nentries] = 1.0
+            self.SIL_priorities[agent_i][self.curr_i:self.curr_i +nentries] = 1.0
         
         # Track experience based off the episodes
         # print('This is the dones',str(dones[0]))
@@ -197,7 +199,7 @@ class ReplayTensorBuffer(object):
                                                  roll_amount)
                 self.ws_buffs[agent_i] = np.roll(self.ws_buffs[agent_i],
                                                    roll_amount)
-                self.SIL_priority[agent_i] = np.roll(self.SIL_priority[agent_i],
+                self.SIL_priorities[agent_i] = np.roll(self.SIL_priorities[agent_i],
                                                      roll_amount)
             self.curr_i = roll_amount
             self.start_loc = 0
@@ -334,71 +336,33 @@ class ReplayTensorBuffer(object):
     
 
 
-    def sample_SIL(self,agentID=0,batch_size=32,to_gpu=False, norm_rews=False):
-        '''Returns a sample prioritized using MC_Targets - Q for the Self-Imitation update and the indices used'''
-        # inds = np.random.choice(np.arange(self.filled_i), size=N,
-        #                         replace=False)
-        if to_gpu:
-            cast = lambda x: Variable(Tensor(x), requires_grad=False).cuda()
-        else:
-            cast = lambda x: Variable(Tensor(x), requires_grad=False)
-        if to_gpu:
-            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True).cuda() # obs need gradient for cent-Q
-        else:
-            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True)
-            
-            
-        prios = self.SIL_priority[agentID][:self.filled_i]
-        if prios.sum() == 0:
-            probs = [1.0/len(prios)]*len(prios)
-        else:
-            probs = prios/prios.sum()
-
-        inds  = np.random.choice(self.filled_i,batch_size,p=probs)
-        if norm_rews:
-            ret_rews = [cast((self.rew_buffs[i][inds] -
-                              self.rew_buffs[i][:self.filled_i].mean()) /
-                             self.rew_buffs[i][:self.filled_i].std())
-                        for i in range(self.num_agents)]
-        if norm_rews:
-            ret_mc = [cast((self.mc_buffs[i][inds] -
-                              self.mc_buffs[i][:self.filled_i].mean()) /
-                             self.mc_buffs[i][:self.filled_i].std())
-                        for i in range(self.num_agents)]
-        if norm_rews:
-            ret_n_step = [cast((self.n_step_buffs[i][inds] -
-                              self.n_step_buffs[i][:self.filled_i].mean()) /
-                             self.n_step_buffs[i][:self.filled_i].std())
-                        for i in range(self.num_agents)]
-
-        else:
-            ret_rews = [cast(self.rew_buffs[i][inds]) for i in range(self.num_agents)]
-            ret_mc = [cast(self.mc_buffs[i][inds]) for i in range(self.num_agents)]
-            ret_n_step = [cast(self.n_step_buffs[i][inds]) for i in range(self.num_agents)]
-
-
-       
-        return ([cast_obs(self.obs_buffs[i][inds]) for i in range(self.num_agents)],
-                [cast(self.ac_buffs[i][inds]) for i in range(self.num_agents)],
-                ret_rews,
-                [cast(self.next_obs_buffs[i][inds]) for i in range(self.num_agents)],
-                [cast(self.done_buffs[i][inds]) for i in range(self.num_agents)],
-                ret_mc,
-                ret_n_step,
-                [cast(self.ws_buffs[i][inds]) for i in range(self.num_agents)]),inds
     
     def update_SIL_priorities(self, agentID,inds, prio):
         for i, p in zip(inds,prio):
-            self.SIL_priority[agentID][i] = p
+            self.SIL_priorities[inds,agentID] = prio
+        
 
     def update_priorities(self, agentID,inds, prio,k=1):
         self.ensemble_priorities[inds,agentID,k] = prio
 
     def get_PER_inds(self,agentID=0,batch_size=32,k=1):
-        '''Returns a sample prioritized using MC_Targets - Q for the Self-Imitation update and the indices used'''
+        '''Returns a sample prioritized using TD error for the update and the indices used'''
         # inds = np.random.choice(np.arange(self.filled_i), size=N,
         #                         replace=False)   
         prios = self.ensemble_priorities[:self.filled_i,agentID,k].detach()
+        if prios.sum() == 0:
+            reset = np.ones(len(prios))/(1.0*len(prios))
+            probs = reset/np.sum(reset)
+        else:
+            probs = prios.numpy()/prios.sum().numpy()
+        return np.random.choice(self.filled_i,batch_size,p=probs)
+                              
+    def get_SIL_inds(self,agentID=0,batch_size=32):
+                              
+        '''Returns a sample prioritized using MC_Targets - Q for the Self-Imitation update and the indices used'''
+        # inds = np.random.choice(np.arange(self.filled_i), size=N,
+        #                         replace=False)   
+        prios = self.SIL_priorities[:self.filled_i,agentID,:].squeeze().detach()
         if prios.sum() == 0:
             reset = np.ones(len(prios))/(1.0*len(prios))
             probs = reset/np.sum(reset)
