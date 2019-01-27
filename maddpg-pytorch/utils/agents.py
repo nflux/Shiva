@@ -92,6 +92,7 @@ class DDPGAgent(object):
                             norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                             EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                     LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+
             #self.policy.share_memory()
             
             self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,

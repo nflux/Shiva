@@ -40,7 +40,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
     
     for ensemble in range(k_ensembles):
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team)
-        for up in range(number_of_updates):
+        for up in range(int(np.floor(number_of_updates/k_ensembles))):
             inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
 
             #inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
@@ -110,6 +110,10 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     time.sleep(3)
     print("Done connecting to the server ")
 
+    # ------ Testing ---------
+    #device = 'cpu'
+    #to_gpu = False
+    #cuda = False
     # initializing the maddpg 
     if load_nets:
         maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
@@ -479,7 +483,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 2
+    num_envs = 4
     seed = 123
     port = 2000
     max_num_experiences = 10000
@@ -521,8 +525,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 1
-        num_OA = 1
+        num_TA = 3
+        num_OA = 3
         num_TNPC = 0
         num_ONPC = 0
         obs_dim_TA = 68+(18*(num_TA-1))
@@ -538,7 +542,7 @@ if __name__ == "__main__":
         a_lr = 0.0001 # actor learning rate
         c_lr = 0.001 # critic learning rate
         tau = 0.001 # soft update rate
-        steps_per_update = 10
+        steps_per_update = 12
         number_of_updates = 0
         # exploration --------------------------
         explore = True
@@ -624,7 +628,7 @@ if __name__ == "__main__":
         # Self-play ----------------------------
         load_random_nets = True
         load_random_every = 100
-        k_ensembles = 1
+        k_ensembles = 2
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.8
         # --------------------------------------
@@ -778,19 +782,11 @@ if __name__ == "__main__":
         for i in range(num_envs):
             team_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], :num_TA, :], shared_exps[i][:exp_indices[i], -num_TA:, :])))
             opp_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], -num_TA:, :], shared_exps[i][:exp_indices[i], :num_TA, :])))
-            # opp_replay_buffer.push(shared_exps[i][:exp_indices[i],num_TA:2*num_TA,:])
-            # team_replay_buffer.push(shared_exps[i][:exp_indices[i], num_TA:2*num_TA, :])
-            # opp_replay_buffer.push(shared_exps[i][:exp_indices[i],:num_TA,:])
-#         if len(team_replay_buffer) > 50000:
-#             start = time.time()
-#             for _ in range(10000):
-
-#                 inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-#                 team_sample = team_replay_buffer.sample(inds,
-#                                             to_gpu=to_gpu,norm_rews=False)
-#                 opp_sample = opp_replay_buffer.sample(inds,
-#                                             to_gpu=to_gpu,norm_rews=False)
-#             print("Time for 10000 samples ", time.time()-start)
+            #team_replay_buffer.push(shared_exps[i][:exp_indices[i], :num_TA, :])
+            #opp_replay_buffer.push(shared_exps[i][:exp_indices[i],num_TA:2*num_TA,:])
+            #team_replay_buffer.push(shared_exps[i][:exp_indices[i], num_TA:2*num_TA, :])
+            #opp_replay_buffer.push(shared_exps[i][:exp_indices[i],:num_TA,:])
+         
         # get num updates and reset counter
         # If the update rate is slower than the exp generation than this ratio will be greater than 1 when our experience tensor
         # is full (10,000 timesteps backlogged) so wait for updates to catch up

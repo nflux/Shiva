@@ -2292,10 +2292,12 @@ class MADDPG(object):
     def first_save(self, file_path,num_copies=1):
         """
         Makes K clones of each agent to be used as the ensemble agents"""
-        #self.prep_training(device='cpu')  # move parameters to CPU before saving
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], file_path + ("ensemble_agent_%i" % i) + "/model_%i.pth" % j) for i in range(len(self.team_agents)) for j in range(num_copies)]
+        self.prep_training(device=self.device)
+
 
     def save(self, filename,ep_i):
         """
@@ -2310,11 +2312,11 @@ class MADDPG(object):
         """
         Save trained parameters of all agents into one file
         """
-        #self.prep_training(device='cpu')  # move parameters to CPU before saving
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         torch.save(save_dicts[agentID], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
-        #self.prep_training(device=self.device)
+        self.prep_training(device=self.device)
         
     @classmethod
     def init_from_save_selfplay(cls, filenames=list,nagents=1):
@@ -2352,11 +2354,13 @@ class MADDPG(object):
         """
         Save trained parameters of all agents into one file
         """
-        #self.prep_training(device='cpu')  # move parameters to CPU before saving
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
         
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (i,j))) for i,j in zip(range(len(self.team_agents)),current_ensembles)]
+        self.prep_training(device=self.device)
+
        
     
         #self.prep_training(device=self.device)
@@ -2365,12 +2369,11 @@ class MADDPG(object):
         """
         Save trained parameters of all agents into one file
         """
-        #self.prep_training(device='cpu')  # move parameters to CPU before saving
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
         
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         torch.save(save_dicts[agentID], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
        
-    
-        #self.prep_training(device=self.device)
+        self.prep_training(device=self.device)
         

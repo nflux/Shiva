@@ -67,7 +67,6 @@ class ReplayTensorBuffer(object):
         return self.filled_i
     
     def push(self, exps):
-        print(exps.size())
         nentries = len(exps)
 
         if self.curr_i + nentries > self.max_steps:
