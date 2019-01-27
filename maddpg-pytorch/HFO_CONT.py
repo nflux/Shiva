@@ -483,7 +483,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 4
+    num_envs = 1
     seed = 123
     port = 2000
     max_num_experiences = 10000
@@ -782,11 +782,6 @@ if __name__ == "__main__":
         for i in range(num_envs):
             team_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], :num_TA, :], shared_exps[i][:exp_indices[i], -num_TA:, :])))
             opp_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], -num_TA:, :], shared_exps[i][:exp_indices[i], :num_TA, :])))
-            #team_replay_buffer.push(shared_exps[i][:exp_indices[i], :num_TA, :])
-            #opp_replay_buffer.push(shared_exps[i][:exp_indices[i],num_TA:2*num_TA,:])
-            #team_replay_buffer.push(shared_exps[i][:exp_indices[i], num_TA:2*num_TA, :])
-            #opp_replay_buffer.push(shared_exps[i][:exp_indices[i],:num_TA,:])
-         
         # get num updates and reset counter
         # If the update rate is slower than the exp generation than this ratio will be greater than 1 when our experience tensor
         # is full (10,000 timesteps backlogged) so wait for updates to catch up
