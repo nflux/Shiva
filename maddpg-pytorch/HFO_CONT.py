@@ -30,54 +30,68 @@ import dill
 
 
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA):
+                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent):
     
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
 
     maddpg.prep_training(device=maddpg.device)
-    
     for ensemble in range(k_ensembles):
-        maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team)
-        for up in range(int(np.floor(number_of_updates/k_ensembles))):
-            inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
+        for m in range(num_TA): # for each agent update since we are one policy for all agents
+            maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
+            for up in range(int(np.floor(number_of_updates/k_ensembles))):
+                if not load_same_agent:
+                    inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
+                else:
+                    inds = team_replay_buffer.get_PER_inds(m,batch_size,ensemble)
 
-            #inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
 
-            # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
+                #inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
 
-            if LSTM:
-                team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, agentID, 'team')
-            elif LSTM_PC:
-                team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, agentID, 'team')
-            else:
-                team_sample = team_replay_buffer.sample(inds,
-                                            to_gpu=to_gpu,norm_rews=False)
-                opp_sample = opp_replay_buffer.sample(inds,
-                                            to_gpu=to_gpu,norm_rews=False)
+                # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
 
-                priorities = maddpg.update_centralized_critic(team_sample, opp_sample, agentID, 'team',forward_pass=forward_pass)
-                #print(priorities)
-
-                team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
-            if SIL:
-                for i in range(SIL_update_ratio):
-                    inds = team_replay_buffer.get_SIL_inds(agentID=agentID,batch_size=batch_size)
+                if LSTM:
+                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                    maddpg.update_centralized_critic_LSTM(team_sample, opp_sample, agentID, 'team',)
+                elif LSTM_PC:
+                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                    maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, agentID, 'team')
+                else:
                     team_sample = team_replay_buffer.sample(inds,
-                                            to_gpu=to_gpu,norm_rews=False)
+                                                to_gpu=to_gpu,norm_rews=False)
                     opp_sample = opp_replay_buffer.sample(inds,
-                                            to_gpu=to_gpu,norm_rews=False)
-                    priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
-                    team_replay_buffer.update_SIL_priorities(agentID=agentID,inds = inds, prio=priorities)
+                                                to_gpu=to_gpu,norm_rews=False)
+                    if not load_same_agent:
+                        priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
+                        team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
 
-        maddpg.update_agent_targets(agentID,number_of_updates)
-        maddpg.save_agent(load_path,update_session,agentID)
-        maddpg.save_ensemble(ensemble_path,ensemble,agentID)
+                    else:
+                        priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
+                        team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
+
+
+
+                if SIL:
+                    for i in range(SIL_update_ratio):
+                        inds = team_replay_buffer.get_SIL_inds(agentID=agentID,batch_size=batch_size)
+                        team_sample = team_replay_buffer.sample(inds,
+                                                to_gpu=to_gpu,norm_rews=False)
+                        opp_sample = opp_replay_buffer.sample(inds,
+                                                to_gpu=to_gpu,norm_rews=False)
+                        priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
+                        team_replay_buffer.update_SIL_priorities(agentID=agentID,inds = inds, prio=priorities)
+        if not load_same_agent:
+            maddpg.update_agent_targets(agentID,number_of_updates)
+            maddpg.save_agent(load_path,update_session,agentID)
+            maddpg.save_ensemble(ensemble_path,ensemble,agentID)
+        else:
+            maddpg.update_agent_targets(0,number_of_updates)
+            [maddpg.save_agent(load_path,update_session,i) for i in range(num_TA)]
+            [maddpg.save_ensemble(ensemble_path,ensemble,i) for i in range(num_TA)]
+
 
 
 def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history):
@@ -90,7 +104,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
     LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences) = HP
+    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent) = HP
 
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
@@ -371,6 +385,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
                         priorities = np.array([np.zeros(k_ensembles) for i in range(num_TA)])
                         priorities[:,current_ensembles] = 5.0
+                        #print(current_ensembles)
                         if SIL:
                             SIL_priorities = np.ones(num_TA)*5.0
                         exp_team = np.column_stack((np.transpose(team_n_step_obs[n]),
@@ -446,10 +461,10 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     shared_exps[:len(exps)] = exps
                     ready[env_num] = 1
                     if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
-                        maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path)
+                        maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
                     else:
-                        maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path)
-                    current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path) # use for per ensemble update counter
+                        maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
+                    current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path,load_same_agent=load_same_agent) # use for per ensemble update counter
                     while halt.all():
                         time.sleep(0.0001)
                     total_dim = (obs_dim_TA*2 + acs_dim + 5) + k_ensembles + 1
@@ -483,7 +498,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 1
+    num_envs = 2
     seed = 123
     port = 2000
     max_num_experiences = 10000
@@ -542,7 +557,7 @@ if __name__ == "__main__":
         a_lr = 0.0001 # actor learning rate
         c_lr = 0.001 # critic learning rate
         tau = 0.001 # soft update rate
-        steps_per_update = 12
+        steps_per_update = 10
         number_of_updates = 0
         # exploration --------------------------
         explore = True
@@ -628,9 +643,13 @@ if __name__ == "__main__":
         # Self-play ----------------------------
         load_random_nets = True
         load_random_every = 100
-        k_ensembles = 2
+        k_ensembles = 1
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.8
+        load_same_agent = True # load same policy for all agents
+        num_update_threads = num_TA
+        if load_same_agent:
+            num_update_threads = 1
         # --------------------------------------
         #Save/load -----------------------------
         save_nns = True
@@ -709,7 +728,7 @@ if __name__ == "__main__":
         ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
         LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences)
+        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent)
 
     # dummy env that isn't used explicitly
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
@@ -792,10 +811,18 @@ if __name__ == "__main__":
 
             number_of_updates = int(update_counter.sum().item())
             threads = []
-            for a_i in range(maddpg.nagents_team):
-                threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
-                    team_replay_buffer,opp_replay_buffer,number_of_updates,
-                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA)))
+            if not load_same_agent:
+                for a_i in range(maddpg.nagents_team):
+                    threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
+                        team_replay_buffer,opp_replay_buffer,number_of_updates,
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent)))
+            else:
+                for a_i in range(1):
+                    threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
+                        team_replay_buffer,opp_replay_buffer,number_of_updates,
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent)))
+
+
 
             [thr.start() for thr in threads]
             print("Launching update")
@@ -817,10 +844,16 @@ if __name__ == "__main__":
         if training:
             
             threads = []
-            for a_i in range(maddpg.nagents_team):
-                threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
-                    team_replay_buffer,opp_replay_buffer,number_of_updates,
-                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA)))
+            if not load_same_agent:
+                for a_i in range(maddpg.nagents_team):
+                    threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
+                        team_replay_buffer,opp_replay_buffer,number_of_updates,
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent)))
+            else:
+                for a_i in range(1):
+                    threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
+                        team_replay_buffer,opp_replay_buffer,number_of_updates,
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent)))
 
             [thr.start() for thr in threads]
             print("Launching update")

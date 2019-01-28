@@ -484,7 +484,7 @@ class MADDPG(object):
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
 
                 
-    def update_centralized_critic(self, team_sample, opp_sample, agent_i, side='team', parallel=False, logger=None, act_only=False, obs_only=False,forward_pass=True):
+    def update_centralized_critic(self, team_sample=[], opp_sample =[], agent_i = 0, side='team', parallel=False, logger=None, act_only=False, obs_only=False,forward_pass=True,load_same_agent=False):
         """
         Update parameters of agent model based on sample from replay buffer
         Inputs:
@@ -523,7 +523,8 @@ class MADDPG(object):
         self.curr_agent_index = agent_i
         # Train critic ------------------------
         curr_agent.critic_optimizer.zero_grad()
-        
+        if load_same_agent:
+            curr_agent = self.team_agents[0]
         #print("time critic")
         #start = time.time()
 
@@ -715,7 +716,7 @@ class MADDPG(object):
         
         # return priorities
         if self.TD3:
-            return ((prob_dist_1.sum(dim=1) + prob_dist_2.sum(dim=1))/2.0).cpu()
+            return ((prob_dist_1.float().sum(dim=1) + prob_dist_2.float().sum(dim=1))/2.0).cpu()
         else:
             return prob_dist.sum(dim=1).cpu()
 
@@ -2223,15 +2224,33 @@ class MADDPG(object):
         return instance
 
         
-    def load_random_policy(self,side='team',nagents=1,models_path="models"):
+    def load_random_policy(self,side='team',nagents=1,models_path="models",load_same_agent=False):
         """
         Load new networks into the currently running session
         Returns the index chosen for each agent
         """
         folders = os.listdir(models_path)
         folders.sort()
-        
-        ind = [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
+        if not load_same_agent:
+                
+            ind = [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
+            folder = [folder for folder in folders] # the folder names for each agents model
+            filenames = []
+            for i,f in zip(ind,folder):
+                current = os.listdir(models_path +f)
+                if side == 'team':
+                    current.sort()
+                filenames.append(current[i])
+            
+            save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
+            for i in range(nagents):
+                if side=='team':
+                    self.team_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+                else:
+                    self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+            return ind
+        else:
+            ind = [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
         folder = [folder for folder in folders] # the folder names for each agents model
         filenames = []
         for i,f in zip(ind,folder):
@@ -2243,36 +2262,55 @@ class MADDPG(object):
         save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
         for i in range(nagents):
             if side=='team':
-                self.team_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+                self.team_agents[i].load_policy_params(save_dicts[0]['agent_params'])
             else:
-                self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+                self.opp_agents[i].load_policy_params(save_dicts[0]['agent_params'])
         return ind
                 
                     
-    def load_random_ensemble(self,side='team',nagents=1,models_path="models"):
+    def load_random_ensemble(self,side='team',nagents=1,models_path="models",load_same_agent=False):
         """
         Load new networks into the currently running session
         Returns the index chosen for each agent
         """
         folders = os.listdir(models_path)
         folders.sort()
-        
-        ind = [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
-        folder = [folder for folder in folders] # the folder names for each agents model
-        filenames = []
-        for i,f in zip(ind,folder):
-            current = os.listdir(models_path +f)
-            if side == 'team':
-                current.sort()
-            filenames.append(current[i])
-        
-        save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
-        for i in range(nagents):
-            if side=='team':
-                self.team_agents[i].load_params(save_dicts[i]['agent_params'])
-            else:
-                self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
-        return ind
+        if not load_same_agent:
+                
+            ind = [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
+            folder = [folder for folder in folders] # the folder names for each agents model
+            filenames = []
+            for i,f in zip(ind,folder):
+                current = os.listdir(models_path +f)
+                if side == 'team':
+                    current.sort()
+                filenames.append(current[i])
+            
+            save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
+            for i in range(nagents):
+                if side=='team':
+                    self.team_agents[i].load_params(save_dicts[i]['agent_params'])
+                else:
+                    self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+            return ind
+        else:
+            ind = [0 for _ in range(nagents)] #= [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
+            folder = [folder for folder in folders] # the folder names for each agents model
+            filenames = []
+            for i,f in zip(ind,folder):
+                current = os.listdir(models_path +f)
+                if side == 'team':
+                    current.sort()
+                filenames.append(current[i])
+            
+            save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
+            for i in range(nagents):
+                if side=='team':
+                    self.team_agents[i].load_params(save_dicts[i]['agent_params'])
+                else:
+                    self.opp_agents[i].load_params(save_dicts[i]['agent_params'])
+            return [0 for _ in range(nagents)]
+            
                                
     def load_ensemble(self, ensemble_path,ensemble,agentID):
         # Loads ensemble to team agent #agentID
@@ -2280,11 +2318,13 @@ class MADDPG(object):
         dict = torch.load(ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
         self.team_agents[agentID].load_params(dict['agent_params'])
 
-    def load_same_ensembles(self, ensemble_path,ensemble,nagents):
+    def load_same_ensembles(self, ensemble_path,ensemble,nagents,load_same_agent):
         # Loads ensemble to team agent #agentID
   
-
-        dicts = [torch.load(ensemble_path +("ensemble_agent_%i/model_%i.pth" % (i,ensemble))) for i in range(nagents)]
+        if load_same_agent:
+            dicts = [torch.load(ensemble_path +("ensemble_agent_%i/model_%i.pth" % (0,ensemble))) for i in range(nagents)]
+        else:
+            dicts = [torch.load(ensemble_path +("ensemble_agent_%i/model_%i.pth" % (i,ensemble))) for i in range(nagents)]
         [self.team_agents[i].load_params(dicts[i]['agent_params']) for i in range(nagents)]
 
 
