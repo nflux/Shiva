@@ -108,7 +108,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
-                    num_trials = num_episodes, fpt = episode_length, # create environment
+                    num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
                     feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
                     ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
                     offense_on_ball=False,port=port,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
@@ -544,8 +544,6 @@ if __name__ == "__main__":
         num_OA = 3
         num_TNPC = 0
         num_ONPC = 0
-        obs_dim_TA = 68+(18*(num_TA-1))
-        obs_dim_OA = 68+(18*(num_OA-1))
         acs_dim = 8
         offense_team_bin='helios10'
         defense_team_bin='helios11'  
@@ -631,10 +629,10 @@ if __name__ == "__main__":
         ball_x_max = 0.1
         ball_y_min = -0.1
         ball_y_max = 0.1
-        agents_x_min = -0.3
-        agents_x_max = 0.3
-        agents_y_min = -0.3
-        agents_y_max = 0.3
+        agents_x_min = 0.8
+        agents_x_max = 1
+        agents_y_min = 0.0
+        agents_y_max = 0.0
         change_every_x = 1000000000
         change_agents_x = 0.01
         change_agents_y = 0.01
@@ -717,7 +715,21 @@ if __name__ == "__main__":
         if num_OA > 0:
             has_opp_Agents = True
         else:
-            has_opp_Agents = False   
+            has_opp_Agents = False
+    
+    # dummy env that isn't used explicitly ergo used for dimensions
+    env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
+                    num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
+                    feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
+                    ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
+                    offense_on_ball=False,port=65000,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
+                    agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+                    change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
+                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
+                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=False)
+    
+    obs_dim_TA = env.team_num_features
+    obs_dim_OA = env.opp_num_features
 
     # zip params for env processes
     HP = (action_level,feature_level,to_gpu,device,use_viewer,use_viewer_after,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
@@ -729,17 +741,6 @@ if __name__ == "__main__":
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
         LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
         has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent)
-
-    # dummy env that isn't used explicitly
-    env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
-                    num_trials = num_episodes, fpt = episode_length, # create environment
-                    feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
-                    ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
-                    offense_on_ball=False,port=65000,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
-                    agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
-                    change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
-                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=False)
 
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                 adversary_alg= "MADDPG",device=device,

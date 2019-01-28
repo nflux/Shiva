@@ -149,6 +149,8 @@ class HFOEnvironment(object):
 
   def getState(self, state_data=None):
     """ Returns the current state features """
+    # print('state size', self.getStateSize())
+    # exit(0)
     if state_data is None:
       state_data = np.zeros(self.getStateSize(), dtype=np.float32)
     hfo_lib.getState(self.obj, as_ctypes(state_data))

@@ -4,6 +4,7 @@
 
 #include "lowlevel_feature_extractor.h"
 #include <rcsc/common/server_param.h>
+#include <fstream>
 
 using namespace rcsc;
 
@@ -16,6 +17,8 @@ LowLevelFeatureExtractor::LowLevelFeatureExtractor(int num_teammates,
   assert(numOpponents >= 0);
   numFeatures = num_basic_features +
       features_per_player * (numTeammates + numOpponents);
+  numFeatures += numTeammates + numOpponents; // largest open angle to goal
+  numFeatures += numTeammates + numOpponents; // largest open angle to player
   numFeatures += numTeammates + numOpponents; // Uniform numbers
   numFeatures++; // action state
   feature_vec.resize(numFeatures);
@@ -32,6 +35,8 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   const SelfObject& self = wm.self();
   const Vector2D& self_pos = self.pos();
   const AngleDeg& self_ang = self.body();
+  const PlayerPtrCont& teammates = wm.teammatesFromSelf();
+  const PlayerPtrCont& opponents = wm.opponentsFromSelf();
   addFeature(self.posValid() ? FEAT_MAX : FEAT_MIN);
   // ADD_FEATURE(self_pos.x);
   // ADD_FEATURE(self_pos.y);
@@ -75,7 +80,6 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // self.inertiaPoint(n_steps);
 
   // ======================== LANDMARK FEATURES ======================== //
-  //###########Need to add the left goal here#####################
   // Top Bottom Center of Goal
   rcsc::Vector2D goalCenter(pitchHalfLength, 0);
   addLandmarkFeatures(goalCenter, self_pos, self_ang);
@@ -158,12 +162,79 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     addFeature(0);
   }
 
+  // largest open goal angle
+  if(playingOffense) {
+    addNormFeature(calcLargestGoalAngleTeam(wm, self_pos), 0, M_PI);
+  } else {
+    // std::ofstream myfile;
+    // myfile.open ("example.txt");
+    // myfile << "This is the opponent\n";
+    // myfile.close();
+    addNormFeature(calcLargestGoalAngleOpp(wm, -self_pos), 0, M_PI);
+  }
+
   assert(featIndx == num_basic_features);
+
+  // teammate's open angle to goal
+  int detected_teammates = 0;
+  for (PlayerPtrCont::const_iterator it=teammates.begin(); it != teammates.end(); ++it) {
+    const PlayerObject* teammate = *it;
+    if (valid(teammate) && teammate->unum() > 0 && detected_teammates < numTeammates) {
+      addNormFeature(calcLargestGoalAngleTeam(wm, teammate->pos()), 0, M_PI);
+      detected_teammates++;
+    }
+  }
+  // Add zero features for any missing teammates
+  for (int i=detected_teammates; i<numTeammates; ++i) {
+    addFeature(0);
+  }
+
+  // opponent's open angle to goal
+  int detected_opponents = 0;
+  for (PlayerPtrCont::const_iterator it=opponents.begin(); it != opponents.end(); ++it) {
+    const PlayerObject* opponent = *it;
+    if (valid(opponent) && opponent->unum() > 0 && detected_opponents < numOpponents) {
+      addNormFeature(calcLargestGoalAngleOpp(wm, opponent->pos()), 0, M_PI);
+      detected_opponents++;
+    }
+  }
+  // Add zero features for any missing teammates
+  for (int i=detected_opponents; i<numOpponents; ++i) {
+    addFeature(0);
+  }
+
+  // open angle to teammates
+  detected_teammates = 0;
+  for (PlayerPtrCont::const_iterator it=teammates.begin(); it != teammates.end(); ++it) {
+    const PlayerObject* teammate = *it;
+    if (valid(teammate) && teammate->unum() > 0 && detected_teammates < numTeammates) {
+      addNormFeature(calcLargestTeammateAngle(wm, self_pos, teammate->pos()),0,M_PI);
+      detected_teammates++;
+    }
+  }
+  // Add zero features for any missing teammates
+  for (int i=detected_teammates; i<numTeammates; ++i) {
+    addFeature(0);
+  }
+
+  // open angle to opponents
+  detected_opponents = 0;
+  for (PlayerPtrCont::const_iterator it=opponents.begin(); it != opponents.end(); ++it) {
+    const PlayerObject* opponent = *it;
+    if (valid(opponent) && opponent->unum() > 0 && detected_opponents < numOpponents) {
+      addNormFeature(calcLargestOpponentAngle(wm, self_pos, opponent->pos()),0,M_PI);
+      detected_opponents++;
+    }
+  }
+  // Add zero features for any missing opponents
+  for (int i=detected_opponents; i<numOpponents; ++i) {
+    addFeature(0);
+  }
 
   // ======================== TEAMMATE FEATURES ======================== //
   // Vector of PlayerObject pointers sorted by increasing distance from self
-  int detected_teammates = 0;
-  const PlayerPtrCont& teammates = wm.teammatesFromSelf();
+  detected_teammates = 0;
+  // const PlayerPtrCont& teammates = wm.teammatesFromSelf();
   for (PlayerPtrCont::const_iterator it = teammates.begin();
        it != teammates.end(); ++it) {
     PlayerObject* teammate = *it;
@@ -181,8 +252,8 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   }
 
   // ======================== OPPONENT FEATURES ======================== //
-  int detected_opponents = 0;
-  const PlayerPtrCont& opponents = wm.opponentsFromSelf();
+  detected_opponents = 0;
+  // const PlayerPtrCont& opponents = wm.opponentsFromSelf();
   for (PlayerPtrCont::const_iterator it = opponents.begin();
        it != opponents.end(); ++it) {
     PlayerObject* opponent = *it;
@@ -239,4 +310,13 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   assert(featIndx == numFeatures);
   checkFeatures();
   return feature_vec;
+}
+
+bool LowLevelFeatureExtractor::valid(const rcsc::PlayerObject* player) {
+  if (!player) {return false;} //avoid segfaults
+  const rcsc::Vector2D& pos = player->pos();
+  if (!player->posValid()) {
+    return false;
+  }
+  return pos.isValid();
 }

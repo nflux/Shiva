@@ -130,8 +130,8 @@ class HFO_env():
         self.team_possession = False
         self.opp_possession = False
         if feat_lvl == 'low':
-            self.team_num_features = 50 + 9*num_TA + 9*num_OA + 9*num_ONPC
-            self.opp_num_features = 50 + 9*num_OA + 9*num_TA + 9*num_ONPC
+            self.team_num_features = 49 + 11*num_TA + 11*num_OA + 9*num_ONPC
+            self.opp_num_features = 49 + 11*num_OA + 11*num_TA + 9*num_ONPC
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6
@@ -591,12 +591,19 @@ class HFO_env():
             team_obs = self.team_obs
             team_obs_previous = self.team_obs_previous
             num_ag = self.num_TA
+            # print('team', self.team_envs[0].getUnum(), team_obs[0][59:59+(self.num_TA-1)])
+            # print('team', self.team_envs[1].getUnum(), team_obs[1][59:59+(self.num_TA-1)])
+            print('team', self.team_envs[0].getUnum(), team_obs[0][58])
+            # print('opps', self.team_envs[0].getUnum(), team_obs[0][59+(self.num_TA-1):59+(self.num_TA-1)+self.num_OA])
         else:
             team_actions = self.opp_actions
             team_obs = self.opp_team_obs
             team_obs_previous = self.opp_team_obs_previous
             num_ag = self.num_OA
-
+            print('opp', self.opp_team_envs[0].getUnum(), team_obs[0][58])
+            # print('opp', self.opp_team_envs[0].getUnum(), team_obs[0][59+(self.num_TA-1):59+(self.num_TA-1)+(self.num_OA-1)])
+            # print('opp', self.opp_team_envs[1].getUnum(), team_obs[1][59+(self.num_TA-1):59+(self.num_TA-1)+(self.num_OA-1)])
+        exit(0)
         if team_obs[agentID][7] < 0 :
             reward -= 0.02
             team_reward -= 0.02

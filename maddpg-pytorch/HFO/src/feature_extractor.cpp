@@ -201,7 +201,29 @@ float FeatureExtractor::calcLargestTeammateAngle(const rcsc::WorldModel &wm,
   return calcLargestOpenAngle(wm, self, angTop, angBot, (self - teammate).r());
 }
 
-float FeatureExtractor::calcLargestGoalAngle(const rcsc::WorldModel &wm,
+float FeatureExtractor::calcLargestOpponentAngle(const rcsc::WorldModel &wm,
+                                                 const rcsc::Vector2D &self,
+                                                 const Vector2D &opponent) {
+  float angOpponent = angleToPoint(self, opponent);
+  float angTop = angOpponent + M_PI / 4;
+  float angBot = angOpponent - M_PI / 4;
+  return calcLargestOpenAngle(wm, self, angTop, angBot, (self - opponent).r());
+}
+
+float FeatureExtractor::calcLargestGoalAngleTeam(const rcsc::WorldModel &wm,
+                                             const rcsc::Vector2D &self) {
+  const rcsc::ServerParam & SP = rcsc::ServerParam::i();
+  Vector2D goalPostTop(SP.pitchHalfLength(), SP.goalHalfWidth());
+  Vector2D goalPostBot(SP.pitchHalfLength(), -SP.goalHalfWidth());
+  float angTop = angleToPoint(self, goalPostTop);
+  float angBot = angleToPoint(self, goalPostBot);
+  //std::cout << "starting: " << RAD_T_DEG * angTop << " " << RAD_T_DEG * angBot << std::endl;
+  float res = calcLargestOpenAngle(wm, self, angTop, angBot, 99999);
+  //std::cout << angTop << " " << angBot << " | " << res << std::endl;
+  return res;
+}
+
+float FeatureExtractor::calcLargestGoalAngleOpp(const rcsc::WorldModel &wm,
                                              const rcsc::Vector2D &self) {
   const rcsc::ServerParam & SP = rcsc::ServerParam::i();
   Vector2D goalPostTop(SP.pitchHalfLength(), SP.goalHalfWidth());

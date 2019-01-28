@@ -56,8 +56,13 @@ public:
                                     float angTop, float angBot, float maxDist);
 
   // Returns the angle (in radians) corresponding to largest open shot
-  // on the goal.
-  static float calcLargestGoalAngle(const rcsc::WorldModel &wm,
+  // on the goal for the left side.
+  static float calcLargestGoalAngleTeam(const rcsc::WorldModel &wm,
+                                    const rcsc::Vector2D &self);
+  
+  // Returns the angle (in radians) corresponding to largest open shot
+  // on the goal for the right side.
+  static float calcLargestGoalAngleOpp(const rcsc::WorldModel &wm,
                                     const rcsc::Vector2D &self);
 
   // Returns the largest open angle from self to a given teammate's
@@ -65,6 +70,12 @@ public:
   static float calcLargestTeammateAngle(const rcsc::WorldModel &wm,
                                         const rcsc::Vector2D &self,
                                         const rcsc::Vector2D &teammate);
+  
+  // Returns the largest open angle from self to a given opponent's
+  // position.
+  static float calcLargestOpponentAngle(const rcsc::WorldModel &wm,
+                                        const rcsc::Vector2D &self,
+                                        const rcsc::Vector2D &opponent);
 
   // Helper function to split the open angles by the opponent angles
   static void splitAngles(std::vector<OpenAngle> &openAngles,

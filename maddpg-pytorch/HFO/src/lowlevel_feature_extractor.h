@@ -16,10 +16,14 @@ public:
   // Updated the state features stored in feature_vec
   virtual const std::vector<float>& ExtractFeatures(const rcsc::WorldModel& wm,
 						    bool last_action_status);
+  
+  //override FeatureExtractor::valid
+  //this method takes a pointer instead of a reference
+  bool valid(const rcsc::PlayerObject* player);
 
 protected:
   // Number of features for non-player objects.
-  const static int num_basic_features = 58;
+  const static int num_basic_features = 59;
   // Number of features for each player or opponent in game, not including uniform numbers.
   const static int features_per_player = 8;
 };
