@@ -67,7 +67,7 @@ class HFO_env():
         Returns:
             HFO_Env
         """
-        self.pass_reward = 0.3
+        self.pass_reward = 3.0
         self.agent_possession_team = ['N'] * num_TA
         self.team_passer = [0]*num_TA
         self.opp_passer = [0]*num_TA
@@ -548,6 +548,8 @@ class HFO_env():
                 return reward
         return reward
 
+    def unnormalize(self,val):
+        return (val +1.0)/2.0
     
     # Engineered Reward Function
     #   To-do: Add the ability of team agents to know if opponent npcs hold ball posession. For now, having npc opponent disables first kick award
@@ -585,26 +587,29 @@ class HFO_env():
                 possession_side = 'N'
                 self.agent_possession_opp = ['N'] * self.num_OA
                 return reward
-            
+        
         if self.team_base == base:
             team_actions = self.team_actions
             team_obs = self.team_obs
             team_obs_previous = self.team_obs_previous
+            opp_obs = self.opp_team_obs
+            opp_obs_previous = self.opp_team_obs_previous
             num_ag = self.num_TA
             # print('team', self.team_envs[0].getUnum(), team_obs[0][59:59+(self.num_TA-1)])
             # print('team', self.team_envs[1].getUnum(), team_obs[1][59:59+(self.num_TA-1)])
-            print('team', self.team_envs[0].getUnum(), team_obs[0][58])
+            #print('team', self.team_envs[0].getUnum(), team_obs[0][58])
             # print('opps', self.team_envs[0].getUnum(), team_obs[0][59+(self.num_TA-1):59+(self.num_TA-1)+self.num_OA])
         else:
             team_actions = self.opp_actions
             team_obs = self.opp_team_obs
             team_obs_previous = self.opp_team_obs_previous
+            opp_obs = self.team_obs
+            opp_obs_previous = self.team_obs_previous
             num_ag = self.num_OA
-            print('opp', self.opp_team_envs[0].getUnum(), team_obs[0][58])
+            #print('opp', self.opp_team_envs[0].getUnum(), team_obs[0][58])
             # print('opp', self.opp_team_envs[0].getUnum(), team_obs[0][59+(self.num_TA-1):59+(self.num_TA-1)+(self.num_OA-1)])
             # print('opp', self.opp_team_envs[1].getUnum(), team_obs[1][59+(self.num_TA-1):59+(self.num_TA-1)+(self.num_OA-1)])
-        exit(0)
-        if team_obs[agentID][7] < 0 :
+        if team_obs[agentID][7] < 0 : # LOW STAMINA
             reward -= 0.02
             team_reward -= 0.02
             # print ('low stamina')
@@ -665,11 +670,10 @@ class HFO_env():
                 self.agent_possession_opp = ['N'] * self.num_OA
                 self.agent_possession_opp[agentID] = 'R'
                 if possession_side != 'R':
-                    possession_side = 'R'    
+                    possession_side = 'R'
                     #reward+=1
                     #team_reward+=1
 
-            
         ####################### reduce distance to ball - using delta  ##################
         if self.feat_lvl == 'high':
             r,_,_ = self.distance_to_ball(team_obs[agentID])
@@ -698,17 +702,54 @@ class HFO_env():
         team_reward += (10)*(r_prev - r)
         
 
+        ################## Offensive Behavior #######################
+        # [Offense behavior]  agents will be rewarded based on maximizing their open angle to opponents goal
+        if ((self.team_base == base) and possession_side =='L') or ((self.team_base != base) and possession_side == 'R'): # someone on team has ball
+            b,_,_ =self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+            if b < 1.0 : # Ball is in scoring range
+                if self.apprx_to_goal(team_obs[agentID]) > .3:
+                    a = self.unnormalize(team_obs[agentID][58])
+                    a_prev = self.unnormalize(team_obs_previous[agentID][58])
+                    reward += (a-a_prev)*3
+                    team_reward += (a-a_prev)*3
+
+        # [Offense behavior]  agents will be rewarded based on maximizing their open angle to the ball (to receive pass)
+        # *Needs implementation
+
+        ################## Defensive behavior ######################
+
+        # [Defensive behavior]  agents will be rewarded based on minimizing the opponents open angle to our goal
+        if ((self.team_base == base) and (np.array(self.agent_possession_team) == 'R').any()) or ((self.team_base != base) and (np.array(self.agent_possession_team) == 'L').any()): # someone on opp team has ball
+            if (self.team_base != base):
+                enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
+            else:
+                enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
+
+            b,_,_ =self.ball_distance_to_goal(opp_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
+            if b < 1.0 : # Ball is in scoring range
+
+                if np.array([self.apprx_to_goal(opp_obs[i]) > .3 for i in range(self.num_TA)]).any(): # if anyone is in range on enemy team
+                    agent_inds = np.where([self.apprx_to_goal(opp_obs[i]) > .3 for i in range(self.num_TA)])[0] # find who is in range
+
+                    sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[i][58]) - self.unnormalize(opp_obs[i][58])) for i in agent_inds]) # penalize based on the open angles of the people in range
+                    reward += sum_angle_delta*3.0
+                    team_reward += sum_angle_delta*3.0
+                    angle_delta_possessor = self.unnormalize(opp_obs_previous[enemy_possessor][58]) - self.unnormalize(opp_obs[enemy_possessor][58])# penalize based on the open angles of the possessor
+                    reward += angle_delta_possessor*3.0
+                    team_reward += angle_delta_possessor*3.0  
+
+        # [Defensive behavior]  agents will be rewarded based on minimizing the ball open angle to other opponents (to block passes )
+        # *Needs implementation
+
         ##################################################################################
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
         return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
 
 
-        ################## Offensive Behavior #######################
-        # [Offense behavior]  agents will be rewarded based on maximizing their open angle to opponents goal
-        # [Offense behavior]  agents will be rewarded based on maximizing their open angle to the ball (to receive pass)
-        ################## Defensive behavior ######################
-        # [Defensive behavior]  agents will be rewarded based on minimizing the opponents open angle to our goal
-        # [Defensive behavior]  agents will be rewarded based on minimizing the ball open angle to other opponents (to block passes )
+
+
+
+
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl):
         """ Connect threaded agent to server

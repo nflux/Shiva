@@ -89,8 +89,9 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
             maddpg.save_ensemble(ensemble_path,ensemble,agentID)
         else:
             maddpg.update_agent_targets(0,number_of_updates)
-            [maddpg.save_agent(load_path,update_session,i) for i in range(num_TA)]
-            [maddpg.save_ensemble(ensemble_path,ensemble,i) for i in range(num_TA)]
+        
+        [maddpg.save_agent(load_path,update_session,i) for i in range(num_TA)]
+        [maddpg.save_ensemble(ensemble_path,ensemble,i) for i in range(num_TA)]
 
 
 
@@ -540,8 +541,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 3
-        num_OA = 3
+        num_TA = 2
+        num_OA = 2
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -629,10 +630,10 @@ if __name__ == "__main__":
         ball_x_max = 0.1
         ball_y_min = -0.1
         ball_y_max = 0.1
-        agents_x_min = 0.8
-        agents_x_max = 1
-        agents_y_min = 0.0
-        agents_y_max = 0.0
+        agents_x_min = -0.2
+        agents_x_max = 0.2
+        agents_y_min = -0.2
+        agents_y_max = 0.2
         change_every_x = 1000000000
         change_agents_x = 0.01
         change_agents_y = 0.01
