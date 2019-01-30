@@ -62,6 +62,10 @@ class HFOEnvironment {
   // progress. Returns the game status after the step
   virtual status_t step();
 
+  virtual double getBallX();
+
+  virtual double getBallY();
+
  private:
   rcsc::BasicClient* client;
   Agent* agent;

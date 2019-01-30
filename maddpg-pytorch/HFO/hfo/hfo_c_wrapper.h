@@ -43,6 +43,8 @@ extern "C" {
   int getUnum(hfo::HFOEnvironment *hfo) {return hfo->getUnum();}
   int getNumTeammates(hfo::HFOEnvironment *hfo) {return hfo->getNumTeammates();}
   int getNumOpponents(hfo::HFOEnvironment *hfo) {return hfo->getNumOpponents();}
+  double getBallX(hfo::HFOEnvironment *hfo) {return hfo->getBallX();}
+  double getBallY(hfo::HFOEnvironment *hfo) {return hfo->getBallY();}
 }
 
 #endif

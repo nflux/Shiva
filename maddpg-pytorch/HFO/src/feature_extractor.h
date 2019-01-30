@@ -27,6 +27,9 @@ public:
   // Determines if a player is a part of the HFO game or is inactive.
   static bool valid(const rcsc::PlayerObject& player);
 
+  // Determines if a player is a part of the HFO game or is inactive.
+  static bool valid(const rcsc::SelfObject& player);
+
   // Returns the angle (in radians) from self to a given point
   static float angleToPoint(const rcsc::Vector2D &self,
                             const rcsc::Vector2D &point);
@@ -50,18 +53,48 @@ public:
                              float &ang, float &dist);
 
   // Returns the largest open (in terms of opponents) angle (radians)
-  // from self to the slice defined by [angBot, angTop].
-  static float calcLargestOpenAngle(const rcsc::WorldModel &wm,
+  // from self to the slice defined by [angBot, angTop] for the left side
+  // for the goal.
+  static float calcLargestGoalOpenAngleTeam(const rcsc::WorldModel &wm,
+                                    const rcsc::Vector2D &self,
+                                    float angTop, float angBot, float maxDist);
+  
+  // Returns the largest open (in terms of opponents) angle (radians)
+  // from self to the slice defined by [angBot, angTop] for the left side.
+  // Exactly the same as calcLargestGoalOenAngleTeam(...)
+  static float calcLargestPassOpenAngleTeam(const rcsc::WorldModel &wm,
+                                    const rcsc::Vector2D &self,
+                                    float angTop, float angBot, float maxDist);
+  
+  // Returns the largest open (in terms of opponents) angle (radians)
+  // from self to the slice defined by [angBot, angTop] for the left side.
+  // Exactly the same as calcLargestGoalOenAngleTeam(...)
+  static float calcLargestPassOpenAngleOpp(const rcsc::WorldModel &wm,
+                                    const rcsc::Vector2D &self,
+                                    float angTop, float angBot, float maxDist);
+  
+  // Returns the largest open (in terms of teammates) angle (radians)
+  // from self to the slice defined by [angBot, angTop] for the left side.
+  // Similar to calcLargestGoalOenAngleTeam(...) but uses teammates instead
+  // of opponents.
+  static float calcLargestBlockOpenAngleOpp(const rcsc::WorldModel &wm,
+                                    const rcsc::Vector2D &self,
+                                    float angTop, float angBot, float maxDist);
+  
+  // Returns the largest open (in terms of opponents) angle (radians)
+  // from self to the slice defined by [angBot, angTop] for the right side
+  // for the goal.
+  static float calcLargestGoalOpenAngleOpp(const rcsc::WorldModel &wm,
                                     const rcsc::Vector2D &self,
                                     float angTop, float angBot, float maxDist);
 
   // Returns the angle (in radians) corresponding to largest open shot
-  // on the goal for the left side.
+  // on the goal to the right side.
   static float calcLargestGoalAngleTeam(const rcsc::WorldModel &wm,
                                     const rcsc::Vector2D &self);
   
   // Returns the angle (in radians) corresponding to largest open shot
-  // on the goal for the right side.
+  // on the goal to the left side.
   static float calcLargestGoalAngleOpp(const rcsc::WorldModel &wm,
                                     const rcsc::Vector2D &self);
 
@@ -70,10 +103,16 @@ public:
   static float calcLargestTeammateAngle(const rcsc::WorldModel &wm,
                                         const rcsc::Vector2D &self,
                                         const rcsc::Vector2D &teammate);
-  
-  // Returns the largest open angle from self to a given opponent's
+
+  // Returns the largest open angle from opponents to a given teammate's
   // position.
   static float calcLargestOpponentAngle(const rcsc::WorldModel &wm,
+                                        const rcsc::Vector2D &self,
+                                        const rcsc::Vector2D &teammate);
+  
+  // Returns the largest open angle from self to a given opponent's
+  // position given the teammates already covering certain opponents.
+  static float calcLargestOpenOpponentAngle(const rcsc::WorldModel &wm,
                                         const rcsc::Vector2D &self,
                                         const rcsc::Vector2D &opponent);
 

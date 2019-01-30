@@ -107,6 +107,10 @@ hfo_lib.getNumTeammates.argtypes = [c_void_p]
 hfo_lib.getNumTeammates.restype = c_int
 hfo_lib.getNumOpponents.argtypes = [c_void_p]
 hfo_lib.getNumOpponents.restype = c_int
+hfo_lib.getBallX.argtypes = [c_void_p]
+hfo_lib.getBallX.restype = c_double
+hfo_lib.getBallY.argtypes = [c_void_p]
+hfo_lib.getBallY.restype = c_double
 
 class HFOEnvironment(object):
   def __init__(self):
@@ -149,8 +153,6 @@ class HFOEnvironment(object):
 
   def getState(self, state_data=None):
     """ Returns the current state features """
-    # print('state size', self.getStateSize())
-    # exit(0)
     if state_data is None:
       state_data = np.zeros(self.getStateSize(), dtype=np.float32)
     hfo_lib.getState(self.obj, as_ctypes(state_data))
@@ -199,3 +201,11 @@ class HFOEnvironment(object):
   def getNumOpponents(self):
     """ Returns the number of opponents of the agent """
     return hfo_lib.getNumOpponents(self.obj)
+  
+  def getBallX(self):
+    """ Returns ball x position in terms of the agent """
+    return hfo_lib.getBallX(self.obj)
+  
+  def getBallY(self):
+    """ Returns ball y position in terms of the agent """
+    return hfo_lib.getBallY(self.obj)

@@ -153,3 +153,11 @@ status_t HFOEnvironment::step() {
   }
   return status;
 }
+
+double HFOEnvironment::getBallX() {
+  return agent->world().ball().pos().x;
+}
+
+double HFOEnvironment::getBallY() {
+  return agent->world().ball().pos().y;
+}
