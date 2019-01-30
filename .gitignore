@@ -29,3 +29,5 @@ maddpg-pytorch/rew_viz\.ipynb
 maddpg-pytorch/Pretrained_2v2/High_Lvl/agent_0\.pth
 
 maddpg-pytorch/Pretrained_2v2/High_Lvl/agent_1\.pth
+
+maddpg-pytorch/\.~rew_viz\.ipynb

@@ -569,8 +569,8 @@ if __name__ == "__main__":
         #D4PG Options --------------------------
         D4PG = True
         gamma = 0.99 # discount
-        Vmax = 35
-        Vmin = -35
+        Vmax = 50
+        Vmin = -50
         N_ATOMS = 25
         DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
         n_steps = 5

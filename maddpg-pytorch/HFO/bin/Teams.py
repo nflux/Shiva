@@ -62,8 +62,8 @@ class Agent2d(Team):
               % (name, port, baseDir, logDir, baseDir)
     if record:
       options += ' --record'
-    offenseOrder =  [11,7,8,9,10,6,3,2,4,5]
-    defenseOrder =  [2,3,4,5,6,7,8,11,9,10]
+    offenseOrder =  [2,3,4,5,6,7,8,9,10]
+    defenseOrder =  [2,3,4,5,6,7,8,9,10]
     super(Agent2d, self).__init__(name, binaryPath, libDir, options,
                                   offenseOrder, defenseOrder)
 
