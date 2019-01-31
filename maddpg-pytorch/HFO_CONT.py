@@ -38,8 +38,8 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
 
     maddpg.prep_training(device=maddpg.device)
     for ensemble in range(k_ensembles):
+        maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
         for m in range(num_TA): # for each agent update since we are one policy for all agents
-            maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
             for up in range(int(np.floor(number_of_updates/k_ensembles))):
                 if not load_same_agent:
                     inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
@@ -555,7 +555,7 @@ if __name__ == "__main__":
         a_lr = 0.0001 # actor learning rate
         c_lr = 0.001 # critic learning rate
         tau = 0.001 # soft update rate
-        steps_per_update = 14
+        steps_per_update = 19
         number_of_updates = 0
         # exploration --------------------------
         explore = True

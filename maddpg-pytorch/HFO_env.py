@@ -636,16 +636,16 @@ class HFO_env():
                     reward =+ 0.1
                     team_reward +=0.1
                 # set initial ball position after kick
-                    self.ball_pos_x = self.team_envs[0].getBallX()
-                    self.ball_pos_y = self.team_envs[0].getBallY()
+                    self.ball_pos_x = self.team_envs[0].getBallX()/52.5
+                    self.ball_pos_y = self.team_envs[0].getBallY()/34.0
 
             # track ball delta in between kicks
-            new_x = self.team_envs[0].getBallX()
-            new_y = self.team_envs[0].getBallY()
+            new_x = self.team_envs[0].getBallX()/52.5
+            new_y = self.team_envs[0].getBallY()/34.0
             self.ball_delta = math.sqrt((self.ball_pos_x-new_x)**2+ (self.ball_pos_y-new_y)**2)
             self.ball_pos_x = new_x
             self.ball_pos_y = new_y
-            self.pass_reward = self.ball_delta * 3.0
+            self.pass_reward = self.ball_delta * 5.0
 
 
             ######## Pass Receiver Reward #########
@@ -769,8 +769,8 @@ class HFO_env():
             if b < 1.0 : # Ball is in scoring range
                 if np.array([self.apprx_to_goal(opp_obs[i]) > .3 for i in range(self.num_TA)]).any(): # if anyone is in range on enemy team
                     sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[i][self.open_goal]) - self.unnormalize(opp_obs[i][self.open_goal])) for i in agent_inds]) # penalize based on the open angles of the people in range
-                    reward += sum_angle_delta*3.0
-                    team_reward += sum_angle_delta*3.0
+                    reward += sum_angle_delta*3.0/self.num_TA
+                    team_reward += sum_angle_delta*3.0/self.num_TA
                     angle_delta_possessor = self.unnormalize(opp_obs_previous[enemy_possessor][self.open_goal]) - self.unnormalize(opp_obs[enemy_possessor][self.open_goal])# penalize based on the open angles of the possessor
                     reward += angle_delta_possessor*3.0
                     team_reward += angle_delta_possessor*3.0  
@@ -783,8 +783,8 @@ class HFO_env():
                 enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
 
             sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[enemy_possessor][self.team_pass_angle_beg+i]) - self.unnormalize(opp_obs[enemy_possessor][self.team_pass_angle_beg+i])) for i in range(self.num_TA-1)]) # penalize based on the open angles of the people in range
-            reward += sum_angle_delta*3.0
-            team_reward += sum_angle_delta*3.0
+            reward += sum_angle_delta*3.0/self.num_TA
+            team_reward += sum_angle_delta*3.0/self.num_TA
 
 
         ##################################################################################
