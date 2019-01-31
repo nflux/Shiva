@@ -724,10 +724,18 @@ class HFO_env():
         ####################### reduce ball distance to goal - For ball possessor  ##################
         r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        reward += (10)*(r_prev - r)
-        team_reward += (10)*(r_prev - r)
+        if ((self.team_base == base) and possession_side =='L'):
+            team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
+            if agentID == team_possessor:
+                reward += (10)*(r_prev - r)
+                team_reward += (10)*(r_prev - r)
+        elif  ((self.team_base != base) and possession_side == 'R'):
+            team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
+            if agentID == team_possessor:
+                reward += (10)*(r_prev - r)
+                team_reward += (10)*(r_prev - r)
         
-        #   print('team', self.team_envs[0].getUnum(), team_obs[0][59:59+(self.num_TA-1)])
+
         
         ################## Offensive Behavior #######################
         # [Offense behavior]  agents will be rewarded based on maximizing their open angle to opponents goal
