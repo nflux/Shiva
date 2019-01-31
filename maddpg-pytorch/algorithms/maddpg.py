@@ -2348,14 +2348,18 @@ class MADDPG(object):
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], filename +("agent_%i/model_episode_%i.pth" % (i,ep_i))) for i in range(len(self.team_agents))]
         #self.prep_training(device=self.device)
-    def save_agent(self, filename,ep_i,agentID):
+    def save_agent(self, filename,ep_i,agentID,load_same_agent):
         """
         Save trained parameters of all agents into one file
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
-        torch.save(save_dicts[agentID], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
+        if load_same_agent:
+            torch.save(save_dicts[agentID], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
+        else:
+            torch.save(save_dicts[0], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
+
         self.prep_training(device=self.device)
         
     @classmethod
@@ -2405,7 +2409,7 @@ class MADDPG(object):
     
         #self.prep_training(device=self.device)
         
-    def save_ensemble(self, ensemble_path,ensemble,agentID):
+    def save_ensemble(self, ensemble_path,ensemble,agentID,load_same_agent):
         """
         Save trained parameters of all agents into one file
         """
@@ -2413,7 +2417,11 @@ class MADDPG(object):
         
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
-        torch.save(save_dicts[agentID], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
+        if not load_same_agent:
+            torch.save(save_dicts[agentID], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
+        else:
+            torch.save(save_dicts[0], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
+            
        
         self.prep_training(device=self.device)
         

@@ -83,15 +83,14 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                                                 to_gpu=to_gpu,norm_rews=False)
                         priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
                         team_replay_buffer.update_SIL_priorities(agentID=agentID,inds = inds, prio=priorities)
-        if not load_same_agent:
-            maddpg.update_agent_targets(agentID,number_of_updates)
-            maddpg.save_agent(load_path,update_session,agentID)
-            maddpg.save_ensemble(ensemble_path,ensemble,agentID)
-        else:
-            maddpg.update_agent_targets(0,number_of_updates)
-        
-        [maddpg.save_agent(load_path,update_session,i) for i in range(num_TA)]
-        [maddpg.save_ensemble(ensemble_path,ensemble,i) for i in range(num_TA)]
+            if not load_same_agent:
+                maddpg.update_agent_targets(agentID,number_of_updates)
+                maddpg.save_agent(load_path,update_session,agentID)
+                maddpg.save_ensemble(ensemble_path,ensemble,agentID)
+            else:
+                maddpg.update_agent_targets(0,number_of_updates)
+                [maddpg.save_agent(load_path,update_session,i,load_same_agent) for i in range(num_TA)]
+                [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent) for i in range(num_TA)]
 
 
 
@@ -499,7 +498,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 2
+    num_envs = 3
     seed = 912
     port = 2000
     max_num_experiences = 10000
@@ -541,8 +540,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 2
-        num_OA = 2
+        num_TA = 3
+        num_OA = 3
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -556,7 +555,7 @@ if __name__ == "__main__":
         a_lr = 0.0001 # actor learning rate
         c_lr = 0.001 # critic learning rate
         tau = 0.001 # soft update rate
-        steps_per_update = 10
+        steps_per_update = 14
         number_of_updates = 0
         # exploration --------------------------
         explore = True
@@ -764,7 +763,7 @@ if __name__ == "__main__":
     if first_save: # Generate list of ensemble networks
         file_path = ensemble_path
         maddpg.first_save(file_path,num_copies = k_ensembles)
-        [maddpg.save_agent(load_path,0,i) for i in range(num_TA)] 
+        [maddpg.save_agent(load_path,0,i,load_same_agent = False) for i in range(num_TA)] 
 
         first_save = False
 
