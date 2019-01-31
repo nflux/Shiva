@@ -46,7 +46,7 @@ class MADDPG(object):
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, decent_EM=True,imagination_policy_branch = False,
                  critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
-                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256): 
+                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False): 
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -72,6 +72,7 @@ class MADDPG(object):
         self.num_out_EM = team_net_params[0]['num_out_EM']
         self.batch_size = batch_size
         self.trace_length = trace_length
+        self.only_policy = only_policy
 
         self.num_out_pol = team_net_params[0]['num_out_pol']
         self.team_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
@@ -140,10 +141,9 @@ class MADDPG(object):
         self.obs_weight = obs_weight
         self.rew_weight = rew_weight
         self.ws_weight = ws_weight
-        self.ws_onehot = processor(torch.FloatTensor(self.batch_size,self.world_status_dim),device=self.device) 
+        #self.ws_onehot = processor(torch.FloatTensor(self.batch_size,self.world_status_dim),device=self.device) 
         self.team_count = [0 for i in range(self.nagents_team)]
         self.opp_count = [0 for i in range(self.nagents_opp)]
-
     @property
     def team_policies(self):
         return [a.policy for a in self.team_agents]
@@ -1346,18 +1346,20 @@ class MADDPG(object):
 
         self.niter += 1
 
-    def prep_training(self, device='gpu'):
+    def prep_training(self, device='gpu',only_policy=False):
         for a in self.team_agents:
             a.policy.train()
-            a.critic.train()
-            a.target_policy.train()
-            a.target_critic.train()
+            if not only_policy:
+                a.critic.train()
+                a.target_policy.train()
+                a.target_critic.train()
         
         for a in self.opp_agents:
             a.policy.train()
-            a.critic.train()
-            a.target_policy.train()
-            a.target_critic.train()
+            if not only_policy:
+                a.critic.train()
+                a.target_policy.train()
+                a.target_critic.train()
 
         if device == 'cuda':
             fn = lambda x: x.cuda()
@@ -1370,48 +1372,48 @@ class MADDPG(object):
             for a in self.opp_agents:
                 a.policy = fn(a.policy)
             self.pol_dev = device
-
-        if not self.critic_dev == device:
-            for a in self.team_agents:
-                a.critic = fn(a.critic)
-            for a in self.opp_agents:
-                a.critic = fn(a.critic)
-            self.critic_dev = device
-
-        if not self.trgt_pol_dev == device:
-            for a in self.team_agents:
-                a.target_policy = fn(a.target_policy)
-            for a in self.opp_agents:
-                a.target_policy = fn(a.target_policy)
-            self.trgt_pol_dev = device
-
-        if not self.trgt_critic_dev == device:
-            for a in self.team_agents:
-                a.target_critic = fn(a.target_critic)
-            for a in self.opp_agents:
-                a.target_critic = fn(a.target_critic)
-            self.trgt_critic_dev = device
-        if self.I2A:
-
-            if not self.EM_dev == device:
+        if not only_policy:
+            if not self.critic_dev == device:
                 for a in self.team_agents:
-                    a.EM = fn(a.EM)
-                self.EM_dev = device
+                    a.critic = fn(a.critic)
                 for a in self.opp_agents:
-                    a.EM = fn(a.EM)
-                self.EM_dev = device
-            if not self.prime_dev == device:
+                    a.critic = fn(a.critic)
+                self.critic_dev = device
+
+            if not self.trgt_pol_dev == device:
                 for a in self.team_agents:
-                    a.policy_prime = fn(a.policy_prime)
+                    a.target_policy = fn(a.target_policy)
                 for a in self.opp_agents:
-                    a.policy_prime = fn(a.policy_prime)
-                self.prime_dev = device
-            if not self.imagination_pol_dev == device:
+                    a.target_policy = fn(a.target_policy)
+                self.trgt_pol_dev = device
+
+            if not self.trgt_critic_dev == device:
                 for a in self.team_agents:
-                    a.imagination_policy = fn(a.imagination_policy)
+                    a.target_critic = fn(a.target_critic)
                 for a in self.opp_agents:
-                    a.imagination_policy = fn(a.imagination_policy)
-                self.imagination_pol_dev = device
+                    a.target_critic = fn(a.target_critic)
+                self.trgt_critic_dev = device
+            if self.I2A:
+
+                if not self.EM_dev == device:
+                    for a in self.team_agents:
+                        a.EM = fn(a.EM)
+                    self.EM_dev = device
+                    for a in self.opp_agents:
+                        a.EM = fn(a.EM)
+                    self.EM_dev = device
+                if not self.prime_dev == device:
+                    for a in self.team_agents:
+                        a.policy_prime = fn(a.policy_prime)
+                    for a in self.opp_agents:
+                        a.policy_prime = fn(a.policy_prime)
+                    self.prime_dev = device
+                if not self.imagination_pol_dev == device:
+                    for a in self.team_agents:
+                        a.imagination_policy = fn(a.imagination_policy)
+                    for a in self.opp_agents:
+                        a.imagination_policy = fn(a.imagination_policy)
+                    self.imagination_pol_dev = device
 
     def prep_rollouts(self, device='cpu'):
         for a in self.team_agents:
@@ -2120,7 +2122,7 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True,imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256):
+                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -2218,10 +2220,20 @@ class MADDPG(object):
                      'trace_length': trace_length,
                      'LSTM':LSTM,
                      'LSTM_PC':LSTM_PC,
-                     'hidden_dim_lstm': hidden_dim_lstm}
+                     'hidden_dim_lstm': hidden_dim_lstm,
+                     'only_policy': only_policy}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
+    def delete_non_policy_nets(self):
+        for a in self.team_agents:
+            del a.target_critic
+            del a.target_policy
+            del a.critic
+        for a in self.opp_agents:
+            del a.target_critic
+            del a.target_policy
+            del a.critic
 
         
     def load_random_policy(self,side='team',nagents=1,models_path="models",load_same_agent=False):
@@ -2306,9 +2318,9 @@ class MADDPG(object):
             save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
             for i in range(nagents):
                 if side=='team':
-                    self.team_agents[i].load_params(save_dicts[i]['agent_params'])
+                    self.team_agents[i].load_policy_params(save_dicts[i]['agent_params'])
                 else:
-                    self.opp_agents[i].load_params(save_dicts[i]['agent_params'])
+                    self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
             return [0 for _ in range(nagents)]
             
                                

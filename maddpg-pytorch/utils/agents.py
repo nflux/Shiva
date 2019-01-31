@@ -78,13 +78,14 @@ class DDPGAgent(object):
                             norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                             EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                     LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=False, trace_length=trace_length)
-            #self.policy.share_memory()
-            self.target_policy = LSTM_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
-                                    hidden_dim=hidden_dim,
-                                    discrete_action=discrete_action,
-                                    norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                                    EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                            LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=True, trace_length=trace_length)
+
+            if not maddpg.only_policy:
+                self.target_policy = LSTM_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
+                                        hidden_dim=hidden_dim,
+                                        discrete_action=discrete_action,
+                                        norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                                        EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                                LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=True, trace_length=trace_length)
         else:
             self.policy = I2A_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
                             hidden_dim=hidden_dim,
@@ -94,33 +95,39 @@ class DDPGAgent(object):
                                     LSTM_hidden=LSTM_hidden,maddpg=maddpg)
 
             #self.policy.share_memory()
-            
-            self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
-                                    hidden_dim=hidden_dim,
-                                    discrete_action=discrete_action,
-                                    norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                                    EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                            LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+            if not maddpg.only_policy:
+
+                self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
+                                        hidden_dim=hidden_dim,
+                                        discrete_action=discrete_action,
+                                        norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                                        EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                                LSTM_hidden=LSTM_hidden,maddpg=maddpg)
 
         if self.LSTM_PC:
-            self.critic = LSTMNetwork_Critic(num_in_critic, 1,
-                                    hidden_dim=hidden_dim,
-                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+            if not maddpg.only_policy:
 
-            self.target_critic = LSTMNetwork_Critic(num_in_critic, 1,
-                                                hidden_dim=hidden_dim,
-                                                norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+                self.critic = LSTMNetwork_Critic(num_in_critic, 1,
+                                        hidden_dim=hidden_dim,
+                                        norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+
+                self.target_critic = LSTMNetwork_Critic(num_in_critic, 1,
+                                                    hidden_dim=hidden_dim,
+                                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
         else:
-            self.critic = MLPNetwork_Critic(num_in_critic, 1,
-                                    hidden_dim=hidden_dim,
-                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+            if not maddpg.only_policy:
 
-            self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
-                                                hidden_dim=hidden_dim,
-                                                norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+                self.critic = MLPNetwork_Critic(num_in_critic, 1,
+                                        hidden_dim=hidden_dim,
+                                        norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
 
-        hard_update(self.target_policy, self.policy)
-        hard_update(self.target_critic, self.critic)
+                self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
+                                                    hidden_dim=hidden_dim,
+                                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+
+        if not maddpg.only_policy:
+            hard_update(self.target_policy, self.policy)
+            hard_update(self.target_critic, self.critic)
 
         self.a_lr = a_lr
         self.c_lr = c_lr
@@ -129,7 +136,8 @@ class DDPGAgent(object):
         self.policy_optimizer = Adam(self.policy.parameters(), lr=a_lr, weight_decay =0)
   
         #self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
-        self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
+        if not maddpg.only_policy:
+            self.critic_optimizer = Adam(self.critic.parameters(), lr=c_lr, weight_decay=0)
         if I2A:
             self.EM_optimizer = Adam(self.EM.parameters(), lr=EM_lr)
             self.policy_prime_optimizer = Adam(self.policy_prime.parameters(), lr=a_lr, weight_decay =0)
