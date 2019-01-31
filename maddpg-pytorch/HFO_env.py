@@ -51,7 +51,7 @@ class HFO_env():
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
                  change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
                  change_balls_y=0.1, control_rand_init=False,record=True,
-                 defense_team_bin='helios15', offense_team_bin='helios16', run_server=False):
+                 defense_team_bin='helios15', offense_team_bin='helios16', run_server=False, deterministic=True):
 
         """ Initializes HFO_Env
         Args:
@@ -96,7 +96,7 @@ class HFO_env():
                                     change_every_x=change_every_x, change_agents_x=change_agents_x,
                                     change_agents_y=change_agents_y, change_balls_x=change_balls_x,
                                     change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,
-                                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin)
+                                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, deterministic=deterministic)
 
         self.viewer = None
         self.sleep_timer = 0.0000001 # sleep timer
@@ -1010,7 +1010,7 @@ class HFO_env():
                               change_every_x=1, change_agents_x=0.1,
                               change_agents_y=0.1, change_balls_x=0.1,
                               change_balls_y=0.1, control_rand_init=False,record=True,
-                              defense_team_bin='base', offense_team_bin='helios16'):
+                              defense_team_bin='base', offense_team_bin='helios16', deterministic=True):
             """
             Starts the Half-Field-Offense server.
             frames_per_trial: Episodes end after this many steps.
@@ -1047,6 +1047,7 @@ class HFO_env():
                 % (defense_team_bin)
             if not sync_mode:      cmd += " --no-sync"
             if fullstate:          cmd += " --fullstate"
+            if deterministic:      cmd += " --deterministic"
             if verbose:            cmd += " --verbose"
             if not rcss_log_game:  cmd += " --no-logging"
             if hfo_log_game:       cmd += " --hfo-logging"

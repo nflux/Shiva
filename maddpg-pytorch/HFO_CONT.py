@@ -97,7 +97,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
 def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history):
 
     (action_level,feature_level,to_gpu,device,use_viewer,use_viewer_after,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
-    episode_length,untouched_time,burn_in_iterations,burn_in_episodes,num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
+    episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
     batch_size,hidden_dim,a_lr,c_lr,tau,steps_per_update,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
     DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,decent_EM,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
     LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
@@ -115,7 +115,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                     change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
                     change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
-                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=True)
+                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=True, deterministic=deterministic)
 
     #The start_viewer here is added to automatically start viewer with npc Vs npcs
     if num_TNPC > 0 and num_ONPC > 0:
@@ -537,6 +537,7 @@ if __name__ == "__main__":
         untouched_time = 200
         burn_in_iterations = 500 # for time step
         burn_in_episodes = float(burn_in_iterations)/untouched_time
+        deterministic = True
 
         # --------------------------------------
         # Team ---------------------------------
@@ -733,7 +734,7 @@ if __name__ == "__main__":
 
     # zip params for env processes
     HP = (action_level,feature_level,to_gpu,device,use_viewer,use_viewer_after,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
-    episode_length,untouched_time,burn_in_iterations,burn_in_episodes,num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
+    episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
         batch_size,hidden_dim,a_lr,c_lr,tau,steps_per_update,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
         DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,decent_EM,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
         LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
