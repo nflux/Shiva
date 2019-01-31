@@ -247,7 +247,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   for (PlayerPtrCont::const_iterator it = teammates.begin();
        it != teammates.end(); ++it) {
     PlayerObject* teammate = *it;
-    if (teammate->pos().x > 0 && teammate->unum() > 0 &&
+    if (teammate->unum() > 0 &&
         detected_teammates < numTeammates) {
       addPlayerFeatures(*teammate, self_pos, self_ang);
       detected_teammates++;
@@ -266,7 +266,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   for (PlayerPtrCont::const_iterator it = opponents.begin();
        it != opponents.end(); ++it) {
     PlayerObject* opponent = *it;
-    if (opponent->pos().x > 0 && opponent->unum() > 0 &&
+    if (opponent->unum() > 0 &&
         detected_opponents < numOpponents) {
       addPlayerFeatures(*opponent, self_pos, self_ang);
       detected_opponents++;
@@ -284,7 +284,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   for (PlayerPtrCont::const_iterator it = teammates.begin();
        it != teammates.end(); ++it) {
     PlayerObject* teammate = *it;
-    if (teammate->pos().x > 0 && teammate->unum() > 0 &&
+    if (teammate->unum() > 0 &&
         detected_teammates < numTeammates) {
       addFeature(teammate->unum()/100.0);
       detected_teammates++;
@@ -299,7 +299,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   for (PlayerPtrCont::const_iterator it = opponents.begin();
        it != opponents.end(); ++it) {
     PlayerObject* opponent = *it;
-    if (opponent->pos().x > 0 && opponent->unum() > 0 &&
+    if (opponent->unum() > 0 &&
         detected_opponents < numOpponents) {
       addFeature(opponent->unum()/100.0);
       detected_opponents++;
