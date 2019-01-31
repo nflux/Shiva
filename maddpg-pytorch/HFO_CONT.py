@@ -499,7 +499,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 1
+    num_envs = 2
     seed = 912
     port = 2000
     max_num_experiences = 10000

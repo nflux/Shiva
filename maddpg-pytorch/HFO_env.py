@@ -135,7 +135,19 @@ class HFO_env():
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6
-
+        self.open_goal = 58
+        self.team_goal_angle_beg = 59
+        self.team_goal_angle_end = self.team_goal_angle_beg +(num_TA -1)
+        self.opp_goal_angle_beg = self.team_goal_angle_end
+        self.opp_goal_angle_end = self.opp_goal_angle_beg + num_TA
+        self.team_pass_angle_beg = self.opp_goal_angle_end 
+        self.team_pass_angle_end = self.team_pass_angle_beg + num_TA - 1
+        self.team_unif_beg = -(2*num_TA) 
+        self.team_unif_end = -(2*num_TA) + num_TA - 1
+        # 58 = OPEN GOAL
+        # 59:59+(num_TA - 1) = teammates goal angle
+        # 59 + (num_TA): 59+ num_TA +(num_TA-1) = opp goal angle
+        # 59+ (2*num_TA) - 1: 59+(2*num_TA)-1 + (num_TA-1) = team pass angle
 
         # Create env for each teammate
         self.team_envs = [hfo.HFOEnvironment() for i in range(num_TA)]
@@ -392,6 +404,8 @@ class HFO_env():
                 return rew_amount
         return 0.0
                 
+    def unnormalize_unif(self,unif):
+        return int(np.round(unif * 100,decimals=0))
             
     def team_possession_reward(self,base):
 
@@ -618,16 +632,19 @@ class HFO_env():
             #Remove this check when npc ball posession can be measured
             if self.num_OA > 0:
                 if (np.array(self.agent_possession_team) == 'N').all() and (np.array(self.agent_possession_opp) == 'N').all():
+                    print("First Kick")
                     reward =+ 0.1
                     team_reward +=0.1
                 # set initial ball position after kick
-                    self.ball_pos_x = x
-                    self.ball_pos_y = y
+                    self.ball_pos_x = self.team_envs[0].getBallX()
+                    self.ball_pos_y = self.team_envs[0].getBallY()
 
             # track ball delta in between kicks
-            self.ball_delta = math.sqrt((self.ball_pos_x-x)**2+ (self.ball_pos_y-y)**2)
-            self.ball_pos_x = x
-            self.ball_pos_y = y
+            new_x = self.team_envs[0].getBallX()
+            new_y = self.team_envs[0].getBallY()
+            self.ball_delta = math.sqrt((self.ball_pos_x-new_x)**2+ (self.ball_pos_y-new_y)**2)
+            self.ball_pos_x = new_x
+            self.ball_pos_y = new_y
             self.pass_reward = self.ball_delta * 3.0
 
 
@@ -710,15 +727,16 @@ class HFO_env():
         reward += (10)*(r_prev - r)
         team_reward += (10)*(r_prev - r)
         
-
+        #   print('team', self.team_envs[0].getUnum(), team_obs[0][59:59+(self.num_TA-1)])
+        
         ################## Offensive Behavior #######################
         # [Offense behavior]  agents will be rewarded based on maximizing their open angle to opponents goal
         if ((self.team_base == base) and possession_side =='L') or ((self.team_base != base) and possession_side == 'R'): # someone on team has ball
             b,_,_ =self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
             if b < 1.0 : # Ball is in scoring range
                 if self.apprx_to_goal(team_obs[agentID]) > .3:
-                    a = self.unnormalize(team_obs[agentID][58])
-                    a_prev = self.unnormalize(team_obs_previous[agentID][58])
+                    a = self.unnormalize(team_obs[agentID][self.open_goal])
+                    a_prev = self.unnormalize(team_obs_previous[agentID][self.open_goal])
                     reward += (a-a_prev)*3
                     team_reward += (a-a_prev)*3
 
@@ -728,9 +746,13 @@ class HFO_env():
                 team_possessor = (np.array(self.agent_possession_team) == 'R').argmax()
             else:
                 team_possessor = (np.array(self.agent_possession_opp) == 'L').argmax()
-            angle_delta = self.unnormalize(team_obs[team_possessor][team_open_pass_placeholder+agentID]) - self.unnormalize(team_obs_previous[team_possessor][team_open_pass_placeholder+agentID])
-            reward += angle_delta*3.0
-            team_reward += angle_delta*3.0
+            unif_nums = np.array([self.unnormalize_unif(val) for val in team_obs[team_possessor][self.team_unif_beg:self.team_unif_end]])
+            unif_nums_prev = np.array([self.unnormalize_unif(val) for val in team_obs_previous[team_possessor][self.team_unif_beg:self.team_unif_end]])
+            if agentID != team_possessor:
+                if not (-100 in unif_nums) and not (-100 in unif_nums_prev):
+                    angle_delta = self.unnormalize(team_obs[team_possessor][self.team_pass_angle_beg + np.argwhere(unif_nums == (agentID+1))[0][0]]) - self.unnormalize(team_obs_previous[team_possessor][self.team_pass_angle_beg+np.argwhere(unif_nums_prev == (agentID+1))[0][0]])
+                    reward += angle_delta*3.0
+                    team_reward += angle_delta*3.0
 
         ################## Defensive behavior ######################
 
@@ -741,16 +763,15 @@ class HFO_env():
             else:
                 enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
 
+            agent_inds = np.where([self.apprx_to_goal(opp_obs[i]) > .3 for i in range(self.num_TA)])[0] # find who is in range
+
             b,_,_ =self.ball_distance_to_goal(opp_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
             if b < 1.0 : # Ball is in scoring range
-
                 if np.array([self.apprx_to_goal(opp_obs[i]) > .3 for i in range(self.num_TA)]).any(): # if anyone is in range on enemy team
-                    agent_inds = np.where([self.apprx_to_goal(opp_obs[i]) > .3 for i in range(self.num_TA)])[0] # find who is in range
-
-                    sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[i][58]) - self.unnormalize(opp_obs[i][58])) for i in agent_inds]) # penalize based on the open angles of the people in range
+                    sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[i][self.open_goal]) - self.unnormalize(opp_obs[i][self.open_goal])) for i in agent_inds]) # penalize based on the open angles of the people in range
                     reward += sum_angle_delta*3.0
                     team_reward += sum_angle_delta*3.0
-                    angle_delta_possessor = self.unnormalize(opp_obs_previous[enemy_possessor][58]) - self.unnormalize(opp_obs[enemy_possessor][58])# penalize based on the open angles of the possessor
+                    angle_delta_possessor = self.unnormalize(opp_obs_previous[enemy_possessor][self.open_goal]) - self.unnormalize(opp_obs[enemy_possessor][self.open_goal])# penalize based on the open angles of the possessor
                     reward += angle_delta_possessor*3.0
                     team_reward += angle_delta_possessor*3.0  
 
@@ -760,7 +781,8 @@ class HFO_env():
                 enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
             else:
                 enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-            sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[enemy_possessor][team_open_pass_placeholder+i]) - self.unnormalize(opp_obs[enemy_possessor][team_open_pass_placeholder+agentID])) for i in agent_inds]) # penalize based on the open angles of the people in range
+
+            sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[enemy_possessor][self.team_pass_angle_beg+i]) - self.unnormalize(opp_obs[enemy_possessor][self.team_pass_angle_beg+i])) for i in range(self.num_TA-1)]) # penalize based on the open angles of the people in range
             reward += sum_angle_delta*3.0
             team_reward += sum_angle_delta*3.0
 
@@ -768,6 +790,7 @@ class HFO_env():
         ##################################################################################
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
         return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
+
 
 
 
