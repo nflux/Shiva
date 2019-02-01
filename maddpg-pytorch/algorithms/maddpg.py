@@ -527,40 +527,40 @@ class MADDPG(object):
             curr_agent = self.team_agents[0]
         #print("time critic")
         #start = time.time()
-        with torch.no_grad():
-            if self.TD3:
-                noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
-                all_trgt_acs = [torch.cat(
-                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
+        #with torch.no_grad():
+        if self.TD3:
+            noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
+            all_trgt_acs = [torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
 
-                opp_all_trgt_acs = [torch.cat(
-                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
-            else:
-                all_trgt_acs = [torch.cat(
-                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
-                opp_all_trgt_acs =[torch.cat(
-                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
-    
-            mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
-            mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
+            opp_all_trgt_acs = [torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+        else:
+            all_trgt_acs = [torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
+            opp_all_trgt_acs =[torch.cat(
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
 
-            # Target critic values
-            trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
-            if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
-                        # and build the combination of distr choosing the minimums
-                trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
-                if self.D4PG:
-                    arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
-                                    curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
+        mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
+        mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
 
-                    if not arg: 
-                        trgt_Q = trgt_Q1
-                    else:
-                        trgt_Q = trgt_Q2
+        # Target critic values
+        trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
+        if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
+                    # and build the combination of distr choosing the minimums
+            trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
+            if self.D4PG:
+                arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
+                                curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
+
+                if not arg: 
+                    trgt_Q = trgt_Q1
                 else:
-                    trgt_Q = torch.min(trgt_Q1,trgt_Q2)
+                    trgt_Q = trgt_Q2
             else:
-                trgt_Q = curr_agent.target_critic(trgt_vf_in)
+                trgt_Q = torch.min(trgt_Q1,trgt_Q2)
+        else:
+            trgt_Q = curr_agent.target_critic(trgt_vf_in)
 
         mod_obs = torch.cat((*opp_obs,*obs),dim=1)
         mod_acs = torch.cat((*opp_acs,*acs),dim=1)
@@ -596,6 +596,10 @@ class MADDPG(object):
                         trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
             target_value.detach()
             if self.TD3: # handle double critic
+                with torch.no_grad():
+                    prio = ((actual_value_1 - target_value)**2 + (actual_value_2-target_value)**2).squeeze().detach()/2.0
+                    prio = np.round(prio.cpu().numpy(),decimals=3)
+                    prio = torch.tensor(prio,requires_grad=False)
                 vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
             else:
                 vf_loss = F.mse_loss(actual_value, target_value)
@@ -709,7 +713,11 @@ class MADDPG(object):
         
         # return priorities
         if self.TD3:
-            return ((prob_dist_1.float().sum(dim=1) + prob_dist_2.float().sum(dim=1))/2.0).cpu()
+            if self.D4PG:
+                return ((prob_dist_1.float().sum(dim=1) + prob_dist_2.float().sum(dim=1))/2.0).cpu()
+            else:
+                return prio
+                
         else:
             return prob_dist.sum(dim=1).cpu()
 

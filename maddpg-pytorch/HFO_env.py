@@ -142,7 +142,7 @@ class HFO_env():
         self.opp_goal_angle_end = self.opp_goal_angle_beg + num_TA
         self.team_pass_angle_beg = self.opp_goal_angle_end 
         self.team_pass_angle_end = self.team_pass_angle_beg + num_TA - 1
-        self.team_unif_beg = -(2*num_TA) 
+        self.team_unif_beg = -(2*num_TA) # CHANGE
         self.team_unif_end = -(2*num_TA) + num_TA - 1
         # 58 = OPEN GOAL
         # 59:59+(num_TA - 1) = teammates goal angle
@@ -644,7 +644,7 @@ class HFO_env():
             self.ball_delta = math.sqrt((self.ball_pos_x-new_x)**2+ (self.ball_pos_y-new_y)**2)
             self.ball_pos_x = new_x
             self.ball_pos_y = new_y
-            self.pass_reward = self.ball_delta * 5.0
+            self.pass_reward = self.ball_delta * 15.0
 
 
             ######## Pass Receiver Reward #########
@@ -700,23 +700,23 @@ class HFO_env():
                     #team_reward+=1
 
         ####################### reduce distance to ball - using delta  ##################
-        if self.feat_lvl == 'high':
-            r,_,_ = self.distance_to_ball(team_obs[agentID])
-            r_prev,_,_ = self.distance_to_ball(team_obs_previous[agentID])
-            reward += (r_prev - r) # if [prev > r] ---> positive; if [r > prev] ----> negative
-        elif self.feat_lvl == 'low':
-            prox_cur = self.ball_proximity(team_obs[agentID])
-            prox_prev = self.ball_proximity(team_obs_previous[agentID])
-            reward   += (3)*(prox_cur - prox_prev) # if cur > prev --> +   
-            team_reward +=(3)*(prox_cur - prox_prev)
+        # if self.feat_lvl == 'high':
+        #     r,_,_ = self.distance_to_ball(team_obs[agentID])
+        #     r_prev,_,_ = self.distance_to_ball(team_obs_previous[agentID])
+        #     reward += (r_prev - r) # if [prev > r] ---> positive; if [r > prev] ----> negative
+        # elif self.feat_lvl == 'low':
+        #     prox_cur = self.ball_proximity(team_obs[agentID])
+        #     prox_prev = self.ball_proximity(team_obs_previous[agentID])
+        #     reward   += (3)*(prox_cur - prox_prev) # if cur > prev --> +   
+        #     team_reward +=(3)*(prox_cur - prox_prev)
                 
         ####################### Rewards the closest player to ball for advancing toward ball ############
-        #if self.feat_lvl == 'low':
-        #    prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
-        #    prox_prev,closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
-        #    if agentID == closest_agent:
-        #        team_reward += (prox_cur - prox_prev)
-        #        reward+= (prox_cur-prox_prev)
+        if self.feat_lvl == 'low':
+           prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
+           prox_prev,closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
+           if agentID == closest_agent:
+               team_reward += (prox_cur - prox_prev)*3.0
+               reward+= (prox_cur-prox_prev)*3.0
             
         ##################################################################################
             

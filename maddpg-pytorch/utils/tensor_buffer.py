@@ -349,7 +349,7 @@ class ReplayTensorBuffer(object):
         # inds = np.random.choice(np.arange(self.filled_i), size=N,
         #                         replace=False)   
         prios = self.ensemble_priorities[:self.filled_i,agentID,k].detach()
-        if prios.sum() == 0:
+        if prios.sum() == 0.0:
             reset = np.ones(len(prios))/(1.0*len(prios))
             probs = reset/np.sum(reset)
         else:
@@ -362,7 +362,7 @@ class ReplayTensorBuffer(object):
         # inds = np.random.choice(np.arange(self.filled_i), size=N,
         #                         replace=False)   
         prios = self.SIL_priorities[:self.filled_i,agentID,:].squeeze().detach()
-        if prios.sum() == 0:
+        if prios.sum() == 0.0:
             reset = np.ones(len(prios))/(1.0*len(prios))
             probs = reset/np.sum(reset)
         else:

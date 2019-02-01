@@ -40,6 +40,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
     for ensemble in range(k_ensembles):
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
         for m in range(num_TA): # for each agent update since we are one policy for all agents
+            #start = time.time()
             for up in range(int(np.floor(number_of_updates/k_ensembles))):
                 if not load_same_agent:
                     inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
@@ -71,6 +72,9 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                     else:
                         priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
                         team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
+                        del priorities
+                        del team_sample
+                        del opp_sample
 
 
 
@@ -83,6 +87,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                                                 to_gpu=to_gpu,norm_rews=False)
                         priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
                         team_replay_buffer.update_SIL_priorities(agentID=agentID,inds = inds, prio=priorities)
+            #print(time.time()-start)
             if not load_same_agent:
                 maddpg.update_agent_targets(agentID,number_of_updates)
                 maddpg.save_agent(load_path,update_session,agentID)
@@ -380,12 +385,15 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                             n_step_targets_opp = opp_all_MC_targets[et_i-n]
                             n_step_next_ob_opp = opp_n_step_next_obs[-1]
                             n_step_done_opp = opp_n_step_dones[-1]
-
+                        if D4PG:
+                            default_prio = 5.0
+                        else:
+                            default_prio = 1.0
                         priorities = np.array([np.zeros(k_ensembles) for i in range(num_TA)])
                         priorities[:,current_ensembles] = 5.0
                         #print(current_ensembles)
                         if SIL:
-                            SIL_priorities = np.ones(num_TA)*5.0
+                            SIL_priorities = np.ones(num_TA)*default_prio
                         exp_team = np.column_stack((np.transpose(team_n_step_obs[n]),
                                             team_n_step_acs[n],
                                             np.expand_dims(team_n_step_rewards[n], 1),
@@ -395,7 +403,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                             np.expand_dims(n_step_targets_team, 1),
                                             np.expand_dims([team_n_step_ws[n] for i in range(num_TA)], 1),
                                             priorities,
-                                            np.expand_dims([5.0 for i in range(num_TA)],1)))
+                                            np.expand_dims([default_prio for i in range(num_TA)],1)))
 
 
                         exp_opp = np.column_stack((np.transpose(opp_n_step_obs[n]),
@@ -407,7 +415,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                             np.expand_dims(n_step_targets_opp, 1),
                                             np.expand_dims([opp_n_step_ws[n] for i in range(num_OA)], 1),
                                             priorities,
-                                            np.expand_dims([5.0 for i in range(num_TA)],1)))
+                                            np.expand_dims([default_prio for i in range(num_TA)],1)))
                 
                         exp_comb = np.expand_dims(np.vstack((exp_team, exp_opp)), 0)
 
@@ -421,7 +429,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                 # push exp to queue
                 # log
                 if ep_i > 1:
-                    team_avg_rew = [np.asarray(team_n_step_rewards)[:,i].sum() for i in range(num_TA)]
+                    team_avg_rew = [np.asarray(team_n_step_rewards)[:,i].sum() for i in range(num_TA)] # divide by time step?
                     team_cum_rew = [np.asarray(team_n_step_rewards)[:,i].sum() for i in range(num_TA)]
                     opp_avg_rew = [np.asarray(opp_n_step_rewards)[:,i].sum() for i in range(num_TA)]
                     opp_cum_rew = [np.asarray(opp_n_step_rewards)[:,i].sum() for i in range(num_TA)]
@@ -496,7 +504,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 2
+    num_envs = 4
     seed = 912
     port = 2000
     max_num_experiences = 10000
@@ -539,8 +547,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 2
-        num_OA = 2
+        num_TA = 1
+        num_OA = 1
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -549,12 +557,12 @@ if __name__ == "__main__":
         goalie = False
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 128
+        batch_size = 512
         hidden_dim = int(512)
         a_lr = 0.0001 # actor learning rate
         c_lr = 0.001 # critic learning rate
         tau = 0.001 # soft update rate
-        steps_per_update = 15
+        steps_per_update = 6 * num_envs
         number_of_updates = 0
         # exploration --------------------------
         explore = True
@@ -565,7 +573,7 @@ if __name__ == "__main__":
 
         # --------------------------------------
         #D4PG Options --------------------------
-        D4PG = True
+        D4PG = False
         gamma = 0.99 # discount
         Vmax = 50
         Vmin = -50
