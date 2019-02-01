@@ -496,7 +496,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 6
+    num_envs = 2
     seed = 912
     port = 2000
     max_num_experiences = 10000
@@ -554,7 +554,7 @@ if __name__ == "__main__":
         a_lr = 0.0001 # actor learning rate
         c_lr = 0.001 # critic learning rate
         tau = 0.001 # soft update rate
-        steps_per_update = 19
+        steps_per_update = 15
         number_of_updates = 0
         # exploration --------------------------
         explore = True
@@ -806,7 +806,7 @@ if __name__ == "__main__":
         # is full (10,000 timesteps backlogged) so wait for updates to catch up
         print("Generation/Max Shared memory at :",100*exp_indices[0].item()/max_num_experiences,"%")
 
-        if (exp_indices[0].item()/max_num_experiences) >= .6:
+        if (exp_indices[0].item()/max_num_experiences) >= .4:
             print("Training backlog (shared memory buffer full); halting experience generation until updates catch up")
 
             number_of_updates = int(update_counter.sum().item())
@@ -831,8 +831,8 @@ if __name__ == "__main__":
             update_counter.copy_(torch.zeros(num_envs,requires_grad=False))
 
 
-
-        [exp_i.copy_(torch.tensor(0,requires_grad=False)) for exp_i in exp_indices]
+        for exp_i in exp_indices:
+            exp_i.copy_(torch.tensor(0,requires_grad=False))
         number_of_updates = int(update_counter.sum().item())
         update_counter.copy_(torch.zeros(num_envs,requires_grad=False))
 

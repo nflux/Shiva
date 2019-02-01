@@ -497,7 +497,7 @@ class MADDPG(object):
             logger (SummaryWriter from Tensorboard-Pytorch):
                 If passed in, important quantities will be logged
         """
-        
+        #start = time.time()
         # rews = 1-step, cum-rews = n-step
         if side == 'team':
             count = self.team_count[agent_i]
@@ -527,40 +527,40 @@ class MADDPG(object):
             curr_agent = self.team_agents[0]
         #print("time critic")
         #start = time.time()
+        with torch.no_grad():
+            if self.TD3:
+                noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
+                all_trgt_acs = [torch.cat(
+                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
 
-        if self.TD3:
-            noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
-            all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
-
-            opp_all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
-        else:
-            all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
-            opp_all_trgt_acs =[torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
-   
-        mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
-        mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
-
-        # Target critic values
-        trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
-        if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
-                     # and build the combination of distr choosing the minimums
-            trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
-            if self.D4PG:
-                arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
-                                 curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
-
-                if not arg: 
-                    trgt_Q = trgt_Q1
-                else:
-                    trgt_Q = trgt_Q2
+                opp_all_trgt_acs = [torch.cat(
+                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
             else:
-                trgt_Q = torch.min(trgt_Q1,trgt_Q2)
-        else:
-            trgt_Q = curr_agent.target_critic(trgt_vf_in)
+                all_trgt_acs = [torch.cat(
+                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
+                opp_all_trgt_acs =[torch.cat(
+                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+    
+            mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
+            mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
+
+            # Target critic values
+            trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
+            if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
+                        # and build the combination of distr choosing the minimums
+                trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
+                if self.D4PG:
+                    arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
+                                    curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
+
+                    if not arg: 
+                        trgt_Q = trgt_Q1
+                    else:
+                        trgt_Q = trgt_Q2
+                else:
+                    trgt_Q = torch.min(trgt_Q1,trgt_Q2)
+            else:
+                trgt_Q = curr_agent.target_critic(trgt_vf_in)
 
         mod_obs = torch.cat((*opp_obs,*obs),dim=1)
         mod_acs = torch.cat((*opp_acs,*acs),dim=1)
@@ -618,18 +618,11 @@ class MADDPG(object):
             curr_pol_out = curr_agent.policy(obs[agent_i])
             curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True, device=self.device),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
             team_pol_acs = []
-            opp_pol_acs = []
-            for i in range(nagents):
-                if i == agent_i:
-                    team_pol_acs.append(curr_pol_vf_in)
-                else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
-                    team_pol_acs.append(acs[i])
-            
-            for i in range(nagents):
-                opp_pol_acs.append(opp_acs[i])
+            team_pol_acs = [curr_pol_vf_in if i == agent_i else acs[i] for i in range(nagents)]
+
 
             obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
-            acs_vf_in = torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)
+            acs_vf_in = torch.cat((*opp_acs,*team_pol_acs),dim=1)
             mod_vf_in = torch.cat((obs_vf_in, acs_vf_in), dim=1)
 
             # ------------------------------------------------------
@@ -654,7 +647,7 @@ class MADDPG(object):
             curr_agent.policy_optimizer.step()
             if self.niter % 100 == 0:
                 print("Team (%s) Agent (%i) Actor loss:" % (side,agent_i),pol_loss)
-
+            #print(time.time() - start,"update time")
         # I2A --------------------------------------
         if self.I2A:
             # Update policy prime
