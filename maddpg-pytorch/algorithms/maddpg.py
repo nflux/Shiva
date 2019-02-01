@@ -722,7 +722,7 @@ class MADDPG(object):
             return prob_dist.sum(dim=1).cpu()
 
 
-    def update_centralized_critic_LSTM(self, team_sample, opp_sample, agent_i, side='team', parallel=False, logger=None, act_only=False, obs_only=False):
+    def update_centralized_critic_LSTM(self, team_sample, opp_sample, agent_i, side='team', parallel=False, logger=None, act_only=False, obs_only=False,load_same_agent=False):
         """
         Update parameters of agent model based on sample from replay buffer
         Inputs:
