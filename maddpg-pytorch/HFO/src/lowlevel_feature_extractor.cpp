@@ -64,9 +64,9 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     addAngFeature(self_ang - self.vel().th());
     addNormFeature(self.speed(), 0., observedSelfSpeedMax);
   } else {
-    addFeature(0);
-    addFeature(0);
-    addFeature(0);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
   }
 
   // Global Body Angle -- 0:right -90:up 90:down 180/-180:left
@@ -148,10 +148,10 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     // Distance to Bottom field line
     addDistFeature(pitchHalfWidth - self_pos.y, pitchWidth);
   } else {
-    addFeature(0);
-    addFeature(0);
-    addFeature(0);
-    addFeature(0);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
   }
 
   // ======================== BALL FEATURES ======================== //
@@ -163,9 +163,9 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     // addAngFeature(ball.angleFromSelf());
     // addDistFeature(ball.distFromSelf(), maxHFORadius);
   } else {
-    addFeature(0);
-    addFeature(0);
-    addFeature(0);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
   }
   // Velocity and direction of the ball
   addFeature(ball.velValid() ? FEAT_MAX : FEAT_MIN);
@@ -174,9 +174,9 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     addNormFeature(ball.vel().r(), 0., observedBallSpeedMax);
     addAngFeature(ball.vel().th());
   } else {
-    addFeature(0);
-    addFeature(0);
-    addFeature(0);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
   }
 
   // largest open goal angle of self
@@ -195,7 +195,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   }
   // Add zero features for any missing teammates
   for (int i=detected_teammates; i<numTeammates; ++i) {
-    addFeature(0);
+    addFeature(FEAT_INVALID);
   }
 
   // opponent's open angle to goal
@@ -209,7 +209,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   }
   // Add zero features for any missing teammates
   for (int i=detected_opponents; i<numOpponents; ++i) {
-    addFeature(0);
+    addFeature(FEAT_INVALID);
   }
 
   // open angle to teammates, slices up the opponents in terms of the teammates
@@ -223,7 +223,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   }
   // Add zero features for any missing teammates
   for (int i=detected_teammates; i<numTeammates; ++i) {
-    addFeature(0);
+    addFeature(FEAT_INVALID);
   }
 
   // // open angle to opponents, slices up the teammates in terms of the opponents
@@ -256,7 +256,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // Add zero features for any missing teammates
   for (int i=detected_teammates; i<numTeammates; ++i) {
     for (int j=0; j<features_per_player; ++j) {
-      addFeature(0);
+      addFeature(FEAT_INVALID);
     }
   }
 
@@ -275,7 +275,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // Add zero features for any missing opponents
   for (int i=detected_opponents; i<numOpponents; ++i) {
     for (int j=0; j<features_per_player; ++j) {
-      addFeature(0);
+      addFeature(FEAT_INVALID);
     }
   }
 

@@ -65,9 +65,9 @@ void FeatureExtractor::addLandmarkFeatures(const rcsc::Vector2D& landmark,
                                            const rcsc::Vector2D& self_pos,
                                            const rcsc::AngleDeg& self_ang) {
   if (self_pos == Vector2D::INVALIDATED) {
-    addFeature(0);
-    addFeature(0);
-    addFeature(0);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
   } else {
     Vector2D vec_to_landmark = landmark - self_pos;
     addAngFeature(vec_to_landmark.th() - self_ang);
@@ -89,9 +89,9 @@ void FeatureExtractor::addPlayerFeatures(rcsc::PlayerObject& player,
     // Player's velocity direction
     addAngFeature(player.vel().th());
   } else {
-    addFeature(0);
-    addFeature(0);
-    addFeature(0);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
   }
 }
 

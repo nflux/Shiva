@@ -609,10 +609,11 @@ class HFO_env():
             opp_obs = self.opp_team_obs
             opp_obs_previous = self.opp_team_obs_previous
             num_ag = self.num_TA
-            # print('team', self.team_envs[0].getUnum(), team_obs[0][59:59+(self.num_TA-1)])
-            # print('team', self.team_envs[1].getUnum(), team_obs[1][59:59+(self.num_TA-1)])
-            #print('team', self.team_envs[0].getUnum(), team_obs[0][58])
-            # print('opps', self.team_envs[0].getUnum(), team_obs[0][59+(self.num_TA-1):59+(self.num_TA-1)+self.num_OA])
+            # if agentID == 0:
+            #     print('TEAM BASE')
+            #     self.test_obs_validity(self.team_base)
+            #     print('OPP BASE')
+            #     self.test_obs_validity(self.opp_base)
         else:
             team_actions = self.opp_actions
             team_obs = self.opp_team_obs
@@ -620,9 +621,7 @@ class HFO_env():
             opp_obs = self.team_obs
             opp_obs_previous = self.team_obs_previous
             num_ag = self.num_OA
-            #print('opp', self.opp_team_envs[0].getUnum(), team_obs[0][58])
-            # print('opp', self.opp_team_envs[0].getUnum(), team_obs[0][59+(self.num_TA-1):59+(self.num_TA-1)+(self.num_OA-1)])
-            # print('opp', self.opp_team_envs[1].getUnum(), team_obs[1][59+(self.num_TA-1):59+(self.num_TA-1)+(self.num_OA-1)])
+
         if team_obs[agentID][7] < 0 : # LOW STAMINA
             reward -= 0.02
             team_reward -= 0.02
@@ -1076,3 +1075,70 @@ class HFO_env():
         cmd = get_viewer_path() +\
               " --connect --port %d" % (self.server_port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
+    
+    # Only will work for 2 v 2
+    def test_obs_validity(self, base):
+        observations = None
+        exit_check = False
+        if base == self.team_base:
+            observations = self.team_obs
+            print('side chosen', base)
+        else:
+            observations = self.opp_team_obs
+            print('side chosen', base)
+        
+        if observations[0][0:2].any() == -1 or observations[1][0:2].any() == -1:
+            print('agent:0/1, pos/velocity invalid')
+            exit_check = True
+        
+        if observations[0][2:5].any() == -2 or observations[1][2:5].any() == -2:
+            print('agent:0/1, velocity ang/mag invalid')
+            exit_check = True
+        
+        if observations[0][13:46].any() == -2 or observations[1][13:46].any() == -2:
+            print('agent:0/1, landmark invalid')
+            exit_check = True
+        
+        if observations[0][46:50].any() == -2 or observations[1][46:50].any() == -2:
+            print('agent:0/1, OOB invalid')
+            exit_check = True
+        
+        if observations[0][50] == -1 or observations[1][50] == -1:
+            print('agent:0/1, Ball pos invalid')
+            exit_check = True
+
+        if observations[0][54] == -1 or observations[1][54] == -1:
+            print('agent:0/1, Ball velocity invalid')
+            exit_check = True
+        
+        if observations[0][59] == -2 or observations[1][59] == -2:
+            print('agent:0/1, teammate agents not detected for open goal invalid')
+            exit_check = True
+        
+        if observations[0][60:62].any() == -2 or observations[1][60:62].any() == -2:
+            print('agent:0/1, opponent agents not detected for open goal invalid')
+            exit_check = True
+        
+        if observations[0][62] == -2 or observations[1][62] == -2:
+            print('agent:0/1, open angle to teammates invalid')
+            exit_check = True
+        
+        if observations[0][63:71].any() == -2 or observations[1][63:71].any() == -2:
+            print('agent:0/1, teammate player features invalid')
+            exit_check = True
+        
+        if observations[0][71:71+(2*8)].any() == -2 or observations[1][71:71+(2*8)].any() == -2:
+            print('agent:0/1, opponent player features invalid')
+            exit_check = True
+        
+        if observations[0][87] == -1 or observations[1][87] == -1:
+            print('agent:0/1, teammate uniform invalid')
+            exit_check = True
+        
+        if observations[0][88:90].any() == -1 or observations[1][88:90].any() == -1:
+            print('agent:0/1, opponent uniform invalid')
+            exit_check = True
+        
+        if exit_check:
+            print('Exiting program')
+            exit(0)
