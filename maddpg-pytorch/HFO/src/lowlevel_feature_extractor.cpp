@@ -193,7 +193,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
       detected_teammates++;
     }
   }
-  // Add zero features for any missing teammates
+  // Add -2 features for any missing teammates
   for (int i=detected_teammates; i<numTeammates; ++i) {
     addFeature(FEAT_INVALID);
   }
@@ -207,7 +207,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
       detected_opponents++;
     }
   }
-  // Add zero features for any missing teammates
+  // Add -2 features for any missing teammates
   for (int i=detected_opponents; i<numOpponents; ++i) {
     addFeature(FEAT_INVALID);
   }
@@ -221,7 +221,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
       detected_teammates++;
     }
   }
-  // Add zero features for any missing teammates
+  // Add -2 features for any missing teammates
   for (int i=detected_teammates; i<numTeammates; ++i) {
     addFeature(FEAT_INVALID);
   }
@@ -253,7 +253,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
       detected_teammates++;
     }
   }
-  // Add zero features for any missing teammates
+  // Add -2 features for any missing teammates
   for (int i=detected_teammates; i<numTeammates; ++i) {
     for (int j=0; j<features_per_player; ++j) {
       addFeature(FEAT_INVALID);
@@ -272,7 +272,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
       detected_opponents++;
     }
   }
-  // Add zero features for any missing opponents
+  // Add -2 features for any missing opponents
   for (int i=detected_opponents; i<numOpponents; ++i) {
     for (int j=0; j<features_per_player; ++j) {
       addFeature(FEAT_INVALID);
@@ -310,6 +310,49 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     addFeature(FEAT_MIN);
   }
 
+  // Self x-position & y-position
+  addNormFeature(self_pos.x, -SP.pitchHalfLength, SP.pitchHalfLength);
+  addNormFeature(self_pos.y, -SP.pitchHalfWidth, SP.pitchHalfWidth);
+
+  // Teammates x-pos & y-pos
+  detected_teammates = 0;
+  for(PlayerPtrCont::const_iterator it=teammates.begin(); it != teammates.end(); ++it) {
+    const PlayerObject* teammate = *it;
+    if(valid(teammate) && detected_teammates < numTeammates) {
+      addNormFeature(teammate->pos().x, -SP.pitchHalfLength, SP.pitchHalfLength);
+      addNormFeature(teammate->pos().y, -SP.pitchHalfWidth, SP.pitchHalfWidth);
+    }
+  }
+
+  // Add -2 features for any missing teammates
+  for (int i=detected_teammates; i<numTeammates; ++i) {
+    addFeature(FEAT_INVALID);
+  }
+
+  // Opponents x-pos & y-pos
+  detected_opponents = 0;
+  for(PlayerPtrCont::const_iterator it=opponents.begin(); it != opponents.end(); ++it) {
+    const PlayerObject* opponent = *it;
+    if(valid(opponent) && detected_opponents < numOpponents) {
+      addNormFeature(opponent->pos().x, -SP.pitchHalfLength, SP.pitchHalfLength);
+      addNormFeature(opponent->pos().y, -SP.pitchHalfWidth, SP.pitchHalfWidth);
+    }
+  }
+
+  // Add -2 features for any missing opponents
+  for (int i=detected_opponents; i<numOpponents; ++i) {
+    addFeature(FEAT_INVALID);
+  }
+
+  // Ball x-pos & Ball y-pos
+  if(wm.ball().rposValid()) {
+    addNormFeature(wm.ball().pos().x, -SP.pitchHalfLength, SP.pitchHalfLength);
+    addNormFeature(wm.ball().pos().y, -SP.pitchHalfWidth, SP.pitchHalfWidth);
+  } else {
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
+  }
+  
   if (last_action_status) {
     addFeature(FEAT_MAX);
   } else {
