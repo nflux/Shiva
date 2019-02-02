@@ -738,7 +738,7 @@ class HFO_env():
             
         ##################################################################################
             
-        ####################### reduce ball distance to goal - For ball possessor  ##################
+        ####################### reduce ball distance to goal - For ball possessor and all agents on non controlling team  ##################
         r,_,_ = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         r_prev,_,_ = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
         if ((self.team_base == base) and possession_side =='L'):
@@ -751,6 +751,10 @@ class HFO_env():
             if agentID == team_possessor:
                 reward += (10)*(r_prev - r)
                 team_reward += (10)*(r_prev - r)
+        else:
+            reward += (10)*(r_prev - r)
+            team_reward += (10)*(r_prev - r)
+
         
 
         
