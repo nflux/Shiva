@@ -130,8 +130,8 @@ class HFO_env():
         self.team_possession = False
         self.opp_possession = False
         if feat_lvl == 'low':
-            self.team_num_features = 59 + 13*(num_TA-1) + 12*num_OA + 4 + 9*num_ONPC + 1
-            self.opp_num_features = 59 + 13*(num_OA-1) + 12*num_TA + 4 + 9*num_ONPC + 1
+            self.team_num_features = 59 + 13*(num_TA-1) + 12*num_OA + 4 + 9*num_ONPC + 1 + 2
+            self.opp_num_features = 59 + 13*(num_OA-1) + 12*num_TA + 4 + 9*num_ONPC + 1 + 2
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6 
