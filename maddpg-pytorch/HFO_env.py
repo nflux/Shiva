@@ -134,7 +134,7 @@ class HFO_env():
             self.opp_num_features = 59 + 13*(num_OA-1) + 12*num_TA + 4 + 9*num_ONPC + 1
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
-            self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6
+            self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6 
         self.open_goal = 58
         self.team_goal_angle_beg = 59
         self.team_goal_angle_end = self.team_goal_angle_beg +(num_TA -1)
@@ -142,8 +142,8 @@ class HFO_env():
         self.opp_goal_angle_end = self.opp_goal_angle_beg + num_TA
         self.team_pass_angle_beg = self.opp_goal_angle_end 
         self.team_pass_angle_end = self.team_pass_angle_beg + num_TA - 1
-        self.team_unif_beg = -(2*num_TA) # CHANGE
-        self.team_unif_end = -(2*num_TA) + num_TA - 1
+        self.team_unif_beg = -(2*num_TA) -(2*(num_TA-1)) - (2*num_TA) - 2 # CHANGE
+        self.team_unif_end = -(2*num_TA) + num_TA - 1 -(2*(num_TA-1)) - (2*num_TA) - 2
         # 58 = OPEN GOAL
         # 59:59+(num_TA - 1) = teammates goal angle
         # 59 + (num_TA): 59+ num_TA +(num_TA-1) = opp goal angle
@@ -602,6 +602,26 @@ class HFO_env():
                 self.agent_possession_opp = ['N'] * self.num_OA
                 return reward
         
+
+
+
+        # set global possessor flag     
+        # If anyone kicked the ball, on left get which one
+        kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
+        if kicked.any():
+            print(kicked.argmax())
+            self.team_obs[:,-2] = kicked.argmax() + 1
+        else:
+            self.team_obs[:,-2] = 0
+        # If anyone kicked the ball on right
+        kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
+        if kicked.any():
+            print(kicked.argmax()+1)
+            self.opp_team_obs[:,-1] = kicked.argmax() + 1
+        else:
+            self.opp_team_obs[:,-1] = 0
+
+        
         if self.team_base == base:
             team_actions = self.team_actions
             team_obs = self.team_obs
@@ -621,6 +641,9 @@ class HFO_env():
             reward -= 0.02
             team_reward -= 0.02
             # print ('low stamina')
+        
+
+
         ############ Kicked Ball #################
         if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            
             #Remove this check when npc ball posession can be measured
@@ -844,11 +867,22 @@ class HFO_env():
                 self.sync_at_reward_opp = np.zeros(self.num_OA)
 
                 if self.team_base == base:
-                    self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs_previous[agent_ID,:-2] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs[agent_ID,:-2] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs[agent_ID,-2] = 0
+                    self.team_obs[agent_ID,-1] = 0
+                    self.team_obs_previous[agent_ID,-2] = 0
+                    self.team_obs_previous[agent_ID,-1] = 0
+
+
                 else:
-                    self.opp_team_obs_previous[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
-                    self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
+                    self.opp_team_obs_previous[agent_ID,:-2] = self.opp_team_envs[agent_ID].getState() # Get initial state
+                    self.opp_team_obs[agent_ID,:-2] = self.opp_team_envs[agent_ID].getState() # Get initial state
+                    self.opp_team_obs[agent_ID,-2] = 0
+                    self.opp_team_obs[agent_ID,-1] = 0
+                    self.opp_team_obs_previous[agent_ID,-2] = 0
+                    self.opp_team_obs_previous[agent_ID,-1] = 0
+
 
                 self.been_kicked_team = False
                 self.been_kicked_opp = False
@@ -948,12 +982,12 @@ class HFO_env():
                     if self.team_base == base:
                         self.team_obs_previous[agent_ID] = self.team_obs[agent_ID]
                         self.world_status = self.team_envs[agent_ID].step() # update world
-                        self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.team_obs[agent_ID,:-2] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
                         self.sync_at_reward_team[agent_ID] += 1
                     else:
                         self.opp_team_obs_previous[agent_ID] = self.opp_team_obs[agent_ID]
                         self.world_status = self.opp_team_envs[agent_ID].step() # update world
-                        self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.opp_team_obs[agent_ID,:-2] = self.opp_team_envs[agent_ID].getState() # update obs after all agents have acted
                         self.sync_at_reward_opp[agent_ID] += 1
                     
                     while (self.sync_at_reward_team.sum() + self.sync_at_reward_opp.sum()) % (self.num_TA + self.num_OA) != 0:
