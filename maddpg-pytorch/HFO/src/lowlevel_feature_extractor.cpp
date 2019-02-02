@@ -20,6 +20,9 @@ LowLevelFeatureExtractor::LowLevelFeatureExtractor(int num_teammates,
   numFeatures += numTeammates + numOpponents; // largest open angle to goal
   numFeatures += numTeammates; // largest open angle to player (pass)
   numFeatures += numTeammates + numOpponents; // Uniform numbers
+  numFeatures += 2; // Self x,y
+  numFeatures += 2 * (numTeammates + numOpponents); // Teammates, Opponents x,y
+  numFeatures += 2; // Ball x, y
   numFeatures++; // action state
   feature_vec.resize(numFeatures);
 }
@@ -311,21 +314,29 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   }
 
   // Self x-position & y-position
-  addNormFeature(self_pos.x, -SP.pitchHalfLength, SP.pitchHalfLength);
-  addNormFeature(self_pos.y, -SP.pitchHalfWidth, SP.pitchHalfWidth);
+  if(self.posValid()) {
+    addNormFeature(self_pos.x, -SP.pitchHalfLength(), SP.pitchHalfLength());
+    addNormFeature(self_pos.y, -SP.pitchHalfWidth(), SP.pitchHalfWidth());
+  } else {
+    addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
+  }
+  
 
   // Teammates x-pos & y-pos
   detected_teammates = 0;
   for(PlayerPtrCont::const_iterator it=teammates.begin(); it != teammates.end(); ++it) {
     const PlayerObject* teammate = *it;
     if(valid(teammate) && detected_teammates < numTeammates) {
-      addNormFeature(teammate->pos().x, -SP.pitchHalfLength, SP.pitchHalfLength);
-      addNormFeature(teammate->pos().y, -SP.pitchHalfWidth, SP.pitchHalfWidth);
+      addNormFeature(teammate->pos().x, -SP.pitchHalfLength(), SP.pitchHalfLength());
+      addNormFeature(teammate->pos().y, -SP.pitchHalfWidth(), SP.pitchHalfWidth());
+      detected_teammates++;
     }
   }
 
   // Add -2 features for any missing teammates
   for (int i=detected_teammates; i<numTeammates; ++i) {
+    addFeature(FEAT_INVALID);
     addFeature(FEAT_INVALID);
   }
 
@@ -334,20 +345,22 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   for(PlayerPtrCont::const_iterator it=opponents.begin(); it != opponents.end(); ++it) {
     const PlayerObject* opponent = *it;
     if(valid(opponent) && detected_opponents < numOpponents) {
-      addNormFeature(opponent->pos().x, -SP.pitchHalfLength, SP.pitchHalfLength);
-      addNormFeature(opponent->pos().y, -SP.pitchHalfWidth, SP.pitchHalfWidth);
+      addNormFeature(opponent->pos().x, -SP.pitchHalfLength(), SP.pitchHalfLength());
+      addNormFeature(opponent->pos().y, -SP.pitchHalfWidth(), SP.pitchHalfWidth());
+      detected_opponents++;
     }
   }
 
   // Add -2 features for any missing opponents
   for (int i=detected_opponents; i<numOpponents; ++i) {
     addFeature(FEAT_INVALID);
+    addFeature(FEAT_INVALID);
   }
 
   // Ball x-pos & Ball y-pos
   if(wm.ball().rposValid()) {
-    addNormFeature(wm.ball().pos().x, -SP.pitchHalfLength, SP.pitchHalfLength);
-    addNormFeature(wm.ball().pos().y, -SP.pitchHalfWidth, SP.pitchHalfWidth);
+    addNormFeature(wm.ball().pos().x, -SP.pitchHalfLength(), SP.pitchHalfLength());
+    addNormFeature(wm.ball().pos().y, -SP.pitchHalfWidth(), SP.pitchHalfWidth());
   } else {
     addFeature(FEAT_INVALID);
     addFeature(FEAT_INVALID);

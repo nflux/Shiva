@@ -130,8 +130,8 @@ class HFO_env():
         self.team_possession = False
         self.opp_possession = False
         if feat_lvl == 'low':
-            self.team_num_features = 59 + 11*(num_TA-1) + 10*num_OA + 9*num_ONPC + 1
-            self.opp_num_features = 59 + 11*(num_OA-1) + 10*num_TA + 9*num_ONPC + 1
+            self.team_num_features = 59 + 13*(num_TA-1) + 12*num_OA + 4 + 9*num_ONPC + 1
+            self.opp_num_features = 59 + 13*(num_OA-1) + 12*num_TA + 4 + 9*num_ONPC + 1
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6
@@ -609,11 +609,6 @@ class HFO_env():
             opp_obs = self.opp_team_obs
             opp_obs_previous = self.opp_team_obs_previous
             num_ag = self.num_TA
-            # if agentID == 0:
-            #     print('TEAM BASE')
-            #     self.test_obs_validity(self.team_base)
-            #     print('OPP BASE')
-            #     self.test_obs_validity(self.opp_base)
         else:
             team_actions = self.opp_actions
             team_obs = self.opp_team_obs
@@ -1138,6 +1133,14 @@ class HFO_env():
         if observations[0][88:90].any() == -1 or observations[1][88:90].any() == -1:
             print('agent:0/1, opponent uniform invalid')
             exit_check = True
+        
+        # if(self.test == 10):
+        #     print('Self x, y', observations[0][90:92], observations[1][90:92])
+        #     print('Teamates x,y', observations[0][92:94], observations[1][92:94])
+        #     print('Opponents x,y', observations[0][94:98], observations[1][94:98])
+        #     print('Ball x,y', observations[0][98:100], observations[1][98:100])
+        #     exit(0)
+        # self.test+=1
         
         if exit_check:
             print('Exiting program')
