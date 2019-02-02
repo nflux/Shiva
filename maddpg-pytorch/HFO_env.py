@@ -142,8 +142,8 @@ class HFO_env():
         self.opp_goal_angle_end = self.opp_goal_angle_beg + num_TA
         self.team_pass_angle_beg = self.opp_goal_angle_end 
         self.team_pass_angle_end = self.team_pass_angle_beg + num_TA - 1
-        self.team_unif_beg = -(2*num_TA) -(2*(num_TA-1)) - (2*num_TA) - 2 # CHANGE
-        self.team_unif_end = -(2*num_TA) + num_TA - 1 -(2*(num_TA-1)) - (2*num_TA) - 2
+        self.team_unif_beg = -(2*num_TA) -(2*(num_TA)) - (2*num_OA) - 2 -2# CHANGE
+        self.team_unif_end = -(2*num_TA) + num_TA - 1 -(2*(num_TA-1)) - (2*num_TA) - 2 -2
         # 58 = OPEN GOAL
         # 59:59+(num_TA - 1) = teammates goal angle
         # 59 + (num_TA): 59+ num_TA +(num_TA-1) = opp goal angle
@@ -609,14 +609,12 @@ class HFO_env():
         # If anyone kicked the ball, on left get which one
         kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
         if kicked.any():
-            print(kicked.argmax())
             self.team_obs[:,-2] = kicked.argmax() + 1
         else:
             self.team_obs[:,-2] = 0
         # If anyone kicked the ball on right
         kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
         if kicked.any():
-            print(kicked.argmax()+1)
             self.opp_team_obs[:,-1] = kicked.argmax() + 1
         else:
             self.opp_team_obs[:,-1] = 0
@@ -763,7 +761,7 @@ class HFO_env():
         if ((self.team_base == base) and possession_side =='L') or ((self.team_base != base) and possession_side == 'R'): # someone on team has ball
             b,_,_ =self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
             if b < 1.0 : # Ball is in scoring range
-                if self.apprx_to_goal(team_obs[agentID]) > .3:
+                if (self.apprx_to_goal(team_obs[agentID]) > .3) and (self.apprx_to_goal(team_obs[agentID]) < .85):
                     a = self.unnormalize(team_obs[agentID][self.open_goal])
                     a_prev = self.unnormalize(team_obs_previous[agentID][self.open_goal])
                     reward += (a-a_prev)*3
