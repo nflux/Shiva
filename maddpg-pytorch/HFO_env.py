@@ -99,7 +99,7 @@ class HFO_env():
                                     defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, deterministic=deterministic)
 
         self.viewer = None
-        self.sleep_timer = 0.0000001 # sleep timer
+        self.sleep_timer = 0.00065 # sleep timer
         
         # params for low level actions
         #num_action_params = 6
@@ -731,8 +731,8 @@ class HFO_env():
            prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
            prox_prev,closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
            if agentID == closest_agent:
-               team_reward += (prox_cur - prox_prev)*3.0
-               reward+= (prox_cur-prox_prev)*3.0
+               team_reward += (prox_cur - prox_prev)*6.0
+               reward+= (prox_cur-prox_prev)*6.0
             
         ##################################################################################
             

@@ -35,17 +35,20 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
-
+    number_of_updates = 600
     maddpg.prep_training(device=maddpg.device)
     for ensemble in range(k_ensembles):
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
         #start = time.time()
-        for up in range(int(np.floor(number_of_updates/k_ensembles))):
+        #for up in range(int(np.floor(number_of_updates/k_ensembles))):
+        for up in range(number_of_updates):
+
+            m = np.random.randint(num_TA)
+
             if not load_same_agent:
                 inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
             else:
                 inds = team_replay_buffer.get_PER_inds(m,batch_size,ensemble)
-
 
             #inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
 
@@ -109,7 +112,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
 
 
 
-def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history):
+def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history,ep_num):
 
     (action_level,feature_level,to_gpu,device,use_viewer,use_viewer_after,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
     episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
@@ -433,15 +436,20 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                             exps = torch.from_numpy(exp_comb)
                         else:
                             exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
-                    exp_i += et_i
+                    exp_i[int(ep_num[env_num].item())] += et_i
+                    shared_exps[int(ep_num[env_num].item())][:len(exps)] = exps
+                    ep_num[env_num] += 1
+                    del exps
+                    exps = None
+
 
                 #############################################################################################################################################################
                 # push exp to queue
                 # log
                 if ep_i > 1:
-                    team_avg_rew = [np.asarray(team_n_step_rewards)[:,i].sum() for i in range(num_TA)] # divide by time step?
+                    team_avg_rew = [np.asarray(team_n_step_rewards)[:,i].sum()/float(et_i) for i in range(num_TA)] # divide by time step?
                     team_cum_rew = [np.asarray(team_n_step_rewards)[:,i].sum() for i in range(num_TA)]
-                    opp_avg_rew = [np.asarray(opp_n_step_rewards)[:,i].sum() for i in range(num_TA)]
+                    opp_avg_rew = [np.asarray(opp_n_step_rewards)[:,i].sum()/float(et_i) for i in range(num_TA)]
                     opp_cum_rew = [np.asarray(opp_n_step_rewards)[:,i].sum() for i in range(num_TA)]
 
                     #Added to Disable/Enable the team agents
@@ -472,9 +480,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                         eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation_ep" + str(ep_i),
                         7000,env.num_TA,env.num_OA,episode_length,device,use_viewer,))
                 if halt.all(): # load when other process is loading buffer to make sure its not saving at the same time
-                    num_updates[env_num] += float(np.floor(exp_i/steps_per_update))
+                    #num_updates[env_num] += float(np.floor(exp_i/steps_per_update))
                     #exps.cpu()
-                    shared_exps[:len(exps)] = exps
                     ready[env_num] = 1
                     if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
                         maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
@@ -482,10 +489,10 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                         maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
                     current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path,load_same_agent=load_same_agent) # use for per ensemble update counter
                     while halt.all():
-                        time.sleep(0.0001)
+                        time.sleep(0.1)
                     total_dim = (obs_dim_TA*2 + acs_dim + 5) + k_ensembles + 1
-
-                    shared_exps.copy_(torch.zeros(max_num_experiences,2*num_TA,total_dim)) # done loading
+                    ep_num.copy_(torch.zeros_like(ep_num,requires_grad=False))
+                    [s.copy_(torch.zeros(max_num_experiences,2*num_TA,total_dim)) for s in shared_exps[:int(ep_num[env_num].item())]] # done loading
                     #exp_i = 0 # reset experience builders
                     del exps
                     exps = None
@@ -517,7 +524,7 @@ if __name__ == "__main__":
     num_envs = 2
     seed = 912
     port = 2000
-    max_num_experiences = 10000
+    max_num_experiences = 500
     update_threads = []
     if True: # all options 
        # Parseargs --------------------------------------------------------------
@@ -557,22 +564,22 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA =2
-        num_OA = 2
+        num_TA =1
+        num_OA = 1
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
         offense_team_bin='helios10'
         defense_team_bin='helios11'  
-        goalie = False
+        goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 512
+        batch_size = 128
         hidden_dim = int(512)
         a_lr = 0.0001 # actor learning rate
-        c_lr = 0.001 # critic learning rate
+        c_lr = 0.0001 # critic learning rate
         tau = 0.001 # soft update rate
-        steps_per_update = (5 * num_envs)
+        steps_per_update = (2 * num_envs)
         number_of_updates = 0
         # exploration --------------------------
         explore = True
@@ -583,7 +590,7 @@ if __name__ == "__main__":
 
         # --------------------------------------
         #D4PG Options --------------------------
-        D4PG = False
+        D4PG = True
         gamma = 0.99 # discount
         Vmax = 50
         Vmin = -50
@@ -791,40 +798,41 @@ if __name__ == "__main__":
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
     opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
                                         obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
-
+    max_episodes_shared = 50
     update_session = 0
     processes = []
     total_dim = (obs_dim_TA*2 + acs_dim + 5) + k_ensembles + 1
 
-    shared_exps = [torch.zeros(max_num_experiences,2*num_TA,total_dim,requires_grad=False).share_memory_() for _ in range(num_envs)]
-    exp_indices = [torch.tensor(0,requires_grad=False).share_memory_() for _ in range(num_envs)]
+    shared_exps = [[torch.zeros(max_num_experiences,2*num_TA,total_dim,requires_grad=False).share_memory_() for _ in range(max_episodes_shared)] for _ in range(num_envs)]
+    exp_indices = [[torch.tensor(0,requires_grad=False).share_memory_() for _ in range(max_episodes_shared)] for _ in range(num_envs)]
+    ep_num = torch.zeros(num_envs,requires_grad=False).share_memory_()
 
     halt = Variable(torch.tensor(0).byte()).share_memory_()
     ready = torch.zeros(num_envs,requires_grad=False).byte().share_memory_()
     update_counter = torch.zeros(num_envs,requires_grad=False).share_memory_()
     for i in range(num_envs):
-        processes.append(mp.Process(target=run_envs, args=(seed + (i * 100), port + (i * 1000), shared_exps[i],exp_indices[i],HP,i,ready,halt,update_counter,(history+str(i)))))
+        processes.append(mp.Process(target=run_envs, args=(seed + (i * 100), port + (i * 1000), shared_exps[i],exp_indices[i],HP,i,ready,halt,update_counter,(history+str(i)),ep_num)))
     
     for p in processes:
         p.start()
 
-    iterations_per_push = 500
+    iterations_per_push = 2
     #maddpg_pick = dill.dumps(maddpg)
     while True: # get experiences, update
-        while((np.asarray([counter.item() for counter in exp_indices]) < iterations_per_push).any()):
-            time.sleep(0.01)
+        while((np.asarray([counter.item() for counter in ep_num]) < iterations_per_push).any()):
+            time.sleep(0.1)
         halt.copy_(torch.tensor(1,requires_grad=False).byte())
         while not ready.all():
-            time.sleep(0.01)
+            time.sleep(0.1)
         for i in range(num_envs):
-            team_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], :num_TA, :], shared_exps[i][:exp_indices[i], -num_TA:, :])))
-            opp_replay_buffer.push(torch.cat((shared_exps[i][:exp_indices[i], -num_TA:, :], shared_exps[i][:exp_indices[i], :num_TA, :])))
+            [team_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item()))]
+            [opp_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], shared_exps[i][j][:exp_indices[i][j], :num_TA, :]))) for j in range(int(ep_num[i].item()))]
         # get num updates and reset counter
         # If the update rate is slower than the exp generation than this ratio will be greater than 1 when our experience tensor
         # is full (10,000 timesteps backlogged) so wait for updates to catch up
-        print("Generation/Max Shared memory at :",100*exp_indices[0].item()/max_num_experiences,"%")
+        print("Episode buffer/Max Shared memory at :",100*ep_num[0].item()/float(max_episodes_shared),"%")
 
-        if (exp_indices[0].item()/max_num_experiences) >= .4:
+        if (ep_num[0].item()/max_episodes_shared) >= 10:
             print("Training backlog (shared memory buffer full); halting experience generation until updates catch up")
 
             number_of_updates = int(update_counter.sum().item())
@@ -849,8 +857,9 @@ if __name__ == "__main__":
             update_counter.copy_(torch.zeros(num_envs,requires_grad=False))
 
 
-        for exp_i in exp_indices:
-            exp_i.copy_(torch.tensor(0,requires_grad=False))
+        for envs in exp_indices:
+            for exp_i in envs:
+                exp_i.copy_(torch.tensor(0,requires_grad=False))
         number_of_updates = int(update_counter.sum().item())
         update_counter.copy_(torch.zeros(num_envs,requires_grad=False))
 
