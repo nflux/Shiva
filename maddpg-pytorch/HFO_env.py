@@ -1,7 +1,8 @@
 import random
 import numpy as np
 import time
-import _thread as thread
+# import _thread as thread
+import threading
 import pandas as pd
 import math
 from HFO.hfo import hfo
@@ -99,7 +100,7 @@ class HFO_env():
                                     defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, deterministic=deterministic)
 
         self.viewer = None
-        self.sleep_timer = 0.00065 # sleep timer
+        self.sleep_timer = 3 # sleep timer
         
         # params for low level actions
         #num_action_params = 6
@@ -161,21 +162,26 @@ class HFO_env():
         self.start = False
 
         # Locks to cause agents to wait for each other
-        self.wait_for_queue = True
-        self.wait_for_connect_vals = False
+        # self.wait_for_queue = True
+        # self.wait_for_connect_vals = False
 
         # Counters to keep agents on the same page in the connect function
         # Each cell represents a corresponding counter to an agent
         # Need to have counters that are not shared among the agents ergo
         # need to have a counter per agent
-        self.sync_after_queue_team = np.zeros(num_TA)
-        self.sync_after_queue_opp = np.zeros(num_OA)
-        self.sync_before_step_team = np.zeros(num_TA)
-        self.sync_before_step_opp = np.zeros(num_OA)
-        self.sync_at_status_team = np.zeros(num_TA)
-        self.sync_at_status_opp = np.zeros(num_OA)
-        self.sync_at_reward_team = np.zeros(num_TA)
-        self.sync_at_reward_opp = np.zeros(num_OA)
+        # self.sync_after_queue_team = np.zeros(num_TA)
+        # self.sync_after_queue_opp = np.zeros(num_OA)
+        # self.sync_before_step_team = np.zeros(num_TA)
+        # self.sync_before_step_opp = np.zeros(num_OA)
+        # self.sync_at_status_team = np.zeros(num_TA)
+        # self.sync_at_status_opp = np.zeros(num_OA)
+        # self.sync_at_reward_team = np.zeros(num_TA)
+        # self.sync_at_reward_opp = np.zeros(num_OA)
+
+        self.sync_after_queue = threading.Barrier(num_TA+num_OA+1, timeout=self.sleep_timer)
+        self.sync_before_step = threading.Barrier(num_TA+num_OA+1, timeout=self.sleep_timer)
+        self.sync_at_status = threading.Barrier(num_TA+num_OA, timeout=self.sleep_timer)
+        self.sync_at_reward = threading.Barrier(num_TA+num_OA, timeout=self.sleep_timer)
 
         # Initialization of mutable lists to be passsed to threads
         # action each team mate is supposed to take when its time to act
@@ -213,23 +219,35 @@ class HFO_env():
         for i in range(self.num_TA):
             if i == 0:
                 print("Connecting player %i" % i , "on team %s to the server" % self.base)
-                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                # thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                #                                 self.goalie,i,self.fpt,self.act_lvl,))
+                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.base,
                                                 self.goalie,i,self.fpt,self.act_lvl,))
+                t.start()
             else:
                 print("Connecting player %i" % i , "on team %s to the server" % self.base)
-                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                # thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
+                #                                 False,i,self.fpt,self.act_lvl,))
+                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.base,
                                                 False,i,self.fpt,self.act_lvl,))
+                t.start()
             time.sleep(1.5)
         
         for i in range(self.num_OA):
             if i == 0:
                 print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
-                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+                # thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+                #                                 self.goalie,i,self.fpt,self.act_lvl,))
+                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.opp_base,
                                                 self.goalie,i,self.fpt,self.act_lvl,))
+                t.start()
             else:
                 print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
-                thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+                # thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
+                #                                 False,i,self.fpt,self.act_lvl,))
+                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.opp_base,
                                                 False,i,self.fpt,self.act_lvl,))
+                t.start()
 
             time.sleep(1.5)
         print("All players connected to server")
@@ -280,16 +298,18 @@ class HFO_env():
         # Queue actions for opposing team
         [self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
 
-        self.sync_after_queue_team += 1
-        self.sync_after_queue_opp += 1
-        while (self.sync_after_queue_team.sum() + self.sync_after_queue_opp.sum()) % ((self.num_TA + self.num_OA) * 2) != 0:
-            time.sleep(self.sleep_timer)
+        # self.sync_after_queue_team += 1
+        # self.sync_after_queue_opp += 1
+        # while (self.sync_after_queue_team.sum() + self.sync_after_queue_opp.sum()) % ((self.num_TA + self.num_OA) * 2) != 0:
+        #     time.sleep(self.sleep_timer)
+        self.sync_after_queue.wait()
             
-        self.wait_for_queue = False
-        self.wait_for_connect_vals = True
+        # self.wait_for_queue = False
+        # self.wait_for_connect_vals = True
 
-        while self.wait_for_connect_vals:
-            time.sleep(self.sleep_timer)
+        # while self.wait_for_connect_vals:
+        #     time.sleep(self.sleep_timer)
+        self.sync_before_step.wait()
         #print('Actions, Obs, rewards, and status ready')
 
         team_rew = [rew + self.pass_reward if passer else rew for rew,passer in zip(self.team_rewards,self.team_passer)]
@@ -861,10 +881,10 @@ class HFO_env():
             while(self.start):
                 ep_num += 1
                 j = 0 # j to maximum episode length
-                self.sync_at_status_team = np.zeros(self.num_TA)
-                self.sync_at_status_opp = np.zeros(self.num_OA)
-                self.sync_at_reward_team = np.zeros(self.num_TA)
-                self.sync_at_reward_opp = np.zeros(self.num_OA)
+                # self.sync_at_status_team = np.zeros(self.num_TA)
+                # self.sync_at_status_opp = np.zeros(self.num_OA)
+                # self.sync_at_reward_team = np.zeros(self.num_TA)
+                # self.sync_at_reward_opp = np.zeros(self.num_OA)
 
                 if self.team_base == base:
                     self.team_obs_previous[agent_ID,:-2] = self.team_envs[agent_ID].getState() # Get initial state
@@ -887,16 +907,17 @@ class HFO_env():
                 self.been_kicked_team = False
                 self.been_kicked_opp = False
                 while j < fpt:
-                    self.wait_for_queue = True
+                    # self.wait_for_queue = True
 
-                    if self.team_base == base:
-                        self.sync_after_queue_team[agent_ID] += 1
-                    else:
-                        self.sync_after_queue_opp[agent_ID] += 1
+                    # if self.team_base == base:
+                    #     self.sync_after_queue_team[agent_ID] += 1
+                    # else:
+                    #     self.sync_after_queue_opp[agent_ID] += 1
 
-                    while self.wait_for_queue:
-                        time.sleep(self.sleep_timer)
+                    # while self.wait_for_queue:
+                    #     time.sleep(self.sleep_timer)
                     #print('Done queueing actions')
+                    self.sync_after_queue.wait()
 
                     
                     
@@ -938,7 +959,7 @@ class HFO_env():
                                 #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
                                 self.team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3,base),self.get_valid_scaled_param(agent_ID,4,base))
 
-                            self.sync_at_status_team[agent_ID] += 1
+                            # self.sync_at_status_team[agent_ID] += 1
                     else:
                         # take the action
                         if act_lvl == 'high':
@@ -974,24 +995,26 @@ class HFO_env():
                                 #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
                                 self.opp_team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3,base),self.get_valid_scaled_param(agent_ID,4,base))
 
-                            self.sync_at_status_opp[agent_ID] += 1
+                            # self.sync_at_status_opp[agent_ID] += 1
 
-                    while (self.sync_at_status_team.sum() + self.sync_at_status_opp.sum()) % (self.num_TA + self.num_OA) != 0:
-                        time.sleep(self.sleep_timer)
+                    # while (self.sync_at_status_team.sum() + self.sync_at_status_opp.sum()) % (self.num_TA + self.num_OA) != 0:
+                    #     time.sleep(self.sleep_timer)
+                    self.sync_at_status.wait()
                     
                     if self.team_base == base:
                         self.team_obs_previous[agent_ID] = self.team_obs[agent_ID]
                         self.world_status = self.team_envs[agent_ID].step() # update world
                         self.team_obs[agent_ID,:-2] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
-                        self.sync_at_reward_team[agent_ID] += 1
+                        # self.sync_at_reward_team[agent_ID] += 1
                     else:
                         self.opp_team_obs_previous[agent_ID] = self.opp_team_obs[agent_ID]
                         self.world_status = self.opp_team_envs[agent_ID].step() # update world
                         self.opp_team_obs[agent_ID,:-2] = self.opp_team_envs[agent_ID].getState() # update obs after all agents have acted
-                        self.sync_at_reward_opp[agent_ID] += 1
+                        # self.sync_at_reward_opp[agent_ID] += 1
                     
-                    while (self.sync_at_reward_team.sum() + self.sync_at_reward_opp.sum()) % (self.num_TA + self.num_OA) != 0:
-                        time.sleep(self.sleep_timer)
+                    # while (self.sync_at_reward_team.sum() + self.sync_at_reward_opp.sum()) % (self.num_TA + self.num_OA) != 0:
+                    #     time.sleep(self.sleep_timer)
+                    self.sync_at_reward.wait()
 
                     if self.world_status == hfo.IN_GAME:
                         self.d = 0
@@ -1001,18 +1024,19 @@ class HFO_env():
                     if self.team_base == base:
                         self.team_rewards[agent_ID] = self.getReward(
                             self.team_envs[agent_ID].statusToString(self.world_status),agent_ID,base,ep_num) # update reward
-                        self.sync_before_step_team[agent_ID] += 1
+                        # self.sync_before_step_team[agent_ID] += 1
                     else:
                         self.opp_rewards[agent_ID] = self.getReward(
                             self.opp_team_envs[agent_ID].statusToString(self.world_status),agent_ID,base,ep_num) # update reward
-                        self.sync_before_step_opp[agent_ID] += 1
+                        # self.sync_before_step_opp[agent_ID] += 1
 
                     j+=1
 
-                    while (self.sync_before_step_team.sum() + self.sync_before_step_opp.sum()) % (self.num_TA + self.num_OA) != 0:
-                        time.sleep(self.sleep_timer)
+                    # while (self.sync_before_step_team.sum() + self.sync_before_step_opp.sum()) % (self.num_TA + self.num_OA) != 0:
+                    #     time.sleep(self.sleep_timer)
+                    self.sync_before_step.wait()
 
-                    self.wait_for_connect_vals = False
+                    # self.wait_for_connect_vals = False
 
                     # Break if episode done
                     if self.d == True:
