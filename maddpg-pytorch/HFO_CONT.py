@@ -522,7 +522,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     num_envs = 3
-    seed = 912
+    seed = 123
     port = 2000
     max_num_experiences = 500
     update_threads = []
@@ -564,7 +564,7 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA =2
+        num_TA = 2
         num_OA = 2
         num_TNPC = 0
         num_ONPC = 0
@@ -728,7 +728,7 @@ if __name__ == "__main__":
         else:
             discrete_action = False
         if not USE_CUDA:
-                torch.set_num_threads(n_training_threads)
+            torch.set_num_threads(n_training_threads)
 
         #Initialization for either M vs N, M vs 0, or N vs 0
         if num_TA > 0:
