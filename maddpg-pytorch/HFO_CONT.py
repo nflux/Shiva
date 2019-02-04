@@ -31,11 +31,11 @@ import dill
 
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
                             load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent):
-    
+
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
-    number_of_updates = 900
+    number_of_updates = 700
     maddpg.prep_training(device=maddpg.device)
     for ensemble in range(k_ensembles):
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
@@ -521,7 +521,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
-    num_envs = 3
+    num_envs = 2
     seed = 912
     port = 2000
     max_num_experiences = 500
@@ -574,7 +574,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 256
+        batch_size = 128
         hidden_dim = int(512)
         a_lr = 0.0001 # actor learning rate
         c_lr = 0.001 # critic learning rate
@@ -667,7 +667,7 @@ if __name__ == "__main__":
         load_random_every = 100
         k_ensembles = 1
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
-        self_play_proba = 0.8
+        self_play_proba = 0.6
         load_same_agent = True # load same policy for all agents
         num_update_threads = num_TA
         if load_same_agent:
