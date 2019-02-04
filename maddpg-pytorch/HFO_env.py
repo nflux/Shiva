@@ -100,8 +100,8 @@ class HFO_env():
                                     defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, deterministic=deterministic)
 
         self.viewer = None
-        self.sleep_timer = 5.0 # sleep timer
-        self.sleep_timer2 = 45.0
+        # self.sleep_timer = 1.0 # sleep timer
+        # self.sleep_timer2 = 15.0
         # params for low level actions
         #num_action_params = 6
         num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
@@ -178,10 +178,10 @@ class HFO_env():
         # self.sync_at_reward_team = np.zeros(num_TA)
         # self.sync_at_reward_opp = np.zeros(num_OA)
 
-        self.sync_after_queue = threading.Barrier(num_TA+num_OA+1, timeout=self.sleep_timer)
-        self.sync_before_step = threading.Barrier(num_TA+num_OA+1, timeout=self.sleep_timer)
-        self.sync_at_status = threading.Barrier(num_TA+num_OA, timeout=self.sleep_timer)
-        self.sync_at_reward = threading.Barrier(num_TA+num_OA, timeout=self.sleep_timer)
+        self.sync_after_queue = threading.Barrier(num_TA+num_OA+1)
+        self.sync_before_step = threading.Barrier(num_TA+num_OA+1)
+        self.sync_at_status = threading.Barrier(num_TA+num_OA)
+        self.sync_at_reward = threading.Barrier(num_TA+num_OA)
 
         # Initialization of mutable lists to be passsed to threads
         # action each team mate is supposed to take when its time to act
@@ -309,7 +309,7 @@ class HFO_env():
 
         # while self.wait_for_connect_vals:
         #     time.sleep(self.sleep_timer)
-        self.sync_before_step.wait(self.sleep_timer2)
+        self.sync_before_step.wait()
         #print('Actions, Obs, rewards, and status ready')
 
         team_rew = [rew + self.pass_reward if passer else rew for rew,passer in zip(self.team_rewards,self.team_passer)]
@@ -955,7 +955,7 @@ class HFO_env():
                     # while self.wait_for_queue:
                     #     time.sleep(self.sleep_timer)
                     #print('Done queueing actions')
-                    self.sync_after_queue.wait(self.sleep_timer2)
+                    self.sync_after_queue.wait()
 
                     
                     
