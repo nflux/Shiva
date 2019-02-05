@@ -131,8 +131,8 @@ class HFO_env():
         self.team_possession = False
         self.opp_possession = False
         if feat_lvl == 'low':
-            self.team_num_features = 59 + 13*(num_TA-1) + 12*num_OA + 4 + 9*num_ONPC + 1 + 2
-            self.opp_num_features = 59 + 13*(num_OA-1) + 12*num_TA + 4 + 9*num_ONPC + 1 + 2
+            self.team_num_features = 59 + 13*(num_TA-1) + 12*num_OA + 4 + 9*num_ONPC + 1 + 2 + 1
+            self.opp_num_features = 59 + 13*(num_OA-1) + 12*num_TA + 4 + 9*num_ONPC + 1 + 2 + 1
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6 
@@ -143,8 +143,8 @@ class HFO_env():
         self.opp_goal_angle_end = self.opp_goal_angle_beg + num_TA
         self.team_pass_angle_beg = self.opp_goal_angle_end 
         self.team_pass_angle_end = self.team_pass_angle_beg + num_TA - 1
-        self.team_unif_beg = -(2*num_TA) -(2*(num_TA)) - (2*num_OA) - 2 -2# CHANGE
-        self.team_unif_end = -(2*num_TA) + num_TA - 1 -(2*(num_TA-1)) - (2*num_TA) - 2 -2
+        self.team_unif_beg = -(2*num_TA) -(2*(num_TA)) - (2*num_OA) - 2 -2 - 1
+        self.team_unif_end = -(2*num_TA) + num_TA - 1 -(2*(num_TA-1)) - (2*num_TA) - 2 -2 - 1
         # 58 = OPEN GOAL
         # 59:59+(num_TA - 1) = teammates goal angle
         # 59 + (num_TA): 59+ num_TA +(num_TA-1) = opp goal angle
@@ -920,19 +920,26 @@ class HFO_env():
                 # self.sync_at_reward_opp = np.zeros(self.num_OA)
 
                 if self.team_base == base:
-                    self.team_obs_previous[agent_ID,:-2] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID,:-2] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs_previous[agent_ID,:-3] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs[agent_ID,:-3] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs[agent_ID,-3] = 0
                     self.team_obs[agent_ID,-2] = 0
                     self.team_obs[agent_ID,-1] = 0
+
+                    self.team_obs_previous[agent_ID,-3] = 0
                     self.team_obs_previous[agent_ID,-2] = 0
                     self.team_obs_previous[agent_ID,-1] = 0
 
 
+
                 else:
-                    self.opp_team_obs_previous[agent_ID,:-2] = self.opp_team_envs[agent_ID].getState() # Get initial state
-                    self.opp_team_obs[agent_ID,:-2] = self.opp_team_envs[agent_ID].getState() # Get initial state
+                    self.opp_team_obs_previous[agent_ID,:-3] = self.opp_team_envs[agent_ID].getState() # Get initial state
+                    self.opp_team_obs[agent_ID,:-3] = self.opp_team_envs[agent_ID].getState() # Get initial state
+                    self.opp_team_obs[agent_ID,-3] = 0
                     self.opp_team_obs[agent_ID,-2] = 0
                     self.opp_team_obs[agent_ID,-1] = 0
+
+                    self.opp_team_obs_previous[agent_ID,-3] = 0
                     self.opp_team_obs_previous[agent_ID,-2] = 0
                     self.opp_team_obs_previous[agent_ID,-1] = 0
 
@@ -952,6 +959,8 @@ class HFO_env():
                     #     time.sleep(self.sleep_timer)
                     #print('Done queueing actions')
                     self.sync_after_queue.wait()
+                    self.team_obs[agent_ID,-1] = (j*1.0)/fpt
+                    self.opp_team_obs[agent_ID,-1] = (j*1.0)/fpt
 
                     
                     

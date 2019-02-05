@@ -562,7 +562,7 @@ if __name__ == "__main__":
         num_episodes = 10000000
         replay_memory_size = 200000
         episode_length = 500 # FPS
-        untouched_time = 200
+        untouched_time = 500
         burn_in_iterations = 500 # for time step
         burn_in_episodes = float(burn_in_iterations)/untouched_time
         deterministic = True
