@@ -264,25 +264,28 @@ def zero_params(num_Agents,params,action_index):
 
 # returns the distribution projection
 def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, cum_rewards_v, gamma, device="cpu"):
-    #start = time.time()
+    start = time.time()
     next_distr = next_distr_v.data.cpu().numpy()
     rewards = rewards_v.data.cpu().numpy()
     cum_rewards = cum_rewards_v.data.cpu().numpy()
     dones_mask = dones_mask_t.cpu().numpy().astype(np.bool)
     batch_size = len(rewards)
     proj_distr = np.zeros((batch_size, self.N_ATOMS), dtype=np.float32)
+    mask = [True]*batch_size
 
+    start=time.time()
     for atom in range(self.N_ATOMS):
         tz_j = np.minimum(self.Vmax, np.maximum(self.Vmin, 
                                                 (1-self.beta)*(rewards + (self.Vmin + atom * self.DELTA_Z) * gamma) + (self.beta)*cum_rewards))
         b_j = (tz_j - self.Vmin) / self.DELTA_Z
         l = np.floor(b_j).astype(np.int64)
         u = np.ceil(b_j).astype(np.int64)
-        eq_mask = u == l
-        proj_distr[eq_mask, l[eq_mask]] += next_distr[eq_mask, atom]
-        ne_mask = u != l
-        proj_distr[ne_mask, l[ne_mask]] += next_distr[ne_mask, atom] * (u - b_j)[ne_mask]
-        proj_distr[ne_mask, u[ne_mask]] += next_distr[ne_mask, atom] * (b_j - l)[ne_mask]
+
+        #eq_mask = u == l
+        #proj_distr[eq_mask, l[eq_mask]] += next_distr[eq_mask, atom]
+        #ne_mask = u != l
+        proj_distr[mask, l[mask]] += next_distr[mask, atom] * (u - b_j)[mask]
+        proj_distr[mask, u[mask]] += next_distr[mask, atom] * (b_j - l)[mask]
 
 
     if dones_mask.any():
@@ -304,6 +307,63 @@ def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, cum_rewards_v, 
             proj_distr[ne_dones, l[ne_mask]] = (u - b_j)[ne_mask]
             proj_distr[ne_dones, u[ne_mask]] = (b_j - l)[ne_mask]
     #print(time.time() - start,"TIME FOR PROJ")
+    #print(time.time() - start,"time1")
+    #proj_distr2=proj_distr
+    #return torch.from_numpy(proj_distr).float().to(device)
+# ---------------------------------------------------------------
+#start = time.time()
+#     next_distr = next_distr_v.data.cpu().numpy()
+#     rewards = rewards_v.data.cpu().numpy()
+#     cum_rewards = cum_rewards_v.data.cpu().numpy()
+#     dones_mask = dones_mask_t.cpu().numpy().astype(np.bool)
+#     batch_size = len(rewards)
+#     proj_distr = np.zeros((batch_size, self.N_ATOMS), dtype=np.float32)
+#     mask = [True]*batch_size
+#     start = time.time()
+#     atoms = np.arange(self.N_ATOMS,dtype='float64') 
+#     atoms *= self.DELTA_Z
+#     atoms += self.Vmin
+#     atoms *= gamma
+#     atoms = np.tile(atoms,(self.batch_size,1))
+
+#     atoms += np.tile((rewards),(self.N_ATOMS,1)).T
+#     atoms *= (1-self.beta)
+#     atoms += np.tile((self.beta*cum_rewards),(self.N_ATOMS,1)).T
+#     atoms[atoms > self.Vmax] = self.Vmax
+#     atoms[atoms < self.Vmin] =  self.Vmin
+#     b_j = (atoms - self.Vmin) / self.DELTA_Z
+#     l = np.floor(b_j).astype(np.int64)
+#     u = l+1
+#     #u = u.T
+    
+#     proj_distr = proj_distr.T
+#     #next_distr = next_distr.T
+
+#     for i in range(self.N_ATOMS):
+#         proj_distr[l[:,i],mask] += next_distr[mask,i]*(u-b_j)[mask,i]
+#         proj_distr[u[:,i],mask] += next_distr[mask,i]*(b_j-l)[mask,i]
+#     proj_distr = proj_distr.T
+#     #next_distr = next_distr.T
+#     print(time.time() - start,"time2")
+
+#     if dones_mask.any():
+#         proj_distr[dones_mask] = 0.0
+
+#         tz_j = np.minimum(self.Vmax, np.maximum(self.Vmin, rewards[dones_mask]))
+#         b_j = (tz_j - self.Vmin) / self.DELTA_Z
+#         l = np.floor(b_j).astype(np.int64)
+#         u = np.ceil(b_j).astype(np.int64)
+#         #eq_mask = u == l
+#         eq_dones = dones_mask.copy()
+#         eq_dones[dones_mask] = eq_mask
+#         if eq_dones.any():
+#             proj_distr[eq_dones, l[eq_mask]] = 1.0
+#         ne_mask = u != l
+#         ne_dones = dones_mask.copy()
+#         ne_dones[dones_mask] = ne_mask
+#         if ne_dones.any():
+#             proj_distr[ne_dones, l[ne_mask]] = (u - b_j)[ne_mask]
+#             proj_distr[ne_dones, u[ne_mask]] = (b_j - l)[ne_mask]
     return torch.from_numpy(proj_distr).float().to(device)
 
 # ---------------- Torch Tensorized ------------------------------

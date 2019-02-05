@@ -717,8 +717,8 @@ class HFO_env():
 
                 if (np.array(self.agent_possession_team) == 'L').any():
                     enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-                    self.team_lost_possession[enemy_possessor] -= 10.0
-                    self.opp_lost_possession[agentID] += 10.0
+                    self.team_lost_possession[enemy_possessor] -= 5.0
+                    self.opp_lost_possession[agentID] += 5.0
 
                     # print('teammates lost possession ')
 
@@ -757,16 +757,16 @@ class HFO_env():
         if ((self.team_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
             if agentID == team_possessor:
-                reward += (10)*(r_prev - r)
-                team_reward += (10)*(r_prev - r)
+                reward += (20)*(r_prev - r)
+                team_reward += (20)*(r_prev - r)
         elif  ((self.team_base != base) and possession_side == 'R'):
             team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
             if agentID == team_possessor:
-                reward += (10)*(r_prev - r)
-                team_reward += (10)*(r_prev - r)
+                reward += (20)*(r_prev - r)
+                team_reward += (20)*(r_prev - r)
         else:
-            reward += (10)*(r_prev - r)
-            team_reward += (10)*(r_prev - r)
+            reward += (20)*(r_prev - r)
+            team_reward += (20)*(r_prev - r)
 
         
 

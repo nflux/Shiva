@@ -527,7 +527,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 3
+    num_envs = 1
     port = 2000
     max_num_experiences = 500
     update_threads = []
@@ -569,8 +569,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 2
-        num_OA = 2
+        num_TA = 1
+        num_OA = 1
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -579,7 +579,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 256
+        batch_size = 128
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate
@@ -591,11 +591,11 @@ if __name__ == "__main__":
         final_OU_noise_scale = 0.1
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 500 # Haus uses over 10,000 updates --
+        num_explore_episodes = 100 # Haus uses over 10,000 updates --
 
         # --------------------------------------
         #D4PG Options --------------------------
-        D4PG = False
+        D4PG = True
         gamma = 0.99 # discount
         Vmax = 40
         Vmin = -40
@@ -678,7 +678,7 @@ if __name__ == "__main__":
         load_random_every = 100
         k_ensembles = 1
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
-        self_play_proba = 0.6
+        self_play_proba = 0.5
         load_same_agent = True # load same policy for all agents
         num_update_threads = num_TA
         if load_same_agent:
