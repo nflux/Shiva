@@ -171,18 +171,20 @@ class DDPGAgent(object):
         #     if self.policy.training == True:
         #         self.policy.training = False
 
-        # if self.counter % 250 == 0:
-        #     print(torch.softmax(action[:,:self.action_dim],dim=1))
+
         #print(action)
     
         # mixed disc/cont
         if explore:
             if not ran: # not random
                 action = self.policy(obs)
+                #if self.counter % 200 == 0:
+                #    print(torch.softmax(action[:,:self.action_dim],dim=1))
                 a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True, device=self.device)
                 p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
                 action = torch.cat((a,p),1) 
                 self.counter +=1
+
             else: # random
                 action = torch.cat((onehot_from_logits(torch.empty((1,self.action_dim),device=self.device,requires_grad=False).uniform_(-1,1)),
                             torch.empty((1,self.param_dim),device=self.device,requires_grad=False).uniform_(-1,1) ),1)
@@ -193,6 +195,7 @@ class DDPGAgent(object):
             p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
             action = torch.cat((a,p),1) 
             self.counter +=1
+
         return action
             
     

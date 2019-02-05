@@ -88,6 +88,10 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                     del priorities
                     del team_sample
                     del opp_sample
+                    if up == number_of_updates/2: # update target half way through
+                        maddpg.update_agent_targets(0,number_of_updates/2)
+
+
 
 
 
@@ -100,13 +104,14 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                                             to_gpu=to_gpu,norm_rews=False)
                     priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
                     team_replay_buffer.update_SIL_priorities(agentID=agentID,inds = inds, prio=priorities)
+                    
         #print(time.time()-start)
         if not load_same_agent:
             maddpg.update_agent_targets(agentID,number_of_updates)
             maddpg.save_agent(load_path,update_session,agentID)
             maddpg.save_ensemble(ensemble_path,ensemble,agentID)
         else:
-            maddpg.update_agent_targets(0,number_of_updates)
+            maddpg.update_agent_targets(0,number_of_updates/2)
             [maddpg.save_agent(load_path,update_session,i,load_same_agent) for i in range(num_TA)]
             [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent) for i in range(num_TA)]
 
@@ -401,7 +406,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                         if D4PG:
                             default_prio = 5.0
                         else:
-                            default_prio = 1.0
+                            default_prio = 3.0
                         priorities = np.array([np.zeros(k_ensembles) for i in range(num_TA)])
                         priorities[:,current_ensembles] = 5.0
                         #print(current_ensembles)
@@ -574,11 +579,11 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 128
+        batch_size = 256
         hidden_dim = int(512)
-        a_lr = 0.0001 # actor learning rate
-        c_lr = 0.001 # critic learning rate
+
         tau = 0.001 # soft update rate
+
         steps_per_update = (2 * num_envs)
         number_of_updates = 0
         # exploration --------------------------
@@ -586,15 +591,15 @@ if __name__ == "__main__":
         final_OU_noise_scale = 0.1
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 200 # Haus uses over 10,000 updates --
+        num_explore_episodes = 500 # Haus uses over 10,000 updates --
 
         # --------------------------------------
         #D4PG Options --------------------------
         D4PG = True
         gamma = 0.99 # discount
-        Vmax = 50
-        Vmin = -50
-        N_ATOMS = 25
+        Vmax = 40
+        Vmin = -40
+        N_ATOMS = 250
         DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
         n_steps = 5
         # n-step update size 
@@ -602,6 +607,12 @@ if __name__ == "__main__":
         initial_beta = 0.3
         final_beta =0.3
         num_beta_episodes = 1000000000
+        if D4PG:
+            a_lr = 0.0001 # actor learning rate
+            c_lr = 0.001 # critic learning rate
+        else:
+            a_lr = 0.0001 # actor learning rate
+            c_lr = 0.00001 # critic learning rate
         #---------------------------------------
         #TD3 Options ---------------------------
         TD3 = True
@@ -798,7 +809,7 @@ if __name__ == "__main__":
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
     opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
                                         obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
-    max_episodes_shared = 50
+    max_episodes_shared = 40
     update_session = 0
     processes = []
     total_dim = (obs_dim_TA*2 + acs_dim + 5) + k_ensembles + 1

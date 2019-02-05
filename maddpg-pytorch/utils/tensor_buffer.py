@@ -353,7 +353,9 @@ class ReplayTensorBuffer(object):
             reset = np.ones(len(prios))/(1.0*len(prios))
             probs = reset/np.sum(reset)
         else:
-            probs = prios.numpy()/prios.sum().numpy()
+            probs = prios.numpy()/(prios.sum().numpy())
+            while np.abs(probs.sum() - 1) > 0.0003:
+                probs = probs/probs.sum()
         return np.random.choice(self.filled_i,batch_size,p=probs)
                               
     def get_SIL_inds(self,agentID=0,batch_size=32):

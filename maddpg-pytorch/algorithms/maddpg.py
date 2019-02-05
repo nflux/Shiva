@@ -497,6 +497,8 @@ class MADDPG(object):
             logger (SummaryWriter from Tensorboard-Pytorch):
                 If passed in, important quantities will be logged
         """
+        start = time.time()
+
         #start = time.time()
         # rews = 1-step, cum-rews = n-step
         if side == 'team':
@@ -637,9 +639,13 @@ class MADDPG(object):
             else: # non-distributional
                 pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean()              
       
-
+            if self.D4PG:
+                reg_param = 5.0
+            else:
+                reg_param = 1.0
+            
             param_reg = torch.clamp((curr_pol_out[:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out[:,curr_agent.action_dim:]),min=0.0).sum(dim=1).mean()
-            entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/5.0 # regularize using log probabilities
+            entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
             #pol_loss += ((curr_pol_out**2)[:,:curr_agent.action_dim].mean() * 1e-3)/3.0 #Shariq-style regularizer on size of linear outputs
             pol_loss += param_reg
             pol_loss += entropy_reg
@@ -693,6 +699,7 @@ class MADDPG(object):
             EM_loss.backward()
             torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
             curr_agent.EM_optimizer.step()
+
             #---------------------------------------------------------------------------------
         if side == 'team':
             self.team_count[agent_i] += 1
@@ -705,6 +712,8 @@ class MADDPG(object):
         #                         'pol_loss': pol_loss},
         #                        self.niter)
         self.niter +=1
+        #print(time.time() - start,"up")
+
         if self.niter % 100 == 0:
             print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
             if self.I2A:

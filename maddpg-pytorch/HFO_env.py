@@ -312,18 +312,14 @@ class HFO_env():
         self.sync_before_step.wait()
         #print('Actions, Obs, rewards, and status ready')
 
-        team_rew = [rew + self.pass_reward if passer else rew for rew,passer in zip(self.team_rewards,self.team_passer)]
-        
-        if self.num_OA > 0:
-            opp_rew =[rew + self.pass_reward if passer else rew for rew,passer in zip(self.opp_rewards,self.opp_passer)]
+        self.team_rewards = [rew + self.pass_reward if passer else rew for rew,passer in zip(self.team_rewards,self.team_passer)]
+
+        self.opp_rewwards =[rew + self.pass_reward if passer else rew for rew,passer in zip(self.opp_rewards,self.opp_passer)]
         
 
-        team_rew = np.add( team_rew, self.team_lost_possession)
-        
-        if self.num_OA > 0:
-            opp_rew = np.add(opp_rew, self.opp_lost_possession)
-        else:
-            opp_rew = [0]*self.num_TA
+        self.team_rewards = np.add( self.team_rewards, self.team_lost_possession)
+
+        self.opp_rewards = np.add(self.opp_rewards, self.opp_lost_possession)
 
         #team_rew -=  self.team_lost_possession
         #opp_rew -=  self.opp_lost_possession
@@ -332,7 +328,7 @@ class HFO_env():
         self.opp_passer = [0]*self.num_TA
         self.team_lost_possession = [0]*self.num_TA
         self.opp_lost_possession = [0]*self.num_TA
-        return np.asarray(self.team_obs),team_rew,np.asarray(self.opp_team_obs),opp_rew, \
+        return np.asarray(self.team_obs),self.team_rewards,np.asarray(self.opp_team_obs),self.opp_rewards, \
                 self.d, self.world_status
 
 
@@ -654,8 +650,8 @@ class HFO_env():
             num_ag = self.num_OA
 
         if team_obs[agentID][7] < 0 : # LOW STAMINA
-            reward -= 0.02
-            team_reward -= 0.02
+            reward -= 0.05
+            team_reward -= 0.05
             # print ('low stamina')
         
 
@@ -665,9 +661,9 @@ class HFO_env():
             #Remove this check when npc ball posession can be measured
             if self.num_OA > 0:
                 if (np.array(self.agent_possession_team) == 'N').all() and (np.array(self.agent_possession_opp) == 'N').all():
-                    print("First Kick")
-                    reward += 2.0
-                    team_reward +=2.0
+                    #print("First Kick")
+                    reward += 10.0
+                    team_reward +=10.0
                 # set initial ball position after kick
                     self.ball_pos_x = self.team_envs[0].getBallX()/52.5
                     self.ball_pos_y = self.team_envs[0].getBallY()/34.0
@@ -691,14 +687,14 @@ class HFO_env():
                         
                         reward += self.pass_reward
                         team_reward += self.pass_reward
-                        print("received a pass worth:",self.pass_reward)
+                        #print("received a pass worth:",self.pass_reward)
                         #print('team pass reward received ')
                 #Remove this check when npc ball posession can be measured
                 if self.num_OA > 0:
                     if (np.array(self.agent_possession_opp) == 'R').any():
                         enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-                        self.opp_lost_possession[enemy_possessor] -= 3
-                        self.team_lost_possession[agentID] += 3
+                        self.opp_lost_possession[enemy_possessor] -= 10.0
+                        self.team_lost_possession[agentID] += 10.0
                         # print('opponent lost possession')
 
                 ###### Change Possession Reward #######
@@ -721,8 +717,8 @@ class HFO_env():
 
                 if (np.array(self.agent_possession_team) == 'L').any():
                     enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-                    self.team_lost_possession[enemy_possessor] -= 3
-                    self.opp_lost_possession[agentID] += 3
+                    self.team_lost_possession[enemy_possessor] -= 10.0
+                    self.opp_lost_possession[agentID] += 10.0
 
                     # print('teammates lost possession ')
 
@@ -750,8 +746,8 @@ class HFO_env():
            prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
            prox_prev,closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
            if agentID == closest_agent:
-               team_reward += (prox_cur - prox_prev)*6.0
-               reward+= (prox_cur-prox_prev)*6.0
+               team_reward += (prox_cur - prox_prev)*10.0
+               reward+= (prox_cur-prox_prev)*10.0
             
         ##################################################################################
             
