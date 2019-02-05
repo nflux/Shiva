@@ -527,7 +527,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 2
+    num_envs = 3
     port = 2000
     max_num_experiences = 500
     update_threads = []
@@ -595,11 +595,11 @@ if __name__ == "__main__":
 
         # --------------------------------------
         #D4PG Options --------------------------
-        D4PG = True
+        D4PG = False
         gamma = 0.99 # discount
         Vmax = 40
         Vmin = -40
-        N_ATOMS = 250
+        N_ATOMS = 251
         DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
         n_steps = 5
         # n-step update size 
@@ -612,7 +612,7 @@ if __name__ == "__main__":
             c_lr = 0.001 # critic learning rate
         else:
             a_lr = 0.0001 # actor learning rate
-            c_lr = 0.00001 # critic learning rate
+            c_lr = 0.0001 # critic learning rate
         #---------------------------------------
         #TD3 Options ---------------------------
         TD3 = True

@@ -623,15 +623,15 @@ class HFO_env():
         # If anyone kicked the ball, on left get which one
         kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
         if kicked.any():
-            self.team_obs[:,-2] = (kicked.argmax() + 1)/100.0
+            self.team_obs[:,-3] = (kicked.argmax() + 1)/100.0
         else:
-            self.team_obs[:,-2] = 0
+            self.team_obs[:,-3] = 0
         # If anyone kicked the ball on right
         kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
         if kicked.any():
-            self.opp_team_obs[:,-1] = (kicked.argmax() + 1)/100.0
+            self.opp_team_obs[:,-2] = (kicked.argmax() + 1)/100.0
         else:
-            self.opp_team_obs[:,-1] = 0
+            self.opp_team_obs[:,-2] = 0
 
         
         if self.team_base == base:
@@ -693,8 +693,8 @@ class HFO_env():
                 if self.num_OA > 0:
                     if (np.array(self.agent_possession_opp) == 'R').any():
                         enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-                        self.opp_lost_possession[enemy_possessor] -= 10.0
-                        self.team_lost_possession[agentID] += 10.0
+                        self.opp_lost_possession[enemy_possessor] -= 5.0
+                        self.team_lost_possession[agentID] += 5.0
                         # print('opponent lost possession')
 
                 ###### Change Possession Reward #######
@@ -1047,12 +1047,12 @@ class HFO_env():
                     if self.team_base == base:
                         self.team_obs_previous[agent_ID] = self.team_obs[agent_ID]
                         self.world_status = self.team_envs[agent_ID].step() # update world
-                        self.team_obs[agent_ID,:-2] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.team_obs[agent_ID,:-3] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
                         # self.sync_at_reward_team[agent_ID] += 1
                     else:
                         self.opp_team_obs_previous[agent_ID] = self.opp_team_obs[agent_ID]
                         self.world_status = self.opp_team_envs[agent_ID].step() # update world
-                        self.opp_team_obs[agent_ID,:-2] = self.opp_team_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.opp_team_obs[agent_ID,:-3] = self.opp_team_envs[agent_ID].getState() # update obs after all agents have acted
                         # self.sync_at_reward_opp[agent_ID] += 1
                     
                     # while (self.sync_at_reward_team.sum() + self.sync_at_reward_opp.sum()) % (self.num_TA + self.num_OA) != 0:
