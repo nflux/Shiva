@@ -94,6 +94,10 @@ class DDPGAgent(object):
                             EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                     LSTM_hidden=LSTM_hidden,maddpg=maddpg)
 
+            if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
+                print("Let's use", torch.cuda.device_count(), "GPUs!")
+                self.policy = nn.DataParallel(self.policy)
+
             #self.policy.share_memory()
             if not maddpg.only_policy:
 
@@ -103,6 +107,8 @@ class DDPGAgent(object):
                                         norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                                         EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                                 LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+            if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
+                self.target_policy = nn.DataParallel(self.target_policy)
 
         if self.LSTM_PC:
             if not maddpg.only_policy:
@@ -124,6 +130,10 @@ class DDPGAgent(object):
                 self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
                                                     hidden_dim=hidden_dim,
                                                     norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+                if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
+                    self.critic = nn.DataParallel(self.critic)
+                    self.target_critic = nn.DataParallel(self.target_critic)
+
 
         if not maddpg.only_policy:
             hard_update(self.target_policy, self.policy)

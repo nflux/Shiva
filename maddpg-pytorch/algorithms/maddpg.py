@@ -46,7 +46,7 @@ class MADDPG(object):
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, decent_EM=True,imagination_policy_branch = False,
                  critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
-                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False): 
+                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False,multi_gpu=True): 
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -2132,7 +2132,7 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True,imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False):
+                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False,multi_gpu=False):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -2231,7 +2231,8 @@ class MADDPG(object):
                      'LSTM':LSTM,
                      'LSTM_PC':LSTM_PC,
                      'hidden_dim_lstm': hidden_dim_lstm,
-                     'only_policy': only_policy}
+                     'only_policy': only_policy
+                     'multi_gpu':multi_gpu}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
