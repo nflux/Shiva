@@ -203,14 +203,14 @@ class ReplayTensorBuffer(object):
             self.curr_i = roll_amount
             self.start_loc = 0
 
-    def sample(self,inds, to_gpu=False, norm_rews=False,):
+    def sample(self,inds, to_gpu=False, norm_rews=False,device="cuda:0"):
 
         if to_gpu:
-            cast = lambda x: Variable(x,requires_grad=False).cuda()
+            cast = lambda x: Variable(x,requires_grad=False).to(device)
         else:
             cast = lambda x: Variable(x, requires_grad=False)
         if to_gpu:
-            cast_obs = lambda x: Variable(x,requires_grad=True).cuda() # obs need gradient for cent-Q
+            cast_obs = lambda x: Variable(x,requires_grad=True).to(device) # obs need gradient for cent-Q
         else:
             cast_obs = lambda x: Variable(x, requires_grad=True)
 

@@ -73,37 +73,8 @@ class MADDPG(object):
         self.batch_size = batch_size
         self.trace_length = trace_length
         self.only_policy = only_policy
-
+        self.multi_gpu = multi_gpu
         self.num_out_pol = team_net_params[0]['num_out_pol']
-        self.team_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
-                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
-                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
-                                 delta = DELTA_Z,D4PG=D4PG,
-                                 TD3=TD3,
-                                 I2A = I2A,EM_lr=EM_lr,
-                                 world_status_dim=self.world_status_dim,
-                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
-                                      device=device,
-                                      imagination_policy_branch=imagination_policy_branch,
-                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                      LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,
-                                 **params)
-                       for params in team_agent_init_params]
-        
-        self.opp_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
-                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
-                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
-                                 delta = DELTA_Z,D4PG=D4PG,
-                                 TD3=TD3,
-                                 I2A = I2A,EM_lr=EM_lr,
-                                 world_status_dim=self.world_status_dim,
-                                     rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
-                                     imagination_policy_branch=imagination_policy_branch,
-                                     critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                     LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,
-                                 **params)
-                       for params in opp_agent_init_params]
-
         self.team_agent_init_params = team_agent_init_params
         self.opp_agent_init_params = opp_agent_init_params
         self.team_net_params = team_net_params
@@ -144,6 +115,36 @@ class MADDPG(object):
         #self.ws_onehot = processor(torch.FloatTensor(self.batch_size,self.world_status_dim),device=self.device) 
         self.team_count = [0 for i in range(self.nagents_team)]
         self.opp_count = [0 for i in range(self.nagents_opp)]
+        self.team_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
+                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
+                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
+                                 delta = DELTA_Z,D4PG=D4PG,
+                                 TD3=TD3,
+                                 I2A = I2A,EM_lr=EM_lr,
+                                 world_status_dim=self.world_status_dim,
+                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
+                                      device=device,
+                                      imagination_policy_branch=imagination_policy_branch,
+                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
+                                      LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,
+                                 **params)
+                       for params in team_agent_init_params]
+        
+        self.opp_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
+                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
+                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
+                                 delta = DELTA_Z,D4PG=D4PG,
+                                 TD3=TD3,
+                                 I2A = I2A,EM_lr=EM_lr,
+                                 world_status_dim=self.world_status_dim,
+                                     rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
+                                     imagination_policy_branch=imagination_policy_branch,
+                                     critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
+                                     LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,
+                                 **params)
+                       for params in opp_agent_init_params]
+
+
     @property
     def team_policies(self):
         return [a.policy for a in self.team_agents]
@@ -531,7 +532,7 @@ class MADDPG(object):
         #start = time.time()
         #with torch.no_grad():
         if self.TD3:
-            noise = processor(torch.randn_like(acs[0]),device=self.device) * self.TD3_noise
+            noise = processor(torch.randn_like(acs[0]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
             all_trgt_acs = [torch.cat(
                 (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
 
@@ -622,7 +623,7 @@ class MADDPG(object):
         #print("time actor")
         if count % self.TD3_delay_steps == 0:
             curr_pol_out = curr_agent.policy(obs[agent_i])
-            curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True, device=self.device),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
+            curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True, device=self.torch_device),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
             team_pol_acs = []
             team_pol_acs = [curr_pol_vf_in if i == agent_i else acs[i] for i in range(nagents)]
 
@@ -633,11 +634,17 @@ class MADDPG(object):
 
             # ------------------------------------------------------
             if self.D4PG:
-                critic_out = curr_agent.critic.Q1(mod_vf_in)
+                if self.multi_gpu:
+                    critic_out = curr_agent.critic.module.Q1(mod_vf_in)
+                else:
+                    critic_out = curr_agent.critic.Q1(mod_vf_in)
                 distr_q = curr_agent.critic.distr_to_q(critic_out)
                 pol_loss = -distr_q.mean()
             else: # non-distributional
-                pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean()              
+                if self.multi_gpu:
+                    pol_loss = -curr_agent.critic.module.Q1(mod_vf_in).mean() 
+                else:
+                    pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean() 
       
             if self.D4PG:
                 reg_param = 5.0
@@ -1356,7 +1363,7 @@ class MADDPG(object):
 
         self.niter += 1
 
-    def prep_training(self, device='gpu',only_policy=False):
+    def prep_training(self, device='gpu',only_policy=False,torch_device='cuda:0'):
         for a in self.team_agents:
             a.policy.train()
             if not only_policy:
@@ -1372,7 +1379,7 @@ class MADDPG(object):
                 a.target_critic.train()
 
         if device == 'cuda':
-            fn = lambda x: x.cuda()
+            fn = lambda x: x.to(torch_device)
         else:
             fn = lambda x: x.cpu()
 
@@ -2231,7 +2238,7 @@ class MADDPG(object):
                      'LSTM':LSTM,
                      'LSTM_PC':LSTM_PC,
                      'hidden_dim_lstm': hidden_dim_lstm,
-                     'only_policy': only_policy
+                     'only_policy': only_policy,
                      'multi_gpu':multi_gpu}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
@@ -2355,7 +2362,7 @@ class MADDPG(object):
     def first_save(self, file_path,num_copies=1):
         """
         Makes K clones of each agent to be used as the ensemble agents"""
-        self.prep_training(device='cpu')  # move parameters to CPU before saving
+        #self.prep_training(device='cpu')  # move parameters to CPU before saving
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], file_path + ("ensemble_agent_%i" % i) + "/model_%i.pth" % j) for i in range(len(self.team_agents)) for j in range(num_copies)]
@@ -2414,6 +2421,7 @@ class MADDPG(object):
 
         for i in range(nagents):
             instance.team_agents[i].load_params(save_dicts[i]['agent_params'] ) # first n agents
+            
 
         return instance
     

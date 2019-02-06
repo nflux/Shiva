@@ -95,7 +95,6 @@ class DDPGAgent(object):
                                     LSTM_hidden=LSTM_hidden,maddpg=maddpg)
 
             if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
-                print("Let's use", torch.cuda.device_count(), "GPUs!")
                 self.policy = nn.DataParallel(self.policy)
 
             #self.policy.share_memory()
@@ -107,8 +106,8 @@ class DDPGAgent(object):
                                         norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                                         EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                                 LSTM_hidden=LSTM_hidden,maddpg=maddpg)
-            if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
-                self.target_policy = nn.DataParallel(self.target_policy)
+                if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
+                    self.target_policy = nn.DataParallel(self.target_policy)
 
         if self.LSTM_PC:
             if not maddpg.only_policy:
@@ -125,11 +124,11 @@ class DDPGAgent(object):
 
                 self.critic = MLPNetwork_Critic(num_in_critic, 1,
                                         hidden_dim=hidden_dim,
-                                        norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+                                        norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3,maddpg=maddpg)
 
                 self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
                                                     hidden_dim=hidden_dim,
-                                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
+                                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3,maddpg=maddpg)
                 if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
                     self.critic = nn.DataParallel(self.critic)
                     self.target_critic = nn.DataParallel(self.target_critic)
@@ -190,8 +189,8 @@ class DDPGAgent(object):
                 action = self.policy(obs)
                 #if self.counter % 200 == 0:
                 #    print(torch.softmax(action[:,:self.action_dim],dim=1))
-                a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True, device=self.device)
-                p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+                a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
+                p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
                 action = torch.cat((a,p),1) 
                 self.counter +=1
 
@@ -202,7 +201,7 @@ class DDPGAgent(object):
             action = self.policy(obs)
             a = onehot_from_logits(action[0,:self.action_dim].view(1,self.action_dim))
             #p = torch.clamp(action[0,self.action_dim:].view(1,self.param_dim),min=-1.0,max=1.0) # get noisey params (OU)
-            p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+            p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
             action = torch.cat((a,p),1) 
             self.counter +=1
 
@@ -222,16 +221,27 @@ class DDPGAgent(object):
         return action
 '''
     def get_params(self):
-        dict =  {'policy': self.policy.state_dict(),
-                'critic': self.critic.state_dict(),
-                'target_policy': self.target_policy.state_dict(),
-                'target_critic': self.target_critic.state_dict(),
+        #self.maddpg.prep_training(device='cpu')  # move parameters to CPU before saving
+        if self.maddpg.multi_gpu:
 
-                
-                'policy_optimizer': self.policy_optimizer.state_dict(),
-                'critic_optimizer': self.critic_optimizer.state_dict(),
+            dict =  {'policy': self.policy.module.state_dict(),
+                    'critic': self.critic.module.state_dict(),
+                    'target_policy': self.target_policy.module.state_dict(),
+                    'target_critic': self.target_critic.module.state_dict(),
 
-               }
+
+                    'policy_optimizer': self.policy_optimizer.state_dict(),
+                    'critic_optimizer': self.critic_optimizer.state_dict(),}
+        else:
+            
+            dict =  {'policy': self.policy.state_dict(),
+                    'critic': self.critic.state_dict(),
+                    'target_policy': self.target_policy.state_dict(),
+                    'target_critic': self.target_critic.state_dict(),
+                    'policy_optimizer': self.policy_optimizer.state_dict(),
+                    'critic_optimizer': self.critic_optimizer.state_dict(),}
+                    
+
         if self.I2A:
             dict['EM']=self.EM_state_dict()
             dict['EM_optimizer'] = self.EM_optimizer.state_dict()
@@ -244,21 +254,39 @@ class DDPGAgent(object):
 
     #Used to get just the actor weights and params.
     def get_actor_params(self):
-        return {'policy': self.policy.state_dict()}
+        if self.maddpg.multi_gpu:
+            return {'policy': self.policy.module.state_dict()}
+        else:
+            return {'policy': self.policy.state_dict()}
+
 
     #Used to get just the critic weights and params.
     def get_critic_params(self):
-        return {'critic': self.critic.state_dict()}
+        if self.maddpg.multi_gpu:
+            return {'critic': self.critic.module.state_dict()}
+        else:
+            return {'critic': self.critic.state_dict()}
+
+        
 
     def load_params(self, params):
         if self.device == 'cuda':
-            dev = torch.device("cuda")
+            dev = self.maddpg.torch_device
         else:
             dev = torch.device('cpu')
-        self.policy.load_state_dict(params['policy'])
-        self.critic.load_state_dict(params['critic'])
-        self.target_policy.load_state_dict(params['target_policy'])
-        self.target_critic.load_state_dict(params['target_critic'])
+        if self.maddpg.multi_gpu:
+
+            self.policy.module.load_state_dict(params['policy'])
+            self.critic.module.load_state_dict(params['critic'])
+            self.target_policy.module.load_state_dict(params['target_policy'])
+            self.target_critic.module.load_state_dict(params['target_critic'])
+        else:
+
+            self.policy.load_state_dict(params['policy'])
+            self.critic.load_state_dict(params['critic'])
+            self.target_policy.load_state_dict(params['target_policy'])
+            self.target_critic.load_state_dict(params['target_critic'])
+            
 
         if self.I2A:
             self.EM.load_state_dict(params['EM'])
@@ -298,7 +326,11 @@ class DDPGAgent(object):
             dev = torch.device("cuda")
         else:
             dev = torch.device('cpu')
-        self.policy.load_state_dict(params['policy'])
+        if self.maddpg.multi_gpu:
+            self.policy.module.load_state_dict(params['policy'])
+        else:
+            self.policy.load_state_dict(params['policy'])
+
 
 
         if self.I2A:
