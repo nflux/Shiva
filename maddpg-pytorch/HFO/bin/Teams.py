@@ -69,7 +69,7 @@ class Agent2d(Team):
 
   def launch_npc(self, player_num):
     launchOpts = None
-    if player_num == 1:
+    if player_num == 0:
       launchOpts = '-g'
     print('Launch npc %s-%d' % (self._name, player_num))
     return self.start_npc_proc(launchOpts)

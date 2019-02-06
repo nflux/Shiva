@@ -6,6 +6,7 @@
 #include <rcsc/common/logger.h>
 #include <rcsc/common/server_param.h>
 #include <sstream>
+#include <fstream>
 
 using namespace rcsc;
 
@@ -38,16 +39,29 @@ FeatureExtractor::FeatureExtractor(int num_teammates,
 
 FeatureExtractor::~FeatureExtractor() {}
 
-void FeatureExtractor::LogFeatures() {
-#ifdef ELOG
-  assert(feature_vec.size() == numFeatures);
-  std::stringstream ss;
-  for (int i=0; i<numFeatures; ++i) {
-    ss << feature_vec[i] << " ";
+void FeatureExtractor::LogFeatures(const bool record, const long cycle, const int unum, SideID side) {
+  std::string side_str = "unknown";
+  if(record) {
+    assert(feature_vec.size() == numFeatures);
+    std::stringstream ss;
+    for(int i=0; i<=numFeatures; ++i) {
+      ss << feature_vec[i] << ",";
+    }
+    if(side == LEFT) side_str = "left";
+    else if(side == RIGHT) side_str = "right";
+
+    std::ofstream log_file("pt_logs/log_obs_" + side_str + "_" + std::to_string(unum) + ".csv", std::ios_base::out | std::ios_base::app );
+    log_file << cycle << ",StateFeatures," << ss.str() << std::endl;
   }
-  elog.addText(Logger::WORLD, "StateFeatures %s", ss.str().c_str());
-  elog.flush();
-#endif
+// #ifdef ELOG
+//   assert(feature_vec.size() == numFeatures);
+//   std::stringstream ss;
+//   for (int i=0; i<numFeatures; ++i) {
+//     ss << feature_vec[i] << " ";
+//   }
+//   elog.addText(Logger::WORLD, "StateFeatures %s", ss.str().c_str());
+//   elog.flush();
+// #endif
 }
 
 void FeatureExtractor::addAngFeature(const rcsc::AngleDeg& ang) {

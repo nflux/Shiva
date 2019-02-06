@@ -411,13 +411,13 @@ Agent::handleActionStart()
   UpdateFeatures();
 
   // Optionally write to logfile
-#ifdef ELOG
-  if (config().record() && feature_extractor != NULL) {
-    elog.addText(Logger::WORLD, "GameStatus %d", game_status);
-    elog.flush();
-    feature_extractor->LogFeatures();
-  }
-#endif
+// #ifdef ELOG
+//   if (config().record() && feature_extractor != NULL) {
+//     elog.addText(Logger::WORLD, "GameStatus %d", game_status);
+//     elog.flush();
+//     feature_extractor->LogFeatures();
+//   }
+// #endif
 }
 
 /*-------------------------------------------------------------------*/

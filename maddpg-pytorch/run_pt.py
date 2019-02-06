@@ -1,16 +1,26 @@
+import os
+from utils.misc import pretrain_process
 
+left_side = 3
+right_side = 3
+
+def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
     # -------------------------------------
     # PRETRAIN ############################
     if Imitation_exploration:
+        left_files = []
+        right_files = []
+        # team_files = ['Pretrain_Files/3v3_CentQ/base_left-11.log','Pretrain_Files/3v3_CentQ/base_left-7.log','Pretrain_Files/3v3_CentQ/base_left-8.log','Pretrain_Files/3v3_CentQ/base_right-2.log','Pretrain_Files/3v3_CentQ/base_right-3.log','Pretrain_Files/3v3_CentQ/base_right-4.log']
+        # opp_files = ['Pretrain_Files/base_left-1.log','Pretrain_Files/base_left-2.log']
+        if os.path.isdir(os.getcwd() + '/pt_logs'):
+            team_files = os.listdir(os.getcwd() + '/pt_logs')
+            left_files = [os.getcwd() + '/pt_logs/' + f for f in team_files if '_left_' in f]
+            right_files = [os.getcwd() + '/pt_logs/' + f for f in team_files if '_right_' in f]
+        else:
+            print('log directory DNE')
+            exit(0)
 
-        team_files = ['Pretrain_Files/3v3_CentQ/base_left-11.log','Pretrain_Files/3v3_CentQ/base_left-7.log','Pretrain_Files/3v3_CentQ/base_left-8.log','Pretrain_Files/3v3_CentQ/base_right-2.log','Pretrain_Files/3v3_CentQ/base_right-3.log','Pretrain_Files/3v3_CentQ/base_right-4.log']
-        #opp_files = ['Pretrain_Files/base_left-1.log','Pretrain_Files/base_left-2.log']
-
-        team_pt_obs, team_pt_status,team_pt_actions,opp_pt_obs, opp_pt_status,opp_pt_actions = pretrain_process(fnames = team_files,timesteps = pt_timesteps,num_features = env.team_num_features)
-
-
-        print("Length of team obs,stats,actions",len(team_pt_obs),len(team_pt_status),len(team_pt_actions))
-        print("Length of opp obs,stats,actions",len(opp_pt_obs),len(opp_pt_status),len(opp_pt_actions))
+        team_pt_obs, team_pt_status,team_pt_actions,opp_pt_obs, opp_pt_status,opp_pt_actions = pretrain_process(left_fnames=left_files, right_fnames=right_files, timesteps = timesteps, num_features = num_features)
 
         ################## Base Left #########################
         pt_time_step = 0
@@ -302,5 +312,8 @@
                                                 centQ=critic_mod) # 
                                 team_replay_buffer.update_priorities(agentID=a_i,inds = inds, prio=priorities)
                     maddpg.update_all_targets()
-            
-            
+
+if __name__ == "__main__":
+    num_features = 59 + 13*(left_side-1) + 12*right_side + 4 + 1
+
+    pretrain(Imitation_exploration=True, timesteps=500, num_features=num_features)

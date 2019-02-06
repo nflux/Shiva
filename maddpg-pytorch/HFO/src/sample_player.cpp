@@ -87,6 +87,7 @@
 #include <sstream>
 #include <string>
 #include <cstdlib>
+#include <fstream>
 
 using namespace rcsc;
 
@@ -233,8 +234,7 @@ SamplePlayer::initImpl( CmdLineParser & cmd_parser )
 void
 SamplePlayer::actionImpl()
 {
-#ifdef ELOG
-  if (config().record()) {
+  if(config().record()) {
     if (audioSensor().trainerMessageTime().cycle() > lastTrainerMessageTime) {
       const std::string& message = audioSensor().trainerMessage();
       if (feature_extractor == NULL) {
@@ -251,17 +251,51 @@ SamplePlayer::actionImpl()
       }
       hfo::status_t game_status;
       if (hfo::ParseGameStatus(message, game_status)) {
-        elog.addText(Logger::WORLD, "GameStatus %d", game_status);
-        elog.flush();
+        std::string side_str = "unknown";
+        // elog.addText(Logger::WORLD, "GameStatus %d", game_status);
+        // elog.flush();
+        if(this->M_worldmodel.self().side() == LEFT) side_str = "left";
+        else if(this->M_worldmodel.self().side() == RIGHT) side_str = "right";
+
+        std::ofstream log_file("pt_logs/log_status_" + side_str + "_" + std::to_string(this->M_worldmodel.self().unum()) + ".csv", std::ios_base::out | std::ios_base::app );
+        log_file << this->M_worldmodel.fullstateTime().cycle() << ",GameStatus," << game_status << std::endl;
       }
       lastTrainerMessageTime = audioSensor().trainerMessageTime().cycle();
     }
     if (feature_extractor != NULL) {
       feature_extractor->ExtractFeatures(this->world(), true);
-      feature_extractor->LogFeatures();
+      feature_extractor->LogFeatures(config().record(), this->M_worldmodel.fullstateTime().cycle(), this->M_worldmodel.self().unum(), this->M_worldmodel.self().side());
     }
   }
-#endif
+// #ifdef ELOG
+//   if (!config().record()) {
+//     if (audioSensor().trainerMessageTime().cycle() > lastTrainerMessageTime) {
+//       const std::string& message = audioSensor().trainerMessage();
+//       if (feature_extractor == NULL) {
+//         hfo::Config hfo_config;
+//         if (hfo::ParseConfig(message, hfo_config)) {
+//           bool playing_offense = world().ourSide() == rcsc::LEFT;
+//           int num_teammates = playing_offense ?
+//               hfo_config.num_offense - 1 : hfo_config.num_defense - 1;
+//           int num_opponents = playing_offense ?
+//               hfo_config.num_defense : hfo_config.num_offense;
+//           feature_extractor = new LowLevelFeatureExtractor(
+//               num_teammates, num_opponents, playing_offense);
+//         }
+//       }
+//       hfo::status_t game_status;
+//       if (hfo::ParseGameStatus(message, game_status)) {
+//         elog.addText(Logger::WORLD, "GameStatus %d", game_status);
+//         elog.flush();
+//       }
+//       lastTrainerMessageTime = audioSensor().trainerMessageTime().cycle();
+//     }
+//     if (feature_extractor != NULL) {
+//       feature_extractor->ExtractFeatures(this->world(), true);
+//       feature_extractor->LogFeatures();
+//     }
+//   }
+// #endif
 
     //
     // update strategy and analyzer

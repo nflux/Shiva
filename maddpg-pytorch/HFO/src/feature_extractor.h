@@ -18,7 +18,7 @@ public:
 						    bool last_action_status) = 0;
 
   // Record the current state
-  void LogFeatures();
+  void LogFeatures(const bool record, const long cycle, const int unum, rcsc::SideID side);
 
   // How many features are there?
   inline int getNumFeatures() { return numFeatures; }

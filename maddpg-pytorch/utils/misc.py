@@ -7,6 +7,8 @@ from torch.autograd import Variable
 import numpy as np
 import shutil
 import time
+import pandas as pd
+
 def prep_session(session_path="",hist_dir="history",eval_hist_dir= "eval_history",eval_log_dir = "eval_log",load_path = "models/",ensemble_path = "ensemble_models/",log_dir="log",num_TA=1):
     hist_dir = hist_dir
     eval_hist_dir = eval_hist_dir
@@ -73,19 +75,25 @@ def e_greedy_bool(numAgents, eps=0.0,device='cpu'):
     return (rand < eps)
 
 
-def pretrain_process(fnames,timesteps,num_features):
-    contents = []
-    for fname in fnames:
-        print(fname)
+def pretrain_process(left_fnames, right_fnames, timesteps, num_features):
+    
+    # sort fnames
+    left_fnames.sort()
+    right_fnames.sort()
 
-        with open(fname) as f:
-            contents.append(f.readlines())
-                          
-    for i in range(len(fnames)):
-        contents[i] = [x.strip() for x in contents[i]]
+    obs_header_names = ['cycle', 'item']
+    for n in range(num_features):
+        obs_header_names.append(str(n))
 
-        
-    team_pt_status = []
+    df_left_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'item', 'status']) for fn in left_fnames if '_status_' in fn]
+    df_left_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'action', 'param1', 'param2']) for fn in left_fnames if '_actions_' in fn]
+    df_left_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in left_fnames if '_obs_' in fn]
+
+    df_right_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'item', 'status']) for fn in right_fnames if '_status_' in fn]
+    df_right_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'action', 'param1', 'param2']) for fn in right_fnames if '_actions_' in fn]
+    df_right_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in right_fnames if '_obs_' in fn]
+    
+    team_pt_status = [df.loc[:, 'status'].values for df in df_left_status_list]
     team_pt_obs = []
     team_pt_actions = []
     opp_pt_status = []
@@ -93,153 +101,14 @@ def pretrain_process(fnames,timesteps,num_features):
     opp_pt_actions = []
     
     num_TA = len(fnames)/2
-    Tackle = False
-    team_counters = np.array([0]*len(fnames))
-    team_tackles = np.array([False]*len(fnames))
-    screwy_tackle_counter = 0
     c = 0
 
-    use_garbage_action = np.array([0]*len(fnames))
     print("Loading pretrain data")
     while c < (timesteps*3):
-        if c % 30000 == 0:
-            print("reading line",c/3)
-        #print(c)
-        #print(contents[0][team_counters[0]])
-        #print(contents[1][team_counters[1]])
-        #print(contents[2][team_counters[2]])
-        #print(contents[3][team_counters[3]])
-        #print(contents[4][team_counters[4]])
-        #print(contents[5][team_counters[5]])
-        screwy_tackle_counter = 0
-        if contents[0][team_counters[0]].split(' ' )[3] == 'StateFeatures':
-            team_obs = []
-            opp_obs = []
-            for agent in range(len(fnames)):
-                ob = []
-                for j in range(num_features):
-                    ob.append(float(contents[agent][team_counters[agent]].split(' ')[4+j]))
-                if agent < num_TA:
-                    team_obs.append(ob)
-                else:
-                    opp_obs.append(ob)
-            Tackle = False
-            for agent in range(len(fnames)): #  handle no action in line
-                if contents[agent][team_counters[agent] + 1].split(' ')[3] == 'GameStatus':
-                    use_garbage_action[agent] = True
-                elif contents[agent][team_counters[agent] + 1].split(' ')[3] == 'StateFeatures':
-                    print("double state")
-        elif 'agent' in contents[0][team_counters[0]].split(' ')[3]:
-            for agent in range(len(fnames)):
-                while "agent" in contents[agent][team_counters[agent]+1].split(' ')[3]:
-                    action_string = contents[agent][team_counters[agent]+1].split(' ')[4] # If double Turn- Error
-                    team_counters[agent] += 1 # Skip index for that agent
-                if not contents[agent][team_counters[agent] + 1].split(' ')[3] == 'GameStatus':
-                    print("error after action")
-            team_all_as = []
-            opp_all_as = []
-            for agent in range(len(fnames)):
-                action_string = contents[agent][team_counters[agent]].split(' ')[4]
-                if use_garbage_action[agent]: # if action is missing for this timestep push 0's as action and do not consume 
-                    # that line by += -1
-                    a = np.zeros(8)
-                    use_garbage_action[agent] = False
-                    team_counters[agent] += -1
-                elif "Dash"  in action_string: 
-                    result = re.search('Dash((.*),*)', action_string)
-                    power = float(result.group(1).split(',')[0][1:])
-                    direction = float(result.group(1).split(',')[1][:-1])
-                    #a = np.random.uniform(-1,1,8)
-                    a = np.zeros(8)
-                    a[0] += 1.0  
-                    a[1] += 0.0 
-                    a[2] += 0.0 
-                    a[3] = power/100.0
-                    a[4] = direction/180.0
-                    a[5] = np.random.uniform(-.2,.2,1)
-                    a[6] = np.random.uniform(-.2,.2,1)
-                    a[7] = np.random.uniform(-.2,.2,1)
-
-                elif "Turn"  in action_string:
-                    result = re.search('Turn((.*))', action_string)
-                    direction =float(result.group(1)[1:-1])
-                    power = float(-1440)
-                    a = np.zeros(8)
-                    a[0] += 0.0  
-                    a[1] += 1.0 
-                    a[2] += 0.0 
-                    a[3] = np.random.uniform(-.2,.2,1)
-                    a[4] = np.random.uniform(-.2,.2,1)
-                    a[5] = direction/180.0
-                    a[6] = np.random.uniform(-.2,.2,1)
-                    a[7] = np.random.uniform(-.2,.2,1)
-                elif "Kick"  in action_string: 
-                    result = re.search('Kick((.*),*)', action_string)
-                    power = float(result.group(1).split(',')[0][1:])
-                    direction = float(result.group(1).split(',')[1][:-1])
-                    a = np.zeros(8)
-                    a[0] += 0.0  
-                    a[1] += 0.0 
-                    a[2] += 1.0 
-                    a[3] = np.random.uniform(-.2,.2,1)
-                    a[4] = np.random.uniform(-.2,.2,1)
-                    a[5] = np.random.uniform(-.2,.2,1)
-                    a[6] = (power/100.0)*2 - 1
-                    a[7] = direction/180.0
-                elif "Tackle"  in action_string: 
-                    result = re.search('Tackle((.*),*)', action_string)
-                    power = float(result.group(1).split(',')[0][1:])
-                    direction = float(result.group(1).split(',')[1][:-1])
-                    # Throw away entry
-                    Tackle = True
-                    team_tackles[agent] = True # turned off for now ^
-                else: # catch?
-                    print("catch?")
-                    a = np.random.uniform(-0.01,0.01,8)
-                if agent < num_TA:
-                    team_all_as.append(a)
-                else:
-                    opp_all_as.append(a)
-        elif contents[0][team_counters[0]].split(' ')[3] == 'GameStatus':
-            stat = float(contents[0][team_counters[0]].split(' ' )[4])
-            if not contents[0][team_counters[0]+1].split(' ')[3] == 'StateFeatures':
-                print("error after GS")
-            if not Tackle:
-                team_pt_actions.append([[x for x in ac] for ac in team_all_as])
-                team_pt_obs.append(team_obs)
-                team_pt_status.append(stat)
-                opp_pt_actions.append([[x for x in ac] for ac in opp_all_as])
-                opp_pt_obs.append(opp_obs)
-                opp_pt_status.append(stat)
-            else:
-                tackler = np.where(team_tackles)[0][0] # convert to number from bool
-                team_tackles = np.array([False]*len(fnames))
-                #### Screwy offsets for tackle stun ####
-                if not "agent" in contents[tackler][team_counters[tackler]+2].split(' ')[3]:
-                    while not "agent" in contents[tackler][team_counters[tackler]].split(' ')[3]:
-                        screwy_tackle_counter +=1
-                        team_counters[tackler] +=1
-                    screwy_tackle_counter += -2
-                    team_counters[tackler] += -2
-                    for ag in range(len(fnames)):
-                        counter = 0
-                        additional_counter = 0
-                        while counter < (screwy_tackle_counter*3/2) + additional_counter:
-                            if (ag != tackler):
-                                while "agent" in contents[ag][team_counters[ag]+counter].split(' ')[3] and "agent" in contents[ag][team_counters[ag]+counter+1].split(' ')[3]:
-                                    team_counters[ag] += 1
-                                    additional_counter += 1
-                            counter += 1
-                                
-                    team_counters += int((screwy_tackle_counter )* 3 / 2)
-                    team_counters[tackler] += - int(screwy_tackle_counter *3/2) 
-                    # agent who tackled
-                
-        team_counters += 1
-        c += 1
-    #team_pt_obs = np.asarray(np.asarray(pt_obs))
-    team_pt_status = np.asarray(team_pt_status)
-    return team_pt_obs,team_pt_status,team_pt_actions, opp_pt_obs,opp_pt_status,opp_pt_actions
+        pass
+        
+    # return team_pt_obs,team_pt_status,team_pt_actions, opp_pt_obs,opp_pt_status,opp_pt_actions
+    return 0, 0, 0, 0, 0, 0
 
 
 
