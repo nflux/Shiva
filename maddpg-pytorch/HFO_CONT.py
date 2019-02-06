@@ -30,15 +30,19 @@ import dill
 
 
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent):
-
+                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu):
+    start = time.time()
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
-    number_of_updates = 700
-    maddpg.prep_training(device=maddpg.device)
+    
+    number_of_updates = 900
     for ensemble in range(k_ensembles):
+        maddpg.torch_device = torch.device("cuda:1")
+        maddpg.device = 'cuda'
+        maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
+
         #start = time.time()
         #for up in range(int(np.floor(number_of_updates/k_ensembles))):
         for up in range(number_of_updates):
@@ -75,9 +79,9 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                 maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, agentID, 'team')
             else:
                 team_sample = team_replay_buffer.sample(inds,
-                                            to_gpu=to_gpu,norm_rews=False)
+                                            to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                 opp_sample = opp_replay_buffer.sample(inds,
-                                            to_gpu=to_gpu,norm_rews=False)
+                                            to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                 if not load_same_agent:
                     priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
                     team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
@@ -114,7 +118,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
             maddpg.update_agent_targets(0,number_of_updates/2)
             [maddpg.save_agent(load_path,update_session,i,load_same_agent) for i in range(num_TA)]
             [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent) for i in range(num_TA)]
-
+    print(time.time()-start,"<-- Update Cycle")
 
 
 def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history,ep_num):
@@ -170,7 +174,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                 rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,
                                 imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                                 critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=True,multi_gpu=False) 
+                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=True,multi_gpu=multi_gpu) 
     maddpg.prep_training(device=maddpg.device,only_policy=True)
 
     reward_total = [ ]
@@ -527,7 +531,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 1
+    num_envs = 12
     port = 2000
     max_num_experiences = 500
     update_threads = []
@@ -569,8 +573,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 1
-        num_OA = 1
+        num_TA = 3
+        num_OA = 3
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -579,7 +583,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 128
+        batch_size = 1024
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate
@@ -592,7 +596,7 @@ if __name__ == "__main__":
         final_noise_scale = 0.1
         init_noise_scale = 1.00
         num_explore_episodes = 100 # Haus uses over 10,000 updates --
-        multi_gpu = True
+        multi_gpu = False
 
         # --------------------------------------
         #D4PG Options --------------------------
@@ -810,7 +814,7 @@ if __name__ == "__main__":
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
     opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
                                         obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
-    max_episodes_shared = 40
+    max_episodes_shared = 15
     update_session = 0
     processes = []
     total_dim = (obs_dim_TA*2 + acs_dim + 5) + k_ensembles + 1
@@ -828,7 +832,7 @@ if __name__ == "__main__":
     for p in processes:
         p.start()
 
-    iterations_per_push = 2
+    iterations_per_push = 1
     #maddpg_pick = dill.dumps(maddpg)
     while True: # get experiences, update
         while((np.asarray([counter.item() for counter in ep_num]) < iterations_per_push).any()):
@@ -853,12 +857,12 @@ if __name__ == "__main__":
                 for a_i in range(maddpg.nagents_team):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu)))
 
 
 
@@ -887,12 +891,12 @@ if __name__ == "__main__":
                 for a_i in range(maddpg.nagents_team):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu)))
 
             [thr.start() for thr in threads]
             print("Launching update")

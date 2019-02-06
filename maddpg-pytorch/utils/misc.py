@@ -26,9 +26,9 @@ def prep_session(session_path="",hist_dir="history",eval_hist_dir= "eval_history
     
     
 
-def processor(tensor,device):
+def processor(tensor,device,torch_device="cuda:0"):
     if device == 'cuda':
-        fn = lambda x: x.cuda()
+        fn = lambda x: x.to(torch_device)
     else:
         fn = lambda x: x.cpu()
     return fn(tensor)

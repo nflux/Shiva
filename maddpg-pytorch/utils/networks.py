@@ -96,7 +96,7 @@ class MLPNetwork_Critic(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, agent=object,n_atoms=51,D4PG=False,TD3=False):
+    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, agent=object,n_atoms=51,D4PG=False,TD3=False,maddpg=None):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -117,7 +117,7 @@ class MLPNetwork_Critic(nn.Module):
             self.out_dim = 1
        
         if self.agent.device == 'cuda':
-            self.cast = lambda x: x.cuda()
+            self.cast = lambda x: x.to(maddpg.torch_device)
         else:
             self.cast = lambda x: x.cpu()
               
@@ -388,9 +388,8 @@ class I2A_Network(nn.Module):
         object.__setattr__(self, "imagined_pol",imagined_pol)
 
         
-        
         if self.agent.device == 'cuda':
-            self.cast = lambda x: x.cuda()
+            self.cast = lambda x: x.to(maddpg.torch_device)
         else:
             self.cast = lambda x: x.cpu()
         self.norm_in = norm_in
