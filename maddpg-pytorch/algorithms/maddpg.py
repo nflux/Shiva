@@ -2002,7 +2002,7 @@ class MADDPG(object):
         if self.niter % 100 == 0:
             print("Team (%s) Agent(%i) Policy loss" % (side, agent_i),pol_loss)
         
-    def SIL_update(self, team_sample=[], opp_sample=[],agent_i=0,side='team', parallel=False, logger=None):
+    def SIL_update(self, team_sample=[], opp_sample=[],agent_i=0,side='team', parallel=False, logger=None,load_same_agent=False):
         """
         Update parameters of agent model based on sample from replay buffer using Self-Imitation Learning update:
         sil_policy_loss = (MSE(Action,Policy(obs))) * (R - Q) if R > Q
@@ -2038,30 +2038,23 @@ class MADDPG(object):
             opp_policies = self.team_policies
             obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
-      
+        if load_same_agent:
+            curr_agent = self.team_agents[0] 
         curr_agent.critic_optimizer.zero_grad()
 
 
 
         curr_pol_out = curr_agent.policy(obs[agent_i]) # uses gumbel across the actions
-        curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
-        team_pol_acs = []
-        opp_pol_acs = []
-        for i, pi, ob in zip(range(nagents), policies, obs):
-            if i == agent_i:
-                team_pol_acs.append(curr_pol_vf_in)
-            else: # shariq does not gumbel this, we don't want to sample noise from other agents actions?
-                team_pol_acs.append(acs[i])
-            
-            for i in range(nagents):
-                opp_pol_acs.append(opp_acs[i])
+        #curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
 
-        vf_in = torch.cat((torch.cat((*opp_obs,*obs),dim=1),torch.cat((*opp_pol_acs,*team_pol_acs),dim=1)),dim=1)
-            
+        obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
+        acs_vf_in = torch.cat((*opp_acs,*acs),dim=1)
+        vf_in = torch.cat((obs_vf_in, acs_vf_in), dim=1)
+
+
         # Train critic ------------------------
         # Uses MSE between MC values and Q if MC > Q
-        if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
-                     # and build the combination of distr choosing the minimums
+        if self.TD3: # 
             Q1_distr,Q2_distr = curr_agent.critic(vf_in)
             if self.D4PG:
                 Q1 = curr_agent.critic.distr_to_q(Q1_distr)
@@ -2073,7 +2066,9 @@ class MADDPG(object):
                 else:
                     Q = Q2
             else:
-                Q = torch.min(Q1,Q2)
+                Q1 = Q1_distr
+                Q2 = Q2_distr
+                Q = torch.min(Q1_distr,Q2_distr) # not distributional since no d4pg
         else:
             Q = curr_agent.critic(vf_in)
         # Critic assessment of current policy actions
@@ -2113,17 +2108,24 @@ class MADDPG(object):
         param_errors *= clipped_differences
         action_errors *= clipped_differences
 
-        param_loss = torch.sum(torch.abs(param_errors))
-        action_loss = torch.sum(torch.abs(action_errors))
+        param_loss = torch.mean(param_errors)
+        action_loss = torch.mean(action_errors)
 
-        pol_loss = action_loss + param_loss # Weighted MSE based on how off Q was.
+        if self.D4PG:
+            reg_param = 5.0
+        else:
+            reg_param = 1.0
+
+        entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
+
+        pol_loss = action_loss + param_loss + entropy_reg # Weighted MSE based on how off Q was.
         pol_loss.backward()
         if parallel:
             average_gradients(curr_agent.policy)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
-
-        if self.niter % 100 == 0:
+        self.niter +=1
+        if self.niter % 101 == 0:
             print("Team (%s) SIL Actor loss:" % side,np.round(pol_loss.item(),6))
             print("Team (%s) SIL Critic loss:" % side,np.round(vf_loss.item(),6))
         

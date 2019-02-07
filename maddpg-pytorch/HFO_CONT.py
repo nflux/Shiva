@@ -38,7 +38,8 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
     
     number_of_updates = 900
     for ensemble in range(k_ensembles):
-        maddpg.torch_device = torch.device("cuda:1")
+        if multi_gpu:
+            maddpg.torch_device = torch.device("cuda:1")
         maddpg.device = 'cuda'
         maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
@@ -101,13 +102,13 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
 
             if SIL:
                 for i in range(SIL_update_ratio):
-                    inds = team_replay_buffer.get_SIL_inds(agentID=agentID,batch_size=batch_size)
+                    inds = team_replay_buffer.get_SIL_inds(agentID=m,batch_size=batch_size)
                     team_sample = team_replay_buffer.sample(inds,
                                             to_gpu=to_gpu,norm_rews=False)
                     opp_sample = opp_replay_buffer.sample(inds,
                                             to_gpu=to_gpu,norm_rews=False)
                     priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
-                    team_replay_buffer.update_SIL_priorities(agentID=agentID,inds = inds, prio=priorities)
+                    team_replay_buffer.update_SIL_priorities(agentID=m,inds = inds, prio=priorities)
                     
         #print(time.time()-start)
         if not load_same_agent:
@@ -531,7 +532,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 12
+    num_envs = 2
     port = 2000
     max_num_experiences = 500
     update_threads = []
@@ -564,7 +565,7 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 200000
+        replay_memory_size = 300000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -573,8 +574,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 3
-        num_OA = 3
+        num_TA = 2
+        num_OA = 2
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -583,7 +584,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 1024
+        batch_size = 128
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate
@@ -841,6 +842,8 @@ if __name__ == "__main__":
         while not ready.all():
             time.sleep(0.1)
         for i in range(num_envs):
+            #[team_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item()))]
+            #[opp_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item()))]
             [team_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item()))]
             [opp_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], shared_exps[i][j][:exp_indices[i][j], :num_TA, :]))) for j in range(int(ep_num[i].item()))]
         # get num updates and reset counter
