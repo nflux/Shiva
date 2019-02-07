@@ -314,6 +314,6 @@ def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
                     maddpg.update_all_targets()
 
 if __name__ == "__main__":
-    num_features = 59 + 13*(left_side-1) + 12*right_side + 4 + 1
+    num_features = 59 + 13*(left_side-1) + 12*right_side + 4 + 1 + 2 + 1
 
     pretrain(Imitation_exploration=True, timesteps=500, num_features=num_features)

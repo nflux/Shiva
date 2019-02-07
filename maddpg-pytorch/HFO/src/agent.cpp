@@ -104,7 +104,8 @@ Agent::Agent()
       lastTeammateMessageTime(-1),
       lastStatusUpdateTime(-1),
       game_status(IN_GAME),
-      requested_action(NOOP)
+      requested_action(NOOP),
+      ep_end_time(0)
 {
     boost::shared_ptr< AudioMemory > audio_memory( new AudioMemory );
 
@@ -398,8 +399,14 @@ void
 Agent::UpdateFeatures()
 {
   if (feature_extractor != NULL) {
+    hfo::status_t game_status;
+    const std::string& message = audioSensor().trainerMessage();
+    hfo::ParseGameStatus(message, game_status);
+    if(game_status != hfo::IN_GAME) {
+      ep_end_time = this->M_worldmodel.fullstateTime().cycle();
+    }
     state = feature_extractor->ExtractFeatures(this->world(),
-					       getLastActionStatus());
+					       getLastActionStatus(), player_on_ball, ep_end_time);
   }
 }
 

@@ -4,7 +4,6 @@
 
 #include "lowlevel_feature_extractor.h"
 #include <rcsc/common/server_param.h>
-#include <fstream>
 
 using namespace rcsc;
 
@@ -24,6 +23,8 @@ LowLevelFeatureExtractor::LowLevelFeatureExtractor(int num_teammates,
   numFeatures += 2 * (numTeammates + numOpponents); // Teammates, Opponents x,y
   numFeatures += 2; // Ball x, y
   numFeatures++; // action state
+  numFeatures += 2; // Possesor indicators
+  numFeatures++; // timestep
   feature_vec.resize(numFeatures);
 }
 
@@ -31,7 +32,7 @@ LowLevelFeatureExtractor::~LowLevelFeatureExtractor() {}
 
 const std::vector<float>&
 LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
-					  bool last_action_status) {
+					  bool last_action_status, hfo::Player player_on_ball, long ep_end_time) {
   featIndx = 0;
   const ServerParam& SP = ServerParam::i();
   // ======================== SELF FEATURES ======================== //
@@ -371,6 +372,22 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   } else {
     addFeature(FEAT_MIN);
   }
+
+  // std::ofstream outfile;
+  // outfile.open("test.txt", std::ios_base::app);
+  // outfile << "This is the side " << player_on_ball.side << " This is the unum " << player_on_ball.unum << std::endl;
+  if(player_on_ball.side == hfo::LEFT) {
+    addFeature(player_on_ball.unum/100.0);
+    addFeature(0);
+  } else if(player_on_ball.side == hfo::RIGHT) {
+    addFeature(0);
+    addFeature(player_on_ball.unum/100.0);
+  } else {
+    addFeature(0);
+    addFeature(0);
+  }
+  
+  addFeature((wm.fullstateTime().cycle() - ep_end_time + 1)/500.0);
 
   assert(featIndx == numFeatures);
   checkFeatures();

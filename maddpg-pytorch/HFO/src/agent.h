@@ -66,6 +66,7 @@ protected:
   int num_teammates;                   // Number of teammates
   int num_opponents;                   // Number of opponents
   bool last_action_status;  // Recorded return status of last action
+  long ep_end_time;
 
  public:
   inline const std::vector<float>& getState() { return state; }

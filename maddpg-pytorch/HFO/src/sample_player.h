@@ -54,6 +54,11 @@ public:
 
 protected:
 
+  hfo::Player player_on_ball;
+  long ep_end_time = 0;
+
+protected:
+
     /*!
       You can override this method.
       But you must call PlayerAgent::initImpl() in this method.

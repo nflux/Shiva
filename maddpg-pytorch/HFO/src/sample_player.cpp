@@ -87,7 +87,6 @@
 #include <sstream>
 #include <string>
 #include <cstdlib>
-#include <fstream>
 
 using namespace rcsc;
 
@@ -104,7 +103,8 @@ SamplePlayer::SamplePlayer()
       lastTrainerMessageTime(-1),
       num_teammates(-1),
       num_opponents(-1),
-      playing_offense(false)
+      playing_offense(false),
+      ep_end_time(0)
 {
     boost::shared_ptr< AudioMemory > audio_memory( new AudioMemory );
 
@@ -260,10 +260,20 @@ SamplePlayer::actionImpl()
         std::ofstream log_file("pt_logs/log_status_" + side_str + "_" + std::to_string(this->M_worldmodel.self().unum()) + ".csv", std::ios_base::out | std::ios_base::app );
         log_file << this->M_worldmodel.fullstateTime().cycle() << ",GameStatus," << game_status << std::endl;
       }
+      // std::ofstream outfile;
+      // outfile.open("test2.txt", std::ios_base::app);
+      // outfile << "This is the message " << message << std::endl;
+      hfo::ParsePlayerOnBall(message, player_on_ball);
       lastTrainerMessageTime = audioSensor().trainerMessageTime().cycle();
     }
     if (feature_extractor != NULL) {
-      feature_extractor->ExtractFeatures(this->world(), true);
+      const std::string& message = audioSensor().trainerMessage();
+      hfo::status_t game_status;
+      hfo::ParseGameStatus(message, game_status);
+      if(game_status != hfo::IN_GAME) {
+        ep_end_time = this->M_worldmodel.fullstateTime().cycle();
+      }
+      feature_extractor->ExtractFeatures(this->world(), true, player_on_ball, ep_end_time);
       feature_extractor->LogFeatures(config().record(), this->M_worldmodel.fullstateTime().cycle(), this->M_worldmodel.self().unum(), this->M_worldmodel.self().side());
     }
   }

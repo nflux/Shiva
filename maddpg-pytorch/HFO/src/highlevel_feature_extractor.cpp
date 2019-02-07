@@ -24,7 +24,7 @@ HighLevelFeatureExtractor::~HighLevelFeatureExtractor() {}
 
 const std::vector<float>&
 HighLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
-					   bool last_action_status) {
+					   bool last_action_status, hfo::Player player_on_ball, long ep_end_time) {
   featIndx = 0;
   const ServerParam& SP = ServerParam::i();
   const SelfObject& self = wm.self();

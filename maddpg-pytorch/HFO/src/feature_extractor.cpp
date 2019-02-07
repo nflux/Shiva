@@ -6,7 +6,6 @@
 #include <rcsc/common/logger.h>
 #include <rcsc/common/server_param.h>
 #include <sstream>
-#include <fstream>
 
 using namespace rcsc;
 
@@ -44,7 +43,7 @@ void FeatureExtractor::LogFeatures(const bool record, const long cycle, const in
   if(record) {
     assert(feature_vec.size() == numFeatures);
     std::stringstream ss;
-    for(int i=0; i<=numFeatures; ++i) {
+    for(int i=0; i<numFeatures; ++i) {
       ss << feature_vec[i] << ",";
     }
     if(side == LEFT) side_str = "left";

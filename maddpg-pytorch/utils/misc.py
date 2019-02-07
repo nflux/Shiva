@@ -94,8 +94,8 @@ def pretrain_process(left_fnames, right_fnames, timesteps, num_features):
     df_right_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in right_fnames if '_obs_' in fn]
     
     team_pt_status = [df.loc[:, 'status'].values for df in df_left_status_list]
-    team_pt_obs = []
-    team_pt_actions = []
+    team_pt_obs = [df.loc[:, obs_header_names[2:]].values for df in df_left_obs_list]
+    team_pt_actions = [df.loc[:, ]]
     opp_pt_status = []
     opp_pt_obs = []
     opp_pt_actions = []

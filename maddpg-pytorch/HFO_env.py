@@ -621,17 +621,17 @@ class HFO_env():
 
         # set global possessor flag     
         # If anyone kicked the ball, on left get which one
-        kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
-        if kicked.any():
-            self.team_obs[:,-3] = (kicked.argmax() + 1)/100.0
-        else:
-            self.team_obs[:,-3] = 0
-        # If anyone kicked the ball on right
-        kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
-        if kicked.any():
-            self.opp_team_obs[:,-2] = (kicked.argmax() + 1)/100.0
-        else:
-            self.opp_team_obs[:,-2] = 0
+        # kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
+        # if kicked.any():
+        #     self.team_obs[:,-3] = (kicked.argmax() + 1)/100.0
+        # else:
+        #     self.team_obs[:,-3] = 0
+        # # If anyone kicked the ball on right
+        # kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
+        # if kicked.any():
+        #     self.opp_team_obs[:,-2] = (kicked.argmax() + 1)/100.0
+        # else:
+        #     self.opp_team_obs[:,-2] = 0
 
         
         if self.team_base == base:
@@ -920,28 +920,28 @@ class HFO_env():
                 # self.sync_at_reward_opp = np.zeros(self.num_OA)
 
                 if self.team_base == base:
-                    self.team_obs_previous[agent_ID,:-3] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID,:-3] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID,-3] = 0
-                    self.team_obs[agent_ID,-2] = 0
-                    self.team_obs[agent_ID,-1] = 0
+                    self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
+                    # self.team_obs[agent_ID,-3] = 0
+                    # self.team_obs[agent_ID,-2] = 0
+                    # self.team_obs[agent_ID,-1] = 0
 
-                    self.team_obs_previous[agent_ID,-3] = 0
-                    self.team_obs_previous[agent_ID,-2] = 0
-                    self.team_obs_previous[agent_ID,-1] = 0
+                    # self.team_obs_previous[agent_ID,-3] = 0
+                    # self.team_obs_previous[agent_ID,-2] = 0
+                    # self.team_obs_previous[agent_ID,-1] = 0
 
 
 
                 else:
-                    self.opp_team_obs_previous[agent_ID,:-3] = self.opp_team_envs[agent_ID].getState() # Get initial state
-                    self.opp_team_obs[agent_ID,:-3] = self.opp_team_envs[agent_ID].getState() # Get initial state
-                    self.opp_team_obs[agent_ID,-3] = 0
-                    self.opp_team_obs[agent_ID,-2] = 0
-                    self.opp_team_obs[agent_ID,-1] = 0
+                    self.opp_team_obs_previous[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
+                    self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
+                    # self.opp_team_obs[agent_ID,-3] = 0
+                    # self.opp_team_obs[agent_ID,-2] = 0
+                    # self.opp_team_obs[agent_ID,-1] = 0
 
-                    self.opp_team_obs_previous[agent_ID,-3] = 0
-                    self.opp_team_obs_previous[agent_ID,-2] = 0
-                    self.opp_team_obs_previous[agent_ID,-1] = 0
+                    # self.opp_team_obs_previous[agent_ID,-3] = 0
+                    # self.opp_team_obs_previous[agent_ID,-2] = 0
+                    # self.opp_team_obs_previous[agent_ID,-1] = 0
 
 
                 self.been_kicked_team = False
@@ -959,8 +959,8 @@ class HFO_env():
                     #     time.sleep(self.sleep_timer)
                     #print('Done queueing actions')
                     self.sync_after_queue.wait()
-                    self.team_obs[agent_ID,-1] = (j*1.0)/fpt
-                    self.opp_team_obs[agent_ID,-1] = (j*1.0)/fpt
+                    # self.team_obs[agent_ID,-1] = (j*1.0)/fpt
+                    # self.opp_team_obs[agent_ID,-1] = (j*1.0)/fpt
 
                     
                     
@@ -1047,12 +1047,12 @@ class HFO_env():
                     if self.team_base == base:
                         self.team_obs_previous[agent_ID] = self.team_obs[agent_ID]
                         self.world_status = self.team_envs[agent_ID].step() # update world
-                        self.team_obs[agent_ID,:-3] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
                         # self.sync_at_reward_team[agent_ID] += 1
                     else:
                         self.opp_team_obs_previous[agent_ID] = self.opp_team_obs[agent_ID]
                         self.world_status = self.opp_team_envs[agent_ID].step() # update world
-                        self.opp_team_obs[agent_ID,:-3] = self.opp_team_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # update obs after all agents have acted
                         # self.sync_at_reward_opp[agent_ID] += 1
                     
                     # while (self.sync_at_reward_team.sum() + self.sync_at_reward_opp.sum()) % (self.num_TA + self.num_OA) != 0:

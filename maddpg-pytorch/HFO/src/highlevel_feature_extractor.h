@@ -21,7 +21,7 @@ public:
 
   // Updated the state features stored in feature_vec
   virtual const std::vector<float>& ExtractFeatures(const rcsc::WorldModel& wm,
-						    bool last_action_status);
+						    bool last_action_status, hfo::Player player_on_ball, long ep_end_time);
 
   //override FeatureExtractor::valid
   //this method takes a pointer instead of a reference

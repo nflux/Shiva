@@ -4,7 +4,9 @@
 #define FEATURE_EXTRACTOR_H
 
 #include <rcsc/player/player_agent.h>
+#include "HFO.hpp"
 #include <vector>
+#include <fstream>
 
 typedef std::pair<float, float> OpenAngle;
 
@@ -15,7 +17,7 @@ public:
 
   // Updated the state features stored in feature_vec
   virtual const std::vector<float>& ExtractFeatures(const rcsc::WorldModel& wm,
-						    bool last_action_status) = 0;
+						    bool last_action_status, hfo::Player player_on_ball, long ep_end_time) = 0;
 
   // Record the current state
   void LogFeatures(const bool record, const long cycle, const int unum, rcsc::SideID side);
