@@ -758,7 +758,7 @@ class HFO_env():
             team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
             if agentID == team_possessor:
                 reward += (10)*(r_prev - r)
-                team_reward += (20)*(r_prev - r)
+                team_reward += (10)*(r_prev - r)
         elif  ((self.team_base != base) and possession_side == 'R'):
             team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
             if agentID == team_possessor:

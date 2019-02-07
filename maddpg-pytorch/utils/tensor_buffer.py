@@ -337,8 +337,7 @@ class ReplayTensorBuffer(object):
 
     
     def update_SIL_priorities(self, agentID,inds, prio):
-        for i, p in zip(inds,prio):
-            self.SIL_priorities[inds,agentID] = prio
+        self.SIL_priorities[inds,agentID] = prio
         
 
     def update_priorities(self, agentID,inds, prio,k=1):
@@ -368,5 +367,7 @@ class ReplayTensorBuffer(object):
             reset = np.ones(len(prios))/(1.0*len(prios))
             probs = reset/np.sum(reset)
         else:
-            probs = prios.numpy()/prios.sum().numpy()
+            probs = prios.numpy()/(prios.sum().numpy())
+            while np.abs(probs.sum() - 1) > 0.0003:
+                probs = probs/probs.sum()
         return np.random.choice(self.filled_i,batch_size,p=probs)
