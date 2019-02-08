@@ -47,7 +47,7 @@ class MADDPG(object):
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, decent_EM=True,imagination_policy_branch = False,
                  critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
-                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False,multi_gpu=True): 
+                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False,multi_gpu=True,data_parallel=False): 
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -75,6 +75,7 @@ class MADDPG(object):
         self.trace_length = trace_length
         self.only_policy = only_policy
         self.multi_gpu = multi_gpu
+        self.data_parallel = data_parallel
         self.num_out_pol = team_net_params[0]['num_out_pol']
         self.team_agent_init_params = team_agent_init_params
         self.opp_agent_init_params = opp_agent_init_params
@@ -645,14 +646,14 @@ class MADDPG(object):
 
             # ------------------------------------------------------
             if self.D4PG:
-                if self.multi_gpu:
+                if self.data_parallel:
                     critic_out = curr_agent.critic.module.Q1(mod_vf_in)
                 else:
                     critic_out = curr_agent.critic.Q1(mod_vf_in)
                 distr_q = curr_agent.critic.distr_to_q(critic_out)
                 pol_loss = -distr_q.mean()
             else: # non-distributional
-                if self.multi_gpu:
+                if self.data_parallel:
                     pol_loss = -curr_agent.critic.module.Q1(mod_vf_in).mean() 
                 else:
                     pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean() 
@@ -1387,7 +1388,7 @@ class MADDPG(object):
 
         self.niter += 1
 
-    def prep_training(self, device='gpu',only_policy=False,torch_device='cuda:0'):
+    def prep_training(self, device='gpu',only_policy=False,torch_device=torch.device('cuda:0')):
         for a in self.team_agents:
             a.policy.train()
             if not only_policy:
@@ -1406,7 +1407,6 @@ class MADDPG(object):
             fn = lambda x: x.to(torch_device)
         else:
             fn = lambda x: x.cpu()
-
         if not self.pol_dev == device:
             for a in self.team_agents:
                 a.policy = fn(a.policy)
@@ -2165,7 +2165,7 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, decent_EM=True,imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False,multi_gpu=False):
+                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False,multi_gpu=False,data_parallel=False):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -2265,7 +2265,8 @@ class MADDPG(object):
                      'LSTM_PC':LSTM_PC,
                      'hidden_dim_lstm': hidden_dim_lstm,
                      'only_policy': only_policy,
-                     'multi_gpu':multi_gpu}
+                     'multi_gpu':multi_gpu,
+                     'data_parallel':data_parallel}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
@@ -2412,7 +2413,7 @@ class MADDPG(object):
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], filename +("agent_%i/model_episode_%i.pth" % (i,ep_i))) for i in range(len(self.team_agents))]
         #self.prep_training(device=self.device)
-    def save_agent(self, filename,ep_i,agentID,load_same_agent):
+    def save_agent(self, filename,ep_i,agentID,load_same_agent,torch_device=torch.device('cuda:0')):
         """
         Save trained parameters of all agents into one file
         """
@@ -2424,7 +2425,7 @@ class MADDPG(object):
         else:
             torch.save(save_dicts[0], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
 
-        self.prep_training(device=self.device)
+        self.prep_training(device=self.device,torch_device=torch_device)
         
     @classmethod
     def init_from_save_selfplay(cls, filenames=list,nagents=1):
@@ -2474,7 +2475,7 @@ class MADDPG(object):
     
         #self.prep_training(device=self.device)
         
-    def save_ensemble(self, ensemble_path,ensemble,agentID,load_same_agent):
+    def save_ensemble(self, ensemble_path,ensemble,agentID,load_same_agent,torch_device=torch.device('cuda:0')):
         """
         Save trained parameters of all agents into one file
         """
@@ -2488,5 +2489,5 @@ class MADDPG(object):
             torch.save(save_dicts[0], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
             
        
-        self.prep_training(device=self.device)
+        self.prep_training(device=self.device,torch_device=torch_device)
         

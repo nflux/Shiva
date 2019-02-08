@@ -30,16 +30,16 @@ import dill
 
 # updates policy only
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path):
+                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel):
     start = time.time()
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
-    
-    number_of_updates = 350
+
+    number_of_updates = 900
     for ensemble in range(k_ensembles):
         if multi_gpu:
-            maddpg.torch_device = torch.device("cuda:1")
+            maddpg.torch_device = torch.device("cuda:0")
         maddpg.device = 'cuda'
         maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
@@ -129,7 +129,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
     LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu) = HP
+    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel) = HP
 
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
@@ -172,8 +172,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                 rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,
                                 imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                                 critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=True,multi_gpu=multi_gpu) 
-    maddpg.prep_training(device=maddpg.device,only_policy=True)
+                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=True,multi_gpu=multi_gpu,data_parallel=data_parallel) 
+    maddpg.prep_training(device=maddpg.device,only_policy=True,torch_device=maddpg.torch_device)
 
     reward_total = [ ]
     num_steps_per_episode = []
@@ -529,7 +529,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 3
+    num_envs = 6
     port = 2000
     max_num_experiences = 500
     update_threads = []
@@ -562,7 +562,7 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size =100000
+        replay_memory_size =1000000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -571,8 +571,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 2
-        num_OA = 2
+        num_TA = 3
+        num_OA = 3
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -581,7 +581,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 256
+        batch_size = 1024
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate
@@ -593,8 +593,10 @@ if __name__ == "__main__":
         final_OU_noise_scale = 0.1
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 50 # Haus uses over 10,000 updates --
-        multi_gpu = False
+        num_explore_episodes = 1 # Haus uses over 10,000 updates --
+        multi_gpu = True
+        data_parallel = False
+        
 
         # --------------------------------------
         #D4PG Options --------------------------
@@ -778,7 +780,7 @@ if __name__ == "__main__":
         ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
         LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu)
+        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel)
 
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                 adversary_alg= "MADDPG",device=device,
@@ -795,13 +797,17 @@ if __name__ == "__main__":
                                 rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,
                                 imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                                 critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu) 
+                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel) 
 
-
+    if multi_gpu:
+        maddpg.torch_device = torch.device("cuda:1")
+    maddpg.device = 'cuda'
+    maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
+    
     if first_save: # Generate list of ensemble networks
         file_path = ensemble_path
         maddpg.first_save(file_path,num_copies = k_ensembles)
-        [maddpg.save_agent(load_path,0,i,load_same_agent = False) for i in range(num_TA)] 
+        [maddpg.save_agent(load_path,0,i,load_same_agent = False,torch_device=maddpg.torch_device) for i in range(num_TA)] 
 
         first_save = False
 
@@ -857,12 +863,12 @@ if __name__ == "__main__":
                 for a_i in range(maddpg.nagents_team):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
             print("Launching update")
             start = time.time()
             [thr.start() for thr in threads]
@@ -889,12 +895,12 @@ if __name__ == "__main__":
                 for a_i in range(maddpg.nagents_team):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
             [thr.start() for thr in threads]
             print("Launching update")
             start = time.time()
@@ -903,15 +909,12 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(team_replay_buffer)
 
-            number_of_updates = 300
+            number_of_updates = 900
             batches_to_sample = 50
             priorities = [] 
 
             for ensemble in range(k_ensembles):
-                if multi_gpu:
-                    maddpg.torch_device = torch.device("cuda:1")
-                maddpg.device = 'cuda'
-                maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
+
                 maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
 
                 #start = time.time()
@@ -954,7 +957,7 @@ if __name__ == "__main__":
                                                     to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                         if not load_same_agent:
                             priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                            team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+                            team_replay_buffer.update_priorities(agentID=agentID,inds = data_parallelinds, prio=priorities,k = ensemble)
                         else:
                             priorities.append(maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path))
                             #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
@@ -984,6 +987,6 @@ if __name__ == "__main__":
                     [thr.join() for thr in threads]
                     maddpg.load_ensemble_policy(ensemble_path,ensemble,0) # load only policy from updated policy thread
                     maddpg.update_agent_hard_policy(agentID=0)
-                    [maddpg.save_agent(load_path,update_session,i,load_same_agent) for i in range(num_TA)]
-                    [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent) for i in range(num_TA)]
+                    [maddpg.save_agent(load_path,update_session,i,load_same_agent,maddpg.torch_device) for i in range(num_TA)]
+                    [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent,maddpg.torch_device) for i in range(num_TA)]
 
