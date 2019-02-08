@@ -94,7 +94,7 @@ class DDPGAgent(object):
                             EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                     LSTM_hidden=LSTM_hidden,maddpg=maddpg)
 
-            if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
+            if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                 self.policy = nn.DataParallel(self.policy)
 
             #self.policy.share_memory()
@@ -106,7 +106,7 @@ class DDPGAgent(object):
                                         norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                                         EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                                 LSTM_hidden=LSTM_hidden,maddpg=maddpg)
-                if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
+                if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                     self.target_policy = nn.DataParallel(self.target_policy)
 
         if self.LSTM_PC:
@@ -129,7 +129,7 @@ class DDPGAgent(object):
                 self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
                                                     hidden_dim=hidden_dim,
                                                     norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3,maddpg=maddpg)
-                if torch.cuda.device_count() > 1 and maddpg.multi_gpu:
+                if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                     self.critic = nn.DataParallel(self.critic)
                     self.target_critic = nn.DataParallel(self.target_critic)
 
@@ -222,7 +222,7 @@ class DDPGAgent(object):
 '''
     def get_params(self):
         #self.maddpg.prep_training(device='cpu')  # move parameters to CPU before saving
-        if self.maddpg.multi_gpu:
+        if self.maddpg.data_parallel:
 
             dict =  {'policy': self.policy.module.state_dict(),
                     'critic': self.critic.module.state_dict(),
@@ -254,7 +254,7 @@ class DDPGAgent(object):
 
     #Used to get just the actor weights and params.
     def get_actor_params(self):
-        if self.maddpg.multi_gpu:
+        if self.maddpg.data_parallel:
             return {'policy': self.policy.module.state_dict()}
         else:
             return {'policy': self.policy.state_dict()}
@@ -262,7 +262,7 @@ class DDPGAgent(object):
 
     #Used to get just the critic weights and params.
     def get_critic_params(self):
-        if self.maddpg.multi_gpu:
+        if self.maddpg.data_parallel:
             return {'critic': self.critic.module.state_dict()}
         else:
             return {'critic': self.critic.state_dict()}
@@ -274,7 +274,7 @@ class DDPGAgent(object):
             dev = self.maddpg.torch_device
         else:
             dev = torch.device('cpu')
-        if self.maddpg.multi_gpu:
+        if self.maddpg.data_parallel:
 
             self.policy.module.load_state_dict(params['policy'])
             self.critic.module.load_state_dict(params['critic'])
@@ -326,8 +326,9 @@ class DDPGAgent(object):
             dev = torch.device("cuda")
         else:
             dev = torch.device('cpu')
-        if self.maddpg.multi_gpu:
+        if self.maddpg.data_parallel:
             self.policy.module.load_state_dict(params['policy'])
+
         else:
             self.policy.load_state_dict(params['policy'])
 
