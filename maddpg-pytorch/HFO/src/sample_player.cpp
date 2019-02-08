@@ -258,7 +258,7 @@ SamplePlayer::actionImpl()
         else if(this->M_worldmodel.self().side() == RIGHT) side_str = "right";
 
         std::ofstream log_file("pt_logs/log_status_" + side_str + "_" + std::to_string(this->M_worldmodel.self().unum()) + ".csv", std::ios_base::out | std::ios_base::app );
-        log_file << this->M_worldmodel.fullstateTime().cycle() << ",GameStatus," << game_status << std::endl;
+        log_file << this->M_worldmodel.fullstateTime().cycle() << "," << game_status << std::endl;
       }
       // std::ofstream outfile;
       // outfile.open("test2.txt", std::ios_base::app);

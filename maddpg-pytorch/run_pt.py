@@ -1,10 +1,23 @@
 import os
+from algorithms.maddpg import MADDPG
 from utils.misc import pretrain_process
+from HFO_env import HFO_env
+from utils.tensor_buffer import ReplayTensorBuffer
+import numpy as np
+import collections
+import torch
 
-left_side = 3
-right_side = 3
+def pretrain(maddpg, env, team_replay_buffer, opp_replay_buffer, critic_mod_both=True, device='cuda', Imitation_exploration=False, episode_length=500, num_features=0):
+    pt_critic_updates = 30000
+    pt_actor_updates = 30000
+    pt_actor_critic_updates = 0
+    pt_imagination_branch_pol_updates = 100
+    pt_episodes = 1000# num of episodes that you observed in the gameplay between npcs
+    pt_timesteps = 125000# number of timesteps to load in from files
+    pt_EM_updates = 300
+    pt_beta = 1.0
 
-def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
+    initial_beta = 0.3
     # -------------------------------------
     # PRETRAIN ############################
     if Imitation_exploration:
@@ -20,14 +33,17 @@ def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
             print('log directory DNE')
             exit(0)
 
-        team_pt_obs, team_pt_status,team_pt_actions,opp_pt_obs, opp_pt_status,opp_pt_actions = pretrain_process(left_fnames=left_files, right_fnames=right_files, timesteps = timesteps, num_features = num_features)
+        team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions = pretrain_process(left_fnames=left_files, right_fnames=right_files, num_features = num_features)
+
+        # Count up everything besides IN_GAME to get number of episodes
+        collect = collections.Counter(team_pt_status[0])
+        pt_episodes = collect[1] + collect[2] + collect[3] + collect[4]
+        pt_time_step = 0
 
         ################## Base Left #########################
-        pt_time_step = 0
-        for ep_i in range(0, pt_episodes):
+        for ep_i in range(pt_episodes):
             if ep_i % 100 == 0:
                 print("Pushing Pretrain Base-Left Episode:",ep_i)
-                
             
             # team n-step
             team_n_step_rewards = []
@@ -43,13 +59,13 @@ def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
             maddpg.scale_noise(0.0)
             maddpg.reset_noise()
             maddpg.scale_beta(pt_beta)
-            d = False
+            d = 0
             
-            for et_i in range(0, episode_length):            
-                world_stat = team_pt_status[pt_time_step]
-                d = False
+            for et_i in range(episode_length):            
+                world_stat = team_pt_status[0][pt_time_step]
+                d = 0
                 if world_stat != 0.0:
-                    d = True
+                    d = 1
 
                 #### Team ####
                 team_n_step_acs.append(team_pt_actions[pt_time_step])
@@ -61,7 +77,8 @@ def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
 
                 # Store variables for calculation of MC and n-step targets for team
                 pt_time_step += 1
-                if d == True: # Episode done
+                
+                if d == 1: # Episode done
                     # Calculate n-step and MC targets
                     for n in range(et_i+1):
                         MC_targets = []
@@ -93,7 +110,7 @@ def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
                                                 [n_step_done for i in range(env.num_TA)],MC_targets, n_step_targets,
                                                 [team_n_step_ws[n] for i in range(env.num_TA)])
 
-                    pt_time_step +=1
+                    # pt_time_step +=1
                     break
         
         del team_pt_obs
@@ -182,98 +199,98 @@ def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
 
         maddpg.prep_training(device=device)
         
-        if I2A:
-            # pretrain EM
-            for i in range(pt_EM_updates):
-                if i%100 == 0:
-                    print("Petrain EM update:",i)
-                for u_i in range(1):
-                    for a_i in range(env.num_TA):
-                        inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                        #sample = pretrain_buffer.sample(batch_size,
-                        sample = team_replay_buffer.sample(inds,
-                                                    to_gpu=to_gpu,norm_rews=False)
-                        maddpg.update_EM(sample, a_i,'team')
-                    maddpg.niter+=1
+        # if I2A:
+        #     # pretrain EM
+        #     for i in range(pt_EM_updates):
+        #         if i%100 == 0:
+        #             print("Petrain EM update:",i)
+        #         for u_i in range(1):
+        #             for a_i in range(env.num_TA):
+        #                 inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+        #                 #sample = pretrain_buffer.sample(batch_size,
+        #                 sample = team_replay_buffer.sample(inds,
+        #                                             to_gpu=to_gpu,norm_rews=False, device=device)
+        #                 maddpg.update_EM(sample, a_i,'team')
+        #             maddpg.niter+=1
                         
-            if Imitation_exploration:
-                # pretrain policy prime
-                    # pretrain critic
-                for i in range(pt_actor_updates):
-                    if i%100 == 0:
-                        print("Petrain Prime update:",i)
-                    for u_i in range(1):
-                        for a_i in range(env.num_TA):
-                            inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                            sample = team_replay_buffer.sample(inds,
-                                                            to_gpu=to_gpu,norm_rews=False)
-                            maddpg.pretrain_prime(sample, a_i,'team')
-                        maddpg.niter +=1
-                if imagination_policy_branch and I2A:
-                    for i in range(pt_imagination_branch_pol_updates):
-                        if i%100 == 0:
-                            print("Petrain imag policy update:",i)
-                        for u_i in range(1):
-                            for a_i in range(env.num_TA):
-                                inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                                sample = team_replay_buffer.sample(inds,
-                                                            to_gpu=to_gpu,norm_rews=False)
-                                maddpg.pretrain_imagination_policy(sample, a_i,'team')
-                            maddpg.niter +=1
+        #     if Imitation_exploration:
+        #         # pretrain policy prime
+        #             # pretrain critic
+        #         for i in range(pt_actor_updates):
+        #             if i%100 == 0:
+        #                 print("Petrain Prime update:",i)
+        #             for u_i in range(1):
+        #                 for a_i in range(env.num_TA):
+        #                     inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+        #                     sample = team_replay_buffer.sample(inds,
+        #                                                     to_gpu=to_gpu,norm_rews=False, device=device)
+        #                     maddpg.pretrain_prime(sample, a_i,'team')
+        #                 maddpg.niter +=1
+        #         if imagination_policy_branch and I2A:
+        #             for i in range(pt_imagination_branch_pol_updates):
+        #                 if i%100 == 0:
+        #                     print("Petrain imag policy update:",i)
+        #                 for u_i in range(1):
+        #                     for a_i in range(env.num_TA):
+        #                         inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+        #                         sample = team_replay_buffer.sample(inds,
+        #                                                     to_gpu=to_gpu,norm_rews=False, device=device)
+        #                         maddpg.pretrain_imagination_policy(sample, a_i,'team')
+        #                     maddpg.niter +=1
 
                     
 
-        # pretrain policy
-        for i in range(pt_actor_updates):
-            if i%100 == 0:
-                print("Petrain actor update:",i)
-            for u_i in range(1):
-                for a_i in range(env.num_TA):
-                    inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                    sample = team_replay_buffer.sample(inds,
-                                                to_gpu=to_gpu,norm_rews=False)
-                    maddpg.pretrain_actor(sample, a_i,'team')
-                maddpg.niter +=1
+        # # pretrain policy
+        # for i in range(pt_actor_updates):
+        #     if i%100 == 0:
+        #         print("Petrain actor update:",i)
+        #     for u_i in range(1):
+        #         for a_i in range(env.num_TA):
+        #             inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+        #             sample = team_replay_buffer.sample(inds,
+        #                                         to_gpu=to_gpu,norm_rews=False, device=device)
+        #             maddpg.pretrain_actor(sample, a_i,'team')
+        #         maddpg.niter +=1
 
-        maddpg.update_hard_policy()
+        # maddpg.update_hard_policy()
         
         
         
-        if not critic_mod: # non-centralized Q
-            # pretrain critic
-            for i in range(pt_critic_updates):
-                if i%100 == 0:
-                    print("Petrain critic update:",i)
-                for u_i in range(1):
-                    for a_i in range(env.num_TA):
-                        inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                        sample = team_replay_buffer.sample(inds,
-                                                        to_gpu=to_gpu,norm_rews=False)
-                        maddpg.pretrain_critic(sample, a_i,'team')
-                    maddpg.niter +=1
-            maddpg.update_hard_critic()
+        # if not critic_mod: # non-centralized Q
+        #     # pretrain critic
+        #     for i in range(pt_critic_updates):
+        #         if i%100 == 0:
+        #             print("Petrain critic update:",i)
+        #         for u_i in range(1):
+        #             for a_i in range(env.num_TA):
+        #                 inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+        #                 sample = team_replay_buffer.sample(inds,
+        #                                                 to_gpu=to_gpu,norm_rews=False)
+        #                 maddpg.pretrain_critic(sample, a_i,'team')
+        #             maddpg.niter +=1
+        #     maddpg.update_hard_critic()
 
 
-            maddpg.scale_beta(initial_beta) # 
-            # pretrain true actor-critic (non-imitation) + policy prime
-            for i in range(pt_actor_critic_updates):
-                if i%100 == 0:
-                    print("Petrain critic/actor update:",i)
-                for u_i in range(1):
-                    for a_i in range(env.num_TA):
-                        inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
-                        sample = team_replay_buffer.sample(inds,
-                                                    to_gpu=to_gpu,norm_rews=False)
-                        maddpg.update(sample, a_i, 'team' )
-                        if SIL:
-                            for i in range(SIL_update_ratio):
-                                team_sample,inds = team_replay_buffer.sample_SIL(agentID=a_i,batch_size=batch_size,
-                                                    to_gpu=to_gpu,norm_rews=False)
-                                priorities = maddpg.SIL_update(team_sample, opp_sample, a_i, 'team', 
-                                                centQ=critic_mod) # 
-                                team_replay_buffer.update_priorities(agentID=a_i,inds = inds, prio=priorities)
-                    maddpg.update_all_targets()
-        else: # centralized Q
+        #     maddpg.scale_beta(initial_beta) # 
+        #     # pretrain true actor-critic (non-imitation) + policy prime
+        #     for i in range(pt_actor_critic_updates):
+        #         if i%100 == 0:
+        #             print("Petrain critic/actor update:",i)
+        #         for u_i in range(1):
+        #             for a_i in range(env.num_TA):
+        #                 inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+        #                 sample = team_replay_buffer.sample(inds,
+        #                                             to_gpu=to_gpu,norm_rews=False)
+        #                 maddpg.update(sample, a_i, 'team' )
+        #                 if SIL:
+        #                     for i in range(SIL_update_ratio):
+        #                         team_sample,inds = team_replay_buffer.sample_SIL(agentID=a_i,batch_size=batch_size,
+        #                                             to_gpu=to_gpu,norm_rews=False)
+        #                         priorities = maddpg.SIL_update(team_sample, opp_sample, a_i, 'team', 
+        #                                         centQ=critic_mod) # 
+        #                         team_replay_buffer.update_priorities(agentID=a_i,inds = inds, prio=priorities)
+        #             maddpg.update_all_targets()
+        if False: # centralized Q
             for i in range(pt_critic_updates):
                 if i%100 == 0:
                     print("Petrain critic update:",i)
@@ -281,9 +298,9 @@ def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
                     for a_i in range(env.num_TA):
                         inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
                         team_sample = team_replay_buffer.sample(inds,
-                                                                to_gpu=to_gpu,norm_rews=False)
+                                                                to_gpu=to_gpu,norm_rews=False, device=device)
                         opp_sample = opp_replay_buffer.sample(inds,
-                                                            to_gpu=to_gpu,norm_rews=False)
+                                                            to_gpu=to_gpu,norm_rews=False, device=device)
                         maddpg.pretrain_centralized_critic(team_sample, opp_sample, a_i, 'team', 
                                                         act_only=critic_mod_act, obs_only=critic_mod_obs)
                     maddpg.niter +=1
@@ -314,6 +331,170 @@ def pretrain(Imitation_exploration=False, timesteps=500, num_features=0):
                     maddpg.update_all_targets()
 
 if __name__ == "__main__":
-    num_features = 59 + 13*(left_side-1) + 12*right_side + 4 + 1 + 2 + 1
+    USE_CUDA = False
+    if USE_CUDA:
+        device = 'cuda'
+        to_gpu = True
+    else:
+        to_gpu = False
+        device = 'cpu'
+    
+    n_training_threads = 4
+    batch_size = 128
+    tau = 0.001
 
-    pretrain(Imitation_exploration=True, timesteps=500, num_features=num_features)
+    num_TA = 3
+    num_OA = 3
+    goalie = False
+    seed = 123
+    feature_level = 'low'
+    action_level = 'low'
+    untouched_time = 200
+    # Control Random Initilization of Agents and Ball
+    control_rand_init = True
+    ball_x_min = -0.1
+    ball_x_max = 0.1
+    ball_y_min = -0.1
+    ball_y_max = 0.1
+    agents_x_min = -0.2
+    agents_x_max = 0.2
+    agents_y_min = -0.2
+    agents_y_max = 0.2
+    change_every_x = 1000000000
+    change_agents_x = 0.01
+    change_agents_y = 0.01
+    change_balls_x = 0.01
+    change_balls_y = 0.01
+
+    log_dir = 'nan_log'
+    rcss_log_game = False #Logs the game using rcssserver
+    hfo_log_game = False #Logs the game using HFO
+    # default settings ---------------------
+    num_episodes = 10000000
+    episode_length = 500 # FPS
+    untouched_time = 500
+    burn_in_iterations = 500 # for time step
+    burn_in_episodes = float(burn_in_iterations)/untouched_time
+    deterministic = True
+
+    # --------------------------------------
+    # hyperparams--------------------------
+    batch_size = 128
+    hidden_dim = int(512)
+
+    tau = 0.001 # soft update rate
+
+    multi_gpu = False
+
+    # --------------------------------------
+    #D4PG Options --------------------------
+    D4PG = False
+    gamma = 0.99 # discount
+    Vmax = 40
+    Vmin = -40
+    N_ATOMS = 251
+    DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
+    n_steps = 5
+    # n-step update size 
+    # Mixed taqrget beta (0 = 1-step, 1 = MC update)
+    initial_beta = 0.3
+    final_beta =0.3
+    num_beta_episodes = 1000000000
+    if D4PG:
+        a_lr = 0.0001 # actor learning rate
+        c_lr = 0.001 # critic learning rate
+    else:
+        a_lr = 0.0001 # actor learning rate
+        c_lr = 0.0001 # critic learning rate
+    #---------------------------------------
+    #TD3 Options ---------------------------
+    TD3 = True
+    TD3_delay_steps = 2
+    TD3_noise = 0.01
+    #---------------------------------------
+    #I2A Options ---------------------------
+    I2A = False
+    decent_EM = False
+    EM_lr = 0.005
+    obs_weight = 10.0
+    rew_weight = 1.0
+    ws_weight = 1.0
+    rollout_steps = 1
+    LSTM_hidden=16
+    imagination_policy_branch = True
+    #---------------------------------------
+    # Self-Imitation Learning Options ------
+    SIL = False
+    SIL_update_ratio = 1
+    #---------------------------------------
+    #Critic Input Modification 
+    critic_mod = True
+    # NOTE: When both are False but critic_mod is true the critic takes both
+    # actions and observations from the opposing side
+    critic_mod_act = False
+    critic_mod_obs = False
+    critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
+    #---------------------------------------
+    # --------------------------------------
+    # LSTM -------------------------------------------
+    LSTM = False
+    LSTM_PC = False # PC (Policy & Critic)
+    if LSTM and LSTM_PC:
+        print('Only one LSTM flag can be True or both False')
+        exit(0)
+    if LSTM or LSTM_PC:
+        trace_length = 20
+    else:
+        trace_length = 0
+    hidden_dim_lstm = 512
+
+    if action_level == 'high':
+        discrete_action = True
+    else:
+        discrete_action = False
+    if not USE_CUDA:
+        torch.set_num_threads(n_training_threads)
+    # -------------------------------------------------
+
+    # dummy env that isn't used explicitly ergo used for dimensions andd methods
+    env = HFO_env(num_TNPC = 0,num_TA=num_TA,num_OA=num_OA, num_ONPC=0, goalie=goalie,
+                    num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
+                    feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
+                    ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
+                    offense_on_ball=False,port=65000,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game,
+                    agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+                    change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
+                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
+                    defense_team_bin='base', offense_team_bin='base', run_server=False, deterministic=True)
+    
+    obs_dim_TA = env.team_num_features
+    obs_dim_OA = env.opp_num_features
+    acs_dim = 8
+    replay_memory_size = 300000
+    k_ensembles = 1
+    # num_features = 59 + 13*(left_side-1) + 12*right_side + 4 + 1 + 2 + 1
+
+    team_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
+
+    opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
+
+    maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
+                                adversary_alg= "MADDPG",device=device,
+                                gamma=gamma,batch_size=batch_size,
+                                tau=tau,
+                                a_lr=a_lr,
+                                c_lr=c_lr,
+                                hidden_dim=hidden_dim ,discrete_action=discrete_action,
+                                vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
+                                n_steps=n_steps,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta,
+                                TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps,
+                                I2A = I2A, EM_lr = EM_lr,
+                                obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight, 
+                                rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,
+                                imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
+                                critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
+                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu)
+
+    pretrain(maddpg, env, team_replay_buffer, opp_replay_buffer, critic_mod_both=critic_mod_both, device=device, Imitation_exploration=True, episode_length=500, num_features=obs_dim_TA)

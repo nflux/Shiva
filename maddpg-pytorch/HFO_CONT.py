@@ -375,7 +375,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             team_episode = []
             opp_episode = []
 
-            if d == True and et_i >= (trace_length-1): # Episode done 
+            if d == 1 and et_i >= (trace_length-1): # Episode done 
                 n_step_gammas = np.array([[gamma**step for a in range(num_TA)] for step in range(n_steps)])
                #NOTE: Assume M vs M and critic_mod_both == True
                 if critic_mod_both:
@@ -767,7 +767,7 @@ if __name__ == "__main__":
                     agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                     change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
                     change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
-                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=False)
+                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=False, deterministic=deterministic)
     
     obs_dim_TA = env.team_num_features
     obs_dim_OA = env.opp_num_features

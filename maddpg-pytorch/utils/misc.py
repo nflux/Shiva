@@ -75,40 +75,43 @@ def e_greedy_bool(numAgents, eps=0.0,device='cpu'):
     return (rand < eps)
 
 
-def pretrain_process(left_fnames, right_fnames, timesteps, num_features):
+def pretrain_process(left_fnames, right_fnames, num_features):
     
-    # sort fnames
+    # sort fnames by uniform
     left_fnames.sort()
     right_fnames.sort()
 
-    obs_header_names = ['cycle', 'item']
+    obs_header_names = ['cycle']
     for n in range(num_features):
         obs_header_names.append(str(n))
 
-    df_left_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'item', 'status']) for fn in left_fnames if '_status_' in fn]
-    df_left_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'action', 'param1', 'param2']) for fn in left_fnames if '_actions_' in fn]
+    df_left_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if '_status_' in fn]
+    df_left_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in left_fnames if '_actions_' in fn]
     df_left_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in left_fnames if '_obs_' in fn]
 
-    df_right_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'item', 'status']) for fn in right_fnames if '_status_' in fn]
-    df_right_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'action', 'param1', 'param2']) for fn in right_fnames if '_actions_' in fn]
+    df_right_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in right_fnames if '_status_' in fn]
+    df_right_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in right_fnames if '_actions_' in fn]
     df_right_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in right_fnames if '_obs_' in fn]
     
-    team_pt_status = [df.loc[:, 'status'].values for df in df_left_status_list]
-    team_pt_obs = [df.loc[:, obs_header_names[2:]].values for df in df_left_obs_list]
-    team_pt_actions = [df.loc[:, ]]
-    opp_pt_status = []
-    opp_pt_obs = []
-    opp_pt_actions = []
-    
-    num_TA = len(fnames)/2
-    c = 0
+    # Drop repeated zero rows in the beginning
+    df_left_status_list = [df[df.cycle != 0] for df in df_left_status_list]
+    df_left_action_list = [df[df.cycle != 0] for df in df_left_action_list]
+    df_left_obs_list = [df[df.cycle != 0] for df in df_left_obs_list]
 
-    print("Loading pretrain data")
-    while c < (timesteps*3):
-        pass
+    df_right_status_list = [df[df.cycle != 0] for df in df_right_status_list]
+    df_right_action_list = [df[df.cycle != 0] for df in df_right_action_list]
+    df_right_obs_list = [df[df.cycle != 0] for df in df_right_obs_list]
+
+    # Turn to numpy arrays, NOTE: Actions are hot-encoded in the logs
+    team_pt_status = [df.loc[:, 'status'].values for df in df_left_status_list]
+    team_pt_obs = [df.loc[:, obs_header_names[1:]].values for df in df_left_obs_list]
+    team_pt_actions = [df.loc[:, 'dash':].values for df in df_left_action_list]
+
+    opp_pt_status = [df.loc[:, 'status'].values for df in df_right_status_list]
+    opp_pt_obs = [df.loc[:, obs_header_names[1:]].values for df in df_left_obs_list]
+    opp_pt_actions = [df.loc[:, 'dash':].values for df in df_left_action_list]
         
-    # return team_pt_obs,team_pt_status,team_pt_actions, opp_pt_obs,opp_pt_status,opp_pt_actions
-    return 0, 0, 0, 0, 0, 0
+    return team_pt_status, team_pt_obs, team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions
 
 
 

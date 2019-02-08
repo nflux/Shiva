@@ -82,7 +82,7 @@ class pretrain_env():
 
         self.viewer = None
 
-        self._start_viewer() 
+        # self._start_viewer() 
             
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

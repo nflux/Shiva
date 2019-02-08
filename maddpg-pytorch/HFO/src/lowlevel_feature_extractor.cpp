@@ -387,7 +387,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     addFeature(0);
   }
   
-  addFeature((wm.fullstateTime().cycle() - ep_end_time + 1)/500.0);
+  addFeature((wm.fullstateTime().cycle() - ep_end_time + 1)/1000.0);
 
   assert(featIndx == numFeatures);
   checkFeatures();
