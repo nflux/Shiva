@@ -328,6 +328,7 @@ class DDPGAgent(object):
             dev = torch.device('cpu')
         if self.maddpg.multi_gpu:
             self.policy.module.load_state_dict(params['policy'])
+
         else:
             self.policy.load_state_dict(params['policy'])
 

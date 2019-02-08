@@ -12,6 +12,7 @@ import time
 import torch.multiprocessing as mp
 import dill
 import copy
+import pandas as pd
 MSELoss = torch.nn.MSELoss()
 CELoss = torch.nn.CrossEntropyLoss()
 def parallel_step(results,a_i,ran,obs,explore,output,pi_pickle,action_dim=3,param_dim=5,device='cpu',exploration_noise=0.000001):
@@ -65,7 +66,7 @@ class MADDPG(object):
         self.world_status_dim = 6 # number of possible world statuses
         self.nagents_team = len(team_alg_types)
         self.nagents_opp = len(opp_alg_types)
-
+        self.loss_logger = pd.DataFrame()
         self.team_alg_types = team_alg_types
         self.opp_alg_types = opp_alg_types
         self.num_in_EM = team_net_params[0]['num_in_EM']
@@ -485,7 +486,7 @@ class MADDPG(object):
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
 
                 
-    def update_centralized_critic(self, team_sample=[], opp_sample =[], agent_i = 0, side='team', parallel=False, logger=None, act_only=False, obs_only=False,forward_pass=True,load_same_agent=False):
+    def update_centralized_critic(self, team_sample=[], opp_sample =[], agent_i = 0, side='team', parallel=False, logger=None, act_only=False, obs_only=False,forward_pass=True,load_same_agent=False,critic=True,policy=True,session_path=""):
         """
         Update parameters of agent model based on sample from replay buffer
         Inputs:
@@ -498,6 +499,14 @@ class MADDPG(object):
             logger (SummaryWriter from Tensorboard-Pytorch):
                 If passed in, important quantities will be logged
         """
+        if self.niter % 1000:
+            if critic and policy:
+                self.loss_logger.to_csv(session_path + 'loss.csv')
+            elif critic:
+                self.loss_logger.to_csv(session_path + 'critic_loss.csv')
+            elif policy:
+                self.loss_logger.to_csv(session_path + 'actor_loss.csv')
+
         start = time.time()
 
         #start = time.time()
@@ -525,103 +534,105 @@ class MADDPG(object):
 
         self.curr_agent_index = agent_i
         # Train critic ------------------------
-        curr_agent.critic_optimizer.zero_grad()
-        if load_same_agent:
-            curr_agent = self.team_agents[0]
-        #print("time critic")
-        #start = time.time()
-        #with torch.no_grad():
-        if self.TD3:
-            noise = processor(torch.randn_like(acs[0]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
-            all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
+        if critic:
+            curr_agent.critic_optimizer.zero_grad()
+            if load_same_agent:
+                curr_agent = self.team_agents[0]
+            #print("time critic")
+            #start = time.time()
+            #with torch.no_grad():
+            if self.TD3:
+                noise = processor(torch.randn_like(acs[0]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
+                all_trgt_acs = [torch.cat(
+                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
 
-            opp_all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
-        else:
-            all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
-            opp_all_trgt_acs =[torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+                opp_all_trgt_acs = [torch.cat(
+                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+            else:
+                all_trgt_acs = [torch.cat(
+                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
+                opp_all_trgt_acs =[torch.cat(
+                    (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
 
-        mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
-        mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
+            mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
+            mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
 
-        # Target critic values
-        trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
-        if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
-                    # and build the combination of distr choosing the minimums
-            trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
+            # Target critic values
+            trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
+            if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
+                        # and build the combination of distr choosing the minimums
+                trgt_Q1,trgt_Q2 = curr_agent.target_critic(trgt_vf_in)
+                if self.D4PG:
+                    arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
+                                    curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
+
+                    if not arg: 
+                        trgt_Q = trgt_Q1
+                    else:
+                        trgt_Q = trgt_Q2
+                else:
+                    trgt_Q = torch.min(trgt_Q1,trgt_Q2)
+            else:
+                trgt_Q = curr_agent.target_critic(trgt_vf_in)
+
+            mod_obs = torch.cat((*opp_obs,*obs),dim=1)
+            mod_acs = torch.cat((*opp_acs,*acs),dim=1)
+            # Actual critic values
+            vf_in = torch.cat((mod_obs, mod_acs), dim=1)
+            if self.TD3:
+                actual_value_1, actual_value_2 = curr_agent.critic(vf_in)
+            else:
+                actual_value = curr_agent.critic(vf_in)
+            
             if self.D4PG:
-                arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
-                                curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
-
-                if not arg: 
-                    trgt_Q = trgt_Q1
-                else:
-                    trgt_Q = trgt_Q2
-            else:
-                trgt_Q = torch.min(trgt_Q1,trgt_Q2)
-        else:
-            trgt_Q = curr_agent.target_critic(trgt_vf_in)
-
-        mod_obs = torch.cat((*opp_obs,*obs),dim=1)
-        mod_acs = torch.cat((*opp_acs,*acs),dim=1)
-        # Actual critic values
-        vf_in = torch.cat((mod_obs, mod_acs), dim=1)
-        if self.TD3:
-            actual_value_1, actual_value_2 = curr_agent.critic(vf_in)
-        else:
-            actual_value = curr_agent.critic(vf_in)
-        
-        if self.D4PG:
-                # Q1
-                trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
-
-                trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
-                                                  gamma=self.gamma**self.n_steps,device=self.device)
-
-                if self.TD3:
-                    prob_dist_1 = -F.log_softmax(actual_value_1,dim=1) * trgt_vf_distr_proj # Q1
-                    prob_dist_2 = -F.log_softmax(actual_value_2,dim=1) * trgt_vf_distr_proj # Q2
-                    # distribution distance function
-                    vf_loss = prob_dist_1.sum(dim=1).mean() + prob_dist_2.sum(dim=1).mean() # critic loss based on distribution distance
-                else:
-                    prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
+                    # Q1
                     trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
+
                     trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
-                                                      gamma=self.gamma**self.n_steps,device=self.device) 
-                    # distribution distance function
-                    prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
-                    vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
-        else: # single critic value
-            target_value = (1-self.beta)*(n_step_rews[agent_i].view(-1, 1) + (self.gamma**self.n_steps) *
-                        trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
-            target_value.detach()
-            if self.TD3: # handle double critic
-                with torch.no_grad():
-                    prio = ((actual_value_1 - target_value)**2 + (actual_value_2-target_value)**2).squeeze().detach()/2.0
-                    prio = np.round(prio.cpu().numpy(),decimals=3)
-                    prio = torch.tensor(prio,requires_grad=False)
-                vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
-            else:
-                vf_loss = F.mse_loss(actual_value, target_value)
-                        
+                                                    gamma=self.gamma**self.n_steps,device=self.device)
 
-        #vf_loss.backward()
-        vf_loss.backward(retain_graph=False) 
-        
-        if parallel:
-            average_gradients(curr_agent.critic)
-        torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
-        curr_agent.critic_optimizer.step()
-        curr_agent.policy_optimizer.zero_grad()
- 
+                    if self.TD3:
+                        prob_dist_1 = -F.log_softmax(actual_value_1,dim=1) * trgt_vf_distr_proj # Q1
+                        prob_dist_2 = -F.log_softmax(actual_value_2,dim=1) * trgt_vf_distr_proj # Q2
+                        # distribution distance function
+                        vf_loss = prob_dist_1.sum(dim=1).mean() + prob_dist_2.sum(dim=1).mean() # critic loss based on distribution distance
+                    else:
+                        prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
+                        trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
+                        trgt_vf_distr_proj = distr_projection(self,trgt_vf_distr,n_step_rews[agent_i],dones[agent_i],MC_rews[agent_i],
+                                                        gamma=self.gamma**self.n_steps,device=self.device) 
+                        # distribution distance function
+                        prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
+                        vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
+            else: # single critic value
+                target_value = (1-self.beta)*(n_step_rews[agent_i].view(-1, 1) + (self.gamma**self.n_steps) *
+                            trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
+                target_value.detach()
+                if self.TD3: # handle double critic
+                    with torch.no_grad():
+                        prio = ((actual_value_1 - target_value)**2 + (actual_value_2-target_value)**2).squeeze().detach()/2.0
+                        prio = np.round(prio.cpu().numpy(),decimals=3)
+                        prio = torch.tensor(prio,requires_grad=False)
+                    vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
+                else:
+                    vf_loss = F.mse_loss(actual_value, target_value)
+                            
 
-        # Train actor -----------------------
-                
-        #print("time actor")
-        if count % self.TD3_delay_steps == 0:
+            #vf_loss.backward()
+            vf_loss.backward(retain_graph=False) 
+            
+            if parallel:
+                average_gradients(curr_agent.critic)
+            torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
+            curr_agent.critic_optimizer.step()
+
+        if policy:
+            curr_agent.policy_optimizer.zero_grad()
+    
+
+            # Train actor -----------------------
+                    
+            #print("time actor")
             curr_pol_out = curr_agent.policy(obs[agent_i])
             curr_pol_vf_in = torch.cat((gumbel_softmax(curr_pol_out[:,:curr_agent.action_dim], hard=True, device=self.torch_device),curr_pol_out[:,curr_agent.action_dim:]),dim=1)
             team_pol_acs = []
@@ -645,7 +656,7 @@ class MADDPG(object):
                     pol_loss = -curr_agent.critic.module.Q1(mod_vf_in).mean() 
                 else:
                     pol_loss = -curr_agent.critic.Q1(mod_vf_in).mean() 
-      
+    
             if self.D4PG:
                 reg_param = 5.0
             else:
@@ -662,9 +673,13 @@ class MADDPG(object):
                 average_gradients(curr_agent.policy)
             torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
             curr_agent.policy_optimizer.step()
+
             if self.niter % 100 == 0:
                 print("Team (%s) Agent (%i) Actor loss:" % (side,agent_i),pol_loss)
-            #print(time.time() - start,"update time")
+                self.loss_logger = self.loss_logger.append({                'iteration':self.niter,
+                                                                            'actor_loss': np.round(pol_loss.item(),4)},
+                                                                            ignore_index=True)
+                #print(time.time() - start,"update time")
         # I2A --------------------------------------
         if self.I2A:
             # Update policy prime
@@ -720,22 +735,28 @@ class MADDPG(object):
         #                        self.niter)
         self.niter +=1
         #print(time.time() - start,"up")
-
-        if self.niter % 100 == 0:
-            print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
+        if critic:
+            if self.niter % 100 == 0:
+                self.loss_logger = self.loss_logger.append({                          'iteration':self.niter,
+                                                                            'critic': np.round(vf_loss.item(),4)},
+                                                                            ignore_index=True)
+                print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
             if self.I2A:
                 print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
         
         # return priorities
-        if self.TD3:
-            if self.D4PG:
-                return ((prob_dist_1.float().sum(dim=1) + prob_dist_2.float().sum(dim=1))/2.0).cpu()
+        if critic:
+            if self.TD3:
+                if self.D4PG:
+                    return ((prob_dist_1.float().sum(dim=1) + prob_dist_2.float().sum(dim=1))/2.0).cpu()
+                else:
+                    return prio
+                    
             else:
-                return prio
-                
+                return prob_dist.sum(dim=1).cpu()
         else:
-            return prob_dist.sum(dim=1).cpu()
+            return None
 
 
     def update_centralized_critic_LSTM(self, team_sample, opp_sample, agent_i, side='team', parallel=False, logger=None, act_only=False, obs_only=False,load_same_agent=False):
@@ -1333,6 +1354,9 @@ class MADDPG(object):
 
         for a in self.opp_agents:
             hard_update(a.target_policy, a.policy)
+
+    def update_agent_hard_policy(self,agentID):
+            hard_update(self.team_agents[agentID].target_policy, self.team_agents[agentID].policy)
 
     def update_all_targets(self):
         """
@@ -2343,7 +2367,7 @@ class MADDPG(object):
                     self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
             return [0 for _ in range(nagents)]
             
-                               
+                             
     def load_ensemble(self, ensemble_path,ensemble,agentID):
         # Loads ensemble to team agent #agentID
   
@@ -2358,7 +2382,15 @@ class MADDPG(object):
         else:
             dicts = [torch.load(ensemble_path +("ensemble_agent_%i/model_%i.pth" % (i,ensemble))) for i in range(nagents)]
         [self.team_agents[i].load_params(dicts[i]['agent_params']) for i in range(nagents)]
+            
+                             
+    def load_ensemble_policy(self, ensemble_path,ensemble,agentID):
+        # Loads ensemble to team agent #agentID
+  
+        dict = torch.load(ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
+        self.team_agents[agentID].load_policy_params(dict['agent_params'])
 
+    
 
                                           
     def first_save(self, file_path,num_copies=1):
