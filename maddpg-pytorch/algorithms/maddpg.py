@@ -1362,6 +1362,9 @@ class MADDPG(object):
     def update_agent_hard_policy(self,agentID):
             hard_update(self.team_agents[agentID].target_policy, self.team_agents[agentID].policy)
 
+    def update_agent_hard_critic(self,agentID):
+            hard_update(self.team_agents[agentID].target_critic, self.team_agents[agentID].critic)
+
     def update_all_targets(self):
         """
         Update all target networks (called after normal updates have been

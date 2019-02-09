@@ -108,7 +108,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
             maddpg.save_agent(load_path,update_session,agentID)
             maddpg.save_ensemble(ensemble_path,ensemble,agentID)
         else:
-            maddpg.update_agent_targets(0,number_of_updates/10)
+            maddpg.update_hard_policy(0)
             [maddpg.save_agent(load_path,update_session,i,load_same_agent) for i in range(num_TA)]
             [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent) for i in range(num_TA)]
     print(time.time()-start,"<-- Policy Update Cycle")
@@ -168,7 +168,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
             maddpg.save_agent(load_path,update_session,agentID)
             maddpg.save_ensemble(ensemble_path,ensemble,agentID)
         else:
-            maddpg.update_agent_targets(0,number_of_updates/10)
+            maddpg.update_agent_hard_policy(0)
             [maddpg.save_agent(load_path,update_session,i,load_same_agent) for i in range(num_TA)]
             [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent) for i in range(num_TA)]
     print(time.time()-start,"<-- Policy Update Cycle")
@@ -652,7 +652,7 @@ if __name__ == "__main__":
         final_OU_noise_scale = 0.1
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 50 # Haus uses over 10,000 updates --
+        num_explore_episodes = 1 # Haus uses over 10,000 updates --
         multi_gpu = False
         data_parallel = False
         
@@ -686,7 +686,7 @@ if __name__ == "__main__":
         #Pretrain Options ----------------------
         pretrain = True
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-        pt_update_cycles = 10
+        pt_update_cycles = 100
         #---------------------------------------
         #I2A Options ---------------------------
         I2A = False
@@ -734,7 +734,7 @@ if __name__ == "__main__":
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.5
         load_same_agent = True # load same policy for all agents
-        play_agent2d = False
+        play_agent2d = True
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -910,12 +910,13 @@ if __name__ == "__main__":
         # Count up everything besides IN_GAME to get number of episodes
         collect = collections.Counter(status[0])
         pt_episodes = collect[1] + collect[2] + collect[3] + collect[4]
+        
         pt_time_step = 0
 
         ################## Base Left #########################
         for ep_i in range(pt_episodes):
-            # if ep_i % 100 == 0:
-            #     print("Pushing Pretrain Base-Left Episode:",ep_i)
+            if ep_i % 100 == 0:
+                print("Pushing Pretrain Episode:",ep_i)
             
             team_n_step_rewards = []
             team_n_step_obs = []
@@ -1006,7 +1007,7 @@ if __name__ == "__main__":
                             # print(current_ensembles)
                             if SIL:
                                 SIL_priorities = np.ones(num_TA)*default_prio
-
+                            
                             exp_team = np.column_stack((team_n_step_obs[n],
                                                 team_n_step_acs[n],
                                                 np.expand_dims(team_n_step_rewards[n], 1),
@@ -1054,7 +1055,10 @@ if __name__ == "__main__":
         maddpg.scale_beta(1)
         update_session = 999999
 
-        for _ in range(pt_update_cycles):
+        for u in range(pt_update_cycles):
+            if u % 10 == 0:
+                print("PT Update Cycle: ",u)
+
             threads = []
             for a_i in range(1):
                 threads.append(mp.Process(target=imitation_thread,args=(a_i,to_gpu,len(team_PT_replay_buffer),batch_size,
@@ -1137,7 +1141,7 @@ if __name__ == "__main__":
                     maddpg.save_agent(load_path,update_session,agentID)
                     maddpg.save_ensemble(ensemble_path,ensemble,agentID)
                 else:
-                    maddpg.update_agent_targets(0,number_of_updates/10)
+                    maddpg.update_agent_hard_policy(0)
                     print(time.time()-start,"<-- Critic Update Cycle")
 
                     [thr.join() for thr in threads]
@@ -1309,7 +1313,7 @@ if __name__ == "__main__":
                     maddpg.save_agent(load_path,update_session,agentID)
                     maddpg.save_ensemble(ensemble_path,ensemble,agentID)
                 else:
-                    maddpg.update_agent_targets(0,number_of_updates/10)
+                    maddpg.update_agent_hard_critic(0)
                     print(time.time()-start,"<-- Critic Update Cycle")
 
                     [thr.join() for thr in threads]
