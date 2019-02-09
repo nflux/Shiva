@@ -20,11 +20,11 @@ def prep_session(session_path="",hist_dir="history",eval_hist_dir= "eval_history
     [shutil.rmtree(path) for path in directories if os.path.isdir(path)]
     [shutil.rmtree(path) for path in [ensemble_path + ("ensemble_agent_%i" % j) for j in range(num_TA)] if os.path.isdir(path)] 
     [shutil.rmtree(path) for path in [load_path + ("agent_%i" % j) for j in range(num_TA)] if os.path.isdir(path)] 
-    [shutil.rmtree(path) for path in [load_path + ("agent2d_%i" % j) for j in range(num_TA)] if os.path.isdir(path)] 
+    [shutil.rmtree(path) for path in [load_path + ("agent2d")] if os.path.isdir(path)] 
 
     [os.makedirs(path) for path in [ensemble_path + ("ensemble_agent_%i" % j) for j in range(num_TA)] if not os.path.exists(path)] # generate ensemble model paths for each agent
     [os.makedirs(path) for path in [load_path + ("agent_%i" % j) for j in range(num_TA)] if not os.path.exists(path)] # generate model paths for each agent
-    [os.makedirs(path) for path in [load_path + ("agent2d_%i" % j) for j in range(num_TA)] if not os.path.exists(path)] # generate model paths for each agent
+    [os.makedirs(path) for path in [load_path + ("agent2d")] if not os.path.exists(path)] # generate model paths for each agent
 
     [os.makedirs(path) for path in directories if not os.path.exists(path)] # generate directories 
     
