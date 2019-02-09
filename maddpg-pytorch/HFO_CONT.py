@@ -686,7 +686,8 @@ if __name__ == "__main__":
         #Pretrain Options ----------------------
         pretrain = True
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-        pt_update_cycles = 100
+        pt_update_cycles = 1000
+        pt_inject_proba = 0.1 
         #---------------------------------------
         #I2A Options ---------------------------
         I2A = False
@@ -944,7 +945,6 @@ if __name__ == "__main__":
                 world_stat = status[0][pt_time_step]
                 d = 0
                 if world_stat != 0.0:
-                    print('This is called done!') 
                     d = 1
                 # print('actions len', len(team_pt_actions))
                 # print('timestep', pt_time_step, 'actions', team_pt_actions[pt_time_step].shape)
@@ -1037,9 +1037,10 @@ if __name__ == "__main__":
                                 exps = torch.from_numpy(exp_comb)
                             else:
                                 exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
-                        [team_PT_replay_buffer.push(exps[:et_i, :num_TA, :])]
-                        [opp_PT_replay_buffer.push(exps[:et_i, num_TA:2*num_TA, :])]
-                                        
+                        team_PT_replay_buffer.push(torch.cat((exps[:et_i, :num_TA, :], exps[:et_i,-num_TA:,:])))
+                        opp_PT_replay_buffer.push(torch.cat((exps[:et_i, -num_TA:, :], exps[:et_i,:num_TA,:])))
+                        print(len(team_PT_replay_buffer),len(opp_PT_replay_buffer))
+           
                         del exps
                         exps = None
                     break
@@ -1223,10 +1224,13 @@ if __name__ == "__main__":
         if training:
             
             threads = []
-            if not load_same_agent:
-                for a_i in range(maddpg.nagents_team):
-                    threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
-                        team_replay_buffer,opp_replay_buffer,number_of_updates,
+            PT = (np.random.uniform(0,1) < pt_inject_proba)
+
+        
+            if PT:
+                for a_i in range(1):
+                    threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_PT_replay_buffer),batch_size,
+                        team_PT_replay_buffer,opp_PT_replay_buffer,number_of_updates,
                         load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
             else:
                 for a_i in range(1):
@@ -1246,19 +1250,20 @@ if __name__ == "__main__":
             priorities = [] 
 
             for ensemble in range(k_ensembles):
-
                 maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
-
-                #start = time.time()
                 for up in range(number_of_updates):
                     offset = up % batches_to_sample
+                    m = 0
+
 
                     if not load_same_agent:
                         inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
                     else:
                         if up % batches_to_sample == 0:
-                            m = 0
-                            inds = team_replay_buffer.get_PER_inds(m,batches_to_sample*batch_size,ensemble)
+                            if  PT:
+                                inds = team_PT_replay_buffer.get_PER_inds(m,batches_to_sample*batch_size,ensemble)
+                            else:
+                                inds = team_replay_buffer.get_PER_inds(m,batches_to_sample*batch_size,ensemble)
                             if len(priorities) > 1:
                                 [team_replay_buffer.update_priorities(agentID=m,inds = inds[offset*batch_size:(offset+1)*batch_size], prio=p,k = ensemble) for p in priorities]
                             priorities = [] 
@@ -1283,10 +1288,17 @@ if __name__ == "__main__":
                         opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
                         maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, agentID, 'team')
                     else:
-                        team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
-                                                    to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
-                        opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
-                                                    to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
+                        if PT:
+                            
+                            team_sample = team_PT_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
+                                                        to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
+                            opp_sample = opp_PT_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
+                                                        to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
+                        else:
+                            team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
+                                                        to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
+                            opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
+                                                        to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                         if not load_same_agent:
                             priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
                             team_replay_buffer.update_priorities(agentID=agentID,inds = data_parallelinds, prio=priorities,k = ensemble)
@@ -1304,7 +1316,10 @@ if __name__ == "__main__":
                                                     to_gpu=to_gpu,norm_rews=False)
                             priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
                             team_replay_buffer.update_SIL_priorities(agentID=m,inds = inds, prio=priorities)
-                [team_replay_buffer.update_priorities(agentID=m,inds = inds[-batch_size:], prio=p,k = ensemble) for p in priorities] # dump priorities for last iteration
+                if PT:
+                    [team_PT_replay_buffer.update_priorities(agentID=m,inds = inds[-batch_size:], prio=p,k = ensemble) for p in priorities] # dump priorities for last iteration
+                else:
+                    [team_replay_buffer.update_priorities(agentID=m,inds = inds[-batch_size:], prio=p,k = ensemble) for p in priorities] # dump priorities for last iteration
 
                 
                 #print(time.time()-start)

@@ -530,7 +530,7 @@ class HFO_env():
 
         reward=0.0
         team_reward = 0.0
-        goal_points = 40
+        goal_points = 40.0
         #---------------------------
         global possession_side
         if d:
