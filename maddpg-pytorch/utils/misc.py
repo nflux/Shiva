@@ -109,14 +109,14 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_obs_list]
 
     # Temporary fix for messed up goalie actions
-    df_goalie_action_patch = pd.DataFrame()
-    df_goalie_action_patch['cycle'] = np.arange(len(df_left_status_list[0].index)+1)
+    # df_goalie_action_patch = pd.DataFrame()
+    # df_goalie_action_patch['cycle'] = np.arange(len(df_left_status_list[0].index)+1)
 
-    df_left_action_list = [pd.merge(df_goalie_action_patch, df_left_action_list[i], on='cycle', how='outer') for i in range(len(df_left_action_list))]
-    df_right_action_list = [pd.merge(df_goalie_action_patch, df_right_action_list[i], on='cycle', how='outer') for i in range(len(df_right_action_list))]
+    # df_left_action_list = [pd.merge(df_goalie_action_patch, df_left_action_list[i], on='cycle', how='outer') for i in range(len(df_left_action_list))]
+    # df_right_action_list = [pd.merge(df_goalie_action_patch, df_right_action_list[i], on='cycle', how='outer') for i in range(len(df_right_action_list))]
 
-    [df.interpolate() for df in df_left_action_list]
-    [df.interpolate() for df in df_right_action_list]
+    # [df.interpolate() for df in df_left_action_list]
+    # [df.interpolate() for df in df_right_action_list]
     
     # df_left_action_list[0].to_csv('./temp_path_robocup0.csv', sep=',', index=False)
     # df_left_action_list[1].to_csv('./temp_path_robocup1.csv', sep=',', index=False)
