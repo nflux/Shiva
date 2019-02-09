@@ -602,17 +602,17 @@ class HFO_env():
 
         # set global possessor flag     
         # If anyone kicked the ball, on left get which one
-        # kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
-        # if kicked.any():
-        #     self.team_obs[:,-3] = (kicked.argmax() + 1)/100.0
-        # else:
-        #     self.team_obs[:,-3] = 0
-        # # If anyone kicked the ball on right
-        # kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
-        # if kicked.any():
-        #     self.opp_team_obs[:,-2] = (kicked.argmax() + 1)/100.0
-        # else:
-        #     self.opp_team_obs[:,-2] = 0
+        kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
+        if kicked.any():
+            self.team_obs[:,-3] = (kicked.argmax() + 1)/100.0
+        else:
+            self.team_obs[:,-3] = 0
+        # If anyone kicked the ball on right
+        kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
+        if kicked.any():
+            self.opp_team_obs[:,-2] = (kicked.argmax() + 1)/100.0
+        else:
+            self.opp_team_obs[:,-2] = 0
 
         
         if self.team_base == base:
