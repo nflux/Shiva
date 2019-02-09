@@ -30,7 +30,8 @@ class Trainer(object):
     self._numTrials = 0 # Total number of HFO trials
     self._numGoalsByLeft = 0 # Trials in which the left scored a goal
     self._numGoalsByRight = 0 # Trials in which the right scored a goal
-    self._numBallsCaptured = 0 # Trials in which defense captured the ball
+    self._numBallsCapturedByLG = 0 # Trials in which left goalie captured the ball
+    self._numBallsCapturedByRG = 0 # Trials in which right goalie captured the ball
     self._numBallsOOB = 0 # Trials in which ball went out of bounds
     self._numOutOfTime = 0 # Trials that ran out of time
     # =============== AGENT =============== #
@@ -274,8 +275,11 @@ class Trainer(object):
       self._numGoalsByRight += 1
       self._numGoalFrames += self._frame - self._lastTrialStart
       endOfTrial = True
-    elif 'CAPTURED_BY_GOALIE' in event:
-      self._numBallsCaptured += 1
+    elif 'CAPTURED_BY_LEFT_GOALIE' in event:
+      self._numBallsCapturedByLG += 1
+      endOfTrial = True
+    elif 'CAPTURED_BY_RIGHT_GOALIE' in event:
+      self._numBallsCapturedByRG
       endOfTrial = True
     elif event == 'OUT_OF_BOUNDS':
       self._numBallsOOB += 1
@@ -287,8 +291,8 @@ class Trainer(object):
       self._done = True
     if endOfTrial:
       self._numTrials += 1
-      print('EndOfTrial: %d %d / %d %d %d %s'%\
-        (self._numGoalsByLeft, self._numGoalsByRight, self._numBallsCaptured, self._numTrials, self._frame, event))
+      print('EndOfTrial: LG:%d RG:%d / BCLG:%d BCRG:%d Trials:%d Frame:%d Event:%s'%\
+        (self._numGoalsByLeft, self._numGoalsByRight, self._numBallsCapturedByLG, self._numBallsCapturedByRG, self._numTrials, self._frame, event))
       self._numFrames += self._frame - self._lastTrialStart
       self._lastTrialStart = self._frame
       self.getConnectedPlayers()
@@ -469,12 +473,13 @@ class Trainer(object):
       %(self._numFrames,
         self._numFrames / float(self._numTrials) if self._numTrials > 0 else float('nan'),
         self._numGoalFrames / float(self._numGoalsByLeft + self._numGoalsByRight) if (self._numGoalsByLeft + self._numGoalsByRight) > 0 else float('nan')))
-    print('Trials             : %i' % self._numTrials)
-    print('Goals by Left      : %i' % self._numGoalsByLeft)
-    print('Goals by Right     : %i' % self._numGoalsByRight)
-    print('Balls Out of Bounds: %i' % self._numBallsOOB)
-    print('Out of Time        : %i' % self._numOutOfTime)
-    print('Captured by Goalie : %i' % self._numBallsCaptured)
+    print('Trials                  : %i' % self._numTrials)
+    print('Goals by Left           : %i' % self._numGoalsByLeft)
+    print('Goals by Right          : %i' % self._numGoalsByRight)
+    print('Balls Out of Bounds     : %i' % self._numBallsOOB)
+    print('Out of Time             : %i' % self._numOutOfTime)
+    print('Captured by Left Goalie : %i' % self._numBallsCapturedByLG)
+    print('Captured by Right Goalie: %i' % self._numBallsCapturedByRG)
 
   def checkLive(self, necProcesses):
     """Returns true if each of the necessary processes is still alive and

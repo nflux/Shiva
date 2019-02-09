@@ -60,15 +60,16 @@ Possible game statuses:
   [OUT_OF_TIME] Trial has ended due to time limit
   [SERVER_DOWN] Server is not alive
 """
-NUM_GAME_STATUS_STATES = 7
-IN_GAME, GOAL_BY_LEFT, GOAL_BY_RIGHT, OUT_OF_BOUNDS, OUT_OF_TIME, SERVER_DOWN, CAPTURED_BY_GOALIE = list(range(NUM_GAME_STATUS_STATES))
+NUM_GAME_STATUS_STATES = 8
+IN_GAME, GOAL_BY_LEFT, GOAL_BY_RIGHT, OUT_OF_BOUNDS, OUT_OF_TIME, SERVER_DOWN, CAPTURED_BY_LEFT_GOALIE, CAPTURED_BY_RIGHT_GOALIE = list(range(NUM_GAME_STATUS_STATES))
 STATUS_STRINGS = {IN_GAME: "InGame",
                   GOAL_BY_LEFT: "Goal_By_Left",
                   GOAL_BY_RIGHT: "Goal_By_Right",
                   OUT_OF_BOUNDS: "OutOfBounds",
                   OUT_OF_TIME: "OutOfTime",
                   SERVER_DOWN: "ServerDown",
-                  CAPTURED_BY_GOALIE: "CapturedByGoalie"}
+                  CAPTURED_BY_LEFT_GOALIE: "CapturedByLeftGoalie",
+                  CAPTURED_BY_RIGHT_GOALIE: "CapturedByRightGoalie"}
 
 """Possible sides."""
 RIGHT, NEUTRAL, LEFT = list(range(-1,2))
