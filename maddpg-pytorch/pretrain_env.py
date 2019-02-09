@@ -156,6 +156,7 @@ class pretrain_env():
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
             time.sleep(3) # Wait for server to startup before connecting a player
+            print("HERE")
 
     def _start_viewer(self):
         """

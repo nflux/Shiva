@@ -3,10 +3,10 @@ import os
 # from run_pt import pretrain
 
 port = 6000
-left_side = 3
-right_side = 3
+left_side = 2
+right_side = 2
 fpt = 500
-untouched_time = 200
+untouched_time = 500
 sync_mode = True
 fullstate = True
 deterministic = True
@@ -18,10 +18,10 @@ ball_x_min = -0.1
 ball_x_max = 0.1
 ball_y_min = -0.1
 ball_y_max = 0.1
-agents_x_min = -0.2
-agents_x_max = 0.2
-agents_y_min = -0.2
-agents_y_max = 0.2
+agents_x_min = -0.4
+agents_x_max = 0.4
+agents_y_min = -0.4
+agents_y_max = 0.4
 change_every_x = 1000000000
 change_agents_x = 0.01
 change_agents_y = 0.01
@@ -39,7 +39,7 @@ else:
 
 pe = pretrain_env(num_TNPC=left_side, num_ONPC=right_side, fpt=fpt, untouched_time=untouched_time, port=port,
                     sync_mode=sync_mode, fullstate=fullstate, seed=seed, verbose = False,
-                    hfo_log_game=False, rcss_log_game=False, log_dir='rcg_log', agents_x_min=agents_x_min, agents_x_max=agents_x_max,
+                    hfo_log_game=False, rcss_log_game=False, log_dir='log', agents_x_min=agents_x_min, agents_x_max=agents_x_max,
                     agents_y_min=agents_y_min, agents_y_max=agents_y_max, change_every_x=change_every_x,
                     change_agents_x=change_agents_x, change_agents_y=change_agents_y, change_balls_x=change_balls_x,
                     change_balls_y=change_balls_y, control_rand_init=control_rand_init, record=True,

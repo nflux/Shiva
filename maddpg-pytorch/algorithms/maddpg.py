@@ -2369,7 +2369,7 @@ class MADDPG(object):
 
 
                              
-    def load_agent2d_policy(self, side='team',models_path='agent2d',load_same-agent=False,agentID=0,role=''):
+    def load_agent2d_policy(self, side='team',models_path='agent2d',load_same_agent=False,agentID=0,role=''):
         # load agent2d role
         dict = torch.load("agent2d/" + "agent2d_%s/agent2d.pth" % (role))
 
@@ -2414,7 +2414,7 @@ class MADDPG(object):
 
         self.prep_training(device=self.device,torch_device=torch_device)
         
-    def save_agent2d(self, filename,ep_i,agentID,load_same_agent,torch_device=torch.device('cuda:0')):
+    def save_agent2d(self, filename,agentID,load_same_agent,torch_device=torch.device('cuda:0'),role=''):
         """
         Save trained parameters of all agents into one file
         """
