@@ -545,10 +545,14 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     #num_updates[env_num] += float(np.floor(exp_i/steps_per_update))
                     #exps.cpu()
                     ready[env_num] = 1
-                    if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
-                        maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
+                    if play_agent2d:
+                        maddpg.load_agent2d_policy(side='opp',load_same_agent=load_same_agent,agentID=0,role='')
                     else:
-                        maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
+                            
+                        if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
+                            maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
+                        else:
+                            maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
                     current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path,load_same_agent=load_same_agent) # use for per ensemble update counter
                     while halt.all():
                         time.sleep(0.1)
@@ -730,6 +734,7 @@ if __name__ == "__main__":
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.5
         load_same_agent = True # load same policy for all agents
+        play_agent2d = True
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -877,8 +882,7 @@ if __name__ == "__main__":
     for i in range(num_envs):
         processes.append(mp.Process(target=run_envs, args=(seed + (i * 100), port + (i * 1000), shared_exps[i],exp_indices[i],HP,i,ready,halt,update_counter,(history+str(i)),ep_num)))
     
-    for p in processes: # Starts environments
-        p.start()
+
 
     
     if pretrain:
@@ -997,6 +1001,11 @@ if __name__ == "__main__":
         maddpg.update_hard_critic()
         maddpg.scale_beta(initial_beta) 
     # -------------Done pretraining actor/critic ---------------------------------------------
+    [maddpg.save_agent2d(load_path,update_session,i,load_same_agent,maddpg.torch_device) for i in range(num_TA)]
+        # Save AGENT2d
+    for p in processes: # Starts environments
+        p.start()
+
     iterations_per_push = 1
     update_session = 0
 

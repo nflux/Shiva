@@ -2366,7 +2366,19 @@ class MADDPG(object):
         dict = torch.load(ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
         self.team_agents[agentID].load_policy_params(dict['agent_params'])
 
-    
+
+
+                             
+    def load_agent2d_policy(self, side='team',models_path='agent2d',load_same-agent=False,agentID=0,role=''):
+        # load agent2d role
+        dict = torch.load("agent2d/" + "agent2d_%s/agent2d.pth" % (role))
+
+        if side =='team':
+            self.team_agents[agentID].load_policy_params(dict['agent_params'])
+        else:
+            self.opp_agents[agentID].load_policy_params(dict['agent_params'])
+
+
 
                                           
     def first_save(self, file_path,num_copies=1):
@@ -2399,6 +2411,20 @@ class MADDPG(object):
             torch.save(save_dicts[agentID], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
         else:
             torch.save(save_dicts[0], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
+
+        self.prep_training(device=self.device,torch_device=torch_device)
+        
+    def save_agent2d(self, filename,ep_i,agentID,load_same_agent,torch_device=torch.device('cuda:0')):
+        """
+        Save trained parameters of all agents into one file
+        """
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
+        save_dicts = np.asarray([{'init_dict': self.init_dict,
+                     'agent_params': a.get_params() } for a in (self.team_agents)])
+        if load_same_agent:
+            torch.save(save_dicts[agentID], filename +("agent2d_%s/agent2D.pth" % (role)))
+        else:
+            torch.save(save_dicts[agentID], filename +("agent2d_%s/agent2D.pth" % (role)))
 
         self.prep_training(device=self.device,torch_device=torch_device)
         
