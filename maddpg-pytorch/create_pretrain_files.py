@@ -39,7 +39,7 @@ else:
 
 pe = pretrain_env(num_TNPC=left_side, num_ONPC=right_side, fpt=fpt, untouched_time=untouched_time, port=port,
                     sync_mode=sync_mode, fullstate=fullstate, seed=seed, verbose = False,
-                    hfo_log_game=True, rcss_log_game=False, log_dir='dummy_log', agents_x_min=agents_x_min, agents_x_max=agents_x_max,
+                    hfo_log_game=False, rcss_log_game=False, log_dir='rcg_log', agents_x_min=agents_x_min, agents_x_max=agents_x_max,
                     agents_y_min=agents_y_min, agents_y_max=agents_y_max, change_every_x=change_every_x,
                     change_agents_x=change_agents_x, change_agents_y=change_agents_y, change_balls_x=change_balls_x,
                     change_balls_y=change_balls_y, control_rand_init=control_rand_init, record=True,

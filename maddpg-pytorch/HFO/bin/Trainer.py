@@ -214,11 +214,11 @@ class Trainer(object):
     # Set up offense team
     offenseTeam = self.createTeam(offense_team_name, play_offense=True)
     self._offenseTeamName = offenseTeam._name
-    self._offenseOrder = [1] + offenseTeam._offense_order # 1 for goalie
+    self._offenseOrder = offenseTeam._offense_order # 1 for goalie
     # Set up defense team
     defenseTeam = self.createTeam(defense_team_name, play_offense=False)
     self._defenseTeamName = defenseTeam._name
-    self._defenseOrder = [1] + defenseTeam._defense_order # 1 for goalie
+    self._defenseOrder = defenseTeam._defense_order # 1 for goalie
     return (offenseTeam, defenseTeam)
 
   def parseMsg(self, msg):
@@ -274,6 +274,9 @@ class Trainer(object):
       self._numGoalsByRight += 1
       self._numGoalFrames += self._frame - self._lastTrialStart
       endOfTrial = True
+    elif 'CAPTURED_BY_GOALIE' in event:
+      self._numBallsCaptured += 1
+      endOfTrial = True
     elif event == 'OUT_OF_BOUNDS':
       self._numBallsOOB += 1
       endOfTrial = True
@@ -284,8 +287,8 @@ class Trainer(object):
       self._done = True
     if endOfTrial:
       self._numTrials += 1
-      print('EndOfTrial: %d %d / %d %d %s'%\
-        (self._numGoalsByLeft, self._numGoalsByRight, self._numTrials, self._frame, event))
+      print('EndOfTrial: %d %d / %d %d %d %s'%\
+        (self._numGoalsByLeft, self._numGoalsByRight, self._numBallsCaptured, self._numTrials, self._frame, event))
       self._numFrames += self._frame - self._lastTrialStart
       self._lastTrialStart = self._frame
       self.getConnectedPlayers()
@@ -471,6 +474,7 @@ class Trainer(object):
     print('Goals by Right     : %i' % self._numGoalsByRight)
     print('Balls Out of Bounds: %i' % self._numBallsOOB)
     print('Out of Time        : %i' % self._numOutOfTime)
+    print('Captured by Goalie : %i' % self._numBallsCaptured)
 
   def checkLive(self, necProcesses):
     """Returns true if each of the necessary processes is still alive and

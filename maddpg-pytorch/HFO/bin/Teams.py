@@ -62,14 +62,14 @@ class Agent2d(Team):
               % (name, port, baseDir, logDir, baseDir)
     if record:
       options += ' --record'
-    offenseOrder =  [2,3,4,5,6,7,8,9,10,11]
-    defenseOrder =  [2,3,4,5,6,7,8,9,10,11]
+    offenseOrder =  [1,2,3,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,2,3,4,5,6,7,8,9,10,11]
     super(Agent2d, self).__init__(name, binaryPath, libDir, options,
                                   offenseOrder, defenseOrder)
 
   def launch_npc(self, player_num):
     launchOpts = None
-    if player_num == 0:
+    if player_num == 1:
       launchOpts = '-g'
     print('Launch npc %s-%d' % (self._name, player_num))
     return self.start_npc_proc(launchOpts)
