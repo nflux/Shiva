@@ -527,56 +527,37 @@ class HFO_env():
     
     def getPretrainRew(self,s,d,base):
         
+
         reward=0.0
         team_reward = 0.0
+        goal_points = 40
         #---------------------------
-
+        global possession_side
         if d:
             if self.team_base == base:
             # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
-                if s==1: # Goal left
-                    reward+=10
-                elif s==2: # Goal right
-                    reward+=-10
-                elif s==3: # OOB
-                    reward+=-0.2
-                #---------------------------
-                #elif s=='OutOfTime':
-                #    reward+=-100
-                #---------------------------
-                #elif s=='InGame':
-                #    reward+=0
-                #---------------------------
-                #elif s=='SERVER_DOWN':
-                #    reward+=0
-                #---------------------------
-                #else:
-                #    print("Error: Unknown GameState", s)
-                #    reward = -1
+                if s==1:
+                    reward+= goal_points
+                elif s==2:
+                    reward+=-goal_points
+                elif s==3:
+                    reward+=-5.0
+                elif s==6:
+                    reward+= -goal_points
+
                 return reward
             else:
-                if s==1: # Goal left
-                    reward+=-10
-                elif s==2: # Goal right
-                    reward+=+10
-                elif s==3: # OOB
-                    reward+=-0.2
-                #---------------------------
-                #Cause Unknown Do Nothing
-                #elif s=='OutOfTime':
-                #    reward+=-100
-                #---------------------------
-                #elif s=='InGame':
-                #    reward+=0
-                #---------------------------
-                #elif s=='SERVER_DOWN':
-                #    reward+=0
-                #---------------------------
-                #else:
-                #    print("Error: Unknown GameState", s)
-                #    reward = -1
-                return reward
+                if s==1:
+                    reward+=-goal_points
+                elif s==2:
+                    reward+=goal_points
+                elif s==3:
+                    reward+=-5.0
+                elif s==6:
+                    reward+= goal_points
+
         return reward
+       
 
     def unnormalize(self,val):
         return (val +1.0)/2.0
