@@ -1624,8 +1624,8 @@ class MADDPG(object):
                     prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
                     vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
         else: # single critic value
-            target_value = (1-self.beta)*(n_step_rews[agent_i].view(-1, 1) + (self.gamma**self.n_steps) *
-                        trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(MC_rews[agent_i].view(-1,1))
+            target_value = (1-self.beta)*(torch.cat([n.view(-1,1) for n in n_step_rews],dim=1).float().mean(dim=1).view(-1, 1) + (self.gamma**self.n_steps) *
+                        trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(torch.cat([mc.view(-1,1) for mc in MC_rews],dim=1).float().mean(dim=1)).view(-1,1)
             target_value.detach()
             if self.TD3: # handle double critic
                 with torch.no_grad():
@@ -1745,7 +1745,7 @@ class MADDPG(object):
                     prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
                     vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
         else: # single critic value
-            target_value = self.beta*(torch.cat([mc.view(-1,1) for mc in MC_rews],dim=1).float().mean(dim=1))
+            target_value = self.beta*(torch.cat([mc.view(-1,1) for mc in MC_rews],dim=1).float().mean(dim=1)).view(-1,1)
             target_value.detach()
             if self.TD3: # handle double critic
                 with torch.no_grad():

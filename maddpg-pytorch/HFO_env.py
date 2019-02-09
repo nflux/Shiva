@@ -595,10 +595,10 @@ class HFO_env():
                 if s=='Goal_By_Left' and self.agent_possession_team[agentID] == 'L':
                     reward+= goal_points
                 elif s=='Goal_By_Left':
-                    reward+= goal_points/10.0 # teammates get 10% of points
+                    reward+= goal_points/5.0 # teammates get 10% of points
                 elif s=='Goal_By_Right':
                     reward+=-goal_points
-                elif s=='OutOfBounds':
+                elif s=='OutOfBounds' and self.agent_possession_team[agentID] == 'L':
                     reward+=-5.0
 
                 possession_side = 'N' # at the end of each episode we set this to none
@@ -608,10 +608,10 @@ class HFO_env():
                 if s=='Goal_By_Right' and self.agent_possession_opp[agentID] == 'R':
                     reward+=goal_points
                 elif s=='Goal_By_Right':
-                    reward+=goal_points/10.0
+                    reward+=goal_points/5.0
                 elif s=='Goal_By_Left':
                     reward+=-goal_points
-                elif s=='OutOfBounds':
+                elif s=='OutOfBounds' and self.agent_possession_opp[agentID] == 'R':
                     reward+=-5.0
 
                 possession_side = 'N'
@@ -785,24 +785,25 @@ class HFO_env():
 
 
         # [Offense behavior]  agents will be rewarded based on maximizing their open angle to the ball (to receive pass)
-        if ((self.team_base == base) and possession_side =='L') or ((self.team_base != base) and possession_side == 'R'): # someone on team has ball
-            if (self.team_base != base):
-                
-                team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-                #print("possessor is base right agent",team_possessor)
+        if self.num_TA > 1:
+            if ((self.team_base == base) and possession_side =='L') or ((self.team_base != base) and possession_side == 'R'): # someone on team has ball
+                if (self.team_base != base):
+                    
+                    team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
+                    #print("possessor is base right agent",team_possessor)
 
-            else:
-                team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-                #print("possessor is base left agent",team_possessor)
+                else:
+                    team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
+                    #print("possessor is base left agent",team_possessor)
 
-            unif_nums = np.array([self.unnormalize_unif(val) for val in team_obs[team_possessor][self.team_unif_beg:self.team_unif_end]])
-            unif_nums_prev = np.array([self.unnormalize_unif(val) for val in team_obs_previous[team_possessor][self.team_unif_beg:self.team_unif_end]])
-            if agentID != team_possessor:
-                if not (-100 in unif_nums) and not (-100 in unif_nums_prev):
-                    angle_delta = self.unnormalize(team_obs[team_possessor][self.team_pass_angle_beg + np.argwhere(unif_nums == (agentID+1))[0][0]]) - self.unnormalize(team_obs_previous[team_possessor][self.team_pass_angle_beg+np.argwhere(unif_nums_prev == (agentID+1))[0][0]])
-                    reward += angle_delta*3.0
-                    team_reward += angle_delta*3.0
-                    #print("offense behavior: pass angle open ",angle_delta*3.0)
+                unif_nums = np.array([self.unnormalize_unif(val) for val in team_obs[team_possessor][self.team_unif_beg:self.team_unif_end]])
+                unif_nums_prev = np.array([self.unnormalize_unif(val) for val in team_obs_previous[team_possessor][self.team_unif_beg:self.team_unif_end]])
+                if agentID != team_possessor:
+                    if not (-100 in unif_nums) and not (-100 in unif_nums_prev):
+                        angle_delta = self.unnormalize(team_obs[team_possessor][self.team_pass_angle_beg + np.argwhere(unif_nums == (agentID+1))[0][0]]) - self.unnormalize(team_obs_previous[team_possessor][self.team_pass_angle_beg+np.argwhere(unif_nums_prev == (agentID+1))[0][0]])
+                        reward += angle_delta*3.0
+                        team_reward += angle_delta*3.0
+                        #print("offense behavior: pass angle open ",angle_delta*3.0)
 
                     
 
@@ -848,23 +849,23 @@ class HFO_env():
 
 
         # [Defensive behavior]  agents will be rewarded based on minimizing the ball open angle to other opponents (to block passes )
-        if ((self.team_base != base) and possession_side == 'L'): # someone on team has ball
-            enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-            sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[enemy_possessor][self.team_pass_angle_beg+i]) - self.unnormalize(opp_obs[enemy_possessor][self.team_pass_angle_beg+i])) for i in range(self.num_TA-1)]) # penalize based on the open angles of the people in range
-            reward += sum_angle_delta*6.0/float(self.num_TA)
-            team_reward += sum_angle_delta*6.0/float(self.num_TA)
-            #print("defensive behavior: block open passes",enemy_possessor,"has ball")
-            #print("reward for blocking",sum_angle_delta*3.0/self.num_TA)
+        if self.num_TA > 1:
+                
+            if ((self.team_base != base) and possession_side == 'L'): # someone on team has ball
+                enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
+                sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[enemy_possessor][self.team_pass_angle_beg+i]) - self.unnormalize(opp_obs[enemy_possessor][self.team_pass_angle_beg+i])) for i in range(self.num_TA-1)]) # penalize based on the open angles of the people in range
+                reward += sum_angle_delta*6.0/float(self.num_TA)
+                team_reward += sum_angle_delta*6.0/float(self.num_TA)
+                #print("defensive behavior: block open passes",enemy_possessor,"has ball")
+                #print("reward for blocking",sum_angle_delta*3.0/self.num_TA)
 
-        elif ((self.team_base == base) and possession_side =='R'):
-            enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-            sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[enemy_possessor][self.team_pass_angle_beg+i]) - self.unnormalize(opp_obs[enemy_possessor][self.team_pass_angle_beg+i])) for i in range(self.num_TA-1)]) # penalize based on the open angles of the people in range
-            reward += sum_angle_delta*6.0/float(self.num_TA)
-            team_reward += sum_angle_delta*6.0/float(self.num_TA)
-            #print("defensive behavior: block open passes",enemy_possessor,"has ball")
-            #print("reward for blocking",sum_angle_delta*6.0/float(self.num_TA))
-
-
+            elif ((self.team_base == base) and possession_side =='R'):
+                enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
+                sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[enemy_possessor][self.team_pass_angle_beg+i]) - self.unnormalize(opp_obs[enemy_possessor][self.team_pass_angle_beg+i])) for i in range(self.num_TA-1)]) # penalize based on the open angles of the people in range
+                reward += sum_angle_delta*6.0/float(self.num_TA)
+                team_reward += sum_angle_delta*6.0/float(self.num_TA)
+                #print("defensive behavior: block open passes",enemy_possessor,"has ball")
+                #print("reward for blocking",sum_angle_delta*6.0/float(self.num_TA))
 
         ##################################################################################
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
