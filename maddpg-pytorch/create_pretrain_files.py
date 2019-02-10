@@ -11,6 +11,7 @@ sync_mode = True
 fullstate = True
 deterministic = True
 seed = 123
+start_viewer = False
 
 # Control Random Initilization of Agents and Ball
 control_rand_init = True
@@ -43,7 +44,7 @@ pe = pretrain_env(num_TNPC=left_side, num_ONPC=right_side, fpt=fpt, untouched_ti
                     agents_y_min=agents_y_min, agents_y_max=agents_y_max, change_every_x=change_every_x,
                     change_agents_x=change_agents_x, change_agents_y=change_agents_y, change_balls_x=change_balls_x,
                     change_balls_y=change_balls_y, control_rand_init=control_rand_init, record=True,
-                    offense_team_bin=offense_team_bin, defense_team_bin=defense_team_bin, deterministic=deterministic)
+                    offense_team_bin=offense_team_bin, defense_team_bin=defense_team_bin, deterministic=deterministic, start_viewer=start_viewer)
 
 while(True):
     pass # Pretraining
