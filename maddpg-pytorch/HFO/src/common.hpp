@@ -50,7 +50,8 @@ enum status_t
   OUT_OF_BOUNDS,       // Ball has gone out of bounds
   OUT_OF_TIME,         // Trial has ended due to time limit
   SERVER_DOWN,          // Server is not alive
-  CAPTURED_BY_GOALIE
+  CAPTURED_BY_LEFT_GOALIE,
+  CAPTURED_BY_RIGHT_GOALIE
 };
 
 // Configuration of the HFO domain including the team names and player
@@ -193,8 +194,10 @@ inline std::string StatusToString(status_t status) {
       return "OutOfTime";
     case SERVER_DOWN:
       return "ServerDown";
-    case CAPTURED_BY_GOALIE:
-      return "CapturedByGoalie";
+    case CAPTURED_BY_LEFT_GOALIE:
+      return "CapturedByLeftGoalie";
+    case CAPTURED_BY_RIGHT_GOALIE:
+      return "CapturedByRightGoalie";
     default:
       return "Unknown";
   }
@@ -293,8 +296,10 @@ inline bool ParseGameStatus(const std::string& message, status_t& status) {
     status = IN_GAME;
   } else if (message.find("HFO_FINISHED") != std::string::npos){
     status = SERVER_DOWN;
-  } else if (message.find("CAPTURED_BY_GOALIE") != std::string::npos) {
-    status = CAPTURED_BY_GOALIE;
+  } else if (message.find("CAPTURED_BY_LEFT_GOALIE") != std::string::npos) {
+    status = CAPTURED_BY_LEFT_GOALIE;  
+  } else if (message.find("CAPTURED_BY_RIGHT_GOALIE") != std::string::npos) {
+    status = CAPTURED_BY_RIGHT_GOALIE;
   } else {
     return false;
   }
