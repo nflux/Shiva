@@ -543,7 +543,9 @@ class HFO_env():
                 elif s==3:
                     reward+=-5.0
                 elif s==6:
-                    reward+= -goal_points
+                    reward+= +goal_points
+                #elif s==7:
+                #    reward+= -goal_points
 
                 return reward
             else:
@@ -554,7 +556,9 @@ class HFO_env():
                 elif s==3:
                     reward+=-5.0
                 elif s==6:
-                    reward+= goal_points
+                    reward+= -goal_points
+                #elif s==7:
+                #    reward+= goal_points
 
         return reward
        
@@ -567,7 +571,7 @@ class HFO_env():
     def getReward(self,s,agentID,base,ep_num):
         reward=0.0
         team_reward = 0.0
-        goal_points = 25
+        goal_points = 40.0
         #---------------------------
         global possession_side
         if self.d:
@@ -581,6 +585,10 @@ class HFO_env():
                     reward+=-goal_points
                 elif s=='OutOfBounds' and self.agent_possession_team[agentID] == 'L':
                     reward+=-5.0
+                #elif s=='CapturedByLeftGoalie':
+                    #reward+=goal_points
+                elif s=='CapturedByRightGoalie':
+                    reward+=-goal_points
 
                 possession_side = 'N' # at the end of each episode we set this to none
                 self.agent_possession_team = ['N'] * self.num_TA
@@ -594,6 +602,10 @@ class HFO_env():
                     reward+=-goal_points
                 elif s=='OutOfBounds' and self.agent_possession_opp[agentID] == 'R':
                     reward+=-5.0
+                #elif s=='CapturedByRightGoalie':
+                    #reward+=goal_points
+                elif s=='CapturedByLeftGoalie':
+                    reward+=-goal_points
 
                 possession_side = 'N'
                 self.agent_possession_opp = ['N'] * self.num_OA

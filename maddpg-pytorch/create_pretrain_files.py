@@ -14,10 +14,10 @@ seed = 123
 
 # Control Random Initilization of Agents and Ball
 control_rand_init = True
-ball_x_min = -0.1
-ball_x_max = 0.1
-ball_y_min = -0.1
-ball_y_max = 0.1
+ball_x_min = -0.01
+ball_x_max = 0.01
+ball_y_min = -0.01
+ball_y_max = 0.01
 agents_x_min = -0.4
 agents_x_max = 0.4
 agents_y_min = -0.4
