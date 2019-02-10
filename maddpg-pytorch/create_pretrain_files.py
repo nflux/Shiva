@@ -14,10 +14,10 @@ seed = 123
 
 # Control Random Initilization of Agents and Ball
 control_rand_init = True
-ball_x_min = -0.01
-ball_x_max = 0.01
-ball_y_min = -0.01
-ball_y_max = 0.01
+ball_x_min = -0.3
+ball_x_max = 0.3
+ball_y_min = -0.3
+ball_y_max = 0.3
 agents_x_min = -0.4
 agents_x_max = 0.4
 agents_y_min = -0.4
@@ -38,7 +38,7 @@ else:
     os.mkdir(os.getcwd() + '/pt_logs')
 
 pe = pretrain_env(num_TNPC=left_side, num_ONPC=right_side, fpt=fpt, untouched_time=untouched_time, port=port,
-                    sync_mode=sync_mode, fullstate=fullstate, seed=seed, verbose = False,
+                    sync_mode=sync_mode, fullstate=fullstate, seed=seed, ball_x_min=ball_x_min,ball_x_max=ball_x_max,ball_y_min=ball_y_min,ball_y_max=ball_y_max,verbose = False,
                     hfo_log_game=False, rcss_log_game=False, log_dir='log', agents_x_min=agents_x_min, agents_x_max=agents_x_max,
                     agents_y_min=agents_y_min, agents_y_max=agents_y_max, change_every_x=change_every_x,
                     change_agents_x=change_agents_x, change_agents_y=change_agents_y, change_balls_x=change_balls_x,
