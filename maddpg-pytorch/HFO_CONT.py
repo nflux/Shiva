@@ -621,7 +621,7 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size =100000
+        replay_memory_size =1000000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -630,8 +630,8 @@ if __name__ == "__main__":
 
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 2
-        num_OA = 2
+        num_TA = 3
+        num_OA = 3
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -640,7 +640,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 128
+        batch_size = 512
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate
@@ -1037,9 +1037,8 @@ if __name__ == "__main__":
                                 exps = torch.from_numpy(exp_comb)
                             else:
                                 exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
-                        team_PT_replay_buffer.push(torch.cat((exps[:et_i, :num_TA, :], exps[:et_i,-num_TA:,:])))
-                        opp_PT_replay_buffer.push(torch.cat((exps[:et_i, -num_TA:, :], exps[:et_i,:num_TA,:])))
-                        print(len(team_PT_replay_buffer),len(opp_PT_replay_buffer))
+                        team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:et_i,-num_TA:,:])))
+                        opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:et_i,:num_TA,:])))
            
                         del exps
                         exps = None
@@ -1120,7 +1119,8 @@ if __name__ == "__main__":
                             priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
                             team_PT_replay_buffer.update_priorities(agentID=agentID,inds = data_parallelinds, prio=priorities,k = ensemble)
                         else:
-                            priorities.append(maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path))
+
+                            priorities.append(maddpg.pretrain_critic_MC(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,session_path=session_path))
                             #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
                             if up % number_of_updates/10 == 0: # update target half way through
                                 maddpg.update_agent_targets(0,number_of_updates/10)
