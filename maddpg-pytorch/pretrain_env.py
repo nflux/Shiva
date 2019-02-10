@@ -40,7 +40,7 @@ class pretrain_env():
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
                  change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
                  change_balls_y=0.1, control_rand_init=False,record=True,
-                 defense_team_bin='base', offense_team_bin='base', deterministic=True):
+                 defense_team_bin='base', offense_team_bin='base', deterministic=True, start_viewer=False):
         
 
         """ Initializes HFO_Env
@@ -82,7 +82,8 @@ class pretrain_env():
 
         self.viewer = None
 
-        self._start_viewer() 
+        if start_viewer:
+            self._start_viewer() 
             
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -156,7 +157,6 @@ class pretrain_env():
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
             time.sleep(3) # Wait for server to startup before connecting a player
-            print("HERE")
 
     def _start_viewer(self):
         """
