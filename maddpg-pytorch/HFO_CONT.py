@@ -108,7 +108,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
             maddpg.save_agent(load_path,update_session,agentID)
             maddpg.save_ensemble(ensemble_path,ensemble,agentID)
         else:
-            maddpg.update_hard_policy(0)
+            maddpg.update_agent_hard_policy(0)
             [maddpg.save_agent(load_path,update_session,i,load_same_agent) for i in range(num_TA)]
             [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent) for i in range(num_TA)]
     print(time.time()-start,"<-- Policy Update Cycle")
@@ -124,7 +124,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
     number_of_updates = 300
     for ensemble in range(k_ensembles):
         if multi_gpu:
-            maddpg.torch_device = torch.device("cuda:1")
+            maddpg.torch_device = torch.device("cuda:0")
         maddpg.device = 'cuda'
         maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
@@ -157,7 +157,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
                     priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
                     team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
                 else:
-                    _ = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)
+                    maddpg.pretrain_actor(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,session_path=session_path)
                     #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
                     if up % number_of_updates/10 == 0: # update target half way through
                         maddpg.update_agent_targets(0,number_of_updates/10)
@@ -184,7 +184,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
     LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d) = HP
+    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path ) = HP
 
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
@@ -545,8 +545,10 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     #num_updates[env_num] += float(np.floor(exp_i/steps_per_update))
                     #exps.cpu()
                     ready[env_num] = 1
-                    if play_agent2d:
-                        maddpg.load_agent2d_policies(side='opp',load_same_agent=load_same_agent,nagents=num_OA)
+                    if play_agent2d and use_preloaded_agent2d:
+                        maddpg.load_agent2d_policies(side='opp',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
+                    elif play_agent2d:
+                        maddpg.load_agent2d_policies(side='opp',load_same_agent=load_same_agent,nagents=num_OA)   
                     else:
                             
                         if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
@@ -736,6 +738,8 @@ if __name__ == "__main__":
         self_play_proba = 0.5
         load_same_agent = True # load same policy for all agents
         play_agent2d = True
+        use_preloaded_agent2d = True
+        preload_agent2d_path = ""
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -746,6 +750,8 @@ if __name__ == "__main__":
         load_nets = False # load previous sessions' networks from file for initialization
         initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
         first_save = True # build model clones for ensemble
+        preload_model = True
+        preload_path = "agent2d/model0.pth"
         # --------------------------------------
         # Evaluation ---------------------------
         evaluate = False
@@ -831,7 +837,7 @@ if __name__ == "__main__":
         ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
         LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d)
+        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path )
 
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                 adversary_alg= "MADDPG",device=device,
@@ -859,6 +865,10 @@ if __name__ == "__main__":
         file_path = ensemble_path
         maddpg.first_save(file_path,num_copies = k_ensembles)
         [maddpg.save_agent(load_path,0,i,load_same_agent = False,torch_device=maddpg.torch_device) for i in range(num_TA)] 
+        if preload_model:
+            maddpg.preload_team(side='team',models_path=preload_path,nagents=num_TA)
+            [maddpg.save_agent(load_path,0,i,load_same_agent = False,torch_device=maddpg.torch_device) for i in range(num_TA)] 
+
 
         first_save = False
 
@@ -1056,8 +1066,9 @@ if __name__ == "__main__":
         update_session = 999999
 
         for u in range(pt_update_cycles):
-            if u % 10 == 0:
-                print("PT Update Cycle: ",u)
+            print("PT Update Cycle: ",u)
+            print("PT Completion: ",u/float(pt_update_cycles),"%")
+
 
             threads = []
             for a_i in range(1):
@@ -1069,7 +1080,7 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(team_PT_replay_buffer)
 
-            number_of_updates = 300
+            number_of_updates = 600
             batches_to_sample = 50
             priorities = [] 
             start = time.time()
@@ -1159,11 +1170,12 @@ if __name__ == "__main__":
 
         maddpg.update_hard_policy()
         maddpg.update_hard_critic()
-        maddpg.scale_beta(initial_beta) 
         maddpg.save_agent2d(load_path,0,load_same_agent,maddpg.torch_device)
 
     # -------------Done pretraining actor/critic ---------------------------------------------
         # Save AGENT2d
+    maddpg.scale_beta(initial_beta) 
+
     for p in processes: # Starts environments
         p.start()
 
@@ -1251,6 +1263,8 @@ if __name__ == "__main__":
 
             for ensemble in range(k_ensembles):
                 maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
+                maddpg.update_hard_policy()
+
                 for up in range(number_of_updates):
                     offset = up % batches_to_sample
                     m = 0

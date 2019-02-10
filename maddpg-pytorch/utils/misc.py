@@ -114,10 +114,15 @@ def pretrain_process(left_fnames, right_fnames, num_features):
 
     df_left_action_list = [pd.merge(df_goalie_action_patch, df_left_action_list[i], on='cycle', how='outer') for i in range(len(df_left_action_list))]
     df_right_action_list = [pd.merge(df_goalie_action_patch, df_right_action_list[i], on='cycle', how='outer') for i in range(len(df_right_action_list))]
-
-    [df.interpolate() for df in df_left_action_list]
-    [df.interpolate() for df in df_right_action_list]
     
+    [df.interpolate(inplace=True) for df in df_left_action_list]
+    [df.interpolate(inplace=True) for df in df_right_action_list]
+    #[df.fillna(0.001) for df in df_left_action_list]
+    #[df.fillna(0.001) for df in df_right_action_list]
+    print("Checking DF's for null values")
+    print([df.isnull().values.any() for df in df_left_action_list])
+    print([df.isnull().values.any() for df in df_right_action_list])
+
     # df_left_action_list[0].to_csv('./temp_path_robocup0.csv', sep=',', index=False)
     # df_left_action_list[1].to_csv('./temp_path_robocup1.csv', sep=',', index=False)
     # df_left_action_list[2].to_csv('./temp_path_robocup2.csv', sep=',', index=False)

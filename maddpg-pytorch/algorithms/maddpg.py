@@ -1980,9 +1980,9 @@ class MADDPG(object):
         all_acs = torch.cat(acs,dim=0)
 
         pol_out_actions = torch.softmax(curr_pol_out[:,:curr_agent.action_dim],dim=1).float()
-        actual_out_actions = Variable(torch.stack(all_acs),requires_grad=True).float()[:,:curr_agent.action_dim]
+        actual_out_actions = Variable(all_acs,requires_grad=True).float()[:,:curr_agent.action_dim]
         pol_out_params = curr_pol_out[:,curr_agent.action_dim:]
-        actual_out_params = Variable(torch.stack(all_acs),requires_grad=True)[:,curr_agent.action_dim:]
+        actual_out_params = Variable(all_acs,requires_grad=True)[:,curr_agent.action_dim:]
 
 
         MSE = F.mse_loss(pol_out_params,actual_out_params)
@@ -2000,7 +2000,7 @@ class MADDPG(object):
         #print(time.time() - start,"up")
         if self.niter % 100 == 0:
             self.loss_logger = self.loss_logger.append({                'iteration':self.niter,
-                                                                        'actor': np.round(pol.item(),4)},
+                                                                        'actor': np.round(pol_loss.item(),4)},
                                                                         ignore_index=True)
             print("Team (%s) Agent(%i) Policy loss" % (side, agent_i),pol_loss)
         
@@ -2372,18 +2372,29 @@ class MADDPG(object):
 
 
                              
+    def load_team(self, side='team',models_path='',load_same_agent=False,nagents=0):
+        # load agent2d role
+        dict = torch.load(models_path)
+
+        if side =='team':
+            [self.team_agents[i].load_params(dict['agent_params']) for i in range(nagents)]
+        else:
+            [self.opp_agents[i].load_params(dict['agent_params']) for i in range(nagents)]
+
+
+                             
     def load_agent2d_policy(self, side='team',models_path='agent2d',load_same_agent=False,agentID=0):
         # load agent2d role
-        dict = torch.load("models/" + "agent2d/agent2d.pth" % (role))
+        dict = torch.load("models/" + "agent2d/agent2D.pth")
 
         if side =='team':
             self.team_agents[agentID].load_policy_params(dict['agent_params'])
         else:
             self.opp_agents[agentID].load_policy_params(dict['agent_params'])
                              
-    def load_agent2d_policies(self, side='team',models_path='agent2d',load_same_agent=False,nagents=0):
+    def load_agent2d_policies(self, side='team',models_path='models/',load_same_agent=False,nagents=0):
         # load agent2d role
-        dict = torch.load("models/" + "agent2d/agent2d.pth" % (role))
+        dict = torch.load(models_path + "agent2d/agent2D.pth")
 
         if side =='team':
             [self.team_agents[i].load_policy_params(dict['agent_params']) for i in range(nagents)]
