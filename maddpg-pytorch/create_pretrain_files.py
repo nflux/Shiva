@@ -3,8 +3,8 @@ import os
 # from run_pt import pretrain
 
 port = 6000
-left_side = 2
-right_side = 2
+left_side = 1
+right_side = 1
 fpt = 500
 untouched_time = 500
 sync_mode = True
@@ -14,10 +14,10 @@ seed = 123
 
 # Control Random Initilization of Agents and Ball
 control_rand_init = True
-ball_x_min = -0.3
-ball_x_max = 0.3
-ball_y_min = -0.3
-ball_y_max = 0.3
+ball_x_min = -0.8
+ball_x_max = 0.8
+ball_y_min = -0.8
+ball_y_max = 0.8
 agents_x_min = -0.4
 agents_x_max = 0.4
 agents_y_min = -0.4
