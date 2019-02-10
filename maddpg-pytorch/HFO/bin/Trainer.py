@@ -279,7 +279,7 @@ class Trainer(object):
       self._numBallsCapturedByLG += 1
       endOfTrial = True
     elif 'CAPTURED_BY_RIGHT_GOALIE' in event:
-      self._numBallsCapturedByRG
+      self._numBallsCapturedByRG += 1
       endOfTrial = True
     elif event == 'OUT_OF_BOUNDS':
       self._numBallsOOB += 1
