@@ -585,8 +585,8 @@ class HFO_env():
                     reward+=-goal_points
                 elif s=='OutOfBounds' and self.agent_possession_team[agentID] == 'L':
                     reward+=-5.0
-                #elif s=='CapturedByLeftGoalie':
-                    #reward+=goal_points
+                elif s=='CapturedByLeftGoalie':
+                    reward+=goal_points/5.0
                 elif s=='CapturedByRightGoalie':
                     reward+=-goal_points
 
@@ -602,8 +602,8 @@ class HFO_env():
                     reward+=-goal_points
                 elif s=='OutOfBounds' and self.agent_possession_opp[agentID] == 'R':
                     reward+=-5.0
-                #elif s=='CapturedByRightGoalie':
-                    #reward+=goal_points
+                elif s=='CapturedByRightGoalie':
+                    reward+=goal_points/5.0
                 elif s=='CapturedByLeftGoalie':
                     reward+=-goal_points
 

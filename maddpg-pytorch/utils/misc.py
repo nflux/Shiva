@@ -8,6 +8,8 @@ import numpy as np
 import shutil
 import time
 import pandas as pd
+import collections
+
 
 def prep_session(session_path="",hist_dir="history",eval_hist_dir= "eval_history",eval_log_dir = "eval_log",load_path = "models/",ensemble_path = "ensemble_models/",log_dir="log",num_TA=1):
     hist_dir = hist_dir
@@ -433,3 +435,157 @@ def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda"):
         y_hard = onehot_from_logits(y)
         y = (y_hard - y).detach() + y
     return y
+
+def load_buffer(rb,num_TA,left,right,obs_dim_TA):
+    team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, num_features = obs_dim_TA)
+
+    # Count up everything besides IN_GAME to get number of episodes
+    collect = collections.Counter(status[0])
+    pt_episodes = collect[1] + collect[2] + collect[3] + collect[4] + collect[6] + collect[7]
+    
+    pt_time_step = 0
+
+    ################## Base Left #########################
+    for ep_i in range(pt_episodes):
+        if ep_i % 100 == 0:
+            print("Pushing Pretrain Episode:",ep_i)
+        
+        team_n_step_rewards = []
+        team_n_step_obs = []
+        team_n_step_acs = []
+        team_n_step_next_obs = []
+        team_n_step_dones = []
+        team_n_step_ws = []
+
+        opp_n_step_rewards = []
+        opp_n_step_obs = []
+        opp_n_step_acs = []
+        opp_n_step_next_obs = []
+        opp_n_step_dones = []
+        opp_n_step_ws = []
+
+        #define/update the noise used for exploration
+        explr_pct_remaining = 0.0
+        beta_pct_remaining = 0.0
+        maddpg.scale_noise(0.0)
+        maddpg.reset_noise()
+        d = 0
+        
+        for et_i in range(episode_length):
+            exps = None
+            world_stat = status[0][pt_time_step]
+            d = 0
+            if world_stat != 0.0:
+                d = 1
+            # print('actions len', len(team_pt_actions))
+            # print('timestep', pt_time_step, 'actions', team_pt_actions[pt_time_step].shape)
+            team_n_step_acs.append(team_pt_actions[pt_time_step])
+            team_n_step_obs.append(team_pt_obs[pt_time_step])
+            team_n_step_ws.append(world_stat)
+            team_n_step_next_obs.append(team_pt_obs[pt_time_step+1])
+            team_n_step_rewards.append(np.hstack([env.getPretrainRew(world_stat,d,"base_left") for i in range(num_TA)]))          
+            team_n_step_dones.append(d)
+
+            opp_n_step_acs.append(opp_pt_actions[pt_time_step])
+            opp_n_step_obs.append(opp_pt_obs[pt_time_step])
+            opp_n_step_ws.append(world_stat)
+            opp_n_step_next_obs.append(opp_pt_obs[pt_time_step+1])
+            opp_n_step_rewards.append(np.hstack([env.getPretrainRew(world_stat,d,"base_right") for i in range(num_TA)]))          
+            opp_n_step_dones.append(d)
+
+            # Store variables for calculation of MC and n-step targets for team
+            pt_time_step += 1
+            if d == 1: # Episode done
+                n_step_gammas = np.array([[gamma**step for a in range(num_TA)] for step in range(n_steps)])
+                # NOTE: Assume M vs M and critic_mod_both == True
+                if critic_mod_both:
+                    team_all_MC_targets = []
+                    opp_all_MC_targets = []
+                    MC_targets_team = np.zeros(num_TA)
+                    MC_targets_opp = np.zeros(num_OA)
+                    for n in range(et_i+1):
+                        MC_targets_team = team_n_step_rewards[et_i-n] + MC_targets_team*gamma
+                        team_all_MC_targets.append(MC_targets_team)
+                        MC_targets_opp = opp_n_step_rewards[et_i-n] + MC_targets_opp*gamma
+                        opp_all_MC_targets.append(MC_targets_opp)
+                    for n in range(et_i+1):
+                        n_step_targets_team = np.zeros(num_TA)
+                        n_step_targets_opp = np.zeros(num_OA)
+                        if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
+                            n_step_targets_team = np.sum(np.multiply(np.asarray(team_n_step_rewards[n:n+n_steps]),(n_step_gammas)),axis=0)
+                            n_step_targets_opp = np.sum(np.multiply(np.asarray(opp_n_step_rewards[n:n+n_steps]),(n_step_gammas)),axis=0)
+
+                            n_step_next_ob_team = team_n_step_next_obs[n - 1 + n_steps]
+                            n_step_done_team = team_n_step_dones[n - 1 + n_steps]
+
+                            n_step_next_ob_opp = opp_n_step_next_obs[n - 1 + n_steps]
+                            n_step_done_opp = opp_n_step_dones[n - 1 + n_steps]
+                        else: # n-step = MC if less than n steps remaining
+                            n_step_targets_team = team_all_MC_targets[et_i-n]
+                            n_step_next_ob_team = team_n_step_next_obs[-1]
+                            n_step_done_team = team_n_step_dones[-1]
+
+                            n_step_targets_opp = opp_all_MC_targets[et_i-n]
+                            n_step_next_ob_opp = opp_n_step_next_obs[-1]
+                            n_step_done_opp = opp_n_step_dones[-1]
+                        if D4PG:
+                            default_prio = 5.0
+                        else:
+                            default_prio = 3.0
+                        current_ensembles = [0]*num_TA
+                        priorities = np.array([np.zeros(k_ensembles) for i in range(num_TA)])
+                        priorities[:,current_ensembles] = 5.0
+                        # print(current_ensembles)
+                        if SIL:
+                            SIL_priorities = np.ones(num_TA)*default_prio
+                        
+                        exp_team = np.column_stack((team_n_step_obs[n],
+                                            team_n_step_acs[n],
+                                            np.expand_dims(team_n_step_rewards[n], 1),
+                                            n_step_next_ob_team,
+                                            np.expand_dims([n_step_done_team for i in range(num_TA)], 1),
+                                            np.expand_dims(team_all_MC_targets[et_i-n], 1),
+                                            np.expand_dims(n_step_targets_team, 1),
+                                            np.expand_dims([team_n_step_ws[n] for i in range(num_TA)], 1),
+                                            priorities,
+                                            np.expand_dims([default_prio for i in range(num_TA)],1)))
+
+
+                        exp_opp = np.column_stack((opp_n_step_obs[n],
+                                            opp_n_step_acs[n],
+                                            np.expand_dims(opp_n_step_rewards[n], 1),
+                                            n_step_next_ob_opp,
+                                            np.expand_dims([n_step_done_opp for i in range(num_OA)], 1),
+                                            np.expand_dims(opp_all_MC_targets[et_i-n], 1),
+                                            np.expand_dims(n_step_targets_opp, 1),
+                                            np.expand_dims([opp_n_step_ws[n] for i in range(num_OA)], 1),
+                                            priorities,
+                                            np.expand_dims([default_prio for i in range(num_TA)],1)))
+                
+                        exp_comb = np.expand_dims(np.vstack((exp_team, exp_opp)), 0)
+
+                        if exps is None:
+                            exps = torch.from_numpy(exp_comb)
+                        else:
+                            exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
+                    if push_only_left:
+                        team_PT_replay_buffer.push(exps[:, :num_TA, :])
+                        opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                    else:
+                        team_PT_replay_buffer.push(exps[:, :num_TA, :])
+                        opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                        opp_PT_replay_buffer.push(exps[:, :num_TA, :])
+                        team_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                        #team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:,-num_TA:,:])))
+                        #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
+        
+                    del exps
+                    exps = None
+                break
+    del team_pt_obs
+    del team_pt_status
+    del team_pt_actions
+
+    del opp_pt_obs
+    del opp_pt_status
+    del opp_pt_actions
