@@ -290,7 +290,13 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     PlayerObject* teammate = *it;
     if (teammate->unum() > 0 &&
         detected_teammates < numTeammates) {
-      addFeature(teammate->unum()/100.0);
+      int unum = teammate->unum();
+      if(unum == 8) {
+        unum = 2;
+      } else if(unum == 11) {
+        unum = 3;
+      }
+      addFeature(unum/100.0);
       detected_teammates++;
     }
   }
@@ -305,7 +311,13 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     PlayerObject* opponent = *it;
     if (opponent->unum() > 0 &&
         detected_opponents < numOpponents) {
-      addFeature(opponent->unum()/100.0);
+      int unum = opponent->unum();
+      if(unum == 8) {
+        unum = 2;
+      } else if(unum == 11) {
+        unum = 3;
+      }
+      addFeature(unum/100.0);
       detected_opponents++;
     }
   }
@@ -376,12 +388,18 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // std::ofstream outfile;
   // outfile.open("test.txt", std::ios_base::app);
   // outfile << "This is the side " << player_on_ball.side << " This is the unum " << player_on_ball.unum << std::endl;
+  int unum = player_on_ball.unum;
+  if(unum == 8) {
+    unum = 2;
+  } else if(unum == 11) {
+    unum = 3;
+  }
   if(player_on_ball.side == hfo::LEFT) {
-    addFeature(player_on_ball.unum/100.0);
+    addFeature(unum/100.0);
     addFeature(0);
   } else if(player_on_ball.side == hfo::RIGHT) {
     addFeature(0);
-    addFeature(player_on_ball.unum/100.0);
+    addFeature(unum/100.0);
   } else {
     addFeature(0);
     addFeature(0);

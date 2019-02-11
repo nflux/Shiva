@@ -257,7 +257,7 @@ SamplePlayer::actionImpl()
         if(this->M_worldmodel.self().side() == LEFT) side_str = "left";
         else if(this->M_worldmodel.self().side() == RIGHT) side_str = "right";
 
-        std::ofstream log_file("pt_logs/log_status_" + side_str + "_" + std::to_string(this->M_worldmodel.self().unum()) + ".csv", std::ios_base::out | std::ios_base::app );
+        std::ofstream log_file("pt_logs_" + std::to_string(config().port()) + "/log_status_" + side_str + "_" + std::to_string(this->M_worldmodel.self().unum()) + ".csv", std::ios_base::out | std::ios_base::app );
         log_file << this->M_worldmodel.fullstateTime().cycle() << "," << game_status << std::endl;
       }
       // std::ofstream outfile;
@@ -274,7 +274,7 @@ SamplePlayer::actionImpl()
         ep_end_time = this->M_worldmodel.fullstateTime().cycle();
       }
       feature_extractor->ExtractFeatures(this->world(), true, player_on_ball, ep_end_time);
-      feature_extractor->LogFeatures(config().record(), this->M_worldmodel.fullstateTime().cycle(), this->M_worldmodel.self().unum(), this->M_worldmodel.self().side());
+      feature_extractor->LogFeatures(config().record(), config().port(), this->M_worldmodel.fullstateTime().cycle(), this->M_worldmodel.self().unum(), this->M_worldmodel.self().side());
     }
   }
 // #ifdef ELOG

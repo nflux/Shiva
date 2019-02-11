@@ -20,7 +20,7 @@ public:
 						    bool last_action_status, hfo::Player player_on_ball, long ep_end_time) = 0;
 
   // Record the current state
-  void LogFeatures(const bool record, const long cycle, const int unum, rcsc::SideID side);
+  void LogFeatures(const bool record, const int port, const long cycle, const int unum, rcsc::SideID side);
 
   // How many features are there?
   inline int getNumFeatures() { return numFeatures; }

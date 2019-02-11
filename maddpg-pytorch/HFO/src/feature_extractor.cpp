@@ -38,7 +38,7 @@ FeatureExtractor::FeatureExtractor(int num_teammates,
 
 FeatureExtractor::~FeatureExtractor() {}
 
-void FeatureExtractor::LogFeatures(const bool record, const long cycle, const int unum, SideID side) {
+void FeatureExtractor::LogFeatures(const bool record, const int port, const long cycle, const int unum, SideID side) {
   std::string side_str = "unknown";
   if(record) {
     assert(feature_vec.size() == numFeatures);
@@ -49,7 +49,7 @@ void FeatureExtractor::LogFeatures(const bool record, const long cycle, const in
     if(side == LEFT) side_str = "left";
     else if(side == RIGHT) side_str = "right";
 
-    std::ofstream log_file("pt_logs/log_obs_" + side_str + "_" + std::to_string(unum) + ".csv", std::ios_base::out | std::ios_base::app );
+    std::ofstream log_file("pt_logs_" + std::to_string(port) + "/log_obs_" + side_str + "_" + std::to_string(unum) + ".csv", std::ios_base::out | std::ios_base::app );
     log_file << cycle << ss.str() << std::endl;
   }
 // #ifdef ELOG
