@@ -90,7 +90,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     obs_header_names = ['cycle']
     for n in range(num_features):
         obs_header_names.append(str(n))
-
+    print("Reading CSVs")
     df_left_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if '_status_' in fn]
     df_left_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in left_fnames if '_actions_' in fn]
     df_left_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in left_fnames if '_obs_' in fn]
@@ -100,7 +100,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     df_right_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in right_fnames if '_obs_' in fn]
     
     # print(df_left_action_list)
-    
+    print("Dropping duplicates")
     # Drop repeated cycles
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_status_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_action_list]
@@ -113,7 +113,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     # Temporary fix for messed up goalie actions
     df_goalie_action_patch = pd.DataFrame()
     df_goalie_action_patch['cycle'] = np.arange(len(df_left_status_list[0].index)+1)
-
+    print("Cleaning null actions")
     df_left_action_list = [pd.merge(df_goalie_action_patch, df_left_action_list[i], on='cycle', how='outer') for i in range(len(df_left_action_list))]
     df_right_action_list = [pd.merge(df_goalie_action_patch, df_right_action_list[i], on='cycle', how='outer') for i in range(len(df_right_action_list))]
     [df.interpolate(inplace=True) for df in df_left_action_list]
@@ -124,6 +124,35 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     print([df.isnull().values.any() for df in df_left_action_list])
     print([df.isnull().values.any() for df in df_right_action_list])
 
+    
+    df_goalie_action_patch = pd.DataFrame()
+    df_goalie_action_patch['cycle'] = np.arange(len(df_left_status_list[0].index)+1)
+    print("Cleaning null obs")
+    df_left_obs_list = [pd.merge(df_goalie_action_patch, df_left_obs_list[i], on='cycle', how='outer') for i in range(len(df_left_obs_list))]
+    df_right_obs_list = [pd.merge(df_goalie_action_patch, df_right_obs_list[i], on='cycle', how='outer') for i in range(len(df_right_obs_list))]
+    #[df.interpolate(inplace=True) for df in df_left_obs_list]
+    #[df.interpolate(inplace=True) for df in df_right_obs_list]
+    [df.fillna(0.001,inplace=True) for df in df_left_obs_list]
+    [df.fillna(0.001,inplace=True) for df in df_right_obs_list]
+    print("Checking DF's for null values")
+    print([df.isnull().values.any() for df in df_left_obs_list])
+    print([df.isnull().values.any() for df in df_right_obs_list])
+
+    
+    df_goalie_action_patch = pd.DataFrame()
+    df_goalie_action_patch['cycle'] = np.arange(len(df_left_status_list[0].index))
+    print("Cleaning null status")
+    df_left_status_list = [pd.merge(df_goalie_action_patch, df_left_status_list[i], on='cycle', how='outer') for i in range(len(df_left_status_list))]
+    df_right_status_list = [pd.merge(df_goalie_action_patch, df_right_status_list[i], on='cycle', how='outer') for i in range(len(df_right_status_list))]
+    #[df.interpolate(inplace=True) for df in df_left_status_list]
+    #[df.interpolate(inplace=True) for df in df_right_status_list]
+    [df.fillna(0,inplace=True) for df in df_left_status_list]
+    [df.fillna(0,inplace=True) for df in df_right_status_list]
+    print("Checking DF's for null values")
+    print([df.isnull().values.any() for df in df_left_status_list])
+    print([df.isnull().values.any() for df in df_right_status_list])
+
+    
     # [df.interpolate() for df in df_right_action_list]
     # [df.interpolate() for df in df_left_action_list]
     # df_left_action_list[0].to_csv('./temp_path_robocup0.csv', sep=',', index=False)
@@ -135,23 +164,24 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     # df_right_action_list[2].to_csv('./temp_path_robocup5.csv', sep=',', index=False)
     # exit(0)
 
+    print("Converting df to numpy")
     # Turn to numpy arrays, NOTE: Actions are hot-encoded in the logs
     status = [df.loc[:, 'status'].values for df in df_left_status_list]
     team_pt_obs = [df.loc[:, obs_header_names[1:]].values for df in df_left_obs_list]
     team_pt_actions = [df.loc[:, 'dash':].values for df in df_left_action_list]
 
-    opp_pt_status = [df.loc[:, 'status'].values for df in df_right_status_list]
-    opp_pt_obs = [df.loc[:, obs_header_names[1:]].values for df in df_left_obs_list]
-    opp_pt_actions = [df.loc[:, 'dash':].values for df in df_left_action_list]
+    o_status = [df.loc[:, 'status'].values for df in df_right_status_list]
+    opp_pt_obs = [df.loc[:, obs_header_names[1:]].values for df in df_right_obs_list]
+    opp_pt_actions = [df.loc[:, 'dash':].values for df in df_right_action_list]
 
     # Change dims to timesteps x number of agents x item
-    team_pt_status = [np.asarray([status[i][ts] for i in range(len(status))]) for ts in range(len(status[0]))]
-    team_pt_obs = [np.asarray([team_pt_obs[i][ts] for i in range(len(team_pt_obs))]) for ts in range(len(team_pt_obs[0]))]
-    team_pt_actions = [np.asarray([team_pt_actions[i][ts] for i in range(len(team_pt_actions))]) for ts in range(len(team_pt_actions[0]))]
+    team_pt_status = [np.asarray([status[i][ts] for i in range(len(status))]) for ts in range(len(status[0])-3)]
+    team_pt_obs = [np.asarray([team_pt_obs[i][ts] for i in range(len(team_pt_obs))]) for ts in range(len(status[0])-3)]
+    team_pt_actions = [np.asarray([team_pt_actions[i][ts] for i in range(len(team_pt_actions))]) for ts in range(len(status[0])-3)]
 
-    opp_pt_status = [np.asarray([opp_pt_status[i][ts] for i in range(len(opp_pt_status))]) for ts in range(len(opp_pt_status[0]))]
-    opp_pt_obs = [np.asarray([opp_pt_obs[i][ts] for i in range(len(opp_pt_obs))]) for ts in range(len(opp_pt_obs[0]))]
-    opp_pt_actions = [np.asarray([opp_pt_actions[i][ts] for i in range(len(opp_pt_actions))]) for ts in range(len(opp_pt_actions[0]))]
+    opp_pt_status = [np.asarray([o_status[i][ts] for i in range(len(o_status))]) for ts in range(len(status[0])-3)]
+    opp_pt_obs = [np.asarray([opp_pt_obs[i][ts] for i in range(len(opp_pt_obs))]) for ts in range(len(status[0])-3)]
+    opp_pt_actions = [np.asarray([opp_pt_actions[i][ts] for i in range(len(opp_pt_actions))]) for ts in range(len(status[0])-3)]
     
     return team_pt_status, team_pt_obs, team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status
 
@@ -436,7 +466,45 @@ def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda"):
         y = (y_hard - y).detach() + y
     return y
 
-def load_buffer(num_TA,left,right,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,env,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left):
+def getPretrainRew(s,d,base):
+
+
+    reward=0.0
+    team_reward = 0.0
+    goal_points = 40.0
+    #---------------------------
+    if d:
+        if 'base_left' == base:
+        # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
+            if s==1:
+                reward+= goal_points
+            elif s==2:
+                reward+=-goal_points
+            elif s==3:
+                reward+=-5.0
+            elif s==6:
+                reward+= +goal_points
+            elif s==7:
+                reward+= -goal_points
+
+            return reward
+        else:
+            if s==1:
+                reward+=-goal_points
+            elif s==2:
+                reward+=goal_points
+            elif s==3:
+                reward+=-5.0
+            elif s==6:
+                reward+= -goal_points
+            elif s==7:
+                reward+= goal_points
+
+    return reward
+
+
+def load_buffer(left,right,zip):
+    num_TA,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left = zip 
     team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, num_features = obs_dim_TA)
 
     # Count up everything besides IN_GAME to get number of episodes
@@ -480,14 +548,14 @@ def load_buffer(num_TA,left,right,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay
             team_n_step_obs.append(team_pt_obs[pt_time_step])
             team_n_step_ws.append(world_stat)
             team_n_step_next_obs.append(team_pt_obs[pt_time_step+1])
-            team_n_step_rewards.append(np.hstack([env.getPretrainRew(world_stat,d,"base_left") for i in range(num_TA)]))          
+            team_n_step_rewards.append(np.hstack([getPretrainRew(world_stat,d,"base_left") for i in range(num_TA)]))          
             team_n_step_dones.append(d)
 
             opp_n_step_acs.append(opp_pt_actions[pt_time_step])
             opp_n_step_obs.append(opp_pt_obs[pt_time_step])
             opp_n_step_ws.append(world_stat)
             opp_n_step_next_obs.append(opp_pt_obs[pt_time_step+1])
-            opp_n_step_rewards.append(np.hstack([env.getPretrainRew(world_stat,d,"base_right") for i in range(num_TA)]))          
+            opp_n_step_rewards.append(np.hstack([getPretrainRew(world_stat,d,"base_right") for i in range(num_TA)]))          
             opp_n_step_dones.append(d)
 
             # Store variables for calculation of MC and n-step targets for team
@@ -586,3 +654,4 @@ def load_buffer(num_TA,left,right,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay
     del opp_pt_obs
     del opp_pt_status
     del opp_pt_actions
+    return (team_PT_replay_buffer,opp_PT_replay_buffer)

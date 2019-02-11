@@ -19,10 +19,10 @@ def main(args):
 
     # Control Random Initilization of Agents and Ball
     control_rand_init = True
-    ball_x_min = -0.3
-    ball_x_max = 0.3
-    ball_y_min = -0.3
-    ball_y_max = 0.3
+    ball_x_min = -0.7
+    ball_x_max = 0.7
+    ball_y_min = -0.7
+    ball_y_max = 0.7
     agents_x_min = -0.4
     agents_x_max = 0.4
     agents_y_min = -0.4

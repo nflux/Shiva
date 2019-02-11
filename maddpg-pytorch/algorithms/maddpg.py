@@ -1692,8 +1692,6 @@ class MADDPG(object):
         if side == 'team':
             count = self.team_count[agent_i]
             curr_agent = self.team_agents[agent_i]
-            target_policies = self.team_target_policies
-            opp_target_policies = self.opp_target_policies
             nagents = self.nagents_team
             policies = self.team_policies
             opp_policies = self.opp_policies
@@ -1702,8 +1700,7 @@ class MADDPG(object):
         else:
             count = self.opp_count[agent_i]
             curr_agent = self.opp_agents[agent_i]
-            target_policies = self.opp_target_policies
-            opp_target_policies = self.team_target_policies
+
             nagents = self.nagents_opp
             policies = self.opp_policies
             opp_policies = self.team_policies
@@ -1954,8 +1951,6 @@ class MADDPG(object):
         if side == 'team':
             count = self.team_count[agent_i]
             curr_agent = self.team_agents[agent_i]
-            target_policies = self.team_target_policies
-            opp_target_policies = self.opp_target_policies
             nagents = self.nagents_team
             policies = self.team_policies
             opp_policies = self.opp_policies
@@ -1964,8 +1959,7 @@ class MADDPG(object):
         else:
             count = self.opp_count[agent_i]
             curr_agent = self.opp_agents[agent_i]
-            target_policies = self.opp_target_policies
-            opp_target_policies = self.team_target_policies
+
             nagents = self.nagents_opp
             policies = self.opp_policies
             opp_policies = self.team_policies
