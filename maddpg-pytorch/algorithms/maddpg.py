@@ -1394,6 +1394,17 @@ class MADDPG(object):
 
         self.niter += 1
 
+    def prep_policy(self,device='cuda',torch_device=torch.device('cuda:0')):
+
+        if device == 'cuda':
+            fn = lambda x: x.to(torch_device)
+        else:
+            fn = lambda x: x.cpu()
+            
+        for a in self.team_agents:
+            a.policy = fn(a.policy)
+        for a in self.opp_agents:
+            a.policy = fn(a.policy)
     def prep_training(self, device='gpu',only_policy=False,torch_device=torch.device('cuda:0')):
         for a in self.team_agents:
             a.policy.train()
@@ -2402,22 +2413,23 @@ class MADDPG(object):
     def first_save(self, file_path,num_copies=1):
         """
         Makes K clones of each agent to be used as the ensemble agents"""
-        #self.prep_training(device='cpu')  # move parameters to CPU before saving
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], file_path + ("ensemble_agent_%i" % i) + "/model_%i.pth" % j) for i in range(len(self.team_agents)) for j in range(num_copies)]
-        self.prep_training(device=self.device)
+        self.prep_training(device=self.device,torch_device=self.torch_device)
 
 
-    def save(self, filename,ep_i):
+    def save(self, filename,ep_i,torch_device=torch.device('cuda:0')):
         """
         Save trained parameters of all agents into one file
         """
-        #self.prep_training(device='cpu')  # move parameters to CPU before saving
+        self.prep_training(device='cpu')  # move parameters to CPU before saving
+        
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], filename +("agent_%i/model_episode_%i.pth" % (i,ep_i))) for i in range(len(self.team_agents))]
-        #self.prep_training(device=self.device)
+        self.prep_training(device=self.device,torch_device=torch_device)
     def save_agent(self, filename,ep_i,agentID,load_same_agent,torch_device=torch.device('cuda:0')):
         """
         Save trained parameters of all agents into one file

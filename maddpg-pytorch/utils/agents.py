@@ -195,8 +195,8 @@ class DDPGAgent(object):
                 self.counter +=1
 
             else: # random
-                action = torch.cat((onehot_from_logits(torch.empty((1,self.action_dim),device=self.device,requires_grad=False).uniform_(-1,1)),
-                            torch.empty((1,self.param_dim),device=self.device,requires_grad=False).uniform_(-1,1) ),1)
+                action = torch.cat((onehot_from_logits(torch.empty((1,self.action_dim),device=self.maddpg.torch_device,requires_grad=False).uniform_(-1,1)),
+                            torch.empty((1,self.param_dim),device=self.maddpg.torch_device,requires_grad=False).uniform_(-1,1) ),1)
         else:
             action = self.policy(obs)
             a = onehot_from_logits(action[0,:self.action_dim].view(1,self.action_dim))
@@ -323,7 +323,7 @@ class DDPGAgent(object):
         
     def load_policy_params(self, params):
         if self.device == 'cuda':
-            dev = torch.device("cuda")
+            dev = torch.device(self.maddpg.torch_device)
         else:
             dev = torch.device('cpu')
         if self.maddpg.data_parallel:
