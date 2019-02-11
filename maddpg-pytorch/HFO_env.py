@@ -81,6 +81,8 @@ class HFO_env():
         self.team_rew_anneal_ep = team_rew_anneal_ep
         self.port = port
         self.hfo_path = get_hfo_path()
+        seed = np.random.randint(1000)
+
         if run_server:
             self._start_hfo_server(frames_per_trial = fpt, untouched_time = untouched_time,
                                     offense_agents = num_TA, defense_agents = num_OA,
@@ -544,8 +546,8 @@ class HFO_env():
                     reward+=-5.0
                 elif s==6:
                     reward+= +goal_points
-                #elif s==7:
-                #    reward+= -goal_points
+                elif s==7:
+                    reward+= -goal_points
 
                 return reward
             else:
@@ -557,8 +559,8 @@ class HFO_env():
                     reward+=-5.0
                 elif s==6:
                     reward+= -goal_points
-                #elif s==7:
-                #    reward+= goal_points
+                elif s==7:
+                    reward+= goal_points
 
         return reward
        
@@ -586,7 +588,7 @@ class HFO_env():
                 elif s=='OutOfBounds' and self.agent_possession_team[agentID] == 'L':
                     reward+=-5.0
                 elif s=='CapturedByLeftGoalie':
-                    reward+=goal_points/5.0
+                    reward+=goal_points
                 elif s=='CapturedByRightGoalie':
                     reward+=-goal_points
 
@@ -603,7 +605,7 @@ class HFO_env():
                 elif s=='OutOfBounds' and self.agent_possession_opp[agentID] == 'R':
                     reward+=-5.0
                 elif s=='CapturedByRightGoalie':
-                    reward+=goal_points/5.0
+                    reward+=goal_points
                 elif s=='CapturedByLeftGoalie':
                     reward+=-goal_points
 

@@ -436,7 +436,7 @@ def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda"):
         y = (y_hard - y).detach() + y
     return y
 
-def load_buffer(rb,num_TA,left,right,obs_dim_TA):
+def load_buffer(num_TA,left,right,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,env,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left):
     team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, num_features = obs_dim_TA)
 
     # Count up everything besides IN_GAME to get number of episodes
@@ -444,7 +444,8 @@ def load_buffer(rb,num_TA,left,right,obs_dim_TA):
     pt_episodes = collect[1] + collect[2] + collect[3] + collect[4] + collect[6] + collect[7]
     
     pt_time_step = 0
-
+    critic_mod_both = True
+    num_OA = num_TA
     ################## Base Left #########################
     for ep_i in range(pt_episodes):
         if ep_i % 100 == 0:
@@ -463,12 +464,8 @@ def load_buffer(rb,num_TA,left,right,obs_dim_TA):
         opp_n_step_next_obs = []
         opp_n_step_dones = []
         opp_n_step_ws = []
+        
 
-        #define/update the noise used for exploration
-        explr_pct_remaining = 0.0
-        beta_pct_remaining = 0.0
-        maddpg.scale_noise(0.0)
-        maddpg.reset_noise()
         d = 0
         
         for et_i in range(episode_length):
