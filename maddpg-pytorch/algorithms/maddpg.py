@@ -66,7 +66,8 @@ class MADDPG(object):
         self.world_status_dim = 6 # number of possible world statuses
         self.nagents_team = len(team_alg_types)
         self.nagents_opp = len(opp_alg_types)
-        self.loss_logger = pd.DataFrame()
+        self.critic_loss_logger = pd.DataFrame()
+        self.policy_loss_logger = pd.DataFrame()
         self.team_alg_types = team_alg_types
         self.opp_alg_types = opp_alg_types
         self.num_in_EM = team_net_params[0]['num_in_EM']
@@ -502,11 +503,11 @@ class MADDPG(object):
         """
         if self.niter % 1000:
             if critic and policy:
-                self.loss_logger.to_csv(session_path + 'loss.csv')
+                self.critic_loss_logger.to_csv(session_path + 'loss.csv')
             elif critic:
-                self.loss_logger.to_csv(session_path + 'critic_loss.csv')
+                self.critic_loss_logger.to_csv(session_path + 'critic_loss.csv')
             elif policy:
-                self.loss_logger.to_csv(session_path + 'actor_loss.csv')
+                self.policy_loss_logger.to_csv(session_path + 'actor_loss.csv')
 
         start = time.time()
 
@@ -609,18 +610,20 @@ class MADDPG(object):
                 target_value = (1-self.beta)*(torch.cat([n.view(-1,1) for n in n_step_rews],dim=1).float().mean(dim=1).view(-1, 1) + (self.gamma**self.n_steps) *
                             trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(torch.cat([mc.view(-1,1) for mc in MC_rews],dim=1).float().mean(dim=1)).view(-1,1)
                 target_value.detach()
+
                 if self.TD3: # handle double critic
-                    with torch.no_grad():
-                        prio = ((actual_value_1 - target_value)**2 + (actual_value_2-target_value)**2).squeeze().detach()/2.0
-                        prio = np.round(prio.cpu().numpy(),decimals=3)
-                        prio = torch.tensor(prio,requires_grad=False)
+
+                    prio = ((actual_value_1 - target_value)**2 + (actual_value_2-target_value)**2).squeeze().detach()/2.0
+                    prio = np.round(prio.cpu().numpy(),decimals=3)
+                    prio = torch.tensor(prio,requires_grad=False)
                     vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
                 else:
                     vf_loss = F.mse_loss(actual_value, target_value)
+
                             
 
             #vf_loss.backward()
-            vf_loss.backward(retain_graph=False) 
+            vf_loss.backward() 
             
             if parallel:
                 average_gradients(curr_agent.critic)
@@ -680,7 +683,8 @@ class MADDPG(object):
 
             if self.niter % 100 == 0:
                 print("Team (%s) Agent (%i) Actor loss:" % (side,agent_i),pol_loss)
-                self.loss_logger = self.loss_logger.append({                'iteration':self.niter,
+
+                self.policy_loss_logger = self.policy_loss_logger.append({                'iteration':self.niter,
                                                                             'actor_loss': np.round(pol_loss.item(),4)},
                                                                             ignore_index=True)
                 #print(time.time() - start,"update time")
@@ -741,10 +745,12 @@ class MADDPG(object):
         #print(time.time() - start,"up")
         if critic:
             if self.niter % 100 == 0:
-                self.loss_logger = self.loss_logger.append({                          'iteration':self.niter,
+                self.critic_loss_logger = self.critic_loss_logger.append({                          'iteration':self.niter,
                                                                             'critic': np.round(vf_loss.item(),4)},
                                                                             ignore_index=True)
                 print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
+
+
             if self.I2A:
                 print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
@@ -1394,6 +1400,32 @@ class MADDPG(object):
 
         self.niter += 1
 
+    def update_agent_actor(self,agentID,number_of_updates):
+        """
+        Update all target networks (called after normal updates have been
+        performed for each agent)
+        """
+        soft_update(self.team_agents[agentID].target_policy, self.team_agents[agentID].policy, self.tau*number_of_updates)
+
+        #for a in self.opp_agents:
+        #    soft_update(a.target_critic, a.critic, self.tau)
+        #    soft_update(a.target_policy, a.policy, self.tau)
+
+        self.niter += 1
+
+    def update_agent_critic(self,agentID,number_of_updates):
+        """
+        Update all target networks (called after normal updates have been
+        performed for each agent)
+        """
+        soft_update(self.team_agents[agentID].target_critic, self.team_agents[agentID].critic, self.tau*number_of_updates)
+
+        #for a in self.opp_agents:
+        #    soft_update(a.target_critic, a.critic, self.tau)
+        #    soft_update(a.target_policy, a.policy, self.tau)
+
+        self.niter += 1
+
     def prep_policy(self,device='cuda',torch_device=torch.device('cuda:0')):
 
         if device == 'cuda':
@@ -1726,8 +1758,16 @@ class MADDPG(object):
         #print("time critic")
         #start = time.time()
         #with torch.no_grad():
+
+        
+        
+        # Add TD3 Noise to actions
+        noise = processor(torch.randn_like(acs[0]),device=self.device,torch_device=self.torch_device) * self.TD3_noise * 3.0
+        acs =  [a + noise for a in acs]
+        opp_acs = [a + noise for a in opp_acs]  
         mod_obs = torch.cat((*opp_obs,*obs),dim=1)
         mod_acs = torch.cat((*opp_acs,*acs),dim=1)
+
         # Actual critic values
         vf_in = torch.cat((mod_obs, mod_acs), dim=1)
         if self.TD3:
@@ -1993,6 +2033,11 @@ class MADDPG(object):
         MSE = F.mse_loss(pol_out_params,actual_out_params)
 
         pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
+        
+        entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
+        reg_param = 1.0
+        entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
+        entropy_reg = (-torch.log(poll_out_actions).sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
         # testing imitation
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
@@ -2438,9 +2483,11 @@ class MADDPG(object):
         save_dicts = np.asarray([{'init_dict': self.init_dict,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         if load_same_agent:
-            torch.save(save_dicts[agentID], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
-        else:
             torch.save(save_dicts[0], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
+
+        else:
+            torch.save(save_dicts[agentID], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
+
 
         self.prep_training(device=self.device,torch_device=torch_device)
         

@@ -167,6 +167,14 @@ class DDPGAgent(object):
         else:
             self.exploration.scale = scale
 
+    def change_a_lr(self,lr):
+        for param_group in self.policy_optimizer.param_groups:
+            param_group['lr'] = lr
+        #self.policy_optimizer = Adam(self.policy.parameters(), lr=lr, weight_decay =0)
+    def change_c_lr(self,lr):
+        #self.critic_optimizer = Adam(self.critic.parameters(), lr=lr, weight_decay =0)
+        for param_group in self.critic_optimizer.param_groups:
+            param_group['lr'] = lr
     def step(self, obs,ran, explore=False):
         """
         Take a step forward in environment for a minibatch of observations
@@ -187,8 +195,8 @@ class DDPGAgent(object):
         if explore:
             if not ran: # not random
                 action = self.policy(obs)
-                #if self.counter % 200 == 0:
-                #    print(torch.softmax(action[:,:self.action_dim],dim=1))
+                if self.counter % 1000 == 0:
+                    print(torch.softmax(action[:,:self.action_dim],dim=1))
                 a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
                 p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
                 action = torch.cat((a,p),1) 
@@ -199,9 +207,12 @@ class DDPGAgent(object):
                             torch.empty((1,self.param_dim),device=self.maddpg.torch_device,requires_grad=False).uniform_(-1,1) ),1)
         else:
             action = self.policy(obs)
+            if self.counter % 1000 == 0:
+                print(torch.softmax(action[:,:self.action_dim],dim=1))
             a = onehot_from_logits(action[0,:self.action_dim].view(1,self.action_dim))
             #p = torch.clamp(action[0,self.action_dim:].view(1,self.param_dim),min=-1.0,max=1.0) # get noisey params (OU)
-            p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+            p = action[0,self.action_dim:].view(1,self.param_dim)
+            #p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
             action = torch.cat((a,p),1) 
             self.counter +=1
 

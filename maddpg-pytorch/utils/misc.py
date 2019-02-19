@@ -471,7 +471,7 @@ def getPretrainRew(s,d,base):
 
     reward=0.0
     team_reward = 0.0
-    goal_points = 40.0
+    goal_points = 8.0
     #---------------------------
     if d:
         if 'base_left' == base:
@@ -481,7 +481,7 @@ def getPretrainRew(s,d,base):
             elif s==2:
                 reward+=-goal_points
             elif s==3:
-                reward+=-5.0
+                reward+=-0.5
             elif s==6:
                 reward+= +goal_points
             elif s==7:
@@ -494,7 +494,7 @@ def getPretrainRew(s,d,base):
             elif s==2:
                 reward+=goal_points
             elif s==3:
-                reward+=-5.0
+                reward+=-0.5
             elif s==6:
                 reward+= -goal_points
             elif s==7:
@@ -504,7 +504,7 @@ def getPretrainRew(s,d,base):
 
 
 def load_buffer(left,right,zip):
-    num_TA,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left = zip 
+    num_TA,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,num_episodes = zip 
     team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, num_features = obs_dim_TA)
 
     # Count up everything besides IN_GAME to get number of episodes
@@ -515,7 +515,7 @@ def load_buffer(left,right,zip):
     critic_mod_both = True
     num_OA = num_TA
     ################## Base Left #########################
-    for ep_i in range(pt_episodes):
+    for ep_i in range(pt_episodes-10):
         if ep_i % 100 == 0:
             print("Pushing Pretrain Episode:",ep_i)
         

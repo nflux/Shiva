@@ -108,7 +108,52 @@ class ReplayTensorBuffer(object):
             self.filled_i += nentries
         if self.curr_i == self.max_steps:
             self.curr_i = 0
+       
+    
+    def merge_buffer(self, buffer):
+        nentries = len(buffer)
+    
+        if self.curr_i + nentries > self.max_steps:
+            rollover = self.max_steps - self.curr_i # num of indices to roll over
+            self.obs_buffs = roll(self.obs_buffs, rollover)
+            self.ac_buffs = roll(self.ac_buffs, rollover)
+            self.rew_buffs = roll(self.rew_buffs, rollover)
+            self.next_obs_buffs = roll(self.next_obs_buffs, rollover)
+            self.done_buffs = roll(self.done_buffs, rollover)
+            self.mc_buffs = roll(self.mc_buffs, rollover)
+            self.n_step_buffs = roll(self.n_step_buffs, rollover)
+            self.ws_buffs = roll(self.ws_buffs, rollover)
+            self.ensemble_priorities = roll(self.ensemble_priorities,rollover)
+            self.SIL_priorities = roll(self.SIL_priorities,rollover)
+
+
+            self.curr_i = 0
+            self.filled_i = self.max_steps
+
+        # Used just for readability
+        oa_i = self.obs_dim + self.ac_dim
+        rew_i = oa_i+1
+        next_oi = rew_i+self.obs_dim
+
+        self.obs_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.obs_dim] = buffer.obs_buffs[:nentries, :self.num_agents, :self.obs_dim]
+        self.ac_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.ac_dim] = buffer.ac_buffs[:nentries, :self.num_agents, :self.ac_dim]
+        self.rew_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = buffer.rew_buffs[:nentries, :self.num_agents, :1]
+        self.next_obs_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.obs_dim] = buffer.next_obs_buffs[:nentries, :self.num_agents, :self.obs_dim]
+        self.done_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = buffer.done_buffs[:nentries, :self.num_agents, :1]
+        self.mc_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = buffer.mc_buffs[:nentries, :self.num_agents, :1]
+        self.n_step_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] =buffer.n_step_buffs[:nentries, :self.num_agents, :1]
+        self.ws_buffs[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = buffer.ws_buffs[:nentries, :self.num_agents, :1]
+        self.ensemble_priorities[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.k] = buffer.ensemble_priorities[:nentries, :self.num_agents, : self.k]
+        self.SIL_priorities[self.curr_i:self.curr_i+nentries, :self.num_agents, :self.k] = buffer.SIL_priorities[:nentries, :self.num_agents,  :self.k]
+
         
+        self.curr_i += nentries
+        if self.filled_i < self.max_steps:
+            self.filled_i += nentries
+        if self.curr_i == self.max_steps:
+            self.curr_i = 0
+
+            
 
     def push_LSTM(self, observations, actions, rewards, next_observations, dones,mc_targets,n_step,ws):
         #nentries = observations.shape[0]  # handle multiple parallel environments
@@ -355,7 +400,7 @@ class ReplayTensorBuffer(object):
             probs = prios.numpy()/(prios.sum().numpy())
             while np.abs(probs.sum() - 1) > 0.0003:
                 probs = probs/probs.sum()
-        return np.random.choice(self.filled_i,batch_size,p=probs)
+        return np.random.choice(self.filled_i,batch_size,p=probs,replace=False)
                               
     def get_SIL_inds(self,agentID=0,batch_size=32):
                               

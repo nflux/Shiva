@@ -121,8 +121,8 @@ class evaluation_env():
         self.feat_lvl = feat_lvl
         
         if feat_lvl == 'low':
-            self.team_num_features = 49 + 11*num_TA + 11*num_OA + 11*num_ONPC
-            self.opp_num_features = 49 + 11*num_OA + 11*num_TA + 11*num_ONPC
+            self.team_num_features = 59 + 13*(num_TA-1) + 12*num_TA + 4 + 1 + 2 + 1
+            self.opp_num_features = 59 + 13*(num_TA-1) + 12*num_TA + 4 + 1 + 2 + 1
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6

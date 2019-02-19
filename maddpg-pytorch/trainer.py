@@ -28,10 +28,10 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
 
 
     control_rand_init = True
-    ball_x_min = -0.1
-    ball_x_max = 0.1
-    ball_y_min = -0.1
-    ball_y_max = 0.1
+    ball_x_min = -0.7
+    ball_x_max = 0.7
+    ball_y_min = -0.7
+    ball_y_max = 0.7
     agents_x_min = -0.3
     agents_x_max = 0.3
     agents_y_min = -0.3
@@ -48,7 +48,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     time.sleep(1)
     env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
                          untouched_time = 500,fullstate=True,offense_on_ball=False,
-                         port=port,log_dir=log_dir,record=False,goalie=goalie,agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+                         port=63000,log_dir=log_dir,record=False,goalie=goalie,agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                 change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
                 change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init)
     time.sleep(2.0)

@@ -29,96 +29,103 @@ import _thread as thread
 import dill
 import collections
 from multiprocessing import Pool
+import gc
 
 # updates policy only
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel):
+                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr):
     start = time.time()
+    if False:
+        
+        initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
+        #maddpg = dill.loads(maddpg_pick)
+        maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
+        if multi_gpu:
+            maddpg.torch_device = torch.device("cuda:3")
+        maddpg.device = 'cuda'
+        number_of_updates = 300
+        batches_to_sample = 30
 
-    initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
-    #maddpg = dill.loads(maddpg_pick)
-    maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
-    if multi_gpu:
-        maddpg.torch_device = torch.device("cuda:3")
-    maddpg.device = 'cuda'
-    number_of_updates = 800
-    batches_to_sample = 100
+        if len(team_replay_buffer) < batch_size*(batches_to_sample):
+            batches_to_sample = 1
+        for ensemble in range(k_ensembles):
 
-    if len(team_replay_buffer) < batch_size*(batches_to_sample):
-        batches_to_sample = 1
-    for ensemble in range(k_ensembles):
-
-        maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
-        maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
-
-        #start = time.time()
-        #for up in range(int(np.floor(number_of_updates/k_ensembles))):
-        for up in range(number_of_updates):
-            m = 0
-            #m = np.random.randint(num_TA)
-
-            # if not load_same_agent:
-            #     inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
-            # else:
-            #     inds = team_replay_buffer.get_PER_inds(m,batch_size,ensemble)
-
-            # does not care about priority
-            offset = up % batches_to_sample
-            if up % batches_to_sample == 0:
-                inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size*batches_to_sample, replace=False)
-            if LSTM:
-                team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                priorities =maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
-                team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
-                del priorities
-                del team_sample
-                del opp_sample
-
-
-                if not load_same_agent:
-                    priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                    team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
-
-
-            elif LSTM_PC:
-                team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, agentID, 'team')
+            maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
+            maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
+            if len(team_replay_buffer) > 1000000:
+                maddpg.team_agents[0].change_a_lr(lr=a_lr) # Unfreeze actor after buffer is loaded with 1million
             else:
-                team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
-                                            to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
-                opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
-                                            to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
-                if not load_same_agent:
-                    priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                    team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+                maddpg.team_agents[0].change_a_lr(lr=0) # Unfreeze actor after buffer is loaded with 1million
 
+
+            #start = time.time()
+            #for up in range(int(np.floor(number_of_updates/k_ensembles))):
+            for up in range(number_of_updates):
+                m = 0
+                #m = np.random.randint(num_TA)
+
+                # if not load_same_agent:
+                #     inds = team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
+                # else:
+                #     inds = team_replay_buffer.get_PER_inds(m,batch_size,ensemble)
+
+                # does not care about priority
+                offset = up % batches_to_sample
+                if up % batches_to_sample == 0:
+                    inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size*batches_to_sample, replace=False)
+                if LSTM:
+                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                    priorities =maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
+                    team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
+                    del priorities
+                    del team_sample
+                    del opp_sample
+
+
+                    if not load_same_agent:
+                        priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
+                        team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+
+
+                elif LSTM_PC:
+                    team_sample = team_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                    opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                    maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, agentID, 'team')
                 else:
-                    _ = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)
-                    #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
-                    if up % number_of_updates/10 == 0: # update target half way through
-                        maddpg.update_agent_targets(0,number_of_updates/10)
-            if SIL:
-                for i in range(SIL_update_ratio):
-                    inds = team_replay_buffer.get_SIL_inds(agentID=m,batch_size=batch_size)
-                    team_sample = team_replay_buffer.sample(inds,
-                                            to_gpu=to_gpu,norm_rews=False)
-                    opp_sample = opp_replay_buffer.sample(inds,
-                                            to_gpu=to_gpu,norm_rews=False)
-                    priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
-                    team_replay_buffer.update_SIL_priorities(agentID=m,inds = inds, prio=priorities)
-                    
-        #print(time.time()-start)
-        if not load_same_agent:
-            maddpg.update_agent_targets(agentID,number_of_updates)
-            maddpg.save_agent(load_path,update_session,agentID,torch_device=maddpg.torch_device)
-            maddpg.save_ensemble(ensemble_path,ensemble,agentID,torch_device=maddpg.torch_device)
-        else:
-            maddpg.update_agent_hard_policy(0)
-            [maddpg.save_agent(load_path,update_session,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
-            [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
-    print(time.time()-start,"<-- Policy Update Cycle")
+                    team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
+                                                to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
+                    opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
+                                                to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
+                    if not load_same_agent:
+                        priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
+                        team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+
+                    else:
+                        _ = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)
+                        #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
+                        if up % number_of_updates/10 == 0: # update target half way through
+                            maddpg.update_agent_targets(0,number_of_updates/10)
+                if SIL:
+                    for i in range(SIL_update_ratio):
+                        inds = team_replay_buffer.get_SIL_inds(agentID=m,batch_size=batch_size)
+                        team_sample = team_replay_buffer.sample(inds,
+                                                to_gpu=to_gpu,norm_rews=False)
+                        opp_sample = opp_replay_buffer.sample(inds,
+                                                to_gpu=to_gpu,norm_rews=False)
+                        priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
+                        team_replay_buffer.update_SIL_priorities(agentID=m,inds = inds, prio=priorities)
+
+            #print(time.time()-start)
+            if not load_same_agent:
+                maddpg.update_agent_targets(agentID,number_of_updates)
+                maddpg.save_agent(load_path,update_session,agentID,torch_device=maddpg.torch_device)
+                maddpg.save_ensemble(ensemble_path,ensemble,agentID,torch_device=maddpg.torch_device)
+            #else:
+                maddpg.update_agent_hard_policy(0)
+                [maddpg.save_agent(load_path,update_session,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
+                [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
+        print(time.time()-start,"<-- Policy Update Cycle")
 
 
 def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
@@ -128,8 +135,8 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
     #maddpg = dill.loads(maddpg_pick)
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
 
-    number_of_updates = 3000
-    batches_to_sample = 1500
+    number_of_updates = 12000
+    batches_to_sample = 1000
     if len(team_replay_buffer) < batch_size*(batches_to_sample):
         batches_to_sample = 1
     for ensemble in range(k_ensembles):
@@ -183,7 +190,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
             maddpg.update_agent_hard_policy(0)
             [maddpg.save_agent(load_path,update_session,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
             [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
-    print(time.time()-start,"<-- Policy Update Cycle")
+    print(time.time()-start,"<-- Policy Update dCycle")
 
 
 def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history,ep_num):
@@ -196,7 +203,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
     LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path ) = HP
+    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d ) = HP
 
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
@@ -206,7 +213,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     offense_on_ball=False,port=port,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
                     agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                     change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
+                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=False,
                     defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=True, deterministic=deterministic)
 
     #The start_viewer here is added to automatically start viewer with npc Vs npcs
@@ -571,17 +578,35 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     #num_updates[env_num] += float(np.floor(exp_i/steps_per_update))
                     #exps.cpu()
                     ready[env_num] = 1
+                    current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path,load_same_agent=load_same_agent) # use for per ensemble update counter
+                    if np.random.uniform(0,1) > 0.9: # self_play_proba % chance loading self else load an old ensemble for opponent
+                        maddpg.load_agent2d_policies(side='team',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
+
                     if play_agent2d and use_preloaded_agent2d:
                         maddpg.load_agent2d_policies(side='opp',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
                     elif play_agent2d:
                         maddpg.load_agent2d_policies(side='opp',models_path =session_path +"models/",load_same_agent=load_same_agent,nagents=num_OA)  
                     else:
                             
-                        if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
-                            maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
-                        else:
-                            maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
-                    current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path,load_same_agent=load_same_agent) # use for per ensemble update counter
+                        #if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
+                        #    maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
+                        #else:
+                        #    maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
+                        # TEST ----------------------
+                        if np.random.uniform(0,1) > 0.9: # self_play_proba % chance loading self else load an old ensemble for opponent
+                        ##    #maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
+                        #    maddpg.load_agent2d_policies(side='opp',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA) # 20% chance to play agent2d
+                            maddpg.load_agent2d_policies(side='team',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
+                        #elif np.random.uniform(0,1) > 0.9:
+                        #    maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
+                        #elif np.random.uniform(0,1) > 0.8:
+                        #    maddpg.load_agent2d_policies(side='opp',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA) # 20% chance to play agent2d
+                        #else:                           
+                            #maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
+                        # -------------------------------------
+                    if bl_agent2d:
+                        maddpg.load_agent2d_policies(side='team',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
+
                     while halt.all():
                         time.sleep(0.1)
                     total_dim = (obs_dim_TA*2 + acs_dim + 5) + k_ensembles + 1
@@ -616,8 +641,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 8
-    port = 2000
+    num_envs = 10
+    port = 45000
     max_num_experiences = 500
     update_threads = []
     if True: # all options 
@@ -649,14 +674,14 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 500000
-        pt_memory = 2000000
+        replay_memory_size = 2000000
+        pt_memory = 1000000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
         burn_in_episodes = float(burn_in_iterations)/untouched_time
         deterministic = True
-
+ 
         # --------------------------------------
         # Team ---------------------------------
         num_TA = 3
@@ -678,8 +703,8 @@ if __name__ == "__main__":
         number_of_updates = 0
         # exploration --------------------------
         explore = True
-        final_OU_noise_scale = 0.001
-        final_noise_scale = 0.001
+        final_OU_noise_scale = 0.05
+        final_noise_scale = 0.1
         init_noise_scale = 1.00
         num_explore_episodes = 1 # Haus uses over 10,000 updates --
         multi_gpu = True
@@ -704,24 +729,34 @@ if __name__ == "__main__":
             a_lr = 0.0001 # actor learning rate
             c_lr = 0.001 # critic learning rate
         else:
-            a_lr = 0.0001 # actor learning rate
-            c_lr = 0.0001 # critic learning rate
+            freeze_actor = 0.0
+            freeze_critic = 0.0
+
+            a_lr = 0.00001 # actor learning rate
+            c_lr = 0.00001 # critic learning rate
         #---------------------------------------
         #TD3 Options ---------------------------
         TD3 = True
         TD3_delay_steps = 2
-        TD3_noise = 0.01
+        TD3_noise = 0.02
         # -------------------------------------- 
         #Pretrain Options ----------------------
         pretrain = False
-        use_pretrain_data = True
+        use_pretrain_data = False
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-        pt_update_cycles = 150
+        pt_update_cycles = 200
         pt_inject_proba = 1.0
+        init_pt_inject_proba = 1.0
+        final_pt_inject_proba = 0.2
+        pt_inject_anneal_ep = 50
         play_agent2d = True
+        bl_agent2d = False
         use_preloaded_agent2d = True
         preload_agent2d_path = ""
-        num_buffers = 10
+        num_buffers = 15
+        pt_total_memory = pt_memory*num_buffers
+
+        pt_episodes = 4000 # not used
         #---------------------------------------
         #I2A Options ---------------------------
         I2A = False
@@ -749,10 +784,10 @@ if __name__ == "__main__":
 
         # Control Random Initilization of Agents and Ball
         control_rand_init = True
-        ball_x_min = -0.7
-        ball_x_max = 0.7
-        ball_y_min = -0.7
-        ball_y_max = 0.7
+        ball_x_min = -0.1
+        ball_x_max = 0.1
+        ball_y_min = -0.1
+        ball_y_max = 0.1
         agents_x_min = -0.2
         agents_x_max = 0.2
         agents_y_min = -0.2
@@ -767,7 +802,7 @@ if __name__ == "__main__":
         load_random_every = 100
         k_ensembles = 1
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
-        self_play_proba = 0.5
+        self_play_proba = 0.8
         load_same_agent = True # load same policy for all agents
         push_only_left = False
         num_update_threads = num_TA
@@ -852,7 +887,7 @@ if __name__ == "__main__":
                     offense_on_ball=False,port=65000,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
                     agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                     change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=True,
+                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=False,
                     defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=False, deterministic=deterministic)
     
     obs_dim_TA = env.team_num_features
@@ -867,7 +902,7 @@ if __name__ == "__main__":
         ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
         LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path )
+        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d )
 
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                 adversary_alg= "MADDPG",device=device,
@@ -928,9 +963,9 @@ if __name__ == "__main__":
     
     if pretrain or use_pretrain_data:
         # ------------------------------------ Start Pretrain --------------------------------------------
-        pt_trb = [ReplayTensorBuffer(pt_memory , num_TA,
+        pt_trbs = [ReplayTensorBuffer(pt_memory , num_TA,
                                                 obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL) for _ in range(num_buffers)]
-        pt_orb = [ReplayTensorBuffer(pt_memory , num_TA,
+        pt_orbs = [ReplayTensorBuffer(pt_memory , num_TA,
                                             obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL) for _ in range(num_buffers)]
         # ------------ Load in shit from csv into buffer ----------------------
         pt_threads = []
@@ -951,14 +986,30 @@ if __name__ == "__main__":
             all_l.append(left_files)
             all_r.append(right_files)
     
-        second_args = [(num_TA,obs_dim_TA,pt_trb[i],pt_orb[i],episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left) for i in range(num_buffers)]
+        second_args = [(num_TA,obs_dim_TA,pt_trbs[i],pt_orbs[i],episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,pt_episodes) for i in range(num_buffers)]
         with Pool() as pool:
-            pt_rb = pool.starmap(load_buffer, zip(all_l,all_r, second_args))
-        pt_trb,pt_orb = list(zip(*pt_rb))
-        del pt_rb
+            pt_rbs = pool.starmap(load_buffer, zip(all_l,all_r, second_args))
+        pt_trbs,pt_orbs = list(zip(*pt_rbs))
+        del pt_rbs
         for i in range(num_buffers):
-            print("Length of RB_",i,": ",len(pt_trb[i]))
+            print("Length of RB_",i,": ",len(pt_trbs[i]))
             
+        #team_replay_buffer = pt_trbs[0]
+        #opp_replay_buffer = pt_orbs[0]
+        
+        pt_trb = ReplayTensorBuffer(pt_total_memory , num_TA,
+                                                obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
+        pt_orb = ReplayTensorBuffer(pt_total_memory , num_TA,
+                                                obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
+        for j in range(num_buffers):
+            pt_trb.merge_buffer(pt_trbs[j])
+            pt_orb.merge_buffer(pt_orbs[j])
+            print("Merging Buffer: ",j)
+        del pt_trbs
+        del pt_orbs
+        gc.collect()
+        time.sleep(5)
+        print("Length of centralized buffer: ", len(pt_trb))
     if pretrain:
 
         # ------------ Done loading shit --------------------------------------
@@ -978,16 +1029,18 @@ if __name__ == "__main__":
 
             threads = []
             for a_i in range(1):
-                threads.append(mp.Process(target=imitation_thread,args=(a_i,to_gpu,len(pt_trb[rb_i]),batch_size,
-                    pt_trb[rb_i],pt_orb[rb_i],number_of_updates,
+                threads.append(mp.Process(target=imitation_thread,args=(a_i,to_gpu,len(pt_trb),batch_size,
+                    pt_trb,pt_orb,number_of_updates,
                     load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
             [thr.start() for thr in threads]
             
             agentID = 0
-            buffer_size = len(pt_trb[rb_i])
+            buffer_size = len(pt_trb)
 
-            number_of_updates = 3000
-            batches_to_sample = 1500
+            number_of_updates = 10000
+            batches_to_sample = 1000
+            if len(pt_trb) < batch_size*(batches_to_sample):
+                batches_to_sample = 1
             priorities = [] 
             start = time.time()
             for ensemble in range(k_ensembles):
@@ -999,71 +1052,70 @@ if __name__ == "__main__":
                     offset = up % batches_to_sample
 
                     if not load_same_agent:
-                        inds = pt_trb[rb_i].get_PER_inds(agentID,batch_size,ensemble)
+                        inds = pt_trb.get_PER_inds(agentID,batch_size,ensemble)
                     else:
                         if up % batches_to_sample == 0:
                             m = 0
-                            inds = pt_trb[rb_i].get_PER_inds(m,batches_to_sample*batch_size,ensemble)
-                            if len(priorities) > 1:
-                                for c,p in enumerate(priorities):
-                                    pt_trb[rb_i].update_priorities(agentID=m,inds = inds[c*batch_size:(c+1)*batch_size], prio=p,k = ensemble) 
+                            #inds = pt_trb[rb_i].get_PER_inds(m,batches_to_sample*batch_size,ensemble)
+                            inds = np.random.choice(np.arange(len(pt_trb)), size=batch_size*batches_to_sample, replace=False)
+
+                            #if len(priorities) > 1:
+                                #for c,p in enumerate(priorities):
+                                #    pt_trb.update_priorities(agentID=m,inds = inds[c*batch_size:(c+1)*batch_size], prio=p,k = ensemble) 
                             priorities = [] 
 
-                    #inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
 
                     # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
 
                     if LSTM:
-                        team_sample = pt_trb[rb_i].sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                        opp_sample = pt_orb[rb_i].sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                        team_sample = pt_trb.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                        opp_sample = pt_orb.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
                         priorities =maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
-                        pt_trb[rb_i].update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
+                        pt_trb.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
                         del priorities
                         del team_sample
                         del opp_sample
                         if not load_same_agent:
                             priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                            pt_trb[rb_i].update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+                            pt_trb.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
                     elif LSTM_PC:
-                        team_sample = pt_trb[rb_i].sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
-                        opp_sample = pt_orb[rb_i].sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                        team_sample = pt_trb.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
+                        opp_sample = pt_orb.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
                         maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, agentID, 'team')
                     else:
-                        team_sample = pt_trb[rb_i].sample(inds[batch_size*offset:batch_size*(offset+1)],
+                        team_sample = pt_trb.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                     to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
-                        opp_sample = pt_orb[rb_i].sample(inds[batch_size*offset:batch_size*(offset+1)],
+                        opp_sample = pt_orb.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                     to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                         if not load_same_agent:
                             priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                            pt_trb[rb_i].update_priorities(agentID=agentID,inds =inds, prio=priorities,k = ensemble)
+                            pt_trb.update_priorities(agentID=agentID,inds =inds, prio=priorities,k = ensemble)
                         else:
-
                             priorities.append(maddpg.pretrain_critic_MC(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,session_path=session_path))
                             #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
                             #if up % number_of_updates/10 == 0: # update target half way through
                             #    maddpg.update_agent_targets(0,number_of_updates/10)
                     if SIL:
                         for i in range(SIL_update_ratio):
-                            inds = pt_trb[rb_i].get_SIL_inds(agentID=m,batch_size=batch_size)
-                            team_sample = pt_trb[rb_i].sample(inds,
+                            inds = pt_trb.get_SIL_inds(agentID=m,batch_size=batch_size)
+                            team_sample = pt_trb.sample(inds,
                                                     to_gpu=to_gpu,norm_rews=False)
-                            opp_sample = pt_orb[rb_i].sample(inds,
+                            opp_sample = pt_orb.sample(inds,
                                                     to_gpu=to_gpu,norm_rews=False)
                             priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
-                            pt_trb[rb_i].update_SIL_priorities(agentID=m,inds = inds, prio=priorities)
-                for c,p in enumerate(priorities):
-                    if c != (len(priorities)-1):
-                        pt_trb[rb_i].update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):(batch_size*(c+1))+(-batch_size*batches_to_sample)], prio=p,k = ensemble) 
-                    else:
-                        pt_trb[rb_i].update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):], prio=p,k = ensemble) 
-                                        
+                            pt_trb.update_SIL_priorities(agentID=m,inds = inds, prio=priorities)
+                #for c,p in enumerate(priorities):
+                #    if c != (len(priorities)-1):
+                #        pt_trb.update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):(batch_size*(c+1))+(-batch_size*batches_to_sample)], prio=p,k = ensemble) 
+                #    else:
+                #        pt_trb.update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):], prio=p,k = ensemble) 
                 #print(time.time()-start)
                 if not load_same_agent:
                     maddpg.update_agent_targets(agentID,number_of_updates)
                     maddpg.save_agent(load_path,update_session,agentID)
                     maddpg.save_ensemble(ensemble_path,ensemble,agentID)
                 else:
-                    maddpg.update_agent_hard_policy(0)
+                    maddpg.update_agent_hard_critic(0)
                     print(time.time()-start,"<-- Critic Update Cycle")
 
                     [thr.join() for thr in threads]
@@ -1078,12 +1130,14 @@ if __name__ == "__main__":
 
 
 
-            maddpg.update_hard_policy()
+            maddpg.update_hard_policy() 
             maddpg.update_hard_critic()
             maddpg.save_agent2d(load_path,0,load_same_agent,maddpg.torch_device)
 
 
     # -------------Done pretraining actor/critic ---------------------------------------------
+    maddpg.team_agents[0].change_c_lr(lr=freeze_critic) # freeze critic until buffer is loaded with 500k
+    maddpg.team_agents[0].change_a_lr(lr=freeze_actor) # freeze actor until buffer is loaded with 1.5mill
     maddpg.save_agent2d(load_path,0,load_same_agent,maddpg.torch_device)
     [maddpg.save_ensemble(ensemble_path,0,i,load_same_agent,maddpg.torch_device) for i in range(num_TA)] # Save agent2d into ensembles
 
@@ -1108,10 +1162,8 @@ if __name__ == "__main__":
                 [team_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item()))]
                 [opp_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item()))]
             else:
-                [opp_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item()))]
-                [team_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item()))]
-                #[team_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item()))]
-                #[opp_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], shared_exps[i][j][:exp_indices[i][j], :num_TA, :]))) for j in range(int(ep_num[i].item()))]
+                [team_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item()))]
+                [opp_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], shared_exps[i][j][:exp_indices[i][j], :num_TA, :]))) for j in range(int(ep_num[i].item()))]
         # get num updates and reset counter
         # If the update rate is slower than the exp generation than this ratio will be greater than 1 when our experience tensor
         # is full (10,000 timesteps backlogged) so wait for updates to catch up
@@ -1126,12 +1178,12 @@ if __name__ == "__main__":
                 for a_i in range(maddpg.nagents_team):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr)))
             print("Launching update")
             start = time.time()
             [thr.start() for thr in threads]
@@ -1149,26 +1201,45 @@ if __name__ == "__main__":
         halt.copy_(torch.tensor(0,requires_grad=False).byte())
         ready.copy_(torch.zeros(num_envs,requires_grad=False).byte())
 
-        training = (len(team_replay_buffer) >= batch_size)
+                            
+        maddpg.load_same_ensembles(ensemble_path,0,maddpg.nagents_team,load_same_agent=load_same_agent)        
 
+        if len(team_replay_buffer) > 100000:
+            maddpg.team_agents[0].change_c_lr(lr=c_lr) # Unfreeze actor after buffer is loaded with 1million
+        #else:
+        #    maddpg.team_agents[0].change_c_lr(lr=freeze_critic) # Unfreeze actor after buffer is loaded with 1million
+        #
+        if len(team_replay_buffer) > 1000000:
+            maddpg.team_agents[0].change_a_lr(lr=a_lr) # Unfreeze actor after buffer is loaded with 1million
+        #else:
+        #    maddpg.team_agents[0].change_a_lr(lr=freeze_actor) # freeze actor after buffer is loaded with 1million
+
+
+        training = (len(team_replay_buffer) >= batch_size)
         if training:
-            
             threads = []
+            pt_inject_proba = max(0.0, 1.0*pt_inject_anneal_ep - update_session) / (pt_inject_anneal_ep)
+            pt_inject_proba = final_pt_inject_proba + (init_pt_inject_proba - final_pt_inject_proba) * pt_inject_proba
             PT = (np.random.uniform(0,1) < pt_inject_proba) and (pretrain or use_pretrain_data)
+            print("Update Session:",update_session)
+            if PT or use_pretrain_data:
+
+                print("PT sample probability:",pt_inject_proba)
+                print("Using PT sample:",PT)
 
         
             if PT:
                 rb_i = np.random.randint(num_buffers)
 
                 for a_i in range(1):
-                    threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(pt_trb[rb_i]),batch_size,
-                        pt_trb[rb_i],pt_orb[rb_i],number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
+                    threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(pt_trb),batch_size,
+                        pt_trb,pt_orb,number_of_updates,
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr)))
             [thr.start() for thr in threads]
             print("Launching update")
             start = time.time()
@@ -1177,17 +1248,16 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(team_replay_buffer)
 
-            number_of_updates = 800
-            batches_to_sample = 100
+            number_of_updates = 500
+            batches_to_sample = 50
             if len(team_replay_buffer) < batch_size*(batches_to_sample):
                 batches_to_sample = 1
 
             priorities = [] 
 
             for ensemble in range(k_ensembles):
-                maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
-                maddpg.update_hard_policy()
-                maddpg.update_hard_critic()
+                #maddpg.update_hard_policy()
+                #maddpg.update_hard_critic()
                 for up in range(number_of_updates):
                     offset = up % batches_to_sample
                     m = 0
@@ -1198,15 +1268,18 @@ if __name__ == "__main__":
                     else:
                         if up % batches_to_sample == 0:
                             if PT:
-                                inds = pt_trb[rb_i].get_PER_inds(m,batches_to_sample*batch_size,ensemble)
+                                #inds = pt_trb.get_PER_inds(m,batches_to_sample*batch_size,ensemble)
+                                inds = np.random.choice(np.arange(len(pt_trb)), size=batch_size*batches_to_sample, replace=False)
+
                             else:
-                                inds = team_replay_buffer.get_PER_inds(m,batches_to_sample*batch_size,ensemble)
-                            if len(priorities) > 1:
-                                for c,p in enumerate(priorities):
-                                    if PT:
-                                        pt_trb[rb_i].update_priorities(agentID=m,inds = inds[c*batch_size:(c+1)*batch_size], prio=p,k = ensemble) 
-                                    else:
-                                        team_replay_buffer.update_priorities(agentID=m,inds = inds[c*batch_size:(c+1)*batch_size], prio=p,k = ensemble) 
+                                #inds = team_replay_buffer.get_PER_inds(m,batches_to_sample*batch_size,ensemble)
+                                inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size*batches_to_sample, replace=False)
+                            #if len(priorities) > 1:
+                            #    for c,p in enumerate(priorities):
+                            #        if PT:
+                            #            pt_trb.update_priorities(agentID=m,inds = inds[c*batch_size:(c+1)*batch_size], prio=p,k = ensemble) 
+                            #        else:
+                            #            team_replay_buffer.update_priorities(agentID=m,inds = inds[c*batch_size:(c+1)*batch_size], prio=p,k = ensemble) 
                             priorities = [] 
 
                     #inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
@@ -1229,11 +1302,11 @@ if __name__ == "__main__":
                         opp_sample = opp_replay_buffer.sample_LSTM(inds, trace_length,to_gpu=to_gpu,norm_rews=False)
                         maddpg.update_centralized_critic_LSTM_PC(team_sample, opp_sample, agentID, 'team')
                     else:
-                        if PT and (pretrain or use_pretrain_data):
+                        if PT:
                             
-                            team_sample = pt_trb[rb_i].sample(inds[batch_size*offset:batch_size*(offset+1)],
+                            team_sample = pt_trb.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                         to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
-                            opp_sample = pt_orb[rb_i].sample(inds[batch_size*offset:batch_size*(offset+1)],
+                            opp_sample = pt_orb.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                         to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                         else:
                             team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
@@ -1244,10 +1317,19 @@ if __name__ == "__main__":
                             priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
                             team_replay_buffer.update_priorities(agentID=agentID,inds = data_parallelinds, prio=priorities,k = ensemble)
                         else:
-                            priorities.append(maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path))
+                            train_actor = (len(team_replay_buffer) > 1000000) and (update_session % 2 == 0)
+                            train_critic = (len(team_replay_buffer) > 100000)
+                            if train_critic:
+                                priorities.append(maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path))
+                            if train_actor: # only update actor once 1 mill
+                                _ = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)
+
                             #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
                             if up % number_of_updates/10 == 0: # update target half way through
-                                maddpg.update_agent_targets(0,number_of_updates/10)
+                                if train_critic and not train_actor:
+                                    maddpg.update_agent_critic(0,number_of_updates/10)
+                                elif train_critic and train_actor:
+                                    maddpg.update_agent_targets(0,number_of_updates/10)
                     if SIL:
                         for i in range(SIL_update_ratio):
                             inds = team_replay_buffer.get_SIL_inds(agentID=m,batch_size=batch_size)
@@ -1257,18 +1339,18 @@ if __name__ == "__main__":
                                                     to_gpu=to_gpu,norm_rews=False)
                             priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
                             team_replay_buffer.update_SIL_priorities(agentID=m,inds = inds, prio=priorities)
-                if PT:
-                    for c,p in enumerate(priorities):
-                        if c != (len(priorities)-1):
-                            pt_trb[rb_i].update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):(batch_size*(c+1))+(-batch_size*batches_to_sample)], prio=p,k = ensemble) 
-                        else:
-                            pt_trb[rb_i].update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):], prio=p,k = ensemble) 
-                else:
-                    for c,p in enumerate(priorities):
-                        if c != (len(priorities)-1):
-                            team_replay_buffer.update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):(batch_size*(c+1))+(-batch_size*batches_to_sample)], prio=p,k = ensemble) 
-                        else:
-                            team_replay_buffer.update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):], prio=p,k = ensemble) 
+                #if PT:
+                #    for c,p in enumerate(priorities):
+                #        if c != (len(priorities)-1):
+                #            pt_trb.update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):(batch_size*(c+1))+(-batch_size*batches_to_sample)], prio=p,k = ensemble) 
+                #        else:
+                #            pt_trb.update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):], prio=p,k = ensemble) 
+                #else:
+                #    for c,p in enumerate(priorities):
+                #        if c != (len(priorities)-1):
+                #            team_replay_buffer.update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):(batch_size*(c+1))+(-batch_size*batches_to_sample)], prio=p,k = ensemble) 
+                #        else:
+                #            team_replay_buffer.update_priorities(agentID=m,inds = inds[(-batch_size*batches_to_sample)+(batch_size*c):], prio=p,k = ensemble) 
                 
                 #print(time.time()-start)
                 if not load_same_agent:
@@ -1276,12 +1358,12 @@ if __name__ == "__main__":
                     maddpg.save_agent(load_path,update_session,agentID,torch_device=maddpg.torch_device)
                     maddpg.save_ensemble(ensemble_path,ensemble,agentID,torch_device=maddpg.torch_device)
                 else:
-                    maddpg.update_agent_hard_critic(0)
+                    maddpg.update_agent_targets(0,number_of_updates/10)
                     print(time.time()-start,"<-- Critic Update Cycle")
 
                     [thr.join() for thr in threads]
-                    maddpg.load_ensemble_policy(ensemble_path,ensemble,0) # load only policy from updated policy thread
-                    maddpg.update_agent_hard_policy(agentID=0)
+                    #maddpg.load_ensemble_policy(ensemble_path,ensemble,0) # load only policy from updated policy thread
+                    #maddpg.update_agent_hard_policy(agentID=0)
                     [maddpg.save_agent(load_path,update_session,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
                     [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
                 print(time.time()-start,"<-- Full Cycle")

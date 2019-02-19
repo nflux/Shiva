@@ -29,15 +29,16 @@ session_path = "training_sessions/1_28_18_2_vs_2/"
 load_path = session_path +"ensemble_models/"
 eval_log_dir = session_path +"eval_log" # evaluation logfiles
 eval_hist_dir = session_path +"eval_history"
-num_TA = 2
-num_OA = 2
+num_TA =3
+num_OA =3
+port = 63000
 episode_length = 500
 device = "cuda"
 use_viewer = True
 launch_eval(
-    [load_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)], # models directory -> agent -> most current episode
+    ["agent2d/agent2D.pth" for i in range(num_TA)], # models directory -> agent -> most current episode
     eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation",
-    7000,num_TA,num_OA,episode_length,device,use_viewer)
+    port,num_TA,num_OA,episode_length,device,use_viewer)
 '''launch_eval(
     ['1v1/model_%i.pth' % i for i in range(num_TA)], # models directory -> agent -> most current episode
     eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation",
