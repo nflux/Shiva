@@ -588,9 +588,9 @@ class HFO_env():
                 elif s=='OutOfBounds' and self.agent_possession_team[agentID] == 'L':
                     reward+=-0.5
                 elif s=='CapturedByLeftGoalie':
-                    reward+=goal_points
+                    reward+=goal_points/2.0
                 elif s=='CapturedByRightGoalie':
-                    reward+=-goal_points
+                    reward+=-goal_points/4.0
 
                 possession_side = 'N' # at the end of each episode we set this to none
                 self.agent_possession_team = ['N'] * self.num_TA
@@ -605,9 +605,9 @@ class HFO_env():
                 elif s=='OutOfBounds' and self.agent_possession_opp[agentID] == 'R':
                     reward+=-0.5
                 elif s=='CapturedByRightGoalie':
-                    reward+=goal_points
+                    reward+=goal_points/2.0
                 elif s=='CapturedByLeftGoalie':
-                    reward+=-goal_points
+                    reward+=-goal_points/4.0
 
                 possession_side = 'N'
                 self.agent_possession_opp = ['N'] * self.num_OA
@@ -741,8 +741,8 @@ class HFO_env():
            prox_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
            prox_prev,closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
            if agentID == closest_agent:
-               team_reward += (prox_cur - prox_prev)*0.5
-               reward+= (prox_cur-prox_prev)*0.5
+               team_reward += (prox_cur - prox_prev)*1.0
+               reward+= (prox_cur-prox_prev)*1.0
             
         ##################################################################################
             
@@ -754,6 +754,7 @@ class HFO_env():
             if agentID == team_possessor:
                 reward += (2.5)*(r_prev - r)
                 team_reward += (2.5)*(r_prev - r)
+
         elif  ((self.team_base != base) and possession_side == 'R'):
             team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
             if agentID == team_possessor:
@@ -763,7 +764,7 @@ class HFO_env():
             reward += (1.25)*(r_prev - r)
             team_reward += (1.25)*(r_prev - r)
 
-        
+            
 
         
         ################## Offensive Behavior #######################

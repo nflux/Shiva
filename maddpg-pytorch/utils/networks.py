@@ -5,11 +5,12 @@ from torch.autograd import Variable
 from .i2a import RolloutEncoder
 import numpy as np
 from utils.misc import processor
+from .misc import onehot_from_logits
 class MLPNetwork_Actor(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object):
+    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,maddpg=object):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -17,19 +18,17 @@ class MLPNetwork_Actor(nn.Module):
             hidden_dim (int): Number of hidden dimensions
             nonlin (PyTorch function): Nonlinearity to apply to hidden layers
         """
-        super(MLPNetwork_Actor, self).__init__()
 
-        self.agent=agent
+        super(MLPNetwork_Actor, self).__init__()
+        self.agent=agent       
         self.discrete_action = discrete_action
         self.action_size = 3
         self.param_size = 5
         self.count = 0
-
         if self.agent.device == 'cuda':
-            self.cast = lambda x: x.cuda()
+            self.cast = lambda x: x.to(maddpg.torch_device)
         else:
             self.cast = lambda x: x.cpu()
-              
         
         if norm_in:  # normalize inputs
             self.in_fn = nn.BatchNorm1d(input_dim)
@@ -376,7 +375,7 @@ class I2A_Network(nn.Module):
         self.action_size = 3
         self.param_size = 5
         self.count = 0
-        self.n_actions = self.agent.n_actions
+        self.n_branches = self.agent.n_branches
         self.rollout_steps = rollout_steps
 
         self.I2A = I2A
@@ -399,7 +398,7 @@ class I2A_Network(nn.Module):
         self.in_fn.bias.data.fill_(0)
    
         if I2A:
-            self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_actions, 1024)
+            self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_branches, 1024)
         else:
             self.fc1 = nn.Linear(input_dim, 1024)
 
@@ -433,18 +432,39 @@ class I2A_Network(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        if X.size()[0] == 1 or not self.norm_in:
-            self.in_fn.train(False)
-        else:
-            self.in_fn.train(True)
-        if self.I2A:
-            fx = self.in_fn(self.cast(X)).float()
-            enc_rollouts = self.rollouts_batch(fx)
-            fc_in = torch.cat((fx,enc_rollouts),dim=1)
-            h1 = self.nonlin(self.fc1(fc_in))
-        else:
-            h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
 
+        if not self.I2A:     
+            if X.size()[0] == 1 or not self.norm_in:
+                self.in_fn.train(False)
+            else:
+                self.in_fn.train(True)
+            h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
+            h2 = self.nonlin(self.fc2(h1))
+            h3 = self.nonlin(self.fc3(h2))
+            h4 = self.nonlin(self.fc4(h3))
+
+            if not self.discrete_action:
+                self.final_out_action = self.out_action_fn(self.out_action(h4))
+                self.final_out_params = self.out_param_fn(self.out_param(h4))
+                out = torch.cat((self.final_out_action, self.final_out_params),1)
+                #if self.count % 100 == 0:
+                #    print(out)
+                self.count += 1
+        else: # I2A
+            if X[0].size()[0] == 1 or not self.norm_in:
+                self.in_fn.train(False)
+            else:
+                self.in_fn.train(True)
+            batch_size = X[0].size()[0]
+            fx = [self.in_fn(self.cast(x)).float() for x in X]
+
+            enc_rollouts = self.rollouts_batch(fx)
+            fc_in = [torch.cat((f,e),dim=1) for f,e in zip(fx,enc_rollouts)]
+            out = [self.ag_forward(x) for x in fc_in]
+        return out
+
+    def ag_forward(self,x):
+        h1 = self.nonlin(self.fc1(x))
         h2 = self.nonlin(self.fc2(h1))
         h3 = self.nonlin(self.fc3(h2))
         h4 = self.nonlin(self.fc4(h3))
@@ -456,47 +476,75 @@ class I2A_Network(nn.Module):
             #if self.count % 100 == 0:
             #    print(out)
             self.count += 1
-
         return out
 
     def rollouts_batch(self, batch):
-        batch_size = batch.size()[0]
-        batch_rest = batch.size()[1:]
+        # batch is a list of obs for each agent
+        batch_size = batch[0].size()[0] # agent 1's obs tensor batch size
+        batch_rest = batch[0].size()[1:]
         if batch_size == 1:
-            obs_batch_v = batch.expand(batch_size * self.n_actions, *batch_rest)
+            obs_batch_v = [b.expand(batch_size * self.n_branches, *batch_rest) for b in batch]
         else:
-            obs_batch_v = batch.unsqueeze(1)
-            obs_batch_v = obs_batch_v.expand(batch_size, self.n_actions, *batch_rest)
-            obs_batch_v = obs_batch_v.contiguous().view(-1, *batch_rest)
-        #actions = np.tile(np.arange(0, self.n_actions, dtype=np.int64), batch_size)
+            obs_batch_v = [b.unsqueeze(1) for b in batch]
+            obs_batch_v = [o.expand(batch_size, self.n_branches, *batch_rest) for o in obs_batch_v]
+            obs_batch_v = [o.contiguous().view(-1, *batch_rest) for o in obs_batch_v]
+        #actions = np.tile(np.arange(0, self.n_branches, dtype=np.int64), batch_size)
         actions = []
-        if self.agent.imagination_policy_branch:
-            actions = torch.stack((self.pol_prime(batch).view(batch_size,-1),self.imagined_pol(batch).view(batch_size,-1)),dim=1).view(self.n_actions*batch_size,-1) # use our agent and another pretrained policy as a branch
+        if self.agent.imagination_policy_branch: # needs revision
+            traj_1 = [self.pol_prime(b) for b in batch]
+            traj_2 = [self.pol_imagined_pol(b) for b in batch]
+            actions_1 = [torch.cat(
+                    (onehot_from_logits(out[:,:self.agent.action_dim]),out[:,self.agent.action_dim:]),dim=1) for out in traj_1]
+            actions_2 = [torch.cat(
+                    (onehot_from_logits(out[:,:self.agent.action_dim]),out[:,self.agent.action_dim:]),dim=1) for out in traj_2]
+            actions = [torch.stack((t1.view(batch_size,-1),t2.view(batch_size,-1)),dim=1).view(self.n_branches*batch_size,-1) for t1,t2 in zip(actions_1,actions_2)] # use our agent and another pretrained policy as a branch
         else:
-            actions = self.pol_prime(batch) # use just our agents actions for rollout
-                           
+            prime_out = [self.pol_prime(b) for b in batch] # use all agents actions for rollout
+            actions = [torch.cat(
+                    (onehot_from_logits(out[:,:self.agent.action_dim]),out[:,self.agent.action_dim:]),dim=1) for out in prime_out]
         step_obs, step_rewards,step_ws = [], [],[]
         for step_idx in range(self.rollout_steps):
-            actions_t = processor(torch.tensor(actions).float(),device=self.agent.device)
-            #EM_in = torch.cat((*obs_batch_v, *actions_t),dim=1)
+            #actions = processor(torch.tensor(actions).float(),device=self.agent.device,torch_device=self.agent.maddpg.torch_device)
+            acs_flat = torch.cat(actions,dim=1)
+            obs_next_v, reward_v, ws_v = [], [], []
+            for ag in range(self.agent.maddpg.nagents_team):
+                obs, rew,ws = self.EM(torch.cat((obs_batch_v[ag], acs_flat),dim=1))
+                obs_next_v.append(obs.detach())
+                reward_v.append(rew.detach())
+                ws_v.append(ws.detach())
 
-            obs_next_v, reward_v,ws_v = self.EM(torch.cat((obs_batch_v, actions_t),dim=1))                
+            step_obs.append(obs_next_v)
+            step_rewards.append(reward_v)
+            step_ws.append(ws_v)
 
-            step_obs.append(obs_next_v.detach())
-            step_rewards.append(reward_v.detach())
-            step_ws.append(ws_v.detach())
             # don't need actions for the last step
             if step_idx == self.rollout_steps-1:
                 break
             # combine the delta from EM into new observation
-            obs_batch_v = obs_batch_v + obs_next_v
+            obs_batch_v = [curr + delta for curr, delta in zip(obs_batch_v,obs_next_v)]
             # select actions
-            actions = self.pol_prime(obs_batch_v)
-        step_obs_v = torch.stack(step_obs)
-        step_rewards_v = torch.stack(step_rewards)
-        step_ws_v = torch.stack(step_ws)
-        flat_enc_v = self.encoder(step_obs_v, step_rewards_v,step_ws_v)
-        return flat_enc_v.view(batch_size, -1)  
+        if self.agent.imagination_policy_branch: # needs revision
+            traj_1 = [self.pol_prime(b) for b in obs_batch_v]
+            traj_2 = [self.pol_imagined_pol(b) for b in obs_batch_v]
+            actions_1 = [torch.cat(
+                    (onehot_from_logits(out[:,:self.agent.action_dim]),out[:,self.agent.action_dim:]),dim=1) for out in traj_1]
+            actions_2 = [torch.cat(
+                    (onehot_from_logits(out[:,:self.agent.action_dim]),out[:,self.agent.action_dim:]),dim=1) for out in traj_2]
+            actions = [torch.stack((t1.view(batch_size,-1),t2.view(batch_size,-1)),dim=1).view(self.n_branches*batch_size,-1) for t1,t2 in zip(actions_1,actions_2)] # use our agent and another pretrained policy as a branch
+        else:
+            prime_out = [self.pol_prime(b) for b in obs_batch_v] # use all agents actions for rollout
+            actions = [torch.cat(
+                    (onehot_from_logits(out[:,:self.agent.action_dim]),out[:,self.agent.action_dim:]),dim=1) for out in prime_out]
+        ag_obs = list(zip(*step_obs))
+        ag_rews = list(zip(*step_rewards))
+        ag_ws = list(zip(*step_ws))
+        
+        step_obs_v = [torch.stack(ao) for ao in ag_obs]
+
+        step_rewards_v = [torch.stack(ar) for ar in ag_rews]
+        step_ws_v = [torch.stack(aws) for aws in ag_ws]
+        flat_enc_v = [self.encoder(so, sr,sws).view(batch_size,-1) for so,sr,sws in zip(step_obs_v,step_rewards_v,step_ws_v)]
+        return flat_enc_v
     
     def distr_to_q(self, distr):
         weights = F.softmax(distr, dim=1) * self.supports
@@ -523,7 +571,7 @@ class LSTM_Network(nn.Module):
         self.action_size = 3
         self.param_size = 5
         self.count = 0
-        self.n_actions = self.agent.n_actions
+        self.n_branches = self.agent.n_branches
         self.rollout_steps = rollout_steps
         self.batch_size = maddpg.batch_size
         self.hidden_dim_lstm = agent.hidden_dim_lstm
@@ -558,7 +606,7 @@ class LSTM_Network(nn.Module):
         self.norm_in = norm_in
    
         if I2A:
-            self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_actions, 1024)
+            self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_branches, 1024)
         else:
             self.fc1 = nn.Linear(input_dim, 512)
 
@@ -655,15 +703,15 @@ class LSTM_Network(nn.Module):
         batch_size = batch.size()[0]
         batch_rest = batch.size()[1:]
         if batch_size == 1:
-            obs_batch_v = batch.expand(batch_size * self.n_actions, *batch_rest)
+            obs_batch_v = batch.expand(batch_size * self.n_branches, *batch_rest)
         else:
             obs_batch_v = batch.unsqueeze(1)
-            obs_batch_v = obs_batch_v.expand(batch_size, self.n_actions, *batch_rest)
+            obs_batch_v = obs_batch_v.expand(batch_size, self.n_branches, *batch_rest)
             obs_batch_v = obs_batch_v.contiguous().view(-1, *batch_rest)
-        #actions = np.tile(np.arange(0, self.n_actions, dtype=np.int64), batch_size)
+        #actions = np.tile(np.arange(0, self.n_branches, dtype=np.int64), batch_size)
         actions = []
         if self.agent.imagination_policy_branch:
-            actions = torch.stack((self.pol_prime(batch).view(batch_size,-1),self.imagined_pol(batch).view(batch_size,-1)),dim=1).view(self.n_actions*batch_size,-1) # use our agent and another pretrained policy as a branch
+            actions = torch.stack((self.pol_prime(batch).view(batch_size,-1),self.imagined_pol(batch).view(batch_size,-1)),dim=1).view(self.n_branches*batch_size,-1) # use our agent and another pretrained policy as a branch
         else:
             actions = self.pol_prime(batch) # use just our agents actions for rollout
                            

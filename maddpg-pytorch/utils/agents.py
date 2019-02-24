@@ -35,35 +35,34 @@ class DDPGAgent(object):
         self.action_dim = 3
         self.imagination_policy_branch = imagination_policy_branch
         self.device = device
-        self.n_actions = 1 + imagination_policy_branch# number of imagination branches
+        self.n_branches = 1 + imagination_policy_branch# number of imagination branches
         self.delta = (float(vmax)-vmin)/(n_atoms-1)
         # D4PG
         self.n_atoms = n_atoms
         self.vmax = vmax
         self.vmin = vmin
         self.world_status_dim = world_status_dim
-        self.num_out_obs_EM = num_in_critic - num_out_pol # obs + actions - actions  = obs head, (this does not include the ws head that is handled internally by network)
-        # print('Num of maddpg agents and num out', str(maddpg.nagents_team), str(num_out_pol), str(self.num_out_obs_EM))
-        # self.num_in_EM = num_in_critic - (self.num_out_obs_EM * (maddpg.nagents_team - 1)) # obs + actions
         self.LSTM = LSTM
         self.LSTM_PC = LSTM_PC
+
+        I2A_num_in_pol = num_in_pol
         self.hidden_dim_lstm = hidden_dim_lstm
 
         self.num_total_out_EM = maddpg.num_out_EM + self.world_status_dim + 1
         # EM for I2A
         if I2A:
             self.EM = EnvironmentModel(maddpg.num_in_EM,maddpg.num_out_EM,hidden_dim=hidden_dim,
-                                  norm_in=self.norm_in,agent=self)
-            # Stores a policy such as Helios to be used as one of the branches in imagination
+                                  norm_in=self.norm_in,agent=self,maddpg=maddpg)
+            # Stores a policy such as Helios to be used num_out_pol*env.num_TAas one of the branches in imagination
             self.imagination_policy = MLPNetwork_Actor(num_in_pol, num_out_pol,
                                     hidden_dim=hidden_dim,
                                     discrete_action=discrete_action, 
-                                    norm_in= self.norm_in,agent=self)
+                                    norm_in= self.norm_in,agent=self,maddpg=maddpg)
         # policy prime for I2A
             self.policy_prime = MLPNetwork_Actor(num_in_pol, num_out_pol,
                                     hidden_dim=hidden_dim,
                                     discrete_action=discrete_action, 
-                                    norm_in= self.norm_in,agent=self)
+                                    norm_in= self.norm_in,agent=self,maddpg=maddpg)
         else:
             self.EM = None
             self.imagination_policy = None
@@ -72,7 +71,7 @@ class DDPGAgent(object):
  
        
         if self.LSTM or self.LSTM_PC:
-            self.policy = LSTM_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
+            self.policy = LSTM_Network(I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
                             hidden_dim=hidden_dim,
                             discrete_action=discrete_action,
                             norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
@@ -80,14 +79,14 @@ class DDPGAgent(object):
                                     LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=False, trace_length=trace_length)
 
             if not maddpg.only_policy:
-                self.target_policy = LSTM_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
+                self.target_policy = LSTM_Network(I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
                                         hidden_dim=hidden_dim,
                                         discrete_action=discrete_action,
                                         norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                                         EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                                 LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=True, trace_length=trace_length)
         else:
-            self.policy = I2A_Network(num_in_pol, num_out_pol, self.num_total_out_EM,
+            self.policy = I2A_Network(I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
                             hidden_dim=hidden_dim,
                             discrete_action=discrete_action,
                             norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
@@ -100,7 +99,7 @@ class DDPGAgent(object):
             #self.policy.share_memory()
             if not maddpg.only_policy:
 
-                self.target_policy = I2A_Network(num_in_pol, num_out_pol,self.num_total_out_EM,
+                self.target_policy = I2A_Network(I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
                                         hidden_dim=hidden_dim,
                                         discrete_action=discrete_action,
                                         norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
@@ -175,7 +174,7 @@ class DDPGAgent(object):
         #self.critic_optimizer = Adam(self.critic.parameters(), lr=lr, weight_decay =0)
         for param_group in self.critic_optimizer.param_groups:
             param_group['lr'] = lr
-    def step(self, obs,ran, explore=False):
+    def step(self, obs,ran,acs,explore=False):
         """
         Take a step forward in environment for a minibatch of observations
         Inputs:
@@ -194,7 +193,10 @@ class DDPGAgent(object):
         # mixed disc/cont
         if explore:
             if not ran: # not random
-                action = self.policy(obs)
+                if self.I2A:
+                    action = acs
+                else:
+                    action = self.policy(obs)
                 if self.counter % 1000 == 0:
                     print(torch.softmax(action[:,:self.action_dim],dim=1))
                 a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
@@ -206,7 +208,10 @@ class DDPGAgent(object):
                 action = torch.cat((onehot_from_logits(torch.empty((1,self.action_dim),device=self.maddpg.torch_device,requires_grad=False).uniform_(-1,1)),
                             torch.empty((1,self.param_dim),device=self.maddpg.torch_device,requires_grad=False).uniform_(-1,1) ),1)
         else:
-            action = self.policy(obs)
+            if self.I2A:
+                action = acs
+            else:
+                action = self.policy(obs)
             if self.counter % 1000 == 0:
                 print(torch.softmax(action[:,:self.action_dim],dim=1))
             a = onehot_from_logits(action[0,:self.action_dim].view(1,self.action_dim))
@@ -254,12 +259,18 @@ class DDPGAgent(object):
                     
 
         if self.I2A:
-            dict['EM']=self.EM_state_dict()
-            dict['EM_optimizer'] = self.EM_optimizer.state_dict()
-            dict['policy_prime_optimizer'] =  self.policy_prime_optimizer.state_dict(),
-            dict['imagination_policy_optimizer']= self.imagination_policy_optimizer.state_dict(),
-            dict['policy_prime'] =  self.policy_prime.state_dict(),
-            dict['imagination_policy']= self.imagination_policy.state_dict()
+            dict = {'policy': self.policy.state_dict(),
+                    'critic': self.critic.state_dict(),
+                    'target_policy': self.target_policy.state_dict(),
+                    'target_critic': self.target_critic.state_dict(),
+                    'policy_optimizer': self.policy_optimizer.state_dict(),
+                    'critic_optimizer': self.critic_optimizer.state_dict(),
+                    'EM':self.EM.state_dict(),
+                    'EM_optimizer':self.EM_optimizer.state_dict(),
+                    'policy_prime_optimizer': self.policy_prime_optimizer.state_dict(),
+                    'imagination_policy_optimizer': self.imagination_policy_optimizer.state_dict(),
+                    'policy_prime':  self.policy_prime.state_dict(),
+                    'imagination_policy': self.imagination_policy.state_dict()}
 
         return dict
 
@@ -332,6 +343,34 @@ class DDPGAgent(object):
             self.imagination_policy_optimizer.load_state_dict(params['imagination_policy_optimizer'])
         
         
+    def load_target_policy_params(self, params):
+        if self.device == 'cuda':
+            dev = torch.device(self.maddpg.torch_device)
+        else:
+            dev = torch.device('cpu')
+        if self.maddpg.data_parallel:
+            self.target_policy.module.load_state_dict(params['target_policy'])
+            self.policy.module.load_state_dict(params['policy'])
+
+        else:
+            self.target_policy.load_state_dict(params['target_policy'])
+            self.policy.load_state_dict(params['policy'])
+
+
+
+        if self.I2A:
+            self.EM.load_state_dict(params['EM'])
+            self.policy_prime.load_state_dict(params['policy_prime'])
+            self.imagination_policy.load_state_dict(params['imagination_policy'])
+
+
+        self.policy.to(dev)
+        if self.I2A:
+            self.EM.to(dev)
+            self.imagination_policy.to(dev)
+            self.policy_prime.to(dev)
+
+           
     def load_policy_params(self, params):
         if self.device == 'cuda':
             dev = torch.device(self.maddpg.torch_device)
@@ -357,4 +396,4 @@ class DDPGAgent(object):
             self.imagination_policy.to(dev)
             self.policy_prime.to(dev)
 
-      
+         

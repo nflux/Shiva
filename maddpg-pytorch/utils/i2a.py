@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 ROLLOUT_HIDDEN = 256
 class EnvironmentModel(nn.Module):
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, agent=object):
+    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, agent=object,maddpg=object):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
