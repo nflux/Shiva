@@ -33,8 +33,8 @@ def main(args):
     change_balls_x = 0.01
     change_balls_y = 0.01
 
-    offense_team_bin = 'base'
-    defense_team_bin = 'base'
+    offense_team_bin = args.offense_team
+    defense_team_bin = args.defense_team
 
     if os.path.isdir(os.getcwd() + '/log_' + str(port)):
         file_list = os.listdir(os.getcwd() + '/log_' + str(port))
@@ -53,7 +53,7 @@ def main(args):
                         hfo_log_game=False, rcss_log_game=False, log_dir=log_dir, agents_x_min=agents_x_min, agents_x_max=agents_x_max,
                         agents_y_min=agents_y_min, agents_y_max=agents_y_max, change_every_x=change_every_x,
                         change_agents_x=change_agents_x, change_agents_y=change_agents_y, change_balls_x=change_balls_x,
-                        change_balls_y=change_balls_y, control_rand_init=control_rand_init, record=True,
+                        change_balls_y=change_balls_y, control_rand_init=control_rand_init, record=False, record_server=True,
                         offense_team_bin=offense_team_bin, defense_team_bin=defense_team_bin, deterministic=deterministic, start_viewer=start_viewer)
 
     while(True):
@@ -66,6 +66,10 @@ def parseArgs():
                     help='port number 2000 or above')
     p.add_argument('--log_dir', dest='log_dir', type=str, default='log_2000',
                     help='Location of rcg file')
+    p.add_argument('--offense-team', dest='offense_team', type=str, default='helios',
+                    help='specifies what binary to run for offense')
+    p.add_argument('--defense-team', dest='defense_team', type=str, default='helios',
+                    help='specifies what binary to run for defense')
     
     args = p.parse_args()
 

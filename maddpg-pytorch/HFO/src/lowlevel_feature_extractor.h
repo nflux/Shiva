@@ -23,7 +23,7 @@ public:
 
 protected:
   // Number of features for non-player objects.
-  const static int num_basic_features = 59;
+  const static int num_basic_features = 56;
   // Number of features for each player or opponent in game, not including uniform numbers.
   const static int features_per_player = 8;
 };

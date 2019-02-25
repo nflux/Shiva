@@ -63,7 +63,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // ADD_FEATURE(self_pos.y);
 
   // Direction and speed of the agent.
-  addFeature(self.velValid() ? FEAT_MAX : FEAT_MIN);
+  // addFeature(self.velValid() ? FEAT_MAX : FEAT_MIN);
   if (self.velValid()) {
     addAngFeature(self_ang - self.vel().th());
     addNormFeature(self.speed(), 0., observedSelfSpeedMax);
@@ -161,7 +161,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // ======================== BALL FEATURES ======================== //
   const BallObject& ball = wm.ball();
   // Angle and distance to the ball
-  addFeature(ball.rposValid() ? FEAT_MAX : FEAT_MIN);
+  // addFeature(ball.rposValid() ? FEAT_MAX : FEAT_MIN);
   if (ball.rposValid()) {
     addLandmarkFeatures(ball.pos(), self_pos, self_ang);
     // addAngFeature(ball.angleFromSelf());
@@ -172,7 +172,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     addFeature(FEAT_INVALID);
   }
   // Velocity and direction of the ball
-  addFeature(ball.velValid() ? FEAT_MAX : FEAT_MIN);
+  // addFeature(ball.velValid() ? FEAT_MAX : FEAT_MIN);
   if (ball.velValid()) {
     // SeverParam lists ballSpeedMax a 2.7 which is too low
     addNormFeature(ball.vel().r(), 0., observedBallSpeedMax);

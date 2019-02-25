@@ -2,6 +2,9 @@
 NUM_ENVS=4
 py_command=""
 
+declare -a arr_offense_teams=("")
+declare -a arr_defense_teams=("")
+
 for ((i=1; i <= $NUM_ENVS; i++ ))
 do
     j=$((($i+1) * 1000))
