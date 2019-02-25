@@ -542,9 +542,9 @@ class HFO_env():
                 elif s==3:
                     reward+=-0.5
                 elif s==6:
-                    reward+= +goal_points
+                    reward+= +goal_points/2.0
                 elif s==7:
-                    reward+= -goal_points
+                    reward+= -goal_points/4.0
 
                 return reward
             else:
@@ -555,9 +555,9 @@ class HFO_env():
                 elif s==3:
                     reward+=-0.5
                 elif s==6:
-                    reward+= -goal_points
+                    reward+= -goal_points/4.0
                 elif s==7:
-                    reward+= goal_points
+                    reward+= goal_points/2.0
 
         return reward
        

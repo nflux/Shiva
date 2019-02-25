@@ -14,7 +14,7 @@ def main(args):
     fullstate = True
     deterministic = True
     seed = np.random.randint(1000)
-    start_viewer = False
+    start_viewer = True
     log_dir = args.log_dir
 
     # Control Random Initilization of Agents and Ball

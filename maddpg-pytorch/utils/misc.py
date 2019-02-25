@@ -91,19 +91,19 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     for n in range(num_features):
         obs_header_names.append(str(n))
     print("Reading CSVs")
-
-    df_left_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in left_fnames if '_actions_' in fn]
-    df_left_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in left_fnames if '_obs_' in fn]
+    df_left_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if '_status' in fn] 
+    df_left_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in left_fnames if '_actions_left' in fn]
+    df_left_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in left_fnames if '_obs_left' in fn]
 
     #df_right_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in right_fnames if '_status_' in fn]
-    df_right_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in right_fnames if '_actions_' in fn]
-    df_right_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in right_fnames if '_obs_' in fn]
+    df_right_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in right_fnames if '_actions_right' in fn]
+    df_right_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in right_fnames if '_obs_right' in fn]
     
     # print(df_left_action_list)
     print("Dropping duplicates")
     # Drop repeated cycles
-    status_list = pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if '_status' in fn
-    status_list = [status_list for i in range(len(df_left_action_list))]
+    status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if 'status' in fn]
+    #status_list = [status_list[0] for i in range(len(df_left_action_list))]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in status_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_action_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_obs_list]
@@ -112,14 +112,14 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_action_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_obs_list]
 
-    # Temporary fix for messed up goalie actions
+    # # Temporary fix for messed up goalie actions
     df_goalie_action_patch = pd.DataFrame()
     df_goalie_action_patch['cycle'] = np.arange(len(status_list[0].index)+1)
     print("Cleaning null actions")
     df_left_action_list = [pd.merge(df_goalie_action_patch, df_left_action_list[i], on='cycle', how='outer') for i in range(len(df_left_action_list))]
     df_right_action_list = [pd.merge(df_goalie_action_patch, df_right_action_list[i], on='cycle', how='outer') for i in range(len(df_right_action_list))]
-    [df.interpolate(inplace=True) for df in df_left_action_list]
-    [df.interpolate(inplace=True) for df in df_right_action_list]
+    #[df.interpolate(inplace=True) for df in df_left_action_list]
+    #[df.interpolate(inplace=True) for df in df_right_action_list]
     [df.fillna(0.001,inplace=True) for df in df_left_action_list]
     [df.fillna(0.001,inplace=True) for df in df_right_action_list]
     print("Checking DF's for null values")
@@ -137,8 +137,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     [df.fillna(0.001,inplace=True) for df in df_left_obs_list]
     [df.fillna(0.001,inplace=True) for df in df_right_obs_list]
     print("Checking DF's for null values")
-    print([df.isnull().values.any() for df in df_left_obs_list])
-    print([df.isnull().values.any() for df in df_right_obs_list])
+
 
     
     df_goalie_action_patch = pd.DataFrame()
@@ -165,7 +164,9 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     # df_right_action_list[1].to_csv('./temp_path_robocup4.csv', sep=',', index=False)
     # df_right_action_list[2].to_csv('./temp_path_robocup5.csv', sep=',', index=False)
     # exit(0)
-
+    print(len(df_left_action_list[0]))
+    print(len(df_left_obs_list[0]))
+    print(len(status_list[0]))
     print("Converting df to numpy")
     # Turn to numpy arrays, NOTE: Actions are hot-encoded in the logs
     status = [df.loc[:, 'status'].values for df in status_list]
@@ -518,10 +519,10 @@ def load_buffer(left,right,zip):
     critic_mod_both = True
     num_OA = num_TA
     ################## Base Left #########################
-    for ep_i in range(pt_episodes-10):
+    for ep_i in range(pt_episodes-2):
         if ep_i % 100 == 0:
             print("Pushing Pretrain Episode:",ep_i)
-        
+
         team_n_step_rewards = []
         team_n_step_obs = []
         team_n_step_acs = []
@@ -606,7 +607,7 @@ def load_buffer(left,right,zip):
                         # print(current_ensembles)
                         if SIL:
                             SIL_priorities = np.ones(num_TA)*default_prio
-                        
+
                         exp_team = np.column_stack((team_n_step_obs[n],
                                             team_n_step_acs[n],
                                             np.expand_dims(team_n_step_rewards[n], 1),

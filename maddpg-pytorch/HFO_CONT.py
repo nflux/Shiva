@@ -130,7 +130,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
     #maddpg = dill.loads(maddpg_pick)
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
 
-    number_of_updates = 12000
+    number_of_updates = 10000
     batches_to_sample = 1000
     if len(team_replay_buffer) < batch_size*(batches_to_sample):
         batches_to_sample = 1
@@ -496,6 +496,17 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                         #print(current_ensembles)
                         if SIL:
                             SIL_priorities = np.ones(num_TA)*default_prio
+
+                        print(np.transpose(team_n_step_obs[n]))
+                        print(team_n_step_acs[n])
+                        print(np.expand_dims(team_n_step_rewards[n], 1))
+                        print(np.expand_dims(team_all_MC_targets[et_i-n], 1))
+                        print(np.expand_dims([n_step_done_team for i in range(num_TA)], 1))
+                        print(np.transpose(n_step_next_ob_team))
+                        print(np.expand_dims(n_step_targets_team, 1))
+                        print(np.expand_dims([team_n_step_ws[n] for i in range(num_TA)], 1))
+                        print(priorities)
+                        print(np.expand_dims([default_prio for i in range(num_TA)],1))
                         exp_team = np.column_stack((np.transpose(team_n_step_obs[n]),
                                             team_n_step_acs[n],
                                             np.expand_dims(team_n_step_rewards[n], 1),
@@ -655,7 +666,7 @@ if __name__ == "__main__":
         # default settings ---------------------
         num_episodes = 10000000
         replay_memory_size = 200000
-        pt_memory = 1000000
+        pt_memory = 25000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -664,8 +675,8 @@ if __name__ == "__main__":
  
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 2
-        num_OA = 2
+        num_TA = 3
+        num_OA = 3
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -720,7 +731,7 @@ if __name__ == "__main__":
         TD3_noise = 0.02
         # -------------------------------------- 
         #Pretrain Options ----------------------
-        pretrain = False
+        pretrain = True
         use_pretrain_data = False
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
         pt_update_cycles = 200
@@ -732,7 +743,7 @@ if __name__ == "__main__":
         bl_agent2d = False
         use_preloaded_agent2d = False
         preload_agent2d_path = ""
-        num_buffers = 15
+        num_buffers = 1
         pt_total_memory = pt_memory*num_buffers
 
         pt_episodes = 4000 # not used
@@ -782,7 +793,7 @@ if __name__ == "__main__":
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.8
         load_same_agent = True # load same policy for all agents
-        push_only_left = False
+        push_only_left = True
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -793,7 +804,7 @@ if __name__ == "__main__":
         load_nets = False # load previous sessions' networks from file for initialization
         initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
         first_save = True # build model clones for ensemble
-        preload_model = True
+        preload_model = False
         preload_path = "agent2d/model_0.pth"
         # --------------------------------------
         # Evaluation ---------------------------
@@ -956,8 +967,8 @@ if __name__ == "__main__":
             
             if os.path.isdir(os.getcwd() + '/pt_logs_%i' % ((i+1)*1000)):
                 team_files = os.listdir(os.getcwd() + '/pt_logs_%i' % ((i+1)*1000))
-                left_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_left_' in f]
-                right_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_right_' in f]
+                left_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_left_' or '.csv' in f]
+                right_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_right_' or '.csv' in f]
             else:
                 print('log directory DNE')
                 exit(0)
