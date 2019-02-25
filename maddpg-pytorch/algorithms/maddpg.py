@@ -531,12 +531,12 @@ class MADDPG(object):
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = opp_sample
         else:
             count = self.opp_count[agent_i]
-            curr_agent = self.opp_agents[agent_i]
-            target_policies = self.opp_target_policies
-            opp_target_policies = self.team_target_policies
+            curr_agent = self.opp_agents[agenelf.I2A:
+            target_policies = self.opp_target                curr_pol_out = curr_agent.policy(obs)cies
+            opp_target_policies = self.team_t            else:_policies
             nagents = self.nagents_opp
             policies = self.opp_policies
-            opp_policies = self.team_policies
+            opp_policies = self.team_policies                
             obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
 
@@ -693,7 +693,7 @@ class MADDPG(object):
                 reg_param = 5.0
             
             param_reg = torch.clamp((curr_pol_out_stacked[:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,curr_agent.action_dim:]),min=0.0).sum(dim=1).mean()
-            entropy_reg = (-torch.log_softmax(curr_pol_out_stacked,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
+            entropy_reg = (-torch.log_softmax(curr_pol_out_stacked[:,:curr_agent.action_dim],dim=1).sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
             pol_loss += param_reg
             pol_loss += entropy_reg
             if self.I2A:
@@ -1655,16 +1655,31 @@ class MADDPG(object):
         #with torch.no_grad():
         if self.TD3:
             noise = processor(torch.randn_like(acs[0]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
+            if self.I2A:
+                team_pi_acs = [a + noise for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
+                opp_pi_acs = [a + noise for a in opp_target_policies[0](opp_next_obs)] # get actions for all agents, add noise to each
+
+            else:
+                team_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]
+                opp_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+
             all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in team_pi_acs]
 
             opp_all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+            (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in opp_pi_acs]
         else:
+            if self.I2A:
+                team_pi_acs = [a for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
+                opp_pi_acs = [a for a in opp_target_policies[0](opp_next_obs)] # get actions for all agents, add noise to each
+            else:
+                team_pi_acs  = [(pi(nobs)) for pi, nobs in zip(target_policies,next_obs)]
+                opp_pi_acs  = [(pi(nobs)) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+
             all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in team_pi_acs]
             opp_all_trgt_acs =[torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in opp_pi_acs]
 
         mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
         mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
@@ -1744,9 +1759,7 @@ class MADDPG(object):
                                                                         'critic': np.round(vf_loss.item(),4)},
                                                                         ignore_index=True)
             print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
-        if self.I2A:
-            print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
-            print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
+
     
     # return priorities
         if self.TD3:
@@ -2066,9 +2079,16 @@ class MADDPG(object):
 
         self.curr_agent_index = agent_i
         
-        all_obs = torch.cat(obs,dim=0) # stack all obs for all agents
+        #all_obs = torch.cat(obs,dim=0) # stack all obs for all agents
+        #curr_pol_out = curr_agent.policy(all_obs)
+
         curr_agent.policy_optimizer.zero_grad()
-        curr_pol_out = curr_agent.policy(all_obs)
+        if self.I2A:
+            curr_pol_out = curr_agent.policy(obs)
+        else:
+            curr_pol_out = [curr_agent.policy(obs[ag]) for ag in range(nagents)]
+        curr_pol_out_stacked =  torch.cat(curr_pol_out,dim=0)
+        
         all_acs = torch.cat(acs,dim=0)
 
         pol_out_actions = torch.softmax(curr_pol_out[:,:curr_agent.action_dim],dim=1).float()
@@ -2081,10 +2101,9 @@ class MADDPG(object):
 
         pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
         
-        entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
         reg_param = 5.0
-        entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
-        entropy_reg = (-torch.log(poll_out_actions).sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
+        entropy_reg = (-torch.log_softmax(curr_pol_out_stacked[:,:curr_agent.action_dim],dim=1).sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
+        #entropy_reg = (-torch.log(poll_out_actions).sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
         # testing imitation
         #pol_loss += (curr_pol_out[:curr_agent.action_dim]**2).mean() * 1e-2 # regularize size of action
         pol_loss.backward()
@@ -2123,8 +2142,8 @@ class MADDPG(object):
             actual_ws = self.ws_onehot.repeat(nagents,1)
             loss_obs = F.mse_loss(est_obs_diff, actual_obs_diff)
             loss_rew = F.mse_loss(est_rews, actual_rews)
-            loss_ws = CELoss(est_ws,torch.argmax(actual_ws,dim=1))
-            EM_loss = self.obs_weight * loss_obs + self.rew_weight * loss_rew + self.ws_weight * loss_ws
+            #loss_ws = CELoss(est_ws,torch.argmax(actual_ws,dim=1))
+            EM_loss = self.obs_weight * loss_obs + self.rew_weight * loss_rew  # + self.ws_weight * loss_ws
             EM_loss.backward()
             torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
             curr_agent.EM_optimizer.step()

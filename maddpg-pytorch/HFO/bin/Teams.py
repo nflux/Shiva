@@ -158,6 +158,8 @@ class Helios17(Team):
               '--intercept-conf-dir %s/data/intercept_probability/ '\
               '--opponent-data-dir %s/data/opponent_data/ -p %d '\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, 
+                 baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, port)
+
     offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
     defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
     super(Helios17, self).__init__(name, binaryPath, libDir, options,
