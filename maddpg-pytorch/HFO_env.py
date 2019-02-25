@@ -142,9 +142,9 @@ class HFO_env():
         self.open_goal = 55 #Changed to account for the 3 removed obs, previously 58
         self.team_goal_angle_beg = 56 #Changed to account for the 3 removed obs, previously 59
         self.team_goal_angle_end = self.team_goal_angle_beg +(num_TA -1)
-        self.opp_goal_angle_beg = self.team_goal_angle_end + 1 #Originally eq to just self.team_goal_angle_end, but we want next index
+        self.opp_goal_angle_beg = self.team_goal_angle_end
         self.opp_goal_angle_end = self.opp_goal_angle_beg + num_TA
-        self.team_pass_angle_beg = self.opp_goal_angle_end + 1 #Originally eq to just self.team_goal_angle_end, but we want next index
+        self.team_pass_angle_beg = self.opp_goal_angle_end
         self.team_pass_angle_end = self.team_pass_angle_beg + num_TA - 1
         self.team_unif_beg = -(2*num_TA) -(2*(num_TA)) - (2*num_OA) - 2 -2 - 1
         self.team_unif_end = -(2*num_TA) + num_TA - 1 -(2*(num_TA-1)) - (2*num_TA) - 2 -2 - 1
