@@ -690,7 +690,7 @@ class MADDPG(object):
             if self.D4PG:
                 reg_param = 5.0
             else:
-                reg_param = 10.0
+                reg_param = 5.0
             
             param_reg = torch.clamp((curr_pol_out_stacked[:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,curr_agent.action_dim:]),min=0.0).sum(dim=1).mean()
             entropy_reg = (-torch.log_softmax(curr_pol_out_stacked,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
