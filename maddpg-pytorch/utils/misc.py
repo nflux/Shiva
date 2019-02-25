@@ -91,28 +91,30 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     for n in range(num_features):
         obs_header_names.append(str(n))
     print("Reading CSVs")
-    df_left_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if '_status_' in fn]
+
     df_left_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in left_fnames if '_actions_' in fn]
     df_left_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in left_fnames if '_obs_' in fn]
 
-    df_right_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in right_fnames if '_status_' in fn]
+    #df_right_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in right_fnames if '_status_' in fn]
     df_right_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in right_fnames if '_actions_' in fn]
     df_right_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in right_fnames if '_obs_' in fn]
     
     # print(df_left_action_list)
     print("Dropping duplicates")
     # Drop repeated cycles
-    [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_status_list]
+    status_list = pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if '_status' in fn
+    status_list = [status_list for i in range(len(df_left_action_list))]
+    [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in status_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_action_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_obs_list]
 
-    [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_status_list]
+    #[df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_status_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_action_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_obs_list]
 
     # Temporary fix for messed up goalie actions
     df_goalie_action_patch = pd.DataFrame()
-    df_goalie_action_patch['cycle'] = np.arange(len(df_left_status_list[0].index)+1)
+    df_goalie_action_patch['cycle'] = np.arange(len(status_list[0].index)+1)
     print("Cleaning null actions")
     df_left_action_list = [pd.merge(df_goalie_action_patch, df_left_action_list[i], on='cycle', how='outer') for i in range(len(df_left_action_list))]
     df_right_action_list = [pd.merge(df_goalie_action_patch, df_right_action_list[i], on='cycle', how='outer') for i in range(len(df_right_action_list))]
@@ -126,7 +128,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
 
     
     df_goalie_action_patch = pd.DataFrame()
-    df_goalie_action_patch['cycle'] = np.arange(len(df_left_status_list[0].index)+1)
+    df_goalie_action_patch['cycle'] = np.arange(len(status_list[0].index)+1)
     print("Cleaning null obs")
     df_left_obs_list = [pd.merge(df_goalie_action_patch, df_left_obs_list[i], on='cycle', how='outer') for i in range(len(df_left_obs_list))]
     df_right_obs_list = [pd.merge(df_goalie_action_patch, df_right_obs_list[i], on='cycle', how='outer') for i in range(len(df_right_obs_list))]
@@ -140,17 +142,17 @@ def pretrain_process(left_fnames, right_fnames, num_features):
 
     
     df_goalie_action_patch = pd.DataFrame()
-    df_goalie_action_patch['cycle'] = np.arange(len(df_left_status_list[0].index))
+    df_goalie_action_patch['cycle'] = np.arange(len(status_list[0].index))
     print("Cleaning null status")
-    df_left_status_list = [pd.merge(df_goalie_action_patch, df_left_status_list[i], on='cycle', how='outer') for i in range(len(df_left_status_list))]
-    df_right_status_list = [pd.merge(df_goalie_action_patch, df_right_status_list[i], on='cycle', how='outer') for i in range(len(df_right_status_list))]
+    status_list = [pd.merge(df_goalie_action_patch, status_list[i], on='cycle', how='outer') for i in range(len(status_list))]
+    #df_right_status_list = [pd.merge(df_goalie_action_patch, df_right_status_list[i], on='cycle', how='outer') for i in range(len(df_right_status_list))]
     #[df.interpolate(inplace=True) for df in df_left_status_list]
     #[df.interpolate(inplace=True) for df in df_right_status_list]
-    [df.fillna(0,inplace=True) for df in df_left_status_list]
-    [df.fillna(0,inplace=True) for df in df_right_status_list]
+    [df.fillna(0,inplace=True) for df in status_list]
+    #[df.fillna(0,inplace=True) for df in df_right_status_list]
     print("Checking DF's for null values")
-    print([df.isnull().values.any() for df in df_left_status_list])
-    print([df.isnull().values.any() for df in df_right_status_list])
+    print([df.isnull().values.any() for df in status_list])
+    #print([df.isnull().values.any() for df in df_right_status_list])
 
     
     # [df.interpolate() for df in df_right_action_list]
@@ -166,23 +168,24 @@ def pretrain_process(left_fnames, right_fnames, num_features):
 
     print("Converting df to numpy")
     # Turn to numpy arrays, NOTE: Actions are hot-encoded in the logs
-    status = [df.loc[:, 'status'].values for df in df_left_status_list]
+    status = [df.loc[:, 'status'].values for df in status_list]
     team_pt_obs = [df.loc[:, obs_header_names[1:]].values for df in df_left_obs_list]
     team_pt_actions = [df.loc[:, 'dash':].values for df in df_left_action_list]
 
-    o_status = [df.loc[:, 'status'].values for df in df_right_status_list]
+    #o_status = [df.loc[:, 'status'].values for df in df_right_status_list]
     opp_pt_obs = [df.loc[:, obs_header_names[1:]].values for df in df_right_obs_list]
     opp_pt_actions = [df.loc[:, 'dash':].values for df in df_right_action_list]
 
     # Change dims to timesteps x number of agents x item
-    team_pt_status = [np.asarray([status[i][ts] for i in range(len(status))]) for ts in range(len(status[0])-3)]
+    #team_pt_status = [np.asarray([status[i][ts] for i in range(len(status))]) for ts in range(len(status[0])-3)]
     team_pt_obs = [np.asarray([team_pt_obs[i][ts] for i in range(len(team_pt_obs))]) for ts in range(len(status[0])-3)]
     team_pt_actions = [np.asarray([team_pt_actions[i][ts] for i in range(len(team_pt_actions))]) for ts in range(len(status[0])-3)]
 
-    opp_pt_status = [np.asarray([o_status[i][ts] for i in range(len(o_status))]) for ts in range(len(status[0])-3)]
+    #opp_pt_status = [np.asarray([o_status[i][ts] for i in range(len(o_status))]) for ts in range(len(status[0])-3)]
     opp_pt_obs = [np.asarray([opp_pt_obs[i][ts] for i in range(len(opp_pt_obs))]) for ts in range(len(status[0])-3)]
     opp_pt_actions = [np.asarray([opp_pt_actions[i][ts] for i in range(len(opp_pt_actions))]) for ts in range(len(status[0])-3)]
-    
+    team_pt_status = 0
+    opp_pt_status = 0
     return team_pt_status, team_pt_obs, team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status
 
 
