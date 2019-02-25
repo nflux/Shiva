@@ -133,17 +133,18 @@ class HFO_env():
         self.team_possession = False
         self.opp_possession = False
         if feat_lvl == 'low':
-            self.team_num_features = 59 + 13*(num_TA-1) + 12*num_OA + 4 + 1 + 2 + 1
-            self.opp_num_features = 59 + 13*(num_OA-1) + 12*num_TA + 4 + 1 + 2 + 1
+            #For new obs reorganization without vailds, changed hfo obs from 59 to 56
+            self.team_num_features = 56 + 13*(num_TA-1) + 12*num_OA + 4 + 1 + 2 + 1
+            self.opp_num_features = 56 + 13*(num_OA-1) + 12*num_TA + 4 + 1 + 2 + 1
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6 
-        self.open_goal = 58
-        self.team_goal_angle_beg = 59
+        self.open_goal = 55 #Changed to account for the 3 removed obs, previously 58
+        self.team_goal_angle_beg = 56 #Changed to account for the 3 removed obs, previously 59
         self.team_goal_angle_end = self.team_goal_angle_beg +(num_TA -1)
-        self.opp_goal_angle_beg = self.team_goal_angle_end
+        self.opp_goal_angle_beg = self.team_goal_angle_end + 1 #Originally eq to just self.team_goal_angle_end, but we want next index
         self.opp_goal_angle_end = self.opp_goal_angle_beg + num_TA
-        self.team_pass_angle_beg = self.opp_goal_angle_end 
+        self.team_pass_angle_beg = self.opp_goal_angle_end + 1 #Originally eq to just self.team_goal_angle_end, but we want next index
         self.team_pass_angle_end = self.team_pass_angle_beg + num_TA - 1
         self.team_unif_beg = -(2*num_TA) -(2*(num_TA)) - (2*num_OA) - 2 -2 - 1
         self.team_unif_end = -(2*num_TA) + num_TA - 1 -(2*(num_TA-1)) - (2*num_TA) - 2 -2 - 1
@@ -364,7 +365,7 @@ class HFO_env():
             if obs[agentID][5] == 1:
                 ball_kickable = True
         elif self.feat_lvl == 'low':
-            if obs[agentID][12] == 1:
+            if obs[agentID][11] == 1: #New kickable
                 ball_kickable = True
         return ball_kickable
     
@@ -385,15 +386,11 @@ class HFO_env():
         if self.feat_lvl == 'high':            
             return obs[6]
         else:
-            return obs[15]
+            return obs[14] #New index
 
     # low level feature (1 for closest to object -1 for furthest)
     def ball_proximity(self,obs):
-        if obs[50]: # ball pos valid
-            return obs[53]
-        else:
-            print('no ball...')
-            return -1
+        return obs[51] #New ball proximity
         
     def closest_player_to_ball(self, team_obs, num_agents):
         '''
@@ -456,18 +453,18 @@ class HFO_env():
         elif self.feat_lvl =='low':
             relative_x = 0
             relative_y = 0
-            ball_proximity = obs[53]
-            goal_proximity = obs[15]
-            ball_dist = 1.0 - ball_proximity
+            ball_proximity = obs[51] #New index
+            goal_proximity = obs[14] #New index
+            ball_dist = 1.0 - ball_proximity 
             goal_dist = 1.0 - goal_proximity
-            kickable = obs[12]
-            ball_ang_sin_rad = obs[51]
-            ball_ang_cos_rad = obs[52]
+            kickable = obs[10]
+            ball_ang_sin_rad = obs[49] #New index
+            ball_ang_cos_rad = obs[50] #New index
             ball_ang_rad = math.acos(ball_ang_cos_rad)
             if ball_ang_sin_rad < 0:
                 ball_ang_rad *= -1.
-            goal_ang_sin_rad = obs[13]
-            goal_ang_cos_rad = obs[14]
+            goal_ang_sin_rad = obs[12] #New index
+            goal_ang_cos_rad = obs[13] #New index
             goal_ang_rad = math.acos(goal_ang_cos_rad)
             if goal_ang_sin_rad < 0:
                 goal_ang_rad *= -1.
@@ -644,7 +641,7 @@ class HFO_env():
             opp_obs_previous = self.team_obs_previous
             num_ag = self.num_OA
 
-        if team_obs[agentID][7] < 0 : # LOW STAMINA
+        if team_obs[agentID][6] < 0 : # LOW STAMINA
             reward -= 0.10
             team_reward -= 0.10
             # print ('low stamina')
