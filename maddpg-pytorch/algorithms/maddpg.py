@@ -2093,6 +2093,41 @@ class MADDPG(object):
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
 
+        if self.I2A:
+            # Update policy prime
+            curr_agent.policy_prime_optimizer.zero_grad()
+            # We take the loss between the current policy's behavior and policy prime which is estimating the current policy
+            pol_prime_out = [curr_agent.policy_prime(obs[ag]) for ag in range(nagents)] # uses gumbel across the actions
+            pol_prime_out_stacked = torch.cat(pol_prime_out,dim=0)
+            pol_prime_loss = F.mse_loss(pol_prime_out_stacked,curr_pol_out_stacked)
+            pol_prime_loss.backward()
+            torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
+            curr_agent.policy_prime_optimizer.step()
+            # Train Environment Model -----------------------------------------------------            
+            curr_agent.EM_optimizer.zero_grad()
+            
+            labels = ws[0].long().view(-1,1) % self.world_status_dim # categorical labels for OH
+            self.ws_onehot.zero_() # reset OH tensor
+            self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
+            agents_acs = torch.cat(acs,dim=1) # cat agents actions to same row
+            agents_obs = torch.cat(obs,dim=0) # stack entire batch on top of eachother for each agent
+            agents_nobs = torch.cat(next_obs,dim=0)
+            agents_rews = torch.cat(rews,dim=0)
+
+            acs_repeated = agents_acs.repeat(nagents,1) # repeat actions so they may be used with each agent's observation batch
+            
+            EM_in = torch.cat((agents_obs,acs_repeated),dim=1)
+            est_obs_diff,est_rews,est_ws = curr_agent.EM(EM_in)
+            actual_obs_diff = agents_nobs - agents_obs
+            actual_rews = agents_rews.view(-1,1)
+            actual_ws = self.ws_onehot.repeat(nagents,1)
+            loss_obs = F.mse_loss(est_obs_diff, actual_obs_diff)
+            loss_rew = F.mse_loss(est_rews, actual_rews)
+            loss_ws = CELoss(est_ws,torch.argmax(actual_ws,dim=1))
+            EM_loss = self.obs_weight * loss_obs + self.rew_weight * loss_rew + self.ws_weight * loss_ws
+            EM_loss.backward()
+            torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
+            curr_agent.EM_optimizer.step()
         self.niter +=1
         #print(time.time() - start,"up")
         if self.niter % 100 == 0:
@@ -2100,7 +2135,11 @@ class MADDPG(object):
                                                                         'actor': np.round(pol_loss.item(),4)},
                                                                         ignore_index=True)
             print("Team (%s) Agent(%i) Policy loss" % (side, agent_i),pol_loss)
-        
+
+            if self.I2A:
+                print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
+                print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
+
     def SIL_update(self, team_sample=[], opp_sample=[],agent_i=0,side='team', parallel=False, logger=None,load_same_agent=False):
         """
         Update parameters of agent model based on sample from replay buffer using Self-Imitation Learning update:
