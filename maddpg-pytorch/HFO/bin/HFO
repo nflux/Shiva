@@ -110,7 +110,7 @@ def main(args):
                     args.change_every_x_ep, args.change_agents_x, args.change_agents_y,
                     args.change_balls_x, args.change_balls_y, args.control_rand_init,
                     args.messageSize, args.verbose, args.tackle_cycles, 
-                    args.offside, args.offside_area_size, args.forbid_offside_kickoff
+                    args.offside, args.offside_area_size, args.forbid_offside_kickoff,
                     args.server_log)
 
   if args.deterministic:
