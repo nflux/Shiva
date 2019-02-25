@@ -645,8 +645,8 @@ class HFO_env():
             num_ag = self.num_OA
 
         if team_obs[agentID][7] < 0 : # LOW STAMINA
-            reward -= 0.02
-            team_reward -= 0.02
+            reward -= 0.10
+            team_reward -= 0.10
             # print ('low stamina')
         
 
@@ -768,15 +768,20 @@ class HFO_env():
 
         
         ################## Offensive Behavior #######################
-        # [Offense behavior]  agents will be rewarded based on maximizing their open angle to opponents goal
+        # [Offense behavior]  agents will be rewarded based on maximizing their open angle to opponents goal ( only for non possessors )
         if ((self.team_base == base) and possession_side =='L') or ((self.team_base != base) and possession_side == 'R'): # someone on team has ball
             b,_,_ =self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
             if b < 1.5 : # Ball is in scoring range
                 if (self.apprx_to_goal(team_obs[agentID]) > 0.0) and (self.apprx_to_goal(team_obs[agentID]) < .85):
                     a = self.unnormalize(team_obs[agentID][self.open_goal])
                     a_prev = self.unnormalize(team_obs_previous[agentID][self.open_goal])
-                    reward += (a-a_prev)
-                    team_reward += (a-a_prev)
+                    if (self.team_base != base):    
+                        team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
+                    else:
+                        team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
+                    if agentID != team_possessor:
+                        reward += (a-a_prev)*2.0
+                        team_reward += (a-a_prev)*2.0
                     #print("offense behavior: goal angle open ",(a-a_prev)*3.0)
 
 
@@ -816,11 +821,11 @@ class HFO_env():
             if b < 1.5 : # Ball is in scoring range
                 if np.array([self.apprx_to_goal(opp_obs[i]) > -0.75 for i in range(self.num_TA)]).any(): # if anyone is in range on enemy team
                     sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[i][self.open_goal]) - self.unnormalize(opp_obs[i][self.open_goal])) for i in agent_inds]) # penalize based on the open angles of the people in range
-                    reward += sum_angle_delta*0.6/self.num_TA
-                    team_reward += sum_angle_delta*0.6/self.num_TA
+                    reward += sum_angle_delta*2.0
+                    team_reward += sum_angle_delta*2.0
                     angle_delta_possessor = self.unnormalize(opp_obs_previous[enemy_possessor][self.open_goal]) - self.unnormalize(opp_obs[enemy_possessor][self.open_goal])# penalize based on the open angles of the possessor
-                    reward += angle_delta_possessor*0.6
-                    team_reward += angle_delta_possessor*0.6
+                    reward += angle_delta_possessor*2.0
+                    team_reward += angle_delta_possessor*2.0
                     #print("defensive behavior: block open angle to goal",agent_inds)
                     #print("areward for blocking goal: ",angle_delta_possessor*3.0)
 
@@ -833,11 +838,11 @@ class HFO_env():
             if b < 1.5 : # Ball is in scoring range
                 if np.array([self.apprx_to_goal(opp_obs[i]) > -0.75 for i in range(self.num_TA)]).any(): # if anyone is in range on enemy team
                     sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[i][self.open_goal]) - self.unnormalize(opp_obs[i][self.open_goal])) for i in agent_inds]) # penalize based on the open angles of the people in range
-                    reward += sum_angle_delta*0.6/self.num_TA
-                    team_reward += sum_angle_delta*0.6/self.num_TA
+                    reward += sum_angle_delta*2.0
+                    team_reward += sum_angle_delta*2.0
                     angle_delta_possessor = self.unnormalize(opp_obs_previous[enemy_possessor][self.open_goal]) - self.unnormalize(opp_obs[enemy_possessor][self.open_goal])# penalize based on the open angles of the possessor
-                    reward += angle_delta_possessor*0.6
-                    team_reward += angle_delta_possessor*0.6
+                    reward += angle_delta_possessor*2.0
+                    team_reward += angle_delta_possessor*2.0
                     #print("defensive behavior: block open angle to goal",agent_inds)
                     #print("areward for blocking goal: ",angle_delta_possessor*3.0)
 

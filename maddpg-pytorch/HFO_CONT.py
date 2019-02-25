@@ -621,7 +621,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 2
+    num_envs = 1
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -682,7 +682,7 @@ if __name__ == "__main__":
         number_of_updates = 0
         # exploration --------------------------
         explore = True
-        final_OU_noise_scale = 0.05
+        final_OU_noise_scale = 0.03
         final_noise_scale = 0.1
         init_noise_scale = 1.00
         num_explore_episodes = 1 # Haus uses over 10,000 updates --
