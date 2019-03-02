@@ -545,15 +545,14 @@ if __name__ == "__main__":
     #---------------------------------------
     # --------------------------------------
     # LSTM -------------------------------------------
-    LSTM = False
-    LSTM_PC = False # PC (Policy & Critic)
-    if LSTM and LSTM_PC:
-        print('Only one LSTM flag can be True or both False')
-        exit(0)
-    if LSTM or LSTM_PC:
-        trace_length = 20
+    LSTM = False # Critic only
+    if LSTM:
+        seq_length = 40 # Must be divisible by 2
     else:
-        trace_length = 0
+        seq_length = 0
+    if seq_length % 2 != 0:
+        print('Seq length must be divisible by 2')
+        exit(0)
     hidden_dim_lstm = 512
 
     if action_level == 'high':
@@ -583,10 +582,10 @@ if __name__ == "__main__":
     # num_features = 59 + 13*(left_side-1) + 12*right_side + 4 + 1 + 2 + 1
 
     team_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM,k_ensembles,SIL)
 
     opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM,k_ensembles,SIL)
 
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                 adversary_alg= "MADDPG",device=device,
@@ -603,6 +602,6 @@ if __name__ == "__main__":
                                 rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,decent_EM = decent_EM,
                                 imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                                 critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu)
+                                LSTM=LSTM, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu)
 
     pretrain(maddpg, env, team_replay_buffer, opp_replay_buffer, num_TA=num_TA, num_OA=num_OA, critic_mod_both=critic_mod_both, device=device, Imitation_exploration=True, episode_length=500, num_features=obs_dim_TA)

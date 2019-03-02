@@ -556,7 +556,7 @@ class LSTM_Network(nn.Module):
     MLP network (can be used as value or policy)
     """
     def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,
-                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, trace_length=1):
+                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, seq_length=20):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -587,7 +587,7 @@ class LSTM_Network(nn.Module):
             self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
                                     Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
         self.training_lstm = training
-        self.trace_length = trace_length
+        self.seq_length = seq_length
 
         self.I2A = I2A
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
@@ -693,10 +693,7 @@ class LSTM_Network(nn.Module):
                 #    print(out)
                 self.count += 1
 
-            if self.agent.LSTM_PC:
-                return out
-            else:
-                return out[0]
+            return out[0]
 
         
     def rollouts_batch(self, batch):

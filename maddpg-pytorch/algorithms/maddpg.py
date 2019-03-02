@@ -47,7 +47,7 @@ class MADDPG(object):
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, imagination_policy_branch = False,
                  critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
-                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False,multi_gpu=True,data_parallel=False): 
+                 LSTM=False, seq_length = 20, hidden_dim_lstm=256,only_policy=False,multi_gpu=True,data_parallel=False): 
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -73,7 +73,7 @@ class MADDPG(object):
         self.num_in_EM = team_net_params[0]['num_in_EM']
         self.num_out_EM = team_net_params[0]['num_out_EM']
         self.batch_size = batch_size
-        self.trace_length = trace_length
+        self.seq_length = seq_length
         self.only_policy = only_policy
         self.multi_gpu = multi_gpu
         self.data_parallel = data_parallel
@@ -128,7 +128,7 @@ class MADDPG(object):
                                       device=device,
                                       imagination_policy_branch=imagination_policy_branch,
                                       critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                      LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,
+                                      LSTM=LSTM, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,
                                  **params)
                        for params in team_agent_init_params]
         
@@ -142,7 +142,7 @@ class MADDPG(object):
                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
                                      imagination_policy_branch=imagination_policy_branch,
                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                     LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,
+                                     LSTM=LSTM, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,
                                  **params)
                        for params in opp_agent_init_params]
 
@@ -2278,7 +2278,7 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False,multi_gpu=False,data_parallel=False):
+                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, seq_length=20, hidden_dim_lstm=256,only_policy=False,multi_gpu=False,data_parallel=False):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -2367,9 +2367,8 @@ class MADDPG(object):
                      'critic_mod_both': critic_mod_both,
                      'critic_mod_act': critic_mod_act,
                      'critic_mod_obs': critic_mod_obs,
-                     'trace_length': trace_length,
+                     'seq_length': seq_length,
                      'LSTM':LSTM,
-                     'LSTM_PC':LSTM_PC,
                      'hidden_dim_lstm': hidden_dim_lstm,
                      'only_policy': only_policy,
                      'multi_gpu':multi_gpu,
