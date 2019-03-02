@@ -35,7 +35,7 @@ import gc
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
                             load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr):
     start = time.time()
-    if len(team_replay_buffer) > 10000:
+    if len(team_replay_buffer) > 750000:
 
         initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
         #maddpg = dill.loads(maddpg_pick)
@@ -43,7 +43,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
         if multi_gpu:
             maddpg.torch_device = torch.device("cuda:3")
         maddpg.device = 'cuda'
-        number_of_updates = 350
+        number_of_updates = 600
         batches_to_sample = 50
 
         if len(team_replay_buffer) < batch_size*(batches_to_sample):
@@ -184,7 +184,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
         else:
             [maddpg.save_agent(load_path,update_session,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
             [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
-    print(time.time()-start,"<-- Policy Update dCycle")
+    print(time.time()-start,"<-- Policy Update Cycle")
 
 
 def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history,ep_num):
@@ -357,7 +357,6 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             opp_agent_actions = [ac.cpu().data.numpy() for ac in opp_torch_agent_actions]
 
             # rearrange actions to be per environment
-            team_params = np.asarray([ac[0][len(env.action_list):] for ac in team_agent_actions]) 
             # rearrange actions to be per environment for the opponent
             opp_params = np.asarray([ac[0][len(env.action_list):] for ac in opp_agent_actions])
 
@@ -405,7 +404,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             team_possession_counter = [env.get_agent_possession_status(i, env.team_base) for i in range(num_TA)]
             opp_possession_counter = [env.get_agent_possession_status(i, env.opp_base) for i in range(num_OA)]
 
-            _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params)
+            _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params,team_agent_actions,opp_agent_actions)
 
             #Added to Disable/Enable the team agents
             if has_team_Agents:
@@ -497,16 +496,6 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                         if SIL:
                             SIL_priorities = np.ones(num_TA)*default_prio
 
-                        print(np.transpose(team_n_step_obs[n]))
-                        print(team_n_step_acs[n])
-                        print(np.expand_dims(team_n_step_rewards[n], 1))
-                        print(np.expand_dims(team_all_MC_targets[et_i-n], 1))
-                        print(np.expand_dims([n_step_done_team for i in range(num_TA)], 1))
-                        print(np.transpose(n_step_next_ob_team))
-                        print(np.expand_dims(n_step_targets_team, 1))
-                        print(np.expand_dims([team_n_step_ws[n] for i in range(num_TA)], 1))
-                        print(priorities)
-                        print(np.expand_dims([default_prio for i in range(num_TA)],1))
                         exp_team = np.column_stack((np.transpose(team_n_step_obs[n]),
                                             team_n_step_acs[n],
                                             np.expand_dims(team_n_step_rewards[n], 1),
@@ -632,7 +621,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 1
+    num_envs = 8
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -665,8 +654,8 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 200000
-        pt_memory = 25000
+        replay_memory_size = 1500000
+        pt_memory = 1000000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -685,19 +674,19 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 128
+        batch_size = 1024
         hidden_dim = int(512)
 
-        tau = 0.001 # soft update rate
+        tau = 0.001 # soft update rate 
 
         number_of_updates = 0
         # exploration --------------------------
         explore = True
-        final_OU_noise_scale = 0.03
-        final_noise_scale = 0.1
+        final_OU_noise_scale = 0.00
+        final_noise_scale = 0.00
         init_noise_scale = 1.00
         num_explore_episodes = 1 # Haus uses over 10,000 updates --
-        multi_gpu = False
+        multi_gpu = True
         data_parallel = False
         
 
@@ -731,10 +720,10 @@ if __name__ == "__main__":
         TD3_noise = 0.02
         # -------------------------------------- 
         #Pretrain Options ----------------------
-        pretrain = True
+        pretrain = False
         use_pretrain_data = False
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-        pt_update_cycles = 200
+        pt_update_cycles = 100
         pt_inject_proba = 1.0
         init_pt_inject_proba = 1.0
         final_pt_inject_proba = 0.2
@@ -743,18 +732,18 @@ if __name__ == "__main__":
         bl_agent2d = False
         use_preloaded_agent2d = False
         preload_agent2d_path = ""
-        num_buffers = 1
+        num_buffers = 16
         pt_total_memory = pt_memory*num_buffers
 
         pt_episodes = 4000 # not used
         #---------------------------------------
         #I2A Options ---------------------------
-        I2A = True
+        I2A = False
         EM_lr = 0.0001
         obs_weight = 5.0
         rew_weight = 1.0
         ws_weight = 1.0
-        rollout_steps = 3
+        rollout_steps = 2
         LSTM_hidden=16
         imagination_policy_branch = False 
         #---------------------------------------
@@ -793,7 +782,7 @@ if __name__ == "__main__":
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.8
         load_same_agent = True # load same policy for all agents
-        push_only_left = True
+        push_only_left = False
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -804,7 +793,7 @@ if __name__ == "__main__":
         load_nets = False # load previous sessions' networks from file for initialization
         initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
         first_save = True # build model clones for ensemble
-        preload_model = False
+        preload_model = True
         preload_path = "agent2d/model_0.pth"
         # --------------------------------------
         # Evaluation ---------------------------
@@ -933,7 +922,7 @@ if __name__ == "__main__":
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
     opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
                                         obs_dim_TA,acs_dim,batch_size, LSTM, LSTM_PC,k_ensembles,SIL)
-    max_episodes_shared = 50
+    max_episodes_shared = 30
     processes = []
     total_dim = (obs_dim_TA*2 + acs_dim + 5) + k_ensembles + 1
 
@@ -1026,7 +1015,7 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(pt_trb)
 
-            number_of_updates = 10000
+            number_of_updates = 5000
             batches_to_sample = 1000
             if len(pt_trb) < batch_size*(batches_to_sample):
                 batches_to_sample = 1
@@ -1080,10 +1069,12 @@ if __name__ == "__main__":
                             priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
                             pt_trb.update_priorities(agentID=agentID,inds =inds, prio=priorities,k = ensemble)
                         else:
-                            priorities.append(maddpg.pretrain_critic_MC(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,session_path=session_path))
+                            
+                            #priorities.append(maddpg.pretrain_critic_MC(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,session_path=session_path))
+                            priorities.append(maddpg.pretrain_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,session_path=session_path))
                             #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
-                            #if up % number_of_updates/10 == 0: # update target half way through
-                            #    maddpg.update_agent_targets(0,number_of_updates/10)
+                            if up % number_of_updates/10 == 0: # update target half way through
+                                maddpg.update_agent_targets(0,number_of_updates/10)
                     if SIL:
                         for i in range(SIL_update_ratio):
                             inds = pt_trb.get_SIL_inds(agentID=m,batch_size=batch_size)

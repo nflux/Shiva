@@ -720,9 +720,9 @@ class MADDPG(object):
             # Train Environment Model -----------------------------------------------------            
             curr_agent.EM_optimizer.zero_grad()
             
-            labels = ws[0].long().view(-1,1) % self.world_status_dim # categorical labels for OH
-            self.ws_onehot.zero_() # reset OH tensor
-            self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
+            #labels = ws[0].long().view(-1,1) % self.world_status_dim # categorical labels for OH
+            #self.ws_onehot.zero_() # reset OH tensor
+            #self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
             agents_acs = torch.cat(acs,dim=1) # cat agents actions to same row
             agents_obs = torch.cat(obs,dim=0) # stack entire batch on top of eachother for each agent
             agents_nobs = torch.cat(next_obs,dim=0)
@@ -734,7 +734,7 @@ class MADDPG(object):
             est_obs_diff,est_rews,est_ws = curr_agent.EM(EM_in)
             actual_obs_diff = agents_nobs - agents_obs
             actual_rews = agents_rews.view(-1,1)
-            actual_ws = self.ws_onehot.repeat(nagents,1)
+            #actual_ws = self.ws_onehot.repeat(nagents,1)
             loss_obs = F.mse_loss(est_obs_diff, actual_obs_diff)
             loss_rew = F.mse_loss(est_rews, actual_rews)
             #loss_ws = CELoss(est_ws,torch.argmax(actual_ws,dim=1))
@@ -1618,7 +1618,7 @@ class MADDPG(object):
         """
         # rews = 1-step, cum-rews = n-step
         if self.niter % 1000:
-            self.loss_logger.to_csv(session_path + 'critic_loss.csv')
+            self.critic_loss_logger.to_csv(session_path + 'critic_loss.csv')
     
         start = time.time()
 
@@ -1655,16 +1655,31 @@ class MADDPG(object):
         #with torch.no_grad():
         if self.TD3:
             noise = processor(torch.randn_like(acs[0]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
+            if self.I2A:
+                team_pi_acs = [a + noise for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
+                opp_pi_acs = [a + noise for a in opp_target_policies[0](opp_next_obs)] # get actions for all agents, add noise to each
+
+            else:
+                team_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]
+                opp_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+
             all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]]
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in team_pi_acs]
 
             opp_all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+            (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in opp_pi_acs]
         else:
+            if self.I2A:
+                team_pi_acs = [a for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
+                opp_pi_acs = [a for a in opp_target_policies[0](opp_next_obs)] # get actions for all agents, add noise to each
+            else:
+                team_pi_acs  = [(pi(nobs)) for pi, nobs in zip(target_policies,next_obs)]
+                opp_pi_acs  = [(pi(nobs)) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+
             all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(target_policies,next_obs)]]
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in team_pi_acs]
             opp_all_trgt_acs =[torch.cat(
-                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in [pi(nobs) for pi, nobs in zip(opp_target_policies,opp_next_obs)]]
+                (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in opp_pi_acs]
 
         mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
         mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
@@ -1695,7 +1710,7 @@ class MADDPG(object):
             actual_value_1, actual_value_2 = curr_agent.critic(vf_in)
         else:
             actual_value = curr_agent.critic(vf_in)
-        
+
         if self.D4PG:
                 # Q1
                 trgt_vf_distr = F.softmax(trgt_Q,dim=1) # critic distribution
@@ -1720,11 +1735,12 @@ class MADDPG(object):
             target_value = (1-self.beta)*(torch.cat([n.view(-1,1) for n in n_step_rews],dim=1).float().mean(dim=1).view(-1, 1) + (self.gamma**self.n_steps) *
                         trgt_Q * (1 - dones[agent_i].view(-1, 1))) + self.beta*(torch.cat([mc.view(-1,1) for mc in MC_rews],dim=1).float().mean(dim=1)).view(-1,1)
             target_value.detach()
+
             if self.TD3: # handle double critic
-                with torch.no_grad():
-                    prio = ((actual_value_1 - target_value)**2 + (actual_value_2-target_value)**2).squeeze().detach()/2.0
-                    prio = np.round(prio.cpu().numpy(),decimals=3)
-                    prio = torch.tensor(prio,requires_grad=False)
+
+                prio = ((actual_value_1 - target_value)**2 + (actual_value_2-target_value)**2).squeeze().detach()/2.0
+                prio = np.round(prio.cpu().numpy(),decimals=3)
+                prio = torch.tensor(prio,requires_grad=False)
                 vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
             else:
                 vf_loss = F.mse_loss(actual_value, target_value)
@@ -1740,7 +1756,7 @@ class MADDPG(object):
         self.niter +=1
         #print(time.time() - start,"up")
         if self.niter % 100 == 0:
-            self.loss_logger = self.loss_logger.append({                'iteration':self.niter,
+            self.critic_loss_logger = self.critic_loss_logger.append({                'iteration':self.niter,
                                                                         'critic': np.round(vf_loss.item(),4)},
                                                                         ignore_index=True)
             print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
@@ -2065,8 +2081,9 @@ class MADDPG(object):
         if self.I2A:
             curr_pol_out = curr_agent.policy(obs)
         else:
-            curr_pol_out = torch.cat([curr_agent.policy(obs[ag]) for ag in range(nagents)],dim=0)
-
+            curr_pol_out = [curr_agent.policy(obs[ag]) for ag in range(nagents)]
+        
+        
         curr_pol_out_stacked = torch.cat(curr_pol_out,dim=0)
 
         #curr_pol_out = curr_agent.policy(all_obs)
@@ -2078,8 +2095,6 @@ class MADDPG(object):
         actual_out_actions = Variable(all_acs,requires_grad=True).float()[:,:curr_agent.action_dim]
         pol_out_params = curr_pol_out_stacked[:,curr_agent.action_dim:]
         actual_out_params = Variable(all_acs,requires_grad=True)[:,curr_agent.action_dim:]
-
-
         MSE = F.mse_loss(pol_out_params,actual_out_params)
 
         pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
@@ -2105,9 +2120,9 @@ class MADDPG(object):
             # Train Environment Model -----------------------------------------------------            
             curr_agent.EM_optimizer.zero_grad()
             
-            labels = ws[0].long().view(-1,1) % self.world_status_dim # categorical labels for OH
-            self.ws_onehot.zero_() # reset OH tensor
-            self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
+            #labels = ws[0].long().view(-1,1) % self.world_status_dim # categorical labels for OH
+            #self.ws_onehot.zero_() # reset OH tensor
+            #self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
             agents_acs = torch.cat(acs,dim=1) # cat agents actions to same row
             agents_obs = torch.cat(obs,dim=0) # stack entire batch on top of eachother for each agent
             agents_nobs = torch.cat(next_obs,dim=0)
@@ -2119,7 +2134,7 @@ class MADDPG(object):
             est_obs_diff,est_rews,est_ws = curr_agent.EM(EM_in)
             actual_obs_diff = agents_nobs - agents_obs
             actual_rews = agents_rews.view(-1,1)
-            actual_ws = self.ws_onehot.repeat(nagents,1)
+            #actual_ws = self.ws_onehot.repeat(nagents,1)
             loss_obs = F.mse_loss(est_obs_diff, actual_obs_diff)
             loss_rew = F.mse_loss(est_rews, actual_rews)
             #loss_ws = CELoss(est_ws,torch.argmax(actual_ws,dim=1))
@@ -2130,7 +2145,7 @@ class MADDPG(object):
         self.niter +=1
         #print(time.time() - start,"up")
         if self.niter % 100 == 0:
-            self.loss_logger = self.policy_loss_logger.append({                'iteration':self.niter,
+            self.policy_loss_logger = self.policy_loss_logger.append({                'iteration':self.niter,
                                                                         'actor': np.round(pol_loss.item(),4)},
                                                                         ignore_index=True)
             print("Team (%s) Agent(%i) Policy loss" % (side, agent_i),pol_loss)

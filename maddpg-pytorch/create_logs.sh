@@ -1,9 +1,11 @@
 #!/bin/sh
-NUM_ENVS=8
+NUM_ENVS=16
 py_command=""
 
-declare -a arr_offense_teams=("helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18")
-declare -a arr_defense_teams=("helios11" "helios12" "helios" "cyrus" "helios15" "helios16" "helios17" "helios18")
+declare -a arr_offense_teams=("helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18")
+#declare -a arr_defense_teams=("helios11" "helios12" "helios" "cyrus" "helios15" "helios16" "helios17" "helios18" "helios11" "helios12" "helios" "cyrus" "helios15" "helios16" "helios17" "helios18")
+declare -a arr_defense_teams=("helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18")
+
 
 for ((i=1; i <= $NUM_ENVS; i++ ))
 do

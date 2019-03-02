@@ -91,7 +91,6 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     for n in range(num_features):
         obs_header_names.append(str(n))
     print("Reading CSVs")
-    df_left_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if '_status' in fn] 
     df_left_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in left_fnames if '_actions_left' in fn]
     df_left_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in left_fnames if '_obs_left' in fn]
 
@@ -103,7 +102,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     print("Dropping duplicates")
     # Drop repeated cycles
     status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if 'status' in fn]
-    #status_list = [status_list[0] for i in range(len(df_left_action_list))]
+    status_list = [status_list[0] for i in range(len(status_list))]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in status_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_action_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_obs_list]
@@ -164,9 +163,6 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     # df_right_action_list[1].to_csv('./temp_path_robocup4.csv', sep=',', index=False)
     # df_right_action_list[2].to_csv('./temp_path_robocup5.csv', sep=',', index=False)
     # exit(0)
-    print(len(df_left_action_list[0]))
-    print(len(df_left_obs_list[0]))
-    print(len(status_list[0]))
     print("Converting df to numpy")
     # Turn to numpy arrays, NOTE: Actions are hot-encoded in the logs
     status = [df.loc[:, 'status'].values for df in status_list]
@@ -176,6 +172,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     #o_status = [df.loc[:, 'status'].values for df in df_right_status_list]
     opp_pt_obs = [df.loc[:, obs_header_names[1:]].values for df in df_right_obs_list]
     opp_pt_actions = [df.loc[:, 'dash':].values for df in df_right_action_list]
+    
 
     # Change dims to timesteps x number of agents x item
     #team_pt_status = [np.asarray([status[i][ts] for i in range(len(status))]) for ts in range(len(status[0])-3)]
@@ -187,6 +184,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     opp_pt_actions = [np.asarray([opp_pt_actions[i][ts] for i in range(len(opp_pt_actions))]) for ts in range(len(status[0])-3)]
     team_pt_status = 0
     opp_pt_status = 0
+    
     return team_pt_status, team_pt_obs, team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status
 
 
@@ -507,9 +505,11 @@ def getPretrainRew(s,d,base):
     return reward
 
 
-def load_buffer(left,right,zip):
-    num_TA,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,num_episodes = zip 
-    team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, num_features = obs_dim_TA)
+def load_buffer(left,right,zip_vars):
+    num_TA,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,num_episodes = zip_vars
+    
+    
+    team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, num_features = obs_dim_TA-8) # -8 for action space thats added here.
 
     # Count up everything besides IN_GAME to get number of episodes
     collect = collections.Counter(status[0])
@@ -519,7 +519,7 @@ def load_buffer(left,right,zip):
     critic_mod_both = True
     num_OA = num_TA
     ################## Base Left #########################
-    for ep_i in range(pt_episodes-2):
+    for ep_i in range(pt_episodes-10):
         if ep_i % 100 == 0:
             print("Pushing Pretrain Episode:",ep_i)
 
@@ -539,26 +539,33 @@ def load_buffer(left,right,zip):
         
 
         d = 0
-        
+        first_action = np.asarray([[1.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0] for _ in range(num_TA)])
         for et_i in range(episode_length):
             exps = None
             world_stat = status[0][pt_time_step]
             d = 0
             if world_stat != 0.0:
                 d = 1
-            # print('actions len', len(team_pt_actions))
-            # print('timestep', pt_time_step, 'actions', team_pt_actions[pt_time_step].shape)
-            team_n_step_acs.append(team_pt_actions[pt_time_step])
-            team_n_step_obs.append(team_pt_obs[pt_time_step])
+
+            if et_i == 0:                
+                obs = np.asarray([list(np.concatenate((t,a),axis=0)) for t,a in zip(team_pt_obs[pt_time_step],first_action)])
+                opp_obs = np.asarray([list(np.concatenate((t,a),axis=0)) for t,a in zip(opp_pt_obs[pt_time_step],first_action)])
+            else:
+                obs = np.asarray([list(np.concatenate((t,a),axis=0)) for t,a in zip(team_pt_obs[pt_time_step],team_pt_actions[pt_time_step-1])])
+                opp_obs = np.asarray([list(np.concatenate((t,a),axis=0)) for t,a in zip(opp_pt_obs[pt_time_step],opp_pt_actions[pt_time_step-1])])
+            nobs = np.asarray([list(np.concatenate((t,a),axis=0)) for t,a in zip(team_pt_obs[pt_time_step+1],team_pt_actions[pt_time_step])])
+            opp_nobs = np.asarray([list(np.concatenate((t,a),axis=0)) for t,a in zip(opp_pt_obs[pt_time_step+1],opp_pt_actions[pt_time_step])])
+            team_n_step_acs.append(team_pt_actions[pt_time_step]) 
+            team_n_step_obs.append(obs)
             team_n_step_ws.append(world_stat)
-            team_n_step_next_obs.append(team_pt_obs[pt_time_step+1])
+            team_n_step_next_obs.append(nobs)
             team_n_step_rewards.append(np.hstack([getPretrainRew(world_stat,d,"base_left") for i in range(num_TA)]))          
             team_n_step_dones.append(d)
-
+            
             opp_n_step_acs.append(opp_pt_actions[pt_time_step])
-            opp_n_step_obs.append(opp_pt_obs[pt_time_step])
+            opp_n_step_obs.append(opp_obs)
             opp_n_step_ws.append(world_stat)
-            opp_n_step_next_obs.append(opp_pt_obs[pt_time_step+1])
+            opp_n_step_next_obs.append(opp_nobs)
             opp_n_step_rewards.append(np.hstack([getPretrainRew(world_stat,d,"base_right") for i in range(num_TA)]))          
             opp_n_step_dones.append(d)
 
@@ -607,7 +614,6 @@ def load_buffer(left,right,zip):
                         # print(current_ensembles)
                         if SIL:
                             SIL_priorities = np.ones(num_TA)*default_prio
-
                         exp_team = np.column_stack((team_n_step_obs[n],
                                             team_n_step_acs[n],
                                             np.expand_dims(team_n_step_rewards[n], 1),

@@ -43,13 +43,13 @@ class evaluation_env():
     # class constructor
     def __init__(self, num_TNPC=0,num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'base_left',
                  goalie = False, num_trials = 10000,fpt = 100,feat_lvl = 'high',
-                 act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
+                 act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 63000,
                  offense_on_ball=0, fullstate = False, seed = 123,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
                  verbose = False, log_game=False, log_dir="log",
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,change_every_x=5,
                  change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,change_balls_y=0.1, 
-                 control_rand_init=False,record=True):
+                 control_rand_init=False,record=False):
         
 
         """ Initializes HFO_Env
@@ -121,8 +121,8 @@ class evaluation_env():
         self.feat_lvl = feat_lvl
         
         if feat_lvl == 'low':
-            self.team_num_features = 59 + 13*(num_TA-1) + 12*num_TA + 4 + 1 + 2 + 1
-            self.opp_num_features = 59 + 13*(num_TA-1) + 12*num_TA + 4 + 1 + 2 + 1
+            self.team_num_features = 56 + 13*(num_TA-1) + 12*(num_TA) + 4 + 1 + 2 + 1 + 8 
+            self.opp_num_features = 56 + 13*(num_TA-1) + 12*(num_TA) + 4 + 1 + 2 + 1 + 8
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6
@@ -167,7 +167,8 @@ class evaluation_env():
         self.team_obs_previous = np.empty([num_TA,self.team_num_features],dtype=float)
         # reward for each agent
         self.team_rewards = np.zeros(num_TA)
-
+        self.team_actions_OH = np.empty([num_TA,8],dtype=float)
+        self.opp_actions_OH = np.empty([num_TA,8],dtype=float)
         self.opp_actions = np.array([2]*num_OA)
         # observation space for all team mate agents
         self.opp_team_obs = np.empty([num_OA,self.opp_num_features],dtype=float)
@@ -251,7 +252,7 @@ class evaluation_env():
             return self.opp_rewards[agent_id]
 
 
-    def Step(self, team_actions, opp_actions, team_params=[], opp_params=[]):
+    def Step(self, team_actions, opp_actions, team_params=[], opp_params=[],team_actions_OH = [],opp_actions_OH = []):
         """ Performs each agents' action from actions and returns tuple (obs,rewards,world_status)
 
         Args:
@@ -266,6 +267,9 @@ class evaluation_env():
 
         """
         # Queue actions for team
+        for i in range(self.num_TA):
+            self.team_actions_OH[i] = team_actions_OH[i]
+            self.opp_actions_OH[i] = opp_actions_OH[i]
         [self.Queue_action(i,self.team_base,team_actions[i],team_params) for i in range(len(team_actions))]
         # Queue actions for opposing team
         #[self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
@@ -513,12 +517,9 @@ class evaluation_env():
 
                 return reward
         
-                ########################### keep the ball kickable ####################################
-            #team_kickable = False
-            #team_kickable = np.array([self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)]).any() # kickable by team
-            #if team_kickable :
-            #    reward+= 1
         
+        
+
             if self.action_list[self.team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,self.team_obs_previous) and not self.been_kicked_team: # uses action just performed, with previous obs, (both at T)
                 reward+= 1 # kicked when avaialable; I am still concerend about the timeing of the team_actions and the kickable status
                 self.been_kicked_team = True
@@ -600,7 +601,25 @@ class evaluation_env():
 
                 return reward
         
-        
+            # If anyone kicked the ball, on left get which one
+            kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
+            if kicked.any():
+                self.team_obs[:,-11] = (kicked.argmax() + 1)/100.0
+            else:
+                self.team_obs[:,-11] = 0
+            # If anyone kicked the ball on right
+            kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
+            if kicked.any():
+                self.opp_team_obs[:,-10] = (kicked.argmax() + 1)/100.0
+            else:
+                self.opp_team_obs[:,-10] = 0
+
+                    ########################### keep the ball kickable ####################################
+                #team_kickable = False
+                #team_kickable = np.array([self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)]).any() # kickable by team
+                #if team_kickable :
+                #    reward+= 1
+
         
         
                 ########################### keep the ball kickable ####################################
@@ -734,9 +753,12 @@ class evaluation_env():
                 self.sync_at_reward_team = np.zeros(self.num_TA)
                 self.sync_at_reward_opp = np.zeros(self.num_OA)
                 # self.d = False
+
                 if self.team_base == base:
-                    self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs_previous[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs[agent_ID,-8:] = [0.0,1.0,0.0, 0.0,0.0,0.0,0.0,0.0]
+                    self.team_obs_previous[agent_ID,-8:] = [0.0,1.0,0.0, 0.0,0.0,0.0,0.0,0.0]
                 else:
                     self.opp_team_obs_previous[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
                     self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
@@ -838,7 +860,8 @@ class evaluation_env():
                     if self.team_base == base:
                         self.team_obs_previous[agent_ID] = self.team_obs[agent_ID]
                         self.world_status = self.team_envs[agent_ID].step() # update world
-                        self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.team_obs[agent_ID,-8:] =  self.team_actions_OH[agent_ID]
                         self.sync_at_reward_team[agent_ID] += 1
 
                     else:
@@ -885,7 +908,7 @@ class evaluation_env():
     def _start_hfo_server(self, frames_per_trial=100,
                               untouched_time=100, offense_agents=1,
                               defense_agents=0, offense_npcs=0,
-                              defense_npcs=0, sync_mode=True, port=6000,
+                              defense_npcs=0, sync_mode=True, port=63000,
                               offense_on_ball=0, fullstate=False, seed=123,
                               ball_x_min=-0.8, ball_x_max=0.8,
                               ball_y_min=-0.8, ball_y_max=0.8,
@@ -925,6 +948,8 @@ class evaluation_env():
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,
                      ball_y_min, ball_y_max, log_dir)
+            cmd += " --defense-team %s" \
+                % ('helios')
             if not sync_mode: cmd += " --no-sync"
             if fullstate:     cmd += " --fullstate"
             if verbose:       cmd += " --verbose"

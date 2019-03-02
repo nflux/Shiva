@@ -28,10 +28,10 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
 
 
     control_rand_init = True
-    ball_x_min = -0.7
-    ball_x_max = 0.7
-    ball_y_min = -0.7
-    ball_y_max = 0.7
+    ball_x_min = -0.1
+    ball_x_max = 0.1
+    ball_y_min = -0.1
+    ball_y_max = 0.1
     agents_x_min = -0.3
     agents_x_max = 0.3
     agents_y_min = -0.3
@@ -44,7 +44,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     print('killing the evaluation server from inside the thread')
 
     print(eval_episodes)
-    subprocess.Popen("ps -ef | grep 7000 | awk '{print $2}' | xargs kill",shell=True)
+    #subprocess.Popen("ps -ef | grep 7000 | awk '{print $2}' | xargs kill",shell=True)
     time.sleep(1)
     env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
                          untouched_time = 500,fullstate=True,offense_on_ball=False,
@@ -99,7 +99,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
                 team_kickable_counter += 1
 
 
-            _,_,d,world_stat = env.Step(team_agents_actions,team_agents_actions,team_params,team_params)
+            _,_,d,world_stat = env.Step(team_agents_actions,team_agents_actions,team_params,team_params,team_agent_actions,team_agent_actions)
             team_rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA)])
 
             team_next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T

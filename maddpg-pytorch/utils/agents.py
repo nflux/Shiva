@@ -174,7 +174,7 @@ class DDPGAgent(object):
         #self.critic_optimizer = Adam(self.critic.parameters(), lr=lr, weight_decay =0)
         for param_group in self.critic_optimizer.param_groups:
             param_group['lr'] = lr
-    def step(self, obs,ran,acs,explore=False):
+    def step(self, obs,ran,acs = None,explore=False):
         """
         Take a step forward in environment for a minibatch of observations
         Inputs:
@@ -396,4 +396,3 @@ class DDPGAgent(object):
             self.imagination_policy.to(dev)
             self.policy_prime.to(dev)
 
-         
