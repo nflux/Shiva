@@ -649,8 +649,8 @@ class HFO_env():
             num_ag = self.num_OA
 
         if team_obs[agentID][6] < 0 : # LOW STAMINA
-            reward -= 0.10
-            team_reward -= 0.10
+            reward -= 0.005
+            team_reward -= 0.005
             # print ('low stamina')
         
 

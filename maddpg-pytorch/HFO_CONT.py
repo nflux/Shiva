@@ -35,7 +35,7 @@ import gc
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
                             load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_PC,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr):
     start = time.time()
-    if len(team_replay_buffer) > 750000:
+    if len(team_replay_buffer) > 10000:
 
         initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
         #maddpg = dill.loads(maddpg_pick)
@@ -197,7 +197,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
     LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d ) = HP
+    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d,reduced_obs_dim,preprocess,zero_critic) = HP
 
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
@@ -240,7 +240,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                 rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
                                 imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                                 critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=True,multi_gpu=multi_gpu,data_parallel=data_parallel) 
+                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,reduced_obs_dim=reduced_obs_dim,preprocess=preprocess,zero_critic=zero_critic) 
         
         
         
@@ -252,7 +252,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
         else:
             maddpg.torch_device = torch.device("cuda:2")
 
-    maddpg.prep_training(device=maddpg.device,only_policy=True,torch_device=maddpg.torch_device)
+    maddpg.prep_training(device=maddpg.device,only_policy=False,torch_device=maddpg.torch_device)
 
     reward_total = [ ]
     num_steps_per_episode = []
@@ -271,7 +271,6 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     time.sleep(3)
     for ep_i in range(0, num_episodes):
         maddpg.device = 'cuda'
-        maddpg.prep_policy(device=maddpg.device,torch_device=maddpg.torch_device)
 
         start = time.time()
         # team n-step
@@ -290,7 +289,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
         opp_n_step_next_obs = []
         opp_n_step_dones = []
         opp_n_step_ws = []
-        #maddpg.prep_rollouts(device='cpu')
+        maddpg.prep_policy_rollout(device=maddpg.device,torch_device=maddpg.torch_device)
 
 
         
@@ -317,7 +316,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
         opp_kickable_counter = [0] * num_OA
         env.team_possession_counter = [0] * num_TA
         env.opp_possession_counter = [0] * num_OA
-
+        reducer = maddpg.team_agents[0].reducer
         for et_i in range(0, episode_length):
 
             if device == 'cuda':
@@ -328,6 +327,13 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                 # gather all the opponent observations into a torch tensor 
                 torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False).cuda(non_blocking=True,device=maddpg.torch_device)
                             for i in range(num_OA)]
+                
+                if preprocess:
+                    team_obs_reduced =[reducer.reduce(Variable(torch.from_numpy(env.Observation(i,'team')).float(),requires_grad=False).cuda(non_blocking=True,device=maddpg.torch_device))
+                                for i in range(num_TA)]
+
+                    opp_obs_reduced = [reducer.reduce(Variable(torch.from_numpy(env.Observation(i,'opp')).float(),requires_grad=False).cuda(non_blocking=True,device=maddpg.torch_device))     
+                            for i in range(num_OA)]  
             else:
                 # gather all the observations into a torch tensor 
                 torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False)
@@ -335,7 +341,15 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
                 # gather all the opponent observations into a torch tensor 
                 torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False)
-                            for i in range(num_OA)]
+                            for i in range(num_OA)] 
+                
+                if preprocess:
+                    team_obs_reduced = [reducer.reduce(Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False))
+                                for i in range(num_TA)]
+
+                    # gather all the opponent observations into a torch tensor 
+                    opp_obs_reduced = [reducer.reduce(Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False))
+                                for i in range(num_OA)]
 
             # Get e-greedy decision
             if explore:
@@ -347,9 +361,10 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
             # get actions as torch Variables for both team and opp
 
-            # change parallel to parallel_process when fixed **
-            
-            team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp,team_randoms,opp_randoms,parallel=False,explore=explore) # leave off or will gumbel sample
+            if preprocess:
+                team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(team_obs_reduced, opp_obs_reduced,team_randoms,opp_randoms,parallel=False,explore=explore) # leave off or will gumbel sample
+            else:
+                team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp,team_randoms,opp_randoms,parallel=False,explore=explore) # leave off or will gumbel sample
             # convert actions to numpy arrays
 
             team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
@@ -442,11 +457,12 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                 opp_n_step_dones.append(opp_done)
                 opp_n_step_ws.append(world_stat)
             # ----------------------------------------------------------------
+            # Reduce size of obs
 
             time_step += 1
             t += 1
 
-            if t%10000 == 0:
+            if t%3000 == 0:
                 team_step_logger_df.to_csv(hist_dir + '/team_%s.csv' % history)
                 opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
                         
@@ -495,6 +511,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                         #print(current_ensembles)
                         if SIL:
                             SIL_priorities = np.ones(num_TA)*default_prio
+                        
 
                         exp_team = np.column_stack((np.transpose(team_n_step_obs[n]),
                                             team_n_step_acs[n],
@@ -574,18 +591,18 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path,load_same_agent=load_same_agent) # use for per ensemble update counter
 
                     if play_agent2d and use_preloaded_agent2d:
-                        maddpg.load_agent2d_policies(side='opp',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
+                        maddpg.load_agent2d(side='opp',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
                     elif play_agent2d:
-                        maddpg.load_agent2d_policies(side='opp',models_path =session_path +"models/",load_same_agent=load_same_agent,nagents=num_OA)  
+                        maddpg.load_agent2d(side='opp',models_path =session_path +"models/",load_same_agent=load_same_agent,nagents=num_OA)  
                     else:
                             
                         if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
-                            maddpg.load_random_policy(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
+                            maddpg.load_random(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
                         else:
                             maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
 
                     if bl_agent2d:
-                        maddpg.load_agent2d_policies(side='team',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
+                        maddpg.load_agent2d(side='team',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
 
                     while halt.all():
                         time.sleep(0.1)
@@ -682,10 +699,10 @@ if __name__ == "__main__":
         number_of_updates = 0
         # exploration --------------------------
         explore = True
-        final_OU_noise_scale = 0.00
-        final_noise_scale = 0.00
+        final_OU_noise_scale = 0.03
+        final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 1 # Haus uses over 10,000 updates --
+        num_explore_episodes = 50 # Haus uses over 10,000 updates --
         multi_gpu = True
         data_parallel = False
         
@@ -759,7 +776,8 @@ if __name__ == "__main__":
         critic_mod_obs = False
         critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
         #---------------------------------------
-
+        preprocess = False
+        zero_critic = True
         # Control Random Initilization of Agents and Ball
         control_rand_init = True
         ball_x_min = -0.1
@@ -793,7 +811,7 @@ if __name__ == "__main__":
         load_nets = False # load previous sessions' networks from file for initialization
         initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
         first_save = True # build model clones for ensemble
-        preload_model = True
+        preload_model = False
         preload_path = "agent2d/model_0.pth"
         # --------------------------------------
         # Evaluation ---------------------------
@@ -870,7 +888,7 @@ if __name__ == "__main__":
     
     obs_dim_TA = env.team_num_features
     obs_dim_OA = env.opp_num_features
-
+    reduced_obs_dim = 16
     # zip params for env processes
     HP = (action_level,feature_level,to_gpu,device,use_viewer,use_viewer_after,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
     episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
@@ -880,7 +898,7 @@ if __name__ == "__main__":
         ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
         LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d )
+        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d,reduced_obs_dim,preprocess,zero_critic )
 
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                 adversary_alg= "MADDPG",device=device,
@@ -897,7 +915,7 @@ if __name__ == "__main__":
                                 rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
                                 imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                                 critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel) 
+                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,reduced_obs_dim=reduced_obs_dim,preprocess=preprocess,zero_critic=zero_critic) 
 
     if multi_gpu:
         maddpg.torch_device = torch.device("cuda:0")

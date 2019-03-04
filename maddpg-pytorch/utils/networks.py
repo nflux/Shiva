@@ -30,13 +30,8 @@ class MLPNetwork_Actor(nn.Module):
         else:
             self.cast = lambda x: x.cpu()
         
-        if norm_in:  # normalize inputs
-            self.in_fn = nn.BatchNorm1d(input_dim)
-            self.in_fn.weight.data.normal_(.01)
-            self.in_fn.bias.data.fill_(0)
-        else:
-            self.in_fn = self.cast
-  
+
+
         self.fc1 = nn.Linear(input_dim, 1024)
         
         self.fc1.weight.data.normal_(0, 0.01) 
@@ -68,7 +63,7 @@ class MLPNetwork_Actor(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
+        h1 = self.nonlin(self.fc1(self.cast(X)))
         h2 = self.nonlin(self.fc2(h1))
         h3 = self.nonlin(self.fc3(h2))
         h4 = self.nonlin(self.fc4(h3))
@@ -120,13 +115,7 @@ class MLPNetwork_Critic(nn.Module):
         else:
             self.cast = lambda x: x.cpu()
               
-        if norm_in:  # normalize inputs
-            self.in_fn = nn.BatchNorm1d(input_dim)
-            self.in_fn.weight.data.normal_(.01)
-            self.in_fn.bias.data.fill_(0)
-        else:
-            self.in_fn = self.cast
-  
+
         self.fc1 = nn.Linear(input_dim, 1024)
         
         self.fc1.weight.data.normal_(0, 0.01) 
@@ -168,7 +157,7 @@ class MLPNetwork_Critic(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of critic Q1
         """
-        h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
+        h1 = self.nonlin(self.fc1(self.cast(X)))
         h2 = self.nonlin(self.fc2(h1))
         h3 = self.nonlin(self.fc3(h2))
         h4 = self.nonlin(self.fc4(h3))
@@ -182,13 +171,13 @@ class MLPNetwork_Critic(nn.Module):
         Outputs:
             out (PyTorch Matrix): Output of network (actions, values, etc)
         """
-        h1 = self.nonlin(self.fc1(self.in_fn(X)))
+        h1 = self.nonlin(self.fc1(self.cast(X)))
         h2 = self.nonlin(self.fc2(h1))
         h3 = self.nonlin(self.fc3(h2))
         h4 = self.nonlin(self.fc4(h3))
         
         if self.TD3:
-            Q2_h1 = self.nonlin(self.Q2_fc1(self.in_fn(self.cast(X))))
+            Q2_h1 = self.nonlin(self.Q2_fc1(self.cast(X)))
             Q2_h2 = self.nonlin(self.Q2_fc2(Q2_h1))
             Q2_h3 = self.nonlin(self.Q2_fc3(Q2_h2))
             Q2_h4 = self.nonlin(self.Q2_fc4(Q2_h3))
@@ -250,13 +239,6 @@ class LSTMNetwork_Critic(nn.Module):
         else:
             self.cast = lambda x: x.cpu()
               
-        # if norm_in:  # normalize inputs
-        #     self.in_fn = nn.BatchNorm1d(input_dim)
-        #     self.in_fn.weight.data.normal_(.01)
-        #     self.in_fn.bias.data.fill_(0)
-        # else:
-        #    self.in_fn = self.cast
-  
         self.fc1 = nn.Linear(input_dim, 512)
         
         self.fc1.weight.data.normal_(0, 0.01)
@@ -392,11 +374,6 @@ class I2A_Network(nn.Module):
         else:
             self.cast = lambda x: x.cpu()
         self.norm_in = norm_in
-
-        self.in_fn = nn.BatchNorm1d(input_dim)
-        self.in_fn.weight.data.normal_(.01)
-        self.in_fn.bias.data.fill_(0)
-   
         if I2A:
             self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_branches, 1024)
         else:
@@ -434,11 +411,7 @@ class I2A_Network(nn.Module):
         """
 
         if not self.I2A:     
-            if X.size()[0] == 1 or not self.norm_in:
-                self.in_fn.train(False)
-            else:
-                self.in_fn.train(True)
-            h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
+            h1 = self.nonlin(self.fc1(self.cast(X)))
             h2 = self.nonlin(self.fc2(h1))
             h3 = self.nonlin(self.fc3(h2))
             h4 = self.nonlin(self.fc4(h3))
@@ -446,17 +419,17 @@ class I2A_Network(nn.Module):
             if not self.discrete_action:
                 self.final_out_action = self.out_action_fn(self.out_action(h4))
                 self.final_out_params = self.out_param_fn(self.out_param(h4))
-                out = torch.cat((self.final_out_action, self.final_out_params),1)
+                if len(self.final_out_action.shape) == 1:
+                    out = torch.cat((self.final_out_action,self.final_out_params),0)
+                else:
+                    out = torch.cat((self.final_out_action, self.final_out_params),1)
                 #if self.count % 100 == 0:
                 #    print(out)
                 self.count += 1
         else: # I2A
-            if X[0].size()[0] == 1 or not self.norm_in:
-                self.in_fn.train(False)
-            else:
-                self.in_fn.train(True)
+
             batch_size = X[0].size()[0]
-            fx = [self.in_fn(self.cast(x)).float() for x in X]
+            fx = [self.cast(x).float() for x in X]
 
             enc_rollouts = self.rollouts_batch(fx)
             fc_in = [torch.cat((f,e),dim=1) for f,e in zip(fx,enc_rollouts)]
@@ -656,7 +629,7 @@ class LSTM_Network(nn.Module):
         """
 
         if self.I2A:
-            fx = self.in_fn(self.cast(X)).float()
+            fx = self.cast(X).float()
             enc_rollouts = self.rollouts_batch(fx)
             fc_in = torch.cat((fx,enc_rollouts),dim=1)
             h1 = self.nonlin(self.fc1(fc_in))
@@ -742,3 +715,71 @@ class LSTM_Network(nn.Module):
         weights = F.softmax(distr, dim=1) * self.supports
         res = weights.sum(dim=1)
         return res.unsqueeze(dim=-1)
+
+    
+    
+class Dimension_Reducer(nn.Module):
+    """
+    MLP network (can be used as value or policy)
+    """
+    def __init__(self, input_dim, nonlin=F.elu, norm_in=True, agent=object,maddpg=None):
+        """
+        Inputs:
+            input_dim (int): Number of dimensions in input
+            out_dim (intT): Number of dimensions in output
+            hidden_dim (int): Number of hidden dimensions
+            nonlin (PyTorch function): Nonlinearity to apply to hidden layers
+        """
+        super(Dimension_Reducer, self).__init__()
+
+        self.agent = agent
+        if self.agent.device == 'cuda':
+            self.cast = lambda x: x.to(maddpg.torch_device)
+        else:
+            self.cast = lambda x: x.cpu()
+              
+        
+        self.fc1 = nn.Linear(input_dim, 32)
+        self.fc1.weight.data.normal_(0, 0.01) 
+        self.fc2 = nn.Linear(32, 16)
+        self.fc2.weight.data.normal_(0, 0.01) 
+        self.fc3 = nn.Linear(16, 32)
+        self.fc3.weight.data.normal_(0, 0.01) 
+        self.out = nn.Linear(32+(3*input_dim),input_dim)
+        self.out.weight.data.normal_(0, 0.01) 
+        self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
+        self.out_fn = lambda x: x
+
+
+    def reduce(self, X):
+        """
+        This function is for the TD3 functionality to use only a single critic for the policy update.
+        Inputs:
+            X (PyTorch Matrix): Batch of observations
+        Outputs:
+            out (PyTorch Matrix): Output of critic Q1
+        """
+        h1 = self.nonlin(self.fc1(self.cast(X)))
+        h2 = self.nonlin(self.fc2(h1))
+        out = self.out_fn(h2) # Should there be linear or relu on output layer
+        return out
+
+    def forward(self, X):
+        """
+        Inputs:
+            X (PyTorch Matrix): Batch of observations
+        Outputs:
+            out (PyTorch Matrix): Output of network (actions, values, etc)
+        """
+        batch = len(X)
+        max_v = X.max(dim=0)[0].repeat(batch,1)
+        min_v = X.min(dim=0)[0].repeat(batch,1)
+        avg_v = X.mean(dim=0).repeat(batch,1)
+        stats = torch.cat((max_v,min_v,avg_v),dim=1)
+        h1 = self.nonlin(self.fc1(self.cast(X)))
+        h2 = self.nonlin(self.fc2(h1))
+        h3 = self.nonlin(self.fc3(h2))
+        h3_cat = torch.cat((h3,stats),dim=1)
+        out = self.out_fn(self.out(h3_cat))
+        return out
+

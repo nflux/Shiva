@@ -189,25 +189,23 @@ def pretrain_process(left_fnames, right_fnames, num_features):
 
 
 
-def zero_params(num_Agents,params,action_index):
-    for i in range(num_Agents):
-        if action_index[i] == 0:
-            params[i][2] = 0
-            params[i][3] = 0
-            params[i][4] = 0
-        if action_index[i] == 1:
-            params[i][0] = 0
-            params[i][1] = 0
-            params[i][3] = 0
-            params[i][4] = 0
-        if action_index[i] == 2:
-            params[i][0] = 0
-            params[i][1] = 0
-            params[i][2] = 0
-    return params
+def zero_params(x):
+    dash = torch.tensor([1,0,0], device=x.device).float()
+    dash = dash.repeat(len(x),1)
+    turn = torch.tensor([0,1,0], device=x.device).float()
+    turn = turn.repeat(len(x),1)
+    kick = torch.tensor([0,0,1], device=x.device).float()
+    kick = kick.repeat(len(x),1)
 
+    index_dash = torch.nonzero((x[:,:3] == dash).sum(dim=1) == x[:,:3].size(1))
+    index_turn = torch.nonzero((x[:,:3] == turn).sum(dim=1) == x[:,:3].size(1))
+    index_kick = torch.nonzero((x[:,:3] == kick).sum(dim=1) == x[:,:3].size(1))
 
-
+    x[index_dash,5:] = 0.0
+    x[index_turn,3:5] = 0.0
+    x[index_turn,6:] =0.0
+    x[index_kick,3:-2]=0.0
+    return x
 # returns the distribution projection
 def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, cum_rewards_v, gamma, device="cpu"):
     start = time.time()

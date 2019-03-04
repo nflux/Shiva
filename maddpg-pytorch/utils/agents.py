@@ -2,10 +2,10 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.optim import Adam,SGD
 import torch
-from .networks import MLPNetwork_Actor,MLPNetwork_Critic,LSTM_Network,I2A_Network,LSTMNetwork_Critic
+from .networks import MLPNetwork_Actor,MLPNetwork_Critic,LSTM_Network,I2A_Network,LSTMNetwork_Critic,Dimension_Reducer
 import torch.nn.functional as F
 from .i2a import *
-from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor,e_greedy_bool
+from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor,e_greedy_bool,zero_params
 from .noise import OUNoise
 import numpy as np
 
@@ -14,11 +14,11 @@ class DDPGAgent(object):
     General class for DDPG agents (policy, critic, target policy, target
     critic, exploration noise)
     """
-    def __init__(self, num_in_pol, num_out_pol, num_in_critic, maddpg=object, hidden_dim=64,
+    def __init__(self, num_in_pol, num_out_pol, num_in_critic, num_in_reducer, maddpg=object, hidden_dim=64,
                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, 
-                LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256): 
+                LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,reduced_obs_dim = 16): 
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -44,7 +44,7 @@ class DDPGAgent(object):
         self.world_status_dim = world_status_dim
         self.LSTM = LSTM
         self.LSTM_PC = LSTM_PC
-
+        
         I2A_num_in_pol = num_in_pol
         self.hidden_dim_lstm = hidden_dim_lstm
 
@@ -95,7 +95,9 @@ class DDPGAgent(object):
 
             if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                 self.policy = nn.DataParallel(self.policy)
-
+                
+            self.reducer = Dimension_Reducer(num_in_reducer,agent=self,maddpg=maddpg,norm_in=self.norm_in)
+            self.reducer_optimizer = Adam(self.reducer.parameters(), lr=a_lr, weight_decay =0)
             #self.policy.share_memory()
             if not maddpg.only_policy:
 
@@ -105,6 +107,7 @@ class DDPGAgent(object):
                                         norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
                                         EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                                 LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+                
                 if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                     self.target_policy = nn.DataParallel(self.target_policy)
 
@@ -131,6 +134,8 @@ class DDPGAgent(object):
                 if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                     self.critic = nn.DataParallel(self.critic)
                     self.target_critic = nn.DataParallel(self.target_critic)
+                    
+                
 
 
         if not maddpg.only_policy:
@@ -198,9 +203,15 @@ class DDPGAgent(object):
                 else:
                     action = self.policy(obs)
                 if self.counter % 1000 == 0:
-                    print(torch.softmax(action[:,:self.action_dim],dim=1))
-                a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
-                p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+                    print(torch.softmax(action.view(-1)[:self.action_dim],dim=0))
+                if self.maddpg.preprocess:
+
+                    a = gumbel_softmax(action[:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
+                    p = torch.clamp((action[self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+
+                else:
+                    a = gumbel_softmax(action[:,:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
+                    p = torch.clamp((action[:,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
                 action = torch.cat((a,p),1) 
                 self.counter +=1
 
@@ -221,6 +232,8 @@ class DDPGAgent(object):
             action = torch.cat((a,p),1) 
             self.counter +=1
 
+        #if self.maddpg.zero_critic:
+        #    action = zero_params(action)
         return action
             
     
@@ -244,10 +257,11 @@ class DDPGAgent(object):
                     'critic': self.critic.module.state_dict(),
                     'target_policy': self.target_policy.module.state_dict(),
                     'target_critic': self.target_critic.module.state_dict(),
-
-
                     'policy_optimizer': self.policy_optimizer.state_dict(),
-                    'critic_optimizer': self.critic_optimizer.state_dict(),}
+                    'critic_optimizer': self.critic_optimizer.state_dict(),
+                    'reducer': self.reducer.module.state_dict(),
+                    'reducer_optimizer': self.reducer_optimizer.state_dict(),
+}
         else:
             
             dict =  {'policy': self.policy.state_dict(),
@@ -255,7 +269,9 @@ class DDPGAgent(object):
                     'target_policy': self.target_policy.state_dict(),
                     'target_critic': self.target_critic.state_dict(),
                     'policy_optimizer': self.policy_optimizer.state_dict(),
-                    'critic_optimizer': self.critic_optimizer.state_dict(),}
+                    'critic_optimizer': self.critic_optimizer.state_dict(),
+                    'reducer':self.reducer.state_dict(),
+                    'reducer_optimizer': self.reducer_optimizer.state_dict()}
                     
 
         if self.I2A:
@@ -270,7 +286,9 @@ class DDPGAgent(object):
                     'policy_prime_optimizer': self.policy_prime_optimizer.state_dict(),
                     'imagination_policy_optimizer': self.imagination_policy_optimizer.state_dict(),
                     'policy_prime':  self.policy_prime.state_dict(),
-                    'imagination_policy': self.imagination_policy.state_dict()}
+                    'imagination_policy': self.imagination_policy.state_dict(),
+                   'reducer': self.reducer.state_dict(),
+                   'reducer_optimizer': self.reducer_optimizer.state_dict()}
 
         return dict
 
@@ -299,12 +317,16 @@ class DDPGAgent(object):
         if self.maddpg.data_parallel:
 
             self.policy.module.load_state_dict(params['policy'])
+            self.reducer.module.load_state_dict(params['reducer'])
+
             self.critic.module.load_state_dict(params['critic'])
             self.target_policy.module.load_state_dict(params['target_policy'])
             self.target_critic.module.load_state_dict(params['target_critic'])
         else:
 
             self.policy.load_state_dict(params['policy'])
+            self.reducer.load_state_dict(params['reducer'])
+
             self.critic.load_state_dict(params['critic'])
             self.target_policy.load_state_dict(params['target_policy'])
             self.target_critic.load_state_dict(params['target_critic'])
@@ -316,6 +338,7 @@ class DDPGAgent(object):
             self.imagination_policy.load_state_dict(params['imagination_policy'])
 
         self.policy.to(dev)
+        self.reducer.to(dev)
         self.critic.to(dev)
         self.target_policy.to(dev)
         self.target_critic.to(dev)
@@ -327,7 +350,7 @@ class DDPGAgent(object):
         
         self.critic_grad_by_action = np.zeros(self.param_dim)
         self.policy_optimizer = Adam(self.policy.parameters(), lr=self.a_lr, weight_decay =0)
-
+        self.reducer_optimizer = Adam(self.reducer.parameters(),lr=self.a_lr,weight_decay = 0)
         self.critic_optimizer = Adam(self.critic.parameters(), lr=self.c_lr, weight_decay=0)
         if self.I2A:
             self.policy_prime_optimizer = Adam(self.policy_prime.parameters(), lr=self.a_lr, weight_decay =0)
@@ -378,9 +401,11 @@ class DDPGAgent(object):
             dev = torch.device('cpu')
         if self.maddpg.data_parallel:
             self.policy.module.load_state_dict(params['policy'])
+            #self.reducer.module.load_state_dict(params['reducer'])
 
         else:
             self.policy.load_state_dict(params['policy'])
+            #self.reducer.load_state_dict(params['reducer'])
 
 
 

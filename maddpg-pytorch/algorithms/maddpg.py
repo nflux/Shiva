@@ -1,9 +1,8 @@
 import torch
 import torch.nn.functional as F
 from utils.networks import MLPNetwork_Actor,MLPNetwork_Critic
-from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbel_softmax,hard_update
+from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbel_softmax,hard_update,zero_params,distr_projection,processor
 from utils.agents import DDPGAgent
-from utils.misc import distr_projection,processor
 import numpy as np
 import random
 from torch.autograd import Variable
@@ -47,7 +46,7 @@ class MADDPG(object):
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, imagination_policy_branch = False,
                  critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
-                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False,multi_gpu=True,data_parallel=False): 
+                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False,multi_gpu=True,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False): 
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -95,7 +94,8 @@ class MADDPG(object):
         self.EM_dev = 'cpu'  # device for EM
         self.prime_dev = 'cpu'  # device for pol prime
         self.imagination_pol_dev = 'cpu'# device for imagination branch policy
-        
+        self.zero_critic = zero_critic
+        self.preprocess = preprocess
         self.niter = 0
         self.n_steps = n_steps
         self.beta = beta
@@ -128,7 +128,7 @@ class MADDPG(object):
                                       device=device,
                                       imagination_policy_branch=imagination_policy_branch,
                                       critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                      LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,
+                                      LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
                                  **params)
                        for params in team_agent_init_params]
         
@@ -516,7 +516,7 @@ class MADDPG(object):
                 self.policy_loss_logger.to_csv(session_path + 'actor_loss.csv')
 
         start = time.time()
-
+        
         #start = time.time()
         # rews = 1-step, cum-rews = n-step
         if side == 'team':
@@ -540,7 +540,15 @@ class MADDPG(object):
             obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
 
+            
+        
         self.curr_agent_index = agent_i
+        if self.preprocess:
+            reducer = curr_agent.reducer
+            red_obs = [reducer.reduce(o) for o in obs]
+            red_next_obs = [reducer.reduce(no) for no in next_obs]
+            red_opp_obs = [reducer.reduce(oo) for oo in opp_obs]
+            red_opp_next_obs = [reducer.reduce(ono) for ono in opp_next_obs]
         # Train critic ------------------------
         if critic:
             curr_agent.critic_optimizer.zero_grad()
@@ -552,12 +560,21 @@ class MADDPG(object):
             if self.TD3:
                 noise = processor(torch.randn_like(acs[0]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
                 if self.I2A:
-                    team_pi_acs = [a + noise for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
-                    opp_pi_acs = [a + noise for a in opp_target_policies[0](opp_next_obs)] # get actions for all agents, add noise to each
+                    if self.preprocess:
+                        team_pi_acs = [a + noise for a in target_policies[0](red_next_obs)] # get actions for all agents, add noise to each
+                        opp_pi_acs = [a + noise for a in opp_target_policies[0](red_opp_next_obs)] # get actions for all agents, add noise to each
+                    else:
+                        team_pi_acs = [a + noise for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
+                        opp_pi_acs = [a + noise for a in opp_target_policies[0](opp_next_obs)] # get actions for all agents, add noise to each
 
                 else:
-                    team_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]
-                    opp_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+                    if self.preprocess:
+                        team_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(target_policies,red_next_obs)]
+                        opp_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,red_opp_next_obs)]
+                    else:
+                        team_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(target_policies,next_obs)]
+                        opp_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+
 
                 all_trgt_acs = [torch.cat(
                     (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in team_pi_acs]
@@ -566,18 +583,34 @@ class MADDPG(object):
                 (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in opp_pi_acs]
             else:
                 if self.I2A:
-                    team_pi_acs = [a for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
-                    opp_pi_acs = [a for a in opp_target_policies[0](opp_next_obs)] # get actions for all agents, add noise to each
+                    if self.preprocess:
+                        team_pi_acs = [a for a in target_policies[0](red_next_obs)] # get actions for all agents, add noise to each
+                        opp_pi_acs = [a for a in opp_target_policies[0](red_opp_next_obs)] # get actions for all agents, add noise to each
+                    else:
+                        team_pi_acs = [a for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
+                        opp_pi_acs = [a for a in opp_target_policies[0](next_obs)] # get actions for all agents, add noise to each
                 else:
-                    team_pi_acs  = [(pi(nobs)) for pi, nobs in zip(target_policies,next_obs)]
-                    opp_pi_acs  = [(pi(nobs)) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
+                    if self.preprocess:
+                        team_pi_acs  = [(pi(nobs)) for pi, nobs in zip(target_policies,red_next_obs)]
+                        opp_pi_acs  = [(pi(nobs)) for pi, nobs in zip(opp_target_policies,red_opp_next_obs)]
+                    else:
+                        team_pi_acs  = [(pi(nobs)) for pi, nobs in zip(target_policies,next_obs)]
+                        opp_pi_acs  = [(pi(nobs)) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
 
                 all_trgt_acs = [torch.cat(
                     (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in team_pi_acs]
                 opp_all_trgt_acs =[torch.cat(
                     (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in opp_pi_acs]
+                
 
-            mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
+            if self.zero_critic:
+                all_trgt_acs = [zero_params(a) for a in all_trgt_acs]
+                opp_all_trgt_acs = [zero_params(a) for a in opp_all_trgt_acs]
+            if self.preprocess:
+                mod_next_obs = torch.cat((*red_opp_next_obs,*red_next_obs),dim=1)
+            else:
+                mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
+
             mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
 
             # Target critic values
@@ -597,11 +630,19 @@ class MADDPG(object):
                     trgt_Q = torch.min(trgt_Q1,trgt_Q2)
             else:
                 trgt_Q = curr_agent.target_critic(trgt_vf_in)
+            
+            if self.preprocess:
+                mod_obs = torch.cat((*red_opp_obs,*red_obs),dim=1)
+            else:
+                mod_obs = torch.cat((*opp_obs,*obs),dim=1)
+            if self.zero_critic:
+                mod_acs = torch.cat((*[zero_params(a) for a in opp_acs],*[zero_params(a) for a in acs]),dim=1)
+            else:
+                mod_acs = torch.cat((*opp_acs,*acs),dim=1)
 
-            mod_obs = torch.cat((*opp_obs,*obs),dim=1)
-            mod_acs = torch.cat((*opp_acs,*acs),dim=1)
             # Actual critic values
             vf_in = torch.cat((mod_obs, mod_acs), dim=1)
+
             if self.TD3:
                 actual_value_1, actual_value_2 = curr_agent.critic(vf_in)
             else:
@@ -651,6 +692,23 @@ class MADDPG(object):
             torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
             curr_agent.critic_optimizer.step()
 
+            # Train preprocessor ---------------------------------
+            if self.preprocess:
+                if self.niter % 1 == 0:
+                    curr_agent.reducer_optimizer.zero_grad()
+                    obs_stacked = torch.cat(obs,dim=0)
+                    rec_obs_stacked = reducer(obs_stacked)
+
+                    opp_obs_stacked = torch.cat(opp_obs,dim=0)
+                    rec_opp_obs_stacked = reducer(opp_obs_stacked)
+                    preprocess_loss = F.mse_loss(rec_obs_stacked,obs_stacked)
+                    preprocess_loss += F.mse_loss(rec_opp_obs_stacked,opp_obs_stacked)
+                    preprocess_loss.backward()
+                    curr_agent.reducer_optimizer.step()
+
+
+            
+            
         if policy:
             curr_agent.policy_optimizer.zero_grad()
     
@@ -661,16 +719,32 @@ class MADDPG(object):
             team_pol_acs = []
     
             if self.I2A:
-                curr_pol_out = curr_agent.policy(obs)
+                if self.preprocess:
+                    curr_pol_out = curr_agent.policy(red_obs)
+                else:
+                    curr_pol_out = curr_agent.policy(obs)
+
             else:
-                curr_pol_out = [curr_agent.policy(obs[ag]) for ag in range(nagents)]
+                if self.preprocess:
+                    curr_pol_out = [curr_agent.policy(red_obs[ag]) for ag in range(nagents)]
+                else:
+                    curr_pol_out = [curr_agent.policy(obs[ag]) for ag in range(nagents)]
+
                 
             team_pol_acs = [torch.cat((gumbel_softmax(c[:,:curr_agent.action_dim], hard=True, device=self.torch_device),c[:,curr_agent.action_dim:]),dim=1) for c in curr_pol_out]
             curr_pol_out_stacked = torch.cat(curr_pol_out,dim=0)
+            if self.zero_critic:
+                curr_pol_out_stacked = zero_params(curr_pol_out_stacked)
 
+            if self.preprocess:
+                obs_vf_in = torch.cat((*red_opp_obs,*red_obs),dim=1)
+            else:
+                obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
 
-            obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
             acs_vf_in = torch.cat((*opp_acs,*team_pol_acs),dim=1)
+            
+            if self.zero_critic:
+                acs_vf_in = torch.cat((*[(a) for a in opp_acs],*[zero_params(a) for a in team_pol_acs]),dim=1)
             mod_vf_in = torch.cat((obs_vf_in, acs_vf_in), dim=1)
 
             # ------------------------------------------------------
@@ -711,7 +785,11 @@ class MADDPG(object):
             # Update policy prime
             curr_agent.policy_prime_optimizer.zero_grad()
             # We take the loss between the current policy's behavior and policy prime which is estimating the current policy
-            pol_prime_out = [curr_agent.policy_prime(obs[ag]) for ag in range(nagents)] # uses gumbel across the actions
+            if self.preprocess:
+                pol_prime_out = [curr_agent.policy_prime(red_obs[ag]) for ag in range(nagents)] # uses gumbel across the actions
+            else:
+                pol_prime_out = [curr_agent.policy_prime(obs[ag]) for ag in range(nagents)] # uses gumbel across the actions
+
             pol_prime_out_stacked = torch.cat(pol_prime_out,dim=0)
             pol_prime_loss = F.mse_loss(pol_prime_out_stacked,curr_pol_out_stacked)
             pol_prime_loss.backward()
@@ -724,8 +802,12 @@ class MADDPG(object):
             #self.ws_onehot.zero_() # reset OH tensor
             #self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
             agents_acs = torch.cat(acs,dim=1) # cat agents actions to same row
-            agents_obs = torch.cat(obs,dim=0) # stack entire batch on top of eachother for each agent
-            agents_nobs = torch.cat(next_obs,dim=0)
+            if self.preprocess:
+                agents_obs = torch.cat(red_obs,dim=0) # stack entire batch on top of eachother for each agent
+                agents_nobs = torch.cat(red_next_obs,dim=0)
+            else:
+                agents_obs = torch.cat(obs,dim=0) # stack entire batch on top of eachother for each agent
+                agents_nobs = torch.cat(next_obs,dim=0)
             agents_rews = torch.cat(rews,dim=0)
 
             acs_repeated = agents_acs.repeat(nagents,1) # repeat actions so they may be used with each agent's observation batch
@@ -746,9 +828,13 @@ class MADDPG(object):
             if self.niter % 100 == 0:
                 print("Team (%s) Agent (%i) Actor loss:" % (side,agent_i),pol_loss)
 
+
                 if self.I2A:
                     print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
                     print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
+
+                    
+                    
     
 
                     self.policy_loss_logger = self.policy_loss_logger.append({                'iteration':self.niter,
@@ -772,14 +858,23 @@ class MADDPG(object):
         #                        {'vf_loss': vf_loss,
         #                         'pol_loss': pol_loss},
         #                        self.niter)
-        self.niter +=1
         #print(time.time() - start,"up")
         if critic:
             if self.niter % 100 == 0:
-                self.critic_loss_logger = self.critic_loss_logger.append({                          'iteration':self.niter,
+                if self.preprocess:
+                    self.critic_loss_logger = self.critic_loss_logger.append({                          'iteration':self.niter,
+                                                                            'preprocess':np.round(preprocess_loss.item(),4),
+                                                                            'critic': np.round(vf_loss.item(),4)},
+                                                                            ignore_index=True)
+                    print("Team (%s) Agent(%i) preprocessor loss" % (side, agent_i),preprocess_loss)
+
+                else:
+                    self.critic_loss_logger = self.critic_loss_logger.append({                          'iteration':self.niter,
                                                                             'critic': np.round(vf_loss.item(),4)},
                                                                             ignore_index=True)
                 print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
+
+        self.niter +=1
 
 
         # return priorities
@@ -1454,6 +1549,19 @@ class MADDPG(object):
         self.niter += 1
 
     def prep_policy(self,device='cuda',torch_device=torch.device('cuda:0')):
+        for a in self.team_agents:
+            a.policy.train()
+            a.reducer.train()
+            if self.I2A:
+                a.policy_prime.train()
+                a.EM.train()
+
+        for a in self.opp_agents:
+            a.policy.train()
+            a.reducer.train()
+            if self.I2A:
+                a.policy_prime.train()
+                a.EM.train()
 
         if device == 'cuda':
             fn = lambda x: x.to(torch_device)
@@ -1462,12 +1570,14 @@ class MADDPG(object):
             
         for a in self.team_agents:
             a.policy = fn(a.policy)
+            a.reducer = fn(a.reducer)
             if self.I2A:    
                 a.policy_prime = fn(a.policy_prime)
                 a.EM  = a.EM = fn(a.EM)
 
         for a in self.opp_agents:
             a.policy = fn(a.policy)
+            a.reducer = fn(a.reducer)
             if self.I2A:    
                 a.policy_prime = fn(a.policy_prime)
                 a.EM  = a.EM = fn(a.EM)
@@ -1475,6 +1585,7 @@ class MADDPG(object):
     def prep_training(self, device='gpu',only_policy=False,torch_device=torch.device('cuda:0')):
         for a in self.team_agents:
             a.policy.train()
+            a.reducer.train()
             if self.I2A:
                 a.policy_prime.train()
                 a.EM.train()
@@ -1485,6 +1596,7 @@ class MADDPG(object):
         
         for a in self.opp_agents:
             a.policy.train()
+            a.reducer.train()
             if self.I2A:
                 a.policy_prime.train()
                 a.EM.train()
@@ -1500,11 +1612,13 @@ class MADDPG(object):
         if not self.pol_dev == device:
             for a in self.team_agents:
                 a.policy = fn(a.policy)
+                a.reducer = fn(a.reducer)
                 if self.I2A:
                     a.policy_prime = fn(a.policy_prime)
                     a.EM  = a.EM = fn(a.EM)
             for a in self.opp_agents:
                 a.policy = fn(a.policy)
+                a.reducer = fn(a.reducer)
                 if self.I2A:
                     a.policy_prime = fn(a.policy_prime)
                     a.EM  = a.EM = fn(a.EM)
@@ -1552,33 +1666,40 @@ class MADDPG(object):
                         a.imagination_policy = fn(a.imagination_policy)
                     self.imagination_pol_dev = device
 
-    def prep_rollouts(self, device='cpu'):
+    def prep_policy_rollout(self, device='gpu',only_policy=False,torch_device=torch.device('cuda:0')):
         for a in self.team_agents:
             a.policy.eval()
+            a.reducer.eval()
+            if self.I2A:
+                a.policy_prime.train()
+                a.EM.train()
+
         for a in self.opp_agents:
-            a.policy.eval()
+            a.policy.train()
+            a.reducer.train()
+            if self.I2A:
+                a.policy_prime.train()
+                a.EM.train()
 
         if device == 'cuda':
-            fn = lambda x: x.cuda()
+            fn = lambda x: x.to(torch_device)
         else:
             fn = lambda x: x.cpu()
+            
+        for a in self.team_agents:
+            a.policy = fn(a.policy)
+            a.reducer = fn(a.reducer)
+            if self.I2A:    
+                a.policy_prime = fn(a.policy_prime)
+                a.EM  = a.EM = fn(a.EM)
 
-        # ---
-        if not self.pol_dev == device:
-            for a in self.team_agents:
-                a.policy = fn(a.policy)
-                a.target_policy = fn(a.target_policy)
-                if self.I2A:
-                    a.policy_prime = fn(a.policy_prime)
-                    a.imagination_policy = fn(a.imagination_policy)
-            for a in self.opp_agents:
-                a.policy = fn(a.policy)
-                a.target_policy = fn(a.target_policy)
-                if self.I2A:
-                    a.policy_prime = fn(a.policy_prime)
-                    a.imagination_policy = fn(a.imagination_policy)
-            self.pol_dev = device
-
+        for a in self.opp_agents:
+            a.policy = fn(a.policy)
+            a.reducer = fn(a.reducer)
+            if self.I2A:    
+                a.policy_prime = fn(a.policy_prime)
+                a.EM  = a.EM = fn(a.EM)
+            
     
     #Needs to be tested
     def save_actor(self, filename):
@@ -1645,7 +1766,14 @@ class MADDPG(object):
             obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
 
+            
         self.curr_agent_index = agent_i
+        if self.preprocess:
+            reducer = curr_agent.reducer
+            obs = [reducer.reduce(o) for o in obs]
+            next_obs = [reducer.reduce(no) for no in next_obs]
+            opp_obs = [reducer.reduce(oo) for oo in opp_obs]
+            opp_next_obs = [reducer.reduce(ono) for ono in opp_next_obs]
         # Train critic ------------------------
         curr_agent.critic_optimizer.zero_grad()
         if load_same_agent:
@@ -1680,6 +1808,11 @@ class MADDPG(object):
                 (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in team_pi_acs]
             opp_all_trgt_acs =[torch.cat(
                 (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in opp_pi_acs]
+                
+
+        if self.zero_critic:
+            all_trgt_acs = [zero_params(a) for a in all_trgt_acs]
+            opp_all_trgt_acs = [zero_params(a) for a in opp_all_trgt_acs]
 
         mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
         mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
@@ -1705,6 +1838,8 @@ class MADDPG(object):
         mod_obs = torch.cat((*opp_obs,*obs),dim=1)
         mod_acs = torch.cat((*opp_acs,*acs),dim=1)
         # Actual critic values
+        if self.zero_critic:
+            mod_acs = torch.cat((*[zero_params(a) for a in opp_acs],*[zero_params(a) for a in acs]),dim=1)
         vf_in = torch.cat((mod_obs, mod_acs), dim=1)
         if self.TD3:
             actual_value_1, actual_value_2 = curr_agent.critic(vf_in)
@@ -1812,6 +1947,12 @@ class MADDPG(object):
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
 
         self.curr_agent_index = agent_i
+        if self.preprocess:
+            reducer = curr_agent.reducer
+            obs = [reducer.reduce(o) for o in obs]
+            next_obs = [reducer.reduce(no) for no in next_obs]
+            opp_obs = [reducer.reduce(oo) for oo in opp_obs]
+            opp_next_obs = [reducer.reduce(ono) for ono in opp_next_obs]
         # Train critic ------------------------
         curr_agent.critic_optimizer.zero_grad()
         if load_same_agent:
@@ -1828,7 +1969,8 @@ class MADDPG(object):
         opp_acs = [a + noise for a in opp_acs]  
         mod_obs = torch.cat((*opp_obs,*obs),dim=1)
         mod_acs = torch.cat((*opp_acs,*acs),dim=1)
-
+        if self.zero_critic:
+            mod_acs = torch.cat((*[zero_params(a) for a in opp_acs],*[zero_params(a) for a in acs]),dim=1)
         # Actual critic values
         vf_in = torch.cat((mod_obs, mod_acs), dim=1)
         if self.TD3:
@@ -1909,7 +2051,10 @@ class MADDPG(object):
             nagents = self.nagents_opp
             policies = self.opp_policies
         zero_values = False
-        
+        reducer = curr_agent.reducer
+        obs = [reducer.reduce(o) for o in obs]
+        next_obs = [reducer.reduce(no) for no in next_obs]
+
         if self.discrete_action:
             # Forward pass as if onehot (hard=True) but backprop through a differentiable
             # Gumbel-Softmax sample. The MADDPG paper uses the Gumbel-Softmax trick to backprop
@@ -2013,8 +2158,12 @@ class MADDPG(object):
             nagents = self.nagents_opp
             policies = self.opp_policies
             
-        # Train Environment Model -----------------------------------------------------            
-        curr_agent.EM_optimizer.zero_grad()
+        # Train Environment Model -----------------------------------------------------          
+        if self.preprocess:
+            curr_agent.EM_optimizer.zero_grad()
+            reducer = curr_agent.reducer
+            obs = [reducer.reduce(o) for o in obs]
+            next_obs = [reducer.reduce(no) for no in next_obs]
 
         labels = ws[0].long().view(-1,1) % self.world_status_dim # categorical labels for OH
         self.ws_onehot.zero_() # reset OH tensor
@@ -2077,7 +2226,12 @@ class MADDPG(object):
             opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
 
         self.curr_agent_index = agent_i
-        
+        if self.preprocess:
+            reducer = curr_agent.reducer
+            obs = [reducer.reduce(o) for o in obs]
+            next_obs = [reducer.reduce(no) for no in next_obs]
+            opp_obs = [reducer.reduce(oo) for oo in opp_obs]
+            opp_next_obs = [reducer.reduce(ono) for ono in opp_next_obs]
         if self.I2A:
             curr_pol_out = curr_agent.policy(obs)
         else:
@@ -2090,7 +2244,7 @@ class MADDPG(object):
         curr_agent.policy_optimizer.zero_grad()
         
         all_acs = torch.cat(acs,dim=0)
-
+        
         pol_out_actions = torch.softmax(curr_pol_out_stacked[:,:curr_agent.action_dim],dim=1).float()
         actual_out_actions = Variable(all_acs,requires_grad=True).float()[:,:curr_agent.action_dim]
         pol_out_params = curr_pol_out_stacked[:,curr_agent.action_dim:]
@@ -2293,7 +2447,7 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False,multi_gpu=False,data_parallel=False):
+                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False,multi_gpu=False,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -2308,8 +2462,11 @@ class MADDPG(object):
             # changed acsp to be action_list for each agent 
             # giving dimension num_TA x action_list so they may zip properly    
 
-            num_in_pol = obsp.shape[0]
-        
+            if preprocess:
+                num_in_pol = reduced_obs_dim
+            else:
+                num_in_pol = obsp.shape[0]
+            num_in_reducer = obsp.shape[0]
             num_out_pol =  len(env.action_list)
 
             # if cont
@@ -2317,7 +2474,7 @@ class MADDPG(object):
                 num_out_pol = len(env.action_list) + len(env.team_action_params[0])
             
             num_in_EM = (num_out_pol*env.num_TA) + num_in_pol
-            num_out_EM = obsp.shape[0]
+            num_out_EM = num_in_pol
 
             # obs space and action space are concatenated before sending to
             # critic network
@@ -2334,17 +2491,20 @@ class MADDPG(object):
             
             team_agent_init_params.append({'num_in_pol': num_in_pol,
                                         'num_out_pol': num_out_pol,
-                                        'num_in_critic': num_in_critic})
+                                        'num_in_critic': num_in_critic,
+                                        'num_in_reducer': num_in_reducer})
             
             opp_agent_init_params.append({'num_in_pol': num_in_pol,
                                         'num_out_pol': num_out_pol,
-                                        'num_in_critic': num_in_critic})
+                                        'num_in_critic': num_in_critic,
+                                        'num_in_reducer': num_in_reducer})
             
             team_net_params.append({'num_in_pol': num_in_pol,
                                     'num_out_pol': num_out_pol,
                                     'num_in_critic': num_in_critic,
                                     'num_in_EM': num_in_EM,
-                                    'num_out_EM': num_out_EM})
+                                    'num_out_EM': num_out_EM,
+                                    'num_in_reducer': num_in_reducer})
 
             
 
@@ -2388,7 +2548,10 @@ class MADDPG(object):
                      'hidden_dim_lstm': hidden_dim_lstm,
                      'only_policy': only_policy,
                      'multi_gpu':multi_gpu,
-                     'data_parallel':data_parallel}
+                     'data_parallel':data_parallel,
+                     'reduced_obs_dim':reduced_obs_dim,
+                     'preprocess':preprocess,
+                     'zero_critic':zero_critic}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
@@ -2445,6 +2608,49 @@ class MADDPG(object):
             else:
                 self.opp_agents[i].load_policy_params(save_dicts[0]['agent_params'])
         return ind
+    
+    def load_random(self,side='team',nagents=1,models_path="models",load_same_agent=False):
+        """
+        Load new networks into the currently running session
+        Returns the index chosen for each agent
+        """
+        folders = os.listdir(models_path)
+        folders.sort()
+        if not load_same_agent:
+                
+            ind = [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
+            folder = [folder for folder in folders] # the folder names for each agents model
+            filenames = []
+            for i,f in zip(ind,folder):
+                current = os.listdir(models_path +f)
+                if side == 'team':
+                    current.sort()
+                filenames.append(current[i])
+            
+            save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
+            for i in range(nagents):
+                if side=='team':
+                    self.team_agents[i].load_params(save_dicts[i]['agent_params'])
+                else:
+                    self.opp_agents[i].load_params(save_dicts[i]['agent_params'])
+            return ind
+        else:
+            ind = [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
+        folder = [folder for folder in folders] # the folder names for each agents model
+        filenames = []
+        for i,f in zip(ind,folder):
+            current = os.listdir(models_path +f)
+            if side == 'team':
+                current.sort()
+            filenames.append(current[i])
+        
+        save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
+        for i in range(nagents):
+            if side=='team':
+                self.team_agents[i].load_params(save_dicts[0]['agent_params'])
+            else:
+                self.opp_agents[i].load_params(save_dicts[0]['agent_params'])
+        return ind
                 
                     
     def load_random_ensemble(self,side='team',nagents=1,models_path="models",load_same_agent=False):
@@ -2470,7 +2676,7 @@ class MADDPG(object):
                 if side=='team':
                     self.team_agents[i].load_params(save_dicts[i]['agent_params'])
                 else:
-                    self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+                    self.opp_agents[i].load_params(save_dicts[i]['agent_params'])
             return ind
         else:
             ind = [0 for _ in range(nagents)] #= [np.random.choice(np.arange(len(os.listdir(models_path + folder)))) for folder in folders] # indices of random model from each agents model folder
@@ -2485,9 +2691,9 @@ class MADDPG(object):
             save_dicts = np.asarray([torch.load(models_path + fold + "/" +  filename) for filename,fold in zip(filenames,folder)]) # params for agent from randomly chosen file from model folder
             for i in range(nagents):
                 if side=='team':
-                    self.team_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+                    self.team_agents[i].load_params(save_dicts[i]['agent_params'])
                 else:
-                    self.opp_agents[i].load_policy_params(save_dicts[i]['agent_params'])
+                    self.opp_agents[i].load_params(save_dicts[i]['agent_params'])
             return [0 for _ in range(nagents)]
             
                              
@@ -2533,18 +2739,27 @@ class MADDPG(object):
         dict = torch.load("models/" + "agent2d/agent2D.pth")
 
         if side =='team':
-            self.team_agents[agentID].load_policy_params(dict['agent_params'])
+            self.team_agents[agentID].load_params(dict['agent_params'])
         else:
-            self.opp_agents[agentID].load_policy_params(dict['agent_params'])
+            self.opp_agents[agentID].load_params(dict['agent_params'])
                              
     def load_agent2d_policies(self, side='team',models_path='models/',load_same_agent=False,nagents=0):
         # load agent2d role
         dict = torch.load(models_path + "agent2d/agent2D.pth")
 
         if side =='team':
-            [self.team_agents[i].load_policy_params(dict['agent_params']) for i in range(nagents)]
+            [self.team_agents[i].load_params(dict['agent_params']) for i in range(nagents)]
         else:
-            [self.opp_agents[i].load_policy_params(dict['agent_params']) for i in range(nagents)]
+            [self.opp_agents[i].load_params(dict['agent_params']) for i in range(nagents)]
+            
+    def load_agent2d(self, side='team',models_path='models/',load_same_agent=False,nagents=0):
+        # load agent2d role
+        dict = torch.load(models_path + "agent2d/agent2D.pth")
+
+        if side =='team':
+            [self.team_agents[i].load_params(dict['agent_params']) for i in range(nagents)]
+        else:
+            [self.opp_agents[i].load_params(dict['agent_params']) for i in range(nagents)]
 
 
 
