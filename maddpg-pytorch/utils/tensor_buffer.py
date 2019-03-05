@@ -16,7 +16,7 @@ class ReplayTensorBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, seq_length,k,SIL):
+    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, seq_length,overlap,k,SIL):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -31,8 +31,9 @@ class ReplayTensorBuffer(object):
         self.start_loc = 0
         self.obs_dim = obs_dim
         self.ac_dim = ac_dim
+        self.obs_acs_dim = obs_dim + ac_dim
         self.seq_length = seq_length
-        self.overlap = int(seq_length/2)
+        self.overlap = overlap
         
         if LSTM:
             self.max_steps = int(max_steps/seq_length) # Max sequences did this to reduce var name change
@@ -165,7 +166,7 @@ class ReplayTensorBuffer(object):
 
     def push_LSTM(self, exps):
         ep_length = len(exps)
-        nentries = (math.ceil(ep_length/self.overlap)) - 1 # Number of rows in seq_exps tensor
+        nentries = (math.ceil(ep_length/self.overlap)) - 1 # Number of rows to input in seq_exps tensor
     
         if self.curr_i + nentries > self.max_steps:
             rollover = self.max_steps - self.curr_i # num of indices to roll over
@@ -174,6 +175,8 @@ class ReplayTensorBuffer(object):
             self.curr_i = 0
             self.filled_i = self.max_steps
 
+        # NOTE: Exps include: obs, acs, n_step_rew, n_step_done, MC_targets, n_step_targets, 
+        #       n_step_ws, ensemble priorities, replay priorities
         if ep_length % self.overlap == 0:
             for n in range(nentries):
                 start_pt = n*self.overlap
@@ -236,80 +239,27 @@ class ReplayTensorBuffer(object):
                 ret_n_step,
                 [cast(self.ws_buffs[inds, i, :]).squeeze() for i in range(self.num_agents)])
     
-    def sample_LSTM(self, inds, seq_length, to_gpu=False, norm_rews=False):
-        # inds = np.random.choice(np.arange(self.filled_i), size=N,
-        #                         replace=False)
+    def sample_LSTM(self, inds, to_gpu=False, device="cuda:0"):
+
         if to_gpu:
-            cast = lambda x: Variable(Tensor(x), requires_grad=False).cuda()
+            cast = lambda x: Variable(x, requires_grad=False).to(device)
         else:
-            cast = lambda x: Variable(Tensor(x), requires_grad=False)
+            cast = lambda x: Variable(x, requires_grad=False)
         if to_gpu:
-            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True).cuda() # obs need gradient for cent-Q
+            cast_obs = lambda x: Variable(x, requires_grad=True).to(device) # obs need gradient for cent-Q
         else:
-            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True)
+            cast_obs = lambda x: Variable(x, requires_grad=True)
 
-        points = [np.random.randint(0,self.curr_i) for i in inds]
-
-
-
-
-        if norm_rews:
-            ret_rews = [cast([(self.episode_buff[i]['rew'][a][p:p+1] -
-                self.episode_buff[i]['rew'][a][:self.filled_i].mean()) /
-                self.episode_buff[i]['rew'][a][:self.filled_i].std()
-                for i,p in zip(inds, points)]) for a in range(self.num_agents)]
-            
-            ret_mc = [cast([(self.episode_buff[i]['mc'][a][p:p+1] - 
-                self.episode_buff[i]['mc'][a][:self.filled_i].mean()) /
-                self.episode_buff[i]['mc'][a][:self.filled_i].std()
-                for i,p in zip(inds, points)]) for a in range(self.num_agents)]
-            
-            ret_n_step = [cast([(self.episode_buff[i]['n_step'][a][p:p+1] - 
-                self.episode_buff[i]['n_step'][a][:self.filled_i].mean()) /
-                self.episode_buff[i]['n_step'][a][:self.filled_i].std()
-                for i,p in zip(inds, points)]) for a in range(self.num_agents)]
-        else:
-            ret_rews = [cast([self.episode_buff[i]['rew'][a][p:p+1]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-            ret_mc = [cast([self.episode_buff[i]['mc'][a][p:p+1]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-            ret_n_step = [cast([self.episode_buff[i]['n_step'][a][p:p+1]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-
-        ret_obs = [cast_obs([self.episode_buff[i]['obs'][a][p:p+seq_length]
-            for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        
-        if self.LSTM: # Was for PC
-            ret_acs = [cast([self.episode_buff[i]['acs'][a][p:p+seq_length]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        else:
-            ret_acs = [cast([self.episode_buff[i]['acs'][a][p:p+1]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        ret_next_obs = [cast_obs([self.episode_buff[i]['next_obs'][a][p:p+seq_length]
-            for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        ret_dones = [cast([self.episode_buff[i]['dones'][a][p:p+1]
-            for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        ret_ws = [cast([self.episode_buff[i]['ws'][a][p:p+1]
-            for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-
-        if self.LSTM: # Was for PC
-            return ([ret_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_acs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_rews[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_next_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_dones[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_mc[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_n_step[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_ws[a].view(self.batch_size) for a in range(self.num_agents)])
-        else:
-            return ([ret_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_acs[a].view((self.batch_size, -1)) for a in range(self.num_agents)],
-                    [ret_rews[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_next_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_dones[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_mc[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_n_step[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_ws[a].view(self.batch_size) for a in range(self.num_agents)])
+        return 
+        (
+            [cast_obs(self.seq_exps[inds, :, a, :self.obs_dim]) for a in range(self.num_agents)], # obs
+            [cast(self.seq_exps[inds, :, a, self.obs_dim:self.obs_acs_dim]) for a in range(self.num_agents)], # actions
+            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim:self.obs_acs_dim+1]) for a in range(self.num_agents)], # rewards
+            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+1:self.obs_acs_dim+2]) for a in range(self.num_agents)], # dones
+            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+2:self.obs_acs_dim+3]) for a in range(self.num_agents)], # mc
+            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+3:self.obs_acs_dim+4]) for a in range(self.num_agents)], # n_step_targets
+            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+4:self.obs_acs_dim+5]) for a in range(self.num_agents)] # ws
+        )
 
     def get_average_rewards(self, N):
         if self.filled_i == self.max_steps:
@@ -334,7 +284,8 @@ class ReplayTensorBuffer(object):
         
 
     def update_priorities(self, agentID,inds, prio,k=1):
-        self.ensemble_priorities[inds,agentID,k] = prio
+        # self.ensemble_priorities[inds,agentID,k] = prio
+        self.seq_exps[inds, :, agentID, self.obs_acs_dim+5+k] = prio
 
     def get_PER_inds(self,agentID=0,batch_size=32,k=1):
         '''Returns a sample prioritized using TD error for the update and the indices used'''

@@ -91,14 +91,19 @@ class DDPGAgent(object):
                 self.target_policy = nn.DataParallel(self.target_policy)
 
         if not maddpg.only_policy:
+            if LSTM:
+                self.critic = LSTMNetwork_Critic(num_in_critic, 1,
+                                            hidden_dim=hidden_dim, agent=self, n_atoms=n_atoms, D4PG=D4PG,TD3=TD3,maddpg=maddpg)
+                self.target_critic = LSTMNetwork_Critic(num_in_critic, 1,
+                                            hidden_dim=hidden_dim, agent=self, n_atoms=n_atoms, D4PG=D4PG,TD3=TD3,maddpg=maddpg)
+            else:
+                self.critic = MLPNetwork_Critic(num_in_critic, 1,
+                                        hidden_dim=hidden_dim,
+                                        norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3,maddpg=maddpg)
 
-            self.critic = MLPNetwork_Critic(num_in_critic, 1,
-                                    hidden_dim=hidden_dim,
-                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3,maddpg=maddpg)
-
-            self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
-                                                hidden_dim=hidden_dim,
-                                                norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3,maddpg=maddpg)
+                self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
+                                                    hidden_dim=hidden_dim,
+                                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3,maddpg=maddpg)
             if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                 self.critic = nn.DataParallel(self.critic)
                 self.target_critic = nn.DataParallel(self.target_critic)
