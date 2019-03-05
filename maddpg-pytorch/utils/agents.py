@@ -226,7 +226,7 @@ class DDPGAgent(object):
             else:
                 action = self.policy(obs)
             if self.counter % 1000 == 0:
-                print(torch.softmax(action[:,:self.action_dim],dim=1))
+                print(torch.softmax(action.view(-1)[:self.action_dim],dim=0))
             a = onehot_from_logits(action[0,:self.action_dim].view(1,self.action_dim))
             #p = torch.clamp(action[0,self.action_dim:].view(1,self.param_dim),min=-1.0,max=1.0) # get noisey params (OU)
             p = action[0,self.action_dim:].view(1,self.param_dim)

@@ -46,7 +46,7 @@ class MADDPG(object):
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, imagination_policy_branch = False,
                  critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
-                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False,multi_gpu=True,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False): 
+                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False,multi_gpu=True,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True): 
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -95,6 +95,7 @@ class MADDPG(object):
         self.prime_dev = 'cpu'  # device for pol prime
         self.imagination_pol_dev = 'cpu'# device for imagination branch policy
         self.zero_critic = zero_critic
+        self.cent_critic = cent_critic
         self.preprocess = preprocess
         self.niter = 0
         self.n_steps = n_steps
@@ -221,12 +222,12 @@ class MADDPG(object):
             team_acs = self.team_agents[0].policy(team_observations)
             opp_acs = self.opp_agents[0].policy(opp_observations)
             return [a.step(obs,ran, acs,explore=explore) for a,ran, obs,acs in zip(self.team_agents, team_e_greedy,team_observations,team_acs)], \
-                    [a.step(obs,ran, acs,explore=explore) for a,ran, obs,acs in zip(self.opp_agents,opp_e_greedy, opp_observations,opp_acs)]
+                    [a.step(obs,ran, acs,explore=False) for a,ran, obs,acs in zip(self.opp_agents,opp_e_greedy, opp_observations,opp_acs)]
 
 
         if not parallel:
             return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
-                    [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
+                    [a.step(obs,ran, explore=False) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
         else:
             #[a for a_i,(a,ran,obs) in enumerate(zip(self.team_agents,team_e_greedy,team_observations))]
 
@@ -606,11 +607,13 @@ class MADDPG(object):
             if self.zero_critic:
                 all_trgt_acs = [zero_params(a) for a in all_trgt_acs]
                 opp_all_trgt_acs = [zero_params(a) for a in opp_all_trgt_acs]
+                
+                
             if self.preprocess:
                 mod_next_obs = torch.cat((*red_opp_next_obs,*red_next_obs),dim=1)
             else:
                 mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
-
+            
             mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
 
             # Target critic values
@@ -2447,7 +2450,7 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False,multi_gpu=False,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False):
+                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False,multi_gpu=False,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True):
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -2551,7 +2554,8 @@ class MADDPG(object):
                      'data_parallel':data_parallel,
                      'reduced_obs_dim':reduced_obs_dim,
                      'preprocess':preprocess,
-                     'zero_critic':zero_critic}
+                     'zero_critic':zero_critic,
+                     'cent_critic':cent_critic}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
