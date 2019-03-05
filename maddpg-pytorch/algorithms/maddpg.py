@@ -744,7 +744,7 @@ class MADDPG(object):
             acs_vf_in = torch.cat((*opp_acs,*team_pol_acs),dim=1)
             
             if self.zero_critic:
-                acs_vf_in = torch.cat((*[(a) for a in opp_acs],*[zero_params(a) for a in team_pol_acs]),dim=1)
+                acs_vf_in = torch.cat((*[zero_params(a) for a in opp_acs],*[zero_params(a) for a in team_pol_acs]),dim=1)
             mod_vf_in = torch.cat((obs_vf_in, acs_vf_in), dim=1)
 
             # ------------------------------------------------------
@@ -2239,7 +2239,7 @@ class MADDPG(object):
         
         
         curr_pol_out_stacked = torch.cat(curr_pol_out,dim=0)
-
+        
         #curr_pol_out = curr_agent.policy(all_obs)
         curr_agent.policy_optimizer.zero_grad()
         
@@ -2247,8 +2247,8 @@ class MADDPG(object):
         
         pol_out_actions = torch.softmax(curr_pol_out_stacked[:,:curr_agent.action_dim],dim=1).float()
         actual_out_actions = Variable(all_acs,requires_grad=True).float()[:,:curr_agent.action_dim]
-        pol_out_params = curr_pol_out_stacked[:,curr_agent.action_dim:]
-        actual_out_params = Variable(all_acs,requires_grad=True)[:,curr_agent.action_dim:]
+        pol_out_params = zero_params(torch.cat((onehot_from_logits(curr_pol_out_stacked[:,:curr_agent.action_dim]),curr_pol_out_stacked[:,curr_agent.action_dim:]),dim=1))[:,curr_agent.action_dim:]
+        actual_out_params = Variable(zero_params(all_acs),requires_grad=True)[:,curr_agent.action_dim:]
         MSE = F.mse_loss(pol_out_params,actual_out_params)
 
         pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)

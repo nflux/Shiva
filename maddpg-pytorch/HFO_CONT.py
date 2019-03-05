@@ -43,7 +43,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
         if multi_gpu:
             maddpg.torch_device = torch.device("cuda:3")
         maddpg.device = 'cuda'
-        number_of_updates = 600
+        number_of_updates = 300
         batches_to_sample = 50
 
         if len(team_replay_buffer) < batch_size*(batches_to_sample):
@@ -638,7 +638,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 8
+    num_envs = 10
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -691,7 +691,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 1024
+        batch_size = 256
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate 
@@ -702,7 +702,7 @@ if __name__ == "__main__":
         final_OU_noise_scale = 0.03
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 50 # Haus uses over 10,000 updates --
+        num_explore_episodes = 1 # Haus uses over 10,000 updates --
         multi_gpu = True
         data_parallel = False
         
@@ -737,7 +737,7 @@ if __name__ == "__main__":
         TD3_noise = 0.02
         # -------------------------------------- 
         #Pretrain Options ----------------------
-        pretrain = False
+        pretrain = True
         use_pretrain_data = False
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
         pt_update_cycles = 100
@@ -780,10 +780,10 @@ if __name__ == "__main__":
         zero_critic = True
         # Control Random Initilization of Agents and Ball
         control_rand_init = True
-        ball_x_min = -0.1
-        ball_x_max = 0.1
-        ball_y_min = -0.1
-        ball_y_max = 0.1
+        ball_x_min = -0.01
+        ball_x_max = 0.01
+        ball_y_min = -0.01
+        ball_y_max = 0.01
         agents_x_min = -0.2 # agents posititions are currently configured in HFO/librcss
         agents_x_max = 0.2
         agents_y_min = -0.2
@@ -1241,7 +1241,7 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(team_replay_buffer)
 
-            number_of_updates = 500
+            number_of_updates = 450
             batches_to_sample = 50
             if len(team_replay_buffer) < batch_size*(batches_to_sample):
                 batches_to_sample = 1

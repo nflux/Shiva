@@ -210,6 +210,8 @@ class DDPGAgent(object):
                     p = torch.clamp((action[self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
 
                 else:
+                    #a = onehot_from_logits(action[:,:self.action_dim].view(1,self.action_dim))
+
                     a = gumbel_softmax(action[:,:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
                     p = torch.clamp((action[:,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
                 action = torch.cat((a,p),1) 
