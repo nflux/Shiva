@@ -254,18 +254,20 @@ class LSTMNetwork_Critic(nn.Module):
         self.fc1.weight.data.normal_(0, 0.01)
         self.fc2 = nn.Linear(512, 256)
         self.fc2.weight.data.normal_(0, 0.01) 
+        self.lstm3 = nn.LSTM(256,self.hidden_dim_lstm)
         
         if TD3: # second critic
             self.Q2_fc1 = nn.Linear(input_dim, 512)
             self.Q2_fc1.weight.data.normal_(0, 0.01)
             self.Q2_fc2 = nn.Linear(512, 256)
-            self.Q2_fc2.weight.data.normal_(0, 0.01) 
+            self.Q2_fc2.weight.data.normal_(0, 0.01)
+            self.Q2_lstm3 = nn.LSTM(256,self.hidden_dim_lstm)
             
-        self.out = nn.LSTM(256,self.hidden_dim_lstm)
+        self.out = nn.Linear(self.hidden_dim_lstm, self.out_dim)
         self.register_buffer("supports",torch.arange(agent.vmin,agent.vmax + agent.delta, agent.delta))
             
         if TD3: # second critic
-            self.Q2_out = nn.LSTM(256,self.hidden_dim_lstm) 
+            self.Q2_out = nn.Linear(self.hidden_dim_lstm, self.out_dim)
 
         self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
