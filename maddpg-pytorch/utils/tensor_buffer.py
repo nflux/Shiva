@@ -16,7 +16,7 @@ class ReplayTensorBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, seq_length,overlap,k,SIL):
+    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k,SIL):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -34,6 +34,8 @@ class ReplayTensorBuffer(object):
         self.obs_acs_dim = obs_dim + ac_dim
         self.seq_length = seq_length
         self.overlap = overlap
+        self.hidden_dim_lstm = hidden_dim_lstm
+        total_dim = obs_dim+ac_dim+6+k+(hidden_dim_lstm*4)
         
         if LSTM:
             self.max_steps = int(max_steps/seq_length) # Max sequences did this to reduce var name change
@@ -250,16 +252,14 @@ class ReplayTensorBuffer(object):
         else:
             cast_obs = lambda x: Variable(x, requires_grad=True)
 
-        return 
-        (
-            [cast_obs(self.seq_exps[inds, :, a, :self.obs_dim]) for a in range(self.num_agents)], # obs
-            [cast(self.seq_exps[inds, :, a, self.obs_dim:self.obs_acs_dim]) for a in range(self.num_agents)], # actions
-            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim:self.obs_acs_dim+1]) for a in range(self.num_agents)], # rewards
-            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+1:self.obs_acs_dim+2]) for a in range(self.num_agents)], # dones
-            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+2:self.obs_acs_dim+3]) for a in range(self.num_agents)], # mc
-            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+3:self.obs_acs_dim+4]) for a in range(self.num_agents)], # n_step_targets
-            [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+4:self.obs_acs_dim+5]) for a in range(self.num_agents)] # ws
-        )
+        return ([cast_obs(self.seq_exps[inds, :, a, :self.obs_dim]) for a in range(self.num_agents)], # obs
+                [cast(self.seq_exps[inds, :, a, self.obs_dim:self.obs_acs_dim]) for a in range(self.num_agents)], # actions
+                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim:self.obs_acs_dim+1]) for a in range(self.num_agents)], # rewards
+                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+1:self.obs_acs_dim+2]) for a in range(self.num_agents)], # dones
+                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+2:self.obs_acs_dim+3]) for a in range(self.num_agents)], # mc
+                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+3:self.obs_acs_dim+4]) for a in range(self.num_agents)], # n_step_targets
+                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+4:self.obs_acs_dim+5]) for a in range(self.num_agents)], # ws
+                self.seq_exps[inds, 0, 0, -self.hidden_dim_lstm*4:]) # recurrent states for both critics
 
     def get_average_rewards(self, N):
         if self.filled_i == self.max_steps:
