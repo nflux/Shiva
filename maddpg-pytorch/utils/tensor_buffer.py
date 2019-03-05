@@ -11,6 +11,12 @@ def roll(tensor, rollover):
     '''
     return torch.cat((tensor[-rollover:], tensor[:-rollover]))
 
+def roll2(tensor, rollover):
+    '''
+    Roll over the second axis of a tensor
+    '''
+    return torch.cat((tensor[-rollover:], tensor[:-rollover]), dim=1)
+
 
 class ReplayTensorBuffer(object):
     """
@@ -39,7 +45,7 @@ class ReplayTensorBuffer(object):
         
         if LSTM:
             self.max_steps = int(max_steps/seq_length) # Max sequences did this to reduce var name change
-            self.seq_exps = torch.zeros((self.max_steps, seq_length, num_agents, obs_dim+ac_dim+6+k), requires_grad=False)
+            self.seq_exps = torch.zeros((seq_length, self.max_steps, num_agents, total_dim), requires_grad=False)
         else:
             self.obs_buffs = torch.zeros((max_steps, num_agents, obs_dim))
             self.ac_buffs = torch.zeros((max_steps, num_agents, ac_dim),requires_grad=False)
@@ -172,7 +178,7 @@ class ReplayTensorBuffer(object):
     
         if self.curr_i + nentries > self.max_steps:
             rollover = self.max_steps - self.curr_i # num of indices to roll over
-            self.seq_exps = roll(self.seq_exps, rollover)
+            self.seq_exps = roll2(self.seq_exps, rollover)
 
             self.curr_i = 0
             self.filled_i = self.max_steps
@@ -182,15 +188,15 @@ class ReplayTensorBuffer(object):
         if ep_length % self.overlap == 0:
             for n in range(nentries):
                 start_pt = n*self.overlap
-                self.seq_exps[self.curr_i+n, :self.seq_length, :self.num_agents, :] = exps[start_pt:start_pt+self.seq_length, :, :]
+                self.seq_exps[:self.seq_length, self.curr_i+n, :self.num_agents, :] = exps[start_pt:start_pt+self.seq_length, :, :]
         else:
             for n in range(nentries):
                 if n != nentries-1:
                     start_pt = n*self.overlap
-                    self.seq_exps[self.curr_i+n, :self.seq_length, :self.num_agents, :] = exps[start_pt:start_pt+self.seq_length, :, :]
+                    self.seq_exps[:self.seq_length, self.curr_i+n, :self.num_agents, :] = exps[start_pt:start_pt+self.seq_length, :, :]
                 else:
                     # Get the last values if the episode length is not evenly divisible by the overlap amount
-                    self.seq_exps[self.curr_i+n, :self.seq_length, :self.num_agents, :] = exps[ep_length-self.seq_length:, :, :]
+                    self.seq_exps[:self.seq_length, self.curr_i+n, :self.num_agents, :] = exps[ep_length-self.seq_length:, :, :]
 
         self.curr_i += nentries
         if self.filled_i < self.max_steps:
@@ -252,14 +258,14 @@ class ReplayTensorBuffer(object):
         else:
             cast_obs = lambda x: Variable(x, requires_grad=True)
 
-        return ([cast_obs(self.seq_exps[inds, :, a, :self.obs_dim]) for a in range(self.num_agents)], # obs
-                [cast(self.seq_exps[inds, :, a, self.obs_dim:self.obs_acs_dim]) for a in range(self.num_agents)], # actions
-                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim:self.obs_acs_dim+1]) for a in range(self.num_agents)], # rewards
-                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+1:self.obs_acs_dim+2]) for a in range(self.num_agents)], # dones
-                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+2:self.obs_acs_dim+3]) for a in range(self.num_agents)], # mc
-                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+3:self.obs_acs_dim+4]) for a in range(self.num_agents)], # n_step_targets
-                [cast(self.seq_exps[inds, :, a, self.obs_acs_dim+4:self.obs_acs_dim+5]) for a in range(self.num_agents)], # ws
-                self.seq_exps[inds, 0, 0, -self.hidden_dim_lstm*4:]) # recurrent states for both critics
+        return ([cast_obs(self.seq_exps[:, inds, a, :self.obs_dim]) for a in range(self.num_agents)], # obs
+                [cast(self.seq_exps[:, inds, a, self.obs_dim:self.obs_acs_dim]) for a in range(self.num_agents)], # actions
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim:self.obs_acs_dim+1]) for a in range(self.num_agents)], # rewards
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+1:self.obs_acs_dim+2]) for a in range(self.num_agents)], # dones
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+2:self.obs_acs_dim+3]) for a in range(self.num_agents)], # mc
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+3:self.obs_acs_dim+4]) for a in range(self.num_agents)], # n_step_targets
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+4:self.obs_acs_dim+5]) for a in range(self.num_agents)], # ws
+                self.seq_exps[0, inds, 0, -self.hidden_dim_lstm*4:]) # recurrent states for both critics
 
     def get_average_rewards(self, N):
         if self.filled_i == self.max_steps:
