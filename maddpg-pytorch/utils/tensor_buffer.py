@@ -3,6 +3,7 @@ from torch import Tensor,squeeze
 from torch.autograd import Variable
 import operator
 import torch
+import math
 
 def roll(tensor, rollover):
     '''
@@ -10,12 +11,18 @@ def roll(tensor, rollover):
     '''
     return torch.cat((tensor[-rollover:], tensor[:-rollover]))
 
+def roll2(tensor, rollover):
+    '''
+    Roll over the second axis of a tensor
+    '''
+    return torch.cat((tensor[-rollover:], tensor[:-rollover]), dim=1)
+
 
 class ReplayTensorBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, LSTM_PC,k,SIL):
+    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k,SIL):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -30,22 +37,32 @@ class ReplayTensorBuffer(object):
         self.start_loc = 0
         self.obs_dim = obs_dim
         self.ac_dim = ac_dim
-        self.obs_buffs = torch.zeros((max_steps, num_agents, obs_dim))
-        self.ac_buffs = torch.zeros((max_steps, num_agents, ac_dim),requires_grad=False)
-        self.n_step_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
-        self.rew_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
-        self.mc_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
-        self.next_obs_buffs = torch.zeros((max_steps, num_agents, obs_dim),requires_grad=False)
-        self.done_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
-        self.ws_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
-        self.SIL_priorities = torch.zeros((max_steps,num_agents,1),requires_grad=False)
-        self.ensemble_priorities = torch.zeros((max_steps,num_agents,k),requires_grad=False)
+        self.obs_acs_dim = obs_dim + ac_dim
+        self.seq_length = seq_length
+        self.overlap = overlap
+        self.hidden_dim_lstm = hidden_dim_lstm
+        total_dim = obs_dim+ac_dim+6+k+(hidden_dim_lstm*4)
+        
+        if LSTM:
+            self.max_steps = int(max_steps/seq_length) # Max sequences did this to reduce var name change
+            self.seq_exps = torch.zeros((seq_length, self.max_steps, num_agents, total_dim), requires_grad=False)
+        else:
+            self.obs_buffs = torch.zeros((max_steps, num_agents, obs_dim))
+            self.ac_buffs = torch.zeros((max_steps, num_agents, ac_dim),requires_grad=False)
+            self.n_step_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+            self.rew_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+            self.mc_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+            self.next_obs_buffs = torch.zeros((max_steps, num_agents, obs_dim),requires_grad=False)
+            self.done_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+            self.ws_buffs = torch.zeros((max_steps, num_agents, 1),requires_grad=False)
+            self.SIL_priorities = torch.zeros((max_steps,num_agents,1),requires_grad=False)
+            self.ensemble_priorities = torch.zeros((max_steps,num_agents,k),requires_grad=False)
+
         self.episode_buff = []
         self.done_step = False
         self.batch_size =  batch_size
         self.count = 0
         self.LSTM = LSTM
-        self.LSTM_PC = LSTM_PC
         self.k = k
         self.SIL = SIL
         # for _ in range(num_agents):
@@ -155,98 +172,37 @@ class ReplayTensorBuffer(object):
 
             
 
-    def push_LSTM(self, observations, actions, rewards, next_observations, dones,mc_targets,n_step,ws):
-        #nentries = observations.shape[0]  # handle multiple parallel environments
-        # for now ** change **
-        nentries = 1
+    def push_LSTM(self, exps):
+        ep_length = len(exps)
+        nentries = (math.ceil(ep_length/self.overlap)) - 1 # Number of rows to input in seq_exps tensor
+    
         if self.curr_i + nentries > self.max_steps:
             rollover = self.max_steps - self.curr_i # num of indices to roll over
-            for agent_i in range(self.num_agents):
-                self.obs_buffs[agent_i] = np.roll(self.obs_buffs[agent_i],
-                                                  rollover, axis=0)
-                self.ac_buffs[agent_i] = np.roll(self.ac_buffs[agent_i],
-                                                 rollover, axis=0)
-                self.rew_buffs[agent_i] = np.roll(self.rew_buffs[agent_i],
-                                                  rollover)
-                self.mc_buffs[agent_i] = np.roll(self.mc_buffs[agent_i],
-                                                  rollover)
-                self.next_obs_buffs[agent_i] = np.roll(
-                    self.next_obs_buffs[agent_i], rollover, axis=0)
-                self.done_buffs[agent_i] = np.roll(self.done_buffs[agent_i],
-                                                   rollover)
-                self.n_step_buffs[agent_i] = np.roll(self.n_step_buffs[agent_i],
-                                                 rollover)
-                self.ws_buffs[agent_i] = np.roll(self.ws_buffs[agent_i],
-                                                   rollover)
-                self.SIL_priority[agent_i] = np.roll(self.SIL_priority[agent_i],
-                                                     rollover)
+            self.seq_exps = roll2(self.seq_exps, rollover)
 
             self.curr_i = 0
             self.filled_i = self.max_steps
-        for agent_i in range(self.num_agents):
 
-            self.obs_buffs[agent_i][self.curr_i:self.curr_i + nentries] = np.vstack(
-                observations[:, agent_i]).T # added .T
-            # actions are already batched by agent, so they are indexed differently
-            self.ac_buffs[agent_i][self.curr_i:self.curr_i + nentries] = actions[agent_i]
-            self.rew_buffs[agent_i][self.curr_i:self.curr_i + nentries] = rewards[agent_i]
-            self.mc_buffs[agent_i][self.curr_i:self.curr_i + nentries] = mc_targets[agent_i]
-            self.next_obs_buffs[agent_i][self.curr_i:self.curr_i + nentries] = np.vstack(
-                next_observations[:, agent_i]).T # added .T
-            self.done_buffs[agent_i][self.curr_i:self.curr_i + nentries] = dones[agent_i]
-            self.n_step_buffs[agent_i][self.curr_i:self.curr_i + nentries] = n_step[agent_i]
-            self.ws_buffs[agent_i][self.curr_i:self.curr_i + nentries] = ws[agent_i]
-            self.SIL_priorities[agent_i][self.curr_i:self.curr_i +nentries] = 1.0
-        
-        # Track experience based off the episodes
-        # print('This is the dones',str(dones[0]))
-        if self.done_step == True:
-            if len(self.episode_buff) >= self.max_episodes:
-                self.episode_buff[0:(1+len(self.episode_buff))-self.max_episodes] = []
-            self.episode_buff.append(
-                {
-                    'obs': [self.obs_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'acs': [self.ac_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'rew': [self.rew_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'mc': [self.mc_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'next_obs': [self.next_obs_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'dones': [self.done_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'n_step': [self.n_step_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'ws': [self.ws_buffs[a][self.start_loc:self.curr_i+1] for a in range(self.num_agents)],
-                    'ep_length': self.curr_i - self.start_loc + 1
-                }
-            )
-
-            self.start_loc = self.curr_i+1
-            self.done_step = False
-
+        # NOTE: Exps include: obs, acs, n_step_rew, n_step_done, MC_targets, n_step_targets, 
+        #       n_step_ws, ensemble priorities, replay priorities
+        if ep_length % self.overlap == 0:
+            for n in range(nentries):
+                start_pt = n*self.overlap
+                self.seq_exps[:self.seq_length, self.curr_i+n, :self.num_agents, :] = exps[start_pt:start_pt+self.seq_length, :, :]
+        else:
+            for n in range(nentries):
+                if n != nentries-1:
+                    start_pt = n*self.overlap
+                    self.seq_exps[:self.seq_length, self.curr_i+n, :self.num_agents, :] = exps[start_pt:start_pt+self.seq_length, :, :]
+                else:
+                    # Get the last values if the episode length is not evenly divisible by the overlap amount
+                    self.seq_exps[:self.seq_length, self.curr_i+n, :self.num_agents, :] = exps[ep_length-self.seq_length:, :, :]
 
         self.curr_i += nentries
         if self.filled_i < self.max_steps:
             self.filled_i += nentries
         if self.curr_i == self.max_steps:
-            roll_amount = self.curr_i - (self.start_loc+1)
-            for agent_i in range(self.num_agents):
-                self.obs_buffs[agent_i] = np.roll(self.obs_buffs[agent_i],
-                                                  roll_amount, axis=0)
-                self.ac_buffs[agent_i] = np.roll(self.ac_buffs[agent_i],
-                                                 roll_amount, axis=0)
-                self.rew_buffs[agent_i] = np.roll(self.rew_buffs[agent_i],
-                                                  roll_amount)
-                self.mc_buffs[agent_i] = np.roll(self.mc_buffs[agent_i],
-                                                  roll_amount)
-                self.next_obs_buffs[agent_i] = np.roll(
-                    self.next_obs_buffs[agent_i], roll_amount, axis=0)
-                self.done_buffs[agent_i] = np.roll(self.done_buffs[agent_i],
-                                                   roll_amount)
-                self.n_step_buffs[agent_i] = np.roll(self.n_step_buffs[agent_i],
-                                                 roll_amount)
-                self.ws_buffs[agent_i] = np.roll(self.ws_buffs[agent_i],
-                                                   roll_amount)
-                self.SIL_priorities[agent_i] = np.roll(self.SIL_priorities[agent_i],
-                                                     roll_amount)
-            self.curr_i = roll_amount
-            self.start_loc = 0
+            self.curr_i = 0
 
     def sample(self,inds, to_gpu=False, norm_rews=False,device="cuda:0"):
 
@@ -291,77 +247,25 @@ class ReplayTensorBuffer(object):
                 ret_n_step,
                 [cast(self.ws_buffs[inds, i, :]).squeeze() for i in range(self.num_agents)])
     
-    def sample_LSTM(self, inds, trace_length, to_gpu=False, norm_rews=False):
-        # inds = np.random.choice(np.arange(self.filled_i), size=N,
-        #                         replace=False)
+    def sample_LSTM(self, inds, to_gpu=False, device="cuda:0"):
+
         if to_gpu:
-            cast = lambda x: Variable(Tensor(x), requires_grad=False).cuda()
+            cast = lambda x: Variable(x, requires_grad=False).to(device)
         else:
-            cast = lambda x: Variable(Tensor(x), requires_grad=False)
+            cast = lambda x: Variable(x, requires_grad=False)
         if to_gpu:
-            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True).cuda() # obs need gradient for cent-Q
+            cast_obs = lambda x: Variable(x, requires_grad=True).to(device) # obs need gradient for cent-Q
         else:
-            cast_obs = lambda x: Variable(Tensor(x), requires_grad=True)
+            cast_obs = lambda x: Variable(x, requires_grad=True)
 
-        points = [np.random.randint(0,self.episode_buff[i]['ep_length']+1-trace_length) for i in inds]
-
-        if norm_rews:
-            ret_rews = [cast([(self.episode_buff[i]['rew'][a][p:p+1] -
-                self.episode_buff[i]['rew'][a][:self.filled_i].mean()) /
-                self.episode_buff[i]['rew'][a][:self.filled_i].std()
-                for i,p in zip(inds, points)]) for a in range(self.num_agents)]
-            
-            ret_mc = [cast([(self.episode_buff[i]['mc'][a][p:p+1] - 
-                self.episode_buff[i]['mc'][a][:self.filled_i].mean()) /
-                self.episode_buff[i]['mc'][a][:self.filled_i].std()
-                for i,p in zip(inds, points)]) for a in range(self.num_agents)]
-            
-            ret_n_step = [cast([(self.episode_buff[i]['n_step'][a][p:p+1] - 
-                self.episode_buff[i]['n_step'][a][:self.filled_i].mean()) /
-                self.episode_buff[i]['n_step'][a][:self.filled_i].std()
-                for i,p in zip(inds, points)]) for a in range(self.num_agents)]
-        else:
-            ret_rews = [cast([self.episode_buff[i]['rew'][a][p:p+1]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-            ret_mc = [cast([self.episode_buff[i]['mc'][a][p:p+1]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-            ret_n_step = [cast([self.episode_buff[i]['n_step'][a][p:p+1]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-
-        ret_obs = [cast_obs([self.episode_buff[i]['obs'][a][p:p+trace_length]
-            for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        
-        if self.LSTM_PC:
-            ret_acs = [cast([self.episode_buff[i]['acs'][a][p:p+trace_length]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        else:
-            ret_acs = [cast([self.episode_buff[i]['acs'][a][p:p+1]
-                for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        ret_next_obs = [cast_obs([self.episode_buff[i]['next_obs'][a][p:p+trace_length]
-            for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        ret_dones = [cast([self.episode_buff[i]['dones'][a][p:p+1]
-            for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-        ret_ws = [cast([self.episode_buff[i]['ws'][a][p:p+1]
-            for i,p in zip(inds,points)]) for a in range(self.num_agents)]
-
-        if self.LSTM_PC:
-            return ([ret_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_acs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_rews[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_next_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_dones[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_mc[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_n_step[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_ws[a].view(self.batch_size) for a in range(self.num_agents)])
-        else:
-            return ([ret_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_acs[a].view((self.batch_size, -1)) for a in range(self.num_agents)],
-                    [ret_rews[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_next_obs[a].permute(1,0,2) for a in range(self.num_agents)],
-                    [ret_dones[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_mc[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_n_step[a].view(self.batch_size) for a in range(self.num_agents)],
-                    [ret_ws[a].view(self.batch_size) for a in range(self.num_agents)])
+        return ([cast_obs(self.seq_exps[:, inds, a, :self.obs_dim]) for a in range(self.num_agents)], # obs
+                [cast(self.seq_exps[:, inds, a, self.obs_dim:self.obs_acs_dim]) for a in range(self.num_agents)], # actions
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim:self.obs_acs_dim+1]) for a in range(self.num_agents)], # rewards
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+1:self.obs_acs_dim+2]) for a in range(self.num_agents)], # dones
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+2:self.obs_acs_dim+3]) for a in range(self.num_agents)], # mc
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+3:self.obs_acs_dim+4]) for a in range(self.num_agents)], # n_step_targets
+                [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+4:self.obs_acs_dim+5]) for a in range(self.num_agents)], # ws
+                self.seq_exps[0, inds, 0, -self.hidden_dim_lstm*4:]) # recurrent states for both critics
 
     def get_average_rewards(self, N):
         if self.filled_i == self.max_steps:
@@ -386,7 +290,8 @@ class ReplayTensorBuffer(object):
         
 
     def update_priorities(self, agentID,inds, prio,k=1):
-        self.ensemble_priorities[inds,agentID,k] = prio
+        # self.ensemble_priorities[inds,agentID,k] = prio
+        self.seq_exps[inds, :, agentID, self.obs_acs_dim+5+k] = prio
 
     def get_PER_inds(self,agentID=0,batch_size=32,k=1):
         '''Returns a sample prioritized using TD error for the update and the indices used'''

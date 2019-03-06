@@ -19,6 +19,7 @@ class DDPGAgent(object):
                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, 
                 LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,reduced_obs_dim = 16): 
+                LSTM=False, seq_length=20, hidden_dim_lstm=256): 
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -43,8 +44,7 @@ class DDPGAgent(object):
         self.vmin = vmin
         self.world_status_dim = world_status_dim
         self.LSTM = LSTM
-        self.LSTM_PC = LSTM_PC
-        
+
         I2A_num_in_pol = num_in_pol
         self.hidden_dim_lstm = hidden_dim_lstm
 
@@ -69,30 +69,25 @@ class DDPGAgent(object):
             self.policy_prime = None
         
  
-       
-        if self.LSTM or self.LSTM_PC:
-            self.policy = LSTM_Network(I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
-                            hidden_dim=hidden_dim,
-                            discrete_action=discrete_action,
-                            norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                            EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                    LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=False, trace_length=trace_length)
+        self.policy = I2A_Network(I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
+                        hidden_dim=hidden_dim,
+                        discrete_action=discrete_action,
+                        norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                        EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                LSTM_hidden=LSTM_hidden,maddpg=maddpg)
 
-            if not maddpg.only_policy:
-                self.target_policy = LSTM_Network(I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
-                                        hidden_dim=hidden_dim,
-                                        discrete_action=discrete_action,
-                                        norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                                        EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                                LSTM_hidden=LSTM_hidden,maddpg=maddpg, training=True, trace_length=trace_length)
-        else:
-            self.policy = I2A_Network(I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
-                            hidden_dim=hidden_dim,
-                            discrete_action=discrete_action,
-                            norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
-                            EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                    LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+        if torch.cuda.device_count() > 1 and maddpg.data_parallel:
+            self.policy = nn.DataParallel(self.policy)
 
+        #self.policy.share_memory()
+        if not maddpg.only_policy:
+
+            self.target_policy = I2A_Network(I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
+                                    hidden_dim=hidden_dim,
+                                    discrete_action=discrete_action,
+                                    norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+                                    EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
+                                            LSTM_hidden=LSTM_hidden,maddpg=maddpg)
             if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                 self.policy = nn.DataParallel(self.policy)
                 
@@ -111,19 +106,15 @@ class DDPGAgent(object):
                 if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                     self.target_policy = nn.DataParallel(self.target_policy)
 
-        if self.LSTM_PC:
-            if not maddpg.only_policy:
+                self.target_policy = nn.DataParallel(self.target_policy)
 
+        if not maddpg.only_policy:
+            if LSTM:
                 self.critic = LSTMNetwork_Critic(num_in_critic, 1,
-                                        hidden_dim=hidden_dim,
-                                        norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
-
+                                            hidden_dim=hidden_dim, agent=self, n_atoms=n_atoms, D4PG=D4PG,TD3=TD3,maddpg=maddpg)
                 self.target_critic = LSTMNetwork_Critic(num_in_critic, 1,
-                                                    hidden_dim=hidden_dim,
-                                                    norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3)
-        else:
-            if not maddpg.only_policy:
-
+                                            hidden_dim=hidden_dim, agent=self, n_atoms=n_atoms, D4PG=D4PG,TD3=TD3,maddpg=maddpg)
+            else:
                 self.critic = MLPNetwork_Critic(num_in_critic, 1,
                                         hidden_dim=hidden_dim,
                                         norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3,maddpg=maddpg)
@@ -131,11 +122,9 @@ class DDPGAgent(object):
                 self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
                                                     hidden_dim=hidden_dim,
                                                     norm_in= self.norm_in,agent=self,n_atoms=n_atoms,D4PG=D4PG,TD3=TD3,maddpg=maddpg)
-                if torch.cuda.device_count() > 1 and maddpg.data_parallel:
-                    self.critic = nn.DataParallel(self.critic)
-                    self.target_critic = nn.DataParallel(self.target_critic)
-                    
-                
+            if torch.cuda.device_count() > 1 and maddpg.data_parallel:
+                self.critic = nn.DataParallel(self.critic)
+                self.target_critic = nn.DataParallel(self.target_critic)
 
 
         if not maddpg.only_policy:
@@ -188,12 +177,6 @@ class DDPGAgent(object):
         Outputs:
             action (PyTorch Variable): Actions for this agent
         """
-        # if self.LSTM or self.LSTM_PC:
-        #     if self.policy.training == True:
-        #         self.policy.training = False
-
-
-        #print(action)
     
         # mixed disc/cont
         if explore:
