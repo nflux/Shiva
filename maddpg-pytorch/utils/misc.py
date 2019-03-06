@@ -424,13 +424,17 @@ def init_processes(rank, size, fn, backend='gloo'):
     dist.init_process_group(backend, rank=rank, world_size=size)
     fn(rank, size)
 
-def onehot_from_logits(logits, eps=0.0):
+def onehot_from_logits(logits, eps=0.0,LSTM=False):
     """
     Given batch of logits, return one-hot sample using epsilon greedy strategy
     (based on given epsilon)
     """
     # get best (according to current policy) actions in one-hot form
-    argmax_acs = (logits == logits.max(1, keepdim=True)[0]).float()
+    if not LSTM:
+        argmax_acs = (logits == logits.max(1, keepdim=True)[0]).float()
+    else:
+        argmax_acs = (logits == logits.max(2, keepdim=True)[0]).float()
+
     if eps == 0.0:
         return argmax_acs
     # get random actions in one-hot form

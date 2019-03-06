@@ -150,7 +150,7 @@ class DDPGAgent(object):
         #self.critic_optimizer = Adam(self.critic.parameters(), lr=lr, weight_decay =0)
         for param_group in self.critic_optimizer.param_groups:
             param_group['lr'] = lr
-    def step(self, obs,ran,acs,explore=False):
+    def step(self, obs,ran,acs=None,explore=False):
         """
         Take a step forward in environment for a minibatch of observations
         Inputs:
@@ -169,8 +169,8 @@ class DDPGAgent(object):
                     action = self.policy(obs)
                 if self.counter % 1000 == 0:
                     print(torch.softmax(action[:,:self.action_dim],dim=1))
-                a = gumbel_softmax(action[0,:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
-                p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+                a = gumbel_softmax(action[:,:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
+                p = torch.clamp((action[:,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
                 action = torch.cat((a,p),1) 
                 self.counter +=1
 

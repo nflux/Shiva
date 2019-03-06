@@ -349,6 +349,7 @@ class I2A_Network(nn.Module):
         self.rollout_steps = rollout_steps
 
         self.I2A = I2A
+        self.LSTM = maddpg.LSTM
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
 
         # save refs without registering
@@ -362,10 +363,6 @@ class I2A_Network(nn.Module):
         else:
             self.cast = lambda x: x.cpu()
         self.norm_in = norm_in
-
-        self.in_fn = nn.BatchNorm1d(input_dim)
-        self.in_fn.weight.data.normal_(.01)
-        self.in_fn.bias.data.fill_(0)
    
         if I2A:
             self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_branches, 1024)
@@ -404,11 +401,7 @@ class I2A_Network(nn.Module):
         """
 
         if not self.I2A:     
-            if X.size()[0] == 1 or not self.norm_in:
-                self.in_fn.train(False)
-            else:
-                self.in_fn.train(True)
-            h1 = self.nonlin(self.fc1(self.in_fn(self.cast(X))))
+            h1 = self.nonlin(self.fc1((self.cast(X))))
             h2 = self.nonlin(self.fc2(h1))
             h3 = self.nonlin(self.fc3(h2))
             h4 = self.nonlin(self.fc4(h3))
@@ -416,20 +409,25 @@ class I2A_Network(nn.Module):
             if not self.discrete_action:
                 self.final_out_action = self.out_action_fn(self.out_action(h4))
                 self.final_out_params = self.out_param_fn(self.out_param(h4))
-                out = torch.cat((self.final_out_action, self.final_out_params),1)
+
+                if len(self.final_out_action.shape) == 2:
+                    out = torch.cat((self.final_out_action,self.final_out_params),1)
+                else:
+                    out = torch.cat((self.final_out_action, self.final_out_params),2)
                 #if self.count % 100 == 0:
                 #    print(out)
                 self.count += 1
         else: # I2A
-            if X[0].size()[0] == 1 or not self.norm_in:
-                self.in_fn.train(False)
-            else:
-                self.in_fn.train(True)
+
             batch_size = X[0].size()[0]
-            fx = [self.in_fn(self.cast(x)).float() for x in X]
+            fx = [(self.cast(x)).float() for x in X]
 
             enc_rollouts = self.rollouts_batch(fx)
-            fc_in = [torch.cat((f,e),dim=1) for f,e in zip(fx,enc_rollouts)]
+            if not self.LSTM:
+                fc_in = [torch.cat((f,e),dim=1) for f,e in zip(fx,enc_rollouts)]
+            else:
+                fc_in = [torch.cat((f,e),dim=2) for f,e in zip(fx,enc_rollouts)]
+            #     fc_in = [torch.cat((f,e),dim=2) for f,e in zip(fx,enc_rollouts)]
             out = [self.ag_forward(x) for x in fc_in]
         return out
 

@@ -736,7 +736,7 @@ if __name__ == "__main__":
         pt_episodes = 4000 # not used
         #---------------------------------------
         #I2A Options ---------------------------
-        I2A = True
+        I2A = False
         EM_lr = 0.0001
         obs_weight = 5.0
         rew_weight = 1.0
