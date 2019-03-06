@@ -463,7 +463,7 @@ class HFO_env():
             goal_proximity = obs[14] #New index
             ball_dist = 1.0 - ball_proximity 
             goal_dist = 1.0 - goal_proximity
-            kickable = obs[10]
+            kickable = obs[11]
             ball_ang_sin_rad = obs[49] #New index
             ball_ang_cos_rad = obs[50] #New index
             ball_ang_rad = math.acos(ball_ang_cos_rad)
