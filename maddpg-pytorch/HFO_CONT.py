@@ -186,7 +186,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
-    LSTM,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
+    LSTM,LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
     has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
     preload_agent2d_path,bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic) = HP
 
@@ -231,7 +231,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                 rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
                                 imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                                 critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_policy=LSTM_policy seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm, lstm_burn_in=lstm_burn_in,overlap=overlap,
+                                LSTM=LSTM, LSTM_policy=LSTM_policy, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm, 
+                                lstm_burn_in=lstm_burn_in,overlap=overlap,
                                 only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,reduced_obs_dim=reduced_obs_dim,preprocess=preprocess,zero_critic=zero_critic,cent_critic=cent_critic)         
         
         
@@ -815,8 +816,8 @@ if __name__ == "__main__":
         eval_episodes = 11
         # --------------------------------------
         # LSTM -------------------------------------------
-        LSTM = True # Critic only
-        LSTM_policy # Policy
+        LSTM = False # Critic only
+        LSTM_policy = True# Policy
         hidden_dim_lstm = 64
         lstm_burn_in = 10
         if LSTM:
@@ -898,6 +899,8 @@ if __name__ == "__main__":
         LSTM, LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
         has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,
         bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic )
+
+
 
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                 adversary_alg= "MADDPG",device=device,

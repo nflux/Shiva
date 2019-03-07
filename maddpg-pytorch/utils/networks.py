@@ -213,12 +213,13 @@ class LSTMNetwork_Critic(nn.Module):
         self.count = 0
         self.TD3 = TD3
         self.batch_size = agent.batch_size
+        self.torch_device = maddpg.torch_device
         self.hidden_dim_lstm = agent.hidden_dim_lstm
         if agent.device == 'cuda':
-            self.hidden_tuple = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
-                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
-            self.hidden_tuple2 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
-                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
+            self.hidden_tuple = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).to(self.torch_device))
+            self.hidden_tuple2 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).to(self.torch_device))
         else:
             self.hidden_tuple = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
                                     Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
@@ -229,9 +230,10 @@ class LSTMNetwork_Critic(nn.Module):
             self.out_dim = n_atoms
         else:
             self.out_dim = 1
-       
+            
+        self.maddpg=maddpg
         if self.agent.device == 'cuda':
-            self.cast = lambda x: x.to(maddpg.torch_device)
+            self.cast = lambda x: x.to(self.torch_device)
         else:
             self.cast = lambda x: x.cpu()
               
@@ -259,10 +261,10 @@ class LSTMNetwork_Critic(nn.Module):
     
     def init_hidden(self, batch_size):
         if self.agent.device == 'cuda':
-            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).cuda(),
-                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).cuda())
-            self.hidden_tuple2 = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).cuda(),
-                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).cuda())
+            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
+            self.hidden_tuple2 = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
         else:
             self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
@@ -784,20 +786,16 @@ class LSTM_Actor(nn.Module):
         self.count = 0
         self.n_branches = self.agent.n_branches
         self.rollout_steps = rollout_steps
-
+        self.maddpg
         self.I2A = I2A
         self.LSTM = maddpg.LSTM
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
 
         if agent.device == 'cuda':
-            self.hidden_tuple = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
-                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
-            self.hidden_tuple2 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
-                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
+            self.hidden_tuple = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).to(self.torch_device))
         else:
             self.hidden_tuple = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
-                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
-            self.hidden_tuple2 = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
                                     Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
 
         # save refs without registering
@@ -836,6 +834,17 @@ class LSTM_Actor(nn.Module):
 
         self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
+
+    def init_hidden(self, batch_size):
+        if self.agent.device == 'cuda':
+            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
+        else:
+            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)),
+                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
+
+    def set_hidden(self, h1):
+        self.hidden_tuple = h1
 
     def forward(self, X):
         """
@@ -880,7 +889,7 @@ class LSTM_Actor(nn.Module):
         h1 = self.nonlin(self.fc1(x))
         h2 = self.nonlin(self.fc2(h1))
         h3 = self.nonlin(self.fc3(h2))
-        h4 = self.nonlin(self.fc4(h3))
+        h4,self.hidden_tuple = self.nonlin(self.lstm4(h3),self.hidden_tuple)
 
         if not self.discrete_action:
             self.final_out_action = self.out_action_fn(self.out_action(h4))

@@ -46,7 +46,7 @@ class MADDPG(object):
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, imagination_policy_branch = False,
                  critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
-                 LSTM=False, LSTM_policy,seq_length = 20, hidden_dim_lstm=256, lstm_burn_in=40,overlap=20,only_policy=False,
+                 LSTM=False, LSTM_policy=False,seq_length = 20, hidden_dim_lstm=256, lstm_burn_in=40,overlap=20,only_policy=False,
                  multi_gpu=True,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True): 
 
         """
@@ -2361,7 +2361,7 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, seq_length=20, hidden_dim_lstm=256, lstm_burn_in=40,overlap=20,
+                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_policy=False,seq_length=20, hidden_dim_lstm=256, lstm_burn_in=40,overlap=20,
                       only_policy=False,multi_gpu=False,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True):
                       
         """
