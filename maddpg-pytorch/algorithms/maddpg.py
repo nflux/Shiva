@@ -99,6 +99,7 @@ class MADDPG(object):
         self.preprocess = preprocess
         self.zero_critic = zero_critic
         self.LSTM = LSTM
+        self.LSTM_policy = LSTM_policy
         self.lstm_burn_in = lstm_burn_in
         self.hidden_dim_lstm = hidden_dim_lstm
         self.seq_length = seq_length
@@ -1130,11 +1131,7 @@ class MADDPG(object):
                 else:
                     vf_loss = F.mse_loss(actual_value, target_value)
 
-                            
-
-            #vf_loss.backward()
             vf_loss.backward() 
-            
             if parallel:
                 average_gradients(curr_agent.critic)
             torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)

@@ -818,7 +818,7 @@ if __name__ == "__main__":
         # --------------------------------------
         # LSTM -------------------------------------------
         LSTM = True # Critic only
-        LSTM_policy = True# Policy
+        LSTM_policy = False# Policy
         hidden_dim_lstm = 64
         lstm_burn_in = 10
         if LSTM:

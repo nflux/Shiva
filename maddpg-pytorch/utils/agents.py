@@ -185,14 +185,11 @@ class DDPGAgent(object):
                     action = self.policy(obs)
                 if self.counter % 1000 == 0:
                     print(torch.softmax(action.view(-1)[:self.action_dim],dim=0))
-                if self.maddpg.preprocess:
-
-                    a = gumbel_softmax(action[:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
-                    p = torch.clamp((action[self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
-
+                
+                if self.maddpg.LSTM_policy:
+                    a = gumbel_softmax(action[:,:,:self.action_dim],hard=True, device=self.maddpg.torch_device,LSTM=True).view(1,self.action_dim)
+                    p = torch.clamp((torch.squeeze(action[:,:,self.action_dim:]).view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
                 else:
-                    #a = onehot_from_logits(action[:,:self.action_dim].view(1,self.action_dim))
-
                     a = gumbel_softmax(action[:,:self.action_dim].view(1,self.action_dim),hard=True, device=self.maddpg.torch_device)
                     p = torch.clamp((action[:,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
                 action = torch.cat((a,p),1) 
@@ -208,10 +205,16 @@ class DDPGAgent(object):
                 action = self.policy(obs)
             if self.counter % 1000 == 0:
                 print(torch.softmax(action.view(-1)[:self.action_dim],dim=0))
-            a = onehot_from_logits(action[0,:self.action_dim].view(1,self.action_dim))
-            #p = torch.clamp(action[0,self.action_dim:].view(1,self.param_dim),min=-1.0,max=1.0) # get noisey params (OU)
-            p = action[0,self.action_dim:].view(1,self.param_dim)
-            #p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
+            if self.maddpg.LSTM_policy:
+                a = onehot_from_logits(action[:,:,:self.action_dim],LSTM=True).view(1,self.action_dim)
+                #p = torch.clamp(action[0,self.action_dim:].view(1,self.param_dim),min=-1.0,max=1.0) # get noisey params (OU)
+                p = torch.squeeze(action[:,:,self.action_dim:]).view(1,self.param_dim)
+
+            else:
+                a = onehot_from_logits(action[:,:self.action_dim].view(1,self.action_dim))
+                #p = torch.clamp(action[0,self.action_dim:].view(1,self.param_dim),min=-1.0,max=1.0) # get noisey params (OU)
+                p = action[:,self.action_dim:].view(1,self.param_dim)
+                #p = torch.clamp((action[0,self.action_dim:].view(1,self.param_dim) + Variable(processor(Tensor(self.exploration.noise()),device=self.device,torch_device=self.maddpg.torch_device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
             action = torch.cat((a,p),1) 
             self.counter +=1
 

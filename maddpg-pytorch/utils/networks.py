@@ -668,6 +668,8 @@ class LSTM_Actor(nn.Module):
         """
 
         if not self.I2A:     
+            if X.shape[0] == 1:
+                X = torch.unsqueeze(X,dim=0)
             h1 = self.nonlin(self.fc1(self.cast(X)))
             h2 = self.nonlin(self.fc2(h1))
             h3 = self.nonlin(self.fc3(h2))
@@ -677,10 +679,7 @@ class LSTM_Actor(nn.Module):
                 self.final_out_action = self.out_action_fn(self.out_action(h4))
                 self.final_out_params = self.out_param_fn(self.out_param(h4))
 
-                if len(self.final_out_action.shape) == 2:
-                    out = torch.cat((self.final_out_action,self.final_out_params),1)
-                else:
-                    out = torch.cat((self.final_out_action, self.final_out_params),2)
+                out = torch.cat((self.final_out_action, self.final_out_params),2)
                 #if self.count % 100 == 0:
                 #    print(out)
                 self.count += 1
@@ -714,10 +713,8 @@ class LSTM_Actor(nn.Module):
         if not self.discrete_action:
             self.final_out_action = self.out_action_fn(self.out_action(h4))
             self.final_out_params = self.out_param_fn(self.out_param(h4))
-            if len(self.final_out_action.shape) == 2:
-                out = torch.cat((self.final_out_action,self.final_out_params),1)
-            else:
-                out = torch.cat((self.final_out_action, self.final_out_params),2)
+
+            out = torch.cat((self.final_out_action, self.final_out_params),2)
             #if self.count % 100 == 0:
             #    print(out)
             self.count += 1
