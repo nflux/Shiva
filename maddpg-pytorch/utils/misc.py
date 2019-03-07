@@ -441,19 +441,19 @@ def onehot_from_logits(logits, eps=0.0,LSTM=False):
                         enumerate(torch.rand(logits.shape[0]))])
 
 # modified for PyTorch from https://github.com/ericjang/gumbel-softmax/blob/master/Categorical%20VAE.ipynb
-def sample_gumbel(shape,eps=1e-20,tens_type=torch.FloatTensor,device="cuda"):  
+def sample_gumbel(shape,eps=1e-20,tens_type=torch.FloatTensor,device="cuda",LSTM=False):  
     """Sample from Gumbel(0, 1)"""
     U = Variable(tens_type(*shape).uniform_(), requires_grad=False).to(device)
     return -torch.log(-torch.log(U + eps) + eps)
 
 # modified for PyTorch from https://github.com/ericjang/gumbel-softmax/blob/master/Categorical%20VAE.ipynb
-def gumbel_softmax_sample(logits, temperature,device="cuda"):
+def gumbel_softmax_sample(logits, temperature,device="cuda",LSTM=False):
     """ Draw a sample from the Gumbel-Softmax distribution"""
-    y = logits + sample_gumbel(logits.shape, tens_type=type(logits.data),device=device)
+    y = logits + sample_gumbel(logits.shape, tens_type=type(logits.data),device=device,LSTM=LSTM)
     return F.softmax(y / temperature, dim=1)
 
 # modified for PyTorch from https://github.com/ericjang/gumbel-softmax/blob/master/Categorical%20VAE.ipynb
-def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda"):
+def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda",LSTM=False):
     """Sample from the Gumbel-Softmax distribution and optionally discretize.
     Args:
       logits: [batch_size, n_class] unnormalized log-probs
@@ -464,9 +464,9 @@ def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda"):
       If hard=True, then the returned sample will be one-hot, otherwise it will
       be a probabilitiy distribution that sums to 1 across classes
     """
-    y = gumbel_softmax_sample(logits, temperature,device)
+    y = gumbel_softmax_sample(logits, temperature,device,LSTM=LSTM)
     if hard:
-        y_hard = onehot_from_logits(y)
+        y_hard = onehot_from_logits(y,LSTM=LSTM)
         y = (y_hard - y).detach() + y
     return y
 

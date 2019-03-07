@@ -35,7 +35,7 @@ import gc
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
                             load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr):
     start = time.time()
-    if len(team_replay_buffer) > 20000:
+    if len(team_replay_buffer) > 400:
 
         initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
         #maddpg = dill.loads(maddpg_pick)
@@ -70,16 +70,13 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                 if up % batches_to_sample == 0:
                     inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size*batches_to_sample, replace=False)
                 if LSTM:
-                    print('policy update !!!!')
-                    exit(0)
                     team_sample = team_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
                                                                 to_gpu=to_gpu,device=maddpg.torch_device)
                     opp_sample = opp_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
                                                                 to_gpu=to_gpu,device=maddpg.torch_device)
 
                     if not load_same_agent:
-                        priorities = maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                        team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+                        print("No implementation")
                     else:
                         _ = maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)
                         #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
@@ -121,7 +118,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
 
 
 def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,seq_length,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel):
+                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,seq_length,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel):
     start = time.time()
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
@@ -134,7 +131,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
     for ensemble in range(k_ensembles):
         if multi_gpu:
             maddpg.torch_device = torch.device("cuda:3")
-        # maddpg.device = 'cuda'
+        maddpg.device = 'cuda'
         maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
         m = 0
@@ -189,10 +186,9 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
-    LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic) = HP
     LSTM,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d ) = HP
+    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
+    preload_agent2d_path,bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic) = HP
 
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
@@ -235,13 +231,11 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                 rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
                                 imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                                 critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,reduced_obs_dim=reduced_obs_dim,preprocess=preprocess,zero_critic=zero_critic,cent_critic=cent_critic) 
-                                LSTM=LSTM, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm, lstm_burn_in=lstm_burn_in,overlap=overlap,
-                                only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel) 
+                                LSTM=LSTM, LSTM_policy=LSTM_policy seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm, lstm_burn_in=lstm_burn_in,overlap=overlap,
+                                only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,reduced_obs_dim=reduced_obs_dim,preprocess=preprocess,zero_critic=zero_critic,cent_critic=cent_critic)         
         
         
-        
-    # maddpg.device = 'cuda'
+    maddpg.device = 'cuda'
 
     if multi_gpu:
         if env_num < 5:
@@ -638,7 +632,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 10
+    num_envs = 2
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -657,7 +651,7 @@ if __name__ == "__main__":
         # options ------------------------------
         action_level = 'low'
         feature_level = 'low'
-        USE_CUDA = False
+        USE_CUDA = True
         if USE_CUDA:
             device = 'cuda'
             to_gpu = True
@@ -671,7 +665,7 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 1500000
+        replay_memory_size = 1000000
         pt_memory = 1000000
         episode_length = 500 # FPS
         untouched_time = 500
@@ -691,7 +685,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 1024
+        batch_size = 128
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate 
@@ -702,8 +696,8 @@ if __name__ == "__main__":
         final_OU_noise_scale = 0.03
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 1 # Haus uses over 10,000 updates --
-        multi_gpu = True
+        num_explore_episodes = 50 # Haus uses over 10,000 updates --
+        multi_gpu = False
         data_parallel = False
         
 
@@ -777,7 +771,7 @@ if __name__ == "__main__":
         critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
         #---------------------------------------
         preprocess = False
-        zero_critic = True
+        zero_critic = False
         cent_critic = True
         # Control Random Initilization of Agents and Ball
         control_rand_init = True
@@ -822,6 +816,7 @@ if __name__ == "__main__":
         # --------------------------------------
         # LSTM -------------------------------------------
         LSTM = True # Critic only
+        LSTM_policy # Policy
         hidden_dim_lstm = 64
         lstm_burn_in = 10
         if LSTM:
@@ -900,10 +895,9 @@ if __name__ == "__main__":
         LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
         ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
-        LSTM,LSTM_PC,trace_length,hidden_dim_lstm,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic )
-        LSTM, seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,bl_agent2d )
+        LSTM, LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
+        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,
+        bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic )
 
     maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
                                 adversary_alg= "MADDPG",device=device,
@@ -920,13 +914,12 @@ if __name__ == "__main__":
                                 rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
                                 imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
                                 critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,reduced_obs_dim=reduced_obs_dim,preprocess=preprocess,zero_critic=zero_critic,cent_critic=cent_critic) 
-                                LSTM=LSTM, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm, lstm_burn_in=lstm_burn_in,overlap=overlap,
-                                only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel) 
+                                LSTM=LSTM, LSTM_policy=LSTM_policy,seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm, lstm_burn_in=lstm_burn_in,overlap=overlap,
+                                only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,reduced_obs_dim=reduced_obs_dim,preprocess=preprocess,zero_critic=zero_critic,cent_critic=cent_critic) 
 
     if multi_gpu:
         maddpg.torch_device = torch.device("cuda:0")
-    # maddpg.device = 'cuda'
+    maddpg.device = 'cuda'
     maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
     
     if first_save: # Generate list of ensemble networks
@@ -1034,7 +1027,7 @@ if __name__ == "__main__":
             for a_i in range(1):
                 threads.append(mp.Process(target=imitation_thread,args=(a_i,to_gpu,len(pt_trb),batch_size,
                     pt_trb,pt_orb,number_of_updates,
-                    load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
+                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
             [thr.start() for thr in threads]
             
             agentID = 0
@@ -1071,24 +1064,21 @@ if __name__ == "__main__":
                     # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
 
                     if LSTM:
-                        team_sample = pt_trb.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False)
-                        opp_sample = pt_orb.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False)
+                        team_sample = pt_trb.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
+                        opp_sample = pt_orb.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                         priorities =maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
+                        print("Use pretrain function")
                         pt_trb.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
-                        del priorities
-                        del team_sample
-                        del opp_sample
+
                         if not load_same_agent:
-                            priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                            pt_trb.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+                            print("No implementation")
                     else:
                         team_sample = pt_trb.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                     to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                         opp_sample = pt_orb.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                     to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                         if not load_same_agent:
-                            priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                            pt_trb.update_priorities(agentID=agentID,inds =inds, prio=priorities,k = ensemble)
+                            print("No implementation")
                         else:
                             
                             priorities.append(maddpg.pretrain_critic_MC(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,session_path=session_path))
@@ -1291,22 +1281,18 @@ if __name__ == "__main__":
                     # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
 
                     if LSTM:
-                        print('Sampling !!!')
                         team_sample = team_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
                                                                     to_gpu=to_gpu, device=maddpg.torch_device)
                         opp_sample = opp_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
                                                                     to_gpu=to_gpu, device=maddpg.torch_device)
 
                         if not load_same_agent:
-                            priorities = maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
-                                                                                load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
-                            team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+                            print("No implementation")
+
                         else:
                             train_actor = (len(team_replay_buffer) > 10000) and False # and (update_session % 2 == 0)
-                            train_critic = (len(team_replay_buffer) > 50)
-                            print('len', str(len(team_replay_buffer)))
+                            train_critic = (len(team_replay_buffer) > batch_size)
                             if train_critic:
-                                print('Training critic')
                                 priorities.append(maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
                                                                                         load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path,lstm_burn_in=lstm_burn_in))
                             if train_actor: # only update actor once 1 mill
@@ -1332,11 +1318,10 @@ if __name__ == "__main__":
                             opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                         to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                         if not load_same_agent:
-                            priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                            team_replay_buffer.update_priorities(agentID=agentID,inds = data_parallelinds, prio=priorities,k = ensemble)
+                            print("no implementation")
                         else:
-                            train_actor = (len(team_replay_buffer) > 10000) and False # and (update_session % 2 == 0)
-                            train_critic = (len(team_replay_buffer) > 10000)
+                            train_actor = (len(team_replay_buffer) > 1000) and False # and (update_session % 2 == 0)
+                            train_critic = (len(team_replay_buffer) > 1000)
                             if train_critic:
                                 priorities.append(maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path))
                             if train_actor: # only update actor once 1 mill

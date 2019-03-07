@@ -46,9 +46,9 @@ class MADDPG(object):
                  I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
                  LSTM_hidden=64, imagination_policy_branch = False,
                  critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
-                 LSTM=False, LSTM_PC=False, trace_length = 1, hidden_dim_lstm=256,only_policy=False,multi_gpu=True,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True): 
-                 LSTM=False, seq_length = 20, hidden_dim_lstm=256, lstm_burn_in=40,overlap=20,
-                 only_policy=False,multi_gpu=True,data_parallel=False): 
+                 LSTM=False, LSTM_policy,seq_length = 20, hidden_dim_lstm=256, lstm_burn_in=40,overlap=20,only_policy=False,
+                 multi_gpu=True,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True): 
+
         """
         Inputs:
             agent_init_params (list of dict): List of dicts with parameters to
@@ -135,8 +135,8 @@ class MADDPG(object):
                                       device=device,
                                       imagination_policy_branch=imagination_policy_branch,
                                       critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                      LSTM=LSTM, LSTM_PC=LSTM_PC, trace_length=trace_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
-                                      LSTM=LSTM, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,
+                                      LSTM=LSTM, LSTM_policy=LSTM_policy,seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
+                                      
                                  **params)
                        for params in team_agent_init_params]
         
@@ -150,7 +150,7 @@ class MADDPG(object):
                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
                                      imagination_policy_branch=imagination_policy_branch,
                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                     LSTM=LSTM, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,
+                                     LSTM=LSTM, LSTM_policy=LSTM_policy, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
                                  **params)
                        for params in opp_agent_init_params]
 
@@ -997,10 +997,11 @@ class MADDPG(object):
             opp_obs, opp_acs, opp_rews, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_ = team_sample
 
         self.curr_agent_index = agent_i
+        if load_same_agent:
+            curr_agent = self.team_agents[0]
+
         # Train critic ------------------------
         if critic:
-            if load_same_agent:
-                curr_agent = self.team_agents[0]
 
             curr_agent.critic_optimizer.zero_grad()
             
@@ -1029,15 +1030,14 @@ class MADDPG(object):
             n_step_rews = list(map(lambda x: x[lstm_burn_in:], n_step_rews))
             MC_rews = list(map(lambda x: x[lstm_burn_in:], MC_rews))
             dones = list(map(lambda x: x[lstm_burn_in:], dones))
-
-            next_obs = list(map(lambda x: torch.cat((x[lstm_burn_in:],obs[-1, :, :]),dim=0), obs))
-            opp_next_obs = list(map(lambda x: torch.cat((x[lstm_burn_in:],opp_obs[-1, :, :]),dim=0), opp_obs))
+            next_obs = list(map(lambda x: torch.cat((x[lstm_burn_in:],x[-1:, :, :]),dim=0), obs))
+            opp_next_obs = list(map(lambda x: torch.cat((x[lstm_burn_in:],x[-1:, :, :]),dim=0), opp_obs))
 
             #print("time critic")
             #start = time.time()
             #with torch.no_grad():
             if self.TD3:
-                noise = processor(torch.randn_like(acs[0][lstm_burn_in:]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
+                noise = processor(torch.randn_like(acs[0][lstm_burn_in-1:]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
                 if self.I2A:
                     team_pi_acs = [a + noise for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
                     opp_pi_acs = [a + noise for a in opp_target_policies[0](opp_next_obs)] # get actions for all agents, add noise to each
@@ -1063,6 +1063,10 @@ class MADDPG(object):
                 opp_all_trgt_acs =[torch.cat(
                     (onehot_from_logits(out[:,:curr_agent.action_dim]),out[:,curr_agent.action_dim:]),dim=1) for out in opp_pi_acs]
 
+            if self.zero_critic:
+                all_trgt_acs = [zero_params(a) for a in all_trgt_acs]
+                opp_all_trgt_acs = [zero_params(a) for a in opp_all_trgt_acs]
+                
             mod_next_obs = torch.cat((*next_obs,*opp_next_obs),dim=2)
             mod_all_trgt_acs = torch.cat((*all_trgt_acs,*opp_all_trgt_acs),dim=2)
 
@@ -1087,8 +1091,12 @@ class MADDPG(object):
             else:
                 trgt_Q = curr_agent.target_critic(trgt_vf_in)
 
+            if self.zero_critic:
+                mod_acs = torch.cat((*[zero_params(a) for a in slice_opp_acs],*[zero_params(a) for a in slice_acs]),dim=2)
+            else:
+                mod_acs = torch.cat((*slice_acs,*slice_opp_acs),dim=2)
+
             mod_obs = torch.cat((*slice_obs,*slice_opp_obs),dim=2)
-            mod_acs = torch.cat((*slice_acs,*slice_opp_acs),dim=2)
             # Actual critic values
             vf_in = torch.cat((mod_obs, mod_acs), dim=2)
             if self.TD3:
@@ -1150,6 +1158,7 @@ class MADDPG(object):
 
             slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
             slice_obs_opp = list(map(lambda x: x[:lstm_burn_in], opp_obs))
+            slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
             slice_acs_opp = list(map(lambda x: x[:lstm_burn_in], opp_acs))
 
             mod_obs = torch.cat((*slice_obs, *slice_obs_opp), dim=2)
@@ -2352,9 +2361,9 @@ class MADDPG(object):
                       vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
                       TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
                       I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,only_policy=False,multi_gpu=False,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True):
                       critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, seq_length=20, hidden_dim_lstm=256, lstm_burn_in=40,overlap=20,
-                      only_policy=False,multi_gpu=False,data_parallel=False):
+                      only_policy=False,multi_gpu=False,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True):
+                      
         """
         Instantiate instance of this class from multi-agent environment
         """
@@ -2451,6 +2460,7 @@ class MADDPG(object):
                      'critic_mod_obs': critic_mod_obs,
                      'seq_length': seq_length,
                      'LSTM':LSTM,
+                     'LSTM':LSTM_policy,
                      'hidden_dim_lstm': hidden_dim_lstm,
                      'lstm_burn_in': lstm_burn_in,
                      'overlap': overlap,

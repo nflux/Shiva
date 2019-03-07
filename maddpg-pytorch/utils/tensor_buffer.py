@@ -15,7 +15,8 @@ def roll2(tensor, rollover):
     '''
     Roll over the second axis of a tensor
     '''
-    return torch.cat((tensor[-rollover:], tensor[:-rollover]), dim=1)
+    print("ROLL")
+    return torch.cat((tensor[:,-rollover:], tensor[:,:-rollover]), dim=1)
 
 
 class ReplayTensorBuffer(object):

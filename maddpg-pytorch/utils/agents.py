@@ -2,7 +2,7 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.optim import Adam,SGD
 import torch
-from .networks import MLPNetwork_Actor,MLPNetwork_Critic,LSTM_Network,I2A_Network,LSTMNetwork_Critic,Dimension_Reducer
+from .networks import MLPNetwork_Actor,MLPNetwork_Critic,LSTM_Network,I2A_Network,LSTMNetwork_Critic,Dimension_Reducer,LSTM_Actor
 import torch.nn.functional as F
 from .i2a import *
 from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor,e_greedy_bool,zero_params
@@ -18,8 +18,7 @@ class DDPGAgent(object):
                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, 
-                LSTM=False, LSTM_PC=False, trace_length=1, hidden_dim_lstm=256,reduced_obs_dim = 16): 
-                LSTM=False, seq_length=20, hidden_dim_lstm=256): 
+                LSTM=False,LSTM_policy=False, seq_length=20, trace_length=1, hidden_dim_lstm=256,reduced_obs_dim = 16): 
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
@@ -44,6 +43,7 @@ class DDPGAgent(object):
         self.vmin = vmin
         self.world_status_dim = world_status_dim
         self.LSTM = LSTM
+        self.LSTM_policy = LSTM_policy
 
         I2A_num_in_pol = num_in_pol
         self.hidden_dim_lstm = hidden_dim_lstm
