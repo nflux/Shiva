@@ -509,195 +509,6 @@ class I2A_Network(nn.Module):
         res = weights.sum(dim=1)
         return res.unsqueeze(dim=-1)
 
-class LSTM_Network(nn.Module):
-    """
-    MLP network (can be used as value or policy)
-    """
-    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,
-                    EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object, training=False, seq_length=20):
-        """
-        Inputs:
-            input_dim (int): Number of dimensions in input
-            out_dim (intT): Number of dimensions in output
-            hidden_dim (int): Number of hidden dimensions
-            nonlin (PyTorch function): Nonlinearity to apply to hidden layers
-        """
-        super(LSTM_Network, self).__init__()
-
-        self.agent=agent
-        self.discrete_action = discrete_action
-        self.action_size = 3
-        self.param_size = 5
-        self.count = 0
-        self.n_branches = self.agent.n_branches
-        self.rollout_steps = rollout_steps
-        self.batch_size = maddpg.batch_size
-        self.hidden_dim_lstm = agent.hidden_dim_lstm
-
-        if self.agent.device == 'cuda':
-            self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda(),
-                                Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda())
-            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
-                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
-        else:
-            self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)),
-                                Variable(torch.zeros(1, 1, self.hidden_dim_lstm)))
-            self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
-                                    Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
-        self.training_lstm = training
-        self.seq_length = seq_length
-
-        self.I2A = I2A
-        self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
-
-        # save refs without registering
-        object.__setattr__(self, "EM", EM)
-        object.__setattr__(self, "pol_prime", pol_prime)
-        object.__setattr__(self, "imagined_pol",imagined_pol)
-
-        
-        
-        if self.agent.device == 'cuda':
-            self.cast = lambda x: x.cuda()
-        else:
-            self.cast = lambda x: x.cpu()
-        self.norm_in = norm_in
-   
-        if I2A:
-            self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_branches, 1024)
-        else:
-            self.fc1 = nn.Linear(input_dim, 512)
-
-        self.fc1.weight.data.normal_(0, 0.01)
-        self.lstm = nn.LSTM(512, 512)
-        self.fc3 = nn.Linear(512, 512)
-        self.fc3.weight.data.normal_(0, 0.01) 
-        self.fc4 = nn.Linear(512, 512)
-        self.fc4.weight.data.normal_(0, 0.01) 
-
-        # hard coded values
-        self.out_action = nn.Linear(512, self.action_size)
-        self.out_action.weight.data.normal_(0, 0.01) 
-
-        self.out_param = nn.Linear(512, self.param_size)
-        self.out_param.weight.data.normal_(0, 0.01) 
-        self.out_param_fn = lambda x: x
-        #self.out_action_fn = F.softmax
-        #self.out_action_fn = F.log_softmax
-        self.out_action_fn = lambda x: x
-
-        self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
-        self.out_fn = lambda x: x
-    
-    def init_hidden(self, training = False):
-        if self.agent.device == 'cuda':
-            if not training:
-                self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda(),
-                                    Variable(torch.zeros(1, 1, self.hidden_dim_lstm)).cuda())
-            else:
-                self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda(),
-                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)).cuda())
-        else:
-            if not training:
-                self.hidden_tuple = (Variable(torch.zeros(1, 1, self.hidden_dim_lstm)),
-                                    Variable(torch.zeros(1, 1, self.hidden_dim_lstm)))
-            else:
-                self.hidden_tuple_train = (Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)),
-                                            Variable(torch.zeros(1, self.batch_size, self.hidden_dim_lstm)))
-
-    def forward(self, X):
-        """
-        Inputs:
-            X (PyTorch Matrix): Batch of observations
-        Outputs:
-            out (PyTorch Matrix): Output of network (actions, values, etc)
-        """
-
-        if self.I2A:
-            fx = self.cast(X).float()
-            enc_rollouts = self.rollouts_batch(fx)
-            fc_in = torch.cat((fx,enc_rollouts),dim=1)
-            h1 = self.nonlin(self.fc1(fc_in))
-        else:
-            h1 = self.nonlin(self.fc1(self.cast(X)))
-        
-        if not self.training_lstm:
-            h2, self.hidden_tuple = self.lstm(h1.unsqueeze(0), self.hidden_tuple)
-        else:
-            h2, self.hidden_tuple_train = self.lstm(h1, self.hidden_tuple_train)
-        
-        # h2 = self.nonlin(h2)
-        h3 = self.nonlin(self.fc3(h2))
-        h4 = self.nonlin(self.fc4(h3))
-
-        if not self.training_lstm:
-            if not self.discrete_action:
-                self.final_out_action = self.out_action_fn(self.out_action(h4))[0]
-                self.final_out_params = self.out_param_fn(self.out_param(h4))[0]
-
-                out = torch.cat((self.final_out_action, self.final_out_params),dim=1)
-                #if self.count % 100 == 0:
-                #    print(out)
-                self.count += 1
-
-            return out
-        else:
-            if not self.discrete_action:
-                self.final_out_action = self.out_action_fn(self.out_action(h4))
-                self.final_out_params = self.out_param_fn(self.out_param(h4))
-
-                out = torch.cat((self.final_out_action, self.final_out_params),dim=2)
-                #if self.count % 100 == 0:
-                #    print(out)
-                self.count += 1
-
-            return out[0]
-
-        
-    def rollouts_batch(self, batch):
-        batch_size = batch.size()[0]
-        batch_rest = batch.size()[1:]
-        if batch_size == 1:
-            obs_batch_v = batch.expand(batch_size * self.n_branches, *batch_rest)
-        else:
-            obs_batch_v = batch.unsqueeze(1)
-            obs_batch_v = obs_batch_v.expand(batch_size, self.n_branches, *batch_rest)
-            obs_batch_v = obs_batch_v.contiguous().view(-1, *batch_rest)
-        #actions = np.tile(np.arange(0, self.n_branches, dtype=np.int64), batch_size)
-        actions = []
-        if self.agent.imagination_policy_branch:
-            actions = torch.stack((self.pol_prime(batch).view(batch_size,-1),self.imagined_pol(batch).view(batch_size,-1)),dim=1).view(self.n_branches*batch_size,-1) # use our agent and another pretrained policy as a branch
-        else:
-            actions = self.pol_prime(batch) # use just our agents actions for rollout
-                           
-        step_obs, step_rewards,step_ws = [], [],[]
-        for step_idx in range(self.rollout_steps):
-            actions_t = processor(torch.tensor(actions).float(),device=self.agent.device)
-            #EM_in = torch.cat((*obs_batch_v, *actions_t),dim=1)
-
-            obs_next_v, reward_v,ws_v = self.EM(torch.cat((obs_batch_v, actions_t),dim=1))                
-
-            step_obs.append(obs_next_v.detach())
-            step_rewards.append(reward_v.detach())
-            step_ws.append(ws_v.detach())
-            # don't need actions for the last step
-            if step_idx == self.rollout_steps-1:
-                break
-            # combine the delta from EM into new observation
-            obs_batch_v = obs_batch_v + obs_next_v
-            # select actions
-            actions = self.pol_prime(obs_batch_v)
-        step_obs_v = torch.stack(step_obs)
-        step_rewards_v = torch.stack(step_rewards)
-        step_ws_v = torch.stack(step_ws)
-        flat_enc_v = self.encoder(step_obs_v, step_rewards_v,step_ws_v)
-        return flat_enc_v.view(batch_size, -1)  
-    
-    def distr_to_q(self, distr):
-        weights = F.softmax(distr, dim=1) * self.supports
-        res = weights.sum(dim=1)
-        return res.unsqueeze(dim=-1)
-
     
     
 class Dimension_Reducer(nn.Module):
@@ -769,7 +580,7 @@ class LSTM_Actor(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object):
+    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(512), nonlin=F.relu, norm_in=False, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -786,7 +597,10 @@ class LSTM_Actor(nn.Module):
         self.count = 0
         self.n_branches = self.agent.n_branches
         self.rollout_steps = rollout_steps
-        self.maddpg
+        self.maddpg = maddpg
+        self.torch_device = maddpg.torch_device
+        self.hidden_dim_lstm = agent.hidden_dim_lstm
+        self.batch_size = agent.batch_size
         self.I2A = I2A
         self.LSTM = maddpg.LSTM
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
@@ -810,18 +624,17 @@ class LSTM_Actor(nn.Module):
             self.cast = lambda x: x.cpu()
         self.norm_in = norm_in
         if I2A:
-            self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_branches, 1024)
+            self.fc1 = nn.Linear(input_dim + LSTM_hidden * self.n_branches, 512)
         else:
-            self.fc1 = nn.Linear(input_dim, 1024)
+            self.fc1 = nn.Linear(input_dim, 512)
 
         
         self.fc1.weight.data.normal_(0, 0.01) 
-        self.fc2 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
         self.fc2.weight.data.normal_(0, 0.01) 
-        self.fc3 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, 256)
         self.fc3.weight.data.normal_(0, 0.01) 
         self.lstm4 = nn.LSTM(256, self.hidden_dim_lstm)
-        self.lstm4.weight.data.normal_(0, 0.01) 
 
         # hard coded values
         self.out_action = nn.Linear(self.hidden_dim_lstm, self.action_size)
@@ -858,7 +671,7 @@ class LSTM_Actor(nn.Module):
             h1 = self.nonlin(self.fc1(self.cast(X)))
             h2 = self.nonlin(self.fc2(h1))
             h3 = self.nonlin(self.fc3(h2))
-            h4,self.hidden_tuple = self.nonlin(self.lstm4(h3),self.hidden_tuple)
+            h4, self.hidden_tuple = self.lstm4(h3, self.hidden_tuple)
 
             if not self.discrete_action:
                 self.final_out_action = self.out_action_fn(self.out_action(h4))
@@ -871,6 +684,7 @@ class LSTM_Actor(nn.Module):
                 #if self.count % 100 == 0:
                 #    print(out)
                 self.count += 1
+            return out
         else: # I2A
 
             batch_size = X[0].size()[0]
@@ -882,23 +696,32 @@ class LSTM_Actor(nn.Module):
             else:
                 fc_in = [torch.cat((f,e),dim=2) for f,e in zip(fx,enc_rollouts)]
             #     fc_in = [torch.cat((f,e),dim=2) for f,e in zip(fx,enc_rollouts)]
-            out = [self.ag_forward(x) for x in fc_in]
-        return out
+            out = []
+            ht = []
+            for x in fc_in:
+                o,h = self.ag_forward(x)
+                out.append(o)
+                ht.append(h) 
+            return out, ht
+
 
     def ag_forward(self,x):
         h1 = self.nonlin(self.fc1(x))
         h2 = self.nonlin(self.fc2(h1))
         h3 = self.nonlin(self.fc3(h2))
-        h4,self.hidden_tuple = self.nonlin(self.lstm4(h3),self.hidden_tuple)
+        h4,self.hidden_tuple = self.lstm4(h3,self.hidden_tuple)
 
         if not self.discrete_action:
             self.final_out_action = self.out_action_fn(self.out_action(h4))
             self.final_out_params = self.out_param_fn(self.out_param(h4))
-            out = torch.cat((self.final_out_action, self.final_out_params),1)
+            if len(self.final_out_action.shape) == 2:
+                out = torch.cat((self.final_out_action,self.final_out_params),1)
+            else:
+                out = torch.cat((self.final_out_action, self.final_out_params),2)
             #if self.count % 100 == 0:
             #    print(out)
             self.count += 1
-        return out
+        return out , self.hidden_tuple
 
     def rollouts_batch(self, batch):
         # batch is a list of obs for each agent

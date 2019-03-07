@@ -199,8 +199,19 @@ class MADDPG(object):
         for a in self.opp_agents:
             a.reset_noise()
     
-    def zero_hidden(self, batch_size):
-        self.team_agents[0].critic.init_hidden(batch_size)
+    def zero_hidden(self, batch_size,actual=False,target=False):
+        if actual:
+            self.team_agents[0].critic.init_hidden(batch_size)
+        if target:
+            self.team_agents[0].target_critic.init_hidden(batch_size)
+
+        # for ta, oa in zip(self.team_agents, self.opp_agents):
+        #     ta.critic.init_hidden(batch_size)
+        #     oa.critic.init_hidden(batch_size)
+
+    def zero_hidden_policy(self, batch_size):
+        [a.policy.init_hidden(batch_size) for a in self.team_agents]
+        [a.policy.init_hidden(batch_size) for a in self.opp_agents]
         # for ta, oa in zip(self.team_agents, self.opp_agents):
         #     ta.critic.init_hidden(batch_size)
         #     oa.critic.init_hidden(batch_size)
@@ -219,12 +230,13 @@ class MADDPG(object):
         
         return h1, h2
     
-    def set_hidden(self, h1, h2, target=False):
-        self.team_agents[0].critic.set_hidden(h1, h2)
+    def set_hidden(self, h1, h2, actual=False,target=False):
+        if actual:
+            self.team_agents[0].critic.set_hidden(h1, h2)
         if target:
             self.team_agents[0].target_critic.set_hidden(h1,h2)
 
-    def step(self, team_observations, opp_observations,team_e_greedy,opp_e_greedy,parallel, explore=False):
+    def step(self, team_observations, opp_observations,team_e_greedy,opp_e_greedy,parallel, explore=False,LSTM_policy=False):
         """
         Take a step forward in environment with all agents
         Inputs:
@@ -234,46 +246,21 @@ class MADDPG(object):
             actions: List of actions for each agent
         """
         if self.I2A:
-            team_acs = self.team_agents[0].policy(team_observations)
-            opp_acs = self.opp_agents[0].policy(opp_observations)
+            if LSTM_policy:
+                team_acs, rec_state = self.team_agents[0].policy(team_observations)
+                opp_acs,opp_rec_state = self.opp_agents[0].policy(opp_observations)
+            else:
+                team_acs = self.team_agents[0].policy(team_observations)
+                opp_acs = self.opp_agents[0].policy(opp_observations)
+
             return [a.step(obs,ran, acs,explore=explore) for a,ran, obs,acs in zip(self.team_agents, team_e_greedy,team_observations,team_acs)], \
                     [a.step(obs,ran, acs,explore=False) for a,ran, obs,acs in zip(self.opp_agents,opp_e_greedy, opp_observations,opp_acs)]
 
 
-        if not parallel:
+        else:                
             return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
                     [a.step(obs,ran, explore=False) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
-        else:
-            #[a for a_i,(a,ran,obs) in enumerate(zip(self.team_agents,team_e_greedy,team_observations))]
 
-            action_dim = self.team_agents[0].action_dim
-            param_dim = self.team_agents[0].param_dim
-            noise = self.team_agents[0].exploration.noise()
-
-            output = mp.Queue()
-            device = self.device
-            team_results = [torch.empty(1,8,requires_grad=False,device=self.device).share_memory_() for _ in range(self.nagents_team)]
-            opp_results = [torch.empty(1,8,requires_grad=False,device=self.device).share_memory_() for _ in range(self.nagents_team)]
-            
-            pi = copy.deepcopy(self.team_agents[0].policy)
-            pi.share_memory()
-            #pi.share_memory_()
-            team_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,pi,
-            action_dim,param_dim,device,noise)) for a_i,(ran,obs) in enumerate(zip(team_e_greedy,team_observations))]
-            opp_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,pi,
-            action_dim,param_dim,device,noise)) for a_i,(ran,obs) in enumerate(zip(team_e_greedy,team_observations))]
-            #team_processes = [mp.Process(target=parallel_step,args=(team_results,a_i,ran,obs,explore,output,dill.dumps(a.policy),action_dim,
-            #    param_dim,device,noise)) for a_i,(a,ran,obs) in enumerate(zip(self.team_agents,team_e_greedy,team_observations))]
-            #opp_processes = [mp.Process(target=parallel_step,args=(opp_results,a_i,ran,obs,explore,output,dill.dumps(a.policy),action_dim,
-            #    param_dim,device,noise)) for a_i,(a,ran,obs) in enumerate(zip(self.opp_agents,opp_e_greedy,opp_observations))]
-            for tp,op in team_processes,opp_processes:
-                tp.start()
-                op.start()
-            for tp,op in team_processes,opp_processes:
-                tp.join()
-                op.join()
-            return [team_results,opp_results]
-    
     def get_recurrent_states(self, exps, obs_dim, acs_dim, nagents, hidden_dim_lstm):
         ep_length = len(exps)
         cutoff = self.seq_length+self.overlap
@@ -309,7 +296,7 @@ class MADDPG(object):
             temp_all_hs =  torch.cat((hs1[0].squeeze(), hs1[1].squeeze(), hs2[0].squeeze(), hs2[1].squeeze()), dim=0)
             exps[ep_length-self.seq_length, :, -hidden_dim_lstm*4:] = temp_all_hs
         else:
-            self.zero_hidden(1)
+            self.zero_hidden(1,actual=True)
             obs = exps[:ep_length-self.seq_length, :, :obs_dim]
             acs = exps[:ep_length-self.seq_length, :, obs_dim:obs_dim+acs_dim]
 
@@ -1007,7 +994,7 @@ class MADDPG(object):
             
             self.zero_hidden(self.batch_size)
             h1, h2 = self.cast_hidden(rec_states)
-            self.set_hidden(h1, h2)
+            self.set_hidden(h1, h2,actual=True,target=True)
 
             slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
             slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
@@ -1021,7 +1008,10 @@ class MADDPG(object):
 
             # Run burn-in on critic to refresh hidden states
             _,_,h1,h2 = curr_agent.critic(burn_in_tensor)
-            self.set_hidden(h1,h2,target=True)
+            _,_,h1_target,h2_target = curr_agent.target_critic(burn_in_tensor)
+
+            self.set_hidden(h1,h2,actual=True,target=False)
+            self.set_hidden(h1_target,h2_target,actual=False,target=True)
 
             slice_obs = list(map(lambda x: x[lstm_burn_in:], obs))
             slice_acs = list(map(lambda x: x[lstm_burn_in:], acs))
@@ -1150,11 +1140,13 @@ class MADDPG(object):
             torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
             curr_agent.critic_optimizer.step()
 
+
+        # Train actor -----------------------
         if policy:
             curr_agent.policy_optimizer.zero_grad()
-            self.zero_hidden(self.batch_size)
+            self.zero_hidden(self.batch_size,actual=True,target=True)
             h1, h2 = self.cast_hidden(rec_states)
-            self.set_hidden(h1, h2)
+            self.set_hidden(h1, h2,actual=True,target=False)
 
             slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
             slice_obs_opp = list(map(lambda x: x[:lstm_burn_in], opp_obs))
@@ -1168,9 +1160,11 @@ class MADDPG(object):
 
             # Run burn-in on critic to refresh hidden states
             _,_,h1,h2 = curr_agent.critic(burn_in_tensor)
-            self.set_hidden(h1,h2,target=False)
+            slice_obs = list(map(lambda x: x[lstm_burn_in:], obs))
+            slice_acs = list(map(lambda x: x[lstm_burn_in:], acs)) # Not used currently
+            slice_opp_obs = list(map(lambda x: x[lstm_burn_in:], opp_obs))
+            slice_opp_acs = list(map(lambda x: x[lstm_burn_in:], opp_acs))
 
-            # Train actor -----------------------
                     
             #print("time actor")
             team_pol_acs = []
@@ -1179,9 +1173,9 @@ class MADDPG(object):
                 curr_pol_out = curr_agent.policy(slice_obs)
             else:
                 curr_pol_out = [curr_agent.policy(slice_obs[ag]) for ag in range(nagents)]
-                
-            team_pol_acs = [torch.cat((gumbel_softmax(c[:,:curr_agent.action_dim], hard=True, device=self.torch_device),c[:,curr_agent.action_dim:]),dim=1) for c in curr_pol_out]
-            curr_pol_out_stacked = torch.cat(curr_pol_out,dim=0)
+
+            team_pol_acs = [torch.cat((gumbel_softmax(c[:,:,:curr_agent.action_dim], hard=True, device=self.torch_device,LSTM=self.LSTM),c[:,:,curr_agent.action_dim:]),dim=2) for c in curr_pol_out]
+            curr_pol_out_stacked = torch.cat(curr_pol_out,dim=1)
 
 
             obs_vf_in = torch.cat((*slice_obs,*slice_obs_opp),dim=2)
@@ -1465,14 +1459,14 @@ class MADDPG(object):
     def prep_policy(self,device='cuda',torch_device=torch.device('cuda:0')):
         for a in self.team_agents:
             a.policy.train()
-            a.reducer.train()
+            #a.reducer.train()
             if self.I2A:
                 a.policy_prime.train()
                 a.EM.train()
 
         for a in self.opp_agents:
             a.policy.train()
-            a.reducer.train()
+            #a.reducer.train()
             if self.I2A:
                 a.policy_prime.train()
                 a.EM.train()
@@ -1484,14 +1478,14 @@ class MADDPG(object):
             
         for a in self.team_agents:
             a.policy = fn(a.policy)
-            a.reducer = fn(a.reducer)
+            #a.reducer = fn(a.reducer)
             if self.I2A:    
                 a.policy_prime = fn(a.policy_prime)
                 a.EM  = a.EM = fn(a.EM)
 
         for a in self.opp_agents:
             a.policy = fn(a.policy)
-            a.reducer = fn(a.reducer)
+            #a.reducer = fn(a.reducer)
             if self.I2A:    
                 a.policy_prime = fn(a.policy_prime)
                 a.EM  = a.EM = fn(a.EM)
@@ -1499,7 +1493,7 @@ class MADDPG(object):
     def prep_training(self, device='gpu',only_policy=False,torch_device=torch.device('cuda:0')):
         for a in self.team_agents:
             a.policy.train()
-            a.reducer.train()
+            #a.reducer.train()
             if self.I2A:
                 a.policy_prime.train()
                 a.EM.train()
@@ -1510,7 +1504,7 @@ class MADDPG(object):
         
         for a in self.opp_agents:
             a.policy.train()
-            a.reducer.train()
+            #a.reducer.train()
             if self.I2A:
                 a.policy_prime.train()
                 a.EM.train()
@@ -1526,13 +1520,13 @@ class MADDPG(object):
         if not self.pol_dev == device:
             for a in self.team_agents:
                 a.policy = fn(a.policy)
-                a.reducer = fn(a.reducer)
+                #a.reducer = fn(a.reducer)
                 if self.I2A:
                     a.policy_prime = fn(a.policy_prime)
                     a.EM  = a.EM = fn(a.EM)
             for a in self.opp_agents:
                 a.policy = fn(a.policy)
-                a.reducer = fn(a.reducer)
+                #a.reducer = fn(a.reducer)
                 if self.I2A:
                     a.policy_prime = fn(a.policy_prime)
                     a.EM  = a.EM = fn(a.EM)
@@ -1583,14 +1577,14 @@ class MADDPG(object):
     def prep_policy_rollout(self, device='gpu',only_policy=False,torch_device=torch.device('cuda:0')):
         for a in self.team_agents:
             a.policy.eval()
-            a.reducer.eval()
+            #a.reducer.eval()
             if self.I2A:
                 a.policy_prime.train()
                 a.EM.train()
 
         for a in self.opp_agents:
             a.policy.train()
-            a.reducer.train()
+            #a.reducer.train()
             if self.I2A:
                 a.policy_prime.train()
                 a.EM.train()
@@ -1602,14 +1596,14 @@ class MADDPG(object):
             
         for a in self.team_agents:
             a.policy = fn(a.policy)
-            a.reducer = fn(a.reducer)
+            #a.reducer = fn(a.reducer)
             if self.I2A:    
                 a.policy_prime = fn(a.policy_prime)
                 a.EM  = a.EM = fn(a.EM)
 
         for a in self.opp_agents:
             a.policy = fn(a.policy)
-            a.reducer = fn(a.reducer)
+            #a.reducer = fn(a.reducer)
             if self.I2A:    
                 a.policy_prime = fn(a.policy_prime)
                 a.EM  = a.EM = fn(a.EM)
@@ -2099,7 +2093,8 @@ class MADDPG(object):
         if self.niter % 100 == 0:
             print("Team (%s) EM Loss:" % side,np.round(EM_loss.item(),2),"{Obs Loss:",np.round(loss_obs.item(),2),",","Rew Loss:",np.round(loss_rew.item(),2),",","WS Loss:",np.round(loss_ws.item(),2),"}")
         
-        
+
+
     def pretrain_actor(self, team_sample=[], opp_sample =[], agent_i = 0, side='team', parallel=False, logger=None, act_only=False, obs_only=False,forward_pass=True,load_same_agent=False,session_path=""):
         """
         Update parameters of actor based on sample from replay buffer for policy imitation (fits policy to observed actions)
@@ -2161,8 +2156,12 @@ class MADDPG(object):
         
         pol_out_actions = torch.softmax(curr_pol_out_stacked[:,:curr_agent.action_dim],dim=1).float()
         actual_out_actions = Variable(all_acs,requires_grad=True).float()[:,:curr_agent.action_dim]
-        pol_out_params = zero_params(torch.cat((onehot_from_logits(curr_pol_out_stacked[:,:curr_agent.action_dim]),curr_pol_out_stacked[:,curr_agent.action_dim:]),dim=1))[:,curr_agent.action_dim:]
-        actual_out_params = Variable(zero_params(all_acs),requires_grad=True)[:,curr_agent.action_dim:]
+        if self.zero_critic:
+            pol_out_params = zero_params(torch.cat((onehot_from_logits(curr_pol_out_stacked[:,:curr_agent.action_dim]),curr_pol_out_stacked[:,curr_agent.action_dim:]),dim=1))[:,curr_agent.action_dim:]
+            actual_out_params = Variable(zero_params(all_acs),requires_grad=True)[:,curr_agent.action_dim:]
+        else:
+            pol_out_params = torch.cat((onehot_from_logits(curr_pol_out_stacked[:,:curr_agent.action_dim]),curr_pol_out_stacked[:,curr_agent.action_dim:]),dim=1)[:,curr_agent.action_dim:]
+            actual_out_params = Variable(all_acs,requires_grad=True)[:,curr_agent.action_dim:]
         MSE = F.mse_loss(pol_out_params,actual_out_params)
 
         pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
@@ -2221,6 +2220,143 @@ class MADDPG(object):
             if self.I2A:
                 print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
                 print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
+
+
+
+
+# ----------------------------------------------------------------------------------------
+
+    def pretrain_actor_LSTM(self, team_sample=[], opp_sample =[], agent_i = 0, side='team', parallel=False, logger=None, act_only=False, obs_only=False,forward_pass=True,load_same_agent=False,session_path="",lstm_burn_in=40):
+        """
+        Update parameters of actor based on sample from replay buffer for policy imitation (fits policy to observed actions)
+        Inputs:
+            sample: tuple of (observations, actions, rewards, next
+                    observations, and episode end masks, cumulative discounted reward) sampled randomly from
+                    the replay buffer. Each is a list with entries
+                    corresponding to each agent
+            agent_i (int): index of agent to update
+            parallel (bool): If true, will average gradients across threads
+            logger (SummaryWriter from Tensorboard-Pytorch):
+                If passed in, important quantities will be logged
+        """
+        # rews = 1-step, cum-rews = n-step
+        if self.niter % 1000:
+            self.policy_loss_logger.to_csv(session_path + 'actor_loss.csv')
+
+        start = time.time()
+
+        #start = time.time()
+        # rews = 1-step, cum-rews = n-step
+        if side == 'team':
+            count = self.team_count[agent_i]
+            curr_agent = self.team_agents[agent_i]
+            nagents = self.nagents_team
+            policies = self.team_policies
+            opp_policies = self.opp_policies
+            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = team_sample
+            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = opp_sample
+        else:
+            count = self.opp_count[agent_i]
+            curr_agent = self.opp_agents[agent_i]
+            nagents = self.nagents_opp
+            policies = self.opp_policies
+            opp_policies = self.team_policies
+            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
+            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
+
+        self.curr_agent_index = agent_i
+
+        obs_stacked = torch.cat(obs,dim=1)
+        all_acs = torch.cat(acs,dim=1)
+        # Zero state initialization then burn-in LSTM
+        self.zero_hidden_policy(self.batch_size)
+        slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
+        slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
+        _ = curr_agent.policy(slice_obs) # burn in
+
+        # Get post-burn in training steps
+        slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
+        slice_acs = list(map(lambda x: x[:lstm_burn_in], acs)) 
+
+        if self.I2A:
+            curr_pol_out = curr_agent.policy(slice_obs) # <--- Out of date
+        else:
+            curr_pol_out = curr_agent.policy(slice_obs)
+        
+        
+        
+        curr_agent.policy_optimizer.zero_grad()
+        
+    
+        pol_out_actions = torch.softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).float()
+        actual_out_actions = Variable(all_acs,requires_grad=True).float()[:,:,:curr_agent.action_dim]
+        if self.zero_critic:
+            pol_out_params = zero_params(torch.cat((onehot_from_logits(curr_pol_out[:,:,:curr_agent.action_dim],LSTM=False),curr_pol_out[:,:,curr_agent.action_dim:]),dim=2))[:,:,curr_agent.action_dim:]
+            actual_out_params = Variable(zero_params(all_acs),requires_grad=True)[:,curr_agent.action_dim:]
+        else:
+            pol_out_params = curr_pol_out[:,:,curr_agent.action_dim:]
+            actual_out_params = Variable(all_acs,requires_grad=True)[:,:,curr_agent.action_dim:]
+          
+
+        pol_loss = F.mse_loss(pol_out_params,actual_out_params) + F.mse_loss(pol_out_actions,actual_out_actions)
+        
+        reg_param = 5.0
+        entropy_reg = (-torch.log(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+        pol_loss.backward(retain_graph=True)
+        if parallel:
+            average_gradients(curr_agent.policy)
+        torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
+        curr_agent.policy_optimizer.step()
+
+        if self.I2A:
+            # Update policy prime
+            curr_agent.policy_prime_optimizer.zero_grad()
+            # We take the loss between the current policy's behavior and policy prime which is estimating the current policy
+            pol_prime_out = [curr_agent.policy_prime(obs[ag]) for ag in range(nagents)] # uses gumbel across the actions
+            pol_prime_out_stacked = torch.cat(pol_prime_out,dim=0)
+            pol_prime_loss = F.mse_loss(pol_prime_out_stacked,curr_pol_out_stacked)
+            pol_prime_loss.backward()
+            torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
+            curr_agent.policy_prime_optimizer.step()
+            # Train Environment Model -----------------------------------------------------            
+            curr_agent.EM_optimizer.zero_grad()
+            
+            #labels = ws[0].long().view(-1,1) % self.world_status_dim # categorical labels for OH
+            #self.ws_onehot.zero_() # reset OH tensor
+            #self.ws_onehot.scatter_(1,labels,1) # fill with OH encoding
+            agents_acs = torch.cat(acs,dim=1) # cat agents actions to same row
+            agents_obs = torch.cat(obs,dim=0) # stack entire batch on top of eachother for each agent
+            agents_nobs = torch.cat(next_obs,dim=0)
+            agents_rews = torch.cat(rews,dim=0)
+
+            acs_repeated = agents_acs.repeat(nagents,1) # repeat actions so they may be used with each agent's observation batch
+            
+            EM_in = torch.cat((agents_obs,acs_repeated),dim=1)
+            est_obs_diff,est_rews,est_ws = curr_agent.EM(EM_in)
+            actual_obs_diff = agents_nobs - agents_obs
+            actual_rews = agents_rews.view(-1,1)
+            #actual_ws = self.ws_onehot.repeat(nagents,1)
+            loss_obs = F.mse_loss(est_obs_diff, actual_obs_diff)
+            loss_rew = F.mse_loss(est_rews, actual_rews)
+            #loss_ws = CELoss(est_ws,torch.argmax(actual_ws,dim=1))
+            EM_loss = self.obs_weight * loss_obs + self.rew_weight * loss_rew # self.ws_weight * loss_ws
+            EM_loss.backward()
+            torch.nn.utils.clip_grad_norm_(curr_agent.policy_prime.parameters(), 1) # do we want to clip the gradients?
+            curr_agent.EM_optimizer.step()
+        self.niter +=1
+        #print(time.time() - start,"up")
+        if self.niter % 100 == 0:
+            self.policy_loss_logger = self.policy_loss_logger.append({                'iteration':self.niter,
+                                                                        'actor': np.round(pol_loss.item(),4)},
+                                                                        ignore_index=True)
+            print("Team (%s) Agent(%i) Policy loss" % (side, agent_i),pol_loss)
+
+            if self.I2A:
+                print("Team (%s) Agent(%i) Policy Prime loss" % (side, agent_i),pol_prime_loss)
+                print("Team (%s) Agent(%i) Environment Model loss" % (side, agent_i),EM_loss)
+
+ 
+# --------------------------------------------------------------------------
 
     def SIL_update(self, team_sample=[], opp_sample=[],agent_i=0,side='team', parallel=False, logger=None,load_same_agent=False):
         """
@@ -2365,7 +2501,7 @@ class MADDPG(object):
                       only_policy=False,multi_gpu=False,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True):
                       
         """
-        Instantiate instance of this class from multi-agent environment
+        Instantiate instance of this class from multi-agent environment 
         """
         team_agent_init_params = []
         team_net_params = []
@@ -2460,7 +2596,7 @@ class MADDPG(object):
                      'critic_mod_obs': critic_mod_obs,
                      'seq_length': seq_length,
                      'LSTM':LSTM,
-                     'LSTM':LSTM_policy,
+                     'LSTM_policy':LSTM_policy,
                      'hidden_dim_lstm': hidden_dim_lstm,
                      'lstm_burn_in': lstm_burn_in,
                      'overlap': overlap,

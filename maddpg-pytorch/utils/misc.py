@@ -450,7 +450,10 @@ def sample_gumbel(shape,eps=1e-20,tens_type=torch.FloatTensor,device="cuda",LSTM
 def gumbel_softmax_sample(logits, temperature,device="cuda",LSTM=False):
     """ Draw a sample from the Gumbel-Softmax distribution"""
     y = logits + sample_gumbel(logits.shape, tens_type=type(logits.data),device=device,LSTM=LSTM)
-    return F.softmax(y / temperature, dim=1)
+    if LSTM:
+        return F.softmax(y/temperature, dim=2)
+    else:
+        return F.softmax(y / temperature, dim=1)
 
 # modified for PyTorch from https://github.com/ericjang/gumbel-softmax/blob/master/Categorical%20VAE.ipynb
 def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda",LSTM=False):

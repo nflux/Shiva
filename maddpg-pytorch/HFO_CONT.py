@@ -33,7 +33,7 @@ import gc
 
 # updates policy only
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr):
+                            load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in):
     start = time.time()
     if len(team_replay_buffer) > 400:
 
@@ -78,7 +78,8 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                     if not load_same_agent:
                         print("No implementation")
                     else:
-                        _ = maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)
+                        _ = maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
+                                                                                        load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
                         #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
                         if up % number_of_updates/10 == 0: # update target half way through
                             maddpg.update_agent_actor(0,number_of_updates/10)
@@ -88,9 +89,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                     opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                 to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                     if not load_same_agent:
-                        priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                        team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
-
+                        print("No implementation")
                     else:
                         _ = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)
                         #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
@@ -118,7 +117,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
 
 
 def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,seq_length,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel):
+                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,seq_length,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in):
     start = time.time()
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
@@ -299,7 +298,9 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             maddpg.scale_noise(0.0)
 
         if LSTM:
-            maddpg.zero_hidden(1)
+            maddpg.zero_hidden(1,actual=True)
+        if LSTM_policy:
+            maddpg.zero_hidden_policy(1)
         maddpg.reset_noise()
         maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
         #for the duration of 100 episode with maximum length of 500 time steps
@@ -308,7 +309,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
         opp_kickable_counter = [0] * num_OA
         env.team_possession_counter = [0] * num_TA
         env.opp_possession_counter = [0] * num_OA
-        reducer = maddpg.team_agents[0].reducer
+        #reducer = maddpg.team_agents[0].reducer
         for et_i in range(0, episode_length):
 
             if device == 'cuda':
@@ -666,8 +667,8 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 1000000
-        pt_memory = 1000000
+        replay_memory_size = 250000
+        pt_memory = 250000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -686,7 +687,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 128
+        batch_size = 64
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate 
@@ -796,7 +797,7 @@ if __name__ == "__main__":
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.8
         load_same_agent = True # load same policy for all agents
-        push_only_left = True
+        push_only_left = False
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -816,7 +817,7 @@ if __name__ == "__main__":
         eval_episodes = 11
         # --------------------------------------
         # LSTM -------------------------------------------
-        LSTM = False # Critic only
+        LSTM = True # Critic only
         LSTM_policy = True# Policy
         hidden_dim_lstm = 64
         lstm_burn_in = 10
@@ -1030,7 +1031,7 @@ if __name__ == "__main__":
             for a_i in range(1):
                 threads.append(mp.Process(target=imitation_thread,args=(a_i,to_gpu,len(pt_trb),batch_size,
                     pt_trb,pt_orb,number_of_updates,
-                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel)))
+                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             [thr.start() for thr in threads]
             
             agentID = 0
@@ -1182,12 +1183,12 @@ if __name__ == "__main__":
                 for a_i in range(maddpg.nagents_team):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             print("Launching update")
             start = time.time()
             [thr.start() for thr in threads]
@@ -1233,12 +1234,12 @@ if __name__ == "__main__":
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(pt_trb),batch_size,
                         pt_trb,pt_orb,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,a_lr)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             [thr.start() for thr in threads]
             print("Launching update")
             start = time.time()
