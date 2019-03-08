@@ -15,7 +15,6 @@ def roll2(tensor, rollover):
     '''
     Roll over the second axis of a tensor
     '''
-    print("ROLL")
     return torch.cat((tensor[:,-rollover:], tensor[:,:-rollover]), dim=1)
 
 

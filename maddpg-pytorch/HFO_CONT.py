@@ -33,7 +33,7 @@ import gc
 
 # updates policy only
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in):
+                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in):
     start = time.time()
     if len(team_replay_buffer) > 400:
 
@@ -69,7 +69,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                 offset = up % batches_to_sample
                 if up % batches_to_sample == 0:
                     inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size*batches_to_sample, replace=False)
-                if LSTM:
+                if LSTM_policy or LSTM:
                     team_sample = team_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
                                                                 to_gpu=to_gpu,device=maddpg.torch_device)
                     opp_sample = opp_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
@@ -78,8 +78,10 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                     if not load_same_agent:
                         print("No implementation")
                     else:
-                        _ = maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
-                                                                                        load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
+                        maddpg.pretrain_actor_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent,lstm_burn_in=lstm_burn_in)
+
+                        
+                        #_ = maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,                                                                                        load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
                         #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
                         if up % number_of_updates/10 == 0: # update target half way through
                             maddpg.update_agent_actor(0,number_of_updates/10)
@@ -117,7 +119,8 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
 
 
 def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
-                            load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,seq_length,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in):
+                     load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,seq_length,k_ensembles,
+                     SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in):
     start = time.time()
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
@@ -140,25 +143,26 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
             offset = up % batches_to_sample
             if up % batches_to_sample == 0:
                 inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size*batches_to_sample, replace=False)
-            if LSTM:
-                team_sample = team_replay_buffer.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False)
-                opp_sample = opp_replay_buffer.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False)
-                priorities =maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
-                team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
-                del priorities
-                del team_sample
-                del opp_sample
+            if LSTM_policy:
+                team_sample = team_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
+                                                            to_gpu=to_gpu,device=maddpg.torch_device)
+                opp_sample = opp_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
+                                                                to_gpu=to_gpu,device=maddpg.torch_device)
+               
                 if not load_same_agent:
-                    priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                    team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+                    print("no implementation")
+                else:
+                    maddpg.pretrain_actor_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent,lstm_burn_in=lstm_burn_in
+                    if up % number_of_updates/10 == 0: # update target half way through
+                        maddpg.update_agent_actor(0,number_of_updates/10))
+
             else:
                 team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                             to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                 opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                             to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                 if not load_same_agent:
-                    priorities = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent)
-                    team_replay_buffer.update_priorities(agentID=agentID,inds = inds, prio=priorities,k = ensemble)
+                    print("implementation missing")
                 else:
                     maddpg.pretrain_actor(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,session_path=session_path)
                     #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
@@ -300,7 +304,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
         if LSTM:
             maddpg.zero_hidden(1,actual=True,torch_device=maddpg.torch_device)
         if LSTM_policy:
-            maddpg.zero_hidden_policy(1)
+            maddpg.zero_hidden_policy(1,maddpg.torch_device)
         maddpg.reset_noise()
         maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
         #for the duration of 100 episode with maximum length of 500 time steps
@@ -536,7 +540,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
                     # Fill in values for zeros for the hidden state
                     exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), num_TA*2, hidden_dim_lstm*4), dtype=exps.dtype)), dim=2)
-                    exps = maddpg.get_recurrent_states(exps, obs_dim_TA, acs_dim, num_TA*2, hidden_dim_lstm,maddpg.torch_device)
+                    #exps = maddpg.get_recurrent_states(exps, obs_dim_TA, acs_dim, num_TA*2, hidden_dim_lstm,maddpg.torch_device)
                     exp_i[int(ep_num[env_num].item())] += et_i
                     shared_exps[int(ep_num[env_num].item())][:len(exps)] = exps
                     ep_num[env_num] += 1
@@ -817,7 +821,7 @@ if __name__ == "__main__":
         # --------------------------------------
         # LSTM -------------------------------------------
         LSTM = True # Critic only
-        LSTM_policy = False# Policy
+        LSTM_policy = True# Policy
         hidden_dim_lstm = 64
         lstm_burn_in = 10
         if LSTM:
@@ -1069,9 +1073,9 @@ if __name__ == "__main__":
                     if LSTM:
                         team_sample = pt_trb.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
                         opp_sample = pt_orb.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
-                        priorities =maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
+                        priorities #=maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
                         print("Use pretrain function")
-                        pt_trb.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
+                        #pt_trb.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
 
                         if not load_same_agent:
                             print("No implementation")
@@ -1157,7 +1161,6 @@ if __name__ == "__main__":
                     [team_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
                     [opp_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
                 else:
-                    print("NOW2")
                     [team_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], 
                         shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
                     [opp_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], 
@@ -1183,12 +1186,12 @@ if __name__ == "__main__":
                 for a_i in range(maddpg.nagents_team):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             print("Launching update")
             start = time.time()
             [thr.start() for thr in threads]
@@ -1234,12 +1237,12 @@ if __name__ == "__main__":
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(pt_trb),batch_size,
                         pt_trb,pt_orb,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             else:
                 for a_i in range(1):
                     threads.append(mp.Process(target=update_thread,args=(a_i,to_gpu,len(team_replay_buffer),batch_size,
                         team_replay_buffer,opp_replay_buffer,number_of_updates,
-                        load_path,update_session,ensemble_path,forward_pass,LSTM,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
+                        load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             [thr.start() for thr in threads]
             print("Launching update")
             start = time.time()
@@ -1297,8 +1300,8 @@ if __name__ == "__main__":
                             train_actor = (len(team_replay_buffer) > 10000) and False # and (update_session % 2 == 0)
                             train_critic = (len(team_replay_buffer) > batch_size)
                             if train_critic:
-                                priorities.append(maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
-                                                                                        load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path,lstm_burn_in=lstm_burn_in))
+                                pass
+                                #priorities.append(maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path,lstm_burn_in=lstm_burn_in))
                             if train_actor: # only update actor once 1 mill
                                 _ = maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
                                                                             load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)

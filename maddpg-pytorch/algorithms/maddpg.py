@@ -210,9 +210,9 @@ class MADDPG(object):
         #     ta.critic.init_hidden(batch_size)
         #     oa.critic.init_hidden(batch_size)
 
-    def zero_hidden_policy(self, batch_size):
-        [a.policy.init_hidden(batch_size) for a in self.team_agents]
-        [a.policy.init_hidden(batch_size) for a in self.opp_agents]
+    def zero_hidden_policy(self, batch_size,torch_device=torch.device('cuda:0')):
+        [a.policy.init_hidden(batch_size,torch_device=torch_device) for a in self.team_agents]
+        [a.policy.init_hidden(batch_size,torch_device=torch_device) for a in self.opp_agents]
         # for ta, oa in zip(self.team_agents, self.opp_agents):
         #     ta.critic.init_hidden(batch_size)
         #     oa.critic.init_hidden(batch_size)
@@ -2262,22 +2262,24 @@ class MADDPG(object):
 
         self.curr_agent_index = agent_i
 
-        obs_stacked = torch.cat(obs,dim=1)
-        all_acs = torch.cat(acs,dim=1)
+
         # Zero state initialization then burn-in LSTM
-        self.zero_hidden_policy(self.batch_size)
+        self.zero_hidden_policy(self.batch_size*nagents,self.torch_device)
         slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
         slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
-        _ = curr_agent.policy(slice_obs) # burn in
+        burn_in_obs = torch.cat(slice_obs,dim=1)
+        _ = curr_agent.policy(burn_in_obs) # burn in
 
         # Get post-burn in training steps
         slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
         slice_acs = list(map(lambda x: x[:lstm_burn_in], acs)) 
 
+        obs_stacked = torch.cat(slice_obs,dim=1)
+        all_acs = torch.cat(slice_acs,dim=1)
         if self.I2A:
-            curr_pol_out = curr_agent.policy(slice_obs) # <--- Out of date
+            curr_pol_out = curr_agent.policy(obs_stacked) # <--- Out of date
         else:
-            curr_pol_out = curr_agent.policy(slice_obs)
+            curr_pol_out = curr_agent.policy(obs_stacked)
         
         
         
@@ -2297,7 +2299,7 @@ class MADDPG(object):
         pol_loss = F.mse_loss(pol_out_params,actual_out_params) + F.mse_loss(pol_out_actions,actual_out_actions)
         
         reg_param = 5.0
-        entropy_reg = (-torch.log(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+        #entropy_reg = (-torch.log(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
         pol_loss.backward(retain_graph=True)
         if parallel:
             average_gradients(curr_agent.policy)
