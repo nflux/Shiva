@@ -43,7 +43,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
         if multi_gpu:
             maddpg.torch_device = torch.device("cuda:3")
         maddpg.device = 'cuda'
-        number_of_updates = 300
+        number_of_updates = 500
         batches_to_sample = 50
 
         if len(team_replay_buffer) < batch_size*(batches_to_sample):
@@ -298,7 +298,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             maddpg.scale_noise(0.0)
 
         if LSTM:
-            maddpg.zero_hidden(1,actual=True)
+            maddpg.zero_hidden(1,actual=True,torch_device=maddpg.torch_device)
         if LSTM_policy:
             maddpg.zero_hidden_policy(1)
         maddpg.reset_noise()
@@ -536,8 +536,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
                     # Fill in values for zeros for the hidden state
                     exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), num_TA*2, hidden_dim_lstm*4), dtype=exps.dtype)), dim=2)
-                    exps = maddpg.get_recurrent_states(exps, obs_dim_TA, acs_dim, num_TA*2, hidden_dim_lstm)
-
+                    exps = maddpg.get_recurrent_states(exps, obs_dim_TA, acs_dim, num_TA*2, hidden_dim_lstm,maddpg.torch_device)
                     exp_i[int(ep_num[env_num].item())] += et_i
                     shared_exps[int(ep_num[env_num].item())][:len(exps)] = exps
                     ep_num[env_num] += 1
@@ -634,7 +633,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 2
+    num_envs = 8
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -667,8 +666,8 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 250000
-        pt_memory = 250000
+        replay_memory_size = 25000
+        pt_memory = 1000000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -677,8 +676,8 @@ if __name__ == "__main__":
  
         # --------------------------------------
         # Team ---------------------------------
-        num_TA = 2
-        num_OA = 2
+        num_TA = 3
+        num_OA = 3
         num_TNPC = 0
         num_ONPC = 0
         acs_dim = 8
@@ -687,7 +686,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 64
+        batch_size = 128
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate 
@@ -699,7 +698,7 @@ if __name__ == "__main__":
         final_noise_scale = 0.1
         init_noise_scale = 1.00
         num_explore_episodes = 50 # Haus uses over 10,000 updates --
-        multi_gpu = False
+        multi_gpu = True
         data_parallel = False
         
 
@@ -1158,6 +1157,7 @@ if __name__ == "__main__":
                     [team_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
                     [opp_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
                 else:
+                    print("NOW2")
                     [team_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], 
                         shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
                     [opp_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], 
@@ -1248,7 +1248,7 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(team_replay_buffer)
 
-            number_of_updates = 450
+            number_of_updates = 400
             batches_to_sample = 50
             if len(team_replay_buffer) < batch_size*(batches_to_sample):
                 batches_to_sample = 1

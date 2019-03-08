@@ -259,7 +259,9 @@ class LSTMNetwork_Critic(nn.Module):
         self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
     
-    def init_hidden(self, batch_size):
+    def init_hidden(self, batch_size,torch_device):
+        self.torch_device = self.maddpg.torch_device
+
         if self.agent.device == 'cuda':
             self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))

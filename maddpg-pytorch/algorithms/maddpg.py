@@ -200,11 +200,11 @@ class MADDPG(object):
         for a in self.opp_agents:
             a.reset_noise()
     
-    def zero_hidden(self, batch_size,actual=False,target=False):
+    def zero_hidden(self, batch_size,actual=False,target=False,torch_device = torch.device('cuda:0')):
         if actual:
-            self.team_agents[0].critic.init_hidden(batch_size)
+            self.team_agents[0].critic.init_hidden(batch_size,torch_device=torch_device)
         if target:
-            self.team_agents[0].target_critic.init_hidden(batch_size)
+            self.team_agents[0].target_critic.init_hidden(batch_size,torch_device=torch_device)
 
         # for ta, oa in zip(self.team_agents, self.opp_agents):
         #     ta.critic.init_hidden(batch_size)
@@ -217,12 +217,12 @@ class MADDPG(object):
         #     ta.critic.init_hidden(batch_size)
         #     oa.critic.init_hidden(batch_size)
     
-    def cast_hidden(self, tensor):
+    def cast_hidden(self, tensor,torch_device=torch.device('cuda:0')):
         if self.device == 'cuda':
-            h1 = (Variable(tensor[None, :, :self.hidden_dim_lstm]).cuda(),
-                                            Variable(tensor[None, :, self.hidden_dim_lstm:self.hidden_dim_lstm*2]).cuda())
-            h2 = (Variable(tensor[None, :, self.hidden_dim_lstm*2:self.hidden_dim_lstm*3]).cuda(),
-                                            Variable(tensor[None, :, self.hidden_dim_lstm*3:self.hidden_dim_lstm*4]).cuda())
+            h1 = (Variable(tensor[None, :, :self.hidden_dim_lstm]).to(torch_device),
+                                            Variable(tensor[None, :, self.hidden_dim_lstm:self.hidden_dim_lstm*2]).to(torch_device))
+            h2 = (Variable(tensor[None, :, self.hidden_dim_lstm*2:self.hidden_dim_lstm*3]).to(torch_device),
+                                            Variable(tensor[None, :, self.hidden_dim_lstm*3:self.hidden_dim_lstm*4]).to(torch_device))
         else:
             h1 = (Variable(tensor[None, :, :self.hidden_dim_lstm]),
                                             Variable(tensor[None, :, self.hidden_dim_lstm:self.hidden_dim_lstm*2]))
@@ -231,7 +231,7 @@ class MADDPG(object):
         
         return h1, h2
     
-    def set_hidden(self, h1, h2, actual=False,target=False):
+    def set_hidden(self, h1, h2, actual=False,target=False,torch_device=torch.device('cuda:0')):
         if actual:
             self.team_agents[0].critic.set_hidden(h1, h2)
         if target:
@@ -262,7 +262,7 @@ class MADDPG(object):
             return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
                     [a.step(obs,ran, explore=False) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
 
-    def get_recurrent_states(self, exps, obs_dim, acs_dim, nagents, hidden_dim_lstm):
+    def get_recurrent_states(self, exps, obs_dim, acs_dim, nagents, hidden_dim_lstm,torch_device):
         ep_length = len(exps)
         cutoff = self.seq_length+self.overlap
         for e in range(0, ep_length-cutoff, self.overlap):
@@ -273,8 +273,7 @@ class MADDPG(object):
             obs = obs.reshape(self.overlap, 1, nagents*obs_dim)
             acs = acs.reshape(self.overlap, 1, nagents*acs_dim)
 
-            comb = torch.cat((obs, acs), dim=2)
-
+            comb = torch.cat((obs, acs), dim=2).to(torch_device) # critic device
             _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
             self.set_hidden(hs1, hs2)
 
@@ -289,7 +288,7 @@ class MADDPG(object):
             obs = obs.reshape(self.overlap, 1, nagents*obs_dim)
             acs = acs.reshape(self.overlap, 1, nagents*acs_dim)
 
-            comb = torch.cat((obs, acs), dim=2)
+            comb = torch.cat((obs, acs), dim=2).to(torch_device)
 
             _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
             self.set_hidden(hs1, hs2)
@@ -297,14 +296,14 @@ class MADDPG(object):
             temp_all_hs =  torch.cat((hs1[0].squeeze(), hs1[1].squeeze(), hs2[0].squeeze(), hs2[1].squeeze()), dim=0)
             exps[ep_length-self.seq_length, :, -hidden_dim_lstm*4:] = temp_all_hs
         else:
-            self.zero_hidden(1,actual=True)
+            self.zero_hidden(1,actual=True,torch_device=torch_device)
             obs = exps[:ep_length-self.seq_length, :, :obs_dim]
             acs = exps[:ep_length-self.seq_length, :, obs_dim:obs_dim+acs_dim]
 
             obs = obs.reshape(ep_length-self.seq_length, 1, nagents*obs_dim)
             acs = acs.reshape(ep_length-self.seq_length, 1, nagents*acs_dim)
 
-            comb = torch.cat((obs, acs), dim=2)
+            comb = torch.cat((obs, acs), dim=2).to(torch_device)
 
             _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
             self.set_hidden(hs1, hs2)
@@ -993,9 +992,9 @@ class MADDPG(object):
 
             curr_agent.critic_optimizer.zero_grad()
             
-            self.zero_hidden(self.batch_size)
-            h1, h2 = self.cast_hidden(rec_states)
-            self.set_hidden(h1, h2,actual=True,target=True)
+            self.zero_hidden(self.batch_size,torch_device=self.torch_device)
+            h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device)
+            self.set_hidden(h1, h2,actual=True,target=True,torch_device=self.torch_device)
 
             slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
             slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
@@ -1141,9 +1140,9 @@ class MADDPG(object):
         # Train actor -----------------------
         if policy:
             curr_agent.policy_optimizer.zero_grad()
-            self.zero_hidden(self.batch_size,actual=True,target=True)
-            h1, h2 = self.cast_hidden(rec_states)
-            self.set_hidden(h1, h2,actual=True,target=False)
+            self.zero_hidden(self.batch_size,actual=True,target=True,torch_device=self.torch_device)
+            h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device)
+            self.set_hidden(h1, h2,actual=True,target=False,torch_device=self.torch_device)
 
             slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
             slice_obs_opp = list(map(lambda x: x[:lstm_burn_in], opp_obs))
@@ -1529,12 +1528,12 @@ class MADDPG(object):
                     a.EM  = a.EM = fn(a.EM)
             self.pol_dev = device
         if not only_policy:
-            if not self.critic_dev == device:
-                for a in self.team_agents:
-                    a.critic = fn(a.critic)
-                for a in self.opp_agents:
-                    a.critic = fn(a.critic)
-                self.critic_dev = device
+            #if not self.critic_dev == device:
+            for a in self.team_agents:
+                a.critic = fn(a.critic)
+            for a in self.opp_agents:
+                a.critic = fn(a.critic)
+            self.critic_dev = device
 
             if not self.trgt_pol_dev == device:
                 for a in self.team_agents:
