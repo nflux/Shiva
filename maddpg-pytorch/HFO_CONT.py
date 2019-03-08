@@ -152,9 +152,9 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
                 if not load_same_agent:
                     print("no implementation")
                 else:
-                    maddpg.pretrain_actor_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent,lstm_burn_in=lstm_burn_in
+                    maddpg.pretrain_actor_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent,lstm_burn_in=lstm_burn_in)
                     if up % number_of_updates/10 == 0: # update target half way through
-                        maddpg.update_agent_actor(0,number_of_updates/10))
+                        maddpg.update_agent_actor(0,number_of_updates/10)
 
             else:
                 team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
@@ -671,7 +671,7 @@ if __name__ == "__main__":
         # default settings ---------------------
         num_episodes = 10000000
         replay_memory_size = 25000
-        pt_memory = 1000000
+        pt_memory = 100000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -736,7 +736,7 @@ if __name__ == "__main__":
         TD3_noise = 0.02
         # -------------------------------------- 
         #Pretrain Options ----------------------
-        pretrain = False
+        pretrain = True
         use_pretrain_data = False
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
         pt_update_cycles = 100
@@ -967,31 +967,34 @@ if __name__ == "__main__":
     if pretrain or use_pretrain_data:
         # ------------------------------------ Start Pretrain --------------------------------------------
         pt_trbs = [ReplayTensorBuffer(pt_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size, LSTM,k_ensembles,SIL) for _ in range(num_buffers)]
+                                                obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain) for _ in range(num_buffers)]
         pt_orbs = [ReplayTensorBuffer(pt_memory , num_TA,
-                                            obs_dim_TA,acs_dim,batch_size, LSTM,k_ensembles,SIL) for _ in range(num_buffers)]
+                                            obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain) for _ in range(num_buffers)]
         # ------------ Load in shit from csv into buffer ----------------------
         pt_threads = []
         print("Load PT Buffers")
         all_l = []
         all_r = []
+        all_s = []
         for i in range(1,num_buffers+1):
             left_files = []
             right_files = []
             
             if os.path.isdir(os.getcwd() + '/pt_logs_%i' % ((i+1)*1000)):
                 team_files = os.listdir(os.getcwd() + '/pt_logs_%i' % ((i+1)*1000))
-                left_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_left_' or '.csv' in f]
-                right_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_right_' or '.csv' in f]
+                left_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_left_' in f]
+                right_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_right_' in f]
+                status_file = os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + 'log_status.csv'
             else:
                 print('log directory DNE')
                 exit(0)
             all_l.append(left_files)
             all_r.append(right_files)
+            all_s.append(status_file)
     
-        second_args = [(num_TA,obs_dim_TA,pt_trbs[i],pt_orbs[i],episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,pt_episodes) for i in range(num_buffers)]
+        second_args = [(num_TA,obs_dim_TA,acs_dim,pt_trbs[i],pt_orbs[i],episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,pt_episodes,LSTM_policy) for i in range(num_buffers)]
         with Pool() as pool:
-            pt_rbs = pool.starmap(load_buffer, zip(all_l,all_r, second_args))
+            pt_rbs = pool.starmap(load_buffer, zip(all_l,all_r,all_s, second_args))
         pt_trbs,pt_orbs = list(zip(*pt_rbs))
         del pt_rbs
         for i in range(num_buffers):
@@ -1001,12 +1004,16 @@ if __name__ == "__main__":
         #opp_replay_buffer = pt_orbs[0]
         
         pt_trb = ReplayTensorBuffer(pt_total_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size, LSTM,k_ensembles,SIL)
+                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain)
         pt_orb = ReplayTensorBuffer(pt_total_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size, LSTM,k_ensembles,SIL)
+                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain)
         for j in range(num_buffers):
-            pt_trb.merge_buffer(pt_trbs[j])
-            pt_orb.merge_buffer(pt_orbs[j])
+            if not LSTM_policy:
+                pt_trb.merge_buffer(pt_trbs[j])
+                pt_orb.merge_buffer(pt_orbs[j])
+            else:
+                pt_trb.merge_buffer_LSTM(pt_trbs[j])
+                pt_orb.merge_buffer_LSTM(pt_orbs[j])
             print("Merging Buffer: ",j)
         del pt_trbs
         del pt_orbs
@@ -1034,7 +1041,7 @@ if __name__ == "__main__":
             for a_i in range(1):
                 threads.append(mp.Process(target=imitation_thread,args=(a_i,to_gpu,len(pt_trb),batch_size,
                     pt_trb,pt_orb,number_of_updates,
-                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
+                    load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,seq_length,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in)))
             [thr.start() for thr in threads]
             
             agentID = 0
@@ -1071,9 +1078,9 @@ if __name__ == "__main__":
                     # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
 
                     if LSTM:
-                        team_sample = pt_trb.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
-                        opp_sample = pt_orb.sample_LSTM(inds, seq_length,to_gpu=to_gpu,norm_rews=False,device=maddpg.torch_device)
-                        priorities #=maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
+                        team_sample = pt_trb.sample_LSTM(inds,to_gpu=to_gpu,device=maddpg.torch_device)
+                        opp_sample = pt_orb.sample_LSTM(inds,to_gpu=to_gpu,device=maddpg.torch_device)
+                        # priorities=maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
                         print("Use pretrain function")
                         #pt_trb.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
 

@@ -81,11 +81,11 @@ def e_greedy_bool(numAgents, eps=0.0,device='cpu'):
     return (rand < eps)
 
 
-def pretrain_process(left_fnames, right_fnames, num_features):
+def pretrain_process(left_fnames, right_fnames, fstatus, num_features):
     
     # sort fnames by uniform
-    left_fnames.sort()
-    right_fnames.sort()
+    left_fnames.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
+    right_fnames.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
 
     obs_header_names = ['cycle']
     for n in range(num_features):
@@ -97,23 +97,21 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     #df_right_status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in right_fnames if '_status_' in fn]
     df_right_action_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'dash', 'turn', 'kick', 'd1', 'd2', 't1', 'k1', 'k2']) for fn in right_fnames if '_actions_right' in fn]
     df_right_obs_list = [pd.read_csv(fn, sep=',', header=None, names=obs_header_names) for fn in right_fnames if '_obs_right' in fn]
-    
+
+    status = pd.read_csv(fstatus, sep=',', header=None, names=['cycle', 'status'])
     # print(df_left_action_list)
     print("Dropping duplicates")
     # Drop repeated cycles
-    status_list = [pd.read_csv(fn, sep=',', header=None, names=['cycle', 'status']) for fn in left_fnames if 'status' in fn]
-    status_list = [status_list[0] for i in range(len(status_list))]
-    [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in status_list]
+    status.drop_duplicates(['cycle'], keep='last', inplace=True)
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_action_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_obs_list]
 
-    #[df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_status_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_action_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_obs_list]
 
     # # Temporary fix for messed up goalie actions
     df_goalie_action_patch = pd.DataFrame()
-    df_goalie_action_patch['cycle'] = np.arange(len(status_list[0].index)+1)
+    df_goalie_action_patch['cycle'] = np.arange(len(status.index)+1)
     print("Cleaning null actions")
     df_left_action_list = [pd.merge(df_goalie_action_patch, df_left_action_list[i], on='cycle', how='outer') for i in range(len(df_left_action_list))]
     df_right_action_list = [pd.merge(df_goalie_action_patch, df_right_action_list[i], on='cycle', how='outer') for i in range(len(df_right_action_list))]
@@ -127,7 +125,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
 
     
     df_goalie_action_patch = pd.DataFrame()
-    df_goalie_action_patch['cycle'] = np.arange(len(status_list[0].index)+1)
+    df_goalie_action_patch['cycle'] = np.arange(len(status.index)+1)
     print("Cleaning null obs")
     df_left_obs_list = [pd.merge(df_goalie_action_patch, df_left_obs_list[i], on='cycle', how='outer') for i in range(len(df_left_obs_list))]
     df_right_obs_list = [pd.merge(df_goalie_action_patch, df_right_obs_list[i], on='cycle', how='outer') for i in range(len(df_right_obs_list))]
@@ -140,16 +138,17 @@ def pretrain_process(left_fnames, right_fnames, num_features):
 
     
     df_goalie_action_patch = pd.DataFrame()
-    df_goalie_action_patch['cycle'] = np.arange(len(status_list[0].index))
+    df_goalie_action_patch['cycle'] = np.arange(len(status.index))
     print("Cleaning null status")
-    status_list = [pd.merge(df_goalie_action_patch, status_list[i], on='cycle', how='outer') for i in range(len(status_list))]
+    status = pd.merge(df_goalie_action_patch, status, on='cycle', how='outer')
     #df_right_status_list = [pd.merge(df_goalie_action_patch, df_right_status_list[i], on='cycle', how='outer') for i in range(len(df_right_status_list))]
     #[df.interpolate(inplace=True) for df in df_left_status_list]
     #[df.interpolate(inplace=True) for df in df_right_status_list]
-    [df.fillna(0,inplace=True) for df in status_list]
+    status.fillna(0,inplace=True)
+    # [df.fillna(0,inplace=True) for df in status_list]
     #[df.fillna(0,inplace=True) for df in df_right_status_list]
     print("Checking DF's for null values")
-    print([df.isnull().values.any() for df in status_list])
+    # print([df.isnull().values.any() for df in status_list])
     #print([df.isnull().values.any() for df in df_right_status_list])
 
     
@@ -165,7 +164,7 @@ def pretrain_process(left_fnames, right_fnames, num_features):
     # exit(0)
     print("Converting df to numpy")
     # Turn to numpy arrays, NOTE: Actions are hot-encoded in the logs
-    status = [df.loc[:, 'status'].values for df in status_list]
+    status = status.loc[:, 'status'].values
     team_pt_obs = [df.loc[:, obs_header_names[1:]].values for df in df_left_obs_list]
     team_pt_actions = [df.loc[:, 'dash':].values for df in df_left_action_list]
 
@@ -176,12 +175,12 @@ def pretrain_process(left_fnames, right_fnames, num_features):
 
     # Change dims to timesteps x number of agents x item
     #team_pt_status = [np.asarray([status[i][ts] for i in range(len(status))]) for ts in range(len(status[0])-3)]
-    team_pt_obs = [np.asarray([team_pt_obs[i][ts] for i in range(len(team_pt_obs))]) for ts in range(len(status[0])-3)]
-    team_pt_actions = [np.asarray([team_pt_actions[i][ts] for i in range(len(team_pt_actions))]) for ts in range(len(status[0])-3)]
+    team_pt_obs = [np.asarray([team_pt_obs[i][ts] for i in range(len(team_pt_obs))]) for ts in range(len(status)-3)]
+    team_pt_actions = [np.asarray([team_pt_actions[i][ts] for i in range(len(team_pt_actions))]) for ts in range(len(status)-3)]
 
     #opp_pt_status = [np.asarray([o_status[i][ts] for i in range(len(o_status))]) for ts in range(len(status[0])-3)]
-    opp_pt_obs = [np.asarray([opp_pt_obs[i][ts] for i in range(len(opp_pt_obs))]) for ts in range(len(status[0])-3)]
-    opp_pt_actions = [np.asarray([opp_pt_actions[i][ts] for i in range(len(opp_pt_actions))]) for ts in range(len(status[0])-3)]
+    opp_pt_obs = [np.asarray([opp_pt_obs[i][ts] for i in range(len(opp_pt_obs))]) for ts in range(len(status)-3)]
+    opp_pt_actions = [np.asarray([opp_pt_actions[i][ts] for i in range(len(opp_pt_actions))]) for ts in range(len(status)-3)]
     team_pt_status = 0
     opp_pt_status = 0
     
@@ -509,15 +508,23 @@ def getPretrainRew(s,d,base):
 
     return reward
 
+def exp_stack(obs,acs,rews,next_obs,dones,MC_targets,n_step_targets,ws,prio,def_prio,LSTM_policy):
+    if not LSTM_policy:
+        return np.column_stack((obs, acs, rews, next_obs, dones, MC_targets, n_step_targets,
+                                    ws, prio, def_prio))
+    else:
+        return np.column_stack((obs, acs, rews, dones, MC_targets, n_step_targets,
+                                    ws, prio, def_prio))
 
-def load_buffer(left,right,zip_vars):
-    num_TA,obs_dim_TA,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,num_episodes = zip_vars
+
+def load_buffer(left,right,fstatus,zip_vars):
+    num_TA,obs_dim_TA,acs_dim,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,num_episodes,LSTM_policy = zip_vars
     
     
-    team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, num_features = obs_dim_TA-8) # -8 for action space thats added here.
+    team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, fstatus=fstatus, num_features = obs_dim_TA-acs_dim) # -8 for action space thats added here.
 
     # Count up everything besides IN_GAME to get number of episodes
-    collect = collections.Counter(status[0])
+    collect = collections.Counter(status)
     pt_episodes = collect[1] + collect[2] + collect[3] + collect[4] + collect[6] + collect[7]
     
     pt_time_step = 0
@@ -547,7 +554,7 @@ def load_buffer(left,right,zip_vars):
         first_action = np.asarray([[1.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0] for _ in range(num_TA)])
         for et_i in range(episode_length):
             exps = None
-            world_stat = status[0][pt_time_step]
+            world_stat = status[pt_time_step]
             d = 0
             if world_stat != 0.0:
                 d = 1
@@ -619,7 +626,9 @@ def load_buffer(left,right,zip_vars):
                         # print(current_ensembles)
                         if SIL:
                             SIL_priorities = np.ones(num_TA)*default_prio
-                        exp_team = np.column_stack((team_n_step_obs[n],
+                        
+                        # If LSTM_policy == True then don't take the next obs
+                        exp_team = exp_stack(team_n_step_obs[n],
                                             team_n_step_acs[n],
                                             np.expand_dims(team_n_step_rewards[n], 1),
                                             n_step_next_ob_team,
@@ -628,10 +637,9 @@ def load_buffer(left,right,zip_vars):
                                             np.expand_dims(n_step_targets_team, 1),
                                             np.expand_dims([team_n_step_ws[n] for i in range(num_TA)], 1),
                                             priorities,
-                                            np.expand_dims([default_prio for i in range(num_TA)],1)))
+                                            np.expand_dims([default_prio for i in range(num_TA)],1), LSTM_policy)
 
-
-                        exp_opp = np.column_stack((opp_n_step_obs[n],
+                        exp_opp = exp_stack(opp_n_step_obs[n],
                                             opp_n_step_acs[n],
                                             np.expand_dims(opp_n_step_rewards[n], 1),
                                             n_step_next_ob_opp,
@@ -640,7 +648,7 @@ def load_buffer(left,right,zip_vars):
                                             np.expand_dims(n_step_targets_opp, 1),
                                             np.expand_dims([opp_n_step_ws[n] for i in range(num_OA)], 1),
                                             priorities,
-                                            np.expand_dims([default_prio for i in range(num_TA)],1)))
+                                            np.expand_dims([default_prio for i in range(num_TA)],1), LSTM_policy)
                 
                         exp_comb = np.expand_dims(np.vstack((exp_team, exp_opp)), 0)
 
@@ -648,16 +656,29 @@ def load_buffer(left,right,zip_vars):
                             exps = torch.from_numpy(exp_comb)
                         else:
                             exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
-                    if push_only_left:
-                        team_PT_replay_buffer.push(exps[:, :num_TA, :])
-                        opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                    
+                    if not LSTM_policy:
+                        if push_only_left:
+                            team_PT_replay_buffer.push(exps[:, :num_TA, :])
+                            opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                        else:
+                            team_PT_replay_buffer.push(exps[:, :num_TA, :])
+                            opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                            opp_PT_replay_buffer.push(exps[:, :num_TA, :])
+                            team_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                            #team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:,-num_TA:,:])))
+                            #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
                     else:
-                        team_PT_replay_buffer.push(exps[:, :num_TA, :])
-                        opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
-                        opp_PT_replay_buffer.push(exps[:, :num_TA, :])
-                        team_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
-                        #team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:,-num_TA:,:])))
-                        #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
+                        if push_only_left:
+                            team_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
+                            opp_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
+                        else:
+                            team_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
+                            opp_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
+                            opp_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
+                            team_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
+                            #team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:,-num_TA:,:])))
+                            #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
         
                     del exps
                     exps = None

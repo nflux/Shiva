@@ -22,7 +22,7 @@ class ReplayTensorBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k,SIL):
+    def __init__(self, max_steps, num_agents, obs_dim, ac_dim, batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k,SIL,pretrain=False):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -41,7 +41,10 @@ class ReplayTensorBuffer(object):
         self.seq_length = seq_length
         self.overlap = overlap
         self.hidden_dim_lstm = hidden_dim_lstm
-        total_dim = obs_dim+ac_dim+6+k+(hidden_dim_lstm*4)
+        if not pretrain:
+            total_dim = obs_dim+ac_dim+6+k+(hidden_dim_lstm*4)
+        else:
+            total_dim = obs_dim+ac_dim+6+k
         
         if LSTM:
             self.max_steps = int(max_steps/seq_length) # Max sequences did this to reduce var name change
@@ -170,7 +173,23 @@ class ReplayTensorBuffer(object):
         if self.curr_i == self.max_steps:
             self.curr_i = 0
 
-            
+    def merge_buffer_LSTM(self, buffer):
+        nentries = len(buffer)
+
+        if self.curr_i + nentries > self.max_steps:
+            rollover = self.max_steps - self.curr_i # num of indices to roll over
+            self.seq_exps = roll2(self.seq_exps, rollover)
+
+            self.curr_i = 0
+            self.filled_i = self.max_steps
+        
+        self.seq_exps[:self.seq_length, self.curr_i:self.curr_i+nentries, :self.num_agents, :] = buffer.seq_exps[:self.seq_length, :nentries, :self.num_agents, :]
+
+        self.curr_i += nentries
+        if self.filled_i < self.max_steps:
+            self.filled_i += nentries
+        if self.curr_i == self.max_steps:
+            self.curr_i = 0
 
     def push_LSTM(self, exps):
         ep_length = len(exps)
