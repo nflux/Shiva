@@ -2271,8 +2271,8 @@ class MADDPG(object):
         _ = curr_agent.policy(burn_in_obs) # burn in
 
         # Get post-burn in training steps
-        slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
-        slice_acs = list(map(lambda x: x[:lstm_burn_in], acs)) 
+        slice_obs = list(map(lambda x: x[lstm_burn_in:], obs))
+        slice_acs = list(map(lambda x: x[lstm_burn_in:], acs)) 
 
         obs_stacked = torch.cat(slice_obs,dim=1)
         all_acs = torch.cat(slice_acs,dim=1)

@@ -47,7 +47,7 @@ class ReplayTensorBuffer(object):
             total_dim = obs_dim+ac_dim+6+k
         
         if LSTM:
-            self.max_steps = int(max_steps/seq_length) # Max sequences did this to reduce var name change
+            self.max_steps = int(max_steps) # Max sequences did this to reduce var name change
             self.seq_exps = torch.zeros((seq_length, self.max_steps, num_agents, total_dim), requires_grad=False)
         else:
             self.obs_buffs = torch.zeros((max_steps, num_agents, obs_dim))

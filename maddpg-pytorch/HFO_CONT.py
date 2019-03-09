@@ -35,7 +35,7 @@ import gc
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
                             load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in):
     start = time.time()
-    if len(team_replay_buffer) > 400:
+    if len(team_replay_buffer) > 100000000000:
 
         initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
         #maddpg = dill.loads(maddpg_pick)
@@ -670,7 +670,7 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 25000
+        replay_memory_size = 100000
         pt_memory = 100000
         episode_length = 500 # FPS
         untouched_time = 500
@@ -690,7 +690,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 128
+        batch_size = 32
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate 
@@ -698,10 +698,10 @@ if __name__ == "__main__":
         number_of_updates = 0
         # exploration --------------------------
         explore = True
-        final_OU_noise_scale = 0.03
-        final_noise_scale = 0.1
+        final_OU_noise_scale = 0.00
+        final_noise_scale = 0.01
         init_noise_scale = 1.00
-        num_explore_episodes = 50 # Haus uses over 10,000 updates --
+        num_explore_episodes = 1 # Haus uses over 10,000 updates --
         multi_gpu = True
         data_parallel = False
         
@@ -748,7 +748,7 @@ if __name__ == "__main__":
         bl_agent2d = False
         use_preloaded_agent2d = False
         preload_agent2d_path = ""
-        num_buffers = 16
+        num_buffers = 14
         pt_total_memory = pt_memory*num_buffers
 
         pt_episodes = 4000 # not used
@@ -800,7 +800,7 @@ if __name__ == "__main__":
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.8
         load_same_agent = True # load same policy for all agents
-        push_only_left = False
+        push_only_left = True
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -1047,8 +1047,8 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(pt_trb)
 
-            number_of_updates = 6000
-            batches_to_sample = 1000
+            number_of_updates = 1000
+            batches_to_sample = 100
             if len(pt_trb) < batch_size*(batches_to_sample):
                 batches_to_sample = 1
             priorities = [] 
@@ -1078,10 +1078,10 @@ if __name__ == "__main__":
                     # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
 
                     if LSTM:
-                        team_sample = pt_trb.sample_LSTM(inds,to_gpu=to_gpu,device=maddpg.torch_device)
-                        opp_sample = pt_orb.sample_LSTM(inds,to_gpu=to_gpu,device=maddpg.torch_device)
+                        team_sample = pt_trb.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],to_gpu=to_gpu,device=maddpg.torch_device)
+                        opp_sample = pt_orb.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],to_gpu=to_gpu,device=maddpg.torch_device)
                         # priorities=maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
-                        print("Use pretrain function")
+                        #print("Use pretrain function")
                         #pt_trb.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
 
                         if not load_same_agent:
@@ -1141,8 +1141,6 @@ if __name__ == "__main__":
 
 
     # -------------Done pretraining actor/critic ---------------------------------------------
-    maddpg.team_agents[0].change_c_lr(lr=freeze_critic) # freeze critic until buffer is loaded with 500k
-    maddpg.team_agents[0].change_a_lr(lr=freeze_actor) # freeze actor until buffer is loaded with 1.5mill
     maddpg.save_agent2d(load_path,0,load_same_agent,maddpg.torch_device)
     [maddpg.save_ensemble(ensemble_path,0,i,load_same_agent,maddpg.torch_device) for i in range(num_TA)] # Save agent2d into ensembles
 
@@ -1218,11 +1216,6 @@ if __name__ == "__main__":
 
                             
         maddpg.load_same_ensembles(ensemble_path,0,maddpg.nagents_team,load_same_agent=load_same_agent)        
-
-        if len(team_replay_buffer) > 1000:
-            maddpg.team_agents[0].change_c_lr(lr=c_lr) # Unfreeze actor after buffer is loaded with 1million
-        if len(team_replay_buffer) > 1000:
-            maddpg.team_agents[0].change_a_lr(lr=a_lr) # Unfreeze actor after buffer is loaded with 1million
 
 
         training = (len(team_replay_buffer) >= batch_size)
