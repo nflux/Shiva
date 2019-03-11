@@ -620,17 +620,16 @@ class HFO_env():
         # set global possessor flag     
         # If anyone kicked the ball, on left get which one
         kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
-        if kicked.any():
-            self.team_obs[:,-11] = (kicked.argmax() + 1)/100.0
-
-        else:
-            self.team_obs[:,-11] = 0
+        #if kicked.any():
+            #self.team_obs[:,-11] = (kicked.argmax() + 1)/100.0
+        #else:
+        #    self.team_obs[:,-11] = 0
         # If anyone kicked the ball on right
         kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
-        if kicked.any():
-            self.opp_team_obs[:,-10] = (kicked.argmax() + 1)/100.0
-        else:
-            self.opp_team_obs[:,-10] = 0
+        #if kicked.any():
+        #    self.opp_team_obs[:,-10] = (kicked.argmax() + 1)/100.0
+        #else:
+        #    self.opp_team_obs[:,-10] = 0
 
         
         if self.team_base == base:
@@ -1112,7 +1111,6 @@ class HFO_env():
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-    # found from https://github.com/openai/gym-soccer/blob/master/gym_soccer/envs/soccer_env.py
     def _start_hfo_server(self, frames_per_trial=100,
                               untouched_time=100, offense_agents=1,
                               defense_agents=0, offense_npcs=0,

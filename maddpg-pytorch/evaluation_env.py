@@ -42,15 +42,15 @@ class evaluation_env():
         """
     # class constructor
     def __init__(self, num_TNPC=0,num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'base_left',
-                 goalie = False, num_trials = 10000,fpt = 100,feat_lvl = 'high',
+                 goalie = True, num_trials = 10000,fpt = 100,feat_lvl = 'low',
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 63000,
                  offense_on_ball=0, fullstate = False, seed = 123,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-                 verbose = False, log_game=False, log_dir="log",
-                 agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,change_every_x=5,
-                 change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,change_balls_y=0.1, 
-                 control_rand_init=False,record=False):
-        
+                 verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
+                 agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,change_every_x=5000,
+                 change_agents_x=0.1,change_balls_x=0.1, change_agents_y=0.1,change_balls_y=0.1, control_rand_init=False,record=False,
+                 defense_team_bin='helios15', offense_team_bin='helios16', run_server=False, deterministic=True,
+                 record_server=True):
 
         """ Initializes HFO_Env
 
@@ -80,12 +80,16 @@ class evaluation_env():
                                fullstate = fullstate, seed = seed,
                                ball_x_min = ball_x_min, ball_x_max = ball_x_max,
                                ball_y_min= ball_y_min, ball_y_max= ball_y_max,
-                               verbose = verbose, log_game = log_game, log_dir = log_dir,record=record,
+                               verbose = verbose, rcss_log_game = rcss_log_game, 
+                               hfo_log_game=hfo_log_game, log_dir = log_dir,     
                                agents_x_min=agents_x_min, agents_x_max=agents_x_max,
                                agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                                change_every_x=change_every_x, change_agents_x=change_agents_x,
                                change_agents_y=change_agents_y, change_balls_x=change_balls_x,
-                               change_balls_y=change_balls_y, control_rand_init=control_rand_init)
+                               change_balls_y=change_balls_y, control_rand_init=control_rand_init,
+                               record=record,defense_team_bin=defense_team_bin,
+                               offense_team_bin=offense_team_bin, deterministic=deterministic,
+                              record_server=record_server)
 
         self.num_trials = num_trials
         self.viewer = None
@@ -602,17 +606,17 @@ class evaluation_env():
                 return reward
         
             # If anyone kicked the ball, on left get which one
-            kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
-            if kicked.any():
-                self.team_obs[:,-11] = (kicked.argmax() + 1)/100.0
-            else:
-                self.team_obs[:,-11] = 0
+            #kicked = np.array([self.action_list[self.team_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.team_obs_previous) for i in range(self.num_TA)])
+            #if kicked.any():
+            #    self.team_obs[:,-11] = (kicked.argmax() + 1)/100.0
+            #else:
+            #    self.team_obs[:,-11] = 0
             # If anyone kicked the ball on right
-            kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
-            if kicked.any():
-                self.opp_team_obs[:,-10] = (kicked.argmax() + 1)/100.0
-            else:
-                self.opp_team_obs[:,-10] = 0
+            #kicked = np.array([self.action_list[self.opp_actions[i]] in self.kick_actions and self.get_kickable_status(i,self.opp_team_obs_previous) for i in range(self.num_TA)])
+            #if kicked.any():
+            #    self.opp_team_obs[:,-10] = (kicked.argmax() + 1)/100.0
+            #else:
+            #    self.opp_team_obs[:,-10] = 0
 
                     ########################### keep the ball kickable ####################################
                 #team_kickable = False
@@ -757,8 +761,8 @@ class evaluation_env():
                 if self.team_base == base:
                     self.team_obs_previous[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
                     self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID,-8:] = [0.0,1.0,0.0, 0.0,0.0,0.0,0.0,0.0]
-                    self.team_obs_previous[agent_ID,-8:] = [0.0,1.0,0.0, 0.0,0.0,0.0,0.0,0.0]
+                    self.team_obs[agent_ID,-8:] = [1.0,0.0,0.0, 1.0,0.0,0.0,0.0,0.0]
+                    self.team_obs_previous[agent_ID,-8:] = [1.0,0.0,0.0, 1.0,0.0,0.0,0.0,0.0]
                 else:
                     self.opp_team_obs_previous[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
                     self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
@@ -909,16 +913,19 @@ class evaluation_env():
                               untouched_time=100, offense_agents=1,
                               defense_agents=0, offense_npcs=0,
                               defense_npcs=0, sync_mode=True, port=63000,
-                              offense_on_ball=0, fullstate=False, seed=123,
+                              offense_on_ball=0, fullstate=True, seed=123,
                               ball_x_min=-0.8, ball_x_max=0.8,
                               ball_y_min=-0.8, ball_y_max=0.8,
-                              verbose=False, log_game=False,
+                              verbose=False, rcss_log_game=False,
                               log_dir="log",
+                              hfo_log_game=False,
                               agents_x_min=0.0, agents_x_max=0.0,
                               agents_y_min=0.0, agents_y_max=0.0,
                               change_every_x=1, change_agents_x=0.1,
                               change_agents_y=0.1, change_balls_x=0.1,
-                              change_balls_y=0.1, control_rand_init=False,record=True):
+                              change_balls_y=0.1, control_rand_init=False,record=True,record_server=True,
+                              defense_team_bin='base', offense_team_bin='helios16', deterministic=True):
+
             """
             Starts the Half-Field-Offense server.
             frames_per_trial: Episodes end after this many steps.
@@ -949,12 +956,16 @@ class evaluation_env():
                      offense_on_ball, seed, ball_x_min, ball_x_max,
                      ball_y_min, ball_y_max, log_dir)
             cmd += " --defense-team %s" \
-                % ('helios')
+                % ('base')
             if not sync_mode: cmd += " --no-sync"
             if fullstate:     cmd += " --fullstate"
+            if deterministic:      cmd += " --deterministic"
+
             if verbose:       cmd += " --verbose"
-            if not log_game:  cmd += " --no-logging"
+            if not rcss_log_game:  cmd += " --no-logging"
+            if hfo_log_game:       cmd += " --hfo-logging"
             if record:        cmd += " --record"
+            if record_server:      cmd += " --log-gen-pt"      
             if control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

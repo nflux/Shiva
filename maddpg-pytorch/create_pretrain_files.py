@@ -9,7 +9,7 @@ def main(args):
     left_side = 3
     right_side = 3
     fpt = 500
-    untouched_time = 500
+    untouched_time = 50
     sync_mode = True
     fullstate = True
     deterministic = True
@@ -19,10 +19,10 @@ def main(args):
 
     # Control Random Initilization of Agents and Ball
     control_rand_init = True
-    ball_x_min = -0.7
-    ball_x_max = 0.7
-    ball_y_min = -0.7
-    ball_y_max = 0.7
+    ball_x_min = -0.22
+    ball_x_max = -0.22
+    ball_y_min = -0.28
+    ball_y_max = -0.28
     agents_x_min = -0.4
     agents_x_max = 0.4
     agents_y_min = -0.4

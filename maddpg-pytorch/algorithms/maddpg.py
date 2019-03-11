@@ -255,11 +255,11 @@ class MADDPG(object):
                 opp_acs = self.opp_agents[0].policy(opp_observations)
 
             return [a.step(obs,ran, acs,explore=explore) for a,ran, obs,acs in zip(self.team_agents, team_e_greedy,team_observations,team_acs)], \
-                    [a.step(obs,ran, acs,explore=False) for a,ran, obs,acs in zip(self.opp_agents,opp_e_greedy, opp_observations,opp_acs)]
+                    [a.step(obs,ran, acs,explore=explore) for a,ran, obs,acs in zip(self.opp_agents,opp_e_greedy, opp_observations,opp_acs)]
 
 
         else:                
-            return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
+            return [a.step(obs,ran, explore=False) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
                     [a.step(obs,ran, explore=False) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
 
     def get_recurrent_states(self, exps, obs_dim, acs_dim, nagents, hidden_dim_lstm,torch_device):
@@ -2222,7 +2222,7 @@ class MADDPG(object):
 
 # ----------------------------------------------------------------------------------------
 
-    def pretrain_actor_LSTM(self, team_sample=[], opp_sample =[], agent_i = 0, side='team', parallel=False, logger=None, act_only=False, obs_only=False,forward_pass=True,load_same_agent=False,session_path="",lstm_burn_in=40):
+    def pretrain_actor_LSTM(self, team_sample=[], opp_sample =[], agent_i = 0, side='team', parallel=False, logger=None, act_only=False, obs_only=False,forward_pass=True,load_same_agent=False,session_path="",lstm_burn_in=40,burnin=False):
         """
         Update parameters of actor based on sample from replay buffer for policy imitation (fits policy to observed actions)
         Inputs:
@@ -2262,17 +2262,22 @@ class MADDPG(object):
 
         self.curr_agent_index = agent_i
 
-
+            
         # Zero state initialization then burn-in LSTM
         self.zero_hidden_policy(self.batch_size*nagents,self.torch_device)
-        slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
-        slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
-        burn_in_obs = torch.cat(slice_obs,dim=1)
-        _ = curr_agent.policy(burn_in_obs) # burn in
+        
+        if burnin:
 
-        # Get post-burn in training steps
-        slice_obs = list(map(lambda x: x[lstm_burn_in:], obs))
-        slice_acs = list(map(lambda x: x[lstm_burn_in:], acs)) 
+            slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
+            slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
+            burn_in_obs = torch.cat(slice_obs,dim=1)
+            _ = curr_agent.policy(burn_in_obs) # burn in
+            # Get post-burn in training steps
+            slice_obs = list(map(lambda x: x[lstm_burn_in:], obs))
+            slice_acs = list(map(lambda x: x[lstm_burn_in:], acs)) 
+        else:
+            slice_obs = obs
+            slice_acs = acs
 
         obs_stacked = torch.cat(slice_obs,dim=1)
         all_acs = torch.cat(slice_acs,dim=1)
@@ -2282,14 +2287,13 @@ class MADDPG(object):
             curr_pol_out = curr_agent.policy(obs_stacked)
         
         
-        
         curr_agent.policy_optimizer.zero_grad()
         
     
         pol_out_actions = torch.softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).float()
         actual_out_actions = Variable(all_acs,requires_grad=True).float()[:,:,:curr_agent.action_dim]
         if self.zero_critic:
-            pol_out_params = zero_params(torch.cat((onehot_from_logits(curr_pol_out[:,:,:curr_agent.action_dim],LSTM=False),curr_pol_out[:,:,curr_agent.action_dim:]),dim=2))[:,:,curr_agent.action_dim:]
+            pol_out_params = zero_params(torch.cat((onehot_from_logits(curr_pol_out[:,:,:curr_agent.action_dim],LSTM=True),curr_pol_out[:,:,curr_agent.action_dim:]),dim=2))[:,:,curr_agent.action_dim:]
             actual_out_params = Variable(zero_params(all_acs),requires_grad=True)[:,curr_agent.action_dim:]
         else:
             pol_out_params = curr_pol_out[:,:,curr_agent.action_dim:]

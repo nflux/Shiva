@@ -24,14 +24,14 @@ from evaluation_env import *
 import subprocess
 
 def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',port=7000,
-                num_TA=1,num_ONPC=0, fpt = 500,device="cpu",use_viewer=False,goalie=False):
+                num_TA=1,num_ONPC=0, fpt = 500,device="cpu",use_viewer=False,goalie=True):
 
 
     control_rand_init = True
-    ball_x_min = -0.1
-    ball_x_max = 0.1
-    ball_y_min = -0.1
-    ball_y_max = 0.1
+    ball_x_min = -0.22
+    ball_x_max = -0.22
+    ball_y_min = -0.28
+    ball_y_max = -0.28
     agents_x_min = -0.3
     agents_x_max = 0.3
     agents_y_min = -0.3
@@ -47,14 +47,15 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     #subprocess.Popen("ps -ef | grep 7000 | awk '{print $2}' | xargs kill",shell=True)
     time.sleep(1)
     env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
-                         untouched_time = 500,fullstate=True,offense_on_ball=False,
-                         port=63000,log_dir=log_dir,record=False,goalie=goalie,agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+                         untouched_time = 500,fullstate=True,ball_x_min = ball_x_min,ball_x_max =ball_x_max,
+                         ball_y_min = ball_y_min,ball_y_max = ball_y_max,offense_on_ball=False,
+                         port=63000,log_dir=log_dir,rcss_log_game=False,hfo_log_game=False,record=False,goalie=goalie,agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                 change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-                change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init)
+                change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record_server=True)
     time.sleep(2.0)
     maddpg = MADDPG.init_from_save_evaluation(filenames,num_TA)
     time.sleep(1.5)
-
+    LSTM_policy = True
     team_step_logger_df = pd.DataFrame()
     env.launch()
     time.sleep(1.5)
@@ -62,13 +63,15 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     maddpg.reset_noise()
     t = 0
     maddpg.prep_training(device=device) # GPU for forward passes?? 
-
+    maddpg.prep_policy_rollout(device=device)
     if use_viewer:
         env._start_viewer()
     # launch evaluation episodes
     for ep_i in range(eval_episodes):
         time_step = 0
         team_kickable_counter = 0
+        if LSTM_policy:
+            maddpg.zero_hidden_policy(1,maddpg.torch_device)
         for et_i in range(fpt):
             torch_obs_team = [Variable(torch.Tensor(np.vstack(env.Observation(i,'team')).T),
                                     requires_grad=False)

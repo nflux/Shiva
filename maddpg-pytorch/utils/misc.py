@@ -141,9 +141,6 @@ def pretrain_process(left_fnames, right_fnames, fstatus, num_features):
     df_goalie_action_patch['cycle'] = np.arange(len(status.index))
     print("Cleaning null status")
     status = pd.merge(df_goalie_action_patch, status, on='cycle', how='outer')
-    #df_right_status_list = [pd.merge(df_goalie_action_patch, df_right_status_list[i], on='cycle', how='outer') for i in range(len(df_right_status_list))]
-    #[df.interpolate(inplace=True) for df in df_left_status_list]
-    #[df.interpolate(inplace=True) for df in df_right_status_list]
     status.fillna(0,inplace=True)
     # [df.fillna(0,inplace=True) for df in status_list]
     #[df.fillna(0,inplace=True) for df in df_right_status_list]
@@ -186,9 +183,11 @@ def pretrain_process(left_fnames, right_fnames, fstatus, num_features):
     
     return team_pt_status, team_pt_obs, team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status
 
-
-
 def zero_params(x):
+    seq = x.shape[0]
+    batch = x.shape[1]
+    if len(x.shape) == 3:
+        x = x.reshape(seq*batch,8)
     dash = torch.tensor([1,0,0], device=x.device).float()
     dash = dash.repeat(len(x),1)
     turn = torch.tensor([0,1,0], device=x.device).float()
@@ -204,7 +203,7 @@ def zero_params(x):
     x[index_turn,3:5] = 0.0
     x[index_turn,6:] =0.0
     x[index_kick,3:-2]=0.0
-    return x
+    return x.reshape(seq,batch,8)
 # returns the distribution projection
 def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, cum_rewards_v, gamma, device="cpu"):
     start = time.time()

@@ -351,7 +351,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             # Get e-greedy decision
             if explore:
                 team_randoms = e_greedy_bool(env.num_TA,eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
-                opp_randoms = e_greedy_bool(env.num_OA,eps = 0,device=maddpg.torch_device)
+                opp_randoms = e_greedy_bool(env.num_OA,eps =(final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
             else:
                 team_randoms = e_greedy_bool(env.num_TA,eps = 0,device=maddpg.torch_device)
                 opp_randoms = e_greedy_bool(env.num_OA,eps = 0,device=maddpg.torch_device)
@@ -637,7 +637,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 8
+    num_envs = 4
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -671,7 +671,7 @@ if __name__ == "__main__":
         # default settings ---------------------
         num_episodes = 10000000
         replay_memory_size = 100000
-        pt_memory = 100000
+        pt_memory = 5000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -690,7 +690,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 32
+        batch_size = 64
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate 
@@ -699,7 +699,7 @@ if __name__ == "__main__":
         # exploration --------------------------
         explore = True
         final_OU_noise_scale = 0.00
-        final_noise_scale = 0.01
+        final_noise_scale = 0.1
         init_noise_scale = 1.00
         num_explore_episodes = 1 # Haus uses over 10,000 updates --
         multi_gpu = True
@@ -748,7 +748,7 @@ if __name__ == "__main__":
         bl_agent2d = False
         use_preloaded_agent2d = False
         preload_agent2d_path = ""
-        num_buffers = 14
+        num_buffers = 16
         pt_total_memory = pt_memory*num_buffers
 
         pt_episodes = 4000 # not used
@@ -780,10 +780,10 @@ if __name__ == "__main__":
         cent_critic = True
         # Control Random Initilization of Agents and Ball
         control_rand_init = True
-        ball_x_min = -0.01
-        ball_x_max = 0.01
-        ball_y_min = -0.01
-        ball_y_max = 0.01
+        ball_x_min = -0.22
+        ball_x_max = -0.22
+        ball_y_min = -0.28
+        ball_y_max = -0.28
         agents_x_min = -0.2 # agents posititions are currently configured in HFO/librcss
         agents_x_max = 0.2
         agents_y_min = -0.2
@@ -878,7 +878,7 @@ if __name__ == "__main__":
         else:
             has_opp_Agents = False
     
-    # dummy env that isn't used explicitly ergo used for dimensions
+        # dummy env that isn't used explicitly ergo used for dimensions
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
                     num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
                     feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
