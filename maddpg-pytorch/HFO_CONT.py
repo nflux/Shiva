@@ -127,7 +127,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
 
     number_of_updates = 10000
-    batches_to_sample = 1000
+    batches_to_sample = 10
     if len(team_replay_buffer) < batch_size*(batches_to_sample):
         batches_to_sample = 1
     for ensemble in range(k_ensembles):
@@ -748,7 +748,7 @@ if __name__ == "__main__":
         bl_agent2d = False
         use_preloaded_agent2d = False
         preload_agent2d_path = ""
-        num_buffers = 16
+        num_buffers = 14
         pt_total_memory = pt_memory*num_buffers
 
         pt_episodes = 4000 # not used

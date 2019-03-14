@@ -9,8 +9,7 @@ from HFO.hfo import hfo
 from HFO import get_config_path, get_hfo_path, get_viewer_path
 import os, subprocess, time, signal
 #from helper import *
-
-
+from utils.misc import zero_params
 
 possession_side = 'N'
 
@@ -301,8 +300,8 @@ class HFO_env():
         """
         # Queue actions for team
         for i in range(self.num_TA):
-            self.team_actions_OH[i] = team_actions_OH[i]
-            self.opp_actions_OH[i] = opp_actions_OH[i]
+            self.team_actions_OH[i] = zero_params(team_actions_OH[i].reshape(-1))
+            self.opp_actions_OH[i] = zero_params(opp_actions_OH[i].reshape(-1))
         [self.Queue_action(i,self.team_base,team_actions[i],team_params) for i in range(len(team_actions))]
         # Queue actions for opposing team
         [self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
@@ -930,8 +929,8 @@ class HFO_env():
                     #self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                     self.team_obs_previous[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
                     self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID,-8:] = [1.0,0.0,0.0, 1.0,0.0,0.0,0.0,0.0]
-                    self.team_obs_previous[agent_ID,-8:] = [1.0,0.0,0.0, 1.0,0.0,0.0,0.0,0.0]
+                    self.team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
+                    self.team_obs_previous[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
 
                     # self.team_obs[agent_ID,-3] = 0
                     # self.team_obs[agent_ID,-2] = 0
@@ -948,8 +947,8 @@ class HFO_env():
                     #self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
                     self.opp_team_obs_previous[agent_ID,:-8] = self.opp_team_envs[agent_ID].getState() # Get initial state
                     self.opp_team_obs[agent_ID,:-8] = self.opp_team_envs[agent_ID].getState() # Get initial state
-                    self.opp_team_obs[agent_ID,-8:] = [1.0,0.0,0.0, 1.0,0.0,0.0,0.0,0.0]
-                    self.opp_team_obs_previous[agent_ID,-8:] = [1.0,0.0,0.0, 1.0,0.0,0.0,0.0,0.0]
+                    self.opp_team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
+                    self.opp_team_obs_previous[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
                     # self.opp_team_obs[agent_ID,-3] = 0
                     # self.opp_team_obs[agent_ID,-2] = 0
                     # self.opp_team_obs[agent_ID,-1] = 0

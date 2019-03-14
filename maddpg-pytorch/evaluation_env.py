@@ -9,8 +9,7 @@ from HFO import get_config_path, get_hfo_path, get_viewer_path
 import os, subprocess, time, signal
 #from helper import *
 
-
-
+from utils.misc import zero_params
 class evaluation_env():
     """HFO_env() extends the HFO environment to allow for centralized execution.
 
@@ -44,12 +43,12 @@ class evaluation_env():
     def __init__(self, num_TNPC=0,num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'base_left',
                  goalie = True, num_trials = 10000,fpt = 100,feat_lvl = 'low',
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 63000,
-                 offense_on_ball=0, fullstate = False, seed = 123,
+                 offense_on_ball=0, fullstate = False, seed = 250,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
                  verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,change_every_x=5000,
                  change_agents_x=0.1,change_balls_x=0.1, change_agents_y=0.1,change_balls_y=0.1, control_rand_init=False,record=False,
-                 defense_team_bin='helios15', offense_team_bin='helios16', run_server=False, deterministic=True,
+                 defense_team_bin='base', offense_team_bin='helios16', run_server=False, deterministic=True,
                  record_server=True):
 
         """ Initializes HFO_Env
@@ -72,6 +71,7 @@ class evaluation_env():
         self.log_dir = log_dir
         self.port = port
         self.hfo_path = get_hfo_path()
+        self.defense_team_bin = defense_team_bin
         self._start_hfo_server(frames_per_trial = fpt, untouched_time = untouched_time,
                                offense_agents = num_TA, defense_agents = num_OA,
                                offense_npcs = num_TNPC, defense_npcs = num_ONPC,
@@ -272,8 +272,8 @@ class evaluation_env():
         """
         # Queue actions for team
         for i in range(self.num_TA):
-            self.team_actions_OH[i] = team_actions_OH[i]
-            self.opp_actions_OH[i] = opp_actions_OH[i]
+            self.team_actions_OH[i] = zero_params(team_actions_OH[i].reshape(-1))
+            self.opp_actions_OH[i] = zero_params(opp_actions_OH[i].reshape(-1))
         [self.Queue_action(i,self.team_base,team_actions[i],team_params) for i in range(len(team_actions))]
         # Queue actions for opposing team
         #[self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
@@ -761,8 +761,8 @@ class evaluation_env():
                 if self.team_base == base:
                     self.team_obs_previous[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
                     self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID,-8:] = [1.0,0.0,0.0, 1.0,0.0,0.0,0.0,0.0]
-                    self.team_obs_previous[agent_ID,-8:] = [1.0,0.0,0.0, 1.0,0.0,0.0,0.0,0.0]
+                    self.team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
+                    self.team_obs_previous[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
                 else:
                     self.opp_team_obs_previous[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
                     self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
@@ -881,6 +881,9 @@ class evaluation_env():
                     else:
                         self.d = True
 
+                        
+                        
+
                     if self.team_base == base:
                         self.team_rewards[agent_ID] = self.getReward(
                             self.team_envs[agent_ID].statusToString(self.world_status),agent_ID,base) # update reward
@@ -923,8 +926,8 @@ class evaluation_env():
                               agents_y_min=0.0, agents_y_max=0.0,
                               change_every_x=1, change_agents_x=0.1,
                               change_agents_y=0.1, change_balls_x=0.1,
-                              change_balls_y=0.1, control_rand_init=False,record=True,record_server=True,
-                              defense_team_bin='base', offense_team_bin='helios16', deterministic=True):
+                              change_balls_y=0.1, control_rand_init=False,record=False,record_server=True,
+                              defense_team_bin='base', offense_team_bin='base', deterministic=True):
 
             """
             Starts the Half-Field-Offense server.
@@ -956,11 +959,10 @@ class evaluation_env():
                      offense_on_ball, seed, ball_x_min, ball_x_max,
                      ball_y_min, ball_y_max, log_dir)
             cmd += " --defense-team %s" \
-                % ('base')
+                % (defense_team_bin)
             if not sync_mode: cmd += " --no-sync"
             if fullstate:     cmd += " --fullstate"
             if deterministic:      cmd += " --deterministic"
-
             if verbose:       cmd += " --verbose"
             if not rcss_log_game:  cmd += " --no-logging"
             if hfo_log_game:       cmd += " --hfo-logging"
