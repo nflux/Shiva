@@ -146,7 +146,7 @@ status_t HFOEnvironment::step() {
   status_t status = agent->getGameStatus();
   // If the episode is over, take three NOOPs to refresh state features
   if (status != IN_GAME && status != SERVER_DOWN) {
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 1; ++i) {
       act(NOOP);
       step();
     }

@@ -402,11 +402,12 @@ Agent::UpdateFeatures()
     hfo::status_t game_status;
     const std::string& message = audioSensor().trainerMessage();
     hfo::ParseGameStatus(message, game_status);
-    if(game_status != hfo::IN_GAME) {
-      ep_end_time = this->M_worldmodel.fullstateTime().cycle();
-    }
+    
     state = feature_extractor->ExtractFeatures(this->world(),
 					       getLastActionStatus(), player_on_ball, ep_end_time);
+    if(game_status != hfo::IN_GAME) {
+      ep_end_time = this->M_worldmodel.fullstateTime().cycle()+1;
+    }
   }
 }
 
