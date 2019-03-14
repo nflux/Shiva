@@ -249,7 +249,7 @@ def parseArgs():
   p.add_argument('--verbose', dest='verbose', action='store_true',
                  default=False, help='Print verbose output.')
   p.add_argument('--deterministic', dest='deterministic', action='store_true',
-                 default=False, help='Make environment deterministic.')
+                 default=True, help='Make environment deterministic.')
   p.add_argument('--tackle-cycles', dest='tackle_cycles', type=int, default=0,
                   help='Change tackle cycle. Default: 0')
   p.add_argument('--no-offside', dest='offside', action='store_false',

@@ -663,11 +663,11 @@ class MADDPG(object):
                 
                 
             if self.preprocess:
-                mod_next_obs = torch.cat((*red_opp_next_obs,*red_next_obs),dim=1)
+                mod_next_obs = torch.cat((*red_next_obs,*red_opp_next_obs),dim=1)
             else:
-                mod_next_obs = torch.cat((*opp_next_obs,*next_obs),dim=1)
+                mod_next_obs = torch.cat((*next_obs,*opp_next_obs),dim=1)
             
-            mod_all_trgt_acs = torch.cat((*opp_all_trgt_acs,*all_trgt_acs),dim=1)
+            mod_all_trgt_acs = torch.cat((*all_trgt_acs,*opp_all_trgt_acs),dim=1)
 
             # Target critic values
             trgt_vf_in = torch.cat((mod_next_obs, mod_all_trgt_acs), dim=1)
@@ -688,13 +688,13 @@ class MADDPG(object):
                 trgt_Q = curr_agent.target_critic(trgt_vf_in)
             
             if self.preprocess:
-                mod_obs = torch.cat((*red_opp_obs,*red_obs),dim=1)
+                mod_obs = torch.cat((*red_obs,*red_opp_obs),dim=1)
             else:
-                mod_obs = torch.cat((*opp_obs,*obs),dim=1)
+                mod_obs = torch.cat((*obs,*opp_obs),dim=1)
             if self.zero_critic:
-                mod_acs = torch.cat((*[zero_params(a) for a in opp_acs],*[zero_params(a) for a in acs]),dim=1)
+                mod_acs = torch.cat((*[zero_params(a) for a in acs],*[zero_params(a) for a in opp_acs]),dim=1)
             else:
-                mod_acs = torch.cat((*opp_acs,*acs),dim=1)
+                mod_acs = torch.cat((*acs,*opp_acs),dim=1)
 
             # Actual critic values
             vf_in = torch.cat((mod_obs, mod_acs), dim=1)
@@ -793,14 +793,14 @@ class MADDPG(object):
                 curr_pol_out_stacked = zero_params(curr_pol_out_stacked)
 
             if self.preprocess:
-                obs_vf_in = torch.cat((*red_opp_obs,*red_obs),dim=1)
+                obs_vf_in = torch.cat((*red_obs,*red_opp_obs),dim=1)
             else:
-                obs_vf_in = torch.cat((*opp_obs,*obs),dim=1)
+                obs_vf_in = torch.cat((*obs,*opp_obs),dim=1)
 
-            acs_vf_in = torch.cat((*opp_acs,*team_pol_acs),dim=1)
+            acs_vf_in = torch.cat((*team_pol_acs,*opp_acs),dim=1)
             
             if self.zero_critic:
-                acs_vf_in = torch.cat((*[zero_params(a) for a in opp_acs],*[zero_params(a) for a in team_pol_acs]),dim=1)
+                acs_vf_in = torch.cat((*[zero_params(a) for a in team_pol_acs],*[zero_params(a) for a in opp_acs]),dim=1)
             mod_vf_in = torch.cat((obs_vf_in, acs_vf_in), dim=1)
 
             # ------------------------------------------------------

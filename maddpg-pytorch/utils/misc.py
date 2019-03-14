@@ -103,10 +103,10 @@ def pretrain_process(left_fnames, right_fnames, fstatus, num_features):
     print("Dropping duplicates")
     # Drop repeated cycles
     status.drop_duplicates(['cycle'], keep='last', inplace=True)
-    [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_action_list]
+    [df.drop_duplicates(['cycle'], keep=False, inplace=True) for df in df_left_action_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_left_obs_list]
 
-    [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_action_list]
+    [df.drop_duplicates(['cycle'], keep=False, inplace=True) for df in df_right_action_list]
     [df.drop_duplicates(['cycle'], keep='last', inplace=True) for df in df_right_obs_list]
 
     # # Temporary fix for messed up goalie actions
@@ -117,8 +117,8 @@ def pretrain_process(left_fnames, right_fnames, fstatus, num_features):
     df_right_action_list = [pd.merge(df_goalie_action_patch, df_right_action_list[i], on='cycle', how='outer') for i in range(len(df_right_action_list))]
     #[df.interpolate(inplace=True) for df in df_left_action_list]
     #[df.interpolate(inplace=True) for df in df_right_action_list]
-    [df.fillna(0.001,inplace=True) for df in df_left_action_list]
-    [df.fillna(0.001,inplace=True) for df in df_right_action_list]
+    [df.fillna(0.0,inplace=True) for df in df_left_action_list]
+    [df.fillna(0.0,inplace=True) for df in df_right_action_list]
     print("Checking DF's for null values")
     print([df.isnull().values.any() for df in df_left_action_list])
     print([df.isnull().values.any() for df in df_right_action_list])
@@ -131,8 +131,8 @@ def pretrain_process(left_fnames, right_fnames, fstatus, num_features):
     df_right_obs_list = [pd.merge(df_goalie_action_patch, df_right_obs_list[i], on='cycle', how='outer') for i in range(len(df_right_obs_list))]
     #[df.interpolate(inplace=True) for df in df_left_obs_list]
     #[df.interpolate(inplace=True) for df in df_right_obs_list]
-    [df.fillna(0.001,inplace=True) for df in df_left_obs_list]
-    [df.fillna(0.001,inplace=True) for df in df_right_obs_list]
+    [df.fillna(0.0,inplace=True) for df in df_left_obs_list]
+    [df.fillna(0.0,inplace=True) for df in df_right_obs_list]
     print("Checking DF's for null values")
 
 
@@ -141,14 +141,13 @@ def pretrain_process(left_fnames, right_fnames, fstatus, num_features):
     df_goalie_action_patch['cycle'] = np.arange(len(status.index))
     print("Cleaning null status")
     status = pd.merge(df_goalie_action_patch, status, on='cycle', how='outer')
-    status.fillna(0,inplace=True)
+    status.fillna(0.0,inplace=True)
     # [df.fillna(0,inplace=True) for df in status_list]
     #[df.fillna(0,inplace=True) for df in df_right_status_list]
     print("Checking DF's for null values")
     # print([df.isnull().values.any() for df in status_list])
     #print([df.isnull().values.any() for df in df_right_status_list])
 
-    
     # [df.interpolate() for df in df_right_action_list]
     # [df.interpolate() for df in df_left_action_list]
     # df_left_action_list[0].to_csv('./temp_path_robocup0.csv', sep=',', index=False)
@@ -184,26 +183,37 @@ def pretrain_process(left_fnames, right_fnames, fstatus, num_features):
     return team_pt_status, team_pt_obs, team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status
 
 def zero_params(x):
-    seq = x.shape[0]
-    batch = x.shape[1]
-    if len(x.shape) == 3:
+    if len(x.shape) == 3: # reshape sequence to be inside batch dimension
+        seq = x.shape[0]
+        batch = x.shape[1]
         x = x.reshape(seq*batch,8)
-    dash = torch.tensor([1,0,0], device=x.device).float()
-    dash = dash.repeat(len(x),1)
-    turn = torch.tensor([0,1,0], device=x.device).float()
-    turn = turn.repeat(len(x),1)
-    kick = torch.tensor([0,0,1], device=x.device).float()
-    kick = kick.repeat(len(x),1)
+    if len(x.shape) ==2:
+        dash = torch.tensor([1,0,0], device=x.device).float()
+        dash = dash.repeat(len(x),1)
+        turn = torch.tensor([0,1,0], device=x.device).float()
+        turn = turn.repeat(len(x),1)
+        kick = torch.tensor([0,0,1], device=x.device).float()
+        kick = kick.repeat(len(x),1)
+        index_dash = torch.nonzero((x[:,:3] == dash).sum(dim=1) == x[:,:3].size(1))
+        index_turn = torch.nonzero((x[:,:3] == turn).sum(dim=1) == x[:,:3].size(1))
+        index_kick = torch.nonzero((x[:,:3] == kick).sum(dim=1) == x[:,:3].size(1))   
+        x[index_dash,5:] = 0.0
+        x[index_turn,3:5] = 0.0
+        x[index_turn,6:] =0.0
+        x[index_kick,3:-2]=0.0
+        return x.reshape(seq,batch,8)
 
-    index_dash = torch.nonzero((x[:,:3] == dash).sum(dim=1) == x[:,:3].size(1))
-    index_turn = torch.nonzero((x[:,:3] == turn).sum(dim=1) == x[:,:3].size(1))
-    index_kick = torch.nonzero((x[:,:3] == kick).sum(dim=1) == x[:,:3].size(1))
-
-    x[index_dash,5:] = 0.0
-    x[index_turn,3:5] = 0.0
-    x[index_turn,6:] =0.0
-    x[index_kick,3:-2]=0.0
-    return x.reshape(seq,batch,8)
+    if len(x.shape) == 1: # Single numpy array (HFO_env)
+        if np.all(x[:3] == [1.0,0.0,0.0]):
+            x[5:] = 0.0
+        elif np.all(x[:3] == [0.0,1.0,0.0]):
+            x[3:5] = 0.0
+            x[6:] =0.0
+        elif np.all(x[:3] == [0.0,0.0,1.0]):
+            x[3:-2]=0.0
+        else:
+            print("Error action not one hot")
+        return x
 # returns the distribution projection
 def distr_projection(self,next_distr_v, rewards_v, dones_mask_t, cum_rewards_v, gamma, device="cpu"):
     start = time.time()
@@ -550,10 +560,10 @@ def load_buffer(left,right,fstatus,zip_vars):
         
 
         d = 0
-        first_action = np.asarray([[1.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0] for _ in range(num_TA)])
+        first_action = np.asarray([[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0] for _ in range(num_TA)])
         for et_i in range(episode_length):
             exps = None
-            world_stat = status[pt_time_step]
+            world_stat = status[pt_time_step+1]
             d = 0
             if world_stat != 0.0:
                 d = 1

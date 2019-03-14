@@ -9,20 +9,21 @@ def main(args):
     left_side = 3
     right_side = 3
     fpt = 500
-    untouched_time = 50
+    untouched_time = 500
     sync_mode = True
     fullstate = True
     deterministic = True
-    seed = np.random.randint(1000)
+    #seed = np.random.randint(1000)
+    seed = 150
     start_viewer = False
     log_dir = args.log_dir
 
     # Control Random Initilization of Agents and Ball
     control_rand_init = True
-    ball_x_min = -0.22
-    ball_x_max = -0.22
-    ball_y_min = -0.28
-    ball_y_max = -0.28
+    ball_x_min = -0.10
+    ball_x_max = -0.10
+    ball_y_min = -0.20
+    ball_y_max = -0.20
     agents_x_min = -0.4
     agents_x_max = 0.4
     agents_y_min = -0.4
@@ -66,9 +67,9 @@ def parseArgs():
                     help='port number 2000 or above')
     p.add_argument('--log_dir', dest='log_dir', type=str, default='log_2000',
                     help='Location of rcg file')
-    p.add_argument('--offense-team', dest='offense_team', type=str, default='helios',
+    p.add_argument('--offense-team', dest='offense_team', type=str, default='base',
                     help='specifies what binary to run for offense')
-    p.add_argument('--defense-team', dest='defense_team', type=str, default='helios',
+    p.add_argument('--defense-team', dest='defense_team', type=str, default='base',
                     help='specifies what binary to run for defense')
     
     args = p.parse_args()
