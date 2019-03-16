@@ -640,14 +640,14 @@ class LSTM_Actor(nn.Module):
 
         # hard coded values
         self.out_action = nn.Linear(self.hidden_dim_lstm, self.action_size)
-        self.out_action.weight.data.normal_(0, 0.01) 
+        self.out_action.weight.data.normal_(0, 0.001) 
 
         self.out_param = nn.Linear(self.hidden_dim_lstm, self.param_size)
-        self.out_param.weight.data.normal_(0, 0.01) 
+        self.out_param.weight.data.normal_(0, 0.001) 
         self.out_param_fn = lambda x: x
         self.out_action_fn = lambda x: x
-
-        self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
+        self.nonlin = nonlin
+        #self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
 
     def init_hidden(self, batch_size,torch_device):

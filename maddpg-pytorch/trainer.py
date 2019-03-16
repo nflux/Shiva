@@ -40,10 +40,10 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
 
 
     control_rand_init = True
-    ball_x_min = -0.10
-    ball_x_max = -0.10
-    ball_y_min = -0.20
-    ball_y_max = -0.20
+    ball_x_min = -0.18
+    ball_x_max = -0.18
+    ball_y_min = -0.40
+    ball_y_max = -0.40
     agents_x_min = -0.3
     agents_x_max = 0.3
     agents_y_min = -0.3
@@ -66,7 +66,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     ep_length = (np.where(stat.iloc[:,1])[0][0] + 1)
     manual_feed_actions = False
     manual_feed_obs = True
-    defense_team_bin = 'base'
+    defense_team_bin = 'helios18'
     print(eval_episodes)
     #subprocess.Popen("ps -ef | grep 7000 | awk '{print $2}' | xargs kill",shell=True)
     time.sleep(1)
@@ -92,6 +92,8 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     if use_viewer:
         env._start_viewer()
     # launch evaluation episodes
+    first_action = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
+
     for ep_i in range(eval_episodes):
         
         time_step = 0
@@ -103,8 +105,14 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
                                     requires_grad=False)
                             for i in range(maddpg.nagents_team)]
             if manual_feed_obs:
-                torch_obs_team = [np.array([ob1.iloc[ep_length+et_i].values[1:]]),np.array([ob2.iloc[et_i+ep_length].values[1:]]),np.array([ob3.iloc[ep_length +et_i].values[1:]])]
-                
+                if et_i == 0:
+                    torch_obs_team = [Variable(torch.from_numpy(np.vstack(np.concatenate((ob1.iloc[ep_length+et_i].values[1:],first_action),axis=0)).T).float(),requires_grad=False),Variable(torch.from_numpy(np.vstack(np.concatenate((ob2.iloc[ep_length+et_i].values[1:],first_action),axis=0)).T).float(),requires_grad=False),Variable(torch.from_numpy(np.vstack(np.concatenate((ob3.iloc[ep_length+et_i].values[1:],first_action),axis=0)).T).float(),requires_grad=False)]
+                else:
+                    ag1_lac = ag1.iloc[start1+ep_length+et_i-1].values[1:]
+                    ag2_lac = ag2.iloc[start2+ep_length+et_i-1].values[1:]
+                    ag3_lac = ag3.iloc[start3+ep_length+et_i-1].values[1:]
+                    torch_obs_team = [Variable(torch.from_numpy(np.vstack(np.concatenate((ob1.iloc[ep_length+et_i].values[1:],ag1_lac),axis=0)).T).float(),requires_grad=False),Variable(torch.from_numpy(np.vstack(np.concatenate((ob2.iloc[ep_length+et_i].values[1:],ag2_lac),axis=0)).T).float(),requires_grad=False),Variable(torch.from_numpy(np.vstack(np.concatenate((ob3.iloc[ep_length+et_i].values[1:],ag3_lac),axis=0)).T).float(),requires_grad=False)]
+                    
             tensors = []
             rands = []
 

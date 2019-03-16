@@ -727,7 +727,7 @@ if __name__ == "__main__":
             freeze_actor = 0.0
             freeze_critic = 0.0
 
-            a_lr = 0.0001 # actor learning rate
+            a_lr = 0.00001 # actor learning rate
             c_lr = 0.0001 # critic learning rate
         #---------------------------------------
         #TD3 Options ---------------------------
@@ -739,7 +739,7 @@ if __name__ == "__main__":
         pretrain = True
         use_pretrain_data = False
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-        pt_update_cycles = 100
+        pt_update_cycles = 200
         pt_inject_proba = 1.0
         init_pt_inject_proba = 1.0
         final_pt_inject_proba = 0.2

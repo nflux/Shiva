@@ -43,7 +43,7 @@ class evaluation_env():
     def __init__(self, num_TNPC=0,num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'base_left',
                  goalie = True, num_trials = 10000,fpt = 100,feat_lvl = 'low',
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 63000,
-                 offense_on_ball=0, fullstate = False, seed = 250,
+                 offense_on_ball=0, fullstate = False, seed = 123,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
                  verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,change_every_x=5000,

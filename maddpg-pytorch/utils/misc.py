@@ -593,6 +593,7 @@ def load_buffer(left,right,fstatus,zip_vars):
             # Store variables for calculation of MC and n-step targets for team
             pt_time_step += 1
             if d == 1: # Episode done
+                pt_time_step += 1 # Jump ahead 1 if episode over
                 n_step_gammas = np.array([[gamma**step for a in range(num_TA)] for step in range(n_steps)])
                 # NOTE: Assume M vs M and critic_mod_both == True
                 if critic_mod_both:
@@ -665,29 +666,30 @@ def load_buffer(left,right,fstatus,zip_vars):
                             exps = torch.from_numpy(exp_comb)
                         else:
                             exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
-                    
-                    if not LSTM_policy:
-                        if push_only_left:
-                            team_PT_replay_buffer.push(exps[:, :num_TA, :])
-                            opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                    if ep_i != 0:
+                        
+                        if not LSTM_policy:
+                            if push_only_left:
+                                team_PT_replay_buffer.push(exps[:, :num_TA, :])
+                                opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                            else:
+                                team_PT_replay_buffer.push(exps[:, :num_TA, :])
+                                opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                                opp_PT_replay_buffer.push(exps[:, :num_TA, :])
+                                team_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                                #team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:,-num_TA:,:])))
+                                #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
                         else:
-                            team_PT_replay_buffer.push(exps[:, :num_TA, :])
-                            opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
-                            opp_PT_replay_buffer.push(exps[:, :num_TA, :])
-                            team_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
-                            #team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:,-num_TA:,:])))
-                            #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
-                    else:
-                        if push_only_left:
-                            team_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
-                            opp_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
-                        else:
-                            team_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
-                            opp_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
-                            opp_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
-                            team_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
-                            #team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:,-num_TA:,:])))
-                            #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
+                            if push_only_left:
+                                team_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
+                                opp_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
+                            else:
+                                team_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
+                                opp_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
+                                opp_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
+                                team_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
+                                #team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:,-num_TA:,:])))
+                                #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
         
                     del exps
                     exps = None
