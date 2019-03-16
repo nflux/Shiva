@@ -40,10 +40,10 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
 
 
     control_rand_init = True
-    ball_x_min = -0.18
-    ball_x_max = -0.18
-    ball_y_min = -0.40
-    ball_y_max = -0.40
+    ball_x_min = -0.1
+    ball_x_max = -0.1
+    ball_y_min = -0.2
+    ball_y_max = -0.2
     agents_x_min = -0.3
     agents_x_max = 0.3
     agents_y_min = -0.3
@@ -64,9 +64,9 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     start2 = np.where(ag2.iloc[:,0])[0][0]
     start3 = np.where(ag3.iloc[:,0])[0][0]
     ep_length = (np.where(stat.iloc[:,1])[0][0] + 1)
-    manual_feed_actions = False
-    manual_feed_obs = True
-    defense_team_bin = 'helios18'
+    manual_feed_actions = True
+    manual_feed_obs = False
+    defense_team_bin = 'base'
     print(eval_episodes)
     #subprocess.Popen("ps -ef | grep 7000 | awk '{print $2}' | xargs kill",shell=True)
     time.sleep(1)
