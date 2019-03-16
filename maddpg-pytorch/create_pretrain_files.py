@@ -14,7 +14,7 @@ def main(args):
     fullstate = True
     deterministic = True
     #seed = np.random.randint(1000)
-    seed = 123
+    seed = 150
     start_viewer = True
     log_dir = args.log_dir
 
@@ -54,7 +54,7 @@ def main(args):
                         hfo_log_game=False, rcss_log_game=False, log_dir=log_dir, agents_x_min=agents_x_min, agents_x_max=agents_x_max,
                         agents_y_min=agents_y_min, agents_y_max=agents_y_max, change_every_x=change_every_x,
                         change_agents_x=change_agents_x, change_agents_y=change_agents_y, change_balls_x=change_balls_x,
-                        change_balls_y=change_balls_y, control_rand_init=control_rand_init, record=False, record_server=True,
+                        change_balls_y=change_balls_y, control_rand_init=control_rand_init, record=True, record_server=True,
                         offense_team_bin=offense_team_bin, defense_team_bin=defense_team_bin, deterministic=deterministic, start_viewer=start_viewer)
 
     while(True):

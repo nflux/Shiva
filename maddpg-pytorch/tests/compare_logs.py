@@ -16,12 +16,12 @@ file_np = np.asarray(file_list)
 for f in range(0,len(file_np)-1,2):
     print(f, end=' ')
     for i in range(len(file_np[f])):
-        # if abs(float(file_np[f,i]) - float(file_np[f+1,i])) > 0.1e-5:
-        #     print(i-1, end=' ')
-        #     set_of_indices.add(i-1)
-        if (float(file_np[f,i]) < 0 and float(file_np[f+1,i]) >= 0) or (float(file_np[f,i]) >= 0 and float(file_np[f+1,i]) < 0):
+        if abs(float(file_np[f,i]) - float(file_np[f+1,i])) > 0.1e-4:
             print(i-1, end=' ')
             set_of_indices.add(i-1)
+        # if (float(file_np[f,i]) < 0 and float(file_np[f+1,i]) >= 0) or (float(file_np[f,i]) >= 0 and float(file_np[f+1,i]) < 0):
+        #     print(i-1, end=' ')
+        #     set_of_indices.add(i-1)
     print('\n--------------')
     # if f == 10:
     #     break

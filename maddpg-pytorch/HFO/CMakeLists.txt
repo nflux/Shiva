@@ -26,7 +26,7 @@ set(RCSSSERVER_BINARY_DIR ${BINARY_DIR}/bin)
 
 ExternalProject_Add(librcsc
   GIT_REPOSITORY "https://github.com/mehrzadshabez/librcsc.git"
-  GIT_TAG "master"
+  GIT_TAG "dev"
   CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
   UPDATE_COMMAND ""
   INSTALL_COMMAND "")
