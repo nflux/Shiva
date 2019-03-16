@@ -67,9 +67,9 @@ def parseArgs():
                     help='port number 2000 or above')
     p.add_argument('--log_dir', dest='log_dir', type=str, default='log_2000',
                     help='Location of rcg file')
-    p.add_argument('--offense-team', dest='offense_team', type=str, default='helios18',
+    p.add_argument('--offense-team', dest='offense_team', type=str, default='base',
                     help='specifies what binary to run for offense')
-    p.add_argument('--defense-team', dest='defense_team', type=str, default='helios18',
+    p.add_argument('--defense-team', dest='defense_team', type=str, default='base',
                     help='specifies what binary to run for defense')
     
     args = p.parse_args()

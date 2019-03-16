@@ -161,3 +161,4 @@ double HFOEnvironment::getBallX() {
 double HFOEnvironment::getBallY() {
   return agent->world().ball().pos().y;
 }
+  
