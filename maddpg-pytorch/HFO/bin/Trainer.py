@@ -88,7 +88,7 @@ class Trainer(object):
     teams_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'teams')
     if requested_team_name == 'helios':
       print('Creating team Helios')
-      team_name = 'HELIOS' + (' CLONE' if play_offense else '')
+      team_name = 'HELIOS' + ('_CLONE' if play_offense else '')
       team_dir = os.path.join(teams_dir, 'helios', 'helios-13Eindhoven')
       lib_dir = os.path.join(teams_dir, 'helios', 'local', 'lib')
       return Teams.Helios(team_name, team_dir, lib_dir,
@@ -96,7 +96,7 @@ class Trainer(object):
                           port=self._serverPort)
     elif requested_team_name == 'base':
       print('Creating team Agent2d (base)')
-      team_name = 'agent2D' + (' CLONE' if play_offense else 'FASF')
+      team_name = 'AGENT2D' + ('_CLONE' if play_offense else 'AGENT2D')
       team_dir = os.path.join(teams_dir, 'base')
       lib_dir = None
       return Teams.Agent2d(team_name, team_dir, lib_dir,
