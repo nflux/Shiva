@@ -243,8 +243,8 @@ float FeatureExtractor::calcLargestOpenOpponentAngle(const rcsc::WorldModel &wm,
 float FeatureExtractor::calcLargestGoalAngleTeam(const rcsc::WorldModel &wm,
                                              const rcsc::Vector2D &self) {
   const rcsc::ServerParam & SP = rcsc::ServerParam::i();
-  Vector2D goalPostTop(SP.pitchHalfLength(), SP.goalHalfWidth());
-  Vector2D goalPostBot(SP.pitchHalfLength(), -SP.goalHalfWidth());
+  Vector2D goalPostTop(SP.pitchHalfLength(), -SP.goalHalfWidth());
+  Vector2D goalPostBot(SP.pitchHalfLength(), SP.goalHalfWidth());
   float angTop = angleToPoint(self, goalPostTop);
   float angBot = angleToPoint(self, goalPostBot);
   //std::cout << "starting: " << RAD_T_DEG * angTop << " " << RAD_T_DEG * angBot << std::endl;

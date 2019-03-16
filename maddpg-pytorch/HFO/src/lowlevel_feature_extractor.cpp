@@ -102,7 +102,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
 
   // ======================== LANDMARK FEATURES ======================== //
   // Top Bottom Center of Goal
-  rcsc::Vector2D goalCenter(pitchHalfLength, 0);
+  rcsc::Vector2D goalCenter(pitchHalfLength, 0.);
   addLandmarkFeatures(goalCenter, self_pos, self_ang);
   rcsc::Vector2D goalPostTop(pitchHalfLength, -goalHalfWidth);
   addLandmarkFeatures(goalPostTop, self_pos, self_ang);
@@ -110,7 +110,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   addLandmarkFeatures(goalPostBot, self_pos, self_ang);
 
   // Top Bottom Center of Penalty Box
-  rcsc::Vector2D penaltyBoxCenter(pitchHalfLength - penaltyAreaLength, 0);
+  rcsc::Vector2D penaltyBoxCenter(pitchHalfLength - penaltyAreaLength, 0.);
   addLandmarkFeatures(penaltyBoxCenter, self_pos, self_ang);
   rcsc::Vector2D penaltyBoxTop(pitchHalfLength - penaltyAreaLength,
                                -penaltyAreaWidth / 2.);
@@ -120,7 +120,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   addLandmarkFeatures(penaltyBoxBot, self_pos, self_ang);
 
   // Corners of the Playable Area
-  rcsc::Vector2D centerField(0, 0);
+  rcsc::Vector2D centerField(0., 0.);
   addLandmarkFeatures(centerField, self_pos, self_ang);
 
   //The code below is the original HFO, it was replaced by full field
@@ -184,7 +184,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   }
 
   // largest open goal angle of self
-  addNormFeature(calcLargestGoalAngleTeam(wm, self_pos), 0, M_PI);
+  addNormFeature(calcLargestGoalAngleTeam(wm, self_pos), 0., M_PI);
 
   assert(featIndx == num_basic_features);
 
@@ -193,7 +193,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   for (PlayerPtrCont::const_iterator it=teammates.begin(); it != teammates.end(); ++it) {
     const PlayerObject* teammate = *it;
     if (valid(teammate) && teammate->unum() > 0 && detected_teammates < numTeammates) {
-      addNormFeature(calcLargestGoalAngleTeam(wm, teammate->pos()), 0, M_PI);
+      addNormFeature(calcLargestGoalAngleTeam(wm, teammate->pos()), 0., M_PI);
       detected_teammates++;
     }
   }
@@ -207,7 +207,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   for (PlayerPtrCont::const_iterator it=opponents.begin(); it != opponents.end(); ++it) {
     const PlayerObject* opponent = *it;
     if (valid(opponent) && opponent->unum() > 0 && detected_opponents < numOpponents) {
-      addNormFeature(calcLargestGoalAngleOpp(wm, -opponent->pos()), 0, M_PI);
+      addNormFeature(calcLargestGoalAngleOpp(wm, -opponent->pos()), 0., M_PI);
       detected_opponents++;
     }
   }
@@ -221,7 +221,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   for (PlayerPtrCont::const_iterator it=teammates.begin(); it != teammates.end(); ++it) {
     const PlayerObject* teammate = *it;
     if (valid(teammate) && teammate->unum() > 0 && detected_teammates < numTeammates) {
-      addNormFeature(calcLargestTeammateAngle(wm, self_pos, teammate->pos()),0,M_PI);
+      addNormFeature(calcLargestTeammateAngle(wm, self_pos, teammate->pos()),0.,M_PI);
       detected_teammates++;
     }
   }
