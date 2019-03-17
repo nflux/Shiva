@@ -408,6 +408,8 @@ Agent::UpdateFeatures()
     if(game_status != hfo::IN_GAME) {
       ep_end_time = this->M_worldmodel.fullstateTime().cycle()+1;
     }
+    feature_extractor->LogFeatures(config().record(), config().port(), this->world().fullstateTime().cycle(),
+                                    this->getUnum(), this->world().self().side());
   }
 }
 

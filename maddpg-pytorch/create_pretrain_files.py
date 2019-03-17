@@ -15,7 +15,7 @@ def main(args):
     deterministic = True
     #seed = np.random.randint(1000)
     seed = 150
-    start_viewer = True
+    start_viewer = False
     log_dir = args.log_dir
 
     # Control Random Initilization of Agents and Ball
