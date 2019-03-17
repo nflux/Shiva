@@ -193,6 +193,14 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
     preload_agent2d_path,bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic) = HP
 
+    record = False
+    record_server = False
+    if record or record_server:
+        if os.path.isdir(os.getcwd() + '/pt_logs_' + str(port)):
+            file_list = os.listdir(os.getcwd() + '/pt_logs_' + str(port))
+            [os.remove(os.getcwd() + '/pt_logs_' + str(port) + '/' + f) for f in file_list]
+        else:
+            os.mkdir(os.getcwd() + '/pt_logs_' + str(port))
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
                     num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
@@ -201,7 +209,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     offense_on_ball=False,port=port,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
                     agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                     change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=False,
+                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,record_server=record_server,
                     defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=True, deterministic=deterministic)
 
     #The start_viewer here is added to automatically start viewer with npc Vs npcs

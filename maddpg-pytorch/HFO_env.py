@@ -50,7 +50,7 @@ class HFO_env():
                  verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
                  change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
-                 change_balls_y=0.1, control_rand_init=False,record=True,
+                 change_balls_y=0.1, control_rand_init=False,record=False,record_server=False,
                  defense_team_bin='helios15', offense_team_bin='helios16', run_server=False, deterministic=True):
 
         """ Initializes HFO_Env
@@ -97,7 +97,7 @@ class HFO_env():
                                     agents_y_min=agents_y_min, agents_y_max=agents_y_max,
                                     change_every_x=change_every_x, change_agents_x=change_agents_x,
                                     change_agents_y=change_agents_y, change_balls_x=change_balls_x,
-                                    change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,
+                                    change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,record_server=record_server,
                                     defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, deterministic=deterministic)
 
         self.viewer = None
@@ -1124,7 +1124,7 @@ class HFO_env():
                               agents_y_min=0.0, agents_y_max=0.0,
                               change_every_x=1, change_agents_x=0.1,
                               change_agents_y=0.1, change_balls_x=0.1,
-                              change_balls_y=0.1, control_rand_init=False,record=True,
+                              change_balls_y=0.1, control_rand_init=False,record=False,record_server=False,
                               defense_team_bin='base', offense_team_bin='helios16', deterministic=True):
             """
             Starts the Half-Field-Offense server.
@@ -1167,6 +1167,7 @@ class HFO_env():
             if not rcss_log_game:  cmd += " --no-logging"
             if hfo_log_game:       cmd += " --hfo-logging"
             if record:             cmd += " --record"
+            if record_server:      cmd += " --log-gen-pt"
             if control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

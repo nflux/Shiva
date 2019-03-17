@@ -96,7 +96,7 @@ class Trainer(object):
                           port=self._serverPort)
     elif requested_team_name == 'base':
       print('Creating team Agent2d (base)')
-      team_name = 'AGENT2D' + ('_CLONE' if play_offense else 'AGENT2D')
+      team_name = 'base_' + ('left' if play_offense else 'right')
       team_dir = os.path.join(teams_dir, 'base')
       lib_dir = None
       return Teams.Agent2d(team_name, team_dir, lib_dir,

@@ -260,6 +260,12 @@ inline bool ParsePlayerOnBall(const std::string& message, Player& player) {
   } else if (message.find("GOAL_BY_RIGHT") != std::string::npos){
     player.unum = atoi((message.substr(message.find("-")+1)).c_str());
     player.side = RIGHT;
+  } else if(message.find("CAPTURED_BY_LEFT_GOALIE") != std::string::npos) {
+    player.unum = atoi((message.substr(message.find("-")+1)).c_str());
+    player.side = LEFT;
+  } else if(message.find("CAPTURED_BY_RIGHT_GOALIE") != std::string::npos) {
+    player.unum = atoi((message.substr(message.find("-")+1)).c_str());
+    player.side = RIGHT;
   } else if (message.find("IN_GAME") != std::string::npos){
     switch (message.at(message.find("-")+1)){
       case 'L':
