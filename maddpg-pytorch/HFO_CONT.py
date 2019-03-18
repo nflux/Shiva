@@ -126,7 +126,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
     #maddpg = dill.loads(maddpg_pick)
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
 
-    number_of_updates = 10000
+    number_of_updates = 500
     batches_to_sample = 10
     if len(team_replay_buffer) < batch_size*(batches_to_sample):
         batches_to_sample = 1
@@ -645,7 +645,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 4
+    num_envs = 1
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -678,8 +678,8 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 100000
-        pt_memory = 5000
+        replay_memory_size = 000
+        pt_memory = 1000
         episode_length = 500 # FPS
         untouched_time = 500
         burn_in_iterations = 500 # for time step
@@ -710,7 +710,7 @@ if __name__ == "__main__":
         final_noise_scale = 0.1
         init_noise_scale = 1.00
         num_explore_episodes = 1 # Haus uses over 10,000 updates --
-        multi_gpu = True
+        multi_gpu = False
         data_parallel = False
         
 
@@ -756,7 +756,7 @@ if __name__ == "__main__":
         bl_agent2d = False
         use_preloaded_agent2d = False
         preload_agent2d_path = ""
-        num_buffers = 14
+        num_buffers = 1
         pt_total_memory = pt_memory*num_buffers
 
         pt_episodes = 4000 # not used

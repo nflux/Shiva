@@ -53,13 +53,13 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     change_agents_y = 0.01
     change_balls_x = 0.01
     change_balls_y = 0.01
-    ag1 = pd.read_csv("pt_logs_17000/log_actions_left_1.csv",header=None)
-    ag2 = pd.read_csv("pt_logs_17000/log_actions_left_8.csv",header=None)
-    ag3 = pd.read_csv("pt_logs_17000/log_actions_left_11.csv",header=None)
-    ob1 = pd.read_csv("pt_logs_17000/log_obs_left_1.csv",header=None)
-    ob2 = pd.read_csv("pt_logs_17000/log_obs_left_8.csv",header=None)
-    ob3 = pd.read_csv("pt_logs_17000/log_obs_left_11.csv",header=None)
-    stat = pd.read_csv("pt_logs_17000/log_status.csv",header=None)
+    ag1 = pd.read_csv("pt_logs_2000/log_actions_left_1.csv",header=None)
+    ag2 = pd.read_csv("pt_logs_2000/log_actions_left_2.csv",header=None)
+    ag3 = pd.read_csv("pt_logs_2000/log_actions_left_3.csv",header=None)
+    ob1 = pd.read_csv("pt_logs_2000/log_obs_left_1.csv",header=None)
+    ob2 = pd.read_csv("pt_logs_2000/log_obs_left_2.csv",header=None)
+    ob3 = pd.read_csv("pt_logs_2000/log_obs_left_3.csv",header=None)
+    stat = pd.read_csv("pt_logs_2000/log_status.csv",header=None)
     start1 = np.where(ag1.iloc[:,0])[0][0]
     start2 = np.where(ag2.iloc[:,0])[0][0]
     start3 = np.where(ag3.iloc[:,0])[0][0]
@@ -88,7 +88,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     t = 0
     maddpg.prep_training(device=device) # GPU for forward passes?? 
     maddpg.prep_policy_rollout(device=device)
-    use_viewer = False
+    use_viewer = True
     if use_viewer:
         env._start_viewer()
     # launch evaluation episodes
