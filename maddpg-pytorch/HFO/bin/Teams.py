@@ -62,8 +62,8 @@ class Agent2d(Team):
               % (name, port, baseDir, logDir, baseDir)
     if record:
       options += ' --record'
-    offenseOrder =  [1,8,11,3,4,5,6,7,8,9,10,11]
-    defenseOrder =  [1,8,11,3,4,5,6,7,8,9,10,11]
+    offenseOrder =  [1,2,3,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,2,3,4,5,6,7,8,9,10,11]
     super(Agent2d, self).__init__(name, binaryPath, libDir, options,
                                   offenseOrder, defenseOrder)
 
@@ -127,7 +127,7 @@ class Helios18(Team):
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, port)
     offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    defenseOrder =  [2,8,11,2,3,4,5,6,7,9,10]
     super(Helios18, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
   def launch_npc(self, player_num):
@@ -407,7 +407,7 @@ class Cyrus(Team):
               '--player-config %s/player.conf'\
               % (host, name, port, baseDir, baseDir)
     offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    defenseOrder =  [2,8,11,2,3,4,5,6,7,9,10]
     super(Cyrus, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 

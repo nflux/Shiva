@@ -927,6 +927,8 @@ class HFO_env():
                 if self.team_base == base:
                     #self.team_obs_previous[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
                     #self.team_obs[agent_ID] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs_previous[agent_ID,-12] = 1
+                    self.team_obs[agent_ID,:-12] = 1
                     self.team_obs_previous[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
                     self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
                     self.team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
@@ -949,6 +951,8 @@ class HFO_env():
                     self.opp_team_obs[agent_ID,:-8] = self.opp_team_envs[agent_ID].getState() # Get initial state
                     self.opp_team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
                     self.opp_team_obs_previous[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
+                    self.opp_team_obs_previous[agent_ID,-12] = 1
+                    self.opp_andteam_obs[agent_ID,:-12] = 1
                     # self.opp_team_obs[agent_ID,-3] = 0
                     # self.opp_team_obs[agent_ID,-2] = 0
                     # self.opp_team_obs[agent_ID,-1] = 0

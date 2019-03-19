@@ -47,8 +47,8 @@ class evaluation_env():
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
                  verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,change_every_x=5000,
-                 change_agents_x=0.1,change_balls_x=0.1, change_agents_y=0.1,change_balls_y=0.1, control_rand_init=False,record=False,
-                 defense_team_bin='base', offense_team_bin='helios16', run_server=False, deterministic=True,
+                 change_agents_x=0.1,change_balls_x=0.1, change_agents_y=0.1,change_balls_y=0.1, control_rand_init=False,record=True,
+                 defense_team_bin='base', offense_team_bin='base', run_server=False, deterministic=True,
                  record_server=True):
 
         """ Initializes HFO_Env
@@ -730,7 +730,7 @@ class evaluation_env():
             feat_lvl = hfo.HIGH_LEVEL_FEATURE_SET
         config_dir=get_config_path() 
         trial = 0
-        print(goalie)
+        
         if self.team_base == base:
             self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                 server_port=port, server_addr='localhost', team_name=base,
@@ -758,15 +758,20 @@ class evaluation_env():
                 self.sync_at_reward_opp = np.zeros(self.num_OA)
                 # self.d = False
 
+                log_obs = []
+
                 if self.team_base == base:
                     self.team_obs_previous[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
                     self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
+                    self.team_obs_previous[agent_ID,-12] = 1
+                    self.team_obs[agent_ID,-12] = 1
                     self.team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
                     self.team_obs_previous[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
                 else:
                     self.opp_team_obs_previous[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
                     self.opp_team_obs[agent_ID] = self.opp_team_envs[agent_ID].getState() # Get initial state
 
+                
                 self.been_kicked_team = False
                 self.been_kicked_opp = False
                 while j < fpt:
@@ -779,8 +784,7 @@ class evaluation_env():
                         time.sleep(self.sleep_timer)
                     #print('Done queueing actions')
 
-                    
-                    
+      
                     # take the action
                     if self.team_base == base:
                         # take the action
@@ -864,6 +868,8 @@ class evaluation_env():
                     if self.team_base == base:
                         self.team_obs_previous[agent_ID] = self.team_obs[agent_ID]
                         self.world_status = self.team_envs[agent_ID].step() # update world
+                        log_obs.append(self.team_obs[agent_ID].copy())
+
                         self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
                         self.team_obs[agent_ID,-8:] =  self.team_actions_OH[agent_ID]
                         self.sync_at_reward_team[agent_ID] += 1
@@ -902,6 +908,8 @@ class evaluation_env():
 
                     # Break if episode done
                     if self.d == True:
+                        pd.DataFrame(log_obs).to_csv("agent_obs_%i.csv" % agent_ID)
+    
                         trial += 1
                         break
         print("Exiting evaluation env")            
