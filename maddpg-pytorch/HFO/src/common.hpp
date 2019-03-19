@@ -13,7 +13,8 @@ namespace hfo {
 enum feature_set_t
 {
   LOW_LEVEL_FEATURE_SET,
-  HIGH_LEVEL_FEATURE_SET
+  HIGH_LEVEL_FEATURE_SET,
+  SIMPLE_LEVEL_FEATURE_SET
 };
 
 // The actions available to the agent

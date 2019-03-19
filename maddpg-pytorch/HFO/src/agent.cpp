@@ -33,6 +33,7 @@
 #include "intention_receive.h"
 #include "lowlevel_feature_extractor.h"
 #include "highlevel_feature_extractor.h"
+#include "simplelevel_feature_extractor.h"
 
 #include "actgen_cross.h"
 #include "actgen_direct_pass.h"
@@ -228,6 +229,9 @@ FeatureExtractor* Agent::getFeatureExtractor(feature_set_t feature_set_indx,
       return new HighLevelFeatureExtractor(numTeammates, numOpponents,
                                            playing_offense);
       break;
+    case SIMPLE_LEVEL_FEATURE_SET:
+      return new SimpleLevelFeatureExtractor(numTeammates, numOpponents,
+                                              playing_offense);
     default:
       std::cerr << "ERROR: Unrecognized Feature set index: "
                 << feature_set_indx << std::endl;

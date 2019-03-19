@@ -89,7 +89,7 @@ set(PLAYER_CPP bhv_basic_move.cpp bhv_basic_offensive_kick.cpp
   bhv_set_play_kick_in.cpp bhv_set_play_kick_off.cpp
   bhv_their_goal_kick_move.cpp bhv_penalty_kick.cpp
   feature_extractor.cpp lowlevel_feature_extractor.cpp
-  highlevel_feature_extractor.cpp neck_default_intercept_neck.cpp
+  highlevel_feature_extractor.cpp simplelevel_feature_extractor.cpp neck_default_intercept_neck.cpp
   neck_goalie_turn_neck.cpp neck_offensive_intercept_neck.cpp
   view_tactical.cpp intention_receive.cpp
   intention_wait_after_set_play_kick.cpp soccer_role.cpp
