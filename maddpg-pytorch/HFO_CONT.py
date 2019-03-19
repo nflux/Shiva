@@ -191,10 +191,9 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
     LSTM,LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
     has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
-    preload_agent2d_path,bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic) = HP
+    preload_agent2d_path,bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic, record, record_server) = HP
 
-    record = False
-    record_server = False
+    
     if record or record_server:
         if os.path.isdir(os.getcwd() + '/pt_logs_' + str(port)):
             file_list = os.listdir(os.getcwd() + '/pt_logs_' + str(port))
@@ -663,8 +662,8 @@ if __name__ == "__main__":
             
         # options ------------------------------
         action_level = 'low'
-        feature_level = 'low'
-        USE_CUDA = True
+        feature_level = 'simple'
+        USE_CUDA = False
         if USE_CUDA:
             device = 'cuda'
             to_gpu = True
@@ -685,6 +684,10 @@ if __name__ == "__main__":
         burn_in_iterations = 500 # for time step
         burn_in_episodes = float(burn_in_iterations)/untouched_time
         deterministic = True
+        
+        # Create logs
+        record = True # Learning agent logs/librcsc
+        record_server = False # server logs
  
         # --------------------------------------
         # Team ---------------------------------
@@ -744,7 +747,7 @@ if __name__ == "__main__":
         TD3_noise = 0.02
         # -------------------------------------- 
         #Pretrain Options ----------------------
-        pretrain = True
+        pretrain = False
         use_pretrain_data = False
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
         pt_update_cycles = 200
@@ -910,7 +913,7 @@ if __name__ == "__main__":
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
         LSTM, LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
         has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,
-        bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic )
+        bl_agent2d,reduced_obs_dim,preprocess,zero_critic,cent_critic, record, record_server)
 
 
 

@@ -24,7 +24,7 @@ public:
 
 protected:
   // Number of unvaried indeces
-  const static int num_basic_features = 12; // ball, self, time step
+  const static int num_basic_features = 16 + 12; // landmarks (16), ball, self, time step
   // Number of features for each teammate or opponent in game
   const static int features_per_player = 6;
 

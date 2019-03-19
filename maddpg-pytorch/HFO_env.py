@@ -137,7 +137,11 @@ class HFO_env():
             self.opp_num_features = 56 + 13*(num_OA-1) + 12*num_TA + 4 + 1 + 2 + 1 + 8
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
-            self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6 
+            self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6
+        elif feat_lvl == 'simple':
+            # 16 - land_feats + 12 - basic feats + 6 per (team/opp)
+            self.team_num_features = 28 + 6 * ((num_TA-1) + num_OA) + 8
+            self.opp_num_features = 28 + 6 * (num_TA + (num_OA-1)) + 8
         self.open_goal = 55 #Changed to account for the 3 removed obs, previously 58
         self.team_goal_angle_beg = 56 #Changed to account for the 3 removed obs, previously 59
         self.team_goal_angle_end = self.team_goal_angle_beg +(num_TA -1)
@@ -576,6 +580,7 @@ class HFO_env():
         reward=0.0
         team_reward = 0.0
         goal_points = 5.0
+        return 0.0
         #---------------------------
         global possession_side
         if self.d:
@@ -884,7 +889,7 @@ class HFO_env():
     def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl):
         """ Connect threaded agent to server
         Args:
-            feat_lvl: Feature level to use. ('high', 'low')
+            feat_lvl: Feature level to use. ('high', 'low', 'simple')
             base: Which base to launch agent to. ('left', 'right)
             goalie: Play goalie. (True, False)
             agent_ID: Integer representing agent index. (0-11)
@@ -897,6 +902,8 @@ class HFO_env():
             feat_lvl = hfo.LOW_LEVEL_FEATURE_SET
         elif feat_lvl == 'high':
             feat_lvl = hfo.HIGH_LEVEL_FEATURE_SET
+        elif feat_lvl == 'simple':
+            feat_lvl = hfo.SIMPLE_LEVEL_FEATURE_SET
 
         config_dir=get_config_path() 
         recorder_dir = 'log/'
@@ -951,8 +958,8 @@ class HFO_env():
                     self.opp_team_obs[agent_ID,:-8] = self.opp_team_envs[agent_ID].getState() # Get initial state
                     self.opp_team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
                     self.opp_team_obs_previous[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
-                    self.opp_team_obs_previous[agent_ID,-12] = 1
-                    self.opp_andteam_obs[agent_ID,:-12] = 1
+                    # self.opp_team_obs_previous[agent_ID,-12] = 1
+                    # self.opp_andteam_obs[agent_ID,:-12] = 1
                     # self.opp_team_obs[agent_ID,-3] = 0
                     # self.opp_team_obs[agent_ID,-2] = 0
                     # self.opp_team_obs[agent_ID,-1] = 0

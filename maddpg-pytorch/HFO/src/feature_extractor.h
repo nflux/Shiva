@@ -153,6 +153,8 @@ protected:
   // Add a feature without normalizing
   void addFeature(float val);
 
+  void addBoundedFeature(float val, float min_val, float max_val);
+
   // Returns a normalized feature value
   float normalize(float val, float min_val, float max_val);
   // Converts a normalized feature value back into original space
@@ -187,6 +189,7 @@ protected:
   int numTeammates; // Number of teammates in HFO
   int numOpponents; // Number of opponents in HFO
   bool playingOffense; // Are we playing offense or defense?
+  std::vector<double> land_feats;
 };
 
 #endif // FEATURE_EXTRACTOR_H

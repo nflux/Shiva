@@ -38,8 +38,6 @@ class HFOEnvironment {
   // Get the current state of the domain. Returns a reference to feature_vec.
   const std::vector<float>& getState();
 
-  // const std::vector<double>& getLandmarks();
-
   // Specify action type to take followed by parameters for that action
   virtual void act(action_t action, ...);
   virtual void act(action_t action, const std::vector<float>& params);

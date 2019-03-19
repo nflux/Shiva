@@ -161,8 +161,4 @@ double HFOEnvironment::getBallX() {
 double HFOEnvironment::getBallY() {
   return agent->world().ball().pos().y;
 }
-
-// const std::vector<double>& HFOEnvironment::getLandmarks() {
-//   return rcsc::WorldModel::getLandmarks();
-// }
   

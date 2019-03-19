@@ -55,6 +55,7 @@
 #include "intention_receive.h"
 #include "lowlevel_feature_extractor.h"
 #include "highlevel_feature_extractor.h"
+#include "simplelevel_feature_extractor.h"
 
 #include <rcsc/action/basic_actions.h>
 #include <rcsc/action/bhv_emergency.h>
@@ -245,7 +246,7 @@ SamplePlayer::actionImpl()
               hfo_config.num_offense - 1 : hfo_config.num_defense - 1;
           int num_opponents = playing_offense ?
               hfo_config.num_defense : hfo_config.num_offense;
-          feature_extractor = new LowLevelFeatureExtractor(
+          feature_extractor = new SimpleLevelFeatureExtractor(
               num_teammates, num_opponents, playing_offense);
         }
       }

@@ -7,8 +7,8 @@ hfo_lib = cdll.LoadLibrary(os.path.join(os.path.dirname(__file__),
                                         'libhfo_c.so'))
 
 """Possible feature sets"""
-NUM_FEATURE_SETS = 2
-LOW_LEVEL_FEATURE_SET, HIGH_LEVEL_FEATURE_SET = list(range(NUM_FEATURE_SETS))
+NUM_FEATURE_SETS = 3
+LOW_LEVEL_FEATURE_SET, HIGH_LEVEL_FEATURE_SET, SIMPLE_LEVEL_FEATURE_SET = list(range(NUM_FEATURE_SETS))
 
 """
 An enum of the possible HFO actions, including:

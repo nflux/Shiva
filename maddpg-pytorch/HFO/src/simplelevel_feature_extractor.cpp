@@ -32,6 +32,12 @@ SimpleLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   const PlayerPtrCont& teammates = wm.teammatesFromSelf();
   const PlayerPtrCont& opponents = wm.opponentsFromSelf();
 
+  // Add simple land features
+  for(int i = 0; i < land_feats.size(); ++i)
+  {
+    addFeature(land_feats[i]);
+  }
+
   const BallObject& ball = wm.ball();
   addFeature(ball.pos().x/pitchHalfLength);
   addFeature(ball.pos().y/pitchHalfWidth);
@@ -98,7 +104,7 @@ SimpleLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   }
 
   assert(featIndx == numFeatures);
-  checkFeatures();
+  // checkFeatures();
   return feature_vec;
 }
 

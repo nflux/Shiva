@@ -34,6 +34,32 @@ FeatureExtractor::FeatureExtractor(int num_teammates,
   //                     pitchWidth * pitchWidth);
   maxHFODist = sqrtf(pitchLength * pitchLength +
                        pitchWidth * pitchWidth);
+  
+  land_feats.resize(16);
+  float values[] = 
+  {
+      -pitchHalfLength/pitchHalfLength, // Top Self corner x
+      -pitchHalfWidth/pitchHalfWidth, // Top Self corner y
+      -pitchHalfLength/pitchHalfLength, // Bottom Self corner x
+      pitchHalfWidth/pitchHalfWidth, // Bottom Self corner y
+      pitchHalfLength/pitchHalfLength, // Top Opp corner x
+      -pitchHalfWidth/pitchHalfWidth, // Top Opp corner y
+      pitchHalfLength/pitchHalfLength, // Bottom Opp corner x
+      pitchHalfWidth/pitchHalfWidth, // Bottom Opp corner y
+      -pitchHalfLength/pitchHalfLength, // Top Self Goal post x
+      -goalHalfWidth/pitchHalfWidth, // Top Self Goal post y
+      -pitchHalfLength/pitchHalfLength, // Bottom Self Goal post x
+      goalHalfWidth/pitchHalfWidth, // Bottom Self Goal post y
+      pitchHalfLength/pitchHalfLength, // Top Opp Goal post x
+      -goalHalfWidth/pitchHalfWidth, // Top Opp goal post y
+      pitchHalfLength/pitchHalfLength, // Bottom Opp Goal post x
+      goalHalfWidth/pitchHalfWidth, // Bottom Opp goal post y
+  };
+
+  for(int i = 0; i < land_feats.size(); i++)
+  {
+      land_feats[i] = values[i];
+  }
 }
 
 FeatureExtractor::~FeatureExtractor() {}
