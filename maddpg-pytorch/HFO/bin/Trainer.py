@@ -105,7 +105,7 @@ class Trainer(object):
                            port=self._serverPort)
     elif requested_team_name == 'helios18':
       print('Creating team Helios18')
-      team_name = 'HELIOS_18' + (' CLONE' if play_offense else '')
+      team_name = 'HELIOS_18_' + ('Shiva' if play_offense else 'Real')
       team_dir = os.path.join(teams_dir, 'helios18')
       lib_dir = os.path.join(teams_dir, 'helios18', 'lib')
       return Teams.Helios18(team_name, team_dir, lib_dir,
@@ -200,7 +200,7 @@ class Trainer(object):
                           port=self._serverPort)
     elif requested_team_name == 'cyrus':
       print('Creating team Cyrus')
-      team_name = 'Cyrus' + (' CLONE' if play_offense else '')
+      team_name = 'CYRUS_' + (' SHIVA_CLONE' if play_offense else 'REAL')
       team_dir = os.path.join(teams_dir, 'cyrus', 'src')
       lib_dir = os.path.join(teams_dir, 'cyrus', 'lib')
       return Teams.Cyrus(team_name, team_dir, lib_dir,
