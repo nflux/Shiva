@@ -140,8 +140,8 @@ class HFO_env():
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6
         elif feat_lvl == 'simple':
             # 16 - land_feats + 12 - basic feats + 6 per (team/opp)
-            self.team_num_features = 28 + 6 * ((num_TA-1) + num_OA) + 8
-            self.opp_num_features = 28 + 6 * (num_TA + (num_OA-1)) + 8
+            self.team_num_features = 28 + (6 * ((num_TA-1) + num_OA)) + 8
+            self.opp_num_features = 28 + (6 * (num_TA + (num_OA-1))) + 8
         self.open_goal = 55 #Changed to account for the 3 removed obs, previously 58
         self.team_goal_angle_beg = 56 #Changed to account for the 3 removed obs, previously 59
         self.team_goal_angle_end = self.team_goal_angle_beg +(num_TA -1)
