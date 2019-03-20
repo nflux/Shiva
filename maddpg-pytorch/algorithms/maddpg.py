@@ -264,52 +264,36 @@ class MADDPG(object):
 
     def get_recurrent_states(self, exps, obs_dim, acs_dim, nagents, hidden_dim_lstm,torch_device):
         ep_length = len(exps)
-        cutoff = self.seq_length+self.overlap
-        for e in range(0, ep_length-cutoff, self.overlap):
+        for e in range(0, ep_length-self.seq_length, self.overlap):
             # Assumes M vs M
-            obs = exps[e:e+self.overlap, :, :obs_dim]
-            acs = exps[e:e+self.overlap, :, obs_dim:obs_dim+acs_dim]
+            if (e + self.overlap + self.seq_length) <= ep_length:
+                obs = exps[e:e+self.overlap, :, :obs_dim]
+                acs = exps[e:e+self.overlap, :, obs_dim:obs_dim+acs_dim]
 
-            obs = obs.reshape(self.overlap, 1, nagents*obs_dim)
-            acs = acs.reshape(self.overlap, 1, nagents*acs_dim)
+                obs = obs.reshape(self.overlap, 1, nagents*obs_dim)
+                acs = acs.reshape(self.overlap, 1, nagents*acs_dim)
 
-            comb = torch.cat((obs, acs), dim=2).to(torch_device) # critic device
-            _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
-            self.set_hidden(hs1, hs2)
+                comb = torch.cat((obs, acs), dim=2).to(torch_device) # critic device
+                _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
+                # self.set_hidden(hs1, hs2)
 
-            temp_all_hs =  torch.cat((hs1[0].squeeze(), hs1[1].squeeze(), hs2[0].squeeze(), hs2[1].squeeze()), dim=0)
-            exps[e+self.overlap, :, -hidden_dim_lstm*4:] = temp_all_hs
-        
-        # Edge case: if episode is not divisible by seq_length need to reset hidden state 
-        if ep_length % self.seq_length == 0:
-            obs = exps[ep_length-cutoff:ep_length-self.seq_length, :, :obs_dim]
-            acs = exps[ep_length-cutoff:ep_length-self.seq_length, :, obs_dim:obs_dim+acs_dim]
+                temp_all_hs =  torch.cat((hs1[0].squeeze(), hs1[1].squeeze(), hs2[0].squeeze(), hs2[1].squeeze()), dim=0)
+                exps[e+self.overlap, :, -hidden_dim_lstm*4:] = temp_all_hs
+            else:
+                self.zero_hidden(1,actual=True,torch_device=torch_device)
+                obs = exps[:ep_length-self.seq_length, :, :obs_dim]
+                acs = exps[:ep_length-self.seq_length, :, obs_dim:obs_dim+acs_dim]
 
-            obs = obs.reshape(self.overlap, 1, nagents*obs_dim)
-            acs = acs.reshape(self.overlap, 1, nagents*acs_dim)
+                obs = obs.reshape(ep_length-self.seq_length, 1, nagents*obs_dim)
+                acs = acs.reshape(ep_length-self.seq_length, 1, nagents*acs_dim)
 
-            comb = torch.cat((obs, acs), dim=2).to(torch_device)
+                comb = torch.cat((obs, acs), dim=2).to(torch_device)
 
-            _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
-            self.set_hidden(hs1, hs2)
+                _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
+                # self.set_hidden(hs1, hs2)
 
-            temp_all_hs =  torch.cat((hs1[0].squeeze(), hs1[1].squeeze(), hs2[0].squeeze(), hs2[1].squeeze()), dim=0)
-            exps[ep_length-self.seq_length, :, -hidden_dim_lstm*4:] = temp_all_hs
-        else:
-            self.zero_hidden(1,actual=True,torch_device=torch_device)
-            obs = exps[:ep_length-self.seq_length, :, :obs_dim]
-            acs = exps[:ep_length-self.seq_length, :, obs_dim:obs_dim+acs_dim]
-
-            obs = obs.reshape(ep_length-self.seq_length, 1, nagents*obs_dim)
-            acs = acs.reshape(ep_length-self.seq_length, 1, nagents*acs_dim)
-
-            comb = torch.cat((obs, acs), dim=2).to(torch_device)
-
-            _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
-            self.set_hidden(hs1, hs2)
-
-            temp_all_hs =  torch.cat((hs1[0].squeeze(), hs1[1].squeeze(), hs2[0].squeeze(), hs2[1].squeeze()), dim=0)
-            exps[ep_length-self.seq_length, :, -hidden_dim_lstm*4:] = temp_all_hs
+                temp_all_hs =  torch.cat((hs1[0].squeeze(), hs1[1].squeeze(), hs2[0].squeeze(), hs2[1].squeeze()), dim=0)
+                exps[ep_length-self.seq_length, :, -hidden_dim_lstm*4:] = temp_all_hs
 
         return exps
 
