@@ -15,15 +15,15 @@ def main(args):
     deterministic = True
     #seed = np.random.randint(1000)
     seed = 150
-    start_viewer = False
+    start_viewer = True
     log_dir = args.log_dir
 
     # Control Random Initilization of Agents and Ball
     control_rand_init = True
-    ball_x_min = -0.1
-    ball_x_max = -0.1
-    ball_y_min = -0.2
-    ball_y_max = -0.2
+    ball_x_min = 0.1
+    ball_x_max = 0.1
+    ball_y_min = 0.2
+    ball_y_max = 0.2
     agents_x_min = -0.4
     agents_x_max = 0.4
     agents_y_min = -0.4

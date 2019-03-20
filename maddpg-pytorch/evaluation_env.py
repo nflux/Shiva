@@ -130,6 +130,9 @@ class evaluation_env():
         elif feat_lvl == 'high':
             self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
             self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6
+        elif feat_lvl == 'simple':
+            self.team_num_features = 28 + (6 * ((num_TA-1) + num_ONPC)) + 8
+            self.opp_num_features = 28 + (6 * (num_TA + (num_ONPC-1))) + 8
 
 
         # Create env for each teammate
@@ -493,6 +496,7 @@ class evaluation_env():
     # Engineered Reward Function
     def getReward(self,s,agentID,base):
         reward=0.0
+        return 0.0
         #---------------------------
 
         if self.team_base == base:
@@ -728,6 +732,8 @@ class evaluation_env():
             feat_lvl = hfo.LOW_LEVEL_FEATURE_SET
         elif feat_lvl == 'high':
             feat_lvl = hfo.HIGH_LEVEL_FEATURE_SET
+        elif feat_lvl == 'simple':
+            feat_lvl = hfo.SIMPLE_LEVEL_FEATURE_SET
         config_dir=get_config_path() 
         trial = 0
         
@@ -763,8 +769,6 @@ class evaluation_env():
                 if self.team_base == base:
                     self.team_obs_previous[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
                     self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs_previous[agent_ID,-12] = 1
-                    self.team_obs[agent_ID,-12] = 1
                     self.team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
                     self.team_obs_previous[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
                 else:

@@ -70,7 +70,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
     print(eval_episodes)
     #subprocess.Popen("ps -ef | grep 7000 | awk '{print $2}' | xargs kill",shell=True)
     time.sleep(1)
-    env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'low', act_lvl = 'low',
+    env = evaluation_env(num_TNPC = 0,num_TA=num_TA,num_OA=0, num_ONPC=num_ONPC, num_trials = eval_episodes, fpt = fpt,feat_lvl = 'simple', act_lvl = 'low',
                          untouched_time = 500,fullstate=True,ball_x_min = ball_x_min,ball_x_max =ball_x_max,
                          ball_y_min = ball_y_min,ball_y_max = ball_y_max,offense_on_ball=False,
                          port=63000,log_dir=log_dir,rcss_log_game=False,hfo_log_game=False,record=False,goalie=goalie,agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
