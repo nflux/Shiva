@@ -261,16 +261,16 @@ class LSTMNetwork_Critic(nn.Module):
     
     def init_hidden(self, batch_size,torch_device):
         self.torch_device = self.maddpg.torch_device
-
+        weight = next(self.parameters()).data
         if self.agent.device == 'cuda':
-            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
-                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
+            self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                            Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
             self.hidden_tuple2 = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
         else:
-            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)),
+            self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
-            self.hidden_tuple2 = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)),
+            self.hidden_tuple2 = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
     
     def set_hidden(self, h1, h2):
@@ -289,7 +289,7 @@ class LSTMNetwork_Critic(nn.Module):
         h2 = self.nonlin(self.fc2(h1))
         h3, self.hidden_tuple = self.lstm3(h2, self.hidden_tuple)
         out = self.out_fn(self.out(h3))
-        return out
+        return out,self.hidden_tuple
 
     def forward(self, X):
         """
@@ -651,11 +651,16 @@ class LSTM_Actor(nn.Module):
         self.out_fn = lambda x: x
 
     def init_hidden(self, batch_size,torch_device):
+        weight = next(self.parameters()).data
         if self.agent.device == 'cuda':
-            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(torch_device),
-                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(torch_device))
+            self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                            Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
+            self.hidden_tuple2 = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
         else:
-            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)),
+            self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
+                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
+            self.hidden_tuple2 = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
 
     def set_hidden(self, h1):

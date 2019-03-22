@@ -203,7 +203,7 @@ class DDPGAgent(object):
                 action = acs
             else:
                 action = self.policy(obs)
-            if self.counter % 1000 == 0:
+            if self.counter % 5000 == 0:
                 print(torch.softmax(action.view(-1)[:self.action_dim],dim=0))
             if self.maddpg.LSTM_policy:
                 a = onehot_from_logits(action[:,:,:self.action_dim],LSTM=True).view(1,self.action_dim)

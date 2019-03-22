@@ -199,7 +199,14 @@ class MADDPG(object):
         
         for a in self.opp_agents:
             a.reset_noise()
-    
+
+    def repackage_hidden(self,h):
+        """Wraps hidden states in new Tensors, to detach them from their history."""
+        if isinstance(h, torch.Tensor):
+            return h.detach()
+        else:
+            return tuple(self.repackage_hidden(v) for v in h)
+
     def zero_hidden(self, batch_size,actual=False,target=False,torch_device = torch.device('cuda:0')):
         if actual:
             self.team_agents[0].critic.init_hidden(batch_size,torch_device=torch_device)
@@ -213,6 +220,8 @@ class MADDPG(object):
     def zero_hidden_policy(self, batch_size,torch_device=torch.device('cuda:0')):
         [a.policy.init_hidden(batch_size,torch_device=torch_device) for a in self.team_agents]
         [a.policy.init_hidden(batch_size,torch_device=torch_device) for a in self.opp_agents]
+        [a.target_policy.init_hidden(batch_size,torch_device=torch_device) for a in self.team_agents]
+        [a.target_policy.init_hidden(batch_size,torch_device=torch_device) for a in self.opp_agents]
         # for ta, oa in zip(self.team_agents, self.opp_agents):
         #     ta.critic.init_hidden(batch_size)
         #     oa.critic.init_hidden(batch_size)
@@ -259,14 +268,19 @@ class MADDPG(object):
 
 
         else:                
-            return [a.step(obs,ran, explore=False) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
+            return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
                     [a.step(obs,ran, explore=False) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
 
     def get_recurrent_states(self, exps, obs_dim, acs_dim, nagents, hidden_dim_lstm,torch_device):
         ep_length = len(exps)
+        self.zero_hidden(1,actual=True,target=True,torch_device=torch_device)
+        
+
         for e in range(0, ep_length-self.seq_length, self.overlap):
             # Assumes M vs M
             if (e + self.overlap + self.seq_length) <= ep_length:
+                self.zero_hidden(1,actual=True,target=True,torch_device=torch_device)
+
                 obs = exps[e:e+self.overlap, :, :obs_dim]
                 acs = exps[e:e+self.overlap, :, obs_dim:obs_dim+acs_dim]
 
@@ -276,11 +290,14 @@ class MADDPG(object):
                 comb = torch.cat((obs, acs), dim=2).to(torch_device) # critic device
                 _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
                 # self.set_hidden(hs1, hs2)
-
+                self.repackage_hidden(hs1)
+                self.repackage_hidden(hs2)
                 temp_all_hs =  torch.cat((hs1[0].squeeze(), hs1[1].squeeze(), hs2[0].squeeze(), hs2[1].squeeze()), dim=0)
+                self.zero_hidden(1,actual=True,target=True,torch_device=torch_device)
+
                 exps[e+self.overlap, :, -hidden_dim_lstm*4:] = temp_all_hs
             else:
-                self.zero_hidden(1,actual=True,torch_device=torch_device)
+                self.zero_hidden(1,actual=True,target=True,torch_device=torch_device)
                 obs = exps[:ep_length-self.seq_length, :, :obs_dim]
                 acs = exps[:ep_length-self.seq_length, :, obs_dim:obs_dim+acs_dim]
 
@@ -290,12 +307,19 @@ class MADDPG(object):
                 comb = torch.cat((obs, acs), dim=2).to(torch_device)
 
                 _,_,hs1,hs2 = self.team_agents[0].critic(comb.float())
+                self.repackage_hidden(hs1)
+                self.repackage_hidden(hs2)
                 # self.set_hidden(hs1, hs2)
 
                 temp_all_hs =  torch.cat((hs1[0].squeeze(), hs1[1].squeeze(), hs2[0].squeeze(), hs2[1].squeeze()), dim=0)
-                exps[ep_length-self.seq_length, :, -hidden_dim_lstm*4:] = temp_all_hs
+                exps[ep_length-self.seq_length, :, -hidden_dim_lstm*4:].copy_(temp_all_hs)
+                temp_all_hs.detach_()
+                self.zero_hidden(1,actual=True,target=True,torch_device=torch_device)
+                del temp_all_hs
+                torch.cuda.empty_cache()
 
-        return exps
+
+
 
 
     def discrete_param_indices(self,discrete):
@@ -944,7 +968,6 @@ class MADDPG(object):
             logger (SummaryWriter from Tensorboard-Pytorch):
                 If passed in, important quantities will be logged
         """
-        # rews = 1-step, cum-rews = n-step
         if side == 'team':
             count = self.team_count[agent_i]
             curr_agent = self.team_agents[agent_i]
@@ -972,29 +995,30 @@ class MADDPG(object):
 
         # Train critic ------------------------
         if critic:
+            self.zero_hidden(self.batch_size,actual=True,target=True,torch_device=self.torch_device)
+            self.zero_hidden_policy(self.batch_size,torch_device=self.torch_device)
 
-            curr_agent.critic_optimizer.zero_grad()
-            
-            self.zero_hidden(self.batch_size,torch_device=self.torch_device)
             h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device)
             self.set_hidden(h1, h2,actual=True,target=True,torch_device=self.torch_device)
 
-            slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
-            slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
-            slice_obs_opp = list(map(lambda x: x[:lstm_burn_in], opp_obs))
-            slice_acs_opp = list(map(lambda x: x[:lstm_burn_in], opp_acs))
+            burnin_slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
+            burnin_slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
+            burnin_slice_obs_opp = list(map(lambda x: x[:lstm_burn_in], opp_obs))
+            burnin_slice_acs_opp = list(map(lambda x: x[:lstm_burn_in], opp_acs))
 
-            mod_obs = torch.cat((*slice_obs, *slice_obs_opp), dim=2)
-            mod_acs = torch.cat((*slice_acs, *slice_acs_opp), dim=2)
+            if self.zero_critic:
+                burnin_slice_acs = [zero_params(a) for a in burnin_slice_acs]
+                burnin_slice_acs_opp = [zero_params(a) for a in burnin_slice_acs_opp]
+            
+            burnin_mod_obs = torch.cat((*burnin_slice_obs, *burnin_slice_obs_opp), dim=2)
+            burnin_mod_acs = torch.cat((*burnin_slice_acs, *burnin_slice_acs_opp), dim=2)
 
-            burn_in_tensor = torch.cat((mod_obs, mod_acs), dim=2)
+            burn_in_tensor = torch.cat((burnin_mod_obs,burnin_mod_acs), dim=2)
 
-            # Run burn-in on critic to refresh hidden states
+            # #Run burn-in on critic to refresh hidden states
             _,_,h1,h2 = curr_agent.critic(burn_in_tensor)
             _,_,h1_target,h2_target = curr_agent.target_critic(burn_in_tensor)
-
-            self.set_hidden(h1,h2,actual=True,target=False)
-            self.set_hidden(h1_target,h2_target,actual=False,target=True)
+            curr_agent.critic_optimizer.zero_grad()
 
             slice_obs = list(map(lambda x: x[lstm_burn_in:], obs))
             slice_acs = list(map(lambda x: x[lstm_burn_in:], acs))
@@ -1005,10 +1029,8 @@ class MADDPG(object):
             dones = list(map(lambda x: x[lstm_burn_in:], dones))
             next_obs = list(map(lambda x: torch.cat((x[lstm_burn_in:],x[-1:, :, :]),dim=0), obs))
             opp_next_obs = list(map(lambda x: torch.cat((x[lstm_burn_in:],x[-1:, :, :]),dim=0), opp_obs))
+            start = time.time()
 
-            #print("time critic")
-            #start = time.time()
-            #with torch.no_grad():
             if self.TD3:
                 noise = processor(torch.randn_like(acs[0][lstm_burn_in-1:]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
                 if self.I2A:
@@ -1019,10 +1041,10 @@ class MADDPG(object):
                     opp_pi_acs  = [(pi(nobs) + noise) for pi, nobs in zip(opp_target_policies,opp_next_obs)]
 
                 all_trgt_acs = [torch.cat(
-                    (onehot_from_logits(out[:,:,:curr_agent.action_dim], LSTM=self.LSTM),out[:,:,curr_agent.action_dim:]),dim=2) for out in team_pi_acs]
+                    (onehot_from_logits(out[:,:,:curr_agent.action_dim], LSTM=True),out[:,:,curr_agent.action_dim:]),dim=2) for out in team_pi_acs]
 
                 opp_all_trgt_acs = [torch.cat(
-                (onehot_from_logits(out[:,:,:curr_agent.action_dim], LSTM=self.LSTM),out[:,:,curr_agent.action_dim:]),dim=2) for out in opp_pi_acs]
+                (onehot_from_logits(out[:,:,:curr_agent.action_dim], LSTM=True),out[:,:,curr_agent.action_dim:]),dim=2) for out in opp_pi_acs]
             else:
                 if self.I2A:
                     team_pi_acs = [a for a in target_policies[0](next_obs)] # get actions for all agents, add noise to each
@@ -1048,9 +1070,8 @@ class MADDPG(object):
             if self.TD3: # TODO* For D4PG case, need mask with indices of the distributions whos distr_to_q(trgtQ1) < distr_to_q(trgtQ2)
                         # and build the combination of distr choosing the minimums
                 trgt_Q1,trgt_Q2,_,_ = curr_agent.target_critic(trgt_vf_in)
-                trgt_Q1 = trgt_Q1[1:]
-                trgt_Q2 = trgt_Q2[1:]
-                
+                trgt_Q1 = trgt_Q1[1:].detach()
+                trgt_Q2 = trgt_Q2[1:].detach()                
                 if self.D4PG:
                     arg = torch.argmin(torch.stack((curr_agent.target_critic.distr_to_q(trgt_Q1).mean(),
                                     curr_agent.target_critic.distr_to_q(trgt_Q2).mean()),dim=0))
@@ -1065,7 +1086,7 @@ class MADDPG(object):
                 trgt_Q = curr_agent.target_critic(trgt_vf_in)
 
             if self.zero_critic:
-                mod_acs = torch.cat((*[zero_params(a) for a in slice_opp_acs],*[zero_params(a) for a in slice_acs]),dim=2)
+                mod_acs = torch.cat((*[zero_params(a) for a in slice_acs],*[zero_params(a) for a in slice_opp_acs]),dim=2)
             else:
                 mod_acs = torch.cat((*slice_acs,*slice_opp_acs),dim=2)
 
@@ -1114,51 +1135,77 @@ class MADDPG(object):
                     vf_loss = F.mse_loss(actual_value, target_value)
 
             vf_loss.backward() 
+
             if parallel:
                 average_gradients(curr_agent.critic)
             torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
             curr_agent.critic_optimizer.step()
+            self.repackage_hidden(h1)
+            self.repackage_hidden(h2)
+            self.repackage_hidden(h1_target)
+            self.repackage_hidden(h2_target)
+
 
 
         # Train actor -----------------------
         if policy:
             curr_agent.policy_optimizer.zero_grad()
+            
             self.zero_hidden(self.batch_size,actual=True,target=True,torch_device=self.torch_device)
+            self.zero_hidden_policy(self.batch_size*nagents,torch_device=self.torch_device)
             h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device)
             self.set_hidden(h1, h2,actual=True,target=False,torch_device=self.torch_device)
 
-            slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
-            slice_obs_opp = list(map(lambda x: x[:lstm_burn_in], opp_obs))
-            slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
-            slice_acs_opp = list(map(lambda x: x[:lstm_burn_in], opp_acs))
+            burnin_slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
+            burnin_slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
+            burnin_slice_obs_opp = list(map(lambda x: x[:lstm_burn_in], opp_obs))
+            burnin_slice_acs_opp = list(map(lambda x: x[:lstm_burn_in], opp_acs))
 
-            mod_obs = torch.cat((*slice_obs, *slice_obs_opp), dim=2)
-            mod_acs = torch.cat((*slice_acs, *slice_acs_opp), dim=2)
+            if self.zero_critic:
+                burnin_slice_acs = [zero_params(a) for a in burnin_slice_acs]
+                burnin_slice_acs_opp = [zero_params(a) for a in burnin_slice_acs_opp]
+            
+            burnin_mod_obs = torch.cat((*burnin_slice_obs, *burnin_slice_obs_opp), dim=2)
+            burnin_mod_acs = torch.cat((*burnin_slice_acs, *burnin_slice_acs_opp), dim=2)
 
-            burn_in_tensor = torch.cat((mod_obs, mod_acs), dim=2)
+            burnin_critic_tensor = torch.cat((burnin_mod_obs,burnin_mod_acs), dim=2)
 
             # Run burn-in on critic to refresh hidden states
-            _,_,h1,h2 = curr_agent.critic(burn_in_tensor)
+            _,_,h1,h2 = curr_agent.critic(burnin_critic_tensor)
+
+            # Run burn-in on policy to refresh hidden states
+            burnin_policy_tensor = torch.cat(burnin_slice_obs,dim=1)
+            _ = curr_agent.policy(burnin_policy_tensor) # burn in
+            curr_agent.policy_optimizer.zero_grad()
+
+
             slice_obs = list(map(lambda x: x[lstm_burn_in:], obs))
             slice_acs = list(map(lambda x: x[lstm_burn_in:], acs)) # Not used currently
             slice_opp_obs = list(map(lambda x: x[lstm_burn_in:], opp_obs))
             slice_opp_acs = list(map(lambda x: x[lstm_burn_in:], opp_acs))
 
-                    
-            #print("time actor")
-            team_pol_acs = []
+            stacked_slice_obs = torch.cat(slice_obs,dim=1)
+
     
             if self.I2A:
-                curr_pol_out = curr_agent.policy(slice_obs)
+                print("no implementation")
+                #curr_pol_out = curr_agent.policy(slice_obs)
             else:
-                curr_pol_out = [curr_agent.policy(slice_obs[ag]) for ag in range(nagents)]
+                curr_pol_out = curr_agent.policy(stacked_slice_obs)
 
-            team_pol_acs = [torch.cat((gumbel_softmax(c[:,:,:curr_agent.action_dim], hard=True, device=self.torch_device,LSTM=self.LSTM),c[:,:,curr_agent.action_dim:]),dim=2) for c in curr_pol_out]
-            curr_pol_out_stacked = torch.cat(curr_pol_out,dim=1)
+            team_pol_acs = torch.cat((gumbel_softmax(curr_pol_out[:,:,:curr_agent.action_dim], hard=True, device=self.torch_device,LSTM=True),curr_pol_out[:,:,curr_agent.action_dim:]),dim=2)
+            if self.zero_critic:
+                team_pol_acs = zero_params(team_pol_acs)
+                slice_opp_acs = [zero_params(a) for a in slice_opp_acs]
 
+                
+            curr_pol_out_stacked = team_pol_acs
+            offset = self.batch_size
+            # recreate list of agents shape instead of stacked agent shape
+            team_pol_acs = [team_pol_acs[:,(offset*i):(offset*(i+1))] for i in range(nagents)] 
 
-            obs_vf_in = torch.cat((*slice_obs,*slice_obs_opp),dim=2)
-            acs_vf_in = torch.cat((*team_pol_acs,*slice_acs_opp),dim=2)
+            obs_vf_in = torch.cat((*slice_obs,*slice_opp_obs),dim=2)
+            acs_vf_in = torch.cat((*team_pol_acs,*slice_opp_acs),dim=2)
             mod_vf_in = torch.cat((obs_vf_in, acs_vf_in), dim=2)
 
             # ------------------------------------------------------
@@ -1166,14 +1213,15 @@ class MADDPG(object):
                 if self.data_parallel:
                     critic_out = curr_agent.critic.module.Q1(mod_vf_in)
                 else:
-                    critic_out = curr_agent.critic.Q1(mod_vf_in)
+                    critic_out,_ = curr_agent.critic.Q1(mod_vf_in)
                 distr_q = curr_agent.critic.distr_to_q(critic_out)
                 pol_loss = -distr_q.mean()
             else: # non-distributional
                 if self.data_parallel:
-                    pol_loss = -curr_agent.critic.module.Q1(mod_vf_in).view(-1,1).mean() 
+                    pol_loss,_ = -curr_agent.critic.module.Q1(mod_vf_in).view(-1,1).mean() 
                 else:
-                    pol_loss = -curr_agent.critic.Q1(mod_vf_in).view(-1,1).mean() 
+                    pol_loss,_ = curr_agent.critic.Q1(mod_vf_in)
+                    pol_loss = -pol_loss.view(-1,1).mean() 
     
             if self.D4PG:
                 reg_param = 5.0
@@ -1192,6 +1240,8 @@ class MADDPG(object):
                 average_gradients(curr_agent.policy)
             torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
             curr_agent.policy_optimizer.step()
+            self.repackage_hidden(h1)
+            self.repackage_hidden(h2)
 
                 #print(time.time() - start,"update time")
         # I2A --------------------------------------
@@ -1330,6 +1380,7 @@ class MADDPG(object):
             curr_agent.critic_optimizer.zero_grad()
             
             self.zero_hidden(self.batch_size,torch_device=self.torch_device)
+            self.zero_hidden_policy(self.batch_size,torch_device=self.torch_device)
             h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device)
             self.set_hidden(h1, h2,actual=True,target=True,torch_device=self.torch_device)
 
@@ -1346,6 +1397,8 @@ class MADDPG(object):
             # Run burn-in on critic to refresh hidden states
             _,_,h1,h2 = curr_agent.critic(burn_in_tensor)
             _,_,h1_target,h2_target = curr_agent.target_critic(burn_in_tensor)
+            
+            curr_agent.critic_optimizer.zero_grad()
 
             self.set_hidden(h1,h2,actual=True,target=False)
             self.set_hidden(h1_target,h2_target,actual=False,target=True)
@@ -1467,7 +1520,7 @@ class MADDPG(object):
                 else:
                     vf_loss = F.mse_loss(actual_value, target_value)
 
-            vf_loss.backward() 
+            vf_loss.backward(retrain_graph=True) 
             if parallel:
                 average_gradients(curr_agent.critic)
             torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
