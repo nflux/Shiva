@@ -45,6 +45,7 @@ extern "C" {
   int getNumOpponents(hfo::HFOEnvironment *hfo) {return hfo->getNumOpponents();}
   double getBallX(hfo::HFOEnvironment *hfo) {return hfo->getBallX();}
   double getBallY(hfo::HFOEnvironment *hfo) {return hfo->getBallY();}
+  bool isKickable(hfo::HFOEnvironment *hfo) {return hfo->isKickable();}
 }
 
 #endif

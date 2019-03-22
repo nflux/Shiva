@@ -66,6 +66,8 @@ class HFOEnvironment {
 
   virtual double getBallY();
 
+  virtual bool isKickable();
+
   
 
  private:

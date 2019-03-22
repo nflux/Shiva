@@ -113,6 +113,8 @@ hfo_lib.getBallX.argtypes = [c_void_p]
 hfo_lib.getBallX.restype = c_double
 hfo_lib.getBallY.argtypes = [c_void_p]
 hfo_lib.getBallY.restype = c_double
+hfo_lib.isKickable.argtypes = [c_void_p]
+hfo_lib.isKickable.restype = c_bool
 
 class HFOEnvironment(object):
   def __init__(self):
@@ -211,3 +213,7 @@ class HFOEnvironment(object):
   def getBallY(self):
     """ Returns ball y position in terms of the agent """
     return hfo_lib.getBallY(self.obj)
+  
+  def isKickable(self):
+    """ Returns true if ball is kickable for the given agent """
+    return hfo_lib.isKickable(self.obj)

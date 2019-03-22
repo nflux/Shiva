@@ -161,4 +161,8 @@ double HFOEnvironment::getBallX() {
 double HFOEnvironment::getBallY() {
   return agent->world().ball().pos().y;
 }
+
+bool HFOEnvironment::isKickable() {
+  return agent->world().self().isKickable();
+}
   
