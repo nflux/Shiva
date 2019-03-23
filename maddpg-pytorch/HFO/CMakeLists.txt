@@ -14,8 +14,7 @@ find_package(FLEX REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 ExternalProject_Add(rcssserver
-  GIT_REPOSITORY "https://github.com/mehrzadshabez/rcssserver.git"
-  GIT_TAG "gen-pt"
+  SOURCE_DIR "../../../../rcssserver"
   CMAKE_ARGS -DCMAKE_BUILD_TYPE=MinSizeRel
   UPDATE_COMMAND ""
   INSTALL_COMMAND "")
@@ -25,8 +24,7 @@ ExternalProject_Get_Property(rcssserver BINARY_DIR)
 set(RCSSSERVER_BINARY_DIR ${BINARY_DIR}/bin)
 
 ExternalProject_Add(librcsc
-  GIT_REPOSITORY "https://github.com/mehrzadshabez/librcsc.git"
-  GIT_TAG "dev"
+  SOURCE_DIR "../../../../librcsc"
   CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
   UPDATE_COMMAND ""
   INSTALL_COMMAND "")
