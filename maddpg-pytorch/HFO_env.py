@@ -334,8 +334,9 @@ class HFO_env():
 ######################  Utils for Reward ########
 #################################################
 
-    def get_kickable_status(self,agentID,obs):
+    def get_kickable_status(self,agentID,obs,env):
         ball_kickable = False
+        ball_kickable = env.isKickable()
         #print("no implementation")
         return ball_kickable
     
@@ -553,6 +554,7 @@ class HFO_env():
             opp_obs = self.opp_team_obs
             opp_obs_previous = self.opp_team_obs_previous
             num_ag = self.num_TA
+            env = self.team_envs[agentID]
         else:
             team_actions = self.opp_actions
             team_obs = self.opp_team_obs
@@ -560,129 +562,122 @@ class HFO_env():
             opp_obs = self.team_obs
             opp_obs_previous = self.team_obs_previous
             num_ag = self.num_OA
+            env = self.opp_team_envs[agentID]
 
-        if team_obs[agentID][self.stamina] < .4 : # LOW STAMINA
-            reward -= 0.005
-            team_reward -= 0.005
+        if team_obs[agentID][self.stamina] < -0.3 : # LOW STAMINA
+            reward -= 0.001
+            team_reward -= 0.001
             # print ('low stamina')
         
 
 
         ############ Kicked Ball #################
 
-        # if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous):            
+        if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous,env):            
         #     #Remove this check when npc ball posession can be measured
-        #     if self.num_OA > 0:
-        #         if (np.array(self.agent_possession_team) == 'N').all() and (np.array(self.agent_possession_opp) == 'N').all():
-        #             #print("First Kick")
-        #             reward += 1.0
-        #             team_reward +=1.0
-        #         # set initial ball position after kick
-        #             self.ball_pos_x = self.team_envs[0].getBallX()/52.5
-        #             self.ball_pos_y = self.team_envs[0].getBallY()/34.0
+            if self.num_OA > 0:
+                if (np.array(self.agent_possession_team) == 'N').all() and (np.array(self.agent_possession_opp) == 'N').all():
+                     #print("First Kick")
+                    reward += 1.0
+                    team_reward +=1.0
+                # set initial ball position after kick
+                    self.ball_pos_x = self.env[agentID].getBallX()/52.5
+                    self.ball_pos_y = self.env[agentID].getBallY()/34.0
 
         #     # track ball delta in between kicks
-        #     new_x = self.team_envs[0].getBallX()/52.5
-        #     new_y = self.team_envs[0].getBallY()/34.0
-        #     self.ball_delta = math.sqrt((self.ball_pos_x-new_x)**2+ (self.ball_pos_y-new_y)**2)
-        #     self.ball_pos_x = new_x
-        #     self.ball_pos_y = new_y
-        #     self.pass_reward = self.ball_delta * 2.0
-
+            new_x = env[agentID].getBallX()/52.5
+            new_y = env[agentID].getBallY()/34.0
+            self.ball_delta = math.sqrt((self.ball_pos_x-new_x)**2+ (self.ball_pos_y-new_y)**2)
+            self.ball_pos_x = new_x
+            self.ball_pos_y = new_y
+            self.pass_reward = self.ball_delta * 2.0
 
         #     ######## Pass Receiver Reward #########
-        #     if self.team_base == base:
-        #         if (np.array(self.agent_possession_team) == 'L').any():
-        #             prev_poss = (np.array(self.agent_possession_team) == 'L').argmax()
-        #             if not self.agent_possession_team[agentID] == 'L':
-        #                 self.team_passer[prev_poss] += 1 # sets passer flag to whoever passed
-        #                 # Passer reward is added in step function after all agents have been checked
-                        
-        #                 reward += self.pass_reward
-        #                 team_reward += self.pass_reward
-        #                 #print("received a pass worth:",self.pass_reward)
-        #                 #print('team pass reward received ')
+            if self.team_base == base:
+                if (np.array(self.agent_possession_team) == 'L').any():
+                    prev_poss = (np.array(self.agent_possession_team) == 'L').argmax()
+                    if not self.agent_possession_team[agentID] == 'L':
+                        self.team_passer[prev_poss] += 1 # sets passer flag to whoever passed
+                        # Passer reward is added in step function after all agents have been checked
+                       
+                        reward += self.pass_reward
+                        team_reward += self.pass_reward
+                        #print("received a pass worth:",self.pass_reward)
+        #               #print('team pass reward received ')
         #         #Remove this check when npc ball posession can be measured
-        #         if self.num_OA > 0:
-        #             if (np.array(self.agent_possession_opp) == 'R').any():
-        #                 enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-        #                 self.opp_lost_possession[enemy_possessor] -= 1.0
-        #                 self.team_lost_possession[agentID] += 1.0
-        #                 # print('opponent lost possession')
+                if self.num_OA > 0:
+                    if (np.array(self.agent_possession_opp) == 'R').any():
+                        enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
+                        self.opp_lost_possession[enemy_possessor] -= 1.0
+                        self.team_lost_possession[agentID] += 1.0
+                        # print('opponent lost possession')
 
         #         ###### Change Possession Reward #######
-        #         self.agent_possession_team = ['N'] * self.num_TA
-        #         self.agent_possession_opp = ['N'] * self.num_OA
-        #         self.agent_possession_team[agentID] = 'L'
-        #         if possession_side != 'L':
-        #             possession_side = 'L'    
-        #             #reward+=1
-        #             #team_reward+=1
-        #     else:
-        #         # self.opp_possession_counter[agentID] += 1
-        #         if (np.array(self.agent_possession_opp) == 'R').any():
-        #             prev_poss = (np.array(self.agent_possession_opp) == 'R').argmax()
-        #             if not self.agent_possession_opp[agentID] == 'R':
-        #                 self.opp_passer[prev_poss] += 1 # sets passer flag to whoever passed
-        #                 reward += self.pass_reward
-        #                 team_reward += self.pass_reward
+                self.agent_possession_team = ['N'] * self.num_TA
+                self.agent_possession_opp = ['N'] * self.num_OA
+                self.agent_possession_team[agentID] = 'L'
+                if possession_side != 'L':
+                    possession_side = 'L'    
+                    #reward+=1
+                    #team_reward+=1
+            else:
+                # self.opp_possession_counter[agentID] += 1
+                if (np.array(self.agent_possession_opp) == 'R').any():
+                    prev_poss = (np.array(self.agent_possession_opp) == 'R').argmax()
+                    if not self.agent_possession_opp[agentID] == 'R':
+                        self.opp_passer[prev_poss] += 1 # sets passer flag to whoever passed
+                        reward += self.pass_reward
+                        team_reward += self.pass_reward
         #                 # print('opp pass reward received ')
 
-        #         if (np.array(self.agent_possession_team) == 'L').any():
-        #             enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-        #             self.team_lost_possession[enemy_possessor] -= 1.0
-        #             self.opp_lost_possession[agentID] += 1.0
+                if (np.array(self.agent_possession_team) == 'L').any():
+                    enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
+                    self.team_lost_possession[enemy_possessor] -= 1.0
+                    self.opp_lost_possession[agentID] += 1.0
+      #             # print('teammates lost possession ')
 
-        #             # print('teammates lost possession ')
-
-        #         self.agent_possession_team = ['N'] * self.num_TA
-        #         self.agent_possession_opp = ['N'] * self.num_OA
-        #         self.agent_possession_opp[agentID] = 'R'
-        #         if possession_side != 'R':
-        #             possession_side = 'R'
-        #             #reward+=1
-        #             #team_reward+=1
+                self.agent_possession_team = ['N'] * self.num_TA
+                self.agent_possession_opp = ['N'] * self.num_OA
+                self.agent_possession_opp[agentID] = 'R'
+                if possession_side != 'R':
+                    possession_side = 'R'
+                    #reward+=1
+                    #team_reward+=1
 
         ####################### reduce distance to ball - using delta  ##################
-        # if self.feat_lvl == 'high':
-        #     r,_,_ = self.distance_to_ball(team_obs[agentID])
-        #     r_prev,_,_ = self.distance_to_ball(team_obs_previous[agentID])
-        #     reward += (r_prev - r) # if [prev > r] ---> positive; if [r > prev] ----> negative
-        # elif self.feat_lvl == 'low':
-        #     prox_cur = self.ball_proximity(team_obs[agentID])
-        #     prox_prev = self.ball_proximity(team_obs_previous[agentID])
-        #     reward   += (3)*(prox_cur - prox_prev) # if cur > prev --> +   
-        #     team_reward +=(3)*(prox_cur - prox_prev)
-                
+        # all agents rewarded for closer to ball
+        dist_cur = self.distance_to_ball(team_obs[agentID])
+        dist_prev = self.distance_to_ball(team_obs_previous[agentID])
+        reward   += (1.5)*(dist_prev - dist_cur) # if cur > prev --> +   
+        team_reward +=(1.5)*(dist_prev - dist_cur)
+            
         ####################### Rewards the closest player to ball for advancing toward ball ############
-        distance_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
-        distance_prev, closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
-        if agentID == closest_agent:
-            team_reward += (distance_prev - distance_cur)*1.0
-            reward+= (distance_prev - distance_cur)*1.0
+        # distance_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
+        # distance_prev, closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
+        # if agentID == closest_agent:
+        #     team_reward += (distance_prev - distance_cur)*1.0
+        #     reward+= (distance_prev - distance_cur)*1.0
             
         ##################################################################################
             
         ####################### reduce ball distance to goal ##################
-        r = self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        r_prev = self.ball_distance_to_goal(team_obs_previous[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        #if ((self.team_base == base) and possession_side =='L'):
-        #    team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-        #    if agentID == team_possessor:
-                #reward += (2.5)*(r_prev - r)
-                #team_reward += (2.5)*(r_prev - r)
-        reward += (2.5)*(r_prev - r)
-        team_reward += (2.5)*(r_prev - r)
+        r = self.ball_distance_to_goal(team_obs[agentID]) 
+        r_prev = self.ball_distance_to_goal(team_obs_previous[agentID]) 
+        if ((self.team_base == base) and possession_side =='L'):
+            team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
+            if agentID == team_possessor:
+                reward += (2.5)*(r_prev - r)
+                team_reward += (2.5)*(r_prev - r)
 
 
-        # elif  ((self.team_base != base) and possession_side == 'R'):
-        #     team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-        #     if agentID == team_possessor:
-        #         reward += (2.5)*(r_prev - r)
-        #         team_reward += (2.5)*(r_prev - r)
-        # else:
-        #     reward += (1.25)*(r_prev - r)
-        #     team_reward += (1.25)*(r_prev - r)
+        elif  ((self.team_base != base) and possession_side == 'R'):
+            team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
+            if agentID == team_possessor:
+                 reward += (2.5)*(r_prev - r)
+                 team_reward += (2.5)*(r_prev - r)
+        else:
+            reward += (1.25)*(r_prev - r)
+            team_reward += (1.25)*(r_prev - r)
 
             
 
@@ -912,7 +907,7 @@ class HFO_env():
                             """if a == 0:
                                 self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
                                 #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
-                            elif a == 1:
+                            elif a == 1:team_envs
                                 #print(self.action_list[a],self.action_params[agent_ID][2])
                                 self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][2])
                             elif a == 2:

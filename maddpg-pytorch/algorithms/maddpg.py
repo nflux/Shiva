@@ -269,7 +269,7 @@ class MADDPG(object):
 
         else:                
             return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
-                    [a.step(obs,ran, explore=False) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
+                    [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
 
     def get_recurrent_states(self, exps, obs_dim, acs_dim, nagents, hidden_dim_lstm,torch_device):
         ep_length = len(exps)
@@ -995,11 +995,13 @@ class MADDPG(object):
 
         # Train critic ------------------------
         if critic:
+            curr_agent.critic_optimizer.zero_grad()
+
             self.zero_hidden(self.batch_size,actual=True,target=True,torch_device=self.torch_device)
             self.zero_hidden_policy(self.batch_size,torch_device=self.torch_device)
 
-            h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device)
-            self.set_hidden(h1, h2,actual=True,target=True,torch_device=self.torch_device)
+            #h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device)
+            #self.set_hidden(h1, h2,actual=True,target=True,torch_device=self.torch_device)
 
             burnin_slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
             burnin_slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
@@ -1018,7 +1020,6 @@ class MADDPG(object):
             # #Run burn-in on critic to refresh hidden states
             _,_,h1,h2 = curr_agent.critic(burn_in_tensor)
             _,_,h1_target,h2_target = curr_agent.target_critic(burn_in_tensor)
-            curr_agent.critic_optimizer.zero_grad()
 
             slice_obs = list(map(lambda x: x[lstm_burn_in:], obs))
             slice_acs = list(map(lambda x: x[lstm_burn_in:], acs))
@@ -1153,8 +1154,8 @@ class MADDPG(object):
             
             self.zero_hidden(self.batch_size,actual=True,target=True,torch_device=self.torch_device)
             self.zero_hidden_policy(self.batch_size*nagents,torch_device=self.torch_device)
-            h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device)
-            self.set_hidden(h1, h2,actual=True,target=False,torch_device=self.torch_device)
+            #h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device)
+            #self.set_hidden(h1, h2,actual=True,target=False,torch_device=self.torch_device)
 
             burnin_slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
             burnin_slice_acs = list(map(lambda x: x[:lstm_burn_in], acs))
@@ -1176,7 +1177,6 @@ class MADDPG(object):
             # Run burn-in on policy to refresh hidden states
             burnin_policy_tensor = torch.cat(burnin_slice_obs,dim=1)
             _ = curr_agent.policy(burnin_policy_tensor) # burn in
-            curr_agent.policy_optimizer.zero_grad()
 
 
             slice_obs = list(map(lambda x: x[lstm_burn_in:], obs))
@@ -1202,7 +1202,7 @@ class MADDPG(object):
             curr_pol_out_stacked = team_pol_acs
             offset = self.batch_size
             # recreate list of agents shape instead of stacked agent shape
-            team_pol_acs = [team_pol_acs[:,(offset*i):(offset*(i+1))] for i in range(nagents)] 
+            team_pol_acs = [team_pol_acs[:,(offset*i):(offset*(i+1)),:] for i in range(nagents)] 
 
             obs_vf_in = torch.cat((*slice_obs,*slice_opp_obs),dim=2)
             acs_vf_in = torch.cat((*team_pol_acs,*slice_opp_acs),dim=2)
@@ -1228,7 +1228,7 @@ class MADDPG(object):
             else:
                 reg_param = 5.0
             
-            param_reg = torch.clamp((curr_pol_out_stacked[:,:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,:,curr_agent.action_dim:]),min=0.0).sum(dim=2).mean()
+            param_reg = torch.clamp((curr_pol_out_stacked[:,:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,:,curr_agent.action_dim:]),min=0.0).sum(dim=2).mean() # How much parameters exceed (-1,1) bound
             entropy_reg = (-torch.log_softmax(curr_pol_out_stacked[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
             pol_loss += param_reg
             pol_loss += entropy_reg

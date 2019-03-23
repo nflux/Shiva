@@ -241,14 +241,19 @@ class LSTMNetwork_Critic(nn.Module):
         self.fc1.weight.data.normal_(0, 0.01)
         self.fc2 = nn.Linear(512, 256)
         self.fc2.weight.data.normal_(0, 0.01) 
-        self.lstm3 = nn.LSTM(256,self.hidden_dim_lstm)
+        self.fc3 = nn.Linear(256, 256)
+        self.fc3.weight.data.normal_(0, 0.01) 
+
+        self.lstm4 = nn.LSTM(256,self.hidden_dim_lstm)
         
         if TD3: # second critic
-            self.Q2_fc1 = nn.Linear(input_dim, 512)
+            self.Q2_fc1 = nn.Linear(input_dim, 256)
             self.Q2_fc1.weight.data.normal_(0, 0.01)
-            self.Q2_fc2 = nn.Linear(512, 256)
-            self.Q2_fc2.weight.data.normal_(0, 0.01)
-            self.Q2_lstm3 = nn.LSTM(256,self.hidden_dim_lstm)
+            self.Q2_fc2 = nn.Linear(256, 256)
+            self.Q2_fc2.weight.data.normal_(0, 0.01)  
+            self.Q2_fc3 = nn.Linear(256, 256)
+            self.Q2_fc3.weight.data.normal_(0, 0.01)
+            self.Q2_lstm4 = nn.LSTM(256,self.hidden_dim_lstm)
             
         self.out = nn.Linear(self.hidden_dim_lstm, self.out_dim)
         self.register_buffer("supports",torch.arange(agent.vmin,agent.vmax + agent.delta, agent.delta))
@@ -261,17 +266,24 @@ class LSTMNetwork_Critic(nn.Module):
     
     def init_hidden(self, batch_size,torch_device):
         self.torch_device = self.maddpg.torch_device
-        weight = next(self.parameters()).data
+
+        #weight = next(self.parameters()).data
         if self.agent.device == 'cuda':
-            self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
-                                            Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
+            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
+            #self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+            #                                Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
             self.hidden_tuple2 = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
         else:
-            self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
+            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
-            self.hidden_tuple2 = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
+
+            self.hidden_tuple2 = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
+            #self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
+
+            #self.hidden_tuple2 = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
     
     def set_hidden(self, h1, h2):
         self.hidden_tuple = h1
@@ -287,8 +299,9 @@ class LSTMNetwork_Critic(nn.Module):
         """
         h1 = self.nonlin(self.fc1(self.cast(X)))
         h2 = self.nonlin(self.fc2(h1))
-        h3, self.hidden_tuple = self.lstm3(h2, self.hidden_tuple)
-        out = self.out_fn(self.out(h3))
+        h3 = self.nonlin(self.fc3(h2))
+        h4, self.hidden_tuple = self.lstm4(h3, self.hidden_tuple)
+        out = self.out_fn(self.out(h4))
         return out,self.hidden_tuple
 
     def forward(self, X):
@@ -300,16 +313,20 @@ class LSTMNetwork_Critic(nn.Module):
         """
         h1 = self.nonlin(self.fc1(self.cast(X)))
         h2 = self.nonlin(self.fc2(h1))
-        h3, self.hidden_tuple = self.lstm3(h2, self.hidden_tuple)
+        h3 = self.nonlin(self.fc3(h2))
+
+        h4, self.hidden_tuple = self.lstm4(h3, self.hidden_tuple)
         
         if self.TD3:
             Q2_h1 = self.nonlin(self.Q2_fc1(self.cast(X)))
             Q2_h2 = self.nonlin(self.Q2_fc2(Q2_h1))
-            Q2_h3, self.hidden_tuple2 = self.Q2_lstm3(Q2_h2, self.hidden_tuple2)
+            Q2_h3 = self.nonlin(self.Q2_fc3(Q2_h2))
+
+            Q2_h4, self.hidden_tuple2 = self.Q2_lstm4(Q2_h3, self.hidden_tuple2)
         
-        out = self.out_fn(self.out(h3))
+        out = self.out_fn(self.out(h4))
         if self.TD3: # 2nd critic
-            Q2_out = self.out_fn(self.Q2_out(Q2_h3))
+            Q2_out = self.out_fn(self.Q2_out(Q2_h4))
             return out, Q2_out, self.hidden_tuple, self.hidden_tuple2
         return out
 
@@ -646,21 +663,19 @@ class LSTM_Actor(nn.Module):
         self.out_param.weight.data.normal_(0, 0.001) 
         self.out_param_fn = lambda x: x
         self.out_action_fn = lambda x: x
-        self.nonlin = nonlin
-        #self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
+        #self.nonlin = nonlin
+        self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
 
     def init_hidden(self, batch_size,torch_device):
-        weight = next(self.parameters()).data
         if self.agent.device == 'cuda':
-            self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
-                                            Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
-            self.hidden_tuple2 = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
-                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
+            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(torch_device),
+                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)).to(torch_device))
+
+            #self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device),
+            #                                Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)).to(self.torch_device))
         else:
-            self.hidden_tuple = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
-                                            Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
-            self.hidden_tuple2 = (Variable(weight.new_zeros(1, batch_size, self.hidden_dim_lstm)),
+            self.hidden_tuple = (Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)),
                                             Variable(torch.zeros(1, batch_size, self.hidden_dim_lstm)))
 
     def set_hidden(self, h1):
