@@ -496,6 +496,26 @@ class HFO_env():
 
         return reward
        
+    def distance(self,x1,x2,y1,y2):
+        return math.sqrt((x1-x2)**2 + (y1-y2)**2)
+
+    def distances(self,agentID,side):
+        if side == 'left':
+            team_obs = self.team_obs
+            opp_obs =  self.opp_team_obs
+        elif side =='right':
+            team_obs = self.opp_team_obs
+            opp_obs = self.team_obs
+        else:
+            print("Error: Please return a side: ('left', 'right') for side parameter")
+
+        distances_team = []
+        distances_opp = []
+        for i in range(len(team_obs)):
+            distances_team.append(self.distance(team_obs[agentID][self.x],team_obs[i][self.x], team_obs[agentID][self.y],team_obs[i][self.y]))
+            distances_opp.append(self.distance(team_obs[agentID][self.x], -opp_obs[i][self.x], team_obs[agentID][self.y], -opp_obs[i][self.y]))
+        return np.argsort(distances_team), np.argsort(distances_opp)
+
 
     def unnormalize(self,val):
         return (val +1.0)/2.0

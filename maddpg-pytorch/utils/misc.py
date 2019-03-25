@@ -10,6 +10,13 @@ import time
 import pandas as pd
 import collections
 
+# Flatten an N-dim irregular list to 1-Dim
+def flatten(l):
+    for el in l:
+        if isinstance(el, collections.Iterable) and not isinstance(el, (str, bytes)):
+            yield from flatten(el)
+        else:
+            yield el
 
 def prep_session(session_path="",hist_dir="history",eval_hist_dir= "eval_history",eval_log_dir = "eval_log",load_path = "models/",ensemble_path = "ensemble_models/",log_dir="log",num_TA=1):
     hist_dir = hist_dir

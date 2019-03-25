@@ -115,6 +115,10 @@ hfo_lib.getBallY.argtypes = [c_void_p]
 hfo_lib.getBallY.restype = c_double
 hfo_lib.isKickable.argtypes = [c_void_p]
 hfo_lib.isKickable.restype = c_bool
+hfo_lib.teammateUnumsByProx.argtypes = [c_void_p, c_void_p]
+hfo_lib.teammateUnumsByProx.restype = None
+hfo_lib.opponentUnumsByProx.argtypes = [c_void_p, c_void_p]
+hfo_lib.opponentUnumsByProx.restype = None
 
 class HFOEnvironment(object):
   def __init__(self):
@@ -217,3 +221,17 @@ class HFOEnvironment(object):
   def isKickable(self):
     """ Returns true if ball is kickable for the given agent """
     return hfo_lib.isKickable(self.obj)
+  
+  def teammateUnumsByProx(self, data=None):
+    if data is None:
+      data = np.zeros(self.getNumTeammates(), dtype=np.int32)
+    print(data)
+    hfo_lib.teammateUnumsByProx(self.obj, as_ctypes(data))
+    print('This is data', data)
+    return data
+  
+  def opponentUnumsByProx(self, data=None):
+    if data is None:
+      data = np.zeros(self.getNumOpponents(), dtype=np.int32)
+    hfo_lib.opponentUnumsByProx(self.obj, as_ctypes(data))
+    return data

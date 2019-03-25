@@ -165,4 +165,11 @@ double HFOEnvironment::getBallY() {
 bool HFOEnvironment::isKickable() {
   return agent->world().self().isKickable();
 }
-  
+
+const std::vector<int>& HFOEnvironment::teammateUnumsByProx() {
+  return agent->getsortedTeamUnums();
+}
+
+const std::vector<int>& HFOEnvironment::opponentUnumsByProx() {
+  return agent->getsortedOppUnums();
+}

@@ -60,6 +60,8 @@ protected:
   hfo::status_t game_status;           // Current status of the game
   hfo::Player player_on_ball;          // Player in posession of the ball
   std::vector<float> state;            // Vector of current state features
+  std::vector<int> sortedTeammateUnums;        // Sorted unums by prox in perspective of the agent
+  std::vector<int> sortedOppUnums;
   std::string say_msg, hear_msg;       // Messages to/from teammates
   hfo::action_t requested_action;      // Currently requested action
   std::vector<float> params;           // Parameters of current action
@@ -70,10 +72,11 @@ protected:
 
  public:
   inline const std::vector<float>& getState() { return state; }
+  inline const std::vector<int>& getsortedTeamUnums() { return sortedTeammateUnums; }
+  inline const std::vector<int>& getsortedOppUnums() { return sortedOppUnums; }
   inline hfo::status_t getGameStatus() { return game_status; }
   inline const hfo::Player& getPlayerOnBall() { return player_on_ball; }
   inline const std::string& getHearMsg() { return hear_msg; }
-  int getUnum(); // Returns the uniform number of the player
   inline int getNumTeammates() { return num_teammates; }
   inline int getNumOpponents() { return num_opponents; }
   inline bool getLastActionStatus() { return last_action_status; }
@@ -82,6 +85,8 @@ protected:
   inline std::vector<float>* mutable_params() { return &params; }
   inline void setAction(hfo::action_t a) { requested_action = a; }
   inline void setSayMsg(const std::string& message) { say_msg = message; }
+
+  int getUnum(); // Returns the uniform number of the player
 
  private:
   bool doPreprocess();
@@ -100,6 +105,9 @@ protected:
   bool doDefendGoal();
   bool doGoToBall();
   bool doNewAction1();
+
+  std::vector<int> setTeammateUnumsByProx();
+  std::vector<int> setOppUnumsByProx();
 
 
   Communication::Ptr M_communication;
