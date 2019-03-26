@@ -6,7 +6,6 @@ import os
 import csv
 import itertools 
 import argparse
-#import tensorflow.contrib.slim as slim
 import numpy as np
 from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process,prep_session,e_greedy_bool,load_buffer
 from torch import Tensor
@@ -20,7 +19,6 @@ from torch.autograd import Variable#from tensorboardX import SummaryWriter
 from utils.make_env import make_env
 from utils.tensor_buffer import ReplayTensorBuffer
 
-#from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
 from HFO_env import *
 from trainer import launch_eval
@@ -35,7 +33,7 @@ import gc
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
                             load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in):
     start = time.time()
-    if len(team_replay_buffer) > 1000:
+    if len(team_replay_buffer) > 2500:
         
         initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
         #maddpg = dill.loads(maddpg_pick)
@@ -391,12 +389,12 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                 opp_actions_params_for_buffer = np.array([val[0] for val in opp_agent_actions])
 
             # If kickable is True one of the teammate agents has possession of the ball
-            kickable = np.array([env.get_kickable_status(i,team_obs.T,env.team_envs[i]) for i in range(env.num_TA)])
+            kickable = np.array([env.team_kickable[i] for i in range(env.num_TA)])
             if kickable.any():
                 team_kickable_counter = [tkc + 1 if kickable[i] else tkc for i,tkc in enumerate(team_kickable_counter)]
                 
             # If kickable is True one of the teammate agents has possession of the ball
-            kickable = np.array([env.get_kickable_status(i,opp_obs.T,env.opp_team_envs[i]) for i in range(env.num_OA)])
+            kickable = np.array([env.opp_kickable[i] for i in range(env.num_OA)])
             if kickable.any():
                 opp_kickable_counter = [okc + 1 if kickable[i] else okc for i,okc in enumerate(opp_kickable_counter)]
             
@@ -583,8 +581,10 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                             
                         if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
                             maddpg.load_random(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
+                            pass
                         else:
                             maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
+                            pass
 
                     if bl_agent2d:
                         maddpg.load_agent2d(side='team',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
@@ -690,7 +690,7 @@ if __name__ == "__main__":
         final_OU_noise_scale = 0.03
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 50 # Haus uses over 10,000 updates --
+        num_explore_episodes = 5 # Haus uses over 10,000 updates --
         multi_gpu = False
         data_parallel = False
         
@@ -716,7 +716,7 @@ if __name__ == "__main__":
             freeze_actor = 0.0
             freeze_critic = 0.0
 
-            a_lr = 0.0001 # actor learning rate
+            a_lr = 0.0002 # actor learning rate
             c_lr = 0.0001 # critic learning rate
         #---------------------------------------
         #TD3 Options ---------------------------
@@ -765,14 +765,14 @@ if __name__ == "__main__":
         critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
         #---------------------------------------
         preprocess = False
-        zero_critic = False
+        zero_critic = True
         cent_critic = True
         # Control Random Initilization of Agents and Ball
         control_rand_init = True
-        ball_x_min = -0.22
-        ball_x_max = -0.22
-        ball_y_min = -0.28
-        ball_y_max = -0.28
+        ball_x_min = -0.00
+        ball_x_max = -0.00
+        ball_y_min = -0.00
+        ball_y_max = -0.00
         agents_x_min = -0.2 # agents posititions are currently configured in HFO/librcss
         agents_x_max = 0.2
         agents_y_min = -0.2
@@ -787,9 +787,9 @@ if __name__ == "__main__":
         load_random_every = 100
         k_ensembles = 1
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
-        self_play_proba = 0.8
+        self_play_proba = 0.9
         load_same_agent = True # load same policy for all agents
-        push_only_left = True
+        push_only_left = False
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -800,7 +800,7 @@ if __name__ == "__main__":
         load_nets = False # load previous sessions' networks from file for initialization
         initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
         first_save = True # build model clones for ensemble
-        preload_model = False
+        preload_model = True
         preload_path = "agent2d/model_0.pth"
         # --------------------------------------
         # Evaluation ---------------------------

@@ -261,7 +261,9 @@ class LSTMNetwork_Critic(nn.Module):
         if TD3: # second critic
             self.Q2_out = nn.Linear(self.hidden_dim_lstm, self.out_dim)
 
-        self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
+        self.nonlin = torch.nn.CELU(inplace=False)
+
+        #self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
     
     def init_hidden(self, batch_size,torch_device):
@@ -664,7 +666,9 @@ class LSTM_Actor(nn.Module):
         self.out_param_fn = lambda x: x
         self.out_action_fn = lambda x: x
         #self.nonlin = nonlin
-        self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
+        self.nonlin = torch.nn.CELU(inplace=False)
+
+        #self.nonlin = torch.nn.LeakyReLU(negative_slope=0.01, inplace=False)
         self.out_fn = lambda x: x
 
     def init_hidden(self, batch_size,torch_device):

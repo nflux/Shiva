@@ -76,6 +76,9 @@ class HFO_env():
         self.agent_possession_opp = ['N'] * num_OA
         self.team_possession_counter = [0] * num_TA
         self.opp_possession_counter = [0] * num_OA
+        self.team_kickable = [0] * num_OA
+        self.opp_kickable = [0] * num_OA
+
         self.goalie = goalie
         self.team_rew_anneal_ep = team_rew_anneal_ep
         self.port = port
@@ -334,22 +337,22 @@ class HFO_env():
 ######################  Utils for Reward ########
 #################################################
 
-    def get_kickable_status(self,agentID,obs,env):
+    def get_kickable_status(self,agentID,env):
         ball_kickable = False
         ball_kickable = env.isKickable()
         #print("no implementation")
         return ball_kickable
     
     def get_agent_possession_status(self,agentID,base):
-        # if self.team_base == base:
-        #     if self.agent_possession_team[agentID] == 'L':
-        #         self.team_possession_counter[agentID] += 1
+        if self.team_base == base:
+            if self.agent_possession_team[agentID] == 'L':
+                self.team_possession_counter[agentID] += 1
             
-        #     return self.team_possession_counter[agentID]
-        # else:
-        #     if self.agent_possession_opp[agentID] == 'R':
-        #         self.opp_possession_counter[agentID] += 1
-            #print("no implementation")
+            return self.team_possession_counter[agentID]
+        else:
+            if self.agent_possession_opp[agentID] == 'R':
+                self.opp_possession_counter[agentID] += 1
+        #    print("no implementation")
             return self.opp_possession_counter[agentID]  
 
 
@@ -495,8 +498,29 @@ class HFO_env():
                     reward+= goal_points/2.0
 
         return reward
-       
 
+    def distance(self,x1,x2,y1,y2):
+        return math.sqrt((x1-x2)**2 + (y1-y2)**2)
+
+    def distances(self,agentID,side):
+        if side == 'left':
+            team_obs = self.team_obs
+            opp_obs =  self.opp_team_obs
+        elif side =='right':
+            team_obs = self.opp_team_obs
+            opp_obs = self.team_obs
+        else:
+            print("Error: Please return a side: ('left', 'right') for side parameter")
+
+        distances_team = []
+        distances_opp = []
+        for i in range(len(team_obs)):
+            distances_team.append(distance(team_obs[agentID][self.x],team_obs[i][self.x], team_obs[agentID][self.y], team_obs[i][self.y]))
+            distances_opp.append(distance(team_obs[agentID][self.x], -opp_obs[i][self.x], team_obs[agentID][self.y], -opp_obs[i][self.y]))
+        return np.argsort(distances_team), np.argsort(distances_opp)
+
+
+            
     def unnormalize(self,val):
         return (val +1.0)/2.0
     
@@ -555,6 +579,8 @@ class HFO_env():
             opp_obs_previous = self.opp_team_obs_previous
             num_ag = self.num_TA
             env = self.team_envs[agentID]
+            kickable = self.team_kickable[agentID]
+            self.team_kickable[agentID] = self.get_kickable_status(agentID,env)
         else:
             team_actions = self.opp_actions
             team_obs = self.opp_team_obs
@@ -563,34 +589,35 @@ class HFO_env():
             opp_obs_previous = self.team_obs_previous
             num_ag = self.num_OA
             env = self.opp_team_envs[agentID]
+            kickable = self.opp_kickable[agentID]
+            self.opp_kickable[agentID] = self.get_kickable_status(agentID,env)# update kickable status (it refers to previous timestep, e.g., it WAS kickable )
 
-        if team_obs[agentID][self.stamina] < -0.3 : # LOW STAMINA
-            reward -= 0.001
-            team_reward -= 0.001
+        if team_obs[agentID][self.stamina] < 0.0 : # LOW STAMINA
+            reward -= 0.003
+            team_reward -= 0.003
             # print ('low stamina')
         
 
 
         ############ Kicked Ball #################
-
-        if self.action_list[team_actions[agentID]] in self.kick_actions and self.get_kickable_status(agentID,team_obs_previous,env):            
-        #     #Remove this check when npc ball posession can be measured
+        
+        if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:            
             if self.num_OA > 0:
                 if (np.array(self.agent_possession_team) == 'N').all() and (np.array(self.agent_possession_opp) == 'N').all():
                      #print("First Kick")
-                    reward += 1.0
-                    team_reward +=1.0
+                    reward += 1.5
+                    team_reward +=1.5
                 # set initial ball position after kick
-                    self.ball_pos_x = self.env[agentID].getBallX()/52.5
-                    self.ball_pos_y = self.env[agentID].getBallY()/34.0
+                    self.ball_pos_x = env.getBallX()/52.5
+                    self.ball_pos_y = env.getBallY()/34.0
 
         #     # track ball delta in between kicks
-            new_x = env[agentID].getBallX()/52.5
-            new_y = env[agentID].getBallY()/34.0
+            new_x = env.getBallX()/52.5
+            new_y = env.getBallY()/34.0
             self.ball_delta = math.sqrt((self.ball_pos_x-new_x)**2+ (self.ball_pos_y-new_y)**2)
             self.ball_pos_x = new_x
             self.ball_pos_y = new_y
-            self.pass_reward = self.ball_delta * 2.0
+            self.pass_reward = self.ball_delta * 5.0
 
         #     ######## Pass Receiver Reward #########
             if self.team_base == base:
@@ -648,15 +675,15 @@ class HFO_env():
         # all agents rewarded for closer to ball
         dist_cur = self.distance_to_ball(team_obs[agentID])
         dist_prev = self.distance_to_ball(team_obs_previous[agentID])
-        reward   += (1.5)*(dist_prev - dist_cur) # if cur > prev --> +   
-        team_reward +=(1.5)*(dist_prev - dist_cur)
+        reward   += (0.5)*(dist_prev - dist_cur) # if cur > prev --> +   
+        team_reward +=(0.5)*(dist_prev - dist_cur)
             
         ####################### Rewards the closest player to ball for advancing toward ball ############
-        # distance_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
-        # distance_prev, closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
-        # if agentID == closest_agent:
-        #     team_reward += (distance_prev - distance_cur)*1.0
-        #     reward+= (distance_prev - distance_cur)*1.0
+        distance_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
+        distance_prev, closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
+        if agentID == closest_agent:
+            team_reward += (distance_prev - distance_cur)*1.0
+            reward+= (distance_prev - distance_cur)*1.0
             
         ##################################################################################
             
@@ -666,18 +693,18 @@ class HFO_env():
         if ((self.team_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
             if agentID == team_possessor:
-                reward += (2.5)*(r_prev - r)
-                team_reward += (2.5)*(r_prev - r)
+                reward += (2*self.num_TA)*(r_prev - r)
+                team_reward += (2*self.num_TA)*(r_prev - r)
 
 
         elif  ((self.team_base != base) and possession_side == 'R'):
             team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
             if agentID == team_possessor:
-                 reward += (2.5)*(r_prev - r)
-                 team_reward += (2.5)*(r_prev - r)
+                 reward += (0.0)*(r_prev - r)
+                 team_reward += (0.0)*(r_prev - r)
         else:
-            reward += (1.25)*(r_prev - r)
-            team_reward += (1.25)*(r_prev - r)
+            reward += (0.0)*(r_prev - r)
+            team_reward += (0.0)*(r_prev - r)
 
             
 
