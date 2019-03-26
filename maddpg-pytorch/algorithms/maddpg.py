@@ -976,8 +976,8 @@ class MADDPG(object):
             nagents = self.nagents_team
             policies = self.team_policies
             opp_policies = self.opp_policies
-            obs, acs, rews, dones, MC_rews,n_step_rews,ws,rec_states = team_sample
-            opp_obs, opp_acs, opp_rews, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_ = opp_sample
+            obs, acs, rews, dones, MC_rews,n_step_rews,ws,rec_states,sorted_feats = team_sample
+            opp_obs, opp_acs, opp_rews, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_,_ = opp_sample
         else:
             count = self.opp_count[agent_i]
             curr_agent = self.opp_agents[agent_i]
@@ -986,8 +986,8 @@ class MADDPG(object):
             nagents = self.nagents_opp
             policies = self.opp_policies
             opp_policies = self.team_policies
-            obs, acs, rews, dones,MC_rews,n_step_rews,ws,rec_states = opp_sample
-            opp_obs, opp_acs, opp_rews, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_ = team_sample
+            obs, acs, rews, dones,MC_rews,n_step_rews,ws,rec_states,sorted_feats = opp_sample
+            opp_obs, opp_acs, opp_rews, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_,_ = team_sample
 
         self.curr_agent_index = agent_i
         if load_same_agent:

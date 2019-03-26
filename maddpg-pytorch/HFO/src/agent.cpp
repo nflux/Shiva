@@ -167,6 +167,30 @@ int Agent::getUnum() {
   return world().self().unum();
 }
 
+std::vector<int> Agent::setTeammateUnumsByProx() {
+  const rcsc::PlayerPtrCont& teammates = world().teammatesFromSelf();
+  std::vector<int> sortedVec(teammates.size());
+  int i = 0;
+  for (rcsc::PlayerPtrCont::const_iterator it=teammates.begin(); it != teammates.end(); ++it) {
+    const rcsc::PlayerObject* teammate = *it;
+    sortedVec[i++] = teammate->unum();
+  }
+
+  return sortedVec;
+}
+
+std::vector<int> Agent::setOppUnumsByProx() {
+  const rcsc::PlayerPtrCont& opponents = world().opponentsFromSelf();
+  std::vector<int> sortedVec(opponents.size());
+  int i = 0;
+  for (rcsc::PlayerPtrCont::const_iterator it=opponents.begin(); it != opponents.end(); ++it) {
+    const rcsc::PlayerObject* opponent = *it;
+    sortedVec[i++] = opponent->unum();
+  }
+
+  return sortedVec;
+}
+
 bool Agent::initImpl(CmdLineParser & cmd_parser) {
     bool result = PlayerAgent::initImpl(cmd_parser);
 
@@ -407,6 +431,9 @@ Agent::UpdateFeatures()
     const std::string& message = audioSensor().trainerMessage();
     hfo::ParseGameStatus(message, game_status);
     
+    // sortedTeammateUnums = setTeammateUnumsByProx();
+    // sortedOppUnums = setOppUnumsByProx();
+
     state = feature_extractor->ExtractFeatures(this->world(),
 					       getLastActionStatus(), player_on_ball, ep_end_time);
     if(game_status != hfo::IN_GAME) {

@@ -7,7 +7,7 @@ import csv
 import itertools 
 import argparse
 import numpy as np
-from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process,prep_session,e_greedy_bool,load_buffer
+from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process,prep_session,e_greedy_bool,load_buffer,flatten
 from torch import Tensor
 from HFO import hfo
 import time
@@ -40,7 +40,8 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
         maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
         if multi_gpu:
             maddpg.torch_device = torch.device("cuda:3")
-        maddpg.device = 'cuda'
+        if to_gpu:
+            maddpg.device = 'cuda'
         number_of_updates = 250
         batches_to_sample = 50
 
@@ -127,7 +128,8 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
     for ensemble in range(k_ensembles):
         if multi_gpu:
             maddpg.torch_device = torch.device("cuda:3")
-        maddpg.device = 'cuda'
+        if to_gpu:
+            maddpg.device = 'cuda'
         maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
         maddpg.load_same_ensembles(ensemble_path,ensemble,maddpg.nagents_team,load_same_agent=load_same_agent)
         m = 0
@@ -172,6 +174,40 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
             [maddpg.save_agent(load_path,update_session,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
             [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
     print(time.time()-start,"<-- Policy Update Cycle")
+
+
+# NOTE: Assumes agents are loaded in sorted uniform order. Ergo 1,2,3,...
+def constructProxmityList(env, all_tobs, all_oobs, all_tacs, all_oacs, num_agents, side):
+    # if side == 'left':
+    #     team = env.team_envs
+    # else:
+    #     team = env.opp_team_envs
+    
+    sortedByProxRet = []
+    sortedUnumOurList = None
+    sortedUnumOppList = None
+    for i in range(num_agents):
+        agent_exp = []
+        sortedUnumOurList, sortedUnumOppList = env.distances(i, side)
+        agent_exp.append(all_tobs[sortedUnumOurList])
+        agent_exp.append(all_oobs[sortedUnumOppList])
+        agent_exp.append(all_tacs[sortedUnumOurList])
+        agent_exp.append(all_oacs[sortedUnumOppList])
+
+        sortedByProxRet.append(agent_exp)
+
+    return sortedByProxRet
+
+def convertProxListToTensor(all_prox_lists, agents, item_size):
+    num_steps = len(all_prox_lists)
+    prox_tensor = torch.zeros(num_steps, agents, item_size)
+    for i,apl in enumerate(all_prox_lists):
+        gen = flatten(apl)
+        np_list = np.array(list(gen))
+        for a in range(agents):
+            prox_tensor[i,a] = torch.from_numpy(np_list[a*item_size:item_size*(a+1)])
+    
+    return prox_tensor
 
 
 def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history,ep_num):
@@ -239,8 +275,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                                 lstm_burn_in=lstm_burn_in,overlap=overlap,
                                 only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,preprocess=preprocess,zero_critic=zero_critic,cent_critic=cent_critic)         
         
-        
-    maddpg.device = 'cuda'
+    if to_gpu:
+        maddpg.device = 'cuda'
 
     if multi_gpu:
         if env_num < 5:
@@ -257,6 +293,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     team_step_logger_df = pd.DataFrame()
     opp_step_logger_df = pd.DataFrame()
 
+    prox_item_size = num_TA*(2*obs_dim_TA + 2*acs_dim)
     exps = None
 
     # --------------------------------
@@ -266,7 +303,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
     time.sleep(3)
     for ep_i in range(0, num_episodes):
-        maddpg.device = 'cuda'
+        if to_gpu:
+            maddpg.device = 'cuda'
 
         start = time.time()
         # team n-step
@@ -315,6 +353,10 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
         env.team_possession_counter = [0] * num_TA
         env.opp_possession_counter = [0] * num_OA
         #reducer = maddpg.team_agents[0].reducer
+
+        # List of tensors sorted by proximity in terms of agents
+        sortedByProxTeamList = []
+        sortedByProxOppList = []
         for et_i in range(0, episode_length):
 
             if device == 'cuda':
@@ -400,6 +442,9 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             
             team_possession_counter = [env.get_agent_possession_status(i, env.team_base) for i in range(num_TA)]
             opp_possession_counter = [env.get_agent_possession_status(i, env.opp_base) for i in range(num_OA)]
+
+            sortedByProxTeamList.append(constructProxmityList(env, team_obs.T, opp_obs.T, team_actions_params_for_buffer, opp_actions_params_for_buffer, num_TA, 'left'))
+            sortedByProxOppList.append(constructProxmityList(env, opp_obs.T, team_obs.T, opp_actions_params_for_buffer, team_actions_params_for_buffer, num_OA, 'right'))
 
             _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params,team_agent_actions,opp_agent_actions)
 
@@ -522,9 +567,12 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                             exps = torch.from_numpy(exp_comb)
                         else:
                             exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
-
+                    
+                    prox_team_tensor = convertProxListToTensor(sortedByProxTeamList, num_TA, prox_item_size)
+                    prox_opp_tensor = convertProxListToTensor(sortedByProxOppList, num_OA, prox_item_size)
+                    comb_prox_tensor = torch.cat((prox_team_tensor, prox_opp_tensor), dim=1)
                     # Fill in values for zeros for the hidden state
-                    exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), num_TA*2, hidden_dim_lstm*4), dtype=exps.dtype)), dim=2)
+                    exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), num_TA*2, hidden_dim_lstm*4), dtype=exps.dtype), comb_prox_tensor.double()), dim=2)
                     #maddpg.get_recurrent_states(exps, obs_dim_TA, acs_dim, num_TA*2, hidden_dim_lstm,maddpg.torch_device)
                     shared_exps[int(ep_num[env_num].item())][:len(exps)] = exps
                     exp_i[int(ep_num[env_num].item())] += et_i
@@ -591,7 +639,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
                     while halt.all():
                         time.sleep(0.1)
-                    total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4)
+                    total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4) + prox_item_size
                     ep_num.copy_(torch.zeros_like(ep_num,requires_grad=False))
                     [s.copy_(torch.zeros(max_num_experiences,2*num_TA,total_dim)) for s in shared_exps[:int(ep_num[env_num].item())]] # done loading
                     del exps
@@ -622,7 +670,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 2
+    num_envs = 1
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -641,7 +689,7 @@ if __name__ == "__main__":
         # options ------------------------------
         action_level = 'low'
         feature_level = 'simple'
-        USE_CUDA = True
+        USE_CUDA = False
         if USE_CUDA:
             device = 'cuda'
             to_gpu = True
@@ -655,7 +703,7 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 15000
+        replay_memory_size = 1000
         pt_memory = 50000
         episode_length = 500 # FPS
         untouched_time = 500
@@ -914,7 +962,9 @@ if __name__ == "__main__":
 
     if multi_gpu:
         maddpg.torch_device = torch.device("cuda:0")
-    maddpg.device = 'cuda'
+    
+    if to_gpu:
+        maddpg.device = 'cuda'
     maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
     
     if first_save: # Generate list of ensemble networks
@@ -927,17 +977,18 @@ if __name__ == "__main__":
 
 
         first_save = False
-
+    
+    prox_item_size = num_TA*(2*obs_dim_TA + 2*acs_dim)
     team_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
 
     #Added to Disable/Enable the opp agents
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
     opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
     max_episodes_shared = 30
     processes = []
-    total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4)
+    total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4) + prox_item_size
 
     shared_exps = [[torch.zeros(max_num_experiences,2*num_TA,total_dim,requires_grad=False).share_memory_() for _ in range(max_episodes_shared)] for _ in range(num_envs)]
     exp_indices = [[torch.tensor(0,requires_grad=False).share_memory_() for _ in range(max_episodes_shared)] for _ in range(num_envs)]
@@ -955,9 +1006,9 @@ if __name__ == "__main__":
     if pretrain or use_pretrain_data:
         # ------------------------------------ Start Pretrain --------------------------------------------
         pt_trbs = [ReplayTensorBuffer(pt_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain) for _ in range(num_buffers)]
+                                                obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
         pt_orbs = [ReplayTensorBuffer(pt_memory , num_TA,
-                                            obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain) for _ in range(num_buffers)]
+                                            obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
         # ------------ Load in shit from csv into buffer ----------------------
         pt_threads = []
         print("Load PT Buffers")
@@ -993,9 +1044,9 @@ if __name__ == "__main__":
         #opp_replay_buffer = pt_orbs[0]
         
         pt_trb = ReplayTensorBuffer(pt_total_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain)
+                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
         pt_orb = ReplayTensorBuffer(pt_total_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain)
+                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
         for j in range(num_buffers):
             if not LSTM_policy:
                 pt_trb.merge_buffer(pt_trbs[j])

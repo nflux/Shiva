@@ -46,6 +46,14 @@ extern "C" {
   double getBallX(hfo::HFOEnvironment *hfo) {return hfo->getBallX();}
   double getBallY(hfo::HFOEnvironment *hfo) {return hfo->getBallY();}
   bool isKickable(hfo::HFOEnvironment *hfo) {return hfo->isKickable();}
+  void teammateUnumsByProx(hfo::HFOEnvironment *hfo, int *unum_data) {
+    const int* unums = hfo->teammateUnumsByProx().data();
+    memcpy(unum_data, unums, hfo->getNumTeammates() * sizeof(int));
+  }
+  void opponentUnumsByProx(hfo::HFOEnvironment *hfo, int *unum_data) {
+    const int* unums = hfo->opponentUnumsByProx().data();
+    memcpy(unum_data, unums, hfo->getNumOpponents() * sizeof(int));
+  }
 }
 
 #endif

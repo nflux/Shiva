@@ -68,7 +68,9 @@ class HFOEnvironment {
 
   virtual bool isKickable();
 
-  
+  const std::vector<int>& teammateUnumsByProx();
+
+  const std::vector<int>& opponentUnumsByProx();
 
  private:
   rcsc::BasicClient* client;

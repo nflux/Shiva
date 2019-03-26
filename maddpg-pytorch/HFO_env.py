@@ -498,7 +498,7 @@ class HFO_env():
                     reward+= goal_points/2.0
 
         return reward
-
+       
     def distance(self,x1,x2,y1,y2):
         return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
@@ -515,12 +515,11 @@ class HFO_env():
         distances_team = []
         distances_opp = []
         for i in range(len(team_obs)):
-            distances_team.append(distance(team_obs[agentID][self.x],team_obs[i][self.x], team_obs[agentID][self.y], team_obs[i][self.y]))
-            distances_opp.append(distance(team_obs[agentID][self.x], -opp_obs[i][self.x], team_obs[agentID][self.y], -opp_obs[i][self.y]))
+            distances_team.append(self.distance(team_obs[agentID][self.x],team_obs[i][self.x], team_obs[agentID][self.y],team_obs[i][self.y]))
+            distances_opp.append(self.distance(team_obs[agentID][self.x], -opp_obs[i][self.x], team_obs[agentID][self.y], -opp_obs[i][self.y]))
         return np.argsort(distances_team), np.argsort(distances_opp)
 
 
-            
     def unnormalize(self,val):
         return (val +1.0)/2.0
     
