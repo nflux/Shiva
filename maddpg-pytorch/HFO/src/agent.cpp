@@ -431,8 +431,8 @@ Agent::UpdateFeatures()
     const std::string& message = audioSensor().trainerMessage();
     hfo::ParseGameStatus(message, game_status);
     
-    sortedTeammateUnums = setTeammateUnumsByProx();
-    sortedOppUnums = setOppUnumsByProx();
+    // sortedTeammateUnums = setTeammateUnumsByProx();
+    // sortedOppUnums = setOppUnumsByProx();
 
     state = feature_extractor->ExtractFeatures(this->world(),
 					       getLastActionStatus(), player_on_ball, ep_end_time);

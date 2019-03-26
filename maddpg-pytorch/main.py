@@ -179,7 +179,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
 
 
 # NOTE: Assumes agents are loaded in sorted uniform order. Ergo 1,2,3,...
-def constuctProxmityList(env, all_tobs, all_oobs, all_tacs, all_oacs, num_agents, side):
+def constructProxmityList(env, all_tobs, all_oobs, all_tacs, all_oacs, num_agents, side):
     # if side == 'left':
     #     team = env.team_envs
     # else:
@@ -191,10 +191,10 @@ def constuctProxmityList(env, all_tobs, all_oobs, all_tacs, all_oacs, num_agents
     for i in range(num_agents):
         agent_exp = []
         sortedUnumOurList, sortedUnumOppList = env.distances(i, side)
-        agent_exp.append(all_tobs[sortedUnumOurList[i]])
-        agent_exp.append(all_oobs[sortedUnumOppList[i]])
-        agent_exp.append(all_tacs[sortedUnumOurList[i]])
-        agent_exp.append(all_oacs[sortedUnumOppList[i]])
+        agent_exp.append(all_tobs[sortedUnumOurList])
+        agent_exp.append(all_oobs[sortedUnumOppList])
+        agent_exp.append(all_tacs[sortedUnumOurList])
+        agent_exp.append(all_oacs[sortedUnumOppList])
 
         sortedByProxRet.append(agent_exp)
 
@@ -206,9 +206,6 @@ def convertProxListToTensor(all_prox_lists, agents, item_size):
     for i,apl in enumerate(all_prox_lists):
         gen = flatten(apl)
         np_list = np.array(list(gen))
-        print(len(np_list))
-        print(item_size)
-        exit(0)
         for a in range(agents):
             prox_tensor[i,a] = torch.from_numpy(np_list[a*item_size:item_size*(a+1)])
     
@@ -298,8 +295,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     team_step_logger_df = pd.DataFrame()
     opp_step_logger_df = pd.DataFrame()
 
-    num_agents = num_TA + num_OA
-    item_size = (num_TA)*obs_dim_TA + (num_TA)*acs_dim
+    prox_item_size = num_TA*(2*obs_dim_TA + 2*acs_dim)
     exps = None
 
     # --------------------------------
@@ -449,8 +445,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             team_possession_counter = [env.get_agent_possession_status(i, env.team_base) for i in range(num_TA)]
             opp_possession_counter = [env.get_agent_possession_status(i, env.opp_base) for i in range(num_OA)]
 
-            sortedByProxTeamList.append(constuctProxmityList(env, list(team_obs.T), list(opp_obs.T), team_actions_params_for_buffer, opp_actions_params_for_buffer, num_TA, 'left'))
-            sortedByProxOppList.append(constuctProxmityList(env, list(opp_obs.T), list(team_obs.T), opp_actions_params_for_buffer, team_actions_params_for_buffer, num_OA, 'right'))
+            sortedByProxTeamList.append(constructProxmityList(env, team_obs.T, opp_obs.T, team_actions_params_for_buffer, opp_actions_params_for_buffer, num_TA, 'left'))
+            sortedByProxOppList.append(constructProxmityList(env, opp_obs.T, team_obs.T, opp_actions_params_for_buffer, team_actions_params_for_buffer, num_OA, 'right'))
 
             _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params,team_agent_actions,opp_agent_actions)
 
@@ -574,15 +570,11 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                         else:
                             exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
                     
-                    prox_team_tensor = convertProxListToTensor(sortedByProxTeamList, num_TA, item_size)
-                    prox_opp_tensor = convertProxListToTensor(sortedByProxOppList, num_OA, item_size)
-                    print(prox_team_tensor.size())
-                    exit(0)
+                    prox_team_tensor = convertProxListToTensor(sortedByProxTeamList, num_TA, prox_item_size)
+                    prox_opp_tensor = convertProxListToTensor(sortedByProxOppList, num_OA, prox_item_size)
                     comb_prox_tensor = torch.cat((prox_team_tensor, prox_opp_tensor), dim=1)
-                    print(comb_prox_tensor.size())
-                    exit(0)
                     # Fill in values for zeros for the hidden state
-                    exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), num_TA*2, hidden_dim_lstm*4), comb_prox_tensor, dtype=exps.dtype)), dim=2)
+                    exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), num_TA*2, hidden_dim_lstm*4), dtype=exps.dtype), comb_prox_tensor.double()), dim=2)
                     #maddpg.get_recurrent_states(exps, obs_dim_TA, acs_dim, num_TA*2, hidden_dim_lstm,maddpg.torch_device)
                     shared_exps[int(ep_num[env_num].item())][:len(exps)] = exps
                     exp_i[int(ep_num[env_num].item())] += et_i
@@ -647,7 +639,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
                     while halt.all():
                         time.sleep(0.1)
-                    total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4)
+                    total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4) + prox_item_size
                     ep_num.copy_(torch.zeros_like(ep_num,requires_grad=False))
                     [s.copy_(torch.zeros(max_num_experiences,2*num_TA,total_dim)) for s in shared_exps[:int(ep_num[env_num].item())]] # done loading
                     del exps
@@ -985,17 +977,18 @@ if __name__ == "__main__":
 
 
         first_save = False
-
+    
+    prox_item_size = num_TA*(2*obs_dim_TA + 2*acs_dim)
     team_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
 
     #Added to Disable/Enable the opp agents
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
     opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL)
+                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
     max_episodes_shared = 30
     processes = []
-    total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4)
+    total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4) + prox_item_size
 
     shared_exps = [[torch.zeros(max_num_experiences,2*num_TA,total_dim,requires_grad=False).share_memory_() for _ in range(max_episodes_shared)] for _ in range(num_envs)]
     exp_indices = [[torch.tensor(0,requires_grad=False).share_memory_() for _ in range(max_episodes_shared)] for _ in range(num_envs)]
@@ -1013,9 +1006,9 @@ if __name__ == "__main__":
     if pretrain or use_pretrain_data:
         # ------------------------------------ Start Pretrain --------------------------------------------
         pt_trbs = [ReplayTensorBuffer(pt_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain) for _ in range(num_buffers)]
+                                                obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
         pt_orbs = [ReplayTensorBuffer(pt_memory , num_TA,
-                                            obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain) for _ in range(num_buffers)]
+                                            obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
         # ------------ Load in shit from csv into buffer ----------------------
         pt_threads = []
         print("Load PT Buffers")
@@ -1051,9 +1044,9 @@ if __name__ == "__main__":
         #opp_replay_buffer = pt_orbs[0]
         
         pt_trb = ReplayTensorBuffer(pt_total_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain)
+                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
         pt_orb = ReplayTensorBuffer(pt_total_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,SIL,pretrain=pretrain)
+                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
         for j in range(num_buffers):
             if not LSTM_policy:
                 pt_trb.merge_buffer(pt_trbs[j])
