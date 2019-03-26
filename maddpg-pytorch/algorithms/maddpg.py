@@ -1357,7 +1357,7 @@ class MADDPG(object):
             opp_policies = self.opp_policies
             obs, acs, rews, dones, MC_rews,n_step_rews,ws,rec_states,sorted_feats = team_sample 
             # sorted feats = [agent_0:[tobs,oobs,tacs,oacs],agent_1:[tobs,oobs,tacs,oacs]] sorted by proximity
-            opp_obs, opp_acs, opp_rews, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_ = opp_sample
+            opp_obs, opp_acs, opp_rews, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_,_ = opp_sample
         else:
             count = self.opp_count[agent_i]
             curr_agent = self.opp_agents[agent_i]
@@ -3321,13 +3321,14 @@ class MADDPG(object):
             # obs space and action space are concatenated before sending to
             # critic network
             # NOTE: Only works for m vs m
-            num_in_critic = (num_in_pol + num_out_pol) * env.num_TA
-            if critic_mod_both:
-                num_in_critic = num_in_critic + ((num_in_pol + num_out_pol) * env.num_TA)
-            elif critic_mod_act:
-                num_in_critic = num_in_critic + (num_out_pol * env.num_TA)
-            elif critic_mod_obs:
-                num_in_critic = num_in_critic + (num_in_pol * env.num_TA)
+            # subtract the last action output
+            num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 )
+            #if critic_mod_both:
+            #    num_in_critic = num_in_critic + ((num_in_pol + num_out_pol) * env.num_TA)
+            #elif critic_mod_act:
+            #    num_in_critic = num_in_critic + (num_out_pol * env.num_TA)
+            #elif critic_mod_obs:
+            #    num_in_critic = num_in_critic + (num_in_pol * env.num_TA)
             
             
             

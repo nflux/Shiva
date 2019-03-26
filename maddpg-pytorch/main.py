@@ -77,7 +77,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                     if not load_same_agent:
                         print("No implementation")
                     else:                        
-                        _ = maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
+                        _ = maddpg.update_LSTM_new(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
                         if up % number_of_updates/10 == 0: # update target half way through
                             maddpg.update_agent_actor(0,number_of_updates/10)
                 else:
@@ -689,7 +689,7 @@ if __name__ == "__main__":
         # options ------------------------------
         action_level = 'low'
         feature_level = 'simple'
-        USE_CUDA = False
+        USE_CUDA = True
         if USE_CUDA:
             device = 'cuda'
             to_gpu = True
@@ -703,7 +703,7 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 1000
+        replay_memory_size = 10000
         pt_memory = 50000
         episode_length = 500 # FPS
         untouched_time = 500
@@ -848,7 +848,7 @@ if __name__ == "__main__":
         load_nets = False # load previous sessions' networks from file for initialization
         initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
         first_save = True # build model clones for ensemble
-        preload_model = True
+        preload_model = False
         preload_path = "agent2d/model_0.pth"
         # --------------------------------------
         # Evaluation ---------------------------
@@ -1338,9 +1338,9 @@ if __name__ == "__main__":
                             train_actor = (len(team_replay_buffer) > 10000) and False # and (update_session % 2 == 0)
                             train_critic = (len(team_replay_buffer) > batch_size)
                             if train_critic:
-                                priorities.append(maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path,lstm_burn_in=lstm_burn_in))
+                                priorities.append(maddpg.update_LSTM_new(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path,lstm_burn_in=lstm_burn_in))
                             if train_actor: # only update actor once 1 mill
-                                _ = maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
+                                _ = maddpg.update_LSTM_new(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
                                                                             load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)
 
                             #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
