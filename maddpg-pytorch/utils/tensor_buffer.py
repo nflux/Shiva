@@ -42,6 +42,7 @@ class ReplayTensorBuffer(object):
         self.overlap = overlap
         self.hidden_dim_lstm = hidden_dim_lstm
         self.prox_item_size = prox_item_size
+        self.prox_item_size_per_agent = prox_item_size//num_agents
         if not pretrain:
             total_dim = obs_dim+ac_dim+6+k+(hidden_dim_lstm*4)+prox_item_size
         else:
@@ -278,6 +279,8 @@ class ReplayTensorBuffer(object):
         else:
             cast_obs = lambda x: Variable(x, requires_grad=True)
 
+        prox_start = self.obs_acs_dim+5+self.k+self.hidden_dim_lstm*4
+        prox_item_list = [0, self.obs_dim, self.obs_dim*2, self.ac_dim + self.obs_dim*2, self.ac_dim*2 + self.obs_dim*2]
         return ([cast_obs(self.seq_exps[:, inds, a, :self.obs_dim]) for a in range(self.num_agents)], # obs
                 [cast(self.seq_exps[:, inds, a, self.obs_dim:self.obs_acs_dim]) for a in range(self.num_agents)], # actions
                 [cast(self.seq_exps[:, inds, a, self.obs_acs_dim:self.obs_acs_dim+1]) for a in range(self.num_agents)], # rewards
@@ -286,8 +289,9 @@ class ReplayTensorBuffer(object):
                 [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+3:self.obs_acs_dim+4]) for a in range(self.num_agents)], # n_step_targets
                 [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+4:self.obs_acs_dim+5]) for a in range(self.num_agents)], # ws
                 self.seq_exps[0, inds, 0, self.obs_acs_dim+5+self.k:self.obs_acs_dim+5+self.k+self.hidden_dim_lstm*4], # recurrent states for both critics
-                [self.seq_exps[:, inds, a, -self.prox_item_size:] for a in range(self.num_agents)])
-                
+                [[[self.seq_exps[:, inds, outer, prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p]:prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p+1]] 
+                for inner in range(self.num_agents)] for p in range(len(prox_item_list)-1)] for outer in range(self.num_agents)])
+
     def get_average_rewards(self, N):
         if self.filled_i == self.max_steps:
             inds = np.arange(self.curr_i - N, self.curr_i)  # allow for negative indexing
