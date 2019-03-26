@@ -289,7 +289,8 @@ class ReplayTensorBuffer(object):
                 [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+3:self.obs_acs_dim+4]) for a in range(self.num_agents)], # n_step_targets
                 [cast(self.seq_exps[:, inds, a, self.obs_acs_dim+4:self.obs_acs_dim+5]) for a in range(self.num_agents)], # ws
                 self.seq_exps[0, inds, 0, self.obs_acs_dim+5+self.k:self.obs_acs_dim+5+self.k+self.hidden_dim_lstm*4], # recurrent states for both critics
-                [[[self.seq_exps[:, inds, outer, prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p]:prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p+1]] 
+                [[[cast_obs(self.seq_exps[:, inds, outer, prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p]:prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p+1]])
+                if p <= 1 else cast(self.seq_exps[:, inds, outer, prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p]:prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p+1]])
                 for inner in range(self.num_agents)] for p in range(len(prox_item_list)-1)] for outer in range(self.num_agents)])
 
     def get_average_rewards(self, N):
