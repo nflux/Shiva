@@ -46,7 +46,7 @@ class ReplayTensorBuffer(object):
         if not pretrain:
             total_dim = obs_dim+ac_dim+6+k+(hidden_dim_lstm*4)+prox_item_size
         else:
-            total_dim = obs_dim+ac_dim+6+k
+            total_dim = obs_dim+ac_dim+6+k+prox_item_size
         
         if LSTM:
             self.max_steps = int(max_steps) # Max sequences did this to reduce var name change

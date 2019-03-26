@@ -532,9 +532,64 @@ def exp_stack(obs,acs,rews,next_obs,dones,MC_targets,n_step_targets,ws,prio,def_
         return np.column_stack((obs, acs, rews, dones, MC_targets, n_step_targets,
                                     ws, prio, def_prio))
 
+# NOTE: Assumes agents are loaded in sorted uniform order. Ergo 1,2,3,...
+def pt_constructProxmityList(all_tobs, all_oobs, all_tacs, all_oacs, num_agents):
+    sortedByProxRet = []
+    sortedUnumOurList = None
+    sortedUnumOppList = None
+    for i in range(num_agents):
+        agent_exp = []
+        sortedUnumOurList, sortedUnumOppList = pt_distances(num_agents, i, all_tobs, all_oobs)
+        agent_exp.append(all_tobs[sortedUnumOurList])
+        agent_exp.append(all_oobs[sortedUnumOppList])
+        agent_exp.append(all_tacs[sortedUnumOurList])
+        agent_exp.append(all_oacs[sortedUnumOppList])
+
+        sortedByProxRet.append(agent_exp)
+
+    return sortedByProxRet
+
+# NOTE: Assumes agents are loaded in sorted uniform order. Ergo 1,2,3,...
+def constructProxmityList(env, all_tobs, all_oobs, all_tacs, all_oacs, num_agents, side):
+    sortedByProxRet = []
+    sortedUnumOurList = None
+    sortedUnumOppList = None
+    for i in range(num_agents):
+        agent_exp = []
+        sortedUnumOurList, sortedUnumOppList = env.distances(i, side)
+        agent_exp.append(all_tobs[sortedUnumOurList])
+        agent_exp.append(all_oobs[sortedUnumOppList])
+        agent_exp.append(all_tacs[sortedUnumOurList])
+        agent_exp.append(all_oacs[sortedUnumOppList])
+
+        sortedByProxRet.append(agent_exp)
+
+    return sortedByProxRet
+
+def convertProxListToTensor(all_prox_lists, agents, item_size):
+    num_steps = len(all_prox_lists)
+    prox_tensor = torch.zeros(num_steps, agents, item_size)
+    for i,apl in enumerate(all_prox_lists):
+        gen = flatten(apl)
+        np_list = np.array(list(gen))
+        for a in range(agents):
+            prox_tensor[i,a] = torch.from_numpy(np_list[a*item_size:item_size*(a+1)])
+    
+    return prox_tensor
+
+def distance(x1,x2,y1,y2):
+    return math.sqrt((x1-x2)**2 + (y1-y2)**2)
+
+def pt_distances(num_agents, agentID, tobs, oobs):
+    distances_team = []
+    distances_opp = []
+    for i in range(num_agents):
+        distances_team.append(self.distance(tobs[agentID][self.x],tobs[i][self.x], tobs[agentID][self.y],tobs[i][self.y]))
+        distances_opp.append(self.distance(tobs[agentID][self.x], -oobs[i][self.x], tobs[agentID][self.y], -oobs[i][self.y]))
+    return np.argsort(distances_team), np.argsort(distances_opp)
 
 def load_buffer(left,right,fstatus,zip_vars):
-    num_TA,obs_dim_TA,acs_dim,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,num_episodes,LSTM_policy = zip_vars
+    num_TA,obs_dim_TA,acs_dim,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,num_episodes,LSTM_policy,prox_item_size = zip_vars
     
     
     team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, fstatus=fstatus, num_features = obs_dim_TA-acs_dim) # -8 for action space thats added here.
@@ -565,7 +620,9 @@ def load_buffer(left,right,fstatus,zip_vars):
         opp_n_step_dones = []
         opp_n_step_ws = []
         
-
+        # List of tensors sorted by proximity in terms of agents
+        sortedByProxTeamList = []
+        sortedByProxOppList = []
         d = 0
         first_action = np.asarray([[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0] for _ in range(num_TA)])
         for et_i in range(episode_length):
@@ -583,6 +640,10 @@ def load_buffer(left,right,fstatus,zip_vars):
                 opp_obs = np.asarray([list(np.concatenate((t,a),axis=0)) for t,a in zip(opp_pt_obs[pt_time_step],opp_pt_actions[pt_time_step-1])])
             nobs = np.asarray([list(np.concatenate((t,a),axis=0)) for t,a in zip(team_pt_obs[pt_time_step+1],team_pt_actions[pt_time_step])])
             opp_nobs = np.asarray([list(np.concatenate((t,a),axis=0)) for t,a in zip(opp_pt_obs[pt_time_step+1],opp_pt_actions[pt_time_step])])
+
+            sortedByProxTeamList.append(pt_constructProxmityList(obs, opp_obs, team_pt_actions[pt_time_step], opp_pt_actions[pt_time_step], num_TA))
+            sortedByProxOppList.append(pt_constructProxmityList(opp_obs, obs, opp_pt_actions[pt_time_step], team_pt_actions[pt_time_step], num_OA))
+
             team_n_step_acs.append(team_pt_actions[pt_time_step]) 
             team_n_step_obs.append(obs)
             team_n_step_ws.append(world_stat)
@@ -673,6 +734,13 @@ def load_buffer(left,right,fstatus,zip_vars):
                             exps = torch.from_numpy(exp_comb)
                         else:
                             exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
+                        
+                    prox_team_tensor = convertProxListToTensor(sortedByProxTeamList, num_TA, prox_item_size)
+                    prox_opp_tensor = convertProxListToTensor(sortedByProxOppList, num_OA, prox_item_size)
+                    comb_prox_tensor = torch.cat((prox_team_tensor, prox_opp_tensor), dim=1)
+                    # Fill in values for zeros for the list of list of lists
+                    exps = torch.cat((exps[:, :, :], comb_prox_tensor.double()), dim=2)
+
                     if ep_i != 0:
                         
                         if not LSTM_policy:

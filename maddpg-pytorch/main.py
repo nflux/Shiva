@@ -7,7 +7,8 @@ import csv
 import itertools 
 import argparse
 import numpy as np
-from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process,prep_session,e_greedy_bool,load_buffer,flatten
+from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process,prep_session,e_greedy_bool, \
+                        load_buffer,flatten,constructProxmityList,convertProxListToTensor
 from torch import Tensor
 from HFO import hfo
 import time
@@ -174,40 +175,6 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
             [maddpg.save_agent(load_path,update_session,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
             [maddpg.save_ensemble(ensemble_path,ensemble,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(num_TA)]
     print(time.time()-start,"<-- Policy Update Cycle")
-
-
-# NOTE: Assumes agents are loaded in sorted uniform order. Ergo 1,2,3,...
-def constructProxmityList(env, all_tobs, all_oobs, all_tacs, all_oacs, num_agents, side):
-    # if side == 'left':
-    #     team = env.team_envs
-    # else:
-    #     team = env.opp_team_envs
-    
-    sortedByProxRet = []
-    sortedUnumOurList = None
-    sortedUnumOppList = None
-    for i in range(num_agents):
-        agent_exp = []
-        sortedUnumOurList, sortedUnumOppList = env.distances(i, side)
-        agent_exp.append(all_tobs[sortedUnumOurList])
-        agent_exp.append(all_oobs[sortedUnumOppList])
-        agent_exp.append(all_tacs[sortedUnumOurList])
-        agent_exp.append(all_oacs[sortedUnumOppList])
-
-        sortedByProxRet.append(agent_exp)
-
-    return sortedByProxRet
-
-def convertProxListToTensor(all_prox_lists, agents, item_size):
-    num_steps = len(all_prox_lists)
-    prox_tensor = torch.zeros(num_steps, agents, item_size)
-    for i,apl in enumerate(all_prox_lists):
-        gen = flatten(apl)
-        np_list = np.array(list(gen))
-        for a in range(agents):
-            prox_tensor[i,a] = torch.from_numpy(np_list[a*item_size:item_size*(a+1)])
-    
-    return prox_tensor
 
 
 def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history,ep_num):
@@ -689,14 +656,14 @@ if __name__ == "__main__":
         # options ------------------------------
         action_level = 'low'
         feature_level = 'simple'
-        USE_CUDA = True
+        USE_CUDA = False
         if USE_CUDA:
             device = 'cuda'
             to_gpu = True
         else:
             to_gpu = False
             device = 'cpu'
-        use_viewer = False
+        use_viewer = True
         use_viewer_after = 1000 # If using viewer, uses after x episodes
         n_training_threads = 8
         rcss_log_game = False #Logs the game using rcssserver
@@ -1032,7 +999,7 @@ if __name__ == "__main__":
             all_s.append(status_file)
     
     
-        second_args = [(num_TA,obs_dim_TA,acs_dim,pt_trbs[i],pt_orbs[i],episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,pt_episodes,LSTM_policy) for i in range(num_buffers)]
+        second_args = [(num_TA,obs_dim_TA,acs_dim,pt_trbs[i],pt_orbs[i],episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,pt_episodes,LSTM_policy,prox_item_size) for i in range(num_buffers)]
         with Pool() as pool:
             pt_rbs = pool.starmap(load_buffer, zip(all_l,all_r,all_s, second_args))
         pt_trbs,pt_orbs = list(zip(*pt_rbs))
