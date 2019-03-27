@@ -34,7 +34,7 @@ import gc
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
                             load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,k_ensembles,SIL,SIL_update_ratio,num_TA,load_same_agent,multi_gpu,session_path,data_parallel,lstm_burn_in):
     start = time.time()
-    if len(team_replay_buffer) > 2500:
+    if len(team_replay_buffer) > 1000:
         
         initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
         #maddpg = dill.loads(maddpg_pick)
@@ -43,7 +43,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
             maddpg.torch_device = torch.device("cuda:3")
         if to_gpu:
             maddpg.device = 'cuda'
-        number_of_updates = 250
+        number_of_updates = 200
         batches_to_sample = 50
 
         if len(team_replay_buffer) < batch_size*(batches_to_sample):
@@ -78,7 +78,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                     if not load_same_agent:
                         print("No implementation")
                     else:                        
-                        _ = maddpg.update_LSTM_new(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
+                        _ = maddpg.update_LSTM_old(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
                         if up % number_of_updates/10 == 0: # update target half way through
                             maddpg.update_agent_actor(0,number_of_updates/10)
                 else:
@@ -595,10 +595,10 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     else:
                             
                         if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
-                            maddpg.load_random(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
+                            #maddpg.load_random(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
                             pass
                         else:
-                            maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
+                            #maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
                             pass
 
                     if bl_agent2d:
@@ -637,7 +637,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 1
+    num_envs = 2
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -670,7 +670,7 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 10000
+        replay_memory_size = 8000
         pt_memory = 50000
         episode_length = 500 # FPS
         untouched_time = 500
@@ -705,7 +705,7 @@ if __name__ == "__main__":
         final_OU_noise_scale = 0.03
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 5 # Haus uses over 10,000 updates --
+        num_explore_episodes = 25 # Haus uses over 10,000 updates --
         multi_gpu = False
         data_parallel = False
         
@@ -804,7 +804,7 @@ if __name__ == "__main__":
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.9
         load_same_agent = True # load same policy for all agents
-        push_only_left = False
+        push_only_left = True
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -1256,7 +1256,7 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(team_replay_buffer)
 
-            number_of_updates = 250
+            number_of_updates = 200
             batches_to_sample = 50
             if len(team_replay_buffer) < batch_size*(batches_to_sample):
                 batches_to_sample = 1
@@ -1305,9 +1305,9 @@ if __name__ == "__main__":
                             train_actor = (len(team_replay_buffer) > 10000) and False # and (update_session % 2 == 0)
                             train_critic = (len(team_replay_buffer) > batch_size)
                             if train_critic:
-                                priorities.append(maddpg.update_LSTM_new(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path,lstm_burn_in=lstm_burn_in))
+                                priorities.append(maddpg.update_LSTM_old(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path,lstm_burn_in=lstm_burn_in))
                             if train_actor: # only update actor once 1 mill
-                                _ = maddpg.update_LSTM_new(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
+                                _ = maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
                                                                             load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)
 
                             #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)

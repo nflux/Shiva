@@ -672,17 +672,22 @@ class HFO_env():
 
         ####################### reduce distance to ball - using delta  ##################
         # all agents rewarded for closer to ball
-        dist_cur = self.distance_to_ball(team_obs[agentID])
-        dist_prev = self.distance_to_ball(team_obs_previous[agentID])
-        reward   += (0.5)*(dist_prev - dist_cur) # if cur > prev --> +   
-        team_reward +=(0.5)*(dist_prev - dist_cur)
+        # dist_cur = self.distance_to_ball(team_obs[agentID])
+        # dist_prev = self.distance_to_ball(team_obs_previous[agentID])
+        # d = (0.5)*(dist_prev - dist_cur) # if cur > prev --> +   
+        # if delta > 0:
+        #     reward  += delta
+        #     team_reward += delta
             
         ####################### Rewards the closest player to ball for advancing toward ball ############
         distance_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
         distance_prev, closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
-            team_reward += (distance_prev - distance_cur)*1.0
-            reward+= (distance_prev - distance_cur)*1.0
+            delta = (distance_prev - distance_cur)*1.0
+            if delta > 0:    
+            #if True:
+                team_reward += delta
+                reward+= delta
             
         ##################################################################################
             
@@ -692,8 +697,11 @@ class HFO_env():
         if ((self.team_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
             if agentID == team_possessor:
-                reward += (2*self.num_TA)*(r_prev - r)
-                team_reward += (2*self.num_TA)*(r_prev - r)
+                delta = (2*self.num_TA)*(r_prev - r)
+                #if True:
+                if delta > 0:
+                    reward += delta
+                    team_reward += delta
 
 
         elif  ((self.team_base != base) and possession_side == 'R'):

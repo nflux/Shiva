@@ -293,6 +293,7 @@ class ReplayTensorBuffer(object):
                 if p <= 1 else cast(self.seq_exps[:, inds, outer, prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p]:prox_start+(inner*self.prox_item_size_per_agent)+prox_item_list[p+1]])
                 for inner in range(self.num_agents)] for p in range(len(prox_item_list)-1)] for outer in range(self.num_agents)])
 
+
     def get_average_rewards(self, N):
         if self.filled_i == self.max_steps:
             inds = np.arange(self.curr_i - N, self.curr_i)  # allow for negative indexing
