@@ -78,7 +78,7 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                     if not load_same_agent:
                         print("No implementation")
                     else:                        
-                        _ = maddpg.update_LSTM_old(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
+                        _ = maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path,lstm_burn_in=lstm_burn_in)
                         if up % number_of_updates/10 == 0: # update target half way through
                             maddpg.update_agent_actor(0,number_of_updates/10)
                 else:
@@ -656,14 +656,14 @@ if __name__ == "__main__":
         # options ------------------------------
         action_level = 'low'
         feature_level = 'simple'
-        USE_CUDA = False
+        USE_CUDA = True
         if USE_CUDA:
             device = 'cuda'
             to_gpu = True
         else:
             to_gpu = False
             device = 'cpu'
-        use_viewer = True
+        use_viewer = False
         use_viewer_after = 1000 # If using viewer, uses after x episodes
         n_training_threads = 8
         rcss_log_game = False #Logs the game using rcssserver
@@ -1305,7 +1305,7 @@ if __name__ == "__main__":
                             train_actor = (len(team_replay_buffer) > 10000) and False # and (update_session % 2 == 0)
                             train_critic = (len(team_replay_buffer) > batch_size)
                             if train_critic:
-                                priorities.append(maddpg.update_LSTM_old(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path,lstm_burn_in=lstm_burn_in))
+                                priorities.append(maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,load_same_agent=load_same_agent,critic=True,policy=False,session_path=session_path,lstm_burn_in=lstm_burn_in))
                             if train_actor: # only update actor once 1 mill
                                 _ = maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=forward_pass,
                                                                             load_same_agent=load_same_agent,critic=False,policy=True,session_path=session_path)

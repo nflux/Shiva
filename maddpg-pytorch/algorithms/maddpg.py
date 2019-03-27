@@ -998,7 +998,7 @@ class MADDPG(object):
             opp_obs = sorted_feats[0][1]
             acs = sorted_feats[0][2]
             opp_acs = sorted_feats[0][3] 
-            #print(acs[:,:,:])
+            #print(acs)
             #print(opp_acs)
             curr_agent.critic_optimizer.zero_grad()
             self.zero_hidden(self.batch_size,actual=True,target=True,torch_device=self.torch_device)
@@ -1346,8 +1346,8 @@ class MADDPG(object):
         if critic:
             curr_agent.critic_optimizer.zero_grad()
 
-            self.zero_hidden(self.batch_size,actual=True,target=True,torch_device=self.torch_device)
-            self.zero_hidden_policy(self.batch_size,torch_device=self.torch_device)
+            self.zero_hidden(self.batch_size*nagents,actual=True,target=True,torch_device=self.torch_device)
+            self.zero_hidden_policy(self.batch_size*nagents,torch_device=self.torch_device)
 
             #h1, h2 = self.cast_hidden(rec_states,torch_device=self.torch_device) # uncomment when recurrent states are fixed
             #self.set_hidden(h1, h2,actual=True,target=True,torch_device=self.torch_device)
@@ -1359,18 +1359,18 @@ class MADDPG(object):
                     sorted_feats[i][2] = [zero_params(a) for a in sorted_feats[i][2]]
                     sorted_feats[i][3] = [zero_params(a) for a in sorted_feats[i][3]]
 
-            #obs = [torch.cat([sorted_feats[i][0][j] for i in range(nagents)],dim=1) for j in range(nagents)]  # use features sorted by prox and stacked per agent along batch
-            #opp_obs = [torch.cat([sorted_feats[i][1][j] for i in range(nagents)],dim=1) for j in range(nagents)]
-            #acs =  [torch.cat([sorted_feats[i][2][j] for i in range(nagents)],dim=1) for j in range(nagents)]
-            #opp_acs = [torch.cat([sorted_feats[i][3][j] for i in range(nagents)],dim=1) for j in range(nagents)]
-            #n_step_rews = [val.repeat(1,nagents,1) for val in n_step_rews]
-            #MC_rews = [val.repeat(1,nagents,1) for val in MC_rews]
-            #dones = [val.repeat(1,nagents,1) for val in dones]
+            obs = [torch.cat([sorted_feats[i][0][j] for i in range(nagents)],dim=1) for j in range(nagents)]  # use features sorted by prox and stacked per agent along batch
+            opp_obs = [torch.cat([sorted_feats[i][1][j] for i in range(nagents)],dim=1) for j in range(nagents)]
+            acs =  [torch.cat([sorted_feats[i][2][j] for i in range(nagents)],dim=1) for j in range(nagents)]
+            opp_acs = [torch.cat([sorted_feats[i][3][j] for i in range(nagents)],dim=1) for j in range(nagents)]
+            n_step_rews = [val.repeat(1,nagents,1) for val in n_step_rews]
+            MC_rews = [val.repeat(1,nagents,1) for val in MC_rews]
+            dones = [val.repeat(1,nagents,1) for val in dones]
 
-            obs = sorted_feats[0][0] #use features sorted by prox and stacked per agent along batch
-            opp_obs = sorted_feats[0][1]
-            acs = sorted_feats[0][2]
-            opp_acs = sorted_feats[0][3] 
+            # obs = sorted_feats[0][0] #use features sorted by prox and stacked per agent along batch
+            # opp_obs = sorted_feats[0][1]
+            # acs = sorted_feats[0][2]
+            # opp_acs = sorted_feats[0][3] 
             #n_step_rews = [val.repeat(1,nagents,1) for val in n_step_rews]
             #MC_rews = [val.repeat(1,nagents,1) for val in MC_rews]
             #dones = [val.repeat(1,nagents,1) for val in dones]
@@ -3289,9 +3289,9 @@ class MADDPG(object):
             # NOTE: Only works for m vs m
             # subtract the last action output
             # obs of 1 agent minus his last action plus all acs of teammatse and opponents plus stamina of teammates
-            num_in_critic = (num_in_pol +num_out_pol) * env.num_TA *2
+            #num_in_critic = (num_in_pol +num_out_pol) * env.num_TA *2
 
-            #num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)
+            num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)
 
 
             #if critic_mod_both:

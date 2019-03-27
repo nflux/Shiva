@@ -684,8 +684,8 @@ class HFO_env():
         distance_prev, closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
             delta = (distance_prev - distance_cur)*1.0
-            if delta > 0:    
-            #if True:
+            #if delta > 0:    
+            if True:
                 team_reward += delta
                 reward+= delta
             
@@ -698,8 +698,8 @@ class HFO_env():
             team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
             if agentID == team_possessor:
                 delta = (2*self.num_TA)*(r_prev - r)
-                #if True:
-                if delta > 0:
+                if True:
+                #if delta > 0:
                     reward += delta
                     team_reward += delta
 

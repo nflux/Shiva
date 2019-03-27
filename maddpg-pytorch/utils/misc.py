@@ -561,7 +561,6 @@ def constructProxmityList(env, all_tobs, all_oobs, all_tacs, all_oacs, num_agent
         agent_exp.append(all_oobs[sortedUnumOppList])
         agent_exp.append(all_tacs[sortedUnumOurList])
         agent_exp.append(all_oacs[sortedUnumOppList])
-
         sortedByProxRet.append(agent_exp)
 
     return sortedByProxRet
