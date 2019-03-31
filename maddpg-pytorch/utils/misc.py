@@ -488,13 +488,14 @@ def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda",LSTM=False)
         y_hard = onehot_from_logits(y,LSTM=LSTM)
         y = (y_hard - y).detach() + y
     return y
+    
 
 def getPretrainRew(s,d,base):
 
 
     reward=0.0
     team_reward = 0.0
-    goal_points = 8.0
+    goal_points = 30.0
     #---------------------------
     if d:
         if 'base_left' == base:
@@ -506,9 +507,9 @@ def getPretrainRew(s,d,base):
             elif s==3:
                 reward+=-0.5
             elif s==6:
-                reward+= +goal_points
+                reward+= +goal_points/5.0
             elif s==7:
-                reward+= -goal_points
+                reward+= -goal_points/4.0
 
             return reward
         else:
@@ -519,9 +520,9 @@ def getPretrainRew(s,d,base):
             elif s==3:
                 reward+=-0.5
             elif s==6:
-                reward+= -goal_points
+                reward+= -goal_points/4.0
             elif s==7:
-                reward+= goal_points
+                reward+= goal_points/5.0
 
     return reward
 
@@ -734,7 +735,7 @@ def load_buffer(left,right,fstatus,zip_vars):
                                             np.expand_dims([default_prio for i in range(num_TA)],1), LSTM_policy)
                 
                         exp_comb = np.expand_dims(np.vstack((exp_team, exp_opp)), 0)
-
+                        
                         if exps is None:
                             exps = torch.from_numpy(exp_comb)
                         else:

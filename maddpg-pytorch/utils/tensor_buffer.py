@@ -43,6 +43,7 @@ class ReplayTensorBuffer(object):
         self.hidden_dim_lstm = hidden_dim_lstm
         self.prox_item_size = prox_item_size
         self.prox_item_size_per_agent = prox_item_size//(2*num_agents)
+        self.pretrain = pretrain
         if not pretrain:
             total_dim = obs_dim+ac_dim+6+k+(hidden_dim_lstm*4)+prox_item_size
         else:
@@ -279,7 +280,10 @@ class ReplayTensorBuffer(object):
         else:
             cast_obs = lambda x: Variable(x, requires_grad=True)
 
-        prox_start = self.obs_acs_dim+5+1+self.k+self.hidden_dim_lstm*4
+        if not self.pretrain:
+            prox_start = self.obs_acs_dim+5+1+self.k+self.hidden_dim_lstm*4
+        else:
+            prox_start = self.obs_acs_dim +6 + self.k
         prox_item_list = [0, self.obs_dim*self.num_agents, self.obs_dim*2*self.num_agents, self.ac_dim + self.obs_dim*2*self.num_agents]
         return ([cast_obs(self.seq_exps[:, inds, a, :self.obs_dim]) for a in range(self.num_agents)], # obs
                 [cast(self.seq_exps[:, inds, a, self.obs_dim:self.obs_acs_dim]) for a in range(self.num_agents)], # actions

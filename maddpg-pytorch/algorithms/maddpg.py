@@ -2456,6 +2456,8 @@ class MADDPG(object):
         vf_in = torch.cat((mod_obs, mod_acs), dim=2)
         if self.TD3:
             actual_value_1, actual_value_2,h1,h2 = curr_agent.critic(vf_in)
+            actual_value_1 = actual_value_1.view(-1,1)
+            actual_value_2 = actual_value_2.view(-1,1)
         else:
             print("no implementation for single Q critic")
         
@@ -2483,13 +2485,33 @@ class MADDPG(object):
             target_value = torch.cat([mc.view(-1,1) for mc in MC_rews],dim=1).float().mean(dim=1).view(-1,1)
             target_value.detach()
             if self.TD3: # handle double critic
-                with torch.no_grad():
-                    prio = ((actual_value_1 - target_value)**2 + (actual_value_2-target_value)**2).squeeze().detach()/2.0
-                    prio = np.round(prio.cpu().numpy(),decimals=3)
-                    prio = torch.tensor(prio,requires_grad=False)
+                #with torch.no_grad():
+                #    prio = ((actual_value_1 - target_value)**2 + (actual_value_2-target_value)**2).squeeze().detach()/2.0
+                #    prio = np.round(prio.cpu().numpy(),decimals=3)
+                #    prio = torch.tensor(prio,requires_grad=False)
                 vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
             else:
                 vf_loss = F.mse_loss(actual_value, target_value)
+
+            vf_loss.backward() 
+
+            if parallel:
+                average_gradients(curr_agent.critic)
+            torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
+            curr_agent.critic_optimizer.step()
+            self.repackage_hidden(h1)
+            self.repackage_hidden(h2)
+            self.niter += 1
+            if self.niter % 100 == 0:
+                self.critic_loss_logger = self.critic_loss_logger.append({'iteration':self.niter,
+                                                                            'critic': np.round(vf_loss.item(),4)},
+                                                                            ignore_index=True)
+                print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
+
+            return 0
+
+
+
 
 
    
@@ -2982,22 +3004,13 @@ class MADDPG(object):
 
         #start = time.time()
         # rews = 1-step, cum-rews = n-step
-        if side == 'team':
-            count = self.team_count[agent_i]
-            curr_agent = self.team_agents[agent_i]
-            nagents = self.nagents_team
-            policies = self.team_policies
-            opp_policies = self.opp_policies
-            obs, acs, rews, dones, MC_rews,n_step_rews,ws,rec_states,sorted_feats = team_sample 
-            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_,_ = opp_sample
-        else:
-            count = self.opp_count[agent_i]
-            curr_agent = self.opp_agents[agent_i]
-            nagents = self.nagents_opp
-            policies = self.opp_policies
-            opp_policies = self.team_policies
-            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = opp_sample
-            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws = team_sample
+        count = self.team_count[agent_i]
+        curr_agent = self.team_agents[agent_i]
+        nagents = self.nagents_team
+        policies = self.team_policies
+        opp_policies = self.opp_policies
+        obs, acs, rews, dones, MC_rews,n_step_rews,ws,rec_states,sorted_feats = team_sample 
+        opp_obs, opp_acs, opp_rews, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_,_ = opp_sample
 
         self.curr_agent_index = agent_i
 
@@ -3010,8 +3023,8 @@ class MADDPG(object):
         
         if self.zero_critic:
             for i in range(nagents):
-                sorted_feats[0][2] = [zero_params(a) for a in sorted_feats[0][2]]
-                sorted_feats[0][3] = [zero_params(a) for a in sorted_feats[0][3]]
+                sorted_feats[i][2] = [zero_params(a) for a in sorted_feats[i][2]]
+                sorted_feats[i][3] = [zero_params(a) for a in sorted_feats[i][3]]
 
         obs = sorted_feats[0][0]  # use features sorted by prox and stacked per agent along batch
         opp_obs =  sorted_feats[0][1]
@@ -3045,7 +3058,7 @@ class MADDPG(object):
         actual_out_actions = Variable(all_acs,requires_grad=True).float()[:,:,:curr_agent.action_dim]
         
         pol_out_params = zero_params(torch.cat((onehot_from_logits(curr_pol_out[:,:,:curr_agent.action_dim],LSTM=True),curr_pol_out[:,:,curr_agent.action_dim:]),dim=2))[:,:,curr_agent.action_dim:]
-        actual_out_params = Variable(zero_params(all_acs),requires_grad=True)[:,curr_agent.action_dim:]
+        actual_out_params = Variable(zero_params(all_acs),requires_grad=True)[:,:,curr_agent.action_dim:]
         
         pol_loss = F.mse_loss(pol_out_params,actual_out_params) + F.mse_loss(pol_out_actions,actual_out_actions)
         

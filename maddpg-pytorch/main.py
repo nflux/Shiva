@@ -671,7 +671,7 @@ if __name__ == "__main__":
         # default settings ---------------------
         num_episodes = 10000000
         replay_memory_size = 50000
-        pt_memory = 3000
+        pt_memory = 50000
         episode_length = 500 # FPS
         untouched_time = 200
         burn_in_iterations = 500 # for time step
@@ -752,7 +752,7 @@ if __name__ == "__main__":
         bl_agent2d = False
         use_preloaded_agent2d = False
         preload_agent2d_path = ""
-        num_buffers = 15
+        num_buffers = 16
         pt_total_memory = pt_memory*num_buffers
 
         pt_episodes = 4000 # not used
@@ -1087,7 +1087,7 @@ if __name__ == "__main__":
                     if LSTM:
                         team_sample = pt_trb.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],to_gpu=to_gpu,device=maddpg.torch_device)
                         opp_sample = pt_orb.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],to_gpu=to_gpu,device=maddpg.torch_device)
-                        # priorities=maddpg.update_centralized_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent)
+                        priorities=maddpg.pretrain_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent,lstm_burn_in=lstm_burn_in)
                         #print("Use pretrain function")
                         #pt_trb.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
 
