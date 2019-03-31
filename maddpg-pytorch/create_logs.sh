@@ -2,9 +2,9 @@
 NUM_ENVS=16
 py_command=""
 
-declare -a arr_offense_teams=("base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base")
+declare -a arr_offense_teams=("helios11" "helios12" "helios18" "cyrus" "helios15" "helios16" "helios17" "helios18" "helios11" "helios12" "helios18" "cyrus" "helios15" "helios16" "helios17" "helios18")
 #declare -a arr_defense_teams=("helios11" "helios12" "helios" "cyrus" "helios15" "helios16" "helios17" "helios18" "helios11" "helios12" "helios" "cyrus" "helios15" "helios16" "helios17" "helios18")
-declare -a arr_defense_teams=("base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base" "base")
+declare -a arr_defense_teams=("helios11" "helios12" "helios18" "helios18" "helios15" "helios16" "helios17" "helios18" "helios11" "helios12" "helios18" "cyrus" "helios15" "helios16" "helios17" "helios18")
 
 
 for ((i=1; i <= $NUM_ENVS; i++ ))

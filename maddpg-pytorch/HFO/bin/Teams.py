@@ -62,8 +62,8 @@ class Agent2d(Team):
               % (name, port, baseDir, logDir, baseDir)
     if record:
       options += ' --record'
-    offenseOrder =  [1,2,3,4,5,6,7,8,9,10,11]
-    defenseOrder =  [1,2,3,4,5,6,7,8,9,10,11]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Agent2d, self).__init__(name, binaryPath, libDir, options,
                                   offenseOrder, defenseOrder)
 
@@ -90,8 +90,8 @@ class Helios(Team):
               '--opponent-data-dir %s/data/opponent_data/ -p %d'\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,2,3,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,2,3,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -126,8 +126,8 @@ class Helios18(Team):
               '--opponent-data-dir %s/data/opponent_data/ --record -p %d '\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [2,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios18, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
   def launch_npc(self, player_num):
@@ -160,8 +160,8 @@ class Helios17(Team):
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, 
                  baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, port)
 
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios17, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -224,8 +224,8 @@ class Helios15(Team):
               '--opponent-data-dir %s/data/opponent_data/ -p %d '\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, 
                  baseDir, baseDir, baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios15, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -254,8 +254,8 @@ class Helios14(Team):
               '--opponent-data-dir %s/data/opponent_data/ -p %d'\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios14, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -281,8 +281,8 @@ class Helios12(Team):
               '--opponent-data-dir %s/data/opponent_data/ -p %d'\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios12, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -307,8 +307,8 @@ class Helios11(Team):
               '--opponent-data-dir %s/data/opp_data/ -p %d'\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios11, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -327,8 +327,8 @@ class Helios10(Team):
               '--config_dir %s/formations-4231 '\
               '--param-file %s/parameters/params -p %d'\
               % (baseDir, host, name, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios10, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -347,8 +347,8 @@ class Helios09(Team):
               '--config_dir %s/formations-442 '\
               '-p %d'\
               % (baseDir, host, name, baseDir, port)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios09, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -367,8 +367,8 @@ class Helios08(Team):
               '--config_dir %s/formations-4231 '\
               '--param-file %s/parameters/params -p %d'\
               % (baseDir, host, name, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios08, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -387,8 +387,8 @@ class Helios07(Team):
               '--config_dir %s/formations-4231 '\
               '--param-file %s/parameters/params -p %d'\
               % (baseDir, host, name, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Helios07, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -406,8 +406,8 @@ class Cyrus(Team):
     options = ' -h %s -t %s -p %i --config_dir %s/formations-dt '\
               '--player-config %s/player.conf'\
               % (host, name, port, baseDir, baseDir)
-    offenseOrder =  [1,8,11,2,3,4,5,6,7,9,10]
-    defenseOrder =  [2,8,11,2,3,4,5,6,7,9,10]
+    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
     super(Cyrus, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 

@@ -1,3 +1,4 @@
+import math
 import re
 import os
 import torch
@@ -580,12 +581,17 @@ def distance(x1,x2,y1,y2):
     return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
 def pt_distances(num_agents, agentID, tobs, oobs):
+    x = 20
+    y = 21
     distances_team = []
     distances_opp = []
     for i in range(num_agents):
-        distances_team.append(self.distance(tobs[agentID][self.x],tobs[i][self.x], tobs[agentID][self.y],tobs[i][self.y]))
-        distances_opp.append(self.distance(tobs[agentID][self.x], -oobs[i][self.x], tobs[agentID][self.y], -oobs[i][self.y]))
+        distances_team.append(distance(tobs[agentID][x],tobs[i][x], tobs[agentID][y],tobs[i][y]))
+        distances_opp.append(distance(tobs[agentID][x], -oobs[i][x], tobs[agentID][y], -oobs[i][y]))
     return np.argsort(distances_team), np.argsort(distances_opp)
+
+def distance(x1,x2,y1,y2):
+    return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
 def load_buffer(left,right,fstatus,zip_vars):
     num_TA,obs_dim_TA,acs_dim,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,num_episodes,LSTM_policy,prox_item_size = zip_vars

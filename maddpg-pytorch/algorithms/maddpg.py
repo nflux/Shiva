@@ -1598,7 +1598,7 @@ class MADDPG(object):
             if self.D4PG:
                 reg_param = 5.0
             else:
-                reg_param = 5.0
+                reg_param = 10.0
             
             param_reg = torch.clamp((curr_pol_out_stacked[:,:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,:,curr_agent.action_dim:]),min=0.0).sum(dim=2).mean() # How much parameters exceed (-1,1) bound
             entropy_reg = (-torch.log_softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
@@ -2427,26 +2427,37 @@ class MADDPG(object):
         curr_agent.critic_optimizer.zero_grad()
         if load_same_agent:
             curr_agent = self.team_agents[0]
-        #print("time critic")
-        #start = time.time()
-        #with torch.no_grad():
+        
+        self.zero_hidden(self.batch_size*nagents,actual=True,target=True,torch_device=self.torch_device)
+        self.zero_hidden_policy(self.batch_size*nagents,torch_device=self.torch_device)
 
-        
-        
+        if self.zero_critic:
+            for i in range(nagents):
+                sorted_feats[i][2] = [zero_params(a) for a in sorted_feats[i][2]]
+                sorted_feats[i][3] = [zero_params(a) for a in sorted_feats[i][3]]
+
+
+        obs = [torch.cat([sorted_feats[i][0][j] for i in range(nagents)],dim=1) for j in range(nagents)]  # use features sorted by prox and stacked per agent along batch
+        opp_obs = [torch.cat([sorted_feats[i][1][j] for i in range(nagents)],dim=1) for j in range(nagents)]
+        acs =  [torch.cat([sorted_feats[i][2][j] for i in range(nagents)],dim=1) for j in range(nagents)]
+        opp_acs = [torch.cat([sorted_feats[i][3][j] for i in range(nagents)],dim=1) for j in range(nagents)]
+        n_step_rews = [val.repeat(1,nagents,1) for val in n_step_rews]
+        MC_rews = [val.repeat(1,nagents,1) for val in MC_rews]
+        dones = [val.repeat(1,nagents,1) for val in dones]
+
         # Add TD3 Noise to actions
-        noise = processor(torch.randn_like(acs[0]),device=self.device,torch_device=self.torch_device) * self.TD3_noise * 3.0
+        noise = processor(torch.randn_like(acs[0]),device=self.device,torch_device=self.torch_device) * self.TD3_noise
         acs =  [a + noise for a in acs]
         opp_acs = [a + noise for a in opp_acs]  
-        mod_obs = torch.cat((*opp_obs,*obs),dim=1)
-        mod_acs = torch.cat((*opp_acs,*acs),dim=1)
-        if self.zero_critic:
-            mod_acs = torch.cat((*[zero_params(a) for a in opp_acs],*[zero_params(a) for a in acs]),dim=1)
+        mod_obs = torch.cat((obs[0][:,:,:-8],torch.stack(([obs[1 + i][:,:,26] for i in range (nagents-1)]),dim=2)),dim=2)
+        mod_acs = torch.cat((*acs,*opp_acs),dim=2)
+        
         # Actual critic values
-        vf_in = torch.cat((mod_obs, mod_acs), dim=1)
+        vf_in = torch.cat((mod_obs, mod_acs), dim=2)
         if self.TD3:
-            actual_value_1, actual_value_2 = curr_agent.critic(vf_in)
+            actual_value_1, actual_value_2,h1,h2 = curr_agent.critic(vf_in)
         else:
-            actual_value = curr_agent.critic(vf_in)
+            print("no implementation for single Q critic")
         
         if self.D4PG:
                 # Q1
@@ -2469,7 +2480,7 @@ class MADDPG(object):
                     prob_dist = -F.log_softmax(actual_value,dim=1) * trgt_vf_distr_proj
                     vf_loss = prob_dist.sum(dim=1).mean() # critic loss based on distribution distance
         else: # single critic value
-            target_value = self.beta*(torch.cat([mc.view(-1,1) for mc in MC_rews],dim=1).float().mean(dim=1)).view(-1,1)
+            target_value = torch.cat([mc.view(-1,1) for mc in MC_rews],dim=1).float().mean(dim=1).view(-1,1)
             target_value.detach()
             if self.TD3: # handle double critic
                 with torch.no_grad():
@@ -2479,32 +2490,6 @@ class MADDPG(object):
                 vf_loss = F.mse_loss(actual_value_1, target_value) + F.mse_loss(actual_value_2,target_value)
             else:
                 vf_loss = F.mse_loss(actual_value, target_value)
-                        
-
-        #vf_loss.backward()
-        vf_loss.backward(retain_graph=False) 
-        
-        if parallel:
-            average_gradients(curr_agent.critic)
-        torch.nn.utils.clip_grad_norm_(curr_agent.critic.parameters(), 1)
-        curr_agent.critic_optimizer.step()
-        self.niter +=1
-        #print(time.time() - start,"up")
-        if self.niter % 100 == 0:
-            self.critic_loss_logger = self.critic_loss_logger.append({                'iteration':self.niter,
-                                                                        'critic': np.round(vf_loss.item(),4)},
-                                                                        ignore_index=True)
-            print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
-
-    
-    # return priorities
-        if self.TD3:
-            if self.D4PG:
-                return ((prob_dist_1.float().sum(dim=1) + prob_dist_2.float().sum(dim=1))/2.0).cpu()
-            else:
-                return prio     
-        else:
-            return prob_dist.sum(dim=1).cpu()
 
 
    
@@ -3003,8 +2988,8 @@ class MADDPG(object):
             nagents = self.nagents_team
             policies = self.team_policies
             opp_policies = self.opp_policies
-            obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws,_,_ = team_sample
-            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_ = opp_sample
+            obs, acs, rews, dones, MC_rews,n_step_rews,ws,rec_states,sorted_feats = team_sample 
+            opp_obs, opp_acs, opp_rews, opp_next_obs, opp_dones, opp_MC_rews, opp_n_step_rews, opp_ws,_,_ = opp_sample
         else:
             count = self.opp_count[agent_i]
             curr_agent = self.opp_agents[agent_i]
@@ -3020,6 +3005,19 @@ class MADDPG(object):
         # Zero state initialization then burn-in LSTM
         self.zero_hidden_policy(self.batch_size*nagents,self.torch_device)
         
+        curr_agent.policy_optimizer.zero_grad()
+
+        
+        if self.zero_critic:
+            for i in range(nagents):
+                sorted_feats[0][2] = [zero_params(a) for a in sorted_feats[0][2]]
+                sorted_feats[0][3] = [zero_params(a) for a in sorted_feats[0][3]]
+
+        obs = sorted_feats[0][0]  # use features sorted by prox and stacked per agent along batch
+        opp_obs =  sorted_feats[0][1]
+        acs =  sorted_feats[0][2] 
+        opp_acs = sorted_feats[0][3]
+
         if burnin:
 
             slice_obs = list(map(lambda x: x[:lstm_burn_in], obs))
@@ -3041,24 +3039,19 @@ class MADDPG(object):
             curr_pol_out = curr_agent.policy(obs_stacked)
         
         
-        curr_agent.policy_optimizer.zero_grad()
         
     
         pol_out_actions = torch.softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).float()
         actual_out_actions = Variable(all_acs,requires_grad=True).float()[:,:,:curr_agent.action_dim]
-        if self.zero_critic:
-            pol_out_params = zero_params(torch.cat((onehot_from_logits(curr_pol_out[:,:,:curr_agent.action_dim],LSTM=True),curr_pol_out[:,:,curr_agent.action_dim:]),dim=2))[:,:,curr_agent.action_dim:]
-            actual_out_params = Variable(zero_params(all_acs),requires_grad=True)[:,curr_agent.action_dim:]
-        else:
-            pol_out_params = curr_pol_out[:,:,curr_agent.action_dim:]
-            actual_out_params = Variable(all_acs,requires_grad=True)[:,:,curr_agent.action_dim:]
-          
-
+        
+        pol_out_params = zero_params(torch.cat((onehot_from_logits(curr_pol_out[:,:,:curr_agent.action_dim],LSTM=True),curr_pol_out[:,:,curr_agent.action_dim:]),dim=2))[:,:,curr_agent.action_dim:]
+        actual_out_params = Variable(zero_params(all_acs),requires_grad=True)[:,curr_agent.action_dim:]
+        
         pol_loss = F.mse_loss(pol_out_params,actual_out_params) + F.mse_loss(pol_out_actions,actual_out_actions)
         
         reg_param = 5.0
         #entropy_reg = (-torch.log(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
-        pol_loss.backward(retain_graph=True)
+        pol_loss.backward(retain_graph=False)
         if parallel:
             average_gradients(curr_agent.policy)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?

@@ -409,8 +409,8 @@ class HFO_env():
         
         
     def ball_distance_to_goal(self,obs):
-        goal_center_x = 1
-        goal_center_y = 0
+        goal_center_x = 1.0
+        goal_center_y = 0.0
         relative_x = obs[self.ball_x] - goal_center_x
         relative_y = obs[self.ball_y] - goal_center_y
         ball_distance_to_goal = math.sqrt(relative_x**2 + relative_y**2)
@@ -467,7 +467,7 @@ class HFO_env():
 
         reward=0.0
         team_reward = 0.0
-        goal_points = 8.0
+        goal_points = 30.0
         #---------------------------
         global possession_side
         if d:
@@ -480,7 +480,7 @@ class HFO_env():
                 elif s==3:
                     reward+=-0.5
                 elif s==6:
-                    reward+= +goal_points/2.0
+                    reward+= +goal_points/5.0
                 elif s==7:
                     reward+= -goal_points/4.0
 
@@ -495,7 +495,7 @@ class HFO_env():
                 elif s==6:
                     reward+= -goal_points/4.0
                 elif s==7:
-                    reward+= goal_points/2.0
+                    reward+= goal_points/5.0
 
         return reward
        
@@ -528,7 +528,7 @@ class HFO_env():
     def getReward(self,s,agentID,base,ep_num):
         reward=0.0
         team_reward = 0.0
-        goal_points = 5.0
+        goal_points = 20.0
         #---------------------------
         global possession_side
         if self.d:
@@ -537,13 +537,13 @@ class HFO_env():
                 if s=='Goal_By_Left' and self.agent_possession_team[agentID] == 'L':
                     reward+= goal_points
                 elif s=='Goal_By_Left':
-                    reward+= goal_points/5.0 # teammates get 10% of points
+                    reward+= goal_points # teammates get 10% of points
                 elif s=='Goal_By_Right':
                     reward+=-goal_points
                 elif s=='OutOfBounds' and self.agent_possession_team[agentID] == 'L':
                     reward+=-0.5
                 elif s=='CapturedByLeftGoalie':
-                    reward+=goal_points/2.0
+                    reward+=goal_points/5.0
                 elif s=='CapturedByRightGoalie':
                     reward+=-goal_points/4.0
 
@@ -554,13 +554,13 @@ class HFO_env():
                 if s=='Goal_By_Right' and self.agent_possession_opp[agentID] == 'R':
                     reward+=goal_points
                 elif s=='Goal_By_Right':
-                    reward+=goal_points/5.0
+                    reward+=goal_points
                 elif s=='Goal_By_Left':
                     reward+=-goal_points
                 elif s=='OutOfBounds' and self.agent_possession_opp[agentID] == 'R':
                     reward+=-0.5
                 elif s=='CapturedByRightGoalie':
-                    reward+=goal_points/2.0
+                    reward+=goal_points/5.0
                 elif s=='CapturedByLeftGoalie':
                     reward+=-goal_points/4.0
 
@@ -607,16 +607,35 @@ class HFO_env():
                     reward += 1.5
                     team_reward +=1.5
                 # set initial ball position after kick
-                    self.ball_pos_x = env.getBallX()/52.5
-                    self.ball_pos_y = env.getBallY()/34.0
+                    if self.team_base == base:
+                        self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
+                        self.BL_ball_pos_y = team_obs[agentID][self.ball_y]
+                    else:
+                        self.BR_ball_pos_x = team_obs[agentID][self.ball_x]
+                        self.BR_ball_pos_y = team_obs[agentID][self.ball_y]
+                        
 
         #     # track ball delta in between kicks
-            new_x = env.getBallX()/52.5
-            new_y = env.getBallY()/34.0
-            self.ball_delta = math.sqrt((self.ball_pos_x-new_x)**2+ (self.ball_pos_y-new_y)**2)
-            self.ball_pos_x = new_x
-            self.ball_pos_y = new_y
-            self.pass_reward = self.ball_delta * 5.0
+            if self.team_base == base:
+                self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
+                self.BL_ball_pos_y = team_obs[agentID][self.ball_y]
+            else:
+                self.BR_ball_pos_x = team_obs[agentID][self.ball_x]
+                self.BR_ball_pos_y = team_obs[agentID][self.ball_y]
+
+            new_x = team_obs[agentID][self.ball_x]
+            new_y = team_obs[agentID][self.ball_y]
+            
+            if self.team_base == base:
+                ball_delta = math.sqrt((self.BL_ball_pos_x-new_x)**2+ (self.BL_ball_pos_y-new_y)**2)
+                self.BL_ball_pos_x = new_x
+                self.BL_ball_pos_y = new_y
+            else:
+                ball_delta = math.sqrt((self.BR_ball_pos_x-new_x)**2+ (self.BR_ball_pos_y-new_y)**2)
+                self.BR_ball_pos_x = new_x
+                self.BR_ball_pos_y = new_y
+            
+            self.pass_reward = ball_delta * 5.0
 
         #     ######## Pass Receiver Reward #########
             if self.team_base == base:
@@ -636,7 +655,8 @@ class HFO_env():
                         enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
                         self.opp_lost_possession[enemy_possessor] -= 1.0
                         self.team_lost_possession[agentID] += 1.0
-                        # print('opponent lost possession')
+                        # print('BR lost possession')
+                        self.pass_reward = 0
 
         #         ###### Change Possession Reward #######
                 self.agent_possession_team = ['N'] * self.num_TA
@@ -660,7 +680,8 @@ class HFO_env():
                     enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
                     self.team_lost_possession[enemy_possessor] -= 1.0
                     self.opp_lost_possession[agentID] += 1.0
-      #             # print('teammates lost possession ')
+                    self.pass_reward = 0
+      #             # print('BL lost possession ')
 
                 self.agent_possession_team = ['N'] * self.num_TA
                 self.agent_possession_opp = ['N'] * self.num_OA
@@ -692,6 +713,7 @@ class HFO_env():
         ##################################################################################
             
         ####################### reduce ball distance to goal ##################
+        # base left kicks
         r = self.ball_distance_to_goal(team_obs[agentID]) 
         r_prev = self.ball_distance_to_goal(team_obs_previous[agentID]) 
         if ((self.team_base == base) and possession_side =='L'):
@@ -703,19 +725,24 @@ class HFO_env():
                     reward += delta
                     team_reward += delta
 
-
+        # base right kicks
         elif  ((self.team_base != base) and possession_side == 'R'):
             team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
             if agentID == team_possessor:
-                 reward += (0.0)*(r_prev - r)
-                 team_reward += (0.0)*(r_prev - r)
+                delta = (2*self.num_TA)*(r_prev - r)
+                if True:
+                #if delta > 0:
+                    reward += delta
+                    team_reward += delta
+                    
+        # non-possessor reward for ball delta toward goal
         else:
-            reward += (0.0)*(r_prev - r)
-            team_reward += (0.0)*(r_prev - r)
+            delta = (0*self.num_TA)*(r_prev - r)
+            if True:
+            #if delta > 0:
+                reward += delta
+                team_reward += delta       
 
-            
-
-        
         # ################## Offensive Behavior #######################
         # # [Offense behavior]  agents will be rewarded based on maximizing their open angle to opponents goal ( only for non possessors )
         # if ((self.team_base == base) and possession_side =='L') or ((self.team_base != base) and possession_side == 'R'): # someone on team has ball

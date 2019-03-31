@@ -122,8 +122,8 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
     #maddpg = dill.loads(maddpg_pick)
     maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
 
-    number_of_updates = 500
-    batches_to_sample = 10
+    number_of_updates = 8000
+    batches_to_sample = 50
     if len(team_replay_buffer) < batch_size*(batches_to_sample):
         batches_to_sample = 1
     for ensemble in range(k_ensembles):
@@ -595,10 +595,10 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     else:
                             
                         if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
-                            #maddpg.load_random(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
+                            maddpg.load_random(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
                             pass
                         else:
-                            #maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
+                            maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
                             pass
 
                     if bl_agent2d:
@@ -637,7 +637,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 2
+    num_envs = 10
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -670,10 +670,10 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 8000
-        pt_memory = 50000
+        replay_memory_size = 50000
+        pt_memory = 3000
         episode_length = 500 # FPS
-        untouched_time = 500
+        untouched_time = 200
         burn_in_iterations = 500 # for time step
         burn_in_episodes = float(burn_in_iterations)/untouched_time
         deterministic = True
@@ -694,7 +694,7 @@ if __name__ == "__main__":
         goalie = True
         team_rew_anneal_ep = 1500 # reward would be
         # hyperparams--------------------------
-        batch_size = 32
+        batch_size = 64
         hidden_dim = int(512)
 
         tau = 0.001 # soft update rate 
@@ -705,8 +705,8 @@ if __name__ == "__main__":
         final_OU_noise_scale = 0.03
         final_noise_scale = 0.1
         init_noise_scale = 1.00
-        num_explore_episodes = 25 # Haus uses over 10,000 updates --
-        multi_gpu = False
+        num_explore_episodes = 1 # Haus uses over 10,000 updates --
+        multi_gpu = True
         data_parallel = False
         
 
@@ -740,7 +740,7 @@ if __name__ == "__main__":
         TD3_noise = 0.02
         # -------------------------------------- 
         #Pretrain Options ----------------------
-        pretrain = False
+        pretrain = True
         use_pretrain_data = False
         test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
         pt_update_cycles = 200
@@ -752,7 +752,7 @@ if __name__ == "__main__":
         bl_agent2d = False
         use_preloaded_agent2d = False
         preload_agent2d_path = ""
-        num_buffers = 1
+        num_buffers = 15
         pt_total_memory = pt_memory*num_buffers
 
         pt_episodes = 4000 # not used
@@ -784,10 +784,10 @@ if __name__ == "__main__":
         cent_critic = True
         # Control Random Initilization of Agents and Ball
         control_rand_init = True
-        ball_x_min = -0.00
-        ball_x_max = -0.00
-        ball_y_min = -0.00
-        ball_y_max = -0.00
+        ball_x_min = -0.10
+        ball_x_max = 0.10
+        ball_y_min = -0.10
+        ball_y_max = 0.10
         agents_x_min = -0.2 # agents posititions are currently configured in HFO/librcss
         agents_x_max = 0.2
         agents_y_min = -0.2
@@ -804,7 +804,7 @@ if __name__ == "__main__":
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
         self_play_proba = 0.9
         load_same_agent = True # load same policy for all agents
-        push_only_left = True
+        push_only_left = False
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
@@ -1054,8 +1054,8 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(pt_trb)
 
-            number_of_updates = 1000
-            batches_to_sample = 100
+            number_of_updates = 5000
+            batches_to_sample = 50
             if len(pt_trb) < batch_size*(batches_to_sample):
                 batches_to_sample = 1
             priorities = [] 
@@ -1256,7 +1256,7 @@ if __name__ == "__main__":
             agentID = 0
             buffer_size = len(team_replay_buffer)
 
-            number_of_updates = 200
+            number_of_updates = 250
             batches_to_sample = 50
             if len(team_replay_buffer) < batch_size*(batches_to_sample):
                 batches_to_sample = 1
