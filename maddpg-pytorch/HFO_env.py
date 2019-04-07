@@ -545,7 +545,7 @@ class HFO_env():
                 elif s=='CapturedByLeftGoalie':
                     reward+=goal_points/5.0
                 elif s=='CapturedByRightGoalie':
-                    reward+=-goal_points/4.0
+                    reward+= 0 #-goal_points/4.0
 
                 possession_side = 'N' # at the end of each episode we set this to none
                 self.agent_possession_team = ['N'] * self.num_TA
@@ -562,7 +562,7 @@ class HFO_env():
                 elif s=='CapturedByRightGoalie':
                     reward+=goal_points/5.0
                 elif s=='CapturedByLeftGoalie':
-                    reward+=-goal_points/4.0
+                    reward+= 0 #-goal_points/4.0
 
                 possession_side = 'N'
                 self.agent_possession_opp = ['N'] * self.num_OA
