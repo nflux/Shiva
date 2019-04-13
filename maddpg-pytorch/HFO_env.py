@@ -848,12 +848,6 @@ class HFO_env():
         rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
         return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
 
-
-
-
-
-
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl):
         """ Connect threaded agent to server
@@ -1184,3 +1178,5 @@ class HFO_env():
         if exit_check:
             print('Exiting program')
             exit(0)
+    
+    def

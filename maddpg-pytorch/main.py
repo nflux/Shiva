@@ -7,8 +7,7 @@ import csv
 import itertools 
 import argparse
 import numpy as np
-from utils.misc import hard_update, gumbel_softmax, onehot_from_logits,e_greedy,zero_params,pretrain_process,prep_session,e_greedy_bool, \
-                        load_buffer,flatten,constructProxmityList,convertProxListToTensor
+import utils.misc as misc
 from torch import Tensor
 from HFO import hfo
 import time
@@ -16,10 +15,9 @@ import threading
 import _thread as thread
 import torch
 from pathlib import Path
-from torch.autograd import Variable#from tensorboardX import SummaryWriter
+from torch.autograd import Variable
 from utils.make_env import make_env
 from utils.tensor_buffer import ReplayTensorBuffer
-
 from algorithms.maddpg import MADDPG
 from HFO_env import *
 from trainer import launch_eval
@@ -347,11 +345,11 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     
             # Get e-greedy decision
             if explore:
-                team_randoms = e_greedy_bool(env.num_TA,eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
-                opp_randoms = e_greedy_bool(env.num_OA,eps =(final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
+                team_randoms = misc.e_greedy_bool(env.num_TA,eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
+                opp_randoms = misc.e_greedy_bool(env.num_OA,eps =(final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
             else:
-                team_randoms = e_greedy_bool(env.num_TA,eps = 0,device=maddpg.torch_device)
-                opp_randoms = e_greedy_bool(env.num_OA,eps = 0,device=maddpg.torch_device)
+                team_randoms = misc.e_greedy_bool(env.num_TA,eps = 0,device=maddpg.torch_device)
+                opp_randoms = misc.e_greedy_bool(env.num_OA,eps = 0,device=maddpg.torch_device)
 
             # get actions as torch Variables for both team and opp
 
@@ -404,8 +402,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             team_possession_counter = [env.get_agent_possession_status(i, env.team_base) for i in range(num_TA)]
             opp_possession_counter = [env.get_agent_possession_status(i, env.opp_base) for i in range(num_OA)]
 
-            sortedByProxTeamList.append(constructProxmityList(env, team_obs.T, opp_obs.T, team_actions_params_for_buffer, opp_actions_params_for_buffer, num_TA, 'left'))
-            sortedByProxOppList.append(constructProxmityList(env, opp_obs.T, team_obs.T, opp_actions_params_for_buffer, team_actions_params_for_buffer, num_OA, 'right'))
+            sortedByProxTeamList.append(misc.constructProxmityList(env, team_obs.T, opp_obs.T, team_actions_params_for_buffer, opp_actions_params_for_buffer, num_TA, 'left'))
+            sortedByProxOppList.append(misc.constructProxmityList(env, opp_obs.T, team_obs.T, opp_actions_params_for_buffer, team_actions_params_for_buffer, num_OA, 'right'))
 
             _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params,team_agent_actions,opp_agent_actions)
 
@@ -528,8 +526,8 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                         else:
                             exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
                     
-                    prox_team_tensor = convertProxListToTensor(sortedByProxTeamList, num_TA, prox_item_size)
-                    prox_opp_tensor = convertProxListToTensor(sortedByProxOppList, num_OA, prox_item_size)
+                    prox_team_tensor = misc.convertProxListToTensor(sortedByProxTeamList, num_TA, prox_item_size)
+                    prox_opp_tensor = misc.convertProxListToTensor(sortedByProxOppList, num_OA, prox_item_size)
                     comb_prox_tensor = torch.cat((prox_team_tensor, prox_opp_tensor), dim=1)
                     # Fill in values for zeros for the hidden state
                     exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), num_TA*2, hidden_dim_lstm*4), dtype=exps.dtype), comb_prox_tensor.double()), dim=2)
@@ -630,7 +628,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 if __name__ == "__main__":  
     mp.set_start_method('forkserver',force=True)
     seed = 912
-    num_envs = 10
+    num_envs = 1
     port = 45000
     max_num_experiences = 500
     update_threads = []
@@ -649,7 +647,7 @@ if __name__ == "__main__":
         # options ------------------------------
         action_level = 'low'
         feature_level = 'simple'
-        USE_CUDA = True
+        USE_CUDA = False
         if USE_CUDA:
             device = 'cuda'
             to_gpu = True
@@ -663,7 +661,7 @@ if __name__ == "__main__":
         hfo_log_game = False #Logs the game using HFO
         # default settings ---------------------
         num_episodes = 10000000
-        replay_memory_size = 200000
+        replay_memory_size = 2000
         pt_memory = 35000
         episode_length = 500 # FPS
         untouched_time = 200
@@ -699,7 +697,7 @@ if __name__ == "__main__":
         final_noise_scale = 0.03
         init_noise_scale = 1.00
         num_explore_episodes = 1 # Haus uses over 10,000 updates --
-        multi_gpu = True
+        multi_gpu = False
         data_parallel = False
         
 
@@ -808,7 +806,7 @@ if __name__ == "__main__":
         load_nets = False # load previous sessions' networks from file for initialization
         initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
         first_save = True # build model clones for ensemble
-        preload_model = True
+        preload_model = False
         preload_path = "agent2d/model_0.pth"
         # --------------------------------------
         # Evaluation ---------------------------
@@ -849,7 +847,7 @@ if __name__ == "__main__":
         eval_log_dir = session_path +"eval_log" # evaluation logfiles
         load_path = session_path +"models/"
         ensemble_path = session_path +"ensemble_models/"
-        prep_session(session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,log_dir,num_TA) # Generates directories and files for the session
+        misc.prep_session(session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,log_dir,num_TA) # Generates directories and files for the session
 
         # --------------------------------------
         # initialization -----------------------
@@ -994,7 +992,7 @@ if __name__ == "__main__":
     
         second_args = [(num_TA,obs_dim_TA,acs_dim,pt_trbs[i],pt_orbs[i],episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,pt_episodes,LSTM_policy,prox_item_size) for i in range(num_buffers)]
         with Pool() as pool:
-            pt_rbs = pool.starmap(load_buffer, zip(all_l,all_r,all_s, second_args))
+            pt_rbs = pool.starmap(misc.load_buffer, zip(all_l,all_r,all_s, second_args))
         pt_trbs,pt_orbs = list(zip(*pt_rbs))
         del pt_rbs
         for i in range(num_buffers):
