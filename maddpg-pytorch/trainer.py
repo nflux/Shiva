@@ -16,7 +16,6 @@ import torch
 from pathlib import Path
 import argparse
 from torch.autograd import Variable#from tensorboardX import SummaryWriter
-from utils.make_env import make_env
 from utils.buffer import ReplayBuffer
 #from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG

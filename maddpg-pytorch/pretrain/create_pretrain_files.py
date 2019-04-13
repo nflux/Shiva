@@ -37,17 +37,17 @@ def main(args):
     offense_team_bin = args.offense_team
     defense_team_bin = args.defense_team
 
-    if os.path.isdir(os.getcwd() + '/log_' + str(port)):
-        file_list = os.listdir(os.getcwd() + '/log_' + str(port))
-        [os.remove(os.getcwd() + '/log_' + str(port) + '/' + f) for f in file_list]
+    if os.path.isdir(os.getcwd() + '/pretrain_data/log_' + str(port)):
+        file_list = os.listdir(os.getcwd() + '/pretrain_data/log_' + str(port))
+        [os.remove(os.getcwd() + '/pretrain_data/log_' + str(port) + '/' + f) for f in file_list]
     else:
-        os.mkdir(os.getcwd() + '/log_' + str(port))
+        os.mkdir(os.getcwd() + '/pretrain_data/log_' + str(port))
     
-    if os.path.isdir(os.getcwd() + '/pt_logs_' + str(port)):
-        file_list = os.listdir(os.getcwd() + '/pt_logs_' + str(port))
-        [os.remove(os.getcwd() + '/pt_logs_' + str(port) + '/' + f) for f in file_list]
+    if os.path.isdir(os.getcwd() + '/pretrain_data/pt_logs_' + str(port)):
+        file_list = os.listdir(os.getcwd() + '/pretrain_data/pt_logs_' + str(port))
+        [os.remove(os.getcwd() + '/pretrain_data/pt_logs_' + str(port) + '/' + f) for f in file_list]
     else:
-        os.mkdir(os.getcwd() + '/pt_logs_' + str(port))
+        os.mkdir(os.getcwd() + '/pretrain_data/pt_logs_' + str(port))
 
     pe = pretrain_env(num_TNPC=left_side, num_ONPC=right_side, fpt=fpt, untouched_time=untouched_time, port=port,
                         sync_mode=sync_mode, fullstate=fullstate, seed=seed, ball_x_min=ball_x_min,ball_x_max=ball_x_max,ball_y_min=ball_y_min,ball_y_max=ball_y_max,verbose = False,

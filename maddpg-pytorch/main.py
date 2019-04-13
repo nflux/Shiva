@@ -16,8 +16,7 @@ import _thread as thread
 import torch
 from pathlib import Path
 from torch.autograd import Variable
-from utils.make_env import make_env
-from utils.tensor_buffer import ReplayTensorBuffer
+from utils.buffer import ReplayBuffer
 from algorithms.maddpg import MADDPG
 from HFO_env import *
 from trainer import launch_eval
@@ -43,11 +42,11 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
     
     if record or record_server:
-        if os.path.isdir(os.getcwd() + '/pt_logs_' + str(port)):
-            file_list = os.listdir(os.getcwd() + '/pt_logs_' + str(port))
-            [os.remove(os.getcwd() + '/pt_logs_' + str(port) + '/' + f) for f in file_list]
+        if os.path.isdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(port)):
+            file_list = os.listdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(port))
+            [os.remove(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(port) + '/' + f) for f in file_list]
         else:
-            os.mkdir(os.getcwd() + '/pt_logs_' + str(port))
+            os.mkdir(os.getcwd() + '/pretrain/pretrain_data//pt_logs_' + str(port))
 
     env = HFO_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
                     num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
@@ -790,12 +789,12 @@ if __name__ == "__main__":
         first_save = False
     
     prox_item_size = num_TA*(2*obs_dim_TA + 2*acs_dim)
-    team_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
+    team_replay_buffer = ReplayBuffer(replay_memory_size , num_TA,
                                         obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
 
     #Added to Disable/Enable the opp agents
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
-    opp_replay_buffer = ReplayTensorBuffer(replay_memory_size , num_TA,
+    opp_replay_buffer = ReplayBuffer(replay_memory_size , num_TA,
                                         obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
     max_episodes_shared = 30
     processes = []
@@ -816,9 +815,9 @@ if __name__ == "__main__":
     
     if pretrain or use_pretrain_data:
         # ------------------------------------ Start Pretrain --------------------------------------------
-        pt_trbs = [ReplayTensorBuffer(pt_memory , num_TA,
+        pt_trbs = [ReplayBuffer(pt_memory , num_TA,
                                                 obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
-        pt_orbs = [ReplayTensorBuffer(pt_memory , num_TA,
+        pt_orbs = [ReplayBuffer(pt_memory , num_TA,
                                             obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
         # ------------ Load in shit from csv into buffer ----------------------
         pt_threads = []
@@ -830,11 +829,11 @@ if __name__ == "__main__":
             left_files = []
             right_files = []
             
-            if os.path.isdir(os.getcwd() + '/pt_logs_%i' % ((i+1)*1000)):
-                team_files = os.listdir(os.getcwd() + '/pt_logs_%i' % ((i+1)*1000))
-                left_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_left_' in f]
-                right_files = [os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_right_' in f]
-                status_file = os.getcwd() + '/pt_logs_%i/' % ((i+1)*1000) + 'log_status.csv'
+            if os.path.isdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_%i' % ((i+1)*1000)):
+                team_files = os.listdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_%i' % ((i+1)*1000))
+                left_files = [os.getcwd() + '/pretrain/pretrain_data/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_left_' in f]
+                right_files = [os.getcwd() + '/pretrain/pretrain_data/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_right_' in f]
+                status_file = os.getcwd() + '/pretrain/pretrain_data/pt_logs_%i/' % ((i+1)*1000) + 'log_status.csv'
             else:
                 print('log directory DNE')
                 exit(0)
@@ -854,9 +853,9 @@ if __name__ == "__main__":
         #team_replay_buffer = pt_trbs[0]
         #opp_replay_buffer = pt_orbs[0]
         
-        pt_trb = ReplayTensorBuffer(pt_total_memory , num_TA,
+        pt_trb = ReplayBuffer(pt_total_memory , num_TA,
                                                 obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
-        pt_orb = ReplayTensorBuffer(pt_total_memory , num_TA,
+        pt_orb = ReplayBuffer(pt_total_memory , num_TA,
                                                 obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
         for j in range(num_buffers):
             if not LSTM_policy:
@@ -1010,23 +1009,8 @@ if __name__ == "__main__":
         halt.copy_(torch.tensor(1,requires_grad=False).byte())
         while not ready.all():
             time.sleep(0.1)
-        for i in range(num_envs):
-            if LSTM:
-                if push_only_left:
-                    [team_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
-                    [opp_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
-                else:
-                    [team_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], 
-                        shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
-                    [opp_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], 
-                        shared_exps[i][j][:exp_indices[i][j], :num_TA, :]))) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
-            else:
-                if push_only_left:
-                    [team_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item()))]
-                    [opp_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item()))]
-                else:
-                    [team_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item()))]
-                    [opp_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], shared_exps[i][j][:exp_indices[i][j], :num_TA, :]))) for j in range(int(ep_num[i].item()))]
+        misc.push(team_replay_buffer,opp_replay_buffer,num_envs,shared_exps,exp_indices,num_TA,ep_num,seq_length,LSTM,push_only_left)
+            
         # get num updates and reset counter
         # If the update rate is slower than the exp generation than this ratio will be greater than 1 when our experience tensor
         # is full (10,000 timesteps backlogged) so wait for updates to catch up
