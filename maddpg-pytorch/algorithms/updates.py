@@ -1,4 +1,4 @@
-from maddpg import MADDPG
+from .maddpg import MADDPG
 
 # updates policy only
 def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,

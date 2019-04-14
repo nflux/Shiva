@@ -10,6 +10,7 @@ import shutil
 import time
 import pandas as pd
 import collections
+
 # Flatten an N-dim irregular list to 1-Dim
 def flatten(l):
     for el in l:
@@ -532,6 +533,26 @@ def exp_stack(obs,acs,rews,next_obs,dones,MC_targets,n_step_targets,ws,prio,def_
     else:
         return np.column_stack((obs, acs, rews, dones, MC_targets, n_step_targets,
                                     ws, prio, def_prio))
+
+# Handles 
+def push(team_replay_buffer,opp_replay_buffer,num_envs,shared_exps,exp_indices,num_TA,ep_num,seq_length,LSTM,push_only_left):
+    for i in range(num_envs):    
+        if LSTM:
+            if push_only_left:
+                [team_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
+                [opp_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
+            else:
+                [team_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], 
+                    shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
+                [opp_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], 
+                    shared_exps[i][j][:exp_indices[i][j], :num_TA, :]))) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
+        else:
+            if push_only_left:
+                [team_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item()))]
+                [opp_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item()))]
+            else:
+                [team_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item()))]
+                [opp_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], shared_exps[i][j][:exp_indices[i][j], :num_TA, :]))) for j in range(int(ep_num[i].item()))]
 
 # NOTE: Assumes agents are loaded in sorted uniform order. Ergo 1,2,3,...
 def pt_constructProxmityList(all_tobs, all_oobs, all_tacs, all_oacs, num_agents):

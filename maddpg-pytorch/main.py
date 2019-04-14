@@ -18,7 +18,7 @@ from pathlib import Path
 from torch.autograd import Variable
 from utils.buffer import ReplayBuffer
 from algorithms.maddpg import MADDPG
-import rc_env
+from rc_env import rc_env, run_envs
 from trainer import launch_eval
 import torch.multiprocessing as mp
 import dill
@@ -358,7 +358,7 @@ if __name__ == "__main__":
     ready = torch.zeros(num_envs,requires_grad=False).byte().share_memory_()
     update_counter = torch.zeros(num_envs,requires_grad=False).share_memory_()
     for i in range(num_envs):
-        processes.append(mp.Process(target=rc_env.run_envs, args=(seed + (i * 100), port + (i * 1000), shared_exps[i],exp_indices[i],HP,i,ready,halt,update_counter,(history+str(i)),ep_num)))
+        processes.append(mp.Process(target=run_envs, args=(seed + (i * 100), port + (i * 1000), shared_exps[i],exp_indices[i],HP,i,ready,halt,update_counter,(history+str(i)),ep_num)))
     
 
 

@@ -9,7 +9,10 @@ from HFO.hfo import hfo
 from HFO import get_config_path, get_hfo_path, get_viewer_path
 import os, subprocess, time, signal
 #from helper import *
-from utils.misc import zero_params
+import utils.misc as misc
+from algorithms.maddpg import MADDPG
+from torch.autograd import Variable
+import torch
 
 possession_side = 'N'
 
@@ -287,8 +290,8 @@ class rc_env():
         """
         # Queue actions for team
         for i in range(self.num_TA):
-            self.team_actions_OH[i] = zero_params(team_actions_OH[i].reshape(-1))
-            self.opp_actions_OH[i] = zero_params(opp_actions_OH[i].reshape(-1))
+            self.team_actions_OH[i] = misc.zero_params(team_actions_OH[i].reshape(-1))
+            self.opp_actions_OH[i] = misc.zero_params(opp_actions_OH[i].reshape(-1))
         [self.Queue_action(i,self.team_base,team_actions[i],team_params) for i in range(len(team_actions))]
         # Queue actions for opposing team
         [self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
