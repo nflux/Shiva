@@ -1184,7 +1184,7 @@ class rc_env():
 
 def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history,ep_num):
 
-    (action_level,feature_level,to_gpu,device,use_viewer,use_viewer_after,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
+    (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
     episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
     batch_size,hidden_dim,a_lr,c_lr,tau,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
     DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
@@ -1192,7 +1192,7 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
     LSTM,LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
+    log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
     preload_agent2d_path,bl_agent2d,preprocess,zero_critic,cent_critic, record, record_server) = HP
 
     
@@ -1212,10 +1212,6 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
                     change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,record_server=record_server,
                     defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=True, deterministic=deterministic)
-
-    #The start_viewer here is added to automatically start viewer with npc Vs npcs
-    if num_TNPC > 0 and num_ONPC > 0:
-        env._start_viewer() 
 
     time.sleep(3)
     print("Done connecting to the server ")
@@ -1385,16 +1381,11 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
             opp_noisey_actions_for_buffer = opp_actions[0]
             opp_params = np.array([val[0][len(env.action_list):] for val in opp_agent_actions])
 
-            # print('These are the opp params', str(opp_params))
-
-            team_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in team_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
-            #Added to Disable/Enable the team agents
-            if has_team_Agents:        
-                team_actions_params_for_buffer = np.array([val[0] for val in team_agent_actions])
+            team_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in team_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes       
+            team_actions_params_for_buffer = np.array([val[0] for val in team_agent_actions])
             opp_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in opp_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
-            #Added to Disable/Enable the opp agents
-            if has_opp_Agents:
-                opp_actions_params_for_buffer = np.array([val[0] for val in opp_agent_actions])
+
+            opp_actions_params_for_buffer = np.array([val[0] for val in opp_agent_actions])
 
             # If kickable is True one of the teammate agents has possession of the ball
             kickable = np.array([env.team_kickable[i] for i in range(env.num_TA)])
@@ -1414,41 +1405,29 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
 
             _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params,team_agent_actions,opp_agent_actions)
 
-            #Added to Disable/Enable the team agents
-            if has_team_Agents:
-                team_rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA)])
-            #Added to Disable/Enable the opp agents
-            if has_opp_Agents:
-                opp_rewards = np.hstack([env.Reward(i,'opp') for i in range(env.num_OA)])
+            team_rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA)])
+            opp_rewards = np.hstack([env.Reward(i,'opp') for i in range(env.num_OA)])
 
-            #Added to Disable/Enable the team agents
-            if has_team_Agents:
-                team_next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
-            #Added to Disable/Enable the opp agents
-            if has_opp_Agents:
-                opp_next_obs = np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
+            team_next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
+            opp_next_obs = np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
 
             
             team_done = env.d
             opp_done = env.d 
 
-            # Store variables for calculation of MC and n-step targets for team
-            #Added to Disable/Enable the team agents
-            if has_team_Agents:
-                team_n_step_rewards.append(team_rewards)
-                team_n_step_obs.append(team_obs)
-                team_n_step_next_obs.append(team_next_obs)
-                team_n_step_acs.append(team_actions_params_for_buffer)
-                team_n_step_dones.append(team_done)
-                team_n_step_ws.append(world_stat)
-            #Added to Disable/Enable the opp agents
-            if has_opp_Agents:
-                opp_n_step_rewards.append(opp_rewards)
-                opp_n_step_obs.append(opp_obs)
-                opp_n_step_next_obs.append(opp_next_obs)
-                opp_n_step_acs.append(opp_actions_params_for_buffer)
-                opp_n_step_dones.append(opp_done)
-                opp_n_step_ws.append(world_stat)
+            team_n_step_rewards.append(team_rewards)
+            team_n_step_obs.append(team_obs)
+            team_n_step_next_obs.append(team_next_obs)
+            team_n_step_acs.append(team_actions_params_for_buffer)
+            team_n_step_dones.append(team_done)
+            team_n_step_ws.append(world_stat)
+
+            opp_n_step_rewards.append(opp_rewards)
+            opp_n_step_obs.append(opp_obs)
+            opp_n_step_next_obs.append(opp_next_obs)
+            opp_n_step_acs.append(opp_actions_params_for_buffer)
+            opp_n_step_dones.append(opp_done)
+            opp_n_step_ws.append(world_stat)
             # ----------------------------------------------------------------
             # Reduce size of obs
 
@@ -1555,25 +1534,23 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     opp_avg_rew = [np.asarray(opp_n_step_rewards)[:,i].sum()/float(et_i) for i in range(num_TA)]
                     opp_cum_rew = [np.asarray(opp_n_step_rewards)[:,i].sum() for i in range(num_TA)]
 
-                    #Added to Disable/Enable the team agents
-                    if has_team_Agents:
-                        team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
-                                                            'why': env.team_envs[0].statusToString(world_stat),
-                                                            'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
-                                                            'possession_percentages': [(tpc/time_step)*100 for tpc in team_possession_counter],
-                                                            'average_reward': team_avg_rew,
-                                                            'cumulative_reward': team_cum_rew},
-                                                            ignore_index=True)
 
-                    #Added to Disable/Enable the opp agents
-                    if has_opp_Agents:
-                        opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
-                                                            'why': env.opp_team_envs[0].statusToString(world_stat),
-                                                            'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
-                                                            'possession_percentages': [(opc/time_step)*100 for opc in opp_possession_counter],
-                                                            'average_reward': opp_avg_rew,
-                                                            'cumulative_reward': opp_cum_rew},
-                                                            ignore_index=True)
+                    team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
+                                                        'why': env.team_envs[0].statusToString(world_stat),
+                                                        'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
+                                                        'possession_percentages': [(tpc/time_step)*100 for tpc in team_possession_counter],
+                                                        'average_reward': team_avg_rew,
+                                                        'cumulative_reward': team_cum_rew},
+                                                        ignore_index=True)
+
+                    
+                    opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
+                                                        'why': env.opp_team_envs[0].statusToString(world_stat),
+                                                        'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
+                                                        'possession_percentages': [(opc/time_step)*100 for opc in opp_possession_counter],
+                                                        'average_reward': opp_avg_rew,
+                                                        'cumulative_reward': opp_cum_rew},
+                                                        ignore_index=True)
 
 
                 # Launch evaluation session
@@ -1621,11 +1598,4 @@ def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,his
                     
                 
             team_obs = team_next_obs
-            #Added to Disable/Enable the opp agents
-            if has_opp_Agents:
-                opp_obs = opp_next_obs
-
-                #print(step_logger_df) 
-            #if t%30000 == 0 and use_viewer:
-            if t%20000 == 0 and use_viewer and ep_i > use_viewer_after:
-                env._start_viewer()   
+            opp_obs = opp_next_obs

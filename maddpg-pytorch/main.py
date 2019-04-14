@@ -1,10 +1,8 @@
-import re
 import itertools
 import random
 import datetime
-import os 
+import os, sys
 import csv
-import itertools 
 import argparse
 import numpy as np
 import utils.misc as misc
@@ -26,97 +24,95 @@ import collections
 from multiprocessing import Pool
 import gc
 import algorithms.updates as up
+import configparser
 
-if __name__ == "__main__":  
-    mp.set_start_method('forkserver',force=True)
-    seed = 912
-    num_envs = 1
-    port = 45000
-    max_num_experiences = 500
-    update_threads = []
-    if True: # all options 
-       # Parseargs --------------------------------------------------------------
-        parser = argparse.ArgumentParser(description='Load port and log directory')
-        parser.add_argument('-log_dir', type=str, default='log',
-                        help='A name for log directory')
-        parser.add_argument('-log', type=str, default='history',
-                        help='A name for log file ')
+if __name__ == "__main__":
+    sys_args = sys.argv[:]
 
-        args = parser.parse_args()
-        log_dir = args.log_dir
-        history = args.log
-            
-        # options ------------------------------
-        action_level = 'low'
-        feature_level = 'simple'
-        USE_CUDA = False
-        if USE_CUDA:
-            device = 'cuda'
-            to_gpu = True
-        else:
-            to_gpu = False
-            device = 'cpu'
-        use_viewer = False
-        use_viewer_after = 1000 # If using viewer, uses after x episodes
-        n_training_threads = 8
-        rcss_log_game = False #Logs the game using rcssserver
-        hfo_log_game = False #Logs the game using HFO
-        # default settings ---------------------
-        num_episodes = 10000000
-        replay_memory_size = 2000
-        pt_memory = 35000
-        episode_length = 500 # FPS
-        untouched_time = 200
-        burn_in_iterations = 500 # for time step
+    if len(sys_args) == 4:
+        env_args = ' '.join(sys_args[1:3])
+        conf_path = os.getcwd() + '/configs/' + sys_args[3]
+    else:
+        print('Invalid number of args provided')
+        exit(0)
+
+    config = configparser.ConfigParser()
+
+    if env_args == "-env rc":
+        mp.set_start_method('forkserver',force=True)
+        config.read(conf_path)
+
+        # ENV_PARAMS
+        EP = config['ENV_PARAMS']
+        seed = int(EP['SEED'])
+        num_envs = int(EP['NUM_ENVS'])
+        port = int(EP['PORT'])
+        max_num_experiences = int(EP['MNE'])
+        log_dir = EP['LOG']
+        history = EP['HISTORY']
+        action_level = EP['AL']
+        feature_level = EP['FL']
+        use_viewer = bool(EP['UV'])
+        rcss_log_game = bool(EP['RCSS_LOG'])
+        hfo_log_game = bool(EP['HFO_LOG'])
+        num_episodes = int(EP['NUM_EP'])
+        episode_length = int(EP['EP_LENGTH'])
+        untouched_time = int(EP['UNTOUCHED'])
+        deterministic = bool(EP['DETERM'])
+        burn_in_iterations = int(EP['BURN_IN'])
         burn_in_episodes = float(burn_in_iterations)/untouched_time
-        deterministic = True
-        
-        # Create logs
-        record = False # Learning agent logs/librcsc
-        record_server = False # server logs
- 
-        # --------------------------------------
-        # Team ---------------------------------
-        num_TA = 3
-        num_OA = 3
-        num_TNPC = 0
-        num_ONPC = 0
-        acs_dim = 8
-        offense_team_bin='helios10'
-        defense_team_bin='helios11'  
-        goalie = True
-        team_rew_anneal_ep = 1500 # reward would be
-        # hyperparams--------------------------
-        batch_size = 32
-        hidden_dim = int(512)
+        record = bool(EP['RECORD_LIB'])
+        record_server = bool(EP['RECORD_SERV'])
+        num_TA = int(EP['NUM_LEFT'])
+        num_OA = int(EP['NUM_RIGHT'])
+        num_TNPC = int(EP['NUM_L_BOT'])
+        num_ONPC = int(EP['NUM_R_BOT'])
+        acs_dim = int(EP['AC_DIM'])
+        offense_team_bin = EP['LEFT_BIN']
+        defense_team_bin = EP['RIGHT_BIN']
+        goalie = bool(EP['GOALIE'])
+        team_rew_anneal_ep = int(EP['REWARD_ANNEAL'])
 
-        tau = 0.001 # soft update rate 
+        # INIT_ENVS
+        IE = config['INIT_ENVS']
+        # Control Random Initilization of Agents and Ball
+        control_rand_init = bool(IE['SELF'])
+        ball_x_min = float(IE['BALL_X_MIN'])
+        ball_x_max = float(IE['BALL_X_MAX'])
+        ball_y_min = float(IE['BALL_Y_MIN'])
+        ball_y_max = float(IE['BALL_Y_MAX'])
+        # agents posititions are currently hard coded on the server
+        agents_x_min = -0.2 
+        agents_x_max = 0.2
+        agents_y_min = -0.2
+        agents_y_max = 0.2
+        # Below change_xxx are not used currently
+        change_every_x = 1000000000
+        change_agents_x = 0.01
+        change_agents_y = 0.01
+        change_balls_x = 0.01
+        change_balls_y = 0.01
 
-        number_of_updates = 0
-        # exploration --------------------------
-        explore = True
-        final_OU_noise_scale = 0.03
-        final_noise_scale = 0.03
-        init_noise_scale = 1.00
-        num_explore_episodes = 1 # Haus uses over 10,000 updates --
-        multi_gpu = False
-        data_parallel = False
-        
+        # HPS_BASE
+        HP = config['HPS_BASE']
+        batch_size = int(HP['BATCH_SIZE'])
+        hidden_dim = int(HP['HIDDEN_DIM'])
+        tau = float(HP['TAU'])
+        number_of_updates = int(HP['NUM_UPDATES'])
+        explore = bool(HP['EXPLORE'])
+        final_OU_noise_scale = float(HP['OU_NOISE'])
+        final_noise_scale = float(HP['NOISE'])
+        init_noise_scale = float(HP['INIT_NOISE'])
+        num_explore_episodes = int(HP['NUM_EXP_EPS'])
 
-        # --------------------------------------
-        #D4PG Options --------------------------
-        D4PG = False
-        gamma = 0.99 # discount
-        Vmax = 40
-        Vmin = -40
-        N_ATOMS = 251
+        # D4PG
+        HP = config['D4PG']
+        D4PG = bool(HP['SELF'])
+        gamma = float(HP['GAMMA']) # discount
+        Vmax = int(HP['VMAX'])
+        Vmin = int(HP['VMIN'])
+        N_ATOMS = int(HP['N_ATOMS'])
         DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-        n_steps = 10
-        # n-step update size 
-        # Mixed taqrget beta (0 = 1-step, 1 = MC update)
-        initial_beta = 0.3
-        final_beta =0.3
-        num_beta_episodes = 1000000000
         if D4PG:
             a_lr = 0.0001 # actor learning rate
             c_lr = 0.001 # critic learning rate
@@ -126,103 +122,103 @@ if __name__ == "__main__":
 
             a_lr = 0.0002 # actor learning rate
             c_lr = 0.0001 # critic learning rate
-        #---------------------------------------
-        #TD3 Options ---------------------------
-        TD3 = True
-        TD3_delay_steps = 2
-        TD3_noise = 0.02
-        # -------------------------------------- 
-        #Pretrain Options ----------------------
-        pretrain = False
-        use_pretrain_data = False
-        test_imitation = False  # After pretrain, infinitely runs the current pretrained policy
-        pt_update_cycles = 1000
-        pt_inject_proba = 1.0
-        init_pt_inject_proba = 1.0
-        final_pt_inject_proba = 0.2
-        pt_inject_anneal_ep = 50
-        play_agent2d = False
-        bl_agent2d = False
-        use_preloaded_agent2d = False
+        
+        # N-Step
+        HP = config['N_STEP']
+        n_steps = int(HP['SELF'])
+        # Mixed taqrget beta (0 = 1-step, 1 = MC update)
+        initial_beta = float(HP['INIT_BETA'])
+        final_beta = float(HP['FINAL_BETA'])
+        num_beta_episodes = int(HP['NUM_BETA_EPS'])
+
+        # TD3
+        HP = config['TD3']
+        TD3 = bool(HP['SELF'])
+        TD3_delay_steps = int(HP['TD3_DELAY'])
+        TD3_noise = float(HP['TD3_NOISE'])
+
+        # Pretrain
+        HP = config['PRETRAIN']
+        pretrain = bool(HP['SELF'])
+        use_pretrain_data = bool(HP['USE_PT_DATA'])
+        test_imitation = bool(HP['TEST_IMI'])  # After pretrain, infinitely runs the current pretrained policy
+        pt_update_cycles = int(HP['PT_CYCLES'])
+        pt_inject_proba = float(HP['PT_INJECT_PROB'])
+        init_pt_inject_proba = float(HP['INIT_PT_PROB'])
+        final_pt_inject_proba = float(HP['FINAL_PT_PROB'])
+        pt_inject_anneal_ep = int(HP['PT_ANNEAL_EP'])
+        play_agent2d = bool(HP['AGENT2D'])
+        bl_agent2d = bool(HP['LEFT_AGENT2D'])
+        use_preloaded_agent2d = bool(HP['PRELOAD_AGENT2D'])
         preload_agent2d_path = ""
-        num_buffers = 14
+        num_buffers = int(HP['NUM_BUFFS'])
         pt_total_memory = pt_memory*num_buffers
 
-        pt_episodes = 4000 # not used
-        #---------------------------------------
-        #I2A Options ---------------------------
-        I2A = False
-        EM_lr = 0.0001
-        obs_weight = 5.0
-        rew_weight = 1.0
-        ws_weight = 1.0
-        rollout_steps = 2
-        LSTM_hidden=16
-        imagination_policy_branch = False 
-        #---------------------------------------
-        # Self-Imitation Learning Options ------
-        SIL = False
-        SIL_update_ratio = 1
-        #---------------------------------------
-        #Critic Input Modification 
-        critic_mod = True
-        # NOTE: When both are False but critic_mod is true the critic takes both
-        # actions and observations from the opposing side
-        critic_mod_act = False
-        critic_mod_obs = False
+        # I2A
+        HP = config['I2A']
+        I2A = bool(HP['SELF'])
+        EM_lr = float(HP['EM_LR'])
+        obs_weight = float(HP['OBS_W'])
+        rew_weight = float(HP['REW_W'])
+        ws_weight = float(HP['WS_W'])
+        rollout_steps = int(HP['ROLL_STEPS'])
+        LSTM_hidden= int(HP['LSTM_HIDD'])
+        imagination_policy_branch = bool(HP['IMAG_POL_BRANCH'])
+
+        # SIL
+        HP = config['SIL']
+        SIL = bool(HP['SELF'])
+        SIL_update_ratio = int(HP['UPDATE_RATIO'])
+
+        # CENT Q
+        HP =  config['CENT_Q']
+        critic_mod = bool(HP['SELF'])
+        critic_mod_act = bool(HP['CRIT_AC'])
+        critic_mod_obs = bool(HP['CRIT_OBS'])
         critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
-        #---------------------------------------
-        preprocess = False
-        zero_critic = True
-        cent_critic = True
-        # Control Random Initilization of Agents and Ball
-        control_rand_init = True
-        ball_x_min = -0.10
-        ball_x_max = 0.10
-        ball_y_min = -0.10
-        ball_y_max = 0.10
-        agents_x_min = -0.2 # agents posititions are currently configured in HFO/librcss
-        agents_x_max = 0.2
-        agents_y_min = -0.2
-        agents_y_max = 0.2
-        change_every_x = 1000000000
-        change_agents_x = 0.01
-        change_agents_y = 0.01
-        change_balls_x = 0.01
-        change_balls_y = 0.01
-        # Self-play ----------------------------
-        load_random_nets = True
-        load_random_every = 100
-        k_ensembles = 1
+
+        # Buffer Params
+        BP = config['BUFFER_PARAMS']
+        replay_memory_size = int(BP['REPLAY_SIZE'])
+        pt_memory = int(BP['PT_MEM'])
+
+        # Self Play
+        SP = config['SELF_PLAY']
+        load_random_nets = bool(SP['LOAD_RAND_NETS'])
+        load_random_every = int(SP['LOAD_RAND_EVERY'])
+        k_ensembles = int(SP['K_ENS'])
         current_ensembles = [0]*num_TA # initialize which ensembles we start with
-        self_play_proba = 0.9
-        load_same_agent = True # load same policy for all agents
-        push_only_left = True
+        self_play_proba = float(SP['SELF_PLAY_PROB'])
+        load_same_agent = bool(SP['LOAD_SAME_AGENT']) # load same policy for all agents
+        push_only_left = bool(SP['PUSH_ONLY_LEFT'])
         num_update_threads = num_TA
         if load_same_agent:
             num_update_threads = 1
-        # --------------------------------------
-        #Save/load -----------------------------
-        save_nns = True
-        ep_save_every = 25 # episodes
-        load_nets = False # load previous sessions' networks from file for initialization
+        
+        # Save/Load
+        SL = config['SAVE_LOAD']
+        save_nns = bool(SL['SAVE_NNS'])
+        ep_save_every = int(SL['EP_SAVE_EVERY']) # episodes
+        load_nets = bool(SL['LOAD_NETS']) # load previous sessions' networks from file for initialization
         initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
-        first_save = True # build model clones for ensemble
-        preload_model = False
+        first_save = bool(SL['FIRST_SAVE']) # build model clones for ensemble
+        preload_model = bool(SL['PRELOAD_MODEL'])
         preload_path = "agent2d/model_0.pth"
-        # --------------------------------------
-        # Evaluation ---------------------------
-        evaluate = False
-        eval_after = 500
-        eval_episodes = 11
-        # --------------------------------------
-        # LSTM -------------------------------------------
-        LSTM = True # Critic only
-        LSTM_policy = True# Policy
-        hidden_dim_lstm = 64
-        lstm_burn_in = 10
+
+        # Evaluation
+        EVAL = config['EVAL']
+        evaluate = bool(EVAL['SELF'])
+        eval_after = int(EVAL['EVAL_AFTER'])
+        eval_episodes = int(EVAL['EVAL_EPS'])
+
+        # LSTM
+        HP = config['LSTM']
+        LSTM = bool(HP['LSTM_CRIT']) # Critic only
+        LSTM_policy = bool(HP['LSTM_POL']) # Policy
+        hidden_dim_lstm = int(HP['HIDDEN_DIM'])
+        lstm_burn_in = int(HP['BURN_IN'])
         if LSTM:
-            seq_length = 20 # Must be divisible by 2 b/c of overlap formula
+            seq_length = int(HP['SEQ_LENGTH']) # Must be divisible by 2 b/c of overlap formula
             overlap = int(seq_length/2)
         else:
             seq_length = 0
@@ -230,12 +226,26 @@ if __name__ == "__main__":
         if seq_length % 2 != 0:
             print('Seq length must be divisible by 2')
             exit(0)
-        # -------------------------------------------------
+        
+        # Misc
+        MISC = config['MISC']
+        USE_CUDA = bool(MISC['CUDA'])
+        if USE_CUDA:
+            device = 'cuda'
+            to_gpu = True
+        else:
+            to_gpu = False
+            device = 'cpu'
+        n_training_threads = int(MISC['NUM_THREADS'])
+        multi_gpu = bool(MISC['MULTI_GPU'])
+        data_parallel = bool(MISC['DATA_PARALLEL'])
+        # optimizations
+        parallel_process = bool(MISC['PARALLEL_PROC'])
+        forward_pass = bool(MISC['FORWARD_PASS'])
+        preprocess = bool(MISC['PREPROCESS'])
+        zero_critic = bool(MISC['ZERO_CRIT'])
+        cent_critic = bool(MISC['CENT_CRIT'])
 
-        # Optimization ------------------------------------
-        parallel_process = True
-        forward_pass = True
-        # -------------------------------------------------
         # Prep Session Files ------------------------------
         session_path = None
         current_day_time = datetime.datetime.now()
@@ -251,7 +261,6 @@ if __name__ == "__main__":
         ensemble_path = session_path +"ensemble_models/"
         misc.prep_session(session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,log_dir,num_TA) # Generates directories and files for the session
 
-        # --------------------------------------
         # initialization -----------------------
         t = 0
         time_step = 0
@@ -263,19 +272,8 @@ if __name__ == "__main__":
             discrete_action = False
         if not USE_CUDA:
             torch.set_num_threads(n_training_threads)
-
-        #Initialization for either M vs N, M vs 0, or N vs 0
-        if num_TA > 0:
-            has_team_Agents = True
-        else:
-            has_team_Agents = False
-
-        if num_OA > 0:
-            has_opp_Agents = True
-        else:
-            has_opp_Agents = False
-    
-        # dummy env that isn't used explicitly ergo used for dimensions
+        
+    # dummy env that isn't used explicitly ergo used for dimensions
     env = rc_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
                     num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
                     feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
@@ -289,7 +287,7 @@ if __name__ == "__main__":
     obs_dim_TA = env.team_num_features
     obs_dim_OA = env.opp_num_features
     # zip params for env processes
-    HP = (action_level,feature_level,to_gpu,device,use_viewer,use_viewer_after,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
+    HP = (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
     episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
         batch_size,hidden_dim,a_lr,c_lr,tau,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
         DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
@@ -297,7 +295,7 @@ if __name__ == "__main__":
         ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
         load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
         LSTM, LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        has_team_Agents,has_opp_Agents,log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,
+        log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,
         bl_agent2d,preprocess,zero_critic,cent_critic, record, record_server)
 
 
@@ -392,7 +390,7 @@ if __name__ == "__main__":
             all_s.append(status_file)
     
     
-        second_args = [(num_TA,obs_dim_TA,acs_dim,pt_trbs[i],pt_orbs[i],episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,pt_episodes,LSTM_policy,prox_item_size) for i in range(num_buffers)]
+        second_args = [(num_TA,obs_dim_TA,acs_dim,pt_trbs[i],pt_orbs[i],episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,LSTM_policy,prox_item_size) for i in range(num_buffers)]
         with Pool() as pool:
             pt_rbs = pool.starmap(misc.load_buffer, zip(all_l,all_r,all_s, second_args))
         pt_trbs,pt_orbs = list(zip(*pt_rbs))

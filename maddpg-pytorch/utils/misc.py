@@ -615,7 +615,7 @@ def distance(x1,x2,y1,y2):
     return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
 def load_buffer(left,right,fstatus,zip_vars):
-    num_TA,obs_dim_TA,acs_dim,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,num_episodes,LSTM_policy,prox_item_size = zip_vars
+    num_TA,obs_dim_TA,acs_dim,team_PT_replay_buffer,opp_PT_replay_buffer,episode_length,n_steps,gamma,D4PG,SIL,k_ensembles,push_only_left,LSTM_policy,prox_item_size = zip_vars
     
     
     team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left, right_fnames=right, fstatus=fstatus, num_features = obs_dim_TA-acs_dim) # -8 for action space thats added here.
