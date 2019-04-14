@@ -1,7 +1,7 @@
 import os
 from algorithms.maddpg import MADDPG
 from utils.misc import pretrain_process
-from HFO_env import HFO_env
+from rc_env import rc_env
 from utils.tensor_buffer import ReplayTensorBuffer
 import numpy as np
 import collections
@@ -564,7 +564,7 @@ if __name__ == "__main__":
     # -------------------------------------------------
 
     # dummy env that isn't used explicitly ergo used for dimensions andd methods
-    env = HFO_env(num_TNPC = 0,num_TA=num_TA,num_OA=num_OA, num_ONPC=0, goalie=goalie,
+    env = rc_env(num_TNPC = 0,num_TA=num_TA,num_OA=num_OA, num_ONPC=0, goalie=goalie,
                     num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
                     feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
                     ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,

@@ -20,7 +20,7 @@ from utils.make_env import make_env
 from utils.buffer import ReplayBuffer
 #from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
-from HFO_env import *
+from rc_env import *
 from trainer import launch_eval
 import _thread as thread
 

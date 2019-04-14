@@ -11,7 +11,7 @@ import os, subprocess, time, signal
 
 from utils.misc import zero_params
 class evaluation_env():
-    """HFO_env() extends the HFO environment to allow for centralized execution.
+    """rc_env() extends the HFO environment to allow for centralized execution.
 
     Attributes:
         num_TA (int): Number of teammate agents. (0-11)

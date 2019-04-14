@@ -4,7 +4,7 @@ import os, subprocess, time, signal
 
 
 class pretrain_env():
-    """HFO_env() extends the HFO environment to allow for centralized execution.
+    """rc_env() extends the HFO environment to allow for centralized execution.
 
     Attributes:
         num_TA (int): Number of teammate agents. (0-11)

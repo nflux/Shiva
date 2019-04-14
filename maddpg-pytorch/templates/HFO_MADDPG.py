@@ -30,7 +30,7 @@ from utils.buffer import ReplayBuffer
 #from utils.env_wrappers import SubprocVecEnv, DummyVecEnv
 from algorithms.maddpg import MADDPG
 
-from HFO_env import *
+from rc_env import *
 
 
 
@@ -48,7 +48,7 @@ else:
     
     
     
-env = HFO_env(1,0,1,'left',False,1000,1000,'high','high')
+env = rc_env(1,0,1,'left',False,1000,1000,'high','high')
 time.sleep(0.1)
 print("Done connecting to the server ")
 
