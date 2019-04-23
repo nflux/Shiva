@@ -1,3 +1,110 @@
+# Shariq added
+models/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# dotenv
+.env
+
+# virtualenv
+.venv
+venv/
+ENV/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+
+/dummy_log
+
+# RoboEnv
 __pycache__/
 *.egg-info/
 *.pyc
@@ -5,55 +112,47 @@ __pycache__/
 *.csv
 *.log
 .vscode/
-maddpg-pytorch/HFO/bin/rcssserver
-maddpg-pytorch/HFO/bin/soccerwindow2
-maddpg-pytorch/HFO/bin/teams/base/agent
-maddpg-pytorch/HFO/bin/teams/base/sample_coach
-maddpg-pytorch/HFO/bin/teams/base/sample_player
-maddpg-pytorch/HFO/bin/teams/base/sample_trainer
-maddpg-pytorch/HFO/example/thread_agents
-maddpg-pytorch/training_sessions
-maddpg-pytorch/Pretrain_Files
-maddpg-pytorch/HFO/log_pt
+HFO/bin/rcssserver
+HFO/bin/soccerwindow2
+HFO/bin/teams/base/agent
+HFO/bin/teams/base/sample_coach
+HFO/bin/teams/base/sample_player
+HFO/bin/teams/base/sample_trainer
+HFO/example/thread_agents
+training_sessions
+Pretrain_Files
+HFO/log_pt
 
-maddpg-pytorch/Pretrained_3v3/
+Pretrained_3v3/
+Trained_3v3/
+Pretrained_2v2/Cent_Q/
 
-maddpg-pytorch/Trained_3v3/
+1v1/
 
-maddpg-pytorch/Pretrained_2v2/Cent_Q/
+rew_viz\.ipynb
 
-maddpg-pytorch/1v1/
+Pretrained_2v2/High_Lvl/agent_0\.pth
 
-maddpg-pytorch/rew_viz\.ipynb
+Pretrained_2v2/High_Lvl/agent_1\.pth
 
-maddpg-pytorch/Pretrained_2v2/High_Lvl/agent_0\.pth
+\.~rew_viz\.ipynb
 
-maddpg-pytorch/Pretrained_2v2/High_Lvl/agent_1\.pth
+2v2 model/model_0\.pth
+3v3_model/
+2v2_model/model_0\.pth
 
-maddpg-pytorch/\.~rew_viz\.ipynb
+example\.ipynb
+untitled\.txt
+agent2d/agent2D\.pth
 
-maddpg-pytorch/2v2 model/model_0\.pth
+agent2d/model_0\.pth
 
-maddpg-pytorch/Untitled\.ipynb
-maddpg-pytorch/3v3_model/
+extra_code\.py
 
-maddpg-pytorch/2v2_model/model_0\.pth
+Untitled2\.ipynb
 
-maddpg-pytorch/Untitled1\.ipynb
+obs_acs_analysis\.ipynb
 
-
-maddpg-pytorch/example\.ipynb
-maddpg-pytorch/untitled\.txt
-maddpg-pytorch/agent2d/agent2D\.pth
-
-maddpg-pytorch/agent2d/model_0\.pth
-
-maddpg-pytorch/extra_code\.py
-
-maddpg-pytorch/Untitled2\.ipynb
-
-maddpg-pytorch/obs_acs_analysis\.ipynb
-
-maddpg-pytorch/pt_logs_3000/Untitled\.ipynb
+pt_logs_3000/Untitled\.ipynb
 
 Untitled\.ipynb
