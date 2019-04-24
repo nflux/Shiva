@@ -1,6 +1,5 @@
 import itertools
 import random
-import datetime
 import os, sys
 import csv
 import argparse
@@ -25,256 +24,48 @@ from multiprocessing import Pool
 import gc
 import algorithms.updates as up
 import configparser
+import argparse
+import config
+
+def parseArgs():
+    parser =  argparse.ArgumentParser('Project Mothra')
+    parser.add_argument('--env', type=str, default='rc',
+                        help='type of environment')
+    parser.add_argument('--nenvs', type=int,  default='1',
+                        help='number of envs')
+    parser.add_argument('--conf', type=str, default='rc_test.ini')
+
+    return parser.parse_args()
+
+class RoboEnv:
+    def __init__(self, config, args):
+        self.env = None
+
+
+
 
 def str_to_bool(s):
     return s == 'True'
 
 if __name__ == "__main__":
-    sys_args = sys.argv[:]
+    args = parseArgs()
+    config_parse = configparser.SafeConfigParser()
 
-    if len(sys_args) == 4:
-        env_args = ' '.join(sys_args[1:3])
-        conf_path = os.getcwd() + '/configs/' + sys_args[3]
-    else:
-        print('Invalid number of args provided')
-        exit(0)
+    conf_path = os.getcwd() + '/configs/' + args.conf
 
-    config = configparser.ConfigParser()
-
-    if env_args == "-env rc":
+    if args.env == 'rc':
         mp.set_start_method('forkserver',force=True)
-        config.read(conf_path)
+        config_parse.read(conf_path)
+        config = config.RoboConfig(config_parse)
 
-        # ENV_PARAMS
-        EP = config['ENV_PARAMS']
-        seed = int(EP['SEED'])
-        num_envs = int(EP['NUM_ENVS'])
-        port = int(EP['PORT'])
-        max_num_experiences = int(EP['MNE'])
-        log_dir = EP['LOG']
-        history = EP['HISTORY']
-        action_level = EP['AL']
-        feature_level = EP['FL']
-        use_viewer = str_to_bool(EP['UV'])
-        rcss_log_game = str_to_bool(EP['RCSS_LOG'])
-        hfo_log_game = str_to_bool(EP['HFO_LOG'])
-        num_episodes = int(EP['NUM_EP'])
-        episode_length = int(EP['EP_LENGTH'])
-        untouched_time = int(EP['UNTOUCHED'])
-        deterministic = str_to_bool(EP['DETERM'])
-        burn_in_iterations = int(EP['BURN_IN'])
-        burn_in_episodes = float(burn_in_iterations)/untouched_time
-        record = str_to_bool(EP['RECORD_LIB'])
-        record_server = str_to_bool(EP['RECORD_SERV'])
-        num_TA = int(EP['NUM_LEFT'])
-        num_OA = int(EP['NUM_RIGHT'])
-        num_TNPC = int(EP['NUM_L_BOT'])
-        num_ONPC = int(EP['NUM_R_BOT'])
-        acs_dim = int(EP['AC_DIM'])
-        offense_team_bin = EP['LEFT_BIN']
-        defense_team_bin = EP['RIGHT_BIN']
-        goalie = str_to_bool(EP['GOALIE'])
-        team_rew_anneal_ep = int(EP['REWARD_ANNEAL'])
-
-        # INIT_ENVS
-        IE = config['INIT_ENVS']
-        # Control Random Initilization of Agents and Ball
-        control_rand_init = str_to_bool(IE['SELF'])
-        ball_x_min = float(IE['BALL_X_MIN'])
-        ball_x_max = float(IE['BALL_X_MAX'])
-        ball_y_min = float(IE['BALL_Y_MIN'])
-        ball_y_max = float(IE['BALL_Y_MAX'])
-        # agents posititions are currently hard coded on the server
-        agents_x_min = -0.2 
-        agents_x_max = 0.2
-        agents_y_min = -0.2
-        agents_y_max = 0.2
-        # Below change_xxx are not used currently
-        change_every_x = 1000000000
-        change_agents_x = 0.01
-        change_agents_y = 0.01
-        change_balls_x = 0.01
-        change_balls_y = 0.01
-
-        # HPS_BASE
-        HP = config['HPS_BASE']
-        batch_size = int(HP['BATCH_SIZE'])
-        hidden_dim = int(HP['HIDDEN_DIM'])
-        tau = float(HP['TAU'])
-        number_of_updates = int(HP['NUM_UPDATES'])
-        explore = str_to_bool(HP['EXPLORE'])
-        final_OU_noise_scale = float(HP['OU_NOISE'])
-        final_noise_scale = float(HP['NOISE'])
-        init_noise_scale = float(HP['INIT_NOISE'])
-        num_explore_episodes = int(HP['NUM_EXP_EPS'])
-
-        # D4PG
-        HP = config['D4PG']
-        D4PG = str_to_bool(HP['SELF'])
-        gamma = float(HP['GAMMA']) # discount
-        Vmax = int(HP['VMAX'])
-        Vmin = int(HP['VMIN'])
-        N_ATOMS = int(HP['N_ATOMS'])
-        DELTA_Z = (Vmax - Vmin) / (N_ATOMS - 1)
-        if D4PG:
-            a_lr = 0.0001 # actor learning rate
-            c_lr = 0.001 # critic learning rate
-        else:
-            freeze_actor = 0.0
-            freeze_critic = 0.0
-
-            a_lr = 0.0002 # actor learning rate
-            c_lr = 0.0001 # critic learning rate
-        
-        # N-Step
-        HP = config['N_STEP']
-        n_steps = int(HP['SELF'])
-        # Mixed taqrget beta (0 = 1-step, 1 = MC update)
-        initial_beta = float(HP['INIT_BETA'])
-        final_beta = float(HP['FINAL_BETA'])
-        num_beta_episodes = int(HP['NUM_BETA_EPS'])
-
-        # TD3
-        HP = config['TD3']
-        TD3 = str_to_bool(HP['SELF'])
-        TD3_delay_steps = int(HP['TD3_DELAY'])
-        TD3_noise = float(HP['TD3_NOISE'])
-
-        # Buffer Params
-        BP = config['BUFFER_PARAMS']
-        replay_memory_size = int(BP['REPLAY_SIZE'])
-        pt_memory = int(BP['PT_MEM'])
-
-        # Pretrain
-        PT = config['PRETRAIN']
-        pretrain = str_to_bool(PT['SELF'])
-        use_pretrain_data = str_to_bool(PT['USE_PT_DATA'])
-        test_imitation = str_to_bool(PT['TEST_IMI'])  # After pretrain, infinitely runs the current pretrained policy
-        pt_update_cycles = int(PT['PT_CYCLES'])
-        pt_inject_proba = float(PT['PT_INJECT_PROB'])
-        init_pt_inject_proba = float(PT['INIT_PT_PROB'])
-        final_pt_inject_proba = float(PT['FINAL_PT_PROB'])
-        pt_inject_anneal_ep = int(PT['PT_ANNEAL_EP'])
-        play_agent2d = str_to_bool(PT['AGENT2D'])
-        bl_agent2d = str_to_bool(PT['LEFT_AGENT2D'])
-        use_preloaded_agent2d = str_to_bool(PT['PRELOAD_AGENT2D'])
-        preload_agent2d_path = ""
-        num_buffers = int(PT['NUM_BUFFS'])
-        pt_total_memory = pt_memory*num_buffers
-
-        # I2A
-        HP = config['I2A']
-        I2A = str_to_bool(HP['SELF'])
-        EM_lr = float(HP['EM_LR'])
-        obs_weight = float(HP['OBS_W'])
-        rew_weight = float(HP['REW_W'])
-        ws_weight = float(HP['WS_W'])
-        rollout_steps = int(HP['ROLL_STEPS'])
-        LSTM_hidden= int(HP['LSTM_HIDD'])
-        imagination_policy_branch = str_to_bool(HP['IMAG_POL_BRANCH'])
-
-        # SIL
-        HP = config['SIL']
-        SIL = str_to_bool(HP['SELF'])
-        SIL_update_ratio = int(HP['UPDATE_RATIO'])
-
-        # CENT Q
-        HP =  config['CENT_Q']
-        critic_mod = str_to_bool(HP['SELF'])
-        critic_mod_act = str_to_bool(HP['CRIT_AC'])
-        critic_mod_obs = str_to_bool(HP['CRIT_OBS'])
-        critic_mod_both = ((critic_mod_act == False) and (critic_mod_obs == False) and critic_mod)
-
-        # Self Play
-        SP = config['SELF_PLAY']
-        load_random_nets = str_to_bool(SP['LOAD_RAND_NETS'])
-        load_random_every = int(SP['LOAD_RAND_EVERY'])
-        k_ensembles = int(SP['K_ENS'])
-        current_ensembles = [0]*num_TA # initialize which ensembles we start with
-        self_play_proba = float(SP['SELF_PLAY_PROB'])
-        load_same_agent = str_to_bool(SP['LOAD_SAME_AGENT']) # load same policy for all agents
-        push_only_left = str_to_bool(SP['PUSH_ONLY_LEFT'])
-        num_update_threads = num_TA
-        if load_same_agent:
-            num_update_threads = 1
-        
-        # Save/Load
-        SL = config['SAVE_LOAD']
-        save_nns = str_to_bool(SL['SAVE_NNS'])
-        ep_save_every = int(SL['EP_SAVE_EVERY']) # episodes
-        load_nets = str_to_bool(SL['LOAD_NETS']) # load previous sessions' networks from file for initialization
-        initial_models = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
-        first_save = str_to_bool(SL['FIRST_SAVE']) # build model clones for ensemble
-        preload_model = str_to_bool(SL['PRELOAD_MODEL'])
-        preload_path = "agent2d/model_0.pth"
-
-        # Evaluation
-        EVAL = config['EVAL']
-        evaluate = str_to_bool(EVAL['SELF'])
-        eval_after = int(EVAL['EVAL_AFTER'])
-        eval_episodes = int(EVAL['EVAL_EPS'])
-
-        # LSTM
-        HP = config['LSTM']
-        LSTM = str_to_bool(HP['LSTM_CRIT']) # Critic only
-        LSTM_policy = str_to_bool(HP['LSTM_POL']) # Policy
-        hidden_dim_lstm = int(HP['HIDDEN_DIM'])
-        lstm_burn_in = int(HP['BURN_IN'])
-        if LSTM:
-            seq_length = int(HP['SEQ_LENGTH']) # Must be divisible by 2 b/c of overlap formula
-            overlap = int(seq_length/2)
-        else:
-            seq_length = 0
-            overlap = 0
-        if seq_length % 2 != 0:
-            print('Seq length must be divisible by 2')
-            exit(0)
-        
-        # Misc
-        MISC = config['MISC']
-        USE_CUDA = str_to_bool(MISC['CUDA'])
-        if USE_CUDA:
-            device = 'cuda'
-            to_gpu = True
-        else:
-            to_gpu = False
-            device = 'cpu'
-        n_training_threads = int(MISC['NUM_THREADS'])
-        multi_gpu = str_to_bool(MISC['MULTI_GPU'])
-        data_parallel = str_to_bool(MISC['DATA_PARALLEL'])
-        # optimizations
-        parallel_process = str_to_bool(MISC['PARALLEL_PROC'])
-        forward_pass = str_to_bool(MISC['FORWARD_PASS'])
-        preprocess = str_to_bool(MISC['PREPROCESS'])
-        zero_critic = str_to_bool(MISC['ZERO_CRIT'])
-        cent_critic = str_to_bool(MISC['CENT_CRIT'])
-
-        # Prep Session Files ------------------------------
-        session_path = None
-        current_day_time = datetime.datetime.now()
-        session_path = 'training_sessions/' + \
-                                        str(current_day_time.month) + \
-                                        '_' + str(current_day_time.day) + \
-                                        '_' + str(current_day_time.hour) + '_' + \
-                                        str(num_TA) + '_vs_' + str(num_OA) + "/"
-        hist_dir = session_path +"history"
-        eval_hist_dir = session_path +"eval_history"
-        eval_log_dir = session_path +"eval_log" # evaluation logfiles
-        load_path = session_path +"models/"
-        ensemble_path = session_path +"ensemble_models/"
-        misc.prep_session(session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,log_dir,num_TA) # Generates directories and files for the session
+        print(config.determ)
+        exit(0)
 
         # initialization -----------------------
         t = 0
         time_step = 0
         threads = []
-        # if using low level actions use non discrete settings
-        if action_level == 'high':
-            discrete_action = True
-        else:
-            discrete_action = False
-        if not USE_CUDA:
-            torch.set_num_threads(n_training_threads)
+
         
     # dummy env that isn't used explicitly ergo used for dimensions
     env = rc_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
