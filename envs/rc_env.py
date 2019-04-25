@@ -1,22 +1,22 @@
 import random
 import numpy as np
 import time
-# import _thread as thread
 import threading
 import pandas as pd
 import math
+from . base_env import Base_Env
 from HFO.hfo import hfo
 from HFO import get_config_path, get_hfo_path, get_viewer_path
 import os, subprocess, time, signal
-#from helper import *
-import utils.misc as misc
+from utils import misc as misc
 from algorithms.maddpg import MADDPG
 from torch.autograd import Variable
 import torch
 
+
 possession_side = 'N'
 
-class rc_env():
+class rc_env(Base_Env):
     """rc_env() extends the HFO environment to allow for centralized execution.
     Attributes:
         num_TA (int): Number of teammate agents. (0-11)
@@ -45,107 +45,84 @@ class rc_env():
         * Add the ability for team agents to function with npcs taking the place of opponents
         """
     # class constructor
-    def __init__(self, num_TNPC=0,num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'base_left',
-                 goalie = False, num_trials = 10000,fpt = 100,feat_lvl = 'high',
-                 act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
-                 offense_on_ball=0, fullstate = False, seed = 123,
-                 ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-                 verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
-                 agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
-                 change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
-                 change_balls_y=0.1, control_rand_init=False,record=False,record_server=False,
-                 defense_team_bin='helios15', offense_team_bin='helios16', run_server=False, deterministic=True):
+    # def __init__(self, num_TNPC=0,num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'base_left',
+    #              goalie = False, num_trials = 10000,fpt = 100,feat_lvl = 'high',
+    #              act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
+    #              offense_on_ball=0, fullstate = False, seed = 123,
+    #              ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
+    #              verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
+    #              agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
+    #              change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
+    #              change_balls_y=0.1, control_rand_init=False,record=False,record_server=False,
+    #              defense_team_bin='helios15', offense_team_bin='helios16', run_server=False, deterministic=True):
 
-        """ Initializes rc_env
-        Args:
-            num_TA (int): Number of teammate agents. (0-11)
-            num_OA (int): Number of opponent agents. (0-11)
-            num_ONPC (int): Number of opponent NPCs. (0-11)
-            base (str): Which side for the team. ('base_left','base_right') NOTE: Keep this at base_left
-            goalie (bool): Should team use a goalie. (True,False)
-            num_trials (int): Number of episodes
-            fpt (int): Frames per trial
-            feat_lvl (str): High or low feature level. ('high','low')
-            act_lvl (str): High or low action level. ('high','low')
-        Returns:
-            rc_env
-        """
+    def __init__(self, config):
+        self.config = config
+
         self.pass_reward = 0.0
-        self.agent_possession_team = ['N'] * num_TA
-        self.team_passer = [0]*num_TA
-        self.opp_passer = [0]*num_TA
-        self.team_lost_possession = [0]*num_TA
-        self.opp_lost_possession = [0]*num_TA
-        self.agent_possession_opp = ['N'] * num_OA
-        self.team_possession_counter = [0] * num_TA
-        self.opp_possession_counter = [0] * num_OA
-        self.team_kickable = [0] * num_OA
-        self.opp_kickable = [0] * num_OA
+        self.agent_possession_team = ['N'] * config.num_left
+        self.team_passer = [0]*config.num_left
+        self.opp_passer = [0]*config.num_left
+        self.team_lost_possession = [0]*config.num_left
+        self.opp_lost_possession = [0]*config.num_left
+        self.agent_possession_opp = ['N'] * config.num_right
+        self.team_possession_counter = [0] * config.num_left
+        self.opp_possession_counter = [0] * config.num_right
+        self.team_kickable = [0] * config.num_right
+        self.opp_kickable = [0] * config.num_right
+        self.offense_on_ball = config.offense_ball
 
-        self.goalie = goalie
-        self.team_rew_anneal_ep = team_rew_anneal_ep
-        self.port = port
+        self.untouched = config.untouched
+
+        self.goalie = config.goalie
+        self.team_rew_anneal_ep = config.reward_anneal
+        self.port = config.port
         self.hfo_path = get_hfo_path()
-        seed = np.random.randint(1000)
-
-        if run_server:
-            self._start_hfo_server(frames_per_trial = fpt, untouched_time = untouched_time,
-                                    offense_agents = num_TA, defense_agents = num_OA,
-                                    offense_npcs = num_TNPC, defense_npcs = num_ONPC,
-                                    sync_mode = sync_mode, port = port,
-                                    offense_on_ball = offense_on_ball,
-                                    fullstate = fullstate, seed = seed,
-                                    ball_x_min = ball_x_min, ball_x_max = ball_x_max,
-                                    ball_y_min= ball_y_min, ball_y_max= ball_y_max,
-                                    verbose = verbose, rcss_log_game = rcss_log_game, 
-                                    hfo_log_game=hfo_log_game, log_dir = log_dir,
-                                    agents_x_min=agents_x_min, agents_x_max=agents_x_max,
-                                    agents_y_min=agents_y_min, agents_y_max=agents_y_max,
-                                    change_every_x=change_every_x, change_agents_x=change_agents_x,
-                                    change_agents_y=change_agents_y, change_balls_x=change_balls_x,
-                                    change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,record_server=record_server,
-                                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, deterministic=deterministic)
+        self.seed = np.random.randint(1000)
 
         self.viewer = None
+
         # params for low level actions
         num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
-        self.team_action_params = np.asarray([[0.0]*num_action_params for i in range(num_TA)])
-        self.opp_action_params = np.asarray([[0.0]*num_action_params for i in range(num_OA)])
-        if act_lvl == 'low':
+        self.team_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_left)])
+        self.opp_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_right)])
+        if config.al == 'low':
             #                   pow,deg   deg       deg         pow,deg    
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
             self.action_list = [hfo.DASH, hfo.TURN, hfo.KICK]
 
             self.kick_actions = [hfo.KICK] # actions that require the ball to be kickable
     
-        elif act_lvl == 'high':
+        elif config.al == 'high':
             self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL, hfo.MOVE]
             self.kick_actions = [hfo.DRIBBLE, hfo.SHOOT, hfo.PASS] # actions that require the ball to be kickable
         
-        self.num_TA = num_TA
-        self.num_OA = num_OA
-        self.num_ONPC = num_ONPC
+        self.num_TA = config.num_left
+        self.num_OA = config.num_right
+        self.num_ONPC = config.num_r_bot
+        self.num_TNPC = config.num_l_bot
 
-        self.base = base
-        self.fpt = fpt
+        self.base = 'base_left'
+        self.fpt = config.ep_length
         self.been_kicked_team = False
         self.been_kicked_opp = False
-        self.act_lvl = act_lvl
-        self.feat_lvl = feat_lvl
+        self.act_lvl = config.al
+        self.feat_lvl = config.fl
         self.team_possession = False
         self.opp_possession = False
-        if feat_lvl == 'low':
+        if config.fl == 'low':
             #For new obs reorganization without vailds, changed hfo obs from 59 to 56
-            self.team_num_features = 56 + 13*(num_TA-1) + 12*num_OA + 4 + 1 + 2 + 1  + 8
-            self.opp_num_features = 56 + 13*(num_OA-1) + 12*num_TA + 4 + 1 + 2 + 1 + 8
-        elif feat_lvl == 'high':
-            self.team_num_features = (6*num_TA) + (3*num_OA) + (3*num_ONPC) + 6
-            self.opp_num_features = (6*num_OA) + (3*num_TA) + (3*num_ONPC) + 6
-        elif feat_lvl == 'simple':
+            self.team_num_features = 56 + 13*(config.num_left-1) + 12*config.num_right + 4 + 1 + 2 + 1  + 8
+            self.opp_num_features = 56 + 13*(config.num_right-1) + 12*config.num_left + 4 + 1 + 2 + 1 + 8
+        elif config.fl == 'high':
+            self.team_num_features = (6*config.num_left) + (3*config.num_right) + (3*num_ONPC) + 6
+            self.opp_num_features = (6*config.num_right) + (3*config.num_left) + (3*num_ONPC) + 6
+        elif config.fl == 'simple':
             # 16 - land_feats + 12 - basic feats + 6 per (team/opp)
-            self.team_num_features = 28 + (6 * ((num_TA-1) + num_OA)) + 8
-            self.opp_num_features = 28 + (6 * (num_TA + (num_OA-1))) + 8
+            self.team_num_features = 28 + (6 * ((config.num_left-1) + config.num_right)) + 8
+            self.opp_num_features = 28 + (6 * (config.num_left + (config.num_right-1))) + 8
 
+        self.acs_dim = config.ac_dim
         # Feature indexes by name
         self.stamina = 26
         self.ball_x = 16
@@ -161,8 +138,8 @@ class rc_env():
         self.opp_goal_bot_x = 14
         self.opp_goal_bot_y = 15
         # Create env for each teammate
-        self.team_envs = [hfo.HFOEnvironment() for i in range(num_TA)]
-        self.opp_team_envs = [hfo.HFOEnvironment() for i in range(num_OA)]
+        self.team_envs = [hfo.HFOEnvironment() for i in range(config.num_left)]
+        self.opp_team_envs = [hfo.HFOEnvironment() for i in range(config.num_right)]
 
         # flag that says when the episode is done
         self.d = 0
@@ -170,46 +147,65 @@ class rc_env():
         # flag to wait for all the agents to load
         self.start = False
 
-        self.sync_after_queue = threading.Barrier(num_TA+num_OA+1)
-        self.sync_before_step = threading.Barrier(num_TA+num_OA+1)
-        self.sync_at_status = threading.Barrier(num_TA+num_OA)
-        self.sync_at_reward = threading.Barrier(num_TA+num_OA)
+        self.sync_after_queue = threading.Barrier(config.num_left+config.num_right+1)
+        self.sync_before_step = threading.Barrier(config.num_left+config.num_right+1)
+        self.sync_at_status = threading.Barrier(config.num_left+config.num_right)
+        self.sync_at_reward = threading.Barrier(config.num_left+config.num_right)
 
         # Initialization of mutable lists to be passsed to threads
         # action each team mate is supposed to take when its time to act
-        self.team_actions = np.array([2]*num_TA)
+        self.team_actions = np.array([2]*config.num_left)
         # observation space for all team mate agents
-        self.team_obs = np.empty([num_TA,self.team_num_features],dtype=float)
+        self.team_obs = np.empty([config.num_left,self.team_num_features],dtype=float)
         # previous state for all team agents
-        self.team_obs_previous = np.empty([num_TA,self.team_num_features],dtype=float)
-        self.team_actions_OH = np.empty([num_TA,8],dtype=float)
-        self.opp_actions_OH = np.empty([num_TA,8],dtype=float)
+        self.team_obs_previous = np.empty([config.num_left,self.team_num_features],dtype=float)
+        self.team_actions_OH = np.empty([config.num_left,8],dtype=float)
+        self.opp_actions_OH = np.empty([config.num_left,8],dtype=float)
 
         # reward for each agent
-        self.team_rewards = np.zeros(num_TA)
+        self.team_rewards = np.zeros(config.num_left)
 
-        self.opp_actions = np.array([2]*num_OA)
+        self.opp_actions = np.array([2]*config.num_right)
         # observation space for all team mate agents
-        self.opp_team_obs = np.empty([num_OA,self.opp_num_features],dtype=float)
+        self.opp_team_obs = np.empty([config.num_right,self.opp_num_features],dtype=float)
         # previous state for all team agents
-        self.opp_team_obs_previous = np.empty([num_OA,self.opp_num_features],dtype=float)
+        self.opp_team_obs_previous = np.empty([config.num_right,self.opp_num_features],dtype=float)
         # reward for each agent
-        self.opp_rewards = np.zeros(num_OA)
+        self.opp_rewards = np.zeros(config.num_right)
 
         # keeps track of world state
         self.world_status = 0
         
-        self.team_base = base
+        self.team_base = self.base
         self.opp_base = ''
 
         # Create thread for each opponent (set one to goalie)
-        if base == 'base_left':
+        if self.base == 'base_left':
             self.opp_base = 'base_right'
-        elif base == 'base_right':
+        elif self.base == 'base_right':
             self.opp_base = 'base_left'
 
         
     def launch(self):
+        # self._start_hfo_server(frames_per_trial = fpt, untouched_time = untouched_time,
+        #                             offense_agents = num_TA, defense_agents = num_OA,
+        #                             offense_npcs = num_TNPC, defense_npcs = num_ONPC,
+        #                             sync_mode = sync_mode, port = port,
+        #                             offense_on_ball = offense_on_ball,
+        #                             fullstate = fullstate, seed = seed,
+        #                             ball_x_min = ball_x_min, ball_x_max = ball_x_max,
+        #                             ball_y_min= ball_y_min, ball_y_max= ball_y_max,
+        #                             verbose = verbose, rcss_log_game = rcss_log_game, 
+        #                             hfo_log_game=hfo_log_game, log_dir = log_dir,
+        #                             agents_x_min=agents_x_min, agents_x_max=agents_x_max,
+        #                             agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+        #                             change_every_x=change_every_x, change_agents_x=change_agents_x,
+        #                             change_agents_y=change_agents_y, change_balls_x=change_balls_x,
+        #                             change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,record_server=record_server,
+        #                             defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, deterministic=deterministic)
+        self._start_hfo_server()
+        
+        time.sleep(3)
         # Create thread for each teammate
         for i in range(self.num_TA):
             if i == 0:
@@ -1020,26 +1016,8 @@ class rc_env():
                     if self.d == True:
                         break
 
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-    def _start_hfo_server(self, frames_per_trial=100,
-                              untouched_time=100, offense_agents=1,
-                              defense_agents=0, offense_npcs=0,
-                              defense_npcs=0, sync_mode=True, port=6000,
-                              offense_on_ball=0, fullstate=False, seed=123,
-                              ball_x_min=-0.8, ball_x_max=0.8,
-                              ball_y_min=-0.8, ball_y_max=0.8,
-                              verbose=False, rcss_log_game=False,
-                              log_dir="log",
-                              hfo_log_game=True,
-                              agents_x_min=0.0, agents_x_max=0.0,
-                              agents_y_min=0.0, agents_y_max=0.0,
-                              change_every_x=1, change_agents_x=0.1,
-                              change_agents_y=0.1, change_balls_x=0.1,
-                              change_balls_y=0.1, control_rand_init=False,record=False,record_server=False,
-                              defense_team_bin='base', offense_team_bin='helios16', deterministic=True):
+    def _start_hfo_server(self):
             """
             Starts the Half-Field-Offense server.
             frames_per_trial: Episodes end after this many steps.
@@ -1058,37 +1036,37 @@ class rc_env():
             log_game: Enable game logging. Logs can be used for replay + visualization.
             log_dir: Directory to place game logs (*.rcg).
             """
-            self.server_port = port
+            self.server_port = self.port
             cmd = self.hfo_path + \
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
                   " --log-dir %s --message-size 256"\
-                  % (frames_per_trial, untouched_time, offense_agents,
-                     defense_agents, offense_npcs, defense_npcs, port,
-                     offense_on_ball, seed, ball_x_min, ball_x_max,
-                     ball_y_min, ball_y_max, log_dir)
+                  % (self.fpt, self.untouched, self.num_TA,
+                     self.num_OA, self.num_TNPC, self.num_ONPC, self.port,
+                     self.offense_on_ball, self.seed, self.config.ball_x_min, self.config.ball_x_max,
+                     self.config.ball_y_min, self.config.ball_y_max, self.config.log)
             #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
-            if offense_npcs > 0:   cmd += " --offense-team %s" \
-                % (offense_team_bin)
-            if defense_npcs > 0:   cmd += " --defense-team %s" \
-                % (defense_team_bin)
-            if not sync_mode:      cmd += " --no-sync"
-            if fullstate:          cmd += " --fullstate"
-            if deterministic:      cmd += " --deterministic"
-            if verbose:            cmd += " --verbose"
-            if not rcss_log_game:  cmd += " --no-logging"
-            if hfo_log_game:       cmd += " --hfo-logging"
-            if record:             cmd += " --record"
-            if record_server:      cmd += " --log-gen-pt"
-            if control_rand_init:
+            if self.num_TNPC > 0:   cmd += " --offense-team %s" \
+                % (self.config.left_bin)
+            if self.num_ONPC > 0:   cmd += " --defense-team %s" \
+                % (self.config.right_bin)
+            if not self.config.sync_mode:      cmd += " --no-sync"
+            if self.config.fullstate:          cmd += " --fullstate"
+            if self.config.determ:      cmd += " --deterministic"
+            if self.config.verbose:            cmd += " --verbose"
+            if not self.config.rcss_log:  cmd += " --no-logging"
+            if self.config.hfo_log:       cmd += " --hfo-logging"
+            if self.config.record_lib:             cmd += " --record"
+            if self.config.record_serv:      cmd += " --log-gen-pt"
+            if self.config.init_env:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
                         " --change-balls-x %f --change-balls-y %f --control-rand-init"\
-                        % (agents_x_min, agents_x_max, agents_y_min, agents_y_max,
-                            change_every_x, change_agents_x, change_agents_y,
-                            change_balls_x, change_balls_y)
+                        % (self.config.agents_x_min, self.config.agents_x_max, self.config.agents_y_min, self.config.agents_y_max,
+                            self.config.change_every_x, self.config.change_agents_x, self.config.change_agents_y,
+                            self.config.change_ball_x, self.config.change_ball_y)
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
@@ -1106,496 +1084,408 @@ class rc_env():
         cmd = get_viewer_path() +\
               " --connect --port %d" % (self.server_port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
-    
-    # Only will work for 2 v 2
-    def test_obs_validity(self, base):
-        observations = None
-        exit_check = False
-        if base == self.team_base:
-            observations = self.team_obs
-            print('side chosen', base)
+
+    def run_envs(self, config, shared_exps,exp_i,ready,halt,num_updates,history,ep_num):
+
+        # (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
+        # episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
+        # batch_size,hidden_dim,a_lr,c_lr,tau,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
+        # DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
+        # LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
+        # ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
+        # load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
+        # LSTM,LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
+        # log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
+        # preload_agent2d_path,bl_agent2d,preprocess,zero_critic,cent_critic, record, record_server) = HP
+
+        
+        if config.record_lib or config.record_serv:
+            if os.path.isdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(self.port)):
+                file_list = os.listdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(self.port))
+                [os.remove(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(self.port) + '/' + f) for f in file_list]
+            else:
+                os.mkdir(os.getcwd() + '/pretrain/pretrain_data//pt_logs_' + str(self.port))
+
+        env = self
+
+        # time.sleep(3)
+        # print("Done connecting to the server ")
+
+        if load_nets:
+            maddpg = MADDPG.init_from_save_evaluation(config.initial_models,self.num_TA) # from evaluation method just loads the networks
         else:
-            observations = self.opp_team_obs
-            print('side chosen', base)
-        
-        if observations[0][0:2].any() == -1 or observations[1][0:2].any() == -1:
-            print('agent:0/1, pos/velocity invalid')
-            exit_check = True
-        
-        if observations[0][2:5].any() == -2 or observations[1][2:5].any() == -2:
-            print('agent:0/1, velocity ang/mag invalid')
-            exit_check = True
-        
-        if observations[0][13:46].any() == -2 or observations[1][13:46].any() == -2:
-            print('agent:0/1, landmark invalid')
-            exit_check = True
-        
-        if observations[0][46:50].any() == -2 or observations[1][46:50].any() == -2:
-            print('agent:0/1, OOB invalid')
-            exit_check = True
-        
-        if observations[0][50] == -1 or observations[1][50] == -1:
-            print('agent:0/1, Ball pos invalid')
-            exit_check = True
-
-        if observations[0][54] == -1 or observations[1][54] == -1:
-            print('agent:0/1, Ball velocity invalid')
-            exit_check = True
-        
-        if observations[0][59] == -2 or observations[1][59] == -2:
-            print('agent:0/1, teammate agents not detected for open goal invalid')
-            exit_check = True
-        
-        if observations[0][60:62].any() == -2 or observations[1][60:62].any() == -2:
-            print('agent:0/1, opponent agents not detected for open goal invalid')
-            exit_check = True
-        
-        if observations[0][62] == -2 or observations[1][62] == -2:
-            print('agent:0/1, open angle to teammates invalid')
-            exit_check = True
-        
-        if observations[0][63:71].any() == -2 or observations[1][63:71].any() == -2:
-            print('agent:0/1, teammate player features invalid')
-            exit_check = True
-        
-        if observations[0][71:71+(2*8)].any() == -2 or observations[1][71:71+(2*8)].any() == -2:
-            print('agent:0/1, opponent player features invalid')
-            exit_check = True
-        
-        if observations[0][87] == -1 or observations[1][87] == -1:
-            print('agent:0/1, teammate uniform invalid')
-            exit_check = True
-        
-        if observations[0][88:90].any() == -1 or observations[1][88:90].any() == -1:
-            print('agent:0/1, opponent uniform invalid')
-            exit_check = True
-        
-        # if(self.test == 10):
-        #     print('Self x, y', observations[0][90:92], observations[1][90:92])
-        #     print('Teamates x,y', observations[0][92:94], observations[1][92:94])
-        #     print('Opponents x,y', observations[0][94:98], observations[1][94:98])
-        #     print('Ball x,y', observations[0][98:100], observations[1][98:100])
-        #     exit(0)
-        # self.test+=1
-        
-        if exit_check:
-            print('Exiting program')
-            exit(0)
-
-def run_envs(seed, port, shared_exps,exp_i,HP,env_num,ready,halt,num_updates,history,ep_num):
-
-    (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
-    episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
-    batch_size,hidden_dim,a_lr,c_lr,tau,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
-    DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
-    LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
-    ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
-    load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
-    LSTM,LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
-    preload_agent2d_path,bl_agent2d,preprocess,zero_critic,cent_critic, record, record_server) = HP
-
-    
-    if record or record_server:
-        if os.path.isdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(port)):
-            file_list = os.listdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(port))
-            [os.remove(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(port) + '/' + f) for f in file_list]
-        else:
-            os.mkdir(os.getcwd() + '/pretrain/pretrain_data//pt_logs_' + str(port))
-
-    env = rc_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
-                    num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
-                    feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
-                    ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
-                    offense_on_ball=False,port=port,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
-                    agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
-                    change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,record_server=record_server,
-                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=True, deterministic=deterministic)
-
-    time.sleep(3)
-    print("Done connecting to the server ")
-
-    # ------ Testing ---------
-    #device = 'cpu'
-    #to_gpu = False
-    #cuda = False
-    # initializing the maddpg 
-    if load_nets:
-        maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
-    else:
-        maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
-                                adversary_alg= "MADDPG",device=device,
-                                gamma=gamma,batch_size=batch_size,
-                                tau=tau,
-                                a_lr=a_lr,
-                                c_lr=c_lr,
-                                hidden_dim=hidden_dim ,discrete_action=discrete_action,
-                                vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
-                                n_steps=n_steps,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta,
-                                TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps,
-                                I2A = I2A, EM_lr = EM_lr,
-                                obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight, 
-                                rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
-                                imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
-                                critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-                                LSTM=LSTM, LSTM_policy=LSTM_policy, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm, 
-                                lstm_burn_in=lstm_burn_in,overlap=overlap,
-                                only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,preprocess=preprocess,zero_critic=zero_critic,cent_critic=cent_critic)         
-        
-    if to_gpu:
-        maddpg.device = 'cuda'
-
-    if multi_gpu:
-        if env_num < 5:
-            maddpg.torch_device = torch.device("cuda:1")
-        else:
-            maddpg.torch_device = torch.device("cuda:2")
-
-    maddpg.prep_training(device=maddpg.device,only_policy=False,torch_device=maddpg.torch_device)
-
-    reward_total = [ ]
-    num_steps_per_episode = []
-    end_actions = [] 
-    # logger_df = pd.DataFrame()
-    team_step_logger_df = pd.DataFrame()
-    opp_step_logger_df = pd.DataFrame()
-
-    prox_item_size = num_TA*(2*obs_dim_TA + 2*acs_dim)
-    exps = None
-
-    # --------------------------------
-    env.launch()
-    if use_viewer:
-        env._start_viewer()       
-
-    time.sleep(3)
-    for ep_i in range(0, num_episodes):
-        if to_gpu:
+            maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
+                                    adversary_alg= "MADDPG",device=config.device,
+                                    gamma=config.gamma,batch_size=config.batch_size,
+                                    tau=config.tau,
+                                    a_lr=config.a_lr,
+                                    c_lr=config.c_lr,
+                                    hidden_dim=config.hidden_dim ,discrete_action=config.discrete_action,
+                                    vmax=config.vmax,vmin=config.vmin,N_ATOMS=config.n_atoms,
+                                    n_steps=config.n_steps,DELTA_Z=config.delta_z,D4PG=config.d4pg,beta=config.init_beta,
+                                    TD3=config.td3,TD3_noise=config.td3_noise,TD3_delay_steps=config.td3_delay,
+                                    I2A = config.i2a, EM_lr = config.em_lr,
+                                    obs_weight = config.obs_w, rew_weight = config.rew_w, ws_weight = config.ws_w, 
+                                    rollout_steps = config.roll_steps,LSTM_hidden=config.lstm_hidden,
+                                    imagination_policy_branch = config.imag_pol_branch,critic_mod_both=config.cent_q,
+                                    critic_mod_act=config.crit_ac, critic_mod_obs= config.crit_obs,
+                                    LSTM=config.lstm_crit, LSTM_policy=config.lstm_pol, seq_length=config.seq_length, hidden_dim_lstm=config.hidden_dim_lstm, 
+                                    lstm_burn_in=lstm_burn_in,overlap=overlap,
+                                    only_policy=False,multi_gpu=config.multi_gpu,data_parallel=config.data_parallel,preprocess=config.preprocess,
+                                    zero_critic=config.zero_crit,cent_critic=config.cent_crit)         
+            
+        if config.to_gpu:
             maddpg.device = 'cuda'
 
-        start = time.time()
-        # team n-step
-        team_n_step_rewards = []
-        team_n_step_obs = []
-        team_n_step_acs = []
-        team_n_step_next_obs = []
-        team_n_step_dones = []
-        team_n_step_ws = []
-
-
-        # opp n-step
-        opp_n_step_rewards = []
-        opp_n_step_obs = []
-        opp_n_step_acs = []
-        opp_n_step_next_obs = []
-        opp_n_step_dones = []
-        opp_n_step_ws = []
-        maddpg.prep_policy_rollout(device=maddpg.device,torch_device=maddpg.torch_device)
-
-
-        
-        #define/update the noise used for exploration
-        if ep_i < burn_in_episodes:
-            explr_pct_remaining = 1.0
-        else:
-            explr_pct_remaining = max(0.0, 1.0*num_explore_episodes - ep_i + burn_in_episodes) / (num_explore_episodes)
-        beta_pct_remaining = max(0.0, 1.0*num_beta_episodes - ep_i + burn_in_episodes) / (num_beta_episodes)
-        
-        # evaluation for 10 episodes every 100
-        if ep_i % 10 == 0:
-            maddpg.scale_noise(final_OU_noise_scale + (init_noise_scale - final_OU_noise_scale) * explr_pct_remaining)
-        if ep_i % 100 == 0:
-            maddpg.scale_noise(0.0)
-
-        if LSTM:
-            maddpg.zero_hidden(1,actual=True,target=True,torch_device=maddpg.torch_device)
-        if LSTM_policy:
-            maddpg.zero_hidden_policy(1,maddpg.torch_device)
-        maddpg.reset_noise()
-        maddpg.scale_beta(final_beta + (initial_beta - final_beta) * beta_pct_remaining)
-        #for the duration of 100 episode with maximum length of 500 time steps
-        time_step = 0
-        team_kickable_counter = [0] * num_TA
-        opp_kickable_counter = [0] * num_OA
-        env.team_possession_counter = [0] * num_TA
-        env.opp_possession_counter = [0] * num_OA
-        #reducer = maddpg.team_agents[0].reducer
-
-        # List of tensors sorted by proximity in terms of agents
-        sortedByProxTeamList = []
-        sortedByProxOppList = []
-        for et_i in range(0, episode_length):
-
-            if device == 'cuda':
-                # gather all the observations into a torch tensor 
-                torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False).cuda(non_blocking=True,device=maddpg.torch_device)
-                            for i in range(num_TA)]
-
-                # gather all the opponent observations into a torch tensor 
-                torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False).cuda(non_blocking=True,device=maddpg.torch_device)
-                            for i in range(num_OA)]
-                
-
+        if config.multi_gpu:
+            if config.num_envs < 5:
+                maddpg.torch_device = torch.device("cuda:1")
             else:
-                # gather all the observations into a torch tensor 
-                torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False)
-                            for i in range(num_TA)]
+                maddpg.torch_device = torch.device("cuda:2")
 
-                # gather all the opponent observations into a torch tensor 
-                torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False)
-                            for i in range(num_OA)] 
-    
-            # Get e-greedy decision
-            if explore:
-                team_randoms = misc.e_greedy_bool(env.num_TA,eps = (final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
-                opp_randoms = misc.e_greedy_bool(env.num_OA,eps =(final_noise_scale + (init_noise_scale - final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
+        current_ensembles = config.current_ensembles
+        preload_agent2d_path = ''
+
+        maddpg.prep_training(device=maddpg.device,only_policy=False,torch_device=maddpg.torch_device)
+
+        reward_total = [ ]
+        num_steps_per_episode = []
+        end_actions = [] 
+        team_step_logger_df = pd.DataFrame()
+        opp_step_logger_df = pd.DataFrame()
+
+        prox_item_size = self.num_TA*(2*self.team_num_features + 2*self.acs_dim)
+        exps = None
+
+        # --------------------------------
+        env.launch()
+        if config.use_viewer:
+            env._start_viewer()       
+
+        time.sleep(3)
+        for ep_i in range(0, config.num_ep):
+            if to_gpu:
+                maddpg.device = 'cuda'
+
+            start = time.time()
+            # team n-step
+            team_n_step_rewards = []
+            team_n_step_obs = []
+            team_n_step_acs = []
+            team_n_step_next_obs = []
+            team_n_step_dones = []
+            team_n_step_ws = []
+
+
+            # opp n-step
+            opp_n_step_rewards = []
+            opp_n_step_obs = []
+            opp_n_step_acs = []
+            opp_n_step_next_obs = []
+            opp_n_step_dones = []
+            opp_n_step_ws = []
+            maddpg.prep_policy_rollout(device=maddpg.device,torch_device=maddpg.torch_device)
+
+
+            
+            #define/update the noise used for exploration
+            if ep_i < config.burn_in_eps:
+                explr_pct_remaining = 1.0
             else:
-                team_randoms = misc.e_greedy_bool(env.num_TA,eps = 0,device=maddpg.torch_device)
-                opp_randoms = misc.e_greedy_bool(env.num_OA,eps = 0,device=maddpg.torch_device)
-
-            # get actions as torch Variables for both team and opp
-
-            team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp,team_randoms,opp_randoms,parallel=False,explore=explore) # leave off or will gumbel sample
-            # convert actions to numpy arrays
-
-            team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
-            #Converting actions to numpy arrays for opp agents
-            opp_agent_actions = [ac.cpu().data.numpy() for ac in opp_torch_agent_actions]
-
-            opp_params = np.asarray([ac[0][len(env.action_list):] for ac in opp_agent_actions])
-
-            # this is returning one-hot-encoded action for each team agent
-            team_actions = np.asarray([[ac[0][:len(env.action_list)] for ac in team_agent_actions]])
-            # this is returning one-hot-encoded action for each opp agent 
-            opp_actions = np.asarray([[ac[0][:len(env.action_list)] for ac in opp_agent_actions]])
-
+                explr_pct_remaining = max(0.0, 1.0*config.num_exp_eps - ep_i + config.burn_in_eps) / (config.num_exp_eps)
+            beta_pct_remaining = max(0.0, 1.0*config.num_beta_eps - ep_i + config.burn_in_eps) / (config.num_beta_eps)
             
+            # evaluation for 10 episodes every 100
+            if ep_i % 10 == 0:
+                maddpg.scale_noise(config.final_OU_noise_scale + (config.init_noise_scale - config.final_OU_noise_scale) * explr_pct_remaining)
+            if ep_i % 100 == 0:
+                maddpg.scale_noise(0.0)
 
-            team_obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
-            opp_obs =  np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
-            
-            # use random unif parameters if e_greedy
-            team_noisey_actions_for_buffer = team_actions[0]
-            team_params = np.array([val[0][len(env.action_list):] for val in team_agent_actions])
-            opp_noisey_actions_for_buffer = opp_actions[0]
-            opp_params = np.array([val[0][len(env.action_list):] for val in opp_agent_actions])
+            if LSTM:
+                maddpg.zero_hidden(1,actual=True,target=True,torch_device=maddpg.torch_device)
+            if LSTM_policy:
+                maddpg.zero_hidden_policy(1,maddpg.torch_device)
+            maddpg.reset_noise()
+            maddpg.scale_beta(config.final_beta + (config.init_beta - config.final_beta) * beta_pct_remaining)
+            #for the duration of 100 episode with maximum length of 500 time steps
+            time_step = 0
+            team_kickable_counter = [0] * self.num_TA
+            opp_kickable_counter = [0] * self.num_OA
+            env.team_possession_counter = [0] * self.num_TA
+            env.opp_possession_counter = [0] * self.num_OA
+            #reducer = maddpg.team_agents[0].reducer
 
-            team_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in team_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes       
-            team_actions_params_for_buffer = np.array([val[0] for val in team_agent_actions])
-            opp_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in opp_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
+            # List of tensors sorted by proximity in terms of agents
+            sortedByProxTeamList = []
+            sortedByProxOppList = []
+            for et_i in range(0, config.ep_length):
 
-            opp_actions_params_for_buffer = np.array([val[0] for val in opp_agent_actions])
+                if device == 'cuda':
+                    # gather all the observations into a torch tensor 
+                    torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False).cuda(non_blocking=True,device=maddpg.torch_device)
+                                for i in range(self.num_TA)]
 
-            # If kickable is True one of the teammate agents has possession of the ball
-            kickable = np.array([env.team_kickable[i] for i in range(env.num_TA)])
-            if kickable.any():
-                team_kickable_counter = [tkc + 1 if kickable[i] else tkc for i,tkc in enumerate(team_kickable_counter)]
-                
-            # If kickable is True one of the teammate agents has possession of the ball
-            kickable = np.array([env.opp_kickable[i] for i in range(env.num_OA)])
-            if kickable.any():
-                opp_kickable_counter = [okc + 1 if kickable[i] else okc for i,okc in enumerate(opp_kickable_counter)]
-            
-            team_possession_counter = [env.get_agent_possession_status(i, env.team_base) for i in range(num_TA)]
-            opp_possession_counter = [env.get_agent_possession_status(i, env.opp_base) for i in range(num_OA)]
-
-            sortedByProxTeamList.append(misc.constructProxmityList(env, team_obs.T, opp_obs.T, team_actions_params_for_buffer, opp_actions_params_for_buffer, num_TA, 'left'))
-            sortedByProxOppList.append(misc.constructProxmityList(env, opp_obs.T, team_obs.T, opp_actions_params_for_buffer, team_actions_params_for_buffer, num_OA, 'right'))
-
-            _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params,team_agent_actions,opp_agent_actions)
-
-            team_rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA)])
-            opp_rewards = np.hstack([env.Reward(i,'opp') for i in range(env.num_OA)])
-
-            team_next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
-            opp_next_obs = np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
-
-            
-            team_done = env.d
-            opp_done = env.d 
-
-            team_n_step_rewards.append(team_rewards)
-            team_n_step_obs.append(team_obs)
-            team_n_step_next_obs.append(team_next_obs)
-            team_n_step_acs.append(team_actions_params_for_buffer)
-            team_n_step_dones.append(team_done)
-            team_n_step_ws.append(world_stat)
-
-            opp_n_step_rewards.append(opp_rewards)
-            opp_n_step_obs.append(opp_obs)
-            opp_n_step_next_obs.append(opp_next_obs)
-            opp_n_step_acs.append(opp_actions_params_for_buffer)
-            opp_n_step_dones.append(opp_done)
-            opp_n_step_ws.append(world_stat)
-            # ----------------------------------------------------------------
-            # Reduce size of obs
-
-            time_step += 1
-            t += 1
-
-            if t%3000 == 0:
-                team_step_logger_df.to_csv(hist_dir + '/team_%s.csv' % history)
-                opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
-                        
-            team_episode = []
-            opp_episode = []
-
-            if d == 1 and et_i >= (seq_length-1): # Episode done 
-                n_step_gammas = np.array([[gamma**step for a in range(num_TA)] for step in range(n_steps)])
-               #NOTE: Assume M vs M and critic_mod_both == True
-                if critic_mod_both:
-                    team_all_MC_targets = []
-                    opp_all_MC_targets = []
-                    MC_targets_team = np.zeros(num_TA)
-                    MC_targets_opp = np.zeros(num_OA)
-                    for n in range(et_i+1):
-                        MC_targets_team = team_n_step_rewards[et_i-n] + MC_targets_team*gamma
-                        team_all_MC_targets.append(MC_targets_team)
-                        MC_targets_opp = opp_n_step_rewards[et_i-n] + MC_targets_opp*gamma
-                        opp_all_MC_targets.append(MC_targets_opp)
-                    for n in range(et_i+1):
-                        n_step_targets_team = np.zeros(num_TA)
-                        n_step_targets_opp = np.zeros(num_OA)
-                        if (et_i + 1) - n >= n_steps: # sum n-step target (when more than n-steps remaining)
-                            n_step_targets_team = np.sum(np.multiply(np.asarray(team_n_step_rewards[n:n+n_steps]),(n_step_gammas)),axis=0)
-                            n_step_targets_opp = np.sum(np.multiply(np.asarray(opp_n_step_rewards[n:n+n_steps]),(n_step_gammas)),axis=0)
-
-                            n_step_next_ob_team = team_n_step_next_obs[n - 1 + n_steps]
-                            n_step_done_team = team_n_step_dones[n - 1 + n_steps]
-
-                            n_step_next_ob_opp = opp_n_step_next_obs[n - 1 + n_steps]
-                            n_step_done_opp = opp_n_step_dones[n - 1 + n_steps]
-                        else: # n-step = MC if less than n steps remaining
-                            n_step_targets_team = team_all_MC_targets[et_i-n]
-                            n_step_next_ob_team = team_n_step_next_obs[-1]
-                            n_step_done_team = team_n_step_dones[-1]
-
-                            n_step_targets_opp = opp_all_MC_targets[et_i-n]
-                            n_step_next_ob_opp = opp_n_step_next_obs[-1]
-                            n_step_done_opp = opp_n_step_dones[-1]
-                        if D4PG:
-                            default_prio = 5.0
-                        else:
-                            default_prio = 3.0
-                        priorities = np.array([np.zeros(k_ensembles) for i in range(num_TA)])
-                        priorities[:,current_ensembles] = 5.0
-                        if SIL:
-                            SIL_priorities = np.ones(num_TA)*default_prio
-                        
-
-                        exp_team = np.column_stack((np.transpose(team_n_step_obs[n]),
-                                            team_n_step_acs[n],
-                                            np.expand_dims(team_n_step_rewards[n], 1),
-                                            np.expand_dims([n_step_done_team for i in range(num_TA)], 1),
-                                            np.expand_dims(team_all_MC_targets[et_i-n], 1),
-                                            np.expand_dims(n_step_targets_team, 1),
-                                            np.expand_dims([team_n_step_ws[n] for i in range(num_TA)], 1),
-                                            priorities,
-                                            np.expand_dims([default_prio for i in range(num_TA)],1)))
-
-
-                        exp_opp = np.column_stack((np.transpose(opp_n_step_obs[n]),
-                                            opp_n_step_acs[n],
-                                            np.expand_dims(opp_n_step_rewards[n], 1),
-                                            np.expand_dims([n_step_done_opp for i in range(num_OA)], 1),
-                                            np.expand_dims(opp_all_MC_targets[et_i-n], 1),
-                                            np.expand_dims(n_step_targets_opp, 1),
-                                            np.expand_dims([opp_n_step_ws[n] for i in range(num_OA)], 1),
-                                            priorities,
-                                            np.expand_dims([default_prio for i in range(num_TA)],1)))
-                
-                        exp_comb = np.expand_dims(np.vstack((exp_team, exp_opp)), 0)
-
-                        if exps is None:
-                            exps = torch.from_numpy(exp_comb)
-                        else:
-                            exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
+                    # gather all the opponent observations into a torch tensor 
+                    torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False).cuda(non_blocking=True,device=maddpg.torch_device)
+                                for i in range(self.num_OA)]
                     
-                    prox_team_tensor = misc.convertProxListToTensor(sortedByProxTeamList, num_TA, prox_item_size)
-                    prox_opp_tensor = misc.convertProxListToTensor(sortedByProxOppList, num_OA, prox_item_size)
-                    comb_prox_tensor = torch.cat((prox_team_tensor, prox_opp_tensor), dim=1)
-                    # Fill in values for zeros for the hidden state
-                    exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), num_TA*2, hidden_dim_lstm*4), dtype=exps.dtype), comb_prox_tensor.double()), dim=2)
-                    #maddpg.get_recurrent_states(exps, obs_dim_TA, acs_dim, num_TA*2, hidden_dim_lstm,maddpg.torch_device)
-                    shared_exps[int(ep_num[env_num].item())][:len(exps)] = exps
-                    exp_i[int(ep_num[env_num].item())] += et_i
-                    ep_num[env_num] += 1
-                    del exps
-                    exps = None
-                    torch.cuda.empty_cache()
 
-                #############################################################################################################################################################
-                # push exp to queue
-                # log
-                if ep_i > 1:
-                    team_avg_rew = [np.asarray(team_n_step_rewards)[:,i].sum()/float(et_i) for i in range(num_TA)] # divide by time step?
-                    team_cum_rew = [np.asarray(team_n_step_rewards)[:,i].sum() for i in range(num_TA)]
-                    opp_avg_rew = [np.asarray(opp_n_step_rewards)[:,i].sum()/float(et_i) for i in range(num_TA)]
-                    opp_cum_rew = [np.asarray(opp_n_step_rewards)[:,i].sum() for i in range(num_TA)]
+                else:
+                    # gather all the observations into a torch tensor 
+                    torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False)
+                                for i in range(self.num_TA)]
 
+                    # gather all the opponent observations into a torch tensor 
+                    torch_obs_opp = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'opp')).T).float(),requires_grad=False)
+                                for i in range(self.num_OA)] 
+        
+                # Get e-greedy decision
+                if config.explore:
+                    team_randoms = misc.e_greedy_bool(env.num_TA,eps = (config.final_noise_scale + (config.init_noise_scale - config.final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
+                    opp_randoms = misc.e_greedy_bool(env.num_OA,eps =(config.final_noise_scale + (config.init_noise_scale - config.final_noise_scale) * explr_pct_remaining),device=maddpg.torch_device)
+                else:
+                    team_randoms = misc.e_greedy_bool(env.num_TA,eps = 0,device=maddpg.torch_device)
+                    opp_randoms = misc.e_greedy_bool(env.num_OA,eps = 0,device=maddpg.torch_device)
 
-                    team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
-                                                        'why': env.team_envs[0].statusToString(world_stat),
-                                                        'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
-                                                        'possession_percentages': [(tpc/time_step)*100 for tpc in team_possession_counter],
-                                                        'average_reward': team_avg_rew,
-                                                        'cumulative_reward': team_cum_rew},
-                                                        ignore_index=True)
+                # get actions as torch Variables for both team and opp
 
+                team_torch_agent_actions, opp_torch_agent_actions = maddpg.step(torch_obs_team, torch_obs_opp,team_randoms,opp_randoms,parallel=False,explore=config.explore) # leave off or will gumbel sample
+                # convert actions to numpy arrays
+
+                team_agent_actions = [ac.cpu().data.numpy() for ac in team_torch_agent_actions]
+                #Converting actions to numpy arrays for opp agents
+                opp_agent_actions = [ac.cpu().data.numpy() for ac in opp_torch_agent_actions]
+
+                opp_params = np.asarray([ac[0][len(env.action_list):] for ac in opp_agent_actions])
+
+                # this is returning one-hot-encoded action for each team agent
+                team_actions = np.asarray([[ac[0][:len(env.action_list)] for ac in team_agent_actions]])
+                # this is returning one-hot-encoded action for each opp agent 
+                opp_actions = np.asarray([[ac[0][:len(env.action_list)] for ac in opp_agent_actions]])
+
+                
+
+                team_obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
+                opp_obs =  np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
+                
+                # use random unif parameters if e_greedy
+                team_noisey_actions_for_buffer = team_actions[0]
+                team_params = np.array([val[0][len(env.action_list):] for val in team_agent_actions])
+                opp_noisey_actions_for_buffer = opp_actions[0]
+                opp_params = np.array([val[0][len(env.action_list):] for val in opp_agent_actions])
+
+                team_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in team_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes       
+                team_actions_params_for_buffer = np.array([val[0] for val in team_agent_actions])
+                opp_agents_actions = [np.argmax(agent_act_one_hot) for agent_act_one_hot in opp_noisey_actions_for_buffer] # convert the one hot encoded actions  to list indexes
+
+                opp_actions_params_for_buffer = np.array([val[0] for val in opp_agent_actions])
+
+                # If kickable is True one of the teammate agents has possession of the ball
+                kickable = np.array([env.team_kickable[i] for i in range(env.num_TA)])
+                if kickable.any():
+                    team_kickable_counter = [tkc + 1 if kickable[i] else tkc for i,tkc in enumerate(team_kickable_counter)]
                     
-                    opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
-                                                        'why': env.opp_team_envs[0].statusToString(world_stat),
-                                                        'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
-                                                        'possession_percentages': [(opc/time_step)*100 for opc in opp_possession_counter],
-                                                        'average_reward': opp_avg_rew,
-                                                        'cumulative_reward': opp_cum_rew},
-                                                        ignore_index=True)
+                # If kickable is True one of the teammate agents has possession of the ball
+                kickable = np.array([env.opp_kickable[i] for i in range(env.num_OA)])
+                if kickable.any():
+                    opp_kickable_counter = [okc + 1 if kickable[i] else okc for i,okc in enumerate(opp_kickable_counter)]
+                
+                team_possession_counter = [env.get_agent_possession_status(i, env.team_base) for i in range(env.num_TA)]
+                opp_possession_counter = [env.get_agent_possession_status(i, env.opp_base) for i in range(env.num_OA)]
 
+                sortedByProxTeamList.append(misc.constructProxmityList(env, team_obs.T, opp_obs.T, team_actions_params_for_buffer, opp_actions_params_for_buffer, env.num_TA, 'left'))
+                sortedByProxOppList.append(misc.constructProxmityList(env, opp_obs.T, team_obs.T, opp_actions_params_for_buffer, team_actions_params_for_buffer, env.num_OA, 'right'))
 
-                # Launch evaluation session
-                if ep_i > 1 and ep_i % eval_after == 0 and evaluate:
-                    thread.start_new_thread(launch_eval,(
-                        [load_path + ("agent_%i/model_episode_%i.pth" % (i,ep_i)) for i in range(env.num_TA)], # models directory -> agent -> most current episode
-                        eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation_ep" + str(ep_i),
-                        7000,env.num_TA,env.num_OA,episode_length,device,use_viewer,))
-                if halt.all(): # load when other process is loading buffer to make sure its not saving at the same time
-                    ready[env_num] = 1
-                    current_ensembles = maddpg.load_random_ensemble(side='team',nagents=num_TA,models_path = ensemble_path,load_same_agent=load_same_agent) # use for per ensemble update counter
+                _,_,_,_,d,world_stat = env.Step(team_agents_actions, opp_agents_actions, team_params, opp_params,team_agent_actions,opp_agent_actions)
 
-                    if play_agent2d and use_preloaded_agent2d:
-                        maddpg.load_agent2d(side='opp',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
-                    elif play_agent2d:
-                        maddpg.load_agent2d(side='opp',models_path =session_path +"models/",load_same_agent=load_same_agent,nagents=num_OA)  
-                    else:
+                team_rewards = np.hstack([env.Reward(i,'team') for i in range(env.num_TA)])
+                opp_rewards = np.hstack([env.Reward(i,'opp') for i in range(env.num_OA)])
+
+                team_next_obs = np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
+                opp_next_obs = np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
+
+                
+                team_done = env.d
+                opp_done = env.d 
+
+                team_n_step_rewards.append(team_rewards)
+                team_n_step_obs.append(team_obs)
+                team_n_step_next_obs.append(team_next_obs)
+                team_n_step_acs.append(team_actions_params_for_buffer)
+                team_n_step_dones.append(team_done)
+                team_n_step_ws.append(world_stat)
+
+                opp_n_step_rewards.append(opp_rewards)
+                opp_n_step_obs.append(opp_obs)
+                opp_n_step_next_obs.append(opp_next_obs)
+                opp_n_step_acs.append(opp_actions_params_for_buffer)
+                opp_n_step_dones.append(opp_done)
+                opp_n_step_ws.append(world_stat)
+                # ----------------------------------------------------------------
+                # Reduce size of obs
+
+                time_step += 1
+                t += 1
+
+                if t%3000 == 0:
+                    team_step_logger_df.to_csv(hist_dir + '/team_%s.csv' % history)
+                    opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
                             
-                        if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
-                            maddpg.load_random(side='opp',nagents = num_OA,models_path = load_path,load_same_agent=load_same_agent)
-                            pass
-                        else:
-                            maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = ensemble_path,load_same_agent=load_same_agent)
-                            pass
+                team_episode = []
+                opp_episode = []
 
-                    if bl_agent2d:
-                        maddpg.load_agent2d(side='team',load_same_agent=load_same_agent,models_path=preload_agent2d_path,nagents=num_OA)
+                if d == 1 and et_i >= (seq_length-1): # Episode done 
+                    n_step_gammas = np.array([[config.gamma**step for a in range(env.num_TA)] for step in range(config.n_steps)])
+                #NOTE: Assume M vs M and critic_mod_both == True
+                    if critic_mod_both:
+                        team_all_MC_targets = []
+                        opp_all_MC_targets = []
+                        MC_targets_team = np.zeros(env.num_TA)
+                        MC_targets_opp = np.zeros(env.num_OA)
+                        for n in range(et_i+1):
+                            MC_targets_team = team_n_step_rewards[et_i-n] + MC_targets_team*config.gamma
+                            team_all_MC_targets.append(MC_targets_team)
+                            MC_targets_opp = opp_n_step_rewards[et_i-n] + MC_targets_opp*config.gamma
+                            opp_all_MC_targets.append(MC_targets_opp)
+                        for n in range(et_i+1):
+                            n_step_targets_team = np.zeros(env.num_TA)
+                            n_step_targets_opp = np.zeros(env.num_OA)
+                            if (et_i + 1) - n >= config.n_steps: # sum n-step target (when more than n-steps remaining)
+                                n_step_targets_team = np.sum(np.multiply(np.asarray(team_n_step_rewards[n:n+config.n_steps]),(n_step_gammas)),axis=0)
+                                n_step_targets_opp = np.sum(np.multiply(np.asarray(opp_n_step_rewards[n:n+config.n_steps]),(n_step_gammas)),axis=0)
 
-                    while halt.all():
-                        time.sleep(0.1)
-                    total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4) + prox_item_size
-                    ep_num.copy_(torch.zeros_like(ep_num,requires_grad=False))
-                    [s.copy_(torch.zeros(max_num_experiences,2*num_TA,total_dim)) for s in shared_exps[:int(ep_num[env_num].item())]] # done loading
-                    del exps
-                    exps = None
+                                n_step_next_ob_team = team_n_step_next_obs[n - 1 + config.n_steps]
+                                n_step_done_team = team_n_step_dones[n - 1 + config.n_steps]
+
+                                n_step_next_ob_opp = opp_n_step_next_obs[n - 1 + config.n_steps]
+                                n_step_done_opp = opp_n_step_dones[n - 1 + config.n_steps]
+                            else: # n-step = MC if less than n steps remaining
+                                n_step_targets_team = team_all_MC_targets[et_i-n]
+                                n_step_next_ob_team = team_n_step_next_obs[-1]
+                                n_step_done_team = team_n_step_dones[-1]
+
+                                n_step_targets_opp = opp_all_MC_targets[et_i-n]
+                                n_step_next_ob_opp = opp_n_step_next_obs[-1]
+                                n_step_done_opp = opp_n_step_dones[-1]
+                            if D4PG:
+                                default_prio = 5.0
+                            else:
+                                default_prio = 3.0
+                            priorities = np.array([np.zeros(config.k_ensembles) for i in range(env.num_TA)])
+                            priorities[:,current_ensembles] = 5.0
+                            if SIL:
+                                SIL_priorities = np.ones(env.num_TA)*default_prio
+                            
+
+                            exp_team = np.column_stack((np.transpose(team_n_step_obs[n]),
+                                                team_n_step_acs[n],
+                                                np.expand_dims(team_n_step_rewards[n], 1),
+                                                np.expand_dims([n_step_done_team for i in range(env.num_TA)], 1),
+                                                np.expand_dims(team_all_MC_targets[et_i-n], 1),
+                                                np.expand_dims(n_step_targets_team, 1),
+                                                np.expand_dims([team_n_step_ws[n] for i in range(env.num_TA)], 1),
+                                                priorities,
+                                                np.expand_dims([default_prio for i in range(env.num_TA)],1)))
 
 
-                end = time.time()
-                print(end-start)
-
-                break
-            elif d:
-                break
-
+                            exp_opp = np.column_stack((np.transpose(opp_n_step_obs[n]),
+                                                opp_n_step_acs[n],
+                                                np.expand_dims(opp_n_step_rewards[n], 1),
+                                                np.expand_dims([n_step_done_opp for i in range(env.num_OA)], 1),
+                                                np.expand_dims(opp_all_MC_targets[et_i-n], 1),
+                                                np.expand_dims(n_step_targets_opp, 1),
+                                                np.expand_dims([opp_n_step_ws[n] for i in range(env.num_OA)], 1),
+                                                priorities,
+                                                np.expand_dims([default_prio for i in range(env.num_TA)],1)))
                     
-                
-            team_obs = team_next_obs
-            opp_obs = opp_next_obs
+                            exp_comb = np.expand_dims(np.vstack((exp_team, exp_opp)), 0)
+
+                            if exps is None:
+                                exps = torch.from_numpy(exp_comb)
+                            else:
+                                exps = torch.cat((exps, torch.from_numpy(exp_comb)),dim=0)
+                        
+                        prox_team_tensor = misc.convertProxListToTensor(sortedByProxTeamList, env.num_TA, prox_item_size)
+                        prox_opp_tensor = misc.convertProxListToTensor(sortedByProxOppList, env.num_OA, prox_item_size)
+                        comb_prox_tensor = torch.cat((prox_team_tensor, prox_opp_tensor), dim=1)
+                        # Fill in values for zeros for the hidden state
+                        exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), env.num_TA*2, config.hidden_dim_lstm*4), dtype=exps.dtype), comb_prox_tensor.double()), dim=2)
+                        #maddpg.get_recurrent_states(exps, obs_dim_TA, acs_dim, env.num_TA*2, hidden_dim_lstm,maddpg.torch_device)
+                        shared_exps[int(ep_num[config.num_envs].item())][:len(exps)] = exps
+                        exp_i[int(ep_num[config.num_envs].item())] += et_i
+                        ep_num[config.num_envs] += 1
+                        del exps
+                        exps = None
+                        torch.cuda.empty_cache()
+
+                    #############################################################################################################################################################
+                    # push exp to queue
+                    # log
+                    if ep_i > 1:
+                        team_avg_rew = [np.asarray(team_n_step_rewards)[:,i].sum()/float(et_i) for i in range(env.num_TA)] # divide by time step?
+                        team_cum_rew = [np.asarray(team_n_step_rewards)[:,i].sum() for i in range(env.num_TA)]
+                        opp_avg_rew = [np.asarray(opp_n_step_rewards)[:,i].sum()/float(et_i) for i in range(env.num_TA)]
+                        opp_cum_rew = [np.asarray(opp_n_step_rewards)[:,i].sum() for i in range(env.num_TA)]
+
+
+                        team_step_logger_df = team_step_logger_df.append({'time_steps': time_step, 
+                                                            'why': env.team_envs[0].statusToString(world_stat),
+                                                            'agents_kickable_percentages': [(tkc/time_step)*100 for tkc in team_kickable_counter],
+                                                            'possession_percentages': [(tpc/time_step)*100 for tpc in team_possession_counter],
+                                                            'average_reward': team_avg_rew,
+                                                            'cumulative_reward': team_cum_rew},
+                                                            ignore_index=True)
+
+                        
+                        opp_step_logger_df = opp_step_logger_df.append({'time_steps': time_step, 
+                                                            'why': env.opp_team_envs[0].statusToString(world_stat),
+                                                            'agents_kickable_percentages': [(okc/time_step)*100 for okc in opp_kickable_counter],
+                                                            'possession_percentages': [(opc/time_step)*100 for opc in opp_possession_counter],
+                                                            'average_reward': opp_avg_rew,
+                                                            'cumulative_reward': opp_cum_rew},
+                                                            ignore_index=True)
+
+
+                    # Launch evaluation session
+                    if ep_i > 1 and ep_i % config.eval_after == 0 and config.eval:
+                        thread.start_new_thread(launch_eval,(
+                            [load_path + ("agent_%i/model_episode_%i.pth" % (i,ep_i)) for i in range(env.num_TA)], # models directory -> agent -> most current episode
+                            eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation_ep" + str(ep_i),
+                            7000,env.num_TA,env.num_OA,config.ep_length,config.device,config.use_viewer,))
+                    if halt.all(): # load when other process is loading buffer to make sure its not saving at the same time
+                        ready[config.num_envs] = 1
+                        current_ensembles = maddpg.load_random_ensemble(side='team',nagents=env.num_TA,models_path = config.ensemble_path,load_same_agent=config.load_same_agent) # use for per ensemble update counter
+
+                        if config.agent2d and config.preloaded_agent2d:
+                            maddpg.load_agent2d(side='opp',load_same_agent=config.load_same_agent,models_path=preload_agent2d_path,nagents=env.num_OA)
+                        elif play_agent2d:
+                            maddpg.load_agent2d(side='opp',models_path =config.session_path +"models/",load_same_agent=config.load_same_agent,nagents=env.num_OA)  
+                        else:
+                                
+                            if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
+                                maddpg.load_random(side='opp',nagents =env.num_OA,models_path =config.load_path,load_same_agent=config.load_same_agent)
+                                pass
+                            else:
+                                maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = config.ensemble_path,load_same_agent=config.load_same_agent)
+                                pass
+
+                        if bl_agent2d:
+                            maddpg.load_agent2d(side='team',load_same_agent=config.load_same_agent,models_path=preload_agent2d_path,nagents=env.num_OA)
+
+                        while halt.all():
+                            time.sleep(0.1)
+                        total_dim = (obs_dim_TA + self.acs_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + prox_item_size
+                        ep_num.copy_(torch.zeros_like(ep_num,requires_grad=False))
+                        [s.copy_(torch.zeros(config.max_num_exps,2*env.num_TA,total_dim)) for s in shared_exps[:int(ep_num[config.num_envs].item())]] # done loading
+                        del exps
+                        exps = None
+
+                    end = time.time()
+                    print(end-start)
+
+                    break
+                elif d:
+                    break            
+                    
+                team_obs = team_next_obs
+                opp_obs = opp_next_obs

@@ -15,7 +15,8 @@ from pathlib import Path
 from torch.autograd import Variable
 from utils.buffer import ReplayBuffer
 from algorithms.maddpg import MADDPG
-from rc_env import rc_env, run_envs
+# from rc_env import rc_env, run_envs
+from envs.rc_env import rc_env
 from trainer import launch_eval
 import torch.multiprocessing as mp
 import dill
@@ -28,11 +29,9 @@ import argparse
 import config
 
 def parseArgs():
-    parser =  argparse.ArgumentParser('Project Mothra')
+    parser =  argparse.ArgumentParser('Team Shiva')
     parser.add_argument('--env', type=str, default='rc',
                         help='type of environment')
-    parser.add_argument('--nenvs', type=int,  default='1',
-                        help='number of envs')
     parser.add_argument('--conf', type=str, default='rc_test.ini')
 
     return parser.parse_args()
@@ -40,12 +39,6 @@ def parseArgs():
 class RoboEnv:
     def __init__(self, config, args):
         self.env = None
-
-
-
-
-def str_to_bool(s):
-    return s == 'True'
 
 if __name__ == "__main__":
     args = parseArgs()
@@ -58,39 +51,40 @@ if __name__ == "__main__":
         config_parse.read(conf_path)
         config = config.RoboConfig(config_parse)
 
-        print(config.determ)
-        exit(0)
-
         # initialization -----------------------
         t = 0
         time_step = 0
         threads = []
 
-        
-    # dummy env that isn't used explicitly ergo used for dimensions
-    env = rc_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
-                    num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
-                    feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
-                    ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
-                    offense_on_ball=False,port=65000,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
-                    agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
-                    change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-                    change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=False,
-                    defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=False, deterministic=deterministic)
+        # env = rc_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
+        #                 num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
+        #                 feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
+        #                 ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
+        #                 offense_on_ball=False,port=65000,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
+        #                 agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
+        #                 change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
+        #                 change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=False,
+        #                 defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=False, deterministic=deterministic)
+
+        env = rc_env(config)
     
-    obs_dim_TA = env.team_num_features
-    obs_dim_OA = env.opp_num_features
+        obs_dim_TA = env.team_num_features
+        obs_dim_OA = env.opp_num_features
+
+        while True:
+            env.launch()
+
     # zip params for env processes
-    HP = (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
-    episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
-        batch_size,hidden_dim,a_lr,c_lr,tau,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
-        DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
-        LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
-        ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
-        load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
-        LSTM, LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-        log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,
-        bl_agent2d,preprocess,zero_critic,cent_critic, record, record_server)
+    # HP = (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
+    # episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
+    #     batch_size,hidden_dim,a_lr,c_lr,tau,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
+    #     DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
+    #     LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
+    #     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
+    #     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
+    #     LSTM, LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
+    #     log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,
+    #     bl_agent2d,preprocess,zero_critic,cent_critic, record, record_server)
 
 
 

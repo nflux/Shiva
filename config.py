@@ -28,20 +28,20 @@ class RoboConfig(Config):
         num_TA = self.conf_dict['num_left']
         num_OA = self.conf_dict['num_right']
         # Prep Session Files ------------------------------
-        session_path = None
+        self.session_path = None
         current_day_time = datetime.datetime.now()
-        session_path = 'training_sessions/' + \
+        self.session_path = 'training_sessions/' + \
                                         str(current_day_time.month) + \
                                         '_' + str(current_day_time.day) + \
                                         '_' + str(current_day_time.hour) + '_' + \
                                         str(num_TA) + '_vs_' + str(num_OA) + "/"
-        hist_dir = session_path +"history"
-        eval_hist_dir = session_path +"eval_history"
-        eval_log_dir = session_path +"eval_log" # evaluation logfiles
-        load_path = session_path +"models/"
-        ensemble_path = session_path +"ensemble_models/"
-        misc.prep_session(session_path,hist_dir,eval_hist_dir,eval_log_dir,
-                            load_path,ensemble_path,self.conf_dict['log'],num_TA)
+        self.hist_dir = self.session_path +"history"
+        self.eval_hist_dir = self.session_path +"eval_history"
+        self.eval_log_dir = self.session_path +"eval_log" # evaluation logfiles
+        self.load_path = self.session_path +"models/"
+        self.ensemble_path = self.session_path +"ensemble_models/"
+        misc.prep_session(self.session_path,self.hist_dir,self.eval_hist_dir,self.eval_log_dir,
+                            self.load_path,self.ensemble_path,self.conf_dict['log'],num_TA)
 
         super().__init__(self.conf_dict)
 
@@ -49,6 +49,7 @@ class RoboConfig(Config):
         if self.conf_dict['d4pg']:
             self.conf_dict['a_lr'] = 0.0001 # actor learning rate
             self.conf_dict['c_lr'] = 0.001 # critic learning rate
+            self.conf_dict['delta_z'] = (self.conf_dict['vmax'] - self.conf_dict['vmin']) / (self.conf_dict['n_atoms'] - 1)
         else:
             self.conf_dict['freeze_actor'] = 0.0
             self.conf_dict['freeze_critic'] = 0.0
@@ -76,4 +77,10 @@ class RoboConfig(Config):
             self.conf_dict['discrete_action'] = True
         else:
             self.conf_dict['discrete_action'] = False
+        
+        self.conf_dict['initial_models'] = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
+
+        self.conf_dict['burn_in_eps'] = float(self.conf_dict['burn_in']) / self.conf_dict['untouched']
+
+        self.conf_dict['current_ensembles'] = [0]*self.conf_dict['num_left']
     
