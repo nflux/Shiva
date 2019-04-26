@@ -40,9 +40,9 @@ def update_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_r
                 if up % batches_to_sample == 0:
                     inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size*batches_to_sample, replace=False)
                 if LSTM_policy or LSTM:
-                    team_sample = team_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
+                    team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                                 to_gpu=to_gpu,device=maddpg.torch_device)
-                    opp_sample = opp_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
+                    opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                                 to_gpu=to_gpu,device=maddpg.torch_device)
 
                     if not load_same_agent:
@@ -110,9 +110,9 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
             if up % batches_to_sample == 0:
                 inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size*batches_to_sample, replace=False)
             if LSTM_policy:
-                team_sample = team_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
+                team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                             to_gpu=to_gpu,device=maddpg.torch_device)
-                opp_sample = opp_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
+                opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                                 to_gpu=to_gpu,device=maddpg.torch_device)
                
                 if not load_same_agent:
