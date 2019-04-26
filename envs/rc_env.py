@@ -1085,7 +1085,7 @@ class rc_env(Base_Env):
               " --connect --port %d" % (self.server_port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 
-    def run_envs(self, config, shared_exps,exp_i,ready,halt,num_updates,history,ep_num):
+    def run_envs(self,shared_exps,exp_i,ready,halt,num_updates,history,ep_num):
 
         # (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
         # episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
@@ -1098,7 +1098,7 @@ class rc_env(Base_Env):
         # log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
         # preload_agent2d_path,bl_agent2d,preprocess,zero_critic,cent_critic, record, record_server) = HP
 
-        
+        config = self.config
         if config.record_lib or config.record_serv:
             if os.path.isdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(self.port)):
                 file_list = os.listdir(os.getcwd() + '/pretrain/pretrain_data/pt_logs_' + str(self.port))
@@ -1107,9 +1107,6 @@ class rc_env(Base_Env):
                 os.mkdir(os.getcwd() + '/pretrain/pretrain_data//pt_logs_' + str(self.port))
 
         env = self
-
-        # time.sleep(3)
-        # print("Done connecting to the server ")
 
         if load_nets:
             maddpg = MADDPG.init_from_save_evaluation(config.initial_models,self.num_TA) # from evaluation method just loads the networks
@@ -1130,7 +1127,7 @@ class rc_env(Base_Env):
                                     imagination_policy_branch = config.imag_pol_branch,critic_mod_both=config.cent_q,
                                     critic_mod_act=config.crit_ac, critic_mod_obs= config.crit_obs,
                                     LSTM=config.lstm_crit, LSTM_policy=config.lstm_pol, seq_length=config.seq_length, hidden_dim_lstm=config.hidden_dim_lstm, 
-                                    lstm_burn_in=lstm_burn_in,overlap=overlap,
+                                    lstm_burn_in=config.burn_in_lstm,overlap=config.overlap,
                                     only_policy=False,multi_gpu=config.multi_gpu,data_parallel=config.data_parallel,preprocess=config.preprocess,
                                     zero_critic=config.zero_crit,cent_critic=config.cent_crit)         
             
@@ -1156,6 +1153,7 @@ class rc_env(Base_Env):
 
         prox_item_size = self.num_TA*(2*self.team_num_features + 2*self.acs_dim)
         exps = None
+        t = 0
 
         # --------------------------------
         env.launch()
