@@ -539,12 +539,12 @@ def push(team_replay_buffer,opp_replay_buffer,num_envs,shared_exps,exp_indices,n
     for i in range(num_envs):    
         if LSTM:
             if push_only_left:
-                [team_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
-                [opp_replay_buffer.push_LSTM(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
+                [team_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], :num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
+                [opp_replay_buffer.push(shared_exps[i][j][:exp_indices[i][j], num_TA:2*num_TA, :]) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
             else:
-                [team_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], 
+                [team_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], :num_TA, :], 
                     shared_exps[i][j][:exp_indices[i][j], -num_TA:, :]))) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
-                [opp_replay_buffer.push_LSTM(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], 
+                [opp_replay_buffer.push(torch.cat((shared_exps[i][j][:exp_indices[i][j], -num_TA:, :], 
                     shared_exps[i][j][:exp_indices[i][j], :num_TA, :]))) for j in range(int(ep_num[i].item())) if seq_length-1 <= exp_indices[i][j]]
         else:
             if push_only_left:
@@ -782,13 +782,13 @@ def load_buffer(left,right,fstatus,zip_vars):
                                 #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
                         else:
                             if push_only_left:
-                                team_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
-                                opp_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
+                                team_PT_replay_buffer.push(exps[:, :num_TA, :])
+                                opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
                             else:
-                                team_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
-                                opp_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
-                                opp_PT_replay_buffer.push_LSTM(exps[:, :num_TA, :])
-                                team_PT_replay_buffer.push_LSTM(exps[:, num_TA:2*num_TA, :])
+                                team_PT_replay_buffer.push(exps[:, :num_TA, :])
+                                opp_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
+                                opp_PT_replay_buffer.push(exps[:, :num_TA, :])
+                                team_PT_replay_buffer.push(exps[:, num_TA:2*num_TA, :])
                                 #team_PT_replay_buffer.push(torch.cat((exps[:, :num_TA, :], exps[:,-num_TA:,:])))
                                 #opp_PT_replay_buffer.push(torch.cat((exps[:, -num_TA:, :], exps[:,:num_TA,:])))
         

@@ -14,7 +14,7 @@ import _thread as thread
 import torch
 from pathlib import Path
 from torch.autograd import Variable
-from utils.buffer import ReplayBuffer
+from utils.buffer_LSTM import ReplayBufferLSTM
 from algorithms.maddpg import MADDPG
 from rc_env import rc_env, run_envs
 from trainer import launch_eval
@@ -340,13 +340,13 @@ if __name__ == "__main__":
         first_save = False
     
     prox_item_size = num_TA*(2*obs_dim_TA + 2*acs_dim)
-    team_replay_buffer = ReplayBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
+    team_replay_buffer = ReplayBufferLSTM(replay_memory_size , num_TA,
+                                        obs_dim_TA,acs_dim,batch_size, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
 
     #Added to Disable/Enable the opp agents
         #initialize the replay buffer of size 10000 for number of opponent agent with their observations & actions 
-    opp_replay_buffer = ReplayBuffer(replay_memory_size , num_TA,
-                                        obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
+    opp_replay_buffer = ReplayBufferLSTM(replay_memory_size , num_TA,
+                                        obs_dim_TA,acs_dim,batch_size, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
     max_episodes_shared = 30
     processes = []
     total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4) + prox_item_size
@@ -366,10 +366,10 @@ if __name__ == "__main__":
     
     if pretrain or use_pretrain_data:
         # ------------------------------------ Start Pretrain --------------------------------------------
-        pt_trbs = [ReplayBuffer(pt_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
-        pt_orbs = [ReplayBuffer(pt_memory , num_TA,
-                                            obs_dim_TA,acs_dim,batch_size, LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
+        pt_trbs = [ReplayBufferLSTM(pt_memory , num_TA,
+                                                obs_dim_TA,acs_dim,batch_size,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
+        pt_orbs = [ReplayBufferLSTM(pt_memory , num_TA,
+                                            obs_dim_TA,acs_dim,batch_size,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain) for _ in range(num_buffers)]
         # ------------ Load in shit from csv into buffer ----------------------
         pt_threads = []
         print("Load PT Buffers")
@@ -404,17 +404,17 @@ if __name__ == "__main__":
         #team_replay_buffer = pt_trbs[0]
         #opp_replay_buffer = pt_orbs[0]
         
-        pt_trb = ReplayBuffer(pt_total_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
-        pt_orb = ReplayBuffer(pt_total_memory , num_TA,
-                                                obs_dim_TA,acs_dim,batch_size,LSTM,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
+        pt_trb = ReplayBufferLSTM(pt_total_memory , num_TA,
+                                                obs_dim_TA,acs_dim,batch_size,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
+        pt_orb = ReplayBufferLSTM(pt_total_memory , num_TA,
+                                                obs_dim_TA,acs_dim,batch_size,seq_length,overlap,hidden_dim_lstm,k_ensembles,prox_item_size,SIL,pretrain=pretrain)
         for j in range(num_buffers):
             if not LSTM_policy:
                 pt_trb.merge_buffer(pt_trbs[j])
                 pt_orb.merge_buffer(pt_orbs[j])
             else:
-                pt_trb.merge_buffer_LSTM(pt_trbs[j])
-                pt_orb.merge_buffer_LSTM(pt_orbs[j])
+                pt_trb.merge_buffer(pt_trbs[j])
+                pt_orb.merge_buffer(pt_orbs[j])
             print("Merging Buffer: ",j)
         del pt_trbs
         del pt_orbs
@@ -479,8 +479,8 @@ if __name__ == "__main__":
                     # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
 
                     if LSTM:
-                        team_sample = pt_trb.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],to_gpu=to_gpu,device=maddpg.torch_device)
-                        opp_sample = pt_orb.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],to_gpu=to_gpu,device=maddpg.torch_device)
+                        team_sample = pt_trb.sample(inds[batch_size*offset:batch_size*(offset+1)],to_gpu=to_gpu,device=maddpg.torch_device)
+                        opp_sample = pt_orb.sample(inds[batch_size*offset:batch_size*(offset+1)],to_gpu=to_gpu,device=maddpg.torch_device)
                         priorities=maddpg.pretrain_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=load_same_agent,lstm_burn_in=lstm_burn_in)
                         #print("Use pretrain function")
                         #pt_trb.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
@@ -682,9 +682,9 @@ if __name__ == "__main__":
                     # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
 
                     if LSTM:
-                        team_sample = team_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
+                        team_sample = team_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                                     to_gpu=to_gpu, device=maddpg.torch_device)
-                        opp_sample = opp_replay_buffer.sample_LSTM(inds[batch_size*offset:batch_size*(offset+1)],
+                        opp_sample = opp_replay_buffer.sample(inds[batch_size*offset:batch_size*(offset+1)],
                                                                     to_gpu=to_gpu, device=maddpg.torch_device)
 
                         if not load_same_agent:
