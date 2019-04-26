@@ -17,12 +17,12 @@ def roll2(tensor, rollover):
     '''
     return torch.cat((tensor[:,-rollover:], tensor[:,:-rollover]), dim=1)
 
-def init_buffer(config, lstm_flag, **kwargs):
+def init_buffer(config, lstm_flag, obs_dim,prox_item_size,pretrain=False):
     buffer = None
     if lstm_flag:
-        buffer = ReplayBufferLSTM(config, kwargs)
+        buffer = ReplayBufferLSTM(config,)
     else:
-        buffer = ReplayBufferNonLSTM(config, kwargs)
+        buffer = ReplayBufferNonLSTM(config,)
 
     return buffer
 
@@ -30,7 +30,7 @@ class ReplayBuffer(object):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, config, obs_dim,ac_dim,prox_item_size,pretrain=False):
+    def __init__(self, config,obs_dim,prox_item_size,pretrain=False):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -45,7 +45,7 @@ class ReplayBuffer(object):
         self.num_agents = config.num_left
 
         self.obs_dim = obs_dim
-        self.ac_dim = ac_dim  
+        self.ac_dim = config.ac_dim
         self.obs_acs_dim = obs_dim + ac_dim 
         self.hidden_dim_lstm = config.hidden_dim_lstm 
         self.prox_item_size = prox_item_size   
@@ -142,7 +142,7 @@ class ReplayBufferNonLSTM(ReplayBuffer):
     """
     Non-LSTM Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, config, obs_dim, ac_dim,prox_item_size,pretrain=False):
+    def __init__(self, config, obs_dim,prox_item_size,pretrain=False):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -152,15 +152,15 @@ class ReplayBufferNonLSTM(ReplayBuffer):
             ac_dims (list of ints): number of action dimensions for each agent
         """
         #This initializes the parent buffer methods/variables
-        super().__init__(config, obs_dim, ac_dim,prox_item_size,pretrain)
+        super().__init__(config, obs_dim,prox_item_size,pretrain)
         
         # self.max_episodes = int(max_steps/episode_length)
         self.start_loc = 0
-        self.obs_acs_dim = obs_dim + ac_dim
+        self.obs_acs_dim = obs_dim + self.ac_dim
         self.prox_item_size_per_agent = prox_item_size//(2*self.num_agents)
 
         self.obs_buffs = torch.zeros((self.max_steps, self.num_agents, obs_dim))
-        self.ac_buffs = torch.zeros((self.max_steps, self.num_agents, ac_dim),requires_grad=False)
+        self.ac_buffs = torch.zeros((self.max_steps, self.num_agents, self.ac_dim),requires_grad=False)
         self.n_step_buffs = torch.zeros((self.max_steps, self.num_agents, 1),requires_grad=False)
         self.rew_buffs = torch.zeros((self.max_steps, self.num_agents, 1),requires_grad=False)
         self.mc_buffs = torch.zeros((self.max_steps, self.num_agents, 1),requires_grad=False)
@@ -304,7 +304,7 @@ class ReplayBufferLSTM(ReplayBuffer):
     """
     Replay Buffer for multi-agent RL with parallel rollouts
     """
-    def __init__(self, config, obs_dim, ac_dim,prox_item_size,SIL,pretrain=False):
+    def __init__(self, config, obs_dim,prox_item_size,pretrain=False):
         """
         Inputs:
             max_steps (int): Maximum number of timepoints to store in buffer
@@ -314,7 +314,7 @@ class ReplayBufferLSTM(ReplayBuffer):
             ac_dims (list of ints): number of action dimensions for each agent
         """
         #This initializes the parent buffer methods/variables
-        super().__init__(config, obs_dim, ac_dim,prox_item_size,SIL,pretrain)
+        super().__init__(config,obs_dim,prox_item_size,pretrain)
         
         self.seq_length = config.seq_length
         self.overlap = config.overlap

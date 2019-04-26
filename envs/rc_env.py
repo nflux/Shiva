@@ -1111,25 +1111,7 @@ class rc_env(Base_Env):
         if load_nets:
             maddpg = MADDPG.init_from_save_evaluation(config.initial_models,self.num_TA) # from evaluation method just loads the networks
         else:
-            maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
-                                    adversary_alg= "MADDPG",device=config.device,
-                                    gamma=config.gamma,batch_size=config.batch_size,
-                                    tau=config.tau,
-                                    a_lr=config.a_lr,
-                                    c_lr=config.c_lr,
-                                    hidden_dim=config.hidden_dim ,discrete_action=config.discrete_action,
-                                    vmax=config.vmax,vmin=config.vmin,N_ATOMS=config.n_atoms,
-                                    n_steps=config.n_steps,DELTA_Z=config.delta_z,D4PG=config.d4pg,beta=config.init_beta,
-                                    TD3=config.td3,TD3_noise=config.td3_noise,TD3_delay_steps=config.td3_delay,
-                                    I2A = config.i2a, EM_lr = config.em_lr,
-                                    obs_weight = config.obs_w, rew_weight = config.rew_w, ws_weight = config.ws_w, 
-                                    rollout_steps = config.roll_steps,LSTM_hidden=config.lstm_hidden,
-                                    imagination_policy_branch = config.imag_pol_branch,critic_mod_both=config.cent_q,
-                                    critic_mod_act=config.crit_ac, critic_mod_obs= config.crit_obs,
-                                    LSTM=config.lstm_crit, LSTM_policy=config.lstm_pol, seq_length=config.seq_length, hidden_dim_lstm=config.hidden_dim_lstm, 
-                                    lstm_burn_in=config.burn_in_lstm,overlap=config.overlap,
-                                    only_policy=False,multi_gpu=config.multi_gpu,data_parallel=config.data_parallel,preprocess=config.preprocess,
-                                    zero_critic=config.zero_crit,cent_critic=config.cent_crit)         
+            maddpg = MADDPG.init(config, self)        
             
         if config.to_gpu:
             maddpg.device = 'cuda'
