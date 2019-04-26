@@ -20,9 +20,9 @@ def roll2(tensor, rollover):
 def init_buffer(config, lstm_flag, obs_dim,prox_item_size,pretrain=False):
     buffer = None
     if lstm_flag:
-        buffer = ReplayBufferLSTM(config,)
+        buffer = ReplayBufferLSTM(config,obs_dim,prox_item_size,pretrain)
     else:
-        buffer = ReplayBufferNonLSTM(config,)
+        buffer = ReplayBufferNonLSTM(config,obs_dim,prox_item_size,pretrain)
 
     return buffer
 

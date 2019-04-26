@@ -1,4 +1,5 @@
 import utils.buffers as buff
+from rc_env import rc_env
 import torch
 from torch.autograd import Variable
 
@@ -7,7 +8,7 @@ class RoboEnvs(rc_env):
         self.config = config
         self.env = super().__init__(config)
         self.obs_dim = self.env.team_num_features
-        self.maddpg = MADDPG.init(config, self.env)
+        # self.maddpg = MADDPG.init(config, self.env)
 
         self.prox_item_size = num_TA*(2*self.obs_dim + 2*config.ac_dim)
         self.team_replay_buffer = buff.init_buffer(config, config.lstm_crit or config.lstm_pol,
