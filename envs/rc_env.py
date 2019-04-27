@@ -13,6 +13,8 @@ from algorithms.maddpg import MADDPG
 from torch.autograd import Variable
 import torch
 
+def run_env(env,shared_exp,exp_i,ready,halt,num_updates,history,ep_num):
+    env.call_env(shared_exp,exp_i,ready,halt,num_updates,history,ep_num)
 
 possession_side = 'N'
 
@@ -56,7 +58,7 @@ class rc_env(Base_Env):
     #              change_balls_y=0.1, control_rand_init=False,record=False,record_server=False,
     #              defense_team_bin='helios15', offense_team_bin='helios16', run_server=False, deterministic=True):
 
-    def __init__(self, config):
+    def __init__(self, config, port):
         self.config = config
 
         self.pass_reward = 0.0
@@ -76,7 +78,7 @@ class rc_env(Base_Env):
 
         self.goalie = config.goalie
         self.team_rew_anneal_ep = config.reward_anneal
-        self.port = config.port
+        self.port = port
         self.hfo_path = get_hfo_path()
         self.seed = np.random.randint(1000)
 
@@ -1085,7 +1087,7 @@ class rc_env(Base_Env):
               " --connect --port %d" % (self.server_port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 
-    def run_envs(self,shared_exps,exp_i,ready,halt,num_updates,history,ep_num):
+    def call_env(self,shared_exps,exp_i,ready,halt,num_updates,history,ep_num):
 
         # (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
         # episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,

@@ -15,6 +15,46 @@ import pandas as pd
 MSELoss = torch.nn.MSELoss()
 CELoss = torch.nn.CrossEntropyLoss()
 
+def init(config, env):
+    maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
+                                adversary_alg= "MADDPG",device=config.device,
+                                gamma=config.gamma,batch_size=config.batch_size,
+                                tau=config.tau,
+                                a_lr=config.a_lr,
+                                c_lr=config.c_lr,
+                                hidden_dim=config.hidden_dim ,discrete_action=config.discrete_action,
+                                vmax=config.vmax,vmin=config.vmin,N_ATOMS=config.n_atoms,
+                                n_steps=config.n_steps,DELTA_Z=config.delta_z,D4PG=config.d4pg,beta=config.init_beta,
+                                TD3=config.td3,TD3_noise=config.td3_noise,TD3_delay_steps=config.td3_delay,
+                                I2A = config.i2a, EM_lr = config.em_lr,
+                                obs_weight = config.obs_w, rew_weight = config.rew_w, ws_weight = config.ws_w, 
+                                rollout_steps = config.roll_steps,LSTM_hidden=config.lstm_hidden,
+                                imagination_policy_branch = config.imag_pol_branch,critic_mod_both=config.cent_q,
+                                critic_mod_act=config.crit_ac, critic_mod_obs= config.crit_obs,
+                                LSTM=config.lstm_crit, LSTM_policy=config.lstm_pol, seq_length=config.seq_length, hidden_dim_lstm=config.hidden_dim_lstm, 
+                                lstm_burn_in=config.burn_in_lstm,overlap=config.overlap,
+                                only_policy=False,multi_gpu=config.multi_gpu,data_parallel=config.data_parallel,preprocess=config.preprocess,
+                                zero_critic=config.zero_crit,cent_critic=config.cent_crit)
+
+    if config.multi_gpu:
+        maddpg.torch_device = torch.device("cuda:0")
+    
+    if config.to_gpu:
+        maddpg.device = 'cuda'
+    maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
+    
+    if config.first_save: # Generate list of ensemble networks
+        file_path = config.ensemble_path
+        maddpg.first_save(file_path,num_copies = config.k_ensembles)
+        [maddpg.save_agent(config.load_path,0,i,load_same_agent = False,torch_device=maddpg.torch_device) for i in range(config.num_left)] 
+        if config.preload_model:
+            maddpg.load_team(side='team',models_path=config.preload_path,nagents=config.num_left)
+            maddpg.first_save(file_path,num_copies = config.k_ensembles) 
+
+        config.first_save = False
+    
+    return maddpg
+
 def parallel_step(results,a_i,ran,obs,explore,output,pi_pickle,action_dim=3,param_dim=5,device='cpu',exploration_noise=0.000001):
 
     pi = dill.loads(pi_pickle)
@@ -3703,43 +3743,5 @@ class MADDPG(object):
        
         self.prep_training(device=self.device,torch_device=torch_device)
     
-    def init(self, config, env):
-        maddpg = self.init_from_env(env, agent_alg="MADDPG",
-                                    adversary_alg= "MADDPG",device=config.device,
-                                    gamma=config.gamma,batch_size=config.batch_size,
-                                    tau=config.tau,
-                                    a_lr=config.a_lr,
-                                    c_lr=config.c_lr,
-                                    hidden_dim=config.hidden_dim ,discrete_action=config.discrete_action,
-                                    vmax=config.vmax,vmin=config.vmin,N_ATOMS=config.n_atoms,
-                                    n_steps=config.n_steps,DELTA_Z=config.delta_z,D4PG=config.d4pg,beta=config.init_beta,
-                                    TD3=config.td3,TD3_noise=config.td3_noise,TD3_delay_steps=config.td3_delay,
-                                    I2A = config.i2a, EM_lr = config.em_lr,
-                                    obs_weight = config.obs_w, rew_weight = config.rew_w, ws_weight = config.ws_w, 
-                                    rollout_steps = config.roll_steps,LSTM_hidden=config.lstm_hidden,
-                                    imagination_policy_branch = config.imag_pol_branch,critic_mod_both=config.cent_q,
-                                    critic_mod_act=config.crit_ac, critic_mod_obs= config.crit_obs,
-                                    LSTM=config.lstm_crit, LSTM_policy=config.lstm_pol, seq_length=config.seq_length, hidden_dim_lstm=config.hidden_dim_lstm, 
-                                    lstm_burn_in=config.burn_in_lstm,overlap=config.overlap,
-                                    only_policy=False,multi_gpu=config.multi_gpu,data_parallel=config.data_parallel,preprocess=config.preprocess,
-                                    zero_critic=config.zero_crit,cent_critic=config.cent_crit)
 
-        if config.multi_gpu:
-            maddpg.torch_device = torch.device("cuda:0")
-        
-        if config.to_gpu:
-            maddpg.device = 'cuda'
-        maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
-        
-        if config.first_save: # Generate list of ensemble networks
-            file_path = config.ensemble_path
-            maddpg.first_save(file_path,num_copies = config.k_ensembles)
-            [maddpg.save_agent(config.load_path,0,i,load_same_agent = False,torch_device=maddpg.torch_device) for i in range(num_TA)] 
-            if preload_model:
-                maddpg.load_team(side='team',models_path=config.preload_path,nagents=config.num_left)
-                maddpg.first_save(file_path,num_copies = config.k_ensembles) 
-
-            config.first_save = False
-        
-        return maddpg
         

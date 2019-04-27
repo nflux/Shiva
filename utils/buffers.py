@@ -46,7 +46,7 @@ class ReplayBuffer(object):
 
         self.obs_dim = obs_dim
         self.ac_dim = config.ac_dim
-        self.obs_acs_dim = obs_dim + ac_dim 
+        self.obs_acs_dim = obs_dim + self.ac_dim 
         self.hidden_dim_lstm = config.hidden_dim_lstm 
         self.prox_item_size = prox_item_size   
         self.pretrain = pretrain

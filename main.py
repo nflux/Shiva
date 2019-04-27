@@ -12,9 +12,10 @@ import threading
 # import _thread as thread
 import torch
 from pathlib import Path
-# from torch.autograd import Variable
+from torch.autograd import Variable
 import utils.buffers as buff
-from algorithms.maddpg import MADDPG
+# from algorithms.maddpg import MADDPG, init
+import algorithms.maddpg as mad_algo
 # from rc_env import rc_env, run_envs
 import envs.multi_envs as menvs
 from trainer import launch_eval
@@ -110,10 +111,7 @@ if __name__ == "__main__":
 
     #     first_save = False
     env = menvs.RoboEnvs(config)
-    maddpg = MADDPG.init(config, env)
-
-    exit(0)
-    print('This gets here')
+    maddpg = mad_algo.init(config, env.template_env)
     
     # prox_item_size = num_TA*(2*obs_dim_TA + 2*acs_dim)
     # team_replay_buffer = ReplayBufferLSTM(replay_memory_size , num_TA,
@@ -315,16 +313,18 @@ if __name__ == "__main__":
 
 
     # -------------Done pretraining actor/critic ---------------------------------------------
-    maddpg.save_agent2d(load_path,0,load_same_agent,maddpg.torch_device)
-    [maddpg.save_ensemble(ensemble_path,0,i,load_same_agent,maddpg.torch_device) for i in range(num_TA)] # Save agent2d into ensembles
+    maddpg.save_agent2d(config.load_path,0,config.load_same_agent,maddpg.torch_device)
+    [maddpg.save_ensemble(config.ensemble_path,0,i,config.load_same_agent,maddpg.torch_device) for i in range(config.num_left)] # Save agent2d into ensembles
 
-    maddpg.scale_beta(initial_beta) 
+    maddpg.scale_beta(config.init_beta) 
 
     # for p in processes: # Starts environments
     #     p.start()
     env.run()
     iterations_per_push = 1
     update_session = 0
+    print('This gets here')
+    time.sleep(30)
 
     #maddpg_pick = dill.dumps(maddpg)
     while True: # get experiences, update

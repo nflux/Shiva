@@ -49,13 +49,13 @@ class RoboConfig(Config):
         if self.conf_dict['d4pg']:
             self.conf_dict['a_lr'] = 0.0001 # actor learning rate
             self.conf_dict['c_lr'] = 0.001 # critic learning rate
-            self.conf_dict['delta_z'] = (self.conf_dict['vmax'] - self.conf_dict['vmin']) / (self.conf_dict['n_atoms'] - 1)
         else:
-            self.conf_dict['freeze_actor'] = 0.0
-            self.conf_dict['freeze_critic'] = 0.0
             self.conf_dict['a_lr'] = 0.0002
             self.conf_dict['c_lr'] = 0.0001
-        
+        self.conf_dict['delta_z'] = (self.conf_dict['vmax'] - self.conf_dict['vmin']) / (self.conf_dict['n_atoms'] - 1)
+        self.conf_dict['freeze_actor'] = 0.0
+        self.conf_dict['freeze_critic'] = 0.0
+
         if self.conf_dict['load_same_agent']:
             self.conf_dict['num_update_threads'] = 1
         
