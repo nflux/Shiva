@@ -1,27 +1,17 @@
-import itertools
 import random
 import os, sys
-import csv
+# import csv
 import argparse
 import numpy as np
 import utils.misc as misc
-from torch import Tensor
-from HFO import hfo
 import time
-import threading
-# import _thread as thread
 import torch
 from pathlib import Path
-from torch.autograd import Variable
 import utils.buffers as buff
-# from algorithms.maddpg import MADDPG, init
 import algorithms.maddpg as mad_algo
-# from rc_env import rc_env, run_envs
 import envs.multi_envs as menvs
-from trainer import launch_eval
+# from trainer import launch_eval
 import torch.multiprocessing as mp
-import dill
-import collections
 from multiprocessing import Pool
 import gc
 import algorithms.updates as updates
@@ -48,90 +38,8 @@ if __name__ == "__main__":
     config_parse.read(conf_path)
     config = config.RoboConfig(config_parse)
 
-    # env = rc_env(num_TNPC = num_TNPC,num_TA=num_TA,num_OA=num_OA, num_ONPC=num_ONPC, goalie=goalie,
-    #                 num_trials = num_episodes, fpt = episode_length, seed=seed, # create environment
-    #                 feat_lvl = feature_level, act_lvl = action_level, untouched_time = untouched_time,fullstate=True,
-    #                 ball_x_min=ball_x_min, ball_x_max=ball_x_max, ball_y_min=ball_y_min, ball_y_max=ball_y_max,
-    #                 offense_on_ball=False,port=65000,log_dir=log_dir, rcss_log_game=rcss_log_game, hfo_log_game=hfo_log_game, team_rew_anneal_ep=team_rew_anneal_ep,
-    #                 agents_x_min=agents_x_min, agents_x_max=agents_x_max, agents_y_min=agents_y_min, agents_y_max=agents_y_max,
-    #                 change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
-    #                 change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=False,
-    #                 defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, run_server=False, deterministic=deterministic)
-
-    # env = rc_env(config)
-
-    # obs_dim_TA = env.team_num_features
-
-# zip params for env processes
-# HP = (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
-# episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
-#     batch_size,hidden_dim,a_lr,c_lr,tau,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
-#     DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
-#     LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
-#     ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
-#     load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
-#     LSTM, LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-#     log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,preload_agent2d_path,
-#     bl_agent2d,preprocess,zero_critic,cent_critic, record, record_server)
-
-
-    # maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
-    #                             adversary_alg= "MADDPG",device=device,
-    #                             gamma=gamma,batch_size=batch_size,
-    #                             tau=tau,
-    #                             a_lr=a_lr,
-    #                             c_lr=c_lr,
-    #                             hidden_dim=hidden_dim ,discrete_action=discrete_action,
-    #                             vmax=Vmax,vmin=Vmin,N_ATOMS=N_ATOMS,
-    #                             n_steps=n_steps,DELTA_Z=DELTA_Z,D4PG=D4PG,beta=initial_beta,
-    #                             TD3=TD3,TD3_noise=TD3_noise,TD3_delay_steps=TD3_delay_steps,
-    #                             I2A = I2A, EM_lr = EM_lr,
-    #                             obs_weight = obs_weight, rew_weight = rew_weight, ws_weight = ws_weight, 
-    #                             rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
-    #                             imagination_policy_branch = imagination_policy_branch,critic_mod_both=critic_mod_both,
-    #                             critic_mod_act=critic_mod_act, critic_mod_obs= critic_mod_obs,
-    #                             LSTM=LSTM, LSTM_policy=LSTM_policy,seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm, lstm_burn_in=lstm_burn_in,overlap=overlap,
-    #                             only_policy=False,multi_gpu=multi_gpu,data_parallel=data_parallel,preprocess=preprocess,zero_critic=zero_critic,cent_critic=cent_critic) 
-
-
-    # if multi_gpu:
-    #     maddpg.torch_device = torch.device("cuda:0")
-    
-    # if to_gpu:
-    #     maddpg.device = 'cuda'
-    # maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
-    
-    # if first_save: # Generate list of ensemble networks
-    #     file_path = ensemble_path
-    #     maddpg.first_save(file_path,num_copies = k_ensembles)
-    #     [maddpg.save_agent(load_path,0,i,load_same_agent = False,torch_device=maddpg.torch_device) for i in range(num_TA)] 
-    #     if preload_model:
-    #         maddpg.load_team(side='team',models_path=preload_path,nagents=num_TA)
-    #         maddpg.first_save(file_path,num_copies = k_ensembles) 
-
-    #     first_save = False
     env = menvs.RoboEnvs(config)
     maddpg = mad_algo.init(config, env.template_env)
-    
-    # prox_item_size = num_TA*(2*obs_dim_TA + 2*acs_dim)
-    # team_replay_buffer = ReplayBufferLSTM(replay_memory_size , num_TA,
-    #                                     obs_dim_TA,acs_dim,batch_size, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
-
-    # opp_replay_buffer = ReplayBufferLSTM(replay_memory_size , num_TA,
-    #                                     obs_dim_TA,acs_dim,batch_size, LSTM, seq_length,overlap,hidden_dim_lstm,k_ensembles, prox_item_size, SIL)
-    # max_episodes_shared = 30
-    # processes = []
-    # total_dim = (obs_dim_TA + acs_dim + 5) + k_ensembles + 1 + (hidden_dim_lstm*4) + prox_item_size
-
-    # shared_exps = [[torch.zeros(max_num_experiences,2*num_TA,total_dim,requires_grad=False).share_memory_() for _ in range(max_episodes_shared)] for _ in range(num_envs)]
-    # exp_indices = [[torch.tensor(0,requires_grad=False).share_memory_() for _ in range(max_episodes_shared)] for _ in range(num_envs)]
-    # ep_num = torch.zeros(num_envs,requires_grad=False).share_memory_()
-
-    # halt = Variable(torch.tensor(0).byte()).share_memory_()
-    # ready = torch.zeros(num_envs,requires_grad=False).byte().share_memory_()
-    # update_counter = torch.zeros(num_envs,requires_grad=False).share_memory_()
-    # for i in range(num_envs):
-    #     processes.append(mp.Process(target=run_envs, args=(seed + (i * 100), port + (i * 1000), shared_exps[i],exp_indices[i],HP,i,ready,halt,update_counter,(history+str(i)),ep_num)))
     
 
     if config.pt or config.use_pt_data:
@@ -326,7 +234,6 @@ if __name__ == "__main__":
     print('This gets here')
     time.sleep(30)
 
-    #maddpg_pick = dill.dumps(maddpg)
     while True: # get experiences, update
         cycle = 0
         while((np.asarray([counter.item() for counter in env.ep_num]) < iterations_per_push).any()):
