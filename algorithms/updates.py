@@ -1,88 +1,97 @@
 from .maddpg import MADDPG
 
-# updates policy only
-def update_thread(agentID,config,team_replay_buffer,opp_replay_buffer,number_of_updates,update_session):
-    start = time.time()
-    if len(team_replay_buffer) > 1000:
-        
-        initial_models = [config.ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(config.num_left)]
-        #maddpg = dill.loads(maddpg_pick)
-        maddpg = MADDPG.init_from_save_evaluation(initial_models,config.num_left) # from evaluation method just loads the networks
-        if config.multi_gpu:
-            maddpg.torch_device = torch.device("cuda:3")
-        if config.to_gpu:
-            maddpg.device = 'cuda'
-        number_of_updates = 250
-        batches_to_sample = 50
+class Update:
+    def __init__(self,config,team_replay_buffer,opp_replay_buffer):
+        self.config = config
+        self.team_replay_buffer = team_replay_buffer
+        self.opp_replay_buffer = opp_replay_buffer
 
-        if len(team_replay_buffer) < config.batch_size*(batches_to_sample):
-            batches_to_sample = 1
-        for ensemble in range(config.k_ensembles):
-
-            maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
-            maddpg.load_same_ensembles(config.ensemble,ensemble,maddpg.nagents_team,load_same_agent=config.load_same_agent)
+    # updates policy only
+    def update_thread(self,agentID,number_of_updates,update_session):
+        start = time.time()
+        config = self.config
+        team_replay_buffer = self.team_replay_buffer
+        opp_replay_buffer = self.opp_replay_buffer
+        if len(team_replay_buffer) > 1000:
             
+            initial_models = [config.ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(config.num_left)]
+            #maddpg = dill.loads(maddpg_pick)
+            maddpg = MADDPG.init_from_save_evaluation(initial_models,config.num_left) # from evaluation method just loads the networks
+            if config.multi_gpu:
+                maddpg.torch_device = torch.device("cuda:3")
+            if config.to_gpu:
+                maddpg.device = 'cuda'
+            number_of_updates = 250
+            batches_to_sample = 50
 
-            #start = time.time()
-            #for up in range(int(np.floor(number_of_updates/k_ensembles))):
-            for up in range(number_of_updates):
-                m = 0
-                #m = np.random.randint(num_TA)
+            if len(team_replay_buffer) < config.batch_size*(batches_to_sample):
+                batches_to_sample = 1
+            for ensemble in range(config.k_ensembles):
 
-                # if not load_same_agent:
-                #     inds = team_replay_buffer.get_PER_inds(agentID,config.batch_size,ensemble)
-                # else:
-                #     inds = team_replay_buffer.get_PER_inds(m,config.batch_size,ensemble)
+                maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
+                maddpg.load_same_ensembles(config.ensemble,ensemble,maddpg.nagents_team,load_same_agent=config.load_same_agent)
+                
 
-                # does not care about priority
-                offset = up % batches_to_sample
-                if up % batches_to_sample == 0:
-                    inds = np.random.choice(np.arange(len(team_replay_buffer)), size=config.batch_size*batches_to_sample, replace=False)
-                if config.lstm_pol or config.lstm_crit:
-                    team_sample = team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                                to_gpu=config.to_gpu,device=maddpg.torch_device)
-                    opp_sample = opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                                to_gpu=config.to_gpu,device=maddpg.torch_device)
+                #start = time.time()
+                #for up in range(int(np.floor(number_of_updates/k_ensembles))):
+                for up in range(number_of_updates):
+                    m = 0
+                    #m = np.random.randint(num_TA)
 
-                    if not config.load_same_agent:
-                        print("No implementation")
-                    else:                        
-                        _ = maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=config.forward_pass,
-                                                load_same_agent=config.load_same_agent,critic=False,policy=True,session_path=config.session_path,lstm_burn_in=config.burn_in_lstm)
-                        if up % number_of_updates/10 == 0: # update target half way through
-                            maddpg.update_agent_actor(0,number_of_updates/10)
-                else:
-                    team_sample = team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
-                    opp_sample = opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
-                    if not config.load_same_agent:
-                        print("No implementation")
+                    # if not load_same_agent:
+                    #     inds = team_replay_buffer.get_PER_inds(agentID,config.batch_size,ensemble)
+                    # else:
+                    #     inds = team_replay_buffer.get_PER_inds(m,config.batch_size,ensemble)
+
+                    # does not care about priority
+                    offset = up % batches_to_sample
+                    if up % batches_to_sample == 0:
+                        inds = np.random.choice(np.arange(len(team_replay_buffer)), size=config.batch_size*batches_to_sample, replace=False)
+                    if config.lstm_pol or config.lstm_crit:
+                        team_sample = team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
+                                                                    to_gpu=config.to_gpu,device=maddpg.torch_device)
+                        opp_sample = opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
+                                                                    to_gpu=config.to_gpu,device=maddpg.torch_device)
+
+                        if not config.load_same_agent:
+                            print("No implementation")
+                        else:                        
+                            _ = maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=config.forward_pass,
+                                                    load_same_agent=config.load_same_agent,critic=False,policy=True,session_path=config.session_path,lstm_burn_in=config.burn_in_lstm)
+                            if up % number_of_updates/10 == 0: # update target half way through
+                                maddpg.update_agent_actor(0,number_of_updates/10)
                     else:
-                        _ = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=config.forward_pass,
-                                                            load_same_agent=config.load_same_agent,critic=False,policy=True,session_path=config.session_path)
-                        #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
-                        if up % number_of_updates/10 == 0: # update target half way through
-                            maddpg.update_agent_actor(0,number_of_updates/10)
-                if config.sil:
-                    for i in range(config.update_ratio):
-                        inds = team_replay_buffer.get_SIL_inds(agentID=m,batch_size=config.batch_size)
-                        team_sample = team_replay_buffer.sample(inds,
-                                                to_gpu=config.to_gpu,norm_rews=False)
-                        opp_sample = opp_replay_buffer.sample(inds,
-                                                to_gpu=config.to_gpu,norm_rews=False)
-                        priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
-                        team_replay_buffer.update_SIL_priorities(agentID=m,inds = inds, prio=priorities)
+                        team_sample = team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
+                                                    to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
+                        opp_sample = opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
+                                                    to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
+                        if not config.load_same_agent:
+                            print("No implementation")
+                        else:
+                            _ = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=config.forward_pass,
+                                                                load_same_agent=config.load_same_agent,critic=False,policy=True,session_path=config.session_path)
+                            #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
+                            if up % number_of_updates/10 == 0: # update target half way through
+                                maddpg.update_agent_actor(0,number_of_updates/10)
+                    if config.sil:
+                        for i in range(config.update_ratio):
+                            inds = team_replay_buffer.get_SIL_inds(agentID=m,batch_size=config.batch_size)
+                            team_sample = team_replay_buffer.sample(inds,
+                                                    to_gpu=config.to_gpu,norm_rews=False)
+                            opp_sample = opp_replay_buffer.sample(inds,
+                                                    to_gpu=config.to_gpu,norm_rews=False)
+                            priorities = maddpg.SIL_update(team_sample, opp_sample, agentID, 'team') # 
+                            team_replay_buffer.update_SIL_priorities(agentID=m,inds = inds, prio=priorities)
 
-            #print(time.time()-start)
-            if not config.load_same_agent:
-                maddpg.update_agent_targets(agentID,number_of_updates)
-                maddpg.save_agent(config.load_path,update_session,agentID,torch_device=maddpg.torch_device)
-                maddpg.save_ensemble(config.ensemble,ensemble,agentID,torch_device=maddpg.torch_device)
-            else:
-                [maddpg.save_agent(config.load_path,update_session,i,config.load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
-                [maddpg.save_ensemble(config.ensemble_path,ensemble,i,config.load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
-    print(time.time()-start,"<-- Policy Update Cycle")
+                #print(time.time()-start)
+                if not config.load_same_agent:
+                    maddpg.update_agent_targets(agentID,number_of_updates)
+                    maddpg.save_agent(config.load_path,update_session,agentID,torch_device=maddpg.torch_device)
+                    maddpg.save_ensemble(config.ensemble,ensemble,agentID,torch_device=maddpg.torch_device)
+                else:
+                    [maddpg.save_agent(config.load_path,update_session,i,config.load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
+                    [maddpg.save_ensemble(config.ensemble_path,ensemble,i,config.load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
+        print(time.time()-start,"<-- Policy Update Cycle")
 
 def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,opp_replay_buffer,number_of_updates,
                      load_path,update_session,ensemble_path,forward_pass,LSTM,LSTM_policy,seq_length,k_ensembles,

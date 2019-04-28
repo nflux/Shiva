@@ -1,26 +1,17 @@
 import envs.rc_env as rc
 import utils.buffers as buff
+import utils.misc as misc
 import torch
 from torch.autograd import Variable
 import torch.multiprocessing as mp
 import os, dill
 import pandas as pd
 import algorithms.maddpg as mad_algo
+import time
+import numpy as np
 
 def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num):
 
-    # (action_level,feature_level,to_gpu,device,use_viewer,n_training_threads,rcss_log_game,hfo_log_game,num_episodes,replay_memory_size,
-    # episode_length,untouched_time,burn_in_iterations,burn_in_episodes, deterministic, num_TA,num_OA,num_TNPC,num_ONPC,offense_team_bin,defense_team_bin,goalie,team_rew_anneal_ep,
-    # batch_size,hidden_dim,a_lr,c_lr,tau,explore,final_OU_noise_scale,final_noise_scale,init_noise_scale,num_explore_episodes,D4PG,gamma,Vmax,Vmin,N_ATOMS,
-    # DELTA_Z,n_steps,initial_beta,final_beta,num_beta_episodes,TD3,TD3_delay_steps,TD3_noise,I2A,EM_lr,obs_weight,rew_weight,ws_weight,rollout_steps,
-    # LSTM_hidden,imagination_policy_branch,SIL,SIL_update_ratio,critic_mod_act,critic_mod_obs,critic_mod_both,control_rand_init,ball_x_min,ball_x_max,
-    # ball_y_min,ball_y_max,agents_x_min,agents_x_max,agents_y_min,agents_y_max,change_every_x,change_agents_x,change_agents_y,change_balls_x,change_balls_y,
-    # load_random_nets,load_random_every,k_ensembles,current_ensembles,self_play_proba,save_nns,load_nets,initial_models,evaluate,eval_after,eval_episodes,
-    # LSTM,LSTM_policy,seq_length,hidden_dim_lstm,lstm_burn_in,overlap,parallel_process,forward_pass,session_path,hist_dir,eval_hist_dir,eval_log_dir,load_path,ensemble_path,t,time_step,discrete_action,
-    # log_dir,obs_dim_TA,obs_dim_OA, acs_dim,max_num_experiences,load_same_agent,multi_gpu,data_parallel,play_agent2d,use_preloaded_agent2d,
-    # preload_agent2d_path,bl_agent2d,preprocess,zero_critic,cent_critic, record, record_server) = HP
-
-    print('This is printedd')
     env = dill.loads(env)
 
     config = env.config
@@ -40,7 +31,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
         maddpg.device = 'cuda'
 
     if config.multi_gpu:
-        if num_env < 5:
+        if env_num < 5:
             maddpg.torch_device = torch.device("cuda:1")
         else:
             maddpg.torch_device = torch.device("cuda:2")
@@ -67,7 +58,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
 
     time.sleep(3)
     for ep_i in range(0, config.num_ep):
-        if to_gpu:
+        if config.to_gpu:
             maddpg.device = 'cuda'
 
         start = time.time()
@@ -100,7 +91,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
         
         # evaluation for 10 episodes every 100
         if ep_i % 10 == 0:
-            maddpg.scale_noise(config.final_OU_noise_scale + (config.init_noise_scale - config.final_OU_noise_scale) * explr_pct_remaining)
+            maddpg.scale_noise(config.final_ou_noise_scale + (config.init_noise_scale - config.final_ou_noise_scale) * explr_pct_remaining)
         if ep_i % 100 == 0:
             maddpg.scale_noise(0.0)
 
@@ -123,7 +114,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
         sortedByProxOppList = []
         for et_i in range(0, config.ep_length):
 
-            if device == 'cuda':
+            if config.device == 'cuda':
                 # gather all the observations into a torch tensor 
                 torch_obs_team = [Variable(torch.from_numpy(np.vstack(env.Observation(i,'team')).T).float(),requires_grad=False).cuda(non_blocking=True,device=maddpg.torch_device)
                             for i in range(env.num_TA)]
@@ -237,10 +228,10 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
             team_episode = []
             opp_episode = []
 
-            if d == 1 and et_i >= (seq_length-1): # Episode done 
+            if d == 1 and et_i >= (config.seq_length-1): # Episode done 
                 n_step_gammas = np.array([[config.gamma**step for a in range(env.num_TA)] for step in range(config.n_steps)])
             #NOTE: Assume M vs M and critic_mod_both == True
-                if critic_mod_both:
+                if config.crit_both:
                     team_all_MC_targets = []
                     opp_all_MC_targets = []
                     MC_targets_team = np.zeros(env.num_TA)
@@ -270,13 +261,13 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
                             n_step_targets_opp = opp_all_MC_targets[et_i-n]
                             n_step_next_ob_opp = opp_n_step_next_obs[-1]
                             n_step_done_opp = opp_n_step_dones[-1]
-                        if D4PG:
+                        if config.d4pg:
                             default_prio = 5.0
                         else:
                             default_prio = 3.0
                         priorities = np.array([np.zeros(config.k_ensembles) for i in range(env.num_TA)])
                         priorities[:,current_ensembles] = 5.0
-                        if SIL:
+                        if config.sil:
                             SIL_priorities = np.ones(env.num_TA)*default_prio
                         
 
@@ -314,9 +305,9 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
                     # Fill in values for zeros for the hidden state
                     exps = torch.cat((exps[:, :, :], torch.zeros((len(exps), env.num_TA*2, config.hidden_dim_lstm*4), dtype=exps.dtype), comb_prox_tensor.double()), dim=2)
                     #maddpg.get_recurrent_states(exps, obs_dim_TA, acs_dim, env.num_TA*2, hidden_dim_lstm,maddpg.torch_device)
-                    shared_exps[int(ep_num[num_env].item())][:len(exps)] = exps
-                    exp_i[int(ep_num[num_env].item())] += et_i
-                    ep_num[num_env] += 1
+                    shared_exps[int(ep_num[env_num].item())][:len(exps)] = exps
+                    exp_i[int(ep_num[env_num].item())] += et_i
+                    ep_num[env_num] += 1
                     del exps
                     exps = None
                     torch.cuda.empty_cache()
@@ -356,12 +347,12 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
                         eval_episodes,eval_log_dir,eval_hist_dir + "/evaluation_ep" + str(ep_i),
                         7000,env.num_TA,env.num_OA,config.ep_length,config.device,config.use_viewer,))
                 if halt.all(): # load when other process is loading buffer to make sure its not saving at the same time
-                    ready[num_env] = 1
+                    ready[env_num] = 1
                     current_ensembles = maddpg.load_random_ensemble(side='team',nagents=env.num_TA,models_path = config.ensemble_path,load_same_agent=config.load_same_agent) # use for per ensemble update counter
 
                     if config.agent2d and config.preloaded_agent2d:
                         maddpg.load_agent2d(side='opp',load_same_agent=config.load_same_agent,models_path=preload_agent2d_path,nagents=env.num_OA)
-                    elif play_agent2d:
+                    elif config.agent2d:
                         maddpg.load_agent2d(side='opp',models_path =config.session_path +"models/",load_same_agent=config.load_same_agent,nagents=env.num_OA)  
                     else:
                             
@@ -372,14 +363,14 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
                             maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = config.ensemble_path,load_same_agent=config.load_same_agent)
                             pass
 
-                    if bl_agent2d:
+                    if config.left_agent2d:
                         maddpg.load_agent2d(side='team',load_same_agent=config.load_same_agent,models_path=preload_agent2d_path,nagents=env.num_OA)
 
                     while halt.all():
                         time.sleep(0.1)
                     total_dim = (obs_dim_TA + env.acs_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + prox_item_size
                     ep_num.copy_(torch.zeros_like(ep_num,requires_grad=False))
-                    [s.copy_(torch.zeros(config.max_num_exps,2*env.num_TA,total_dim)) for s in shared_exps[:int(ep_num[num_env].item())]] # done loading
+                    [s.copy_(torch.zeros(config.max_num_exps,2*env.num_TA,total_dim)) for s in shared_exps[:int(ep_num[env_num].item())]] # done loading
                     del exps
                     exps = None
 

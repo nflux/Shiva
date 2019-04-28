@@ -29,7 +29,7 @@ def init(config, env):
                                 I2A = config.i2a, EM_lr = config.em_lr,
                                 obs_weight = config.obs_w, rew_weight = config.rew_w, ws_weight = config.ws_w, 
                                 rollout_steps = config.roll_steps,LSTM_hidden=config.lstm_hidden,
-                                imagination_policy_branch = config.imag_pol_branch,critic_mod_both=config.cent_q,
+                                imagination_policy_branch = config.imag_pol_branch,critic_mod_both=config.crit_both,
                                 critic_mod_act=config.crit_ac, critic_mod_obs= config.crit_obs,
                                 LSTM=config.lstm_crit, LSTM_policy=config.lstm_pol, seq_length=config.seq_length, hidden_dim_lstm=config.hidden_dim_lstm, 
                                 lstm_burn_in=config.burn_in_lstm,overlap=config.overlap,

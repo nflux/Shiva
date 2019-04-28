@@ -78,7 +78,6 @@ class rc_env(Base_Env):
         self.port = port
         self.hfo_path = get_hfo_path()
         self.seed = np.random.randint(1000)
-        print(self.seed)
 
         self.viewer = None
 
@@ -137,9 +136,12 @@ class rc_env(Base_Env):
         self.opp_goal_top_y = 13
         self.opp_goal_bot_x = 14
         self.opp_goal_bot_y = 15
-        # Create env for each teammate
-        self.team_envs = [hfo.HFOEnvironment() for i in range(config.num_left)]
-        self.opp_team_envs = [hfo.HFOEnvironment() for i in range(config.num_right)]
+
+        # self._start_hfo_server()
+        # self.team_envs = [hfo.HFOEnvironment() for i in range(config.num_left)]
+        # self.opp_team_envs = [hfo.HFOEnvironment() for i in range(config.num_right)]
+        self.team_envs = None
+        self.opp_team_envs = None
 
         # flag that says when the episode is done
         self.d = 0
@@ -184,28 +186,12 @@ class rc_env(Base_Env):
             self.opp_base = 'base_right'
         elif self.base == 'base_right':
             self.opp_base = 'base_left'
-
         
     def launch(self):
-        # self._start_hfo_server(frames_per_trial = fpt, untouched_time = untouched_time,
-        #                             offense_agents = num_TA, defense_agents = num_OA,
-        #                             offense_npcs = num_TNPC, defense_npcs = num_ONPC,
-        #                             sync_mode = sync_mode, port = port,
-        #                             offense_on_ball = offense_on_ball,
-        #                             fullstate = fullstate, seed = seed,
-        #                             ball_x_min = ball_x_min, ball_x_max = ball_x_max,
-        #                             ball_y_min= ball_y_min, ball_y_max= ball_y_max,
-        #                             verbose = verbose, rcss_log_game = rcss_log_game, 
-        #                             hfo_log_game=hfo_log_game, log_dir = log_dir,
-        #                             agents_x_min=agents_x_min, agents_x_max=agents_x_max,
-        #                             agents_y_min=agents_y_min, agents_y_max=agents_y_max,
-        #                             change_every_x=change_every_x, change_agents_x=change_agents_x,
-        #                             change_agents_y=change_agents_y, change_balls_x=change_balls_x,
-        #                             change_balls_y=change_balls_y, control_rand_init=control_rand_init,record=record,record_server=record_server,
-        #                             defense_team_bin=defense_team_bin, offense_team_bin=offense_team_bin, deterministic=deterministic)
         self._start_hfo_server()
+        self.team_envs = [hfo.HFOEnvironment() for i in range(self.config.num_left)]
+        self.opp_team_envs = [hfo.HFOEnvironment() for i in range(self.config.num_right)]
         
-        time.sleep(3)
         # Create thread for each teammate
         for i in range(self.num_TA):
             if i == 0:
@@ -222,6 +208,7 @@ class rc_env(Base_Env):
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.base,
                                                 False,i,self.fpt,self.act_lvl,))
                 t.start()
+            print('This is printed next')
             time.sleep(1.5)
         
         for i in range(self.num_OA):

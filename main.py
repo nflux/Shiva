@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     env = menvs.RoboEnvs(config)
     maddpg = mad_algo.init(config, env.template_env)
-    
+    update = updates.Update(config, env.team_replay_buffer, env.opp_replay_buffer)
 
     if config.pt or config.use_pt_data:
         # ------------------------------------ Start Pretrain --------------------------------------------
@@ -231,8 +231,6 @@ if __name__ == "__main__":
     env.run()
     iterations_per_push = 1
     update_session = 0
-    print('This gets here')
-    time.sleep(30)
 
     while True: # get experiences, update
         cycle = 0
@@ -256,10 +254,10 @@ if __name__ == "__main__":
             if not config.load_same_agent:
                 print("Implementation out of date (load same agent)")
                 for a_i in range(maddpg.nagents_team):
-                    threads.append(mp.Process(target=updates.update_thread,args=(a_i,config,env.team_replay_buffer,env.opp_replay_buffer,number_of_updates,update_session)))
+                    threads.append(mp.Process(target=update.update_thread,args=(a_i,number_of_updates,update_session)))
             else:                    
                 for a_i in range(1):
-                    threads.append(mp.Process(target=updates.update_thread,args=(a_i,config,env.team_replay_buffer,env.opp_replay_buffer,number_of_updates,update_session)))
+                    threads.append(mp.Process(target=updates.update_thread,args=(a_i,number_of_updates,update_session)))
             print("Launching update")
             start = time.time()
             [thr.start() for thr in threads]
