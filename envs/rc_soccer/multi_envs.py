@@ -1,4 +1,4 @@
-import envs.rc_env as rc
+import envs.rc_soccer.rc_env as rc
 import utils.buffers as buff
 import utils.misc as misc
 import torch
@@ -419,3 +419,7 @@ class RoboEnvs:
 
         for p in processes: # Starts environments
             p.start()
+
+class RoboEnvWrapper(RoboEnvs):
+    pass
+    

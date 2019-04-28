@@ -4,7 +4,6 @@ import time
 import threading
 import pandas as pd
 import math
-from . base_env import Base_Env
 from HFO.hfo import hfo
 from HFO import get_config_path, get_hfo_path, get_viewer_path
 import os, subprocess, time, signal
@@ -15,7 +14,7 @@ import torch
 
 possession_side = 'N'
 
-class rc_env(Base_Env):
+class rc_env:
     """rc_env() extends the HFO environment to allow for centralized execution.
     Attributes:
         num_TA (int): Number of teammate agents. (0-11)
