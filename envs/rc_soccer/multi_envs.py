@@ -10,7 +10,7 @@ import algorithms.maddpg as mad_algo
 import time
 import numpy as np
 
-def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num):
+def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,obs_dim):
 
     env = dill.loads(env)
 
@@ -356,11 +356,11 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
                         maddpg.load_agent2d(side='opp',models_path =config.session_path +"models/",load_same_agent=config.load_same_agent,nagents=env.num_OA)  
                     else:
                             
-                        if np.random.uniform(0,1) > self_play_proba: # self_play_proba % chance loading self else load an old ensemble for opponent
+                        if np.random.uniform(0,1) > config.self_play_prob: # self_play_proba % chance loading self else load an old ensemble for opponent
                             maddpg.load_random(side='opp',nagents =env.num_OA,models_path =config.load_path,load_same_agent=config.load_same_agent)
                             pass
                         else:
-                            maddpg.load_random_ensemble(side='opp',nagents = num_OA,models_path = config.ensemble_path,load_same_agent=config.load_same_agent)
+                            maddpg.load_random_ensemble(side='opp',nagents = env.num_OA,models_path = config.ensemble_path,load_same_agent=config.load_same_agent)
                             pass
 
                     if config.left_agent2d:
@@ -368,7 +368,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num)
 
                     while halt.all():
                         time.sleep(0.1)
-                    total_dim = (obs_dim_TA + env.acs_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + prox_item_size
+                    total_dim = (obs_dim + env.acs_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + prox_item_size
                     ep_num.copy_(torch.zeros_like(ep_num,requires_grad=False))
                     [s.copy_(torch.zeros(config.max_num_exps,2*env.num_TA,total_dim)) for s in shared_exps[:int(ep_num[env_num].item())]] # done loading
                     del exps
@@ -415,11 +415,12 @@ class RoboEnvs:
             envs.append(rc.rc_env(self.config, self.config.port + (i * 1000)))
             processes.append(mp.Process(target=run_env, args=(dill.dumps(envs[i]),self.shared_exps[i],
                                         self.exp_indices[i],i,self.ready,self.halt,self.update_counter,
-                                        (self.config.history+str(i)),self.ep_num)))
+                                        (self.config.history+str(i)),self.ep_num,self.obs_dim)))
 
         for p in processes: # Starts environments
             p.start()
 
+# To-Do
 class RoboEnvWrapper(RoboEnvs):
     pass
     

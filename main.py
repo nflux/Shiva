@@ -1,16 +1,13 @@
 import random
 import os, sys
-# import csv
 import argparse
 import numpy as np
 import utils.misc as misc
 import time
 import torch
 from pathlib import Path
-import utils.buffers as buff
 import algorithms.maddpg as mad_algo
 import envs.rc_soccer.multi_envs as menvs
-# from trainer import launch_eval
 import torch.multiprocessing as mp
 from multiprocessing import Pool
 import gc
@@ -225,10 +222,8 @@ if __name__ == "__main__":
     [maddpg.save_ensemble(config.ensemble_path,0,i,config.load_same_agent,maddpg.torch_device) for i in range(config.num_left)] # Save agent2d into ensembles
 
     maddpg.scale_beta(config.init_beta) 
-
     env.run()
-
-    update.main_update()
+    update.main_update(env, maddpg)
     
 
     

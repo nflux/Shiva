@@ -1,4 +1,9 @@
 from .maddpg import MADDPG
+import utils.misc as misc
+import numpy as np
+import time
+import torch.multiprocessing as mp
+import torch
 
 class Update:
     def __init__(self,config,team_replay_buffer,opp_replay_buffer):
@@ -6,8 +11,8 @@ class Update:
         self.team_replay_buffer = team_replay_buffer
         self.opp_replay_buffer = opp_replay_buffer
 
-    def main_update(self):
-        
+    def main_update(self, env, maddpg):
+        config = self.config
         iterations_per_push = 1
         update_session = 0
 
@@ -33,29 +38,29 @@ class Update:
                 if not config.load_same_agent:
                     print("Implementation out of date (load same agent)")
                     for a_i in range(maddpg.nagents_team):
-                        threads.append(mp.Process(target=update.update_thread,args=(a_i,number_of_updates,update_session)))
+                        threads.append(mp.Process(target=self.update_thread,args=(a_i,number_of_updates,update_session)))
                 else:                    
                     for a_i in range(1):
-                        threads.append(mp.Process(target=updates.update_thread,args=(a_i,number_of_updates,update_session)))
+                        threads.append(mp.Process(target=self.update_thread,args=(a_i,number_of_updates,update_session)))
                 print("Launching update")
                 start = time.time()
                 [thr.start() for thr in threads]
                 [thr.join() for thr in threads]
                 update_session +=1
-                env.update_counter.copy_(torch.zeros(num_envs,requires_grad=False))
+                env.update_counter.copy_(torch.zeros(config.num_envs,requires_grad=False))
 
 
-            for envs in exp_indices:
+            for envs in env.exp_indices:
                 for exp_i in envs:
                     exp_i.copy_(torch.tensor(0,requires_grad=False))
             number_of_updates = int(env.update_counter.sum().item())
-            env.update_counter.copy_(torch.zeros(num_envs,requires_grad=False))
+            env.update_counter.copy_(torch.zeros(config.num_envs,requires_grad=False))
 
             env.halt.copy_(torch.tensor(0,requires_grad=False).byte())
-            env.ready.copy_(torch.zeros(num_envs,requires_grad=False).byte())
+            env.ready.copy_(torch.zeros(config.num_envs,requires_grad=False).byte())
 
                                 
-            maddpg.load_same_ensembles(env.ensemble_path,0,maddpg.nagents_team,load_same_agent=config.load_same_agent)        
+            maddpg.load_same_ensembles(config.ensemble_path,0,maddpg.nagents_team,load_same_agent=config.load_same_agent)        
 
 
             training = (len(env.team_replay_buffer) >= config.batch_size)
@@ -90,7 +95,7 @@ class Update:
 
                 number_of_updates = 250
                 batches_to_sample = 50
-                if len(env.team_replay_buffer) < batch_size*(batches_to_sample):
+                if len(env.team_replay_buffer) < config.batch_size*(batches_to_sample):
                     batches_to_sample = 1
 
                 priorities = [] 
@@ -102,7 +107,7 @@ class Update:
 
 
                         if not config.load_same_agent:
-                            inds = env.team_replay_buffer.get_PER_inds(agentID,batch_size,ensemble)
+                            inds = env.team_replay_buffer.get_PER_inds(agentID,config.batch_size,ensemble)
                         else:
                             if up % batches_to_sample == 0:
                                 if PT:
@@ -130,7 +135,7 @@ class Update:
                             opp_sample = env.opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
                                                                         to_gpu=config.to_gpu, device=maddpg.torch_device)
 
-                            if not load_same_agent:
+                            if not config.load_same_agent:
                                 print("No implementation")
 
                             else:
