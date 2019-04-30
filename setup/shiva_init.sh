@@ -24,7 +24,7 @@ git clone https://github.com/mehrzadshabez/Robocup-Sigma.git
 cd Robocup-Sigma
 git checkout dev
 
-cd maddpg-pytorch/HFO
+cd HFO
 bash recompile_start.sh
 
 #Get Matthews Soccerwindow (Proabably unnecessary)

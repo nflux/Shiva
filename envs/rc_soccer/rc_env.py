@@ -199,7 +199,9 @@ class rc_env:
                 #                                 self.goalie,i,self.fpt,self.act_lvl,))
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.base,
                                                 self.goalie,i,self.fpt,self.act_lvl,))
+                print("herereerr")
                 t.start()
+                print("herereerr")
             else:
                 print("Connecting player %i" % i , "on team %s to the server" % self.base)
                 # thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
