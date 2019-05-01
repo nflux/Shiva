@@ -8,6 +8,8 @@ cmake_install.cmake
 CMakeFiles/
 
 # HFO Executeables
+hfo/libhfo_c.so
+lib/libhfo.so
 bin/rcssserver
 bin/soccerwindow2
 bin/teams/base/agent
