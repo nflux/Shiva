@@ -30,7 +30,7 @@ class RoboConfig(Config):
         # Prep Session Files ------------------------------
         self.session_path = None
         current_day_time = datetime.datetime.now()
-        self.session_path = 'training_sessions/' + \
+        self.session_path = 'data/training_sessions/' + \
                                         str(current_day_time.month) + \
                                         '_' + str(current_day_time.day) + \
                                         '_' + str(current_day_time.hour) + '_' + \

@@ -15,7 +15,7 @@ from trainer import launch_eval
 import _thread as thread
 
 eval_episodes = 50
-session_path = "training_sessions/eval/"
+session_path = "data/training_sessions/eval/"
 load_path = session_path +"ensemble_models/"
 eval_log_dir = session_path +"eval_log" # evaluation logfiles
 eval_hist_dir = session_path +"eval_history"

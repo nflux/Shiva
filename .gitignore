@@ -106,7 +106,6 @@ ENV/
 __pycache__/
 *.pyc
 *.csv
-training_sessions
 Pretrain_Files
 HFO/log_pt
 
