@@ -15,26 +15,8 @@ import pandas as pd
 MSELoss = torch.nn.MSELoss()
 CELoss = torch.nn.CrossEntropyLoss()
 
-def init(config, env):
-    maddpg = MADDPG.init_from_env(env, agent_alg="MADDPG",
-                                adversary_alg= "MADDPG",device=config.device,
-                                gamma=config.gamma,batch_size=config.batch_size,
-                                tau=config.tau,
-                                a_lr=config.a_lr,
-                                c_lr=config.c_lr,
-                                hidden_dim=config.hidden_dim ,discrete_action=config.discrete_action,
-                                vmax=config.vmax,vmin=config.vmin,N_ATOMS=config.n_atoms,
-                                n_steps=config.n_steps,DELTA_Z=config.delta_z,D4PG=config.d4pg,beta=config.init_beta,
-                                TD3=config.td3,TD3_noise=config.td3_noise,TD3_delay_steps=config.td3_delay,
-                                I2A = config.i2a, EM_lr = config.em_lr,
-                                obs_weight = config.obs_w, rew_weight = config.rew_w, ws_weight = config.ws_w, 
-                                rollout_steps = config.roll_steps,LSTM_hidden=config.lstm_hidden,
-                                imagination_policy_branch = config.imag_pol_branch,critic_mod_both=config.crit_both,
-                                critic_mod_act=config.crit_ac, critic_mod_obs= config.crit_obs,
-                                LSTM=config.lstm_crit, LSTM_policy=config.lstm_pol, seq_length=config.seq_length, hidden_dim_lstm=config.hidden_dim_lstm, 
-                                lstm_burn_in=config.burn_in_lstm,overlap=config.overlap,
-                                only_policy=False,multi_gpu=config.multi_gpu,data_parallel=config.data_parallel,preprocess=config.preprocess,
-                                zero_critic=config.zero_crit,cent_critic=config.cent_crit)
+def init_from_env(config, env):
+    maddpg = MADDPG.init_from_env(env, config)
 
     if config.multi_gpu:
         maddpg.torch_device = torch.device("cuda:0")
@@ -3295,13 +3277,8 @@ class MADDPG(object):
        
 
     @classmethod
-    def init_from_env(cls, env, agent_alg="MADDPG", adversary_alg="MADDPG",device='cpu',
-                      gamma=0.95, batch_size=0, tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,discrete_action=True,
-                      vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5, DELTA_Z = 20.0/50,D4PG=False,beta=0,
-                      TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
-                      I2A = False,EM_lr=0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,LSTM_hidden=64, imagination_policy_branch=False,
-                      critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False, LSTM=False, LSTM_policy=False,seq_length=20, hidden_dim_lstm=256, lstm_burn_in=40,overlap=20,
-                      only_policy=False,multi_gpu=False,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True):
+    def init_from_env(cls, env, config, agent_alg="MADDPG", adversary_alg="MADDPG", 
+                        only_policy=False,reduced_obs_dim=16):
                       
         """
         Instantiate instance of this class from multi-agent environment 
@@ -3324,31 +3301,13 @@ class MADDPG(object):
             num_in_reducer = obsp.shape[0]
             num_out_pol =  len(env.action_list)
 
-            # if cont
             if not discrete_action:
                 num_out_pol = len(env.action_list) + len(env.team_action_params[0])
             
             num_in_EM = (num_out_pol*env.num_TA) + num_in_pol
             num_out_EM = num_in_pol
 
-            # obs space and action space are concatenated before sending to
-            # critic network
-            # NOTE: Only works for m vs m
-            # subtract the last action output
-            # obs of 1 agent minus his last action plus all acs of teammatse and opponents plus stamina of teammates
-            #num_in_critic = (num_in_pol +num_out_pol) * env.num_TA *2
-
-            num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)
-
-
-            #if critic_mod_both:
-            #    num_in_critic = num_in_critic + ((num_in_pol + num_out_pol) * env.num_TA)
-            #elif critic_mod_act:
-            #    num_in_critic = num_in_critic + (num_out_pol * env.num_TA)
-            #elif critic_mod_obs:
-            #    num_in_critic = num_in_critic + (num_in_pol * env.num_TA)
-            
-            
+            num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)            
             
             team_agent_init_params.append({'num_in_pol': num_in_pol,
                                         'num_out_pol': num_out_pol,
@@ -3367,58 +3326,56 @@ class MADDPG(object):
                                     'num_out_EM': num_out_EM,
                                     'num_in_reducer': num_in_reducer})
 
-            
-
-
         ## change for continuous
-        init_dict = {'gamma': gamma, 'batch_size': batch_size,
-                     'tau': tau, 'a_lr': a_lr,
-                     'c_lr':c_lr,
-                     'hidden_dim': hidden_dim,
+        init_dict = {'gamma': config.gamma, 'batch_size': config.batch_size,
+                     'tau': config.tau, 'a_lr': config.a_lr,
+                     'c_lr':configc_lr,
+                     'hidden_dim': config.hidden_dim,
                      'team_alg_types': team_alg_types,
                      'opp_alg_types': opp_alg_types,
-                     'device': device,
+                     'device': config.device,
                      'team_agent_init_params': team_agent_init_params,
                      'opp_agent_init_params': opp_agent_init_params,
                      'team_net_params': team_net_params,
-                     'discrete_action': discrete_action,
-                     'vmax': vmax,
-                     'vmin': vmin,
-                     'N_ATOMS': N_ATOMS,
-                     'n_steps': n_steps,
-                     'DELTA_Z': DELTA_Z,
-                     'D4PG': D4PG,
-                     'beta': beta,
-                     'TD3': TD3,
-                     'TD3_noise': TD3_noise,
-                     'TD3_delay_steps': TD3_delay_steps,
-                     'I2A': I2A,
-                     'EM_lr': EM_lr,
-                     'obs_weight': obs_weight,
-                     'rew_weight': rew_weight,
-                     'ws_weight': ws_weight,
-                     'rollout_steps': rollout_steps,
-                     'LSTM_hidden': LSTM_hidden,
-                     'imagination_policy_branch': imagination_policy_branch,
-                     'critic_mod_both': critic_mod_both,
-                     'critic_mod_act': critic_mod_act,
-                     'critic_mod_obs': critic_mod_obs,
-                     'seq_length': seq_length,
-                     'LSTM':LSTM,
-                     'LSTM_policy':LSTM_policy,
-                     'hidden_dim_lstm': hidden_dim_lstm,
-                     'lstm_burn_in': lstm_burn_in,
-                     'overlap': overlap,
+                     'discrete_action': config.discrete_action,
+                     'vmax': config.vmax,
+                     'vmin': config.vmin,
+                     'N_ATOMS': config.n_atoms,
+                     'n_steps': config.n_steps,
+                     'DELTA_Z': config.delta_z,
+                     'D4PG': config.d4pg,
+                     'beta': config.init_beta,
+                     'TD3': config.td3,
+                     'TD3_noise': config.td3_noise,
+                     'TD3_delay_steps': config.td3_delay,
+                     'I2A': config.i2a,
+                     'EM_lr': config.em_lr,
+                     'obs_weight': config.obs_w,
+                     'rew_weight': config.rew_w,
+                     'ws_weight': config.ws_w,
+                     'rollout_steps': config.roll_steps,
+                     'LSTM_hidden': config.lstm_hidden,
+                     'imagination_policy_branch': config.imag_pol_branch,
+                     'critic_mod_both': config.crit_both,
+                     'critic_mod_act': config.crit_ac,
+                     'critic_mod_obs': config.crit_obs,
+                     'seq_length': config.seq_length,
+                     'LSTM': config.lstm_crit,
+                     'LSTM_policy': config.lstm_policy,
+                     'hidden_dim_lstm': config.hidden_dim_lstm,
+                     'lstm_burn_in': config.burn_in_lstm,
+                     'overlap': config.overlap,
                      'only_policy': only_policy,
-                     'multi_gpu':multi_gpu,
-                     'data_parallel':data_parallel,
+                     'multi_gpu': config.multi_gpu,
+                     'data_parallel': config.data_parallel,
                      'reduced_obs_dim':reduced_obs_dim,
-                     'preprocess':preprocess,
-                     'zero_critic':zero_critic,
-                     'cent_critic':cent_critic}
+                     'preprocess': config.preprocess,
+                     'zero_critic': config.zero_crit,
+                     'cent_critic': config.cent_crit}
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
+
     def delete_non_policy_nets(self):
         for a in self.team_agents:
             del a.target_critic

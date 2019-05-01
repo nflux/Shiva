@@ -19,6 +19,11 @@ if __name__ == "__main__":
     config_parse.read(conf_path)
 
     if args.env == 'rc':
+        conf_path = os.getcwd() + '/configs/rc_soccer/' + args.conf
+        if not os.path.isfile(conf_path):
+            print('Incorrect configuration provided')
+            exit(0)
+        config_parse.read(conf_path)
         envs = rc_envs.RoboEnvsWrapper(config_parse)
         envs.run()
     elif args.env == 'nmmo':

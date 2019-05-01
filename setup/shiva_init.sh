@@ -9,13 +9,13 @@ cd shiva
 #Get the RCSSSERVER Repo
 git clone https://github.com/mehrzadshabez/rcssserver.git
 cd rcssserver
-git checkout gen-pt
+# git checkout gen-pt
 cd ..
 
 #Get the LIBRCSC Repo
 git clone https://github.com/mehrzadshabez/librcsc.git
 cd librcsc
-git checkout dev
+# git checkout dev
 cd ..
 
 
