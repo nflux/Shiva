@@ -36,6 +36,7 @@ wheels/
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+install_manifest.txt
 
 # Unit test / coverage reports
 htmlcov/
@@ -102,23 +103,12 @@ ENV/
 # mypy
 .mypy_cache/
 
-/dummy_log
+.vscode/
 
 # RoboEnv
 __pycache__/
-*.egg-info/
 *.pyc
-*.ipynb_checkpoints
 *.csv
-*.log
-.vscode/
-HFO/bin/rcssserver
-HFO/bin/soccerwindow2
-HFO/bin/teams/base/agent
-HFO/bin/teams/base/sample_coach
-HFO/bin/teams/base/sample_player
-HFO/bin/teams/base/sample_trainer
-HFO/example/thread_agents
 training_sessions
 Pretrain_Files
 HFO/log_pt
