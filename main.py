@@ -21,7 +21,7 @@ if __name__ == "__main__":
     if args.env == 'rc':
         envs = rc_envs.RoboEnvsWrapper(config_parse)
         envs.run()
-    else if args.env == 'nmmo':
+    elif args.env == 'nmmo':
         # TO-DO
         print('Running nmmo')
     else:
