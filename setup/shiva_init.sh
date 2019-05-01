@@ -24,11 +24,5 @@ git clone https://github.com/mehrzadshabez/Robocup-Sigma.git
 cd Robocup-Sigma
 git checkout dev
 
-cd HFO
+cd envs/rc_soccer/HFO
 bash recompile_start.sh
-
-#Get Matthews Soccerwindow (Proabably unnecessary)
-#git clone https://github.com/mhauskn/soccerwindow2.git
-
-#Get the Matthew hfo-teams (Proabably unnecessary)
-#git clone https://github.com/mhauskn/hfo-teams.git
