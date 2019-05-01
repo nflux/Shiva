@@ -7,8 +7,66 @@ import torch.multiprocessing as mp
 import os, dill
 import pandas as pd
 import algorithms.maddpg as mad_algo
+import algorithms.updates as updates
+from .pretrain import pretrain_process as pretrainer
 import time
 import numpy as np
+import config as conf
+
+class RoboEnvs:
+    def __init__(self, config):
+        self.config = config
+        self.template_env = rc.rc_env(config, 0)
+        self.obs_dim = self.template_env.team_num_features
+        # self.maddpg = MADDPG.init(config, self.env)
+
+        self.prox_item_size = config.num_left*(2*self.obs_dim + 2*config.ac_dim)
+        self.team_replay_buffer = buff.init_buffer(config, config.lstm_crit or config.lstm_pol,
+                                                    self.obs_dim, self.prox_item_size)
+
+        self.opp_replay_buffer = buff.init_buffer(config, config.lstm_crit or config.lstm_pol,
+                                                    self.obs_dim, self.prox_item_size)
+        self.max_episodes_shared = 30
+        self.total_dim = (self.obs_dim + config.ac_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + self.prox_item_size
+
+        self.shared_exps = [[torch.zeros(config.max_num_exps,2*config.num_left,self.total_dim,requires_grad=False).share_memory_() for _ in range(self.max_episodes_shared)] for _ in range(config.num_envs)]
+        self.exp_indices = [[torch.tensor(0,requires_grad=False).share_memory_() for _ in range(self.max_episodes_shared)] for _ in range(config.num_envs)]
+        self.ep_num = torch.zeros(config.num_envs,requires_grad=False).share_memory_()
+
+        self.halt = Variable(torch.tensor(0).byte()).share_memory_()
+        self.ready = torch.zeros(config.num_envs,requires_grad=False).byte().share_memory_()
+        self.update_counter = torch.zeros(config.num_envs,requires_grad=False).share_memory_()
+
+    def run(self):
+        processes = []
+        envs = []
+        for i in range(self.config.num_envs):
+            envs.append(rc.rc_env(self.config, self.config.port + (i * 1000)))
+            processes.append(mp.Process(target=run_env, args=(dill.dumps(envs[i]),self.shared_exps[i],
+                                        self.exp_indices[i],i,self.ready,self.halt,self.update_counter,
+                                        (self.config.history+str(i)),self.ep_num,self.obs_dim)))
+
+        for p in processes: # Starts environments
+            p.start()
+
+class RoboEnvsWrapper:
+    def __init__(self, config_parse):
+        self.config = conf.RoboConfig(config_parse)
+        self.envs = RoboEnvs(self.config)
+        self.maddpg = mad_algo.init(self.config, self.envs.template_env)
+        self.update = updates.Update(self.config, self.envs.team_replay_buffer, self.envs.opp_replay_buffer)
+        #Pretraining **Needs create_pretrain_files.py to test, importing HFO issue
+        # self.pretrainer = pretrainer.pretrain(self.config, self.envs)
+
+    def run(self):
+        mp.set_start_method('forkserver',force=True)
+        # self.pretrainer.pretraining()
+        # self.maddpg.save_agent2d(config.load_path,0,config.load_same_agent,maddpg.torch_device)
+        # [self.maddpg.save_ensemble(config.ensemble_path,0,i,config.load_same_agent,maddpg.torch_device) for i in range(config.num_left)] # Save agent2d into ensembles
+        self.envs.run()
+        self.maddpg.scale_beta(self.config.init_beta)
+        self.update.main_update(self.envs, self.maddpg)
+
 
 def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,obs_dim):
 
@@ -156,8 +214,6 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
             team_actions = np.asarray([[ac[0][:len(env.action_list)] for ac in team_agent_actions]])
             # this is returning one-hot-encoded action for each opp agent 
             opp_actions = np.asarray([[ac[0][:len(env.action_list)] for ac in opp_agent_actions]])
-
-            
 
             team_obs =  np.array([env.Observation(i,'team') for i in range(maddpg.nagents_team)]).T
             opp_obs =  np.array([env.Observation(i,'opp') for i in range(maddpg.nagents_opp)]).T
@@ -384,43 +440,5 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
             team_obs = team_next_obs
             opp_obs = opp_next_obs
 
-class RoboEnvs:
-    def __init__(self, config):
-        self.config = config
-        self.template_env = rc.rc_env(config, 0)
-        self.obs_dim = self.template_env.team_num_features
-        # self.maddpg = MADDPG.init(config, self.env)
 
-        self.prox_item_size = config.num_left*(2*self.obs_dim + 2*config.ac_dim)
-        self.team_replay_buffer = buff.init_buffer(config, config.lstm_crit or config.lstm_pol,
-                                                    self.obs_dim, self.prox_item_size)
-
-        self.opp_replay_buffer = buff.init_buffer(config, config.lstm_crit or config.lstm_pol,
-                                                    self.obs_dim, self.prox_item_size)
-        self.max_episodes_shared = 30
-        self.total_dim = (self.obs_dim + config.ac_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + self.prox_item_size
-
-        self.shared_exps = [[torch.zeros(config.max_num_exps,2*config.num_left,self.total_dim,requires_grad=False).share_memory_() for _ in range(self.max_episodes_shared)] for _ in range(config.num_envs)]
-        self.exp_indices = [[torch.tensor(0,requires_grad=False).share_memory_() for _ in range(self.max_episodes_shared)] for _ in range(config.num_envs)]
-        self.ep_num = torch.zeros(config.num_envs,requires_grad=False).share_memory_()
-
-        self.halt = Variable(torch.tensor(0).byte()).share_memory_()
-        self.ready = torch.zeros(config.num_envs,requires_grad=False).byte().share_memory_()
-        self.update_counter = torch.zeros(config.num_envs,requires_grad=False).share_memory_()
-
-    def run(self):
-        processes = []
-        envs = []
-        for i in range(self.config.num_envs):
-            envs.append(rc.rc_env(self.config, self.config.port + (i * 1000)))
-            processes.append(mp.Process(target=run_env, args=(dill.dumps(envs[i]),self.shared_exps[i],
-                                        self.exp_indices[i],i,self.ready,self.halt,self.update_counter,
-                                        (self.config.history+str(i)),self.ep_num,self.obs_dim)))
-
-        for p in processes: # Starts environments
-            p.start()
-
-# To-Do
-class RoboEnvWrapper(RoboEnvs):
-    pass
     

@@ -1,11 +1,10 @@
-import random
 import numpy as np
 import time
 import threading
 import pandas as pd
 import math
-from HFO.hfo import hfo
-from HFO import get_config_path, get_hfo_path, get_viewer_path
+from .HFO.hfo import hfo
+from .HFO import get_config_path, get_hfo_path, get_viewer_path
 import os, subprocess, time, signal
 from utils import misc as misc
 from algorithms.maddpg import MADDPG
