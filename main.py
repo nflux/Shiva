@@ -1,23 +1,9 @@
-import random
-import os, sys
-import argparse
-import numpy as np
-import utils.misc as misc
-import time
-import torch
-from pathlib import Path
-from utils.buffers import ReplayBufferLSTM
-import utils.buffers as buff
+import os, argparse, configparser, config
 import algorithms.maddpg as mad_algo
 import pretrain.pretrain_process as pretrainer
 import envs.rc_soccer.multi_envs as menvs
 import torch.multiprocessing as mp
-from multiprocessing import Pool
-import gc
 import algorithms.updates as updates
-import configparser
-import argparse
-import config
 
 def parseArgs():
     parser =  argparse.ArgumentParser('Team Shiva')
@@ -29,7 +15,7 @@ def parseArgs():
 
 if __name__ == "__main__":
     args = parseArgs()
-    config_parse = configparser.SafeConfigParser()
+    config_parse = configparser.ConfigParser()
 
     conf_path = os.getcwd() + '/configs/' + args.conf
 

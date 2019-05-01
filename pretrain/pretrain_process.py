@@ -1,6 +1,4 @@
-import random
 import os, sys
-import argparse
 import numpy as np
 import utils.misc as misc
 import time
@@ -9,13 +7,10 @@ from pathlib import Path
 from utils.buffers import ReplayBufferLSTM
 import utils.buffers as buff
 import algorithms.maddpg as mad_algo
-import envs.rc_soccer.multi_envs as menvs
 import torch.multiprocessing as mp
 from multiprocessing import Pool
 import gc
 import algorithms.updates as updates
-import configparser
-import argparse
 
 class pretrain:
 
