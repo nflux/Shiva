@@ -12,18 +12,14 @@ def parseArgs():
 if __name__ == "__main__":
     args = parseArgs()
     config_parse = configparser.ConfigParser()
-    conf_path = os.getcwd() + '/configs/' + args.conf
-    if not os.path.isfile(conf_path):
-        print('Incorrect configuration provided')
-        exit(0)
-    config_parse.read(conf_path)
+    conf_path = os.getcwd() + '/configs/'
 
     if args.env == 'rc':
-        conf_path = os.getcwd() + '/configs/rc_soccer/' + args.conf
-        if not os.path.isfile(conf_path):
+        rc_path = conf_path + 'rc_soccer/' + args.conf + '.ini'
+        if not os.path.isfile(rc_path):
             print('Incorrect configuration provided')
             exit(0)
-        config_parse.read(conf_path)
+        config_parse.read(rc_path)
         envs = rc_envs.RoboEnvsWrapper(config_parse)
         envs.run()
     elif args.env == 'nmmo':

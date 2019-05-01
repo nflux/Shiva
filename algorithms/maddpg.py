@@ -3294,14 +3294,14 @@ class MADDPG(object):
             # changed acsp to be action_list for each agent 
             # giving dimension num_TA x action_list so they may zip properly    
 
-            if preprocess:
+            if config.preprocess:
                 num_in_pol = reduced_obs_dim
             else:
                 num_in_pol = obsp.shape[0]
             num_in_reducer = obsp.shape[0]
             num_out_pol =  len(env.action_list)
 
-            if not discrete_action:
+            if not config.discrete_action:
                 num_out_pol = len(env.action_list) + len(env.team_action_params[0])
             
             num_in_EM = (num_out_pol*env.num_TA) + num_in_pol
@@ -3329,7 +3329,7 @@ class MADDPG(object):
         ## change for continuous
         init_dict = {'gamma': config.gamma, 'batch_size': config.batch_size,
                      'tau': config.tau, 'a_lr': config.a_lr,
-                     'c_lr':configc_lr,
+                     'c_lr':config.c_lr,
                      'hidden_dim': config.hidden_dim,
                      'team_alg_types': team_alg_types,
                      'opp_alg_types': opp_alg_types,
@@ -3361,7 +3361,7 @@ class MADDPG(object):
                      'critic_mod_obs': config.crit_obs,
                      'seq_length': config.seq_length,
                      'LSTM': config.lstm_crit,
-                     'LSTM_policy': config.lstm_policy,
+                     'LSTM_policy': config.lstm_pol,
                      'hidden_dim_lstm': config.hidden_dim_lstm,
                      'lstm_burn_in': config.burn_in_lstm,
                      'overlap': config.overlap,
