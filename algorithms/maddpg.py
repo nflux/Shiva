@@ -9,9 +9,8 @@ from torch.autograd import Variable
 import os
 import time
 import torch.multiprocessing as mp
-import dill
-import copy
 import pandas as pd
+
 MSELoss = torch.nn.MSELoss()
 CELoss = torch.nn.CrossEntropyLoss()
 
@@ -57,20 +56,73 @@ def parallel_step(results,a_i,ran,obs,explore,output,pi_pickle,action_dim=3,para
         p = torch.clamp((action[0,action_dim:].view(1,param_dim) + Variable(processor(torch.Tensor(exploration_noise),device=device),requires_grad=False)),min=-1.0,max=1.0) # get noisey params (OU)
         action = torch.cat((a,p),1) 
     results[a_i] = action
- 
+
+class BASE_MADDPG(object):
+    def __init__(self, config, team_net_params, team_alg_types='MADDPG', opp_alg_types='MADDPG', only_policy=False):
+        self.config = config
+        self.num_in_EM = team_net_params[0]['num_in_EM']
+        self.num_out_EM = team_net_params[0]['num_out_EM']
+        self.num_out_pol = team_net_params[0]['num_out_pol']
+        self.team_net_params = team_net_params
+        self.only_policy = only_policy
+    
+    @classmethod
+    def init_from_env(cls, env, config, agent_alg="MADDPG", adversary_alg="MADDPG", only_policy=False):
+                      
+        """
+        Instantiate instance of this class from multi-agent environment 
+        """
+        team_agent_init_params = []
+        team_net_params = []
+        opp_agent_init_params = []
+        
+        opp_alg_types = [ adversary_alg for atype in range(env.num_OA)]
+        team_alg_types = [ agent_alg for atype in range(env.num_TA)]
+        for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs, team_alg_types):
+            
+            # changed acsp to be action_list for each agent 
+            # giving dimension num_TA x action_list so they may zip properly    
+
+            if config.preprocess:
+                num_in_pol = config.reduced_obs_dim
+            else:
+                num_in_pol = obsp.shape[0]
+            num_in_reducer = obsp.shape[0]
+            num_out_pol =  len(env.action_list)
+
+            if not config.discrete_action:
+                num_out_pol = len(env.action_list) + len(env.team_action_params[0])
+            
+            num_in_EM = (num_out_pol*env.num_TA) + num_in_pol
+            num_out_EM = num_in_pol
+
+            num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)            
+            
+            team_net_params.append({'num_in_pol': num_in_pol,
+                                    'num_out_pol': num_out_pol,
+                                    'num_in_critic': num_in_critic,
+                                    'num_in_EM': num_in_EM,
+                                    'num_out_EM': num_out_EM,
+                                    'num_in_reducer': num_in_reducer})
+
+        ## change for continuous
+        init_dict = {'team_alg_types': team_alg_types,
+                     'opp_alg_types': opp_alg_types,
+                     'team_net_params': team_net_params,
+                     'config' : config}
+
+        instance = cls(**init_dict)
+        instance.init_dict = init_dict
+        return instance
+    
+
+
+
 class MADDPG(object):
     """
     Wrapper class for DDPG-esque (i.e. also MADDPG) agents in multi-agent task
     """
-    def __init__(self, team_agent_init_params, opp_agent_init_params, team_net_params, team_alg_types='MADDPG', opp_alg_types='MADDPG',device='cpu',
-                 gamma=0.95, batch_size=0,tau=0.01, a_lr=0.01, c_lr=0.01, hidden_dim=64,
-                 discrete_action=True,vmax = 10,vmin = -10, N_ATOMS = 51, n_steps = 5,
-                 DELTA_Z = 20.0/50,D4PG=False,beta = 0,TD3=False,TD3_noise = 0.2,TD3_delay_steps=2,
-                 I2A = False,EM_lr = 0.001,obs_weight=10.0,rew_weight=1.0,ws_weight=1.0,rollout_steps = 5,
-                 LSTM_hidden=64, imagination_policy_branch = False,
-                 critic_mod_both=False, critic_mod_act=False, critic_mod_obs=False,
-                 LSTM=False, LSTM_policy=False,seq_length = 20, hidden_dim_lstm=256, lstm_burn_in=40,overlap=20,only_policy=False,
-                 multi_gpu=True,data_parallel=False,reduced_obs_dim=16,preprocess=False,zero_critic=False,cent_critic=True): 
+    def __init__(self, config, team_net_params, team_alg_types='MADDPG', opp_alg_types='MADDPG', only_policy=False): 
 
         """
         Inputs:
@@ -3276,105 +3328,7 @@ class MADDPG(object):
 
        
 
-    @classmethod
-    def init_from_env(cls, env, config, agent_alg="MADDPG", adversary_alg="MADDPG", 
-                        only_policy=False,reduced_obs_dim=16):
-                      
-        """
-        Instantiate instance of this class from multi-agent environment 
-        """
-        team_agent_init_params = []
-        team_net_params = []
-        opp_agent_init_params = []
-        
-        opp_alg_types = [ adversary_alg for atype in range(env.num_OA)]
-        team_alg_types = [ agent_alg for atype in range(env.num_TA)]
-        for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs, team_alg_types):
-            
-            # changed acsp to be action_list for each agent 
-            # giving dimension num_TA x action_list so they may zip properly    
-
-            if config.preprocess:
-                num_in_pol = reduced_obs_dim
-            else:
-                num_in_pol = obsp.shape[0]
-            num_in_reducer = obsp.shape[0]
-            num_out_pol =  len(env.action_list)
-
-            if not config.discrete_action:
-                num_out_pol = len(env.action_list) + len(env.team_action_params[0])
-            
-            num_in_EM = (num_out_pol*env.num_TA) + num_in_pol
-            num_out_EM = num_in_pol
-
-            num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)            
-            
-            team_agent_init_params.append({'num_in_pol': num_in_pol,
-                                        'num_out_pol': num_out_pol,
-                                        'num_in_critic': num_in_critic,
-                                        'num_in_reducer': num_in_reducer})
-            
-            opp_agent_init_params.append({'num_in_pol': num_in_pol,
-                                        'num_out_pol': num_out_pol,
-                                        'num_in_critic': num_in_critic,
-                                        'num_in_reducer': num_in_reducer})
-            
-            team_net_params.append({'num_in_pol': num_in_pol,
-                                    'num_out_pol': num_out_pol,
-                                    'num_in_critic': num_in_critic,
-                                    'num_in_EM': num_in_EM,
-                                    'num_out_EM': num_out_EM,
-                                    'num_in_reducer': num_in_reducer})
-
-        ## change for continuous
-        init_dict = {'gamma': config.gamma, 'batch_size': config.batch_size,
-                     'tau': config.tau, 'a_lr': config.a_lr,
-                     'c_lr':config.c_lr,
-                     'hidden_dim': config.hidden_dim,
-                     'team_alg_types': team_alg_types,
-                     'opp_alg_types': opp_alg_types,
-                     'device': config.device,
-                     'team_agent_init_params': team_agent_init_params,
-                     'opp_agent_init_params': opp_agent_init_params,
-                     'team_net_params': team_net_params,
-                     'discrete_action': config.discrete_action,
-                     'vmax': config.vmax,
-                     'vmin': config.vmin,
-                     'N_ATOMS': config.n_atoms,
-                     'n_steps': config.n_steps,
-                     'DELTA_Z': config.delta_z,
-                     'D4PG': config.d4pg,
-                     'beta': config.init_beta,
-                     'TD3': config.td3,
-                     'TD3_noise': config.td3_noise,
-                     'TD3_delay_steps': config.td3_delay,
-                     'I2A': config.i2a,
-                     'EM_lr': config.em_lr,
-                     'obs_weight': config.obs_w,
-                     'rew_weight': config.rew_w,
-                     'ws_weight': config.ws_w,
-                     'rollout_steps': config.roll_steps,
-                     'LSTM_hidden': config.lstm_hidden,
-                     'imagination_policy_branch': config.imag_pol_branch,
-                     'critic_mod_both': config.crit_both,
-                     'critic_mod_act': config.crit_ac,
-                     'critic_mod_obs': config.crit_obs,
-                     'seq_length': config.seq_length,
-                     'LSTM': config.lstm_crit,
-                     'LSTM_policy': config.lstm_pol,
-                     'hidden_dim_lstm': config.hidden_dim_lstm,
-                     'lstm_burn_in': config.burn_in_lstm,
-                     'overlap': config.overlap,
-                     'only_policy': only_policy,
-                     'multi_gpu': config.multi_gpu,
-                     'data_parallel': config.data_parallel,
-                     'reduced_obs_dim':reduced_obs_dim,
-                     'preprocess': config.preprocess,
-                     'zero_critic': config.zero_crit,
-                     'cent_critic': config.cent_crit}
-        instance = cls(**init_dict)
-        instance.init_dict = init_dict
-        return instance
+    
 
     def delete_non_policy_nets(self):
         for a in self.team_agents:

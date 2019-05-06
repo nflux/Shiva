@@ -20,14 +20,14 @@ class RoboEnvs:
         self.obs_dim = self.template_env.team_num_features
         # self.maddpg = MADDPG.init(config, self.env)
 
-        self.prox_item_size = config.num_left*(2*self.obs_dim + 2*config.ac_dim)
+        self.prox_item_size = config.num_left*(2*self.obs_dim + 2*config.total_ac_dim)
         self.team_replay_buffer = buff.init_buffer(config, config.lstm_crit or config.lstm_pol,
                                                     self.obs_dim, self.prox_item_size)
 
         self.opp_replay_buffer = buff.init_buffer(config, config.lstm_crit or config.lstm_pol,
                                                     self.obs_dim, self.prox_item_size)
         self.max_episodes_shared = 30
-        self.total_dim = (self.obs_dim + config.ac_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + self.prox_item_size
+        self.total_dim = (self.obs_dim + config.total_ac_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + self.prox_item_size
 
         self.shared_exps = [[torch.zeros(config.max_num_exps,2*config.num_left,self.total_dim,requires_grad=False).share_memory_() for _ in range(self.max_episodes_shared)] for _ in range(config.num_envs)]
         self.exp_indices = [[torch.tensor(0,requires_grad=False).share_memory_() for _ in range(self.max_episodes_shared)] for _ in range(config.num_envs)]
@@ -83,7 +83,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
     if config.load_nets:
         maddpg = mad_algo.MADDPG.init_from_save_evaluation(config.initial_models,env.num_TA) # from evaluation method just loads the networks
     else:
-        maddpg = mad_algo.init(config, env)        
+        maddpg = mad_algo.init_from_env(config, env)        
         
     if config.to_gpu:
         maddpg.device = 'cuda'

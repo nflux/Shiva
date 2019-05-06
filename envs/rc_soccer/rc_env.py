@@ -119,7 +119,7 @@ class rc_env:
             self.team_num_features = 28 + (6 * ((config.num_left-1) + config.num_right)) + 8
             self.opp_num_features = 28 + (6 * (config.num_left + (config.num_right-1))) + 8
 
-        self.acs_dim = config.ac_dim
+        self.acs_dim = config.total_ac_dim
         # Feature indexes by name
         self.stamina = 26
         self.ball_x = 16

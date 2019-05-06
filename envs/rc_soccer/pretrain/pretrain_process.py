@@ -19,7 +19,7 @@ class pretrain:
         self.config = config
         self.numBuffs = config.num_buffs
         self.num_TA = config.num_left
-        self.acs_dim = config.ac_dim
+        self.acs_dim = config.total_ac_dim
         self.obs_dim = env.obs_dim
         self.prox_item_size = env.prox_item_size
         self.pt = config.pt

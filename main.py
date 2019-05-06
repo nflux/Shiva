@@ -5,7 +5,7 @@ def parseArgs():
     parser =  argparse.ArgumentParser('Team Shiva')
     parser.add_argument('--env', type=str, default='rc',
                         help='type of environment')
-    parser.add_argument('--conf', type=str, default='')
+    parser.add_argument('--conf', type=str, default='rc_cpu')
 
     return parser.parse_args()
 

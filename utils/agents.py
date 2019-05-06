@@ -9,12 +9,24 @@ from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor,e_gr
 from .noise import OUNoise
 import numpy as np
 
+# class Base_Agent(object):
+#     def __init__(self, num_in_pol, num_out_pol, num_in_critic, num_in_reducer, maddpg=object, hidden_dim=64,
+#                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
+#                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
+#                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, 
+#                 LSTM=False,LSTM_policy=False, seq_length=20, trace_length=1, hidden_dim_lstm=256,reduced_obs_dim = 16):
+        
+#         self.I2A = I2A
+#         self.norm_in = False
+#         self.counter = 0
+
+
 class DDPGAgent(object):
     """
     General class for DDPG agents (policy, critic, target policy, target
     critic, exploration noise)
     """
-    def __init__(self, num_in_pol, num_out_pol, num_in_critic, num_in_reducer, maddpg=object, hidden_dim=64,
+    def __init__(self, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, num_in_reducer, maddpg=object, hidden_dim=64,
                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, 
@@ -35,7 +47,7 @@ class DDPGAgent(object):
         self.action_dim = 3
         self.imagination_policy_branch = imagination_policy_branch
         self.device = device
-        self.n_branches = 1 + imagination_policy_branch# number of imagination branches
+        self.n_branches = 1 + imagination_policy_branch # number of imagination branches
         self.delta = (float(vmax)-vmin)/(n_atoms-1)
         # D4PG
         self.n_atoms = n_atoms
@@ -234,7 +246,7 @@ class DDPGAgent(object):
                                    requires_grad=False)
             action = action.clamp(-1, 1)
         return action
-'''
+        '''
     def get_params(self):
         #self.maddpg.prep_training(device='cpu')  # move parameters to CPU before saving
         if self.maddpg.data_parallel:
