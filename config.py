@@ -52,7 +52,7 @@ class RoboConfig(Config):
         else:
             self.conf_dict['a_lr'] = 0.0002
             self.conf_dict['c_lr'] = 0.0001
-        self.conf_dict['delta_z'] = (self.conf_dict['vmax'] - self.conf_dict['vmin']) / (self.conf_dict['n_atoms'] - 1)
+        self.conf_dict['delta_z'] = (float(self.conf_dict['vmax'] - self.conf_dict['vmin'])) / (self.conf_dict['n_atoms'] - 1)
         self.conf_dict['freeze_actor'] = 0.0
         self.conf_dict['freeze_critic'] = 0.0
 

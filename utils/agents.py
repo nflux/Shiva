@@ -9,16 +9,52 @@ from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor,e_gr
 from .noise import OUNoise
 import numpy as np
 
-# class Base_Agent(object):
-#     def __init__(self, num_in_pol, num_out_pol, num_in_critic, num_in_reducer, maddpg=object, hidden_dim=64,
-#                 a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
-#                 I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
-#                 device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, 
-#                 LSTM=False,LSTM_policy=False, seq_length=20, trace_length=1, hidden_dim_lstm=256,reduced_obs_dim = 16):
+class Base_Agent(object):
+    def __init__(self, config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, num_in_reducer, maddpg=object, only_policy):
         
-#         self.I2A = I2A
-#         self.norm_in = False
-#         self.counter = 0
+        self.I2A = config.i2a
+        self.norm_in = False
+        self.counter = 0
+        self.updating_actor = False
+        self.maddpg = maddpg
+        self.batch_size = config..batch_size
+        self.param_dim = config.param_dim
+        self.action_dim = config.ac_dim
+        self.imagination_policy_branch = config.imag_pol_branch
+        self.device = device
+        self.n_branches = 1 + self.imagination_policy_branch # number of imagination branches
+        self.delta = config.delta_z
+        # D4PG
+        self.n_atoms = config.n_atoms
+        self.vmax = config.vmax
+        self.vmin = config.vmin
+        self.world_status_dim = config.world_status_dim
+        self.LSTM_crit = config.lstm_crit
+        self.LSTM_policy = config.lstm_pol
+        self.a_lr = config.a_lr
+        self.c_lr = config.c_lr
+        self.EM_lr = config.em_lr
+
+        self.I2A_num_in_pol = num_in_pol
+        self.hidden_dim_lstm = config.hidden_dim_lstm
+        self.num_total_out_EM = num_out_EM + self.world_status_dim + 1
+        if self.I2A:
+            self.EM = EnvironmentModel(num_in_EM, num_out_EM,hidden_dim=config.hidden_dim,
+                                  norm_in=self.norm_in,agent=self,maddpg=maddpg)
+
+            self.imagination_policy = MLPNetwork_Actor(num_in_pol, num_out_pol,
+                                    hidden_dim=config.hidden_dim,
+                                    discrete_action=config.discrete_action, 
+                                    norm_in= self.norm_in,agent=self,maddpg=maddpg)
+        # policy prime for I2A
+            self.policy_prime = MLPNetwork_Actor(num_in_pol, num_out_pol,
+                                    hidden_dim=config.hidden_dim,
+                                    discrete_action=config.discrete_action, 
+                                    norm_in= self.norm_in,agent=self,maddpg=maddpg)
+        else:
+            self.EM = None
+            self.imagination_policy = None
+            self.policy_prime = None
 
 
 class DDPGAgent(object):
@@ -26,34 +62,30 @@ class DDPGAgent(object):
     General class for DDPG agents (policy, critic, target policy, target
     critic, exploration noise)
     """
-    def __init__(self, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, num_in_reducer, maddpg=object, hidden_dim=64,
-                a_lr=0.001, c_lr=0.001, discrete_action=True,n_atoms = 51,vmax=10,vmin=-10,delta=20.0/50,D4PG=True,TD3=False,
-                I2A = False,EM_lr=0.001,world_status_dim = 6,rollout_steps = 5,LSTM_hidden=64,
-                device='cpu',imagination_policy_branch=True, critic_mod_both = False, critic_mod_act = False, critic_mod_obs = False, 
-                LSTM=False,LSTM_policy=False, seq_length=20, trace_length=1, hidden_dim_lstm=256,reduced_obs_dim = 16): 
+    def __init__(self, config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, num_in_reducer, maddpg=object, only_policy): 
         """
         Inputs:
             num_in_pol (int): number of dimensions for policy input
             num_out_pol (int): number of dimensions for policy output
             num_in_critic (int): number of dimensions for critic input
         """
-        self.I2A = I2A
+        self.I2A = config.i2a
         self.norm_in = False
         self.counter = 0
         self.updating_actor = False
         self.maddpg = maddpg
-        self.batch_size = maddpg.batch_size
-        self.param_dim = 5
-        self.action_dim = 3
-        self.imagination_policy_branch = imagination_policy_branch
+        self.batch_size = config..batch_size
+        self.param_dim = config.param_dim
+        self.action_dim = config.ac_dim
+        self.imagination_policy_branch = config.imag_pol_branch
         self.device = device
-        self.n_branches = 1 + imagination_policy_branch # number of imagination branches
-        self.delta = (float(vmax)-vmin)/(n_atoms-1)
+        self.n_branches = 1 + self.imagination_policy_branch # number of imagination branches
+        self.delta = config.delta_z
         # D4PG
-        self.n_atoms = n_atoms
-        self.vmax = vmax
-        self.vmin = vmin
-        self.world_status_dim = world_status_dim
+        self.n_atoms = config.n_atoms
+        self.vmax = config.vmax
+        self.vmin = config.vmin
+        self.world_status_dim = config.world_status_dim
         self.LSTM = LSTM
         self.LSTM_policy = LSTM_policy
 

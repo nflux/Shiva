@@ -65,6 +65,58 @@ class BASE_MADDPG(object):
         self.num_out_pol = team_net_params[0]['num_out_pol']
         self.team_net_params = team_net_params
         self.only_policy = only_policy
+        self.world_status_dim = config.world_status_dim # number of possible world statuses
+        self.nagents_team = len(team_alg_types)
+        self.nagents_opp = len(opp_alg_types)
+        self.critic_loss_logger = pd.DataFrame()
+        self.policy_loss_logger = pd.DataFrame()
+        self.batch_size = config.batch_size
+        self.multi_gpu = config.multi_gpu
+        self.data_parallel = config.data_parallel
+        self.device = config.device
+        self.torch_device = torch.device(config.device)
+        self.gamma = config.gamma
+        self.tau = config.tau
+        self.a_lr = config.a_lr
+        self.c_lr = config.c_lr
+        self.discrete_action = config.discrete_action
+        self.pol_dev = 'cpu'  # device for policies
+        self.critic_dev = 'cpu'  # device for critics
+        self.trgt_pol_dev = 'cpu'  # device for target policies
+        self.trgt_critic_dev = 'cpu'  # device for target critics
+        self.EM_dev = 'cpu'  # device for EM
+        self.prime_dev = 'cpu'  # device for pol prime
+        self.imagination_pol_dev = 'cpu'# device for imagination branch policy
+        self.cent_critic = config.cent_crit
+        self.preprocess = config.preprocess
+        self.zero_critic = config.zero_crit
+        self.LSTM_crit = config.lstm_crit
+        self.LSTM_policy = config.lstm_pol
+        self.lstm_burn_in = config.burn_in_lstm
+        self.hidden_dim_lstm = config.hidden_dim_lstm
+        self.seq_length = config.seq_length
+        self.overlap = config.overlap
+        self.niter = 0
+        self.n_steps = config.n_steps
+        self.beta = config.beta
+        self.N_ATOMS = config.n_atoms
+        self.Vmax = config.vmax
+        self.Vmin = config.vmin
+        self.DELTA_Z = config.delta_z
+        self.D4PG = config.d4pg
+        self.TD3 = config.td3
+        self.TD3_noise = config.td3_noise
+        self.TD3_delay_steps = config.td3_delay
+        if not self.TD3:
+            self.TD3_delay_steps = 1
+        self.EM_lr = config.em_lr
+        self.I2A = config.i2a
+        self.obs_weight = config.obs_w
+        self.rew_weight = config.rew_w
+        self.ws_weight = config.ws_w
+        self.ws_onehot = processor(torch.FloatTensor(self.batch_size,self.world_status_dim),device=self.device,torch_device=self.torch_device) 
+        self.team_count = [0 for i in range(self.nagents_team)]
+        self.opp_count = [0 for i in range(self.nagents_opp)]
     
     @classmethod
     def init_from_env(cls, env, config, agent_alg="MADDPG", adversary_alg="MADDPG", only_policy=False):
@@ -114,9 +166,73 @@ class BASE_MADDPG(object):
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
-    
 
+    @classmethod
+    def init_from_save_selfplay(cls, filenames=list,nagents=1):
+        """
+        Instantiate instance of this class from file created by 'save' method
+        """
+        random_sessions = random.sample(filenames,nagents)
+        save_dicts =  [torch.load(filename) for filename in random_sessions]
+        instance = cls(**save_dicts[0]['init_dict'])
+        instance.init_dict = save_dicts[0]['init_dict']
+        
+        for a, params in zip(instance.nagents_team, random.sample(random.sample(save_dicts,1)['agent_params'],1)):
+            a.load_params(params)
 
+        for a, params in zip(instance.opp_agents,  random.sample(random.sample(save_dicts,1)['agent_params'],1)):
+            a.load_params(params)
+
+        return instance
+
+    @classmethod
+    def init_from_save_evaluation(cls, filenames,nagents=1):
+        """
+        Instantiate instance of this class from file created by 'save' method
+        """
+        save_dicts = np.asarray([torch.load(filename) for filename in filenames]) # use only filename
+        instance = cls(**save_dicts[0]['init_dict'])
+        instance.init_dict = save_dicts[0]['init_dict']
+
+        for i in range(nagents):
+            instance.team_agents[i].load_params(save_dicts[i]['agent_params'] ) # first n agents
+            
+
+        return instance
+
+class RMADDPG(BASE_MADDPG):
+    def __init__(self, env, config, only_policy = False):
+       self = super().init_from_env(env, config, only_policy)
+
+       self.team_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
+                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
+                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
+                                 delta = DELTA_Z,D4PG=D4PG,
+                                 TD3=TD3,
+                                 I2A = I2A,EM_lr=EM_lr,
+                                 world_status_dim=self.world_status_dim,
+                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
+                                      device=device,
+                                      imagination_policy_branch=imagination_policy_branch,
+                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
+                                      LSTM=LSTM, LSTM_policy=LSTM_policy,seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
+                                 **params)
+                       for params in self.team_net_params]
+        
+        self.opp_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
+                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
+                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
+                                 delta = DELTA_Z,D4PG=D4PG,
+                                 TD3=TD3,
+                                 I2A = I2A,EM_lr=EM_lr,
+                                 world_status_dim=self.world_status_dim,
+                                     rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
+                                     imagination_policy_branch=imagination_policy_branch,
+                                     critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
+                                     LSTM=LSTM, LSTM_policy=LSTM_policy, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
+                                 **params)
+                       for params in self.team_net_params]
+       
 
 class MADDPG(object):
     """
@@ -139,96 +255,6 @@ class MADDPG(object):
             hidden_dim (int): Number of hidden dimensions for networks
             discrete_action (bool): Whether or not to use discrete action space
         """
-        self.world_status_dim = 8 # number of possible world statuses
-        self.nagents_team = len(team_alg_types)
-        self.nagents_opp = len(opp_alg_types)
-        self.critic_loss_logger = pd.DataFrame()
-        self.policy_loss_logger = pd.DataFrame()
-        self.team_alg_types = team_alg_types
-        self.opp_alg_types = opp_alg_types
-        self.num_in_EM = team_net_params[0]['num_in_EM']
-        self.num_out_EM = team_net_params[0]['num_out_EM']
-        self.batch_size = batch_size
-        self.only_policy = only_policy
-        self.multi_gpu = multi_gpu
-        self.data_parallel = data_parallel
-        self.num_out_pol = team_net_params[0]['num_out_pol']
-        self.team_agent_init_params = team_agent_init_params
-        self.opp_agent_init_params = opp_agent_init_params
-        self.team_net_params = team_net_params
-        self.device = device
-        self.torch_device = torch.device(device)
-        self.gamma = gamma
-        self.tau = tau
-        self.a_lr = a_lr
-        self.c_lr = c_lr
-        self.discrete_action = discrete_action
-        self.pol_dev = 'cpu'  # device for policies
-        self.critic_dev = 'cpu'  # device for critics
-        self.trgt_pol_dev = 'cpu'  # device for target policies
-        self.trgt_critic_dev = 'cpu'  # device for target critics
-        self.EM_dev = 'cpu'  # device for EM
-        self.prime_dev = 'cpu'  # device for pol prime
-        self.imagination_pol_dev = 'cpu'# device for imagination branch policy
-        self.cent_critic = cent_critic
-        self.preprocess = preprocess
-        self.zero_critic = zero_critic
-        self.LSTM = LSTM
-        self.LSTM_policy = LSTM_policy
-        self.lstm_burn_in = lstm_burn_in
-        self.hidden_dim_lstm = hidden_dim_lstm
-        self.seq_length = seq_length
-        self.overlap = overlap
-        self.niter = 0
-        self.n_steps = n_steps
-        self.beta = beta
-        self.N_ATOMS = N_ATOMS
-        self.Vmax = vmax
-        self.Vmin = vmin
-        self.DELTA_Z = DELTA_Z
-        self.D4PG = D4PG
-        self.TD3 = TD3
-        self.TD3_noise = TD3_noise
-        self.TD3_delay_steps = TD3_delay_steps
-        if not TD3:
-            self.TD3_delay_steps = 1
-        self.EM_lr = EM_lr
-        self.I2A = I2A
-        self.obs_weight = obs_weight
-        self.rew_weight = rew_weight
-        self.ws_weight = ws_weight
-        self.ws_onehot = processor(torch.FloatTensor(self.batch_size,self.world_status_dim),device=self.device,torch_device=self.torch_device) 
-        self.team_count = [0 for i in range(self.nagents_team)]
-        self.opp_count = [0 for i in range(self.nagents_opp)]
-        self.team_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
-                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
-                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
-                                 delta = DELTA_Z,D4PG=D4PG,
-                                 TD3=TD3,
-                                 I2A = I2A,EM_lr=EM_lr,
-                                 world_status_dim=self.world_status_dim,
-                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
-                                      device=device,
-                                      imagination_policy_branch=imagination_policy_branch,
-                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                      LSTM=LSTM, LSTM_policy=LSTM_policy,seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
-                                      
-                                 **params)
-                       for params in team_agent_init_params]
-        
-        self.opp_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
-                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
-                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
-                                 delta = DELTA_Z,D4PG=D4PG,
-                                 TD3=TD3,
-                                 I2A = I2A,EM_lr=EM_lr,
-                                 world_status_dim=self.world_status_dim,
-                                     rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
-                                     imagination_policy_branch=imagination_policy_branch,
-                                     critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                     LSTM=LSTM, LSTM_policy=LSTM_policy, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
-                                 **params)
-                       for params in opp_agent_init_params]
 
 
     @property
@@ -3589,39 +3615,6 @@ class MADDPG(object):
             torch.save(save_dicts[agentID], filename +("agent2d/agent2D.pth"))
 
         self.prep_training(device=self.device,torch_device=torch_device)
-        
-    @classmethod
-    def init_from_save_selfplay(cls, filenames=list,nagents=1):
-        """
-        Instantiate instance of this class from file created by 'save' method
-        """
-        random_sessions = random.sample(filenames,nagents)
-        save_dicts =  [torch.load(filename) for filename in random_sessions]
-        instance = cls(**save_dicts[0]['init_dict'])
-        instance.init_dict = save_dicts[0]['init_dict']
-        
-        for a, params in zip(instance.nagents_team, random.sample(random.sample(save_dicts,1)['agent_params'],1)):
-            a.load_params(params)
-
-        for a, params in zip(instance.opp_agents,  random.sample(random.sample(save_dicts,1)['agent_params'],1)):
-            a.load_params(params)
-
-        return instance
-
-    @classmethod
-    def init_from_save_evaluation(cls, filenames,nagents=1):
-        """
-        Instantiate instance of this class from file created by 'save' method
-        """
-        save_dicts = np.asarray([torch.load(filename) for filename in filenames]) # use only filename
-        instance = cls(**save_dicts[0]['init_dict'])
-        instance.init_dict = save_dicts[0]['init_dict']
-
-        for i in range(nagents):
-            instance.team_agents[i].load_params(save_dicts[i]['agent_params'] ) # first n agents
-            
-
-        return instance
     
     def save_ensembles(self, ensemble_path,current_ensembles):
         """
