@@ -10,12 +10,21 @@ from .misc import hard_update, gumbel_softmax, onehot_from_logits,processor,e_gr
 from .noise import OUNoise
 import numpy as np
 
-# def init_agents(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-#             num_in_reducer, maddpg=object, only_policy):
+def init_agents(num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
+            num_in_reducer, config=None, maddpg=object, only_policy=False):
     
-#     if conifg.lstm_pol and config.lstm_crit:
-#         return 
-
+    if conifg.lstm_pol and config.lstm_crit:
+        return RecAgent(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, 
+                        num_out_EM, num_in_reducer)
+    elif config.lstm_pol:
+        return RecPolAgent(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, 
+                        num_out_EM, num_in_reducer)
+    elif config.lstm_crit:
+        return RecCritAgent(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, 
+                        num_out_EM, num_in_reducer)
+    else:
+        return NonRecAgent(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, 
+                        num_out_EM, num_in_reducer)
 
 class Base_Agent(object):
     def __init__(self, config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
@@ -361,7 +370,7 @@ class RecPolAgent(Base_Agent):
                 num_in_reducer, maddpg=object, only_policy):
         super().__init__(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
                         num_in_reducer, maddpg=object, only_policy)
-        self.policy = LSTM_Actor(self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
+        self.policy = LSTM_Actor(config,self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
                                 hidden_dim=config.hidden_dim,
                                 discrete_action=config.discrete_action,
                                 norm_in= self.norm_in,agent=self,I2A=self.I2A,rollout_steps=rollout_steps,
@@ -372,7 +381,7 @@ class RecPolAgent(Base_Agent):
             self.policy = nn.DataParallel(self.policy)
         
         if not only_policy:
-            self.target_policy = LSTM_Actor(self.I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
+            self.target_policy = LSTM_Actor(config,self.I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
                                                     hidden_dim=config.hidden_dim,discrete_action=config.discrete_action,
                                                     norm_in= self.norm_in,agent=self,I2A=self.I2A,
                                                     rollout_steps=rollout_steps,EM = self.EM, 
@@ -382,12 +391,12 @@ class RecPolAgent(Base_Agent):
             if torch.cuda.device_count() > 1 and maddpg.data_parallel:
                 self.target_policy = nn.DataParallel(self.target_policy)
         
-            self.critic = MLPNetwork_Critic(num_in_critic, 1,
+            self.critic = MLPNetwork_Critic(config, num_in_critic, 1,
                                         hidden_dim=config.hidden_dim,
                                         norm_in= self.norm_in,agent=self,n_atoms=config.n_atoms,
                                         D4PG=config.d4pg,TD3=config.td3,maddpg=maddpg)
 
-            self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
+            self.target_critic = MLPNetwork_Critic(config, num_in_critic, 1,
                                                     hidden_dim=hidden_dim,
                                                     norm_in= self.norm_in,agent=self,n_atoms=config.n_atoms,
                                                     D4PG=config.d4pg,TD3=config.td3,maddpg=maddpg)
@@ -412,31 +421,31 @@ class RecCritAgent(Base_Agent):
         super().__init__(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
                         num_in_reducer, maddpg=object, only_policy)
         
-        self.policy = I2A_Network(I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
-                        hidden_dim=hidden_dim,
-                        discrete_action=discrete_action,
-                        norm_in= self.norm_in,agent=self,I2A=I2A,rollout_steps=rollout_steps,
+        self.policy = I2A_Network(config,self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
+                        hidden_dim=config.hidden_dim,
+                        discrete_action=config.discrete_action,
+                        norm_in= self.norm_in,agent=self,I2A=self.I2A,rollout_steps=self.rollout_steps,
                         EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
-                                LSTM_hidden=LSTM_hidden,maddpg=maddpg)
+                        LSTM_hidden=config.lstm_hidden,maddpg=maddpg)
         
         if torch.cuda.device_count() > 1 and config.data_parallel:
             self.policy = nn.DataParallel(self.policy)
         
         if not only_policy:
-            self.target_policy = I2A_Network(I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
-                                                hidden_dim=hidden_dim,
-                                                discrete_action=discrete_action,
-                                                norm_in= self.norm_in,agent=self,I2A=config.i2a,rollout_steps=self.rollout_steps,
+            self.target_policy = I2A_Network(config,self.I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
+                                                hidden_dim=config.hidden_dim,
+                                                discrete_action=config.discrete_action,
+                                                norm_in= self.norm_in,agent=self,I2A=self.I2A,rollout_steps=self.rollout_steps,
                                                 EM = self.EM, pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                                 LSTM_hidden=config.lstm_hidden,maddpg=maddpg)
             if torch.cuda.device_count() > 1 and config.data_parallel:
                 self.target_policy = nn.DataParallel(self.target_policy)
 
 
-            self.critic = LSTMNetwork_Critic(num_in_critic, 1,
+            self.critic = LSTMNetwork_Critic(config, num_in_critic, 1,
                                             hidden_dim=config.hidden_dim, agent=self, n_atoms=config.n_atoms, 
                                             D4PG=config.d4pg,TD3=config.td3,maddpg=maddpg)
-            self.target_critic = LSTMNetwork_Critic(num_in_critic, 1,
+            self.target_critic = LSTMNetwork_Critic(config, num_in_critic, 1,
                                             hidden_dim=config.hidden_dim, agent=self, n_atoms=config.n_atoms, 
                                             D4PG=config.d4pg,TD3=config.td3,maddpg=maddpg)
             
@@ -459,7 +468,7 @@ class RecAgent(Base_Agent):
         super().__init__(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
                         num_in_reducer, maddpg=object, only_policy)
         
-        self.policy = LSTM_Actor(self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
+        self.policy = LSTM_Actor(config,self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
                                 hidden_dim=config.hidden_dim,
                                 discrete_action=config.discrete_action,
                                 norm_in= self.norm_in,agent=self,I2A=self.I2A,rollout_steps=self.rollout_steps,
@@ -470,7 +479,7 @@ class RecAgent(Base_Agent):
             self.policy = nn.DataParallel(self.policy)
         
         if not only_policy:
-            self.target_policy = LSTM_Actor(self.I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
+            self.target_policy = LSTM_Actor(config,self.I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
                                             hidden_dim=config.hidden_dim,discrete_action=config.discrete_action,
                                             norm_in= self.norm_in,agent=self,I2A=self.I2A,
                                             rollout_steps=self.rollout_steps,EM = self.EM, 
@@ -480,10 +489,10 @@ class RecAgent(Base_Agent):
             if torch.cuda.device_count() > 1 and config..data_parallel:
                 self.target_policy = nn.DataParallel(self.target_policy)
             
-            self.critic = LSTMNetwork_Critic(num_in_critic, 1,
+            self.critic = LSTMNetwork_Critic(config, num_in_critic, 1,
                                             hidden_dim=config.hidden_dim, agent=self, n_atoms=config.n_atoms, 
                                             D4PG=config.d4pg,TD3=config.td3,maddpg=maddpg)
-            self.target_critic = LSTMNetwork_Critic(num_in_critic, 1,
+            self.target_critic = LSTMNetwork_Critic(config, num_in_critic, 1,
                                             hidden_dim=config.hidden_dim, agent=self, n_atoms=config.n_atoms, 
                                             D4PG=config.d4pg,TD3=config.td3,maddpg=maddpg)
             
@@ -503,7 +512,7 @@ class NonRecAgent(Base_Agent):
         super().__init__(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
                         num_in_reducer, maddpg=object, only_policy)
         
-        self.policy = I2A_Network(self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
+        self.policy = I2A_Network(config,self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
                         hidden_dim=config.hidden_dim,
                         discrete_action=config.discrete_action,
                         norm_in= self.norm_in,agent=self,I2A=self.I2A,
@@ -516,7 +525,7 @@ class NonRecAgent(Base_Agent):
             self.policy = nn.DataParallel(self.policy)
         
         if not only_policy:
-            self.target_policy = I2A_Network(self.I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
+            self.target_policy = I2A_Network(config,self.I2A_num_in_pol, num_out_pol,self.num_total_out_EM,
                                             hidden_dim=config.hidden_dim,
                                             discrete_action=config.discrete_action,
                                             norm_in= self.norm_in,agent=self,I2A=self.I2A,
@@ -528,12 +537,12 @@ class NonRecAgent(Base_Agent):
             if torch.cuda.device_count() > 1 and config.data_parallel:
                 self.target_policy = nn.DataParallel(self.target_policy)
             
-            self.critic = MLPNetwork_Critic(num_in_critic, 1,
+            self.critic = MLPNetwork_Critic(config, num_in_critic, 1,
                                         hidden_dim=config.hidden_dim,
                                         norm_in= self.norm_in,agent=self,
                                         n_atoms=config.n_atoms,D4PG=config.d4pg,TD3=config.td3,maddpg=maddpg)
 
-            self.target_critic = MLPNetwork_Critic(num_in_critic, 1,
+            self.target_critic = MLPNetwork_Critic(config, num_in_critic, 1,
                                         hidden_dim=config.hidden_dim,
                                         norm_in= self.norm_in,agent=self,
                                         n_atoms=config.n_atoms,D4PG=config.d4pg,TD3=config.td3,maddpg=maddpg)

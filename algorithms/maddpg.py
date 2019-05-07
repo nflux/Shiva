@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from utils.networks import MLPNetwork_Actor,MLPNetwork_Critic
 from utils.misc import soft_update, average_gradients, onehot_from_logits, gumbel_softmax,hard_update,zero_params,distr_projection,processor
-from utils.agents import DDPGAgent
+import utils.agents as agents
 import numpy as np
 import random
 from torch.autograd import Variable
@@ -74,7 +74,7 @@ class BASE_MADDPG(object):
         self.multi_gpu = config.multi_gpu
         self.data_parallel = config.data_parallel
         self.device = config.device
-        self.torch_device = torch.device(config.device)
+        self.torch_device = config.torch_device
         self.gamma = config.gamma
         self.tau = config.tau
         self.a_lr = config.a_lr
@@ -98,7 +98,7 @@ class BASE_MADDPG(object):
         self.overlap = config.overlap
         self.niter = 0
         self.n_steps = config.n_steps
-        self.beta = config.beta
+        self.beta = config.init_beta
         self.N_ATOMS = config.n_atoms
         self.Vmax = config.vmax
         self.Vmin = config.vmin
@@ -117,6 +117,9 @@ class BASE_MADDPG(object):
         self.ws_onehot = processor(torch.FloatTensor(self.batch_size,self.world_status_dim),device=self.device,torch_device=self.torch_device) 
         self.team_count = [0 for i in range(self.nagents_team)]
         self.opp_count = [0 for i in range(self.nagents_opp)]
+        
+        self.team_agents = None
+        self.opp_agents = None
     
     @classmethod
     def init_from_env(cls, env, config, agent_alg="MADDPG", adversary_alg="MADDPG", only_policy=False):
@@ -199,64 +202,7 @@ class BASE_MADDPG(object):
             
 
         return instance
-
-class RMADDPG(BASE_MADDPG):
-    def __init__(self, env, config, only_policy = False):
-       self = super().init_from_env(env, config, only_policy)
-
-       self.team_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
-                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
-                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
-                                 delta = DELTA_Z,D4PG=D4PG,
-                                 TD3=TD3,
-                                 I2A = I2A,EM_lr=EM_lr,
-                                 world_status_dim=self.world_status_dim,
-                                      rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,
-                                      device=device,
-                                      imagination_policy_branch=imagination_policy_branch,
-                                      critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                      LSTM=LSTM, LSTM_policy=LSTM_policy,seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
-                                 **params)
-                       for params in self.team_net_params]
-        
-        self.opp_agents = [DDPGAgent(discrete_action=discrete_action, maddpg=self,
-                                 hidden_dim=hidden_dim,a_lr=a_lr, c_lr=c_lr,
-                                 n_atoms = N_ATOMS, vmax = vmax, vmin = vmin,
-                                 delta = DELTA_Z,D4PG=D4PG,
-                                 TD3=TD3,
-                                 I2A = I2A,EM_lr=EM_lr,
-                                 world_status_dim=self.world_status_dim,
-                                     rollout_steps = rollout_steps,LSTM_hidden=LSTM_hidden,device=device,
-                                     imagination_policy_branch=imagination_policy_branch,
-                                     critic_mod_both = critic_mod_both, critic_mod_act=critic_mod_act, critic_mod_obs=critic_mod_obs,
-                                     LSTM=LSTM, LSTM_policy=LSTM_policy, seq_length=seq_length, hidden_dim_lstm=hidden_dim_lstm,reduced_obs_dim=reduced_obs_dim,
-                                 **params)
-                       for params in self.team_net_params]
-       
-
-class MADDPG(object):
-    """
-    Wrapper class for DDPG-esque (i.e. also MADDPG) agents in multi-agent task
-    """
-    def __init__(self, config, team_net_params, team_alg_types='MADDPG', opp_alg_types='MADDPG', only_policy=False): 
-
-        """
-        Inputs:
-            agent_init_params (list of dict): List of dicts with parameters to
-                                              initialize each agent
-                num_in_pol (int): Input dimensions to policy
-                num_out_pol (int): Output dimensions to policy
-                num_in_critic (int): Input dimensions to critic
-            alg_types (list of str): Learning algorithm for each agent (DDPG
-                                       or MADDPG)
-            gamma (float): Discount factor
-            tau (float): Target update rate
-            lr (float): Learning rate for policy and critic
-            hidden_dim (int): Number of hidden dimensions for networks
-            discrete_action (bool): Whether or not to use discrete action space
-        """
-
-
+    
     @property
     def team_policies(self):
         return [a.policy for a in self.team_agents]
@@ -280,7 +226,6 @@ class MADDPG(object):
             scale (float): scale of beta
         """
         self.beta = beta
-
     
     def scale_noise(self, scale):
         """
@@ -300,7 +245,68 @@ class MADDPG(object):
         
         for a in self.opp_agents:
             a.reset_noise()
+    
+    def discrete_param_indices(self,discrete):
+        if discrete == 0:
+            return [0,1]
+        elif discrete == 1:
+            return [2]
+        if discrete == 2:
+            return [3,4]
+          
+    # zeros the params corresponding to the non-chosen actions
+    def zero_params(self,params,actions_oh):
+        for a,p in zip(actions_oh,params):
+            if np.argmax(a.data.numpy()) == 0:
+                p[2 + len(a)] = 0 # offset by num of actions to get params
+                p[3 + len(a)] = 0
+                p[4 + len(a)] = 0
+            if np.argmax(a.data.numpy()) == 1:
+                p[0 + len(a)] = 0
+                p[1 + len(a)] = 0
+                p[3 + len(a)] = 0
+                p[4 + len(a)] = 0
+            if np.argmax(a.data.numpy()) == 2:
+                p[0 + len(a)] = 0
+                p[1 + len(a)] = 0
+                p[2 + len(a)] = 0
+        return params
+    
+    def step(self, team_observations, opp_observations,team_e_greedy,opp_e_greedy,parallel, explore=False,LSTM_policy=False):
+        """
+        Take a step forward in environment with all agents
+        Inputs:
+            observations: List of observations for each agent
+            explore (boolean): Whether or not to add exploration noise
+        Outputs:
+            actions: List of actions for each agent
+        """
+        if self.I2A:
+            if self.conifg.lstm_pol:
+                team_acs, rec_state = self.team_agents[0].policy(team_observations)
+                opp_acs,opp_rec_state = self.opp_agents[0].policy(opp_observations)
+            else:
+                team_acs = self.team_agents[0].policy(team_observations)
+                opp_acs = self.opp_agents[0].policy(opp_observations)
 
+            return [a.step(obs,ran, acs,explore=explore) for a,ran, obs,acs in zip(self.team_agents, team_e_greedy,team_observations,team_acs)], \
+                    [a.step(obs,ran, acs,explore=explore) for a,ran, obs,acs in zip(self.opp_agents,opp_e_greedy, opp_observations,opp_acs)]
+
+
+        else:                
+            return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
+                    [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
+
+class RMADDPG(BASE_MADDPG):
+    def __init__(self, env, config, only_policy = False):
+        self = super().init_from_env(env, config, only_policy)
+
+        self.team_agents = [agents.init_agents(config=config,maddpg=self,only_policy=only_policy, 
+                            **params) for params in self.team_net_params]
+        
+        self.opp_agents = [agents.init_agents(config=config,maddpg=self,only_policy=only_policy, 
+                            **params) for params in self.team_net_params]
+    
     def repackage_hidden(self,h):
         """Wraps hidden states in new Tensors, to detach them from their history."""
         if isinstance(h, torch.Tensor):
@@ -346,32 +352,7 @@ class MADDPG(object):
             self.team_agents[0].critic.set_hidden(h1, h2)
         if target:
             self.team_agents[0].target_critic.set_hidden(h1,h2)
-
-    def step(self, team_observations, opp_observations,team_e_greedy,opp_e_greedy,parallel, explore=False,LSTM_policy=False):
-        """
-        Take a step forward in environment with all agents
-        Inputs:
-            observations: List of observations for each agent
-            explore (boolean): Whether or not to add exploration noise
-        Outputs:
-            actions: List of actions for each agent
-        """
-        if self.I2A:
-            if LSTM_policy:
-                team_acs, rec_state = self.team_agents[0].policy(team_observations)
-                opp_acs,opp_rec_state = self.opp_agents[0].policy(opp_observations)
-            else:
-                team_acs = self.team_agents[0].policy(team_observations)
-                opp_acs = self.opp_agents[0].policy(opp_observations)
-
-            return [a.step(obs,ran, acs,explore=explore) for a,ran, obs,acs in zip(self.team_agents, team_e_greedy,team_observations,team_acs)], \
-                    [a.step(obs,ran, acs,explore=explore) for a,ran, obs,acs in zip(self.opp_agents,opp_e_greedy, opp_observations,opp_acs)]
-
-
-        else:                
-            return [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.team_agents, team_e_greedy,team_observations)], \
-                    [a.step(obs,ran, explore=explore) for a,ran, obs in zip(self.opp_agents,opp_e_greedy, opp_observations)]
-
+    
     def get_recurrent_states(self, exps, obs_dim, acs_dim, nagents, hidden_dim_lstm,torch_device):
         ep_length = len(exps)
         self.zero_hidden(1,actual=True,target=True,torch_device=torch_device)
@@ -418,38 +399,29 @@ class MADDPG(object):
                 self.zero_hidden(1,actual=True,target=True,torch_device=torch_device)
                 del temp_all_hs
                 torch.cuda.empty_cache()
+       
 
+class MADDPG(object):
+    """
+    Wrapper class for DDPG-esque (i.e. also MADDPG) agents in multi-agent task
+    """
+    def __init__(self, config, team_net_params, team_alg_types='MADDPG', opp_alg_types='MADDPG', only_policy=False): 
 
-
-
-
-    def discrete_param_indices(self,discrete):
-        if discrete == 0:
-            return [0,1]
-        elif discrete == 1:
-            return [2]
-        if discrete == 2:
-            return [3,4]
-                     
-                     
-    # zeros the params corresponding to the non-chosen actions
-    def zero_params(self,params,actions_oh):
-        for a,p in zip(actions_oh,params):
-            if np.argmax(a.data.numpy()) == 0:
-                p[2 + len(a)] = 0 # offset by num of actions to get params
-                p[3 + len(a)] = 0
-                p[4 + len(a)] = 0
-            if np.argmax(a.data.numpy()) == 1:
-                p[0 + len(a)] = 0
-                p[1 + len(a)] = 0
-                p[3 + len(a)] = 0
-                p[4 + len(a)] = 0
-            if np.argmax(a.data.numpy()) == 2:
-                p[0 + len(a)] = 0
-                p[1 + len(a)] = 0
-                p[2 + len(a)] = 0
-        return params
-
+        """
+        Inputs:
+            agent_init_params (list of dict): List of dicts with parameters to
+                                              initialize each agent
+                num_in_pol (int): Input dimensions to policy
+                num_out_pol (int): Output dimensions to policy
+                num_in_critic (int): Input dimensions to critic
+            alg_types (list of str): Learning algorithm for each agent (DDPG
+                                       or MADDPG)
+            gamma (float): Discount factor
+            tau (float): Target update rate
+            lr (float): Learning rate for policy and critic
+            hidden_dim (int): Number of hidden dimensions for networks
+            discrete_action (bool): Whether or not to use discrete action space
+        """
 
     def update(self, sample, agent_i, side='team', parallel=False, logger=None):
         """
@@ -2610,11 +2582,6 @@ class MADDPG(object):
                 print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
 
             return 0
-
-
-
-
-
    
     def pretrain_prime(self, sample, agent_i,side='team', parallel=False, logger=None):
         obs, acs, rews, next_obs, dones,MC_rews,n_step_rews,ws = sample

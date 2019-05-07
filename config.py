@@ -72,6 +72,7 @@ class RoboConfig(Config):
             self.conf_dict['device'] = 'cpu'
             self.conf_dict['to_gpu'] = False
             torch.set_num_threads(self.conf_dict['num_threads'])
+        self.conf_dict['torch_device'] = torch.device(self.conf_dict['device'])
         
         if self.conf_dict['al'] == 'high':
             self.conf_dict['discrete_action'] = True
