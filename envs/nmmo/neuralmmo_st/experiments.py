@@ -4,29 +4,31 @@ import os
 
 #Oversimplified user specification
 #for 1-3 collaborators
-USER = 'your-username'
-if USER == 'your-username':
-   #Thousandth
-   prefix = 'test'
-   remote = False
-   local  = not remote
+# USER = 'your-username'
+# if USER == 'your-username':
+class Experiments:
+   def __init__(self):
+      #Thousandth
+      self.prefix = 'test'
+      self.remote = False
+      self.local  = not remote
 
-   test = True#local
-   best = True#local
-   load = True#local
+      self.test = True#local
+      self.best = True#local
+      self.load = True#local
 
-   sample = not test
-   singles = True
-   tournaments = False
-   
-   exps = {}
-   szs = [128]
-   #For full distributed runs
-   #szs = (16, 32, 64, 128)
-   names = 'law chaos'.split()
-   confs = (Law, Chaos)
+      self.sample = not test
+      self.singles = True
+      self.tournaments = False
+      
+      self.exps = {}
+      self.szs = [128]
+      #For full distributed runs
+      #szs = (16, 32, 64, 128)
+      self.names = 'law chaos'.split()
+      self.confs = (Law, Chaos)
 
-   def makeExp(name, conf, sz, test=False):
+   def makeExp(self,name, conf, sz, test=False):
       NENT, NPOP = sz, sz//16
       ROOT = 'resource/exps/' + name + '/'
       try:
@@ -38,23 +40,23 @@ if USER == 'your-username':
          pass
       MODELDIR = ROOT + 'model/'
 
-      exp = conf(remote, 
+      exp = conf(self.remote, 
             NENT=NENT, NPOP=NPOP,
             MODELDIR=MODELDIR,
-            SAMPLE=sample,
-            BEST=best,
-            LOAD=load,
-            TEST=test)
-      exps[name] = exp
+            SAMPLE=self.sample,
+            BEST=self.best,
+            LOAD=self.load,
+            TEST=self.test)
+      self.exps[name] = exp
       print(name, ', NENT: ', NENT, ', NPOP: ', NPOP)
 
-   def makeExps():
+   def makeExps(self):
       #Training runs
-      for label, conf in zip(names, confs):
+      for label, conf in zip(self.names, self.confs):
          for sz in szs:
             name = prefix + label + str(sz)
-            makeExp(name, conf, sz, test=test)
+            makeExp(name, conf, sz, test=self.test)
           
    #Sample config
-   makeExps()
-   makeExp('sample', Chaos, 128, test=True)
+   # makeExps()
+   # makeExp('sample', Chaos, 128, test=True)
