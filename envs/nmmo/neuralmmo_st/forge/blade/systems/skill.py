@@ -1,7 +1,7 @@
 import abc
 
 import numpy as np
-from forge.blade.systems import experience
+from . import experience
 
 class Skills:
    def __init__(self):

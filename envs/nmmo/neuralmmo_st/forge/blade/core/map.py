@@ -1,8 +1,8 @@
 from pdb import set_trace as T
 import numpy as np
 
-from forge.blade import core
-from forge.blade.lib import enums, utils
+from .. import core
+from ..lib import enums, utils
 
 def loadTiled(fPath, tiles, nCounts):
     import pytmx

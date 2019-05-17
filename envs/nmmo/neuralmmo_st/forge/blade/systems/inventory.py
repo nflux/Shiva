@@ -1,4 +1,4 @@
-from forge.blade.item import item, armor
+from ..item import item, armor
 
 class Inventory:
    def __init__(self):

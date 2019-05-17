@@ -4,7 +4,7 @@
 
 import numpy as np
 from queue import Queue
-from forge.blade.lib import enums, utils
+from ....forge.blade.lib import enums, utils
 """
 Synthetic Training
 Procedural control

@@ -11,7 +11,7 @@ class Config:
          self.ROOT = '/root/code/Projekt-Godsword/' + self.ROOT
 
    def defaults(self):
-      self.ROOT = 'resource/maps/procedural/map'
+      self.ROOT = 'neuralmmo_st/resource/maps/procedural/map'
       self.SUFFIX = '/map.tmx'
       self.BORDER = 9 # Number of lava tiles on the outside
       self.SZ =  62 # 62 = 80 - 2*9

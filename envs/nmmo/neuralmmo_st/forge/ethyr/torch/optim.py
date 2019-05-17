@@ -4,9 +4,9 @@ from torch import optim
 from torch.autograd import Variable
 from pdb import set_trace as T
 
-from forge.ethyr import rollouts
-from forge.ethyr.torch import loss
-from forge.ethyr.torch import param
+from ....forge.ethyr import rollouts
+from ....forge.ethyr.torch import loss
+from ....forge.ethyr.torch import param
 
 class ManualAdam(optim.Adam):
    def step(self, grads):

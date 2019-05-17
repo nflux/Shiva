@@ -1,4 +1,4 @@
-from forge.blade.action import action, v2
+from ....forge.blade.action import action, v2
 
 def isInt(x):
    return type(x) in (float, int) and int(x) == x

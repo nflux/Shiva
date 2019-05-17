@@ -1,6 +1,6 @@
-from forge.blade import systems
-from forge.blade.systems import skill
-from forge.blade.item import item, ore
+from .. import systems
+from ..systems import skill
+from ..item import item, ore
 
 class Knife(item.Weapon):
    createSkill = skill.Smithing

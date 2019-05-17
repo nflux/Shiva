@@ -1,5 +1,5 @@
-from forge.blade.systems import skill
-from forge.blade.item import item
+from ..systems import skill
+from ..item import item
 
 class Ore(item.Item):
    createSkill = skill.Mining

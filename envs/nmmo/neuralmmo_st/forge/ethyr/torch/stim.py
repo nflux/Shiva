@@ -1,5 +1,5 @@
-from forge.ethyr.torch import utils as tu
-from forge.ethyr import stim
+from ....forge.ethyr.torch import utils as tu
+from ....forge.ethyr import stim
 
 from pdb import set_trace as T
 

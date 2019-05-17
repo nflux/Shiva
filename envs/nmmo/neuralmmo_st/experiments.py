@@ -11,13 +11,13 @@ class Experiments:
       #Thousandth
       self.prefix = 'test'
       self.remote = False
-      self.local  = not remote
+      self.local  = not self.remote
 
       self.test = True#local
       self.best = True#local
       self.load = True#local
 
-      self.sample = not test
+      self.sample = not self.test
       self.singles = True
       self.tournaments = False
       
@@ -30,7 +30,7 @@ class Experiments:
 
    def makeExp(self,name, conf, sz, test=False):
       NENT, NPOP = sz, sz//16
-      ROOT = 'resource/exps/' + name + '/'
+      ROOT = 'neuralmmo_st/resource/exps/' + name + '/'
       try:
          os.mkdir(ROOT)
          os.mkdir(ROOT + 'model')
@@ -53,9 +53,9 @@ class Experiments:
    def makeExps(self):
       #Training runs
       for label, conf in zip(self.names, self.confs):
-         for sz in szs:
-            name = prefix + label + str(sz)
-            makeExp(name, conf, sz, test=self.test)
+         for sz in self.szs:
+            name = self.prefix + label + str(sz)
+            self.makeExp(name, conf, sz, test=self.test)
           
    #Sample config
    # makeExps()

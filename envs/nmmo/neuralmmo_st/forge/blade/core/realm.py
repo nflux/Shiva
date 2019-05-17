@@ -4,8 +4,8 @@ import numpy as np
 from pdb import set_trace as T
 import numpy as np
 
-from forge import trinity as Trinity
-from forge.blade import entity, core
+from ....forge import trinity as Trinity
+from ...blade import entity, core
 from itertools import chain
 from copy import deepcopy
 

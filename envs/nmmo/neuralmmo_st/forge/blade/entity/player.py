@@ -1,6 +1,6 @@
 import numpy as np
-from forge.blade.systems import ai
-from forge.blade.lib.enums import Material, Neon
+from ....forge.blade.systems import ai
+from ....forge.blade.lib.enums import Material, Neon
 from pdb import set_trace as T
 
 class Stat:

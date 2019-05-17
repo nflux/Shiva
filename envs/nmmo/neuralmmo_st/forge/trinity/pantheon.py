@@ -6,11 +6,11 @@ import time
 from collections import defaultdict
 from torch.nn.parameter import Parameter
 
-from forge.ethyr.torch import save
-from forge.ethyr.torch.optim import ManualAdam, ManualSGD
-from forge.ethyr.torch.param import getParameters 
-from forge.blade.lib.log import Quill
-from forge import trinity
+from ...forge.ethyr.torch import save
+from ...forge.ethyr.torch.optim import ManualAdam, ManualSGD
+from ...forge.ethyr.torch.param import getParameters 
+from ...forge.blade.lib.log import Quill
+from ...forge import trinity
 
 class Model:
    def __init__(self, config, args):

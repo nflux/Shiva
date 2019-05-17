@@ -1,6 +1,6 @@
 from pdb import set_trace as T
-from forge.blade.action import action
-from forge.blade.lib import utils, enums
+from ....forge.blade.action import action
+from ....forge.blade.lib import utils, enums
 import numpy as np
 
 class Arg:

@@ -1,7 +1,7 @@
 from pdb import set_trace as T
-from forge.blade import systems
-from forge.blade.systems import skill
-from forge.blade.item import item, ore
+from .. import systems
+from ..systems import skill
+from ..item import item, ore
 
 class Armor(item.Item):
    createSkill = skill.Smithing

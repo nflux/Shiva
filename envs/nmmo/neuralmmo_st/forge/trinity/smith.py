@@ -1,6 +1,6 @@
 import ray, pickle
 from pdb import set_trace as T
-from forge.blade import core, lib
+from ...forge.blade import core, lib
 
 #Wrapper for remote async multi environments (realms)
 #Supports both the native and vecenv per-env api
@@ -54,7 +54,7 @@ class Blacksmith:
       lib.ray.init(args.ray)
 
    def render(self):
-      from forge.embyr.twistedserver import Application
+      from ...forge.embyr.twistedserver import Application
       Application(self.env, self.renderStep)
 
 #Example runner using the (slower) vecenv api

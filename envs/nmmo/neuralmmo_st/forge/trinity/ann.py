@@ -6,12 +6,12 @@ from torch import nn
 from torch.nn import functional as F
 from torch.distributions import Categorical
 
-from forge.blade.action.tree import ActionTree
-from forge.blade.action.v2 import ActionV2
-from forge.blade.lib.enums import Neon
-from forge.blade.lib import enums
-from forge.ethyr import torch as torchlib
-from forge.blade import entity
+from ...forge.blade.action.tree import ActionTree
+from ...forge.blade.action.v2 import ActionV2
+from ...forge.blade.lib.enums import Neon
+from ...forge.blade.lib import enums
+from ...forge.ethyr import torch as torchlib
+from ...forge.blade import entity
 
 def classify(logits):
    if len(logits.shape) == 1:

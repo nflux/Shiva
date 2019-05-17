@@ -1,5 +1,5 @@
 from pdb import set_trace as T
-from forge.blade.lib.enums import Palette
+from ...forge.blade.lib.enums import Palette
 import numpy as np
 
 class God:

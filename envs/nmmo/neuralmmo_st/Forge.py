@@ -3,7 +3,7 @@ from pdb import set_trace as T
 import argparse
 
 import experiments
-from forge.trinity import smith, Trinity, Pantheon, God, Sword
+from .forge.trinity import smith, Trinity, Pantheon, God, Sword
 
 def parseArgs():
    parser = argparse.ArgumentParser('Projekt Godsword')

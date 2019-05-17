@@ -1,4 +1,4 @@
-from forge.blade.systems import skill
+from ...blade.systems import skill
 
 class Item:
    createSkill = None

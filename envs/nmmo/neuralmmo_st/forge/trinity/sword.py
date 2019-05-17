@@ -2,19 +2,19 @@ from pdb import set_trace as T
 from collections import defaultdict
 import numpy as np
 
-from forge import trinity
-from forge.ethyr.torch.param import setParameters, zeroGrads
-from forge.ethyr.torch import optim
-from forge.ethyr.rollouts import Rollout
+from ...forge import trinity
+from ...forge.ethyr.torch.param import setParameters, zeroGrads
+from ...forge.ethyr.torch import optim
+from ...forge.ethyr.rollouts import Rollout
 
 import pygame # for direct human-controlled movement
 import os
 # import keyboard # needs root access!
-from forge.blade.systems import ai
+from ...forge.blade.systems import ai
 
-from forge.blade.action.v2 import ActionV2
-import forge.blade.action.v2 as ActionsV2
-from forge.blade.action.tree import ActionTree
+from ...forge.blade.action.v2 import ActionV2
+# import forge.blade.action.v2 as ActionsV2
+from ...forge.blade.action.tree import ActionTree
 
 class Sword:
    PROCEDURAL_MOVE = (0,0)

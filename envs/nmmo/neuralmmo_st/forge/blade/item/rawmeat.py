@@ -1,5 +1,5 @@
-from forge.blade.systems import Skill
-from forge.blade.item import Item
+from ..systems import Skill
+from ..item import Item
 
 class RawMeat(Item.Item):
    useSkill = Skill.Cooking

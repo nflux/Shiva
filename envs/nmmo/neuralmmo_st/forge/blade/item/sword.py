@@ -1,6 +1,6 @@
-from forge.blade.systems.Recipe import Recipe
-from forge.blade.systems import Skill
-from forge.blade.item import Item, Ore
+from ..systems.Recipe import Recipe
+from ..systems import Skill
+from ..item import Item, Ore
 
 
 class Sword(Item.Weapon):

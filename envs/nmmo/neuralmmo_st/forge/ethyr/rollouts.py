@@ -2,7 +2,7 @@ from pdb import set_trace as T
 from itertools import chain 
 import numpy as np
 
-from forge.blade.lib.log import Blob
+from ...forge.blade.lib.log import Blob
 
 #Untested function
 def discountRewards(rewards, gamma=0.99):

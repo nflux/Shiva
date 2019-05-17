@@ -2,7 +2,7 @@ from pdb import set_trace as T
 import numpy as np
 import torch
 import time
-from forge.blade.lib.utils import EDA
+from ....forge.blade.lib.utils import EDA
 
 class Resetter:
    def __init__(self, resetTol):
