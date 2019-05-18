@@ -67,29 +67,22 @@ class GodswordServerProtocol(WebSocketServerProtocol):
         print("Message", packet)
 
     def onConnect(self, request):
-        print("WebSocket connection request: {}".format(request))
+        # print("WebSocket connection request: {}".format(request))
         realm = self.factory.realm.envs[0]
-        print(realm)
-        print("After Realms")
         self.realm = realm
         self.frame += 1
 
         data = self.serverPacket()
         sz = data['environment'].shape[0]
-        print("After server Packet")
 
         self.vals = None
         if data['values'] is not None:
            self.vals = self.visVals(data['values'], sz)
 
-        print("Before Update")
         self.sendUpdate()
-        print("Update Sent")
 
     def serverPacket(self):
-        print(type(self.realm.clientData))
         data = self.realm.clientData.remote()
-        print("Client Data")
         data = ray.get(data)
         data = pickle.loads(data)
         return data

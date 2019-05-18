@@ -92,6 +92,8 @@ class Native(Blacksmith):
    #With no communication -- all on the env cores.
    def run(self):
       recvs = self.env.run(self.pantheon.model)
+      with open("output.txt", "a") as f:
+         print(recvs, file=f)
       self.pantheon.step(recvs)
       self.rayBuffers()
 

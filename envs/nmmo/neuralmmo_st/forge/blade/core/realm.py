@@ -36,7 +36,6 @@ class Realm:
       if self.values is None and hasattr(self, 'sword'):
          print("Going into visvals")
          self.values = self.sword.anns[0].visVals()
-      print("Passing values")
       ret = {
             'environment': self.world.env,
             'entities': dict((k, v.packet()) for k, v in self.desciples.items()),
@@ -83,7 +82,7 @@ class Realm:
 
       ent.move   = ActionArgs(move, moveArgs)
       ent.attack = ActionArgs(attack, attackArgs[0])
-      print("[Realm-stepEnt]attackArgs=" + str(attackArgs))
+      # print("[Realm-stepEnt]attackArgs=" + str(attackArgs))
 
    def getStim(self, ent):
       return self.world.env.stim(ent.pos, self.config.STIM)
@@ -124,7 +123,7 @@ class NativeRealm(Realm):
       # counterLimit = 3
       
       dead = []
-      print('NativeRealm-stepEnts. size=' + str(len(self.desciples.values())))
+      # print('NativeRealm-stepEnts. size=' + str(len(self.desciples.values())))
       for ent in self.desciples.values():
          if (int(ent.entID) < 0): ## Replace this with some other way to determine a controlled entity
              ent.step(self.world)
