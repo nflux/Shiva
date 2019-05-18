@@ -56,6 +56,8 @@ class Blacksmith:
    def render(self):
       from ...forge.embyr.twistedserver import Application
       Application(self.env, self.renderStep)
+      print('Rendering')
+      # exit(0)
 
 #Example runner using the (slower) vecenv api
 #The actual vecenv spec was not designed for

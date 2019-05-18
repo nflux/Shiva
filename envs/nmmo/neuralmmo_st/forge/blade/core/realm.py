@@ -34,8 +34,9 @@ class Realm:
 
    def clientData(self):
       if self.values is None and hasattr(self, 'sword'):
+         print("Going into visvals")
          self.values = self.sword.anns[0].visVals()
-
+      print("Passing values")
       ret = {
             'environment': self.world.env,
             'entities': dict((k, v.packet()) for k, v in self.desciples.items()),

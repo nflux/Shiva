@@ -267,7 +267,9 @@ class ANN(nn.Module):
       return vals
 
    def visVals(self, food='max', water='max'):
-      from forge.blade.core import realm
+      print("Fuck you imports")
+      # from forge.blade.core import realm
+      print("Dying here")
       posList, vals = [], []
       R, C = self.world.shape
       for r in range(self.config.BORDER, R-self.config.BORDER):

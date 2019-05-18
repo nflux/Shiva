@@ -1,4 +1,4 @@
-import neuralmmo_st
+import neuralmmo_st as nmmo
 import argparse
 # from forge.trinity import smith, Trinity, Pantheon, God, Sword
 
@@ -22,12 +22,12 @@ def parseArgs():
 #multiagent, so this is a best-effort facsimile
 class GymExample:
     def __init__(self, config, args):
-        self.env = neuralmmo_st.smith.VecEnv(config, args, self.step)
+        self.env = nmmo.smith.VecEnv(config, args, self.step)
         #The environment is persistent. Reset only to start it.
         self.envsObs = self.env.reset()
 
         #the ANN used internally by Trinity
-        self.ann = neuralmmo_st.ANN(config)
+        self.ann = nmmo.ANN(config)
 
     #Runs a single step of each environment
     #With slow comms at each step
@@ -48,8 +48,8 @@ class GymExample:
 
 class NativeExample:
     def __init__(self, config, args):
-        trinity = neuralmmo_st.Trinity(neuralmmo_st.Pantheon, neuralmmo_st.God, neuralmmo_st.Sword)
-        self.env = neuralmmo_st.smith.Native(config, args, trinity)
+        trinity = nmmo.Trinity(nmmo.Pantheon, nmmo.God, nmmo.Sword)
+        self.env = nmmo.smith.Native(config, args, trinity)
 
     def run(self):
         while True:
@@ -58,9 +58,9 @@ class NativeExample:
 if __name__ == '__main__':
     args = parseArgs()
     assert args.api in ('native', 'vecenv')
-    exper = neuralmmo_st.Experiments()
+    exper = nmmo.Experiments()
     exper.makeExps()
-    exper.makeExp('sample', neuralmmo_st.Chaos, 128, test=True)
+    exper.makeExp('sample', nmmo.Chaos, 128, test=True)
     config = exper.exps['testchaos128']
 
     if args.api == 'native':
@@ -73,4 +73,5 @@ if __name__ == '__main__':
     if args.render:
         example.env.render()
     
+    print("This is running")
     example.run()

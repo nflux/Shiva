@@ -13,7 +13,7 @@ import os
 from ...forge.blade.systems import ai
 
 from ...forge.blade.action.v2 import ActionV2
-# import forge.blade.action.v2 as ActionsV2
+import neuralmmo_st.forge.blade.action.v2 as ActionsV2
 from ...forge.blade.action.tree import ActionTree
 
 class Sword:
