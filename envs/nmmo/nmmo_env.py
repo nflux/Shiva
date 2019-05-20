@@ -73,5 +73,4 @@ if __name__ == '__main__':
     if args.render:
         example.env.render()
     
-    print("This is running")
     example.run()

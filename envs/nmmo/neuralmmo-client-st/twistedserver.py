@@ -185,7 +185,6 @@ class Application:
 
       reactor.listenTCP(port, site)
       reactor.run()
-      print("Reactor running")
 
    def kill(*args):
       print("Killed by user")

@@ -70,6 +70,7 @@ class Realm:
 
    def stepWorld(self):
       ents = list(chain(self.desciples.values()))
+      # print("This is ents", ents[0].health.val)
       self.world.step(ents, [])
 
    def stepEnv(self):
@@ -82,6 +83,12 @@ class Realm:
 
       ent.move   = ActionArgs(move, moveArgs)
       ent.attack = ActionArgs(attack, attackArgs[0])
+      with open("output.txt", "a") as f:
+         # print("Move action:", ent.move.action.args(self.getStim(ent), ent, self.config), file=f)
+         # print("Move arg:", ent.move.args, file=f)
+         # print("Attack action:", ent.attack.action.args(self.getStim(ent), ent, self.config), file=f)
+         # print("Attack arg:", ent.attack.args, file=f)
+         print("packet", ent.attack.action, file=f)
       # print("[Realm-stepEnt]attackArgs=" + str(attackArgs))
 
    def getStim(self, ent):

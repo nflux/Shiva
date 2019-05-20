@@ -92,7 +92,7 @@ class Attack(action.Attack):
       if (entity.entID == targ.entID):
          entity._attack = None
          return
-      print("[v2 - ATTACK!]" + entity.entID + " attacks target " + targ.entID)
+      # print("[v2 - ATTACK!]" + entity.entID + " attacks target " + targ.entID)
       #entity.targPos = targ.pos
       #entity.attkPos = entity.lastPos
       #entity.targ = targ
