@@ -169,7 +169,7 @@ class Update:
                             if not config.load_same_agent:
                                 print("no implementation")
                             else:
-                                train_actor = (len(env.team_replay_buffer) > 1000) and False # and (update_session % 2 == 0)
+                                train_actor = (len(env.team_replay_buffer) > 1000) and False # False disabling train actor if using asynchronous updates
                                 train_critic = (len(env.team_replay_buffer) > 1000)
                                 if train_critic:
                                     priorities.append(maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',
