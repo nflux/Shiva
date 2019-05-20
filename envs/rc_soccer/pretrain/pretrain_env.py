@@ -1,4 +1,3 @@
-from HFO.hfo import hfo
 from HFO import get_config_path, get_hfo_path, get_viewer_path
 import os, subprocess, time, signal
 

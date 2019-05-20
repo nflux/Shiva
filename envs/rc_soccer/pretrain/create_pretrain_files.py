@@ -1,3 +1,6 @@
+import os
+import sys
+sys.path.append('..')
 from pretrain_env import pretrain_env
 import os
 import argparse
