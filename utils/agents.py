@@ -15,16 +15,16 @@ def init_agents(num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM,
     
     if config.lstm_pol and config.lstm_crit:
         return RecAgent(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, 
-                        num_out_EM, num_in_reducer)
+                        num_out_EM, num_in_reducer, maddpg)
     elif config.lstm_pol:
         return RecPolAgent(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, 
-                        num_out_EM, num_in_reducer)
+                        num_out_EM, num_in_reducer, maddpg)
     elif config.lstm_crit:
         return RecCritAgent(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, 
-                        num_out_EM, num_in_reducer)
+                        num_out_EM, num_in_reducer, maddpg)
     else:
         return NonRecAgent(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, 
-                        num_out_EM, num_in_reducer)
+                        num_out_EM, num_in_reducer, maddpg)
 
 class Base_Agent(object):
     def __init__(self, config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 

@@ -34,8 +34,8 @@ class Realm:
 
    def clientData(self):
       if self.values is None and hasattr(self, 'sword'):
+         print("Going into visvals")
          self.values = self.sword.anns[0].visVals()
-
       ret = {
             'environment': self.world.env,
             'entities': dict((k, v.packet()) for k, v in self.desciples.items()),
@@ -70,6 +70,7 @@ class Realm:
 
    def stepWorld(self):
       ents = list(chain(self.desciples.values()))
+      # print("This is ents", ents[0].health.val)
       self.world.step(ents, [])
 
    def stepEnv(self):
@@ -82,7 +83,13 @@ class Realm:
 
       ent.move   = ActionArgs(move, moveArgs)
       ent.attack = ActionArgs(attack, attackArgs[0])
-      print("[Realm-stepEnt]attackArgs=" + str(attackArgs))
+      with open("output.txt", "a") as f:
+         # print("Move action:", ent.move.action.args(self.getStim(ent), ent, self.config), file=f)
+         # print("Move arg:", ent.move.args, file=f)
+         # print("Attack action:", ent.attack.action.args(self.getStim(ent), ent, self.config), file=f)
+         # print("Attack arg:", ent.attack.args, file=f)
+         print("packet", ent.attack.action, file=f)
+      # print("[Realm-stepEnt]attackArgs=" + str(attackArgs))
 
    def getStim(self, ent):
       return self.world.env.stim(ent.pos, self.config.STIM)
@@ -123,7 +130,7 @@ class NativeRealm(Realm):
       # counterLimit = 3
       
       dead = []
-      print('NativeRealm-stepEnts. size=' + str(len(self.desciples.values())))
+      # print('NativeRealm-stepEnts. size=' + str(len(self.desciples.values())))
       for ent in self.desciples.values():
          if (int(ent.entID) < 0): ## Replace this with some other way to determine a controlled entity
              ent.step(self.world)

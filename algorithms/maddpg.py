@@ -14,23 +14,29 @@ import pandas as pd
 MSELoss = torch.nn.MSELoss()
 CELoss = torch.nn.CrossEntropyLoss()
 
-def init_from_save(config, load_paths, num_agents):
+def init_from_save(config, filenames, nagents=1):
+    """
+    Instantiate instance of this class from file created by 'save' method
+    """
+    save_dicts = np.asarray([torch.load(filename) for filename in filenames]) # use only filename
+
     if config.lstm_pol and config.lstm_crit:
-        maddpg = RMADDPG(None, config, load=True, load_paths=initial_models)
+        maddpg = RMADDPG(save_dicts[0]['init_dict'])
     elif config.lstm_pol:
         maddpg = RAMADDPG(None, config, load=True, load_paths=initial_models)
     elif config.lstm_crit:
         maddpg = RCMADDPG(None, config, load=True, load_paths=initial_models)
     else:
         maddpg = VanillaMADDPG(None, config, load=True, load_paths=initial_models)
-    
+
+    for i in range(nagents):
+        maddpg.team_agents[i].load_params(save_dicts[i]['agent_params'] ) # first n agents
+
     return maddpg
 
-def init_from_env(config, env):
+def init_from_config(config):
     if config.lstm_pol and config.lstm_crit:
-        maddpg = RMADDPG(env,config)
-        print(maddpg.gamma)
-        exit(0)
+        maddpg = RMADDPG(config)
     elif config.lstm_pol:
         maddpg = RAMADDPG(env,config)
     elif config.lstm_crit:
@@ -78,16 +84,16 @@ def parallel_step(results,a_i,ran,obs,explore,output,pi_pickle,action_dim=3,para
     results[a_i] = action
 
 class BASE_MADDPG(object):
-    def __init__(self, config, team_net_params, team_alg_types=[], opp_alg_types=[], only_policy=False):
+    def __init__(self, config, only_policy=False):
         self.config = config
-        self.num_in_EM = team_net_params[0]['num_in_EM']
-        self.num_out_EM = team_net_params[0]['num_out_EM']
-        self.num_out_pol = team_net_params[0]['num_out_pol']
-        self.team_net_params = team_net_params
+        self.team_net_params = self.config.team_net_params
+        self.num_in_EM = self.team_net_params[0]['num_in_EM']
+        self.num_out_EM = self.team_net_params[0]['num_out_EM']
+        self.num_out_pol = self.team_net_params[0]['num_out_pol']
         self.only_policy = only_policy
         self.world_status_dim = config.world_status_dim # number of possible world statuses
-        self.nagents_team = len(team_alg_types)
-        self.nagents_opp = len(opp_alg_types)
+        self.nagents_team = self.config.num_left
+        self.nagents_opp = self.config.num_right
         self.critic_loss_logger = pd.DataFrame()
         self.policy_loss_logger = pd.DataFrame()
         self.batch_size = config.batch_size
@@ -140,56 +146,56 @@ class BASE_MADDPG(object):
         self.opp_agents = [agents.init_agents(config=config,maddpg=self,only_policy=only_policy, 
                             **params) for params in self.team_net_params]
     
-    @classmethod
-    def init_from_env(cls, env, config, agent_alg="MADDPG", adversary_alg="MADDPG", only_policy=False):
+    # @classmethod
+    # def init_from_env(cls, env, config, agent_alg="MADDPG", adversary_alg="MADDPG", only_policy=False):
                       
-        """
-        Instantiate instance of this class from multi-agent environment 
-        """
-        team_agent_init_params = []
-        team_net_params = []
-        opp_agent_init_params = []
+    #     """
+    #     Instantiate instance of this class from multi-agent environment 
+    #     """
+    #     team_agent_init_params = []
+    #     team_net_params = []
+    #     opp_agent_init_params = []
         
-        opp_alg_types = [ adversary_alg for atype in range(env.num_OA)]
-        team_alg_types = [ agent_alg for atype in range(env.num_TA)]
-        for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs, team_alg_types):
+    #     opp_alg_types = [ adversary_alg for atype in range(env.num_OA)]
+    #     team_alg_types = [ agent_alg for atype in range(env.num_TA)]
+    #     for acsp, obsp, algtype in zip([env.action_list for i in range(env.num_TA)], env.team_obs, team_alg_types):
             
-            # changed acsp to be action_list for each agent 
-            # giving dimension num_TA x action_list so they may zip properly    
+    #         # changed acsp to be action_list for each agent 
+    #         # giving dimension num_TA x action_list so they may zip properly    
 
-            if config.preprocess:
-                num_in_pol = config.reduced_obs_dim
-            else:
-                num_in_pol = obsp.shape[0]
-            num_in_reducer = obsp.shape[0]
-            num_out_pol =  len(env.action_list)
+    #         if config.preprocess:
+    #             num_in_pol = config.reduced_obs_dim
+    #         else:
+    #             num_in_pol = obsp.shape[0]
+    #         num_in_reducer = obsp.shape[0]
+    #         num_out_pol =  len(env.action_list)
 
-            if not config.discrete_action:
-                num_out_pol = len(env.action_list) + len(env.team_action_params[0])
+    #         if not config.discrete_action:
+    #             num_out_pol = len(env.action_list) + len(env.team_action_params[0])
             
-            num_in_EM = (num_out_pol*env.num_TA) + num_in_pol
-            num_out_EM = num_in_pol
+    #         num_in_EM = (num_out_pol*env.num_TA) + num_in_pol
+    #         num_out_EM = num_in_pol
 
-            num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)            
+    #         num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)            
             
-            team_net_params.append({'num_in_pol': num_in_pol,
-                                    'num_out_pol': num_out_pol,
-                                    'num_in_critic': num_in_critic,
-                                    'num_in_EM': num_in_EM,
-                                    'num_out_EM': num_out_EM,
-                                    'num_in_reducer': num_in_reducer})
+    #         team_net_params.append({'num_in_pol': num_in_pol,
+    #                                 'num_out_pol': num_out_pol,
+    #                                 'num_in_critic': num_in_critic,
+    #                                 'num_in_EM': num_in_EM,
+    #                                 'num_out_EM': num_out_EM,
+    #                                 'num_in_reducer': num_in_reducer})
 
-        ## change for continuous
-        init_dict = {'team_alg_types': team_alg_types,
-                     'opp_alg_types': opp_alg_types,
-                     'team_net_params': team_net_params,
-                     'config' : config}
+    #     ## change for continuous
+    #     init_dict = {'team_alg_types': team_alg_types,
+    #                  'opp_alg_types': opp_alg_types,
+    #                  'team_net_params': team_net_params,
+    #                  'config' : config}
 
-        # print(**init_dict)
-        # exit(0)
-        instance = cls(**init_dict)
-        instance.init_dict = init_dict
-        return instance
+    #     # print(**init_dict)
+    #     # exit(0)
+    #     instance = cls(**init_dict)
+    #     instance.init_dict = init_dict
+    #     return instance
 
 
     @classmethod
@@ -207,22 +213,6 @@ class BASE_MADDPG(object):
 
         for a, params in zip(instance.opp_agents,  random.sample(random.sample(save_dicts,1)['agent_params'],1)):
             a.load_params(params)
-
-        return instance
-
-    @classmethod
-    def init_from_save(cls, filenames,nagents=1):
-        """
-        Instantiate instance of this class from file created by 'save' method
-        """
-        save_dicts = np.asarray([torch.load(filename) for filename in filenames]) # use only filename
-        
-        instance = cls(**save_dicts[0]['init_dict'])
-        instance.init_dict = save_dicts[0]['init_dict']
-
-        for i in range(nagents):
-            instance.team_agents[i].load_params(save_dicts[i]['agent_params'] ) # first n agents
-            
 
         return instance
     
@@ -531,7 +521,7 @@ class BASE_MADDPG(object):
         """
         Makes K clones of each agent to be used as the ensemble agents"""
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], file_path + ("ensemble_agent_%i" % i) + "/model_%i.pth" % j) for i in range(len(self.team_agents)) for j in range(num_copies)]
         self.prep_training(device=self.device,torch_device=self.torch_device)
@@ -543,7 +533,7 @@ class BASE_MADDPG(object):
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
         
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], filename +("agent_%i/model_episode_%i.pth" % (i,ep_i))) for i in range(len(self.team_agents))]
         self.prep_training(device=self.device,torch_device=torch_device)
@@ -553,7 +543,7 @@ class BASE_MADDPG(object):
         Save trained parameters of all agents into one file
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         if load_same_agent:
             torch.save(save_dicts[0], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
@@ -569,7 +559,7 @@ class BASE_MADDPG(object):
         Save trained parameters of all agents into one file
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         if load_same_agent:
             torch.save(save_dicts[agentID], filename +("agent2d/agent2D.pth"))
@@ -584,7 +574,7 @@ class BASE_MADDPG(object):
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
         
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (i,j))) for i,j in zip(range(len(self.team_agents)),current_ensembles)]
         self.prep_training(device=self.device)
@@ -599,7 +589,7 @@ class BASE_MADDPG(object):
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
         
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         if not load_same_agent:
             torch.save(save_dicts[agentID], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
@@ -920,7 +910,7 @@ class BASE_MADDPG(object):
         Save trained parameters of all agent's actor network into one file
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dict = {'init_dict': self.init_dict,
+        save_dict = {'init_dict': self.config,
                      'actor_params': [a.get_actor_params() for a in (self.team_agents+self.opp_agents)]}
         torch.save(save_dict, filename)
 
@@ -930,7 +920,7 @@ class BASE_MADDPG(object):
         Save trained parameters of all agent's critic networks into one file
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dict = {'init_dict': self.init_dict,
+        save_dict = {'init_dict': self.config,
                      'critic_params': [a.get_critic_params() for a in self.agents]}
         torch.save(save_dict, filename)
     
@@ -1199,16 +1189,8 @@ class BASE_MADDPG(object):
         return clipped_differences.cpu()
 
 class RMADDPG(BASE_MADDPG):
-    def __init__(self, env, config, only_policy = False, load = False, load_paths = None):
-        if not load:
-            # print(super())
-            # exit()
-            # super(BASE_MADDPG).init_from_env()
-            # self = BASE_MADDPG.init_from_env(env, config)
-            self.init_from_env(env, config)
-            # exit(0)
-        else:
-            super(BASE_MADDPG, self).init_from_save(load_paths, config.num_left)
+    def __init__(self, config, only_policy = False):
+        super(RMADDPG, self).__init__(config)
 
         self.lstm_burn_in = config.burn_in_lstm
         self.hidden_dim_lstm = config.hidden_dim_lstm
@@ -1370,7 +1352,7 @@ class RMADDPG(BASE_MADDPG):
             _,_,h1_target,h2_target = curr_agent.target_critic(burn_in_tensor)
 
             # Run burn-in on target policy
-            burnin_slice_obs = list(map(lambda x: x[self.lstm_burn_in], obs))
+            burnin_slice_obs = list(map(lambda x: x[:self.lstm_burn_in], obs))
             [pi(nobs) for pi,nobs in zip(target_policies,burnin_slice_obs)]# burn in target
             # Run burn-in on opponent target policy
             burnin_opp_slice_obs = list(map(lambda x: x[:self.lstm_burn_in], opp_obs))

@@ -67,7 +67,7 @@ class GodswordServerProtocol(WebSocketServerProtocol):
         print("Message", packet)
 
     def onConnect(self, request):
-        print("WebSocket connection request: {}".format(request))
+        # print("WebSocket connection request: {}".format(request))
         realm = self.factory.realm.envs[0]
         self.realm = realm
         self.frame += 1

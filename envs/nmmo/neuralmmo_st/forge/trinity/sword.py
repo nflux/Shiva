@@ -2,7 +2,7 @@ from pdb import set_trace as T
 from collections import defaultdict
 import numpy as np
 
-from ...forge import trinity
+from neuralmmo_st.forge import trinity
 from ...forge.ethyr.torch.param import setParameters, zeroGrads
 from ...forge.ethyr.torch import optim
 from ...forge.ethyr.rollouts import Rollout
@@ -13,7 +13,7 @@ import os
 from ...forge.blade.systems import ai
 
 from ...forge.blade.action.v2 import ActionV2
-# import forge.blade.action.v2 as ActionsV2
+import neuralmmo_st.forge.blade.action.v2 as ActionsV2
 from ...forge.blade.action.tree import ActionTree
 
 class Sword:
@@ -158,18 +158,18 @@ class Sword:
             
          
          simTick = currentTick - Sword.tickOffset
-         print("[SWORD][entID=" + str(ent.entID) + "]currentTick=" + str(currentTick) + "; simTick = " + str(simTick))
+         # print("[SWORD][entID=" + str(ent.entID) + "]currentTick=" + str(currentTick) + "; simTick = " + str(simTick))
          
-         print("[SWORD]AllEnts=" + str(allEnts))
+         # print("[SWORD]AllEnts=" + str(allEnts))
          if (Sword.blueMove == 0 and int(ent.teamID) == 0):
             currentLivingBlue = list()
             for teammateID in Sword.livingBlue:
                for e in allEnts:
                   if int(e.entID) == teammateID:
                      currentLivingBlue.append(teammateID)
-            print("[SWORD]BlueTeam survivors=" + str(currentLivingBlue))
+            # print("[SWORD]BlueTeam survivors=" + str(currentLivingBlue))
             if (currentLivingBlue != Sword.livingBlue):
-               print("[SWORD]livingBlue changed. Last value= " + str(Sword.livingBlue))
+               # print("[SWORD]livingBlue changed. Last value= " + str(Sword.livingBlue))
                Sword.livingBlue = currentLivingBlue
                Sword.blueMove = 2
          
@@ -180,34 +180,34 @@ class Sword:
          else:            
             nearestDist = nearestEnemyAndDistance[0]
             nearestEnemy = nearestEnemyAndDistance[1]
-            print("[SWORD][entID=" + str(ent.entID) + "] Nearest Enemy and Distance = " + str((nearestEnemyAndDistance[0], nearestEnemyAndDistance[1].entID)))
+            # print("[SWORD][entID=" + str(ent.entID) + "] Nearest Enemy and Distance = " + str((nearestEnemyAndDistance[0], nearestEnemyAndDistance[1].entID)))
             
             attackAction = ActionsV2.Melee
             if (nearestDist <= self.config.MELEERANGE):
                # Do melee attack
                attackAction = ActionsV2.Melee
                enemy_ent = nearestEnemy
-               print("[SWORD][entID=" + str(ent.entID) + "] MELEE: " + str(nearestDist) + "<=" + str(self.config.MELEERANGE) + "; targ=" + str(enemy_ent.entID))
+               # print("[SWORD][entID=" + str(ent.entID) + "] MELEE: " + str(nearestDist) + "<=" + str(self.config.MELEERANGE) + "; targ=" + str(enemy_ent.entID))
             elif (nearestDist <= self.config.RANGERANGE):
                # Do range attack
                attackAction = ActionsV2.Range
                enemy_ent = nearestEnemy
-               print("[SWORD][entID=" + str(ent.entID) + "] RANGE: " + str(nearestDist) + "<=" + str(self.config.RANGERANGE) + "; targ=" + str(enemy_ent.entID))
+               # print("[SWORD][entID=" + str(ent.entID) + "] RANGE: " + str(nearestDist) + "<=" + str(self.config.RANGERANGE) + "; targ=" + str(enemy_ent.entID))
             else:
                # No attack
                enemy_ent = ent
-               print("[SWORD][entID=" + str(ent.entID) + "] NOATTACK: " + str(nearestDist) + "; targ=" + str(enemy_ent.entID))
+               # print("[SWORD][entID=" + str(ent.entID) + "] NOATTACK: " + str(nearestDist) + "; targ=" + str(enemy_ent.entID))
             
             actn = actions[1], attackAction # Set attack
             
             movements = self.GetMovementList(int(ent.entID))
             if (simTick >= len(movements)):
                if (int(ent.teamID) == 0 and Sword.blueMove > 0):
-                  print("[SWORD] Move " + str(ent.entID) + " to the right")
+                  # print("[SWORD] Move " + str(ent.entID) + " to the right")
                   Sword.PROCEDURAL_MOVE = (0,1)
                   if (int(ent.entID) == Sword.livingBlue[-1]):
                      Sword.blueMove -= 1
-                     print("[SWORD]decrement blueMove to: " + str(Sword.blueMove))
+                     # print("[SWORD]decrement blueMove to: " + str(Sword.blueMove))
                else:
                   Sword.PROCEDURAL_MOVE = (0,0)
             else:
@@ -215,7 +215,7 @@ class Sword:
             ### END PROCEDURAL INPUT ###
             
             arguments = (Sword.PROCEDURAL_MOVE, [enemy_ent]) # set movement amount here and enemy here. If enemy_ent is not self, then no attack takes place.
-            print("[sword-HUMAN]arguments:" + str(arguments))
+            # print("[sword-HUMAN]arguments:" + str(arguments))
       else:
          arguments = ((0,0), [ent])
          actn = actions[1], ActionsV2.Range

@@ -361,7 +361,7 @@ class I2A_Network(nn.Module):
         self.rollout_steps = rollout_steps
 
         self.I2A = I2A
-        self.LSTM = maddpg.LSTM
+        self.LSTM = config.lstm_crit
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
 
         # save refs without registering
@@ -623,7 +623,7 @@ class LSTM_Actor(nn.Module):
         self.hidden_dim_lstm = agent.hidden_dim_lstm
         self.batch_size = agent.batch_size
         self.I2A = I2A
-        self.LSTM = maddpg.LSTM
+        self.LSTM = config.lstm_pol
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
 
         if agent.device == 'cuda':
