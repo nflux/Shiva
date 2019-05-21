@@ -96,7 +96,8 @@ def main(args):
                   'server::use_offside=%i ' \
                   'server::offside_active_area_size=%f ' \
                   'server::forbid_kick_off_offside=%i ' \
-                  'server::server_log=%i' \
+                  'server::server_log=%i ' \
+                  'server::pt_log_dir=%s' \
                   %(server_port, coach_port, olcoach_port,
                     args.logging, args.logging, args.hfo_logging,
                     args.logDir, args.logDir, args.logDir,
@@ -111,14 +112,14 @@ def main(args):
                     args.change_balls_x, args.change_balls_y, args.control_rand_init,
                     args.messageSize, args.verbose, args.tackle_cycles, 
                     args.offside, args.offside_area_size, args.forbid_offside_kickoff,
-                    args.server_log)
+                    args.server_log, args.pt_log_dir)
 
   if args.deterministic:
     serverOptions += ' server::player_rand=0 ' \
                      'server::ball_rand=0 ' \
                      'server::kick_rand=0 ' \
-                     'server::wind_rand=0'  \
-                     'server::tackle_rand_factor=0' \
+                     'server::wind_rand=0 '  \
+                     'server::tackle_rand_factor=0 ' \
                      'server::foul_detect_probability=0'
 
   try:
@@ -262,6 +263,9 @@ def parseArgs():
                     default=True, help='allow offside kickoff')
   p.add_argument('--log-gen-pt', dest='server_log', action='store_true',
                     help='allow logging of general pre-training')
+  p.add_argument('--log-dir-pt', dest='pt_log_dir',
+                    default= "pretrain_data",help='Directory for the pretrain logs')
+                    
 
   args = p.parse_args()
   if args.offenseAgents not in list(range(0, 12)):

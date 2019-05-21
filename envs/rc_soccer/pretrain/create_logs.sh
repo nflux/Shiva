@@ -1,5 +1,5 @@
 #!/bin/sh
-NUM_ENVS=16
+NUM_ENVS=1
 py_command=""
 
 declare -a arr_offense_teams=("helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18" "helios18")

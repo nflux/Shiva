@@ -20,6 +20,8 @@ def main(args):
     #seed = 150
     start_viewer = True
     log_dir = args.log_dir
+    #pt_log_dir = args.pt_log_dir
+    pt_log_dir ="pretrain_data"
 
     # Control Random Initilization of Agents and Ball
     control_rand_init = True
@@ -40,21 +42,24 @@ def main(args):
     offense_team_bin = args.offense_team
     defense_team_bin = args.defense_team
 
-    if os.path.isdir(os.getcwd() + '/pretrain_data/log_' + str(port)):
-        file_list = os.listdir(os.getcwd() + '/pretrain_data/log_' + str(port))
-        [os.remove(os.getcwd() + '/pretrain_data/log_' + str(port) + '/' + f) for f in file_list]
+    if not (os.path.isdir(os.getcwd() + "/" + pt_log_dir)):
+        os.mkdir(os.getcwd() + "/" + pt_log_dir)
+
+    if os.path.isdir(os.getcwd() + "/" + pt_log_dir + '/log_' + str(port)):
+        file_list = os.listdir(os.getcwd()  + "/" + pt_log_dir + '/log_' + str(port))
+        [os.remove(os.getcwd() + "/" + pt_log_dir + '/log_' + str(port) + '/' + f) for f in file_list]
     else:
-        os.mkdir(os.getcwd() + '/pretrain_data/log_' + str(port))
+        os.mkdir(os.getcwd()  + "/" + pt_log_dir + '/log_' + str(port))
     
-    if os.path.isdir(os.getcwd() + '/pretrain_data/pt_logs_' + str(port)):
-        file_list = os.listdir(os.getcwd() + '/pretrain_data/pt_logs_' + str(port))
-        [os.remove(os.getcwd() + '/pretrain_data/pt_logs_' + str(port) + '/' + f) for f in file_list]
+    if os.path.isdir(os.getcwd() + "/" + pt_log_dir + '/pt_logs_' + str(port)):
+        file_list = os.listdir(os.getcwd()   + "/" + pt_log_dir + '/pt_logs_' + str(port))
+        [os.remove(os.getcwd()  + "/" + pt_log_dir + '/pt_logs_' + str(port) + '/' + f) for f in file_list]
     else:
-        os.mkdir(os.getcwd() + '/pretrain_data/pt_logs_' + str(port))
+        os.mkdir(os.getcwd()  + "/" + pt_log_dir + '/pt_logs_' + str(port))
 
     pe = pretrain_env(num_TNPC=left_side, num_ONPC=right_side, fpt=fpt, untouched_time=untouched_time, port=port,
                         sync_mode=sync_mode, fullstate=fullstate, seed=seed, ball_x_min=ball_x_min,ball_x_max=ball_x_max,ball_y_min=ball_y_min,ball_y_max=ball_y_max,verbose = False,
-                        hfo_log_game=False, rcss_log_game=False, log_dir=log_dir, agents_x_min=agents_x_min, agents_x_max=agents_x_max,
+                        hfo_log_game=True, rcss_log_game=False, log_dir=log_dir, pt_log_dir=pt_log_dir, agents_x_min=agents_x_min, agents_x_max=agents_x_max,
                         agents_y_min=agents_y_min, agents_y_max=agents_y_max, change_every_x=change_every_x,
                         change_agents_x=change_agents_x, change_agents_y=change_agents_y, change_balls_x=change_balls_x,
                         change_balls_y=change_balls_y, control_rand_init=control_rand_init, record=False, record_server=True,
@@ -70,6 +75,8 @@ def parseArgs():
                     help='port number 2000 or above')
     p.add_argument('--log_dir', dest='log_dir', type=str, default='log_2000',
                     help='Location of rcg file')
+    p.add_argument('--pt_log_dir', dest='pt_log_dir', type=str, default='log_2000',
+                    help='Location of pt file')
     p.add_argument('--offense-team', dest='offense_team', type=str, default='base',
                     help='specifies what binary to run for offense')
     p.add_argument('--defense-team', dest='defense_team', type=str, default='base',
