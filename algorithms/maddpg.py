@@ -21,17 +21,13 @@ def init_from_save(config, filenames, nagents=1):
     save_dicts = np.asarray([torch.load(filename) for filename in filenames]) # use only filename
 
     if config.lstm_pol and config.lstm_crit:
-        maddpg = RMADDPG(config)
-        maddpg.init_dict = save_dicts[0]['init_dict']
+        maddpg = RMADDPG(save_dicts[0]['init_dict'])
     elif config.lstm_pol:
         maddpg = RAMADDPG(None, config, load=True, load_paths=initial_models)
     elif config.lstm_crit:
         maddpg = RCMADDPG(None, config, load=True, load_paths=initial_models)
     else:
         maddpg = VanillaMADDPG(None, config, load=True, load_paths=initial_models)
-    
-    # instance = cls(**save_dicts[0]['init_dict'])
-    # instance.init_dict = save_dicts[0]['init_dict']
 
     for i in range(nagents):
         maddpg.team_agents[i].load_params(save_dicts[i]['agent_params'] ) # first n agents
@@ -89,7 +85,6 @@ def parallel_step(results,a_i,ran,obs,explore,output,pi_pickle,action_dim=3,para
 
 class BASE_MADDPG(object):
     def __init__(self, config, only_policy=False):
-        self.init_dict = {}
         self.config = config
         self.team_net_params = self.config.team_net_params
         self.num_in_EM = self.team_net_params[0]['num_in_EM']
@@ -526,7 +521,7 @@ class BASE_MADDPG(object):
         """
         Makes K clones of each agent to be used as the ensemble agents"""
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], file_path + ("ensemble_agent_%i" % i) + "/model_%i.pth" % j) for i in range(len(self.team_agents)) for j in range(num_copies)]
         self.prep_training(device=self.device,torch_device=self.torch_device)
@@ -538,7 +533,7 @@ class BASE_MADDPG(object):
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
         
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], filename +("agent_%i/model_episode_%i.pth" % (i,ep_i))) for i in range(len(self.team_agents))]
         self.prep_training(device=self.device,torch_device=torch_device)
@@ -548,7 +543,7 @@ class BASE_MADDPG(object):
         Save trained parameters of all agents into one file
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         if load_same_agent:
             torch.save(save_dicts[0], filename +("agent_%i/model_episode_%i.pth" % (agentID,ep_i)))
@@ -564,7 +559,7 @@ class BASE_MADDPG(object):
         Save trained parameters of all agents into one file
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         if load_same_agent:
             torch.save(save_dicts[agentID], filename +("agent2d/agent2D.pth"))
@@ -579,7 +574,7 @@ class BASE_MADDPG(object):
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
         
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         [torch.save(save_dicts[i], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (i,j))) for i,j in zip(range(len(self.team_agents)),current_ensembles)]
         self.prep_training(device=self.device)
@@ -594,7 +589,7 @@ class BASE_MADDPG(object):
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
         
-        save_dicts = np.asarray([{'init_dict': self.init_dict,
+        save_dicts = np.asarray([{'init_dict': self.config,
                      'agent_params': a.get_params() } for a in (self.team_agents)])
         if not load_same_agent:
             torch.save(save_dicts[agentID], ensemble_path +("ensemble_agent_%i/model_%i.pth" % (agentID,ensemble)))
@@ -915,7 +910,7 @@ class BASE_MADDPG(object):
         Save trained parameters of all agent's actor network into one file
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dict = {'init_dict': self.init_dict,
+        save_dict = {'init_dict': self.config,
                      'actor_params': [a.get_actor_params() for a in (self.team_agents+self.opp_agents)]}
         torch.save(save_dict, filename)
 
@@ -925,7 +920,7 @@ class BASE_MADDPG(object):
         Save trained parameters of all agent's critic networks into one file
         """
         self.prep_training(device='cpu')  # move parameters to CPU before saving
-        save_dict = {'init_dict': self.init_dict,
+        save_dict = {'init_dict': self.config,
                      'critic_params': [a.get_critic_params() for a in self.agents]}
         torch.save(save_dict, filename)
     
