@@ -76,7 +76,7 @@ def launch_eval(filenames,eval_episodes = 10,log_dir = "eval_log",log='eval',por
                 change_every_x=change_every_x, change_agents_x=change_agents_x, change_agents_y=change_agents_y,
                 change_balls_x=change_balls_x, change_balls_y=change_balls_y, control_rand_init=control_rand_init,record_server=True,defense_team_bin=defense_team_bin)
     time.sleep(2.0)
-    maddpg = MADDPG.init_from_save_evaluation(filenames,num_TA)
+    maddpg = MADDPG.init_from_save(filenames,num_TA)
     time.sleep(1.5)
     LSTM_policy = True
     team_step_logger_df = pd.DataFrame()
