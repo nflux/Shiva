@@ -53,7 +53,9 @@ class RoboEnvsWrapper:
     def __init__(self, config_parse):
         self.config = conf.RoboConfig(config_parse)
         self.envs = RoboEnvs(self.config)
-        self.maddpg = mad_algo.init_from_env(self.config, self.envs.template_env)
+        self.config.env_inits(self.envs.template_env)
+
+        self.maddpg = mad_algo.init_from_config(self.config)
         self.update = updates.Update(self.config, self.envs.team_replay_buffer, self.envs.opp_replay_buffer)
         #Pretraining **Needs create_pretrain_files.py to test, importing HFO issue
         # self.pretrainer = pretrainer.pretrain(self.config, self.envs)
@@ -84,7 +86,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
         # from evaluation method just loads the networks
         maddpg = mad_algo.init_from_save(config, config.inital_models, config.num_left)
     else:
-        maddpg = mad_algo.init_from_env(config, env)        
+        maddpg = mad_algo.init_from_config(config)        
         
     if config.to_gpu:
         maddpg.device = 'cuda'

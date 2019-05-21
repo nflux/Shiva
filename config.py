@@ -85,3 +85,30 @@ class RoboConfig(Config):
 
         self.conf_dict['current_ensembles'] = [0]*self.conf_dict['num_left']
     
+    def env_inits(self, env):
+        team_net_params = []
+        for acsp, obsp in zip([env.action_list for i in range(env.num_TA)], env.team_obs):
+            if self.preprocess:
+                num_in_pol = config.reduced_obs_dim
+            else:
+                num_in_pol = obsp.shape[0]
+            num_in_reducer = obsp.shape[0]
+            num_out_pol =  len(env.action_list)
+
+            if not self.discrete_action:
+                num_out_pol = len(env.action_list) + len(env.team_action_params[0])
+            
+            num_in_EM = (num_out_pol*env.num_TA) + num_in_pol
+            num_out_EM = num_in_pol
+
+            num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)            
+            
+            team_net_params.append({'num_in_pol': num_in_pol,
+                                    'num_out_pol': num_out_pol,
+                                    'num_in_critic': num_in_critic,
+                                    'num_in_EM': num_in_EM,
+                                    'num_out_EM': num_out_EM,
+                                    'num_in_reducer': num_in_reducer})
+
+        setattr(self, 'team_net_params', team_net_params)
+    
