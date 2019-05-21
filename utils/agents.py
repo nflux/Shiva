@@ -13,7 +13,7 @@ import numpy as np
 def init_agents(num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
             num_in_reducer, config=None, maddpg=object, only_policy=False):
     
-    if conifg.lstm_pol and config.lstm_crit:
+    if config.lstm_pol and config.lstm_crit:
         return RecAgent(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, 
                         num_out_EM, num_in_reducer)
     elif config.lstm_pol:
@@ -28,7 +28,7 @@ def init_agents(num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM,
 
 class Base_Agent(object):
     def __init__(self, config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-                num_in_reducer, maddpg=object, only_policy):
+                num_in_reducer, maddpg=object, only_policy=False):
         self.config = config
         self.num_in_pol = num_in_pol
         self.num_out_pol = num_out_pol
@@ -46,7 +46,7 @@ class Base_Agent(object):
         self.param_dim = config.param_dim
         self.action_dim = config.ac_dim
         self.imagination_policy_branch = config.imag_pol_branch
-        self.device = device
+        self.device = config.device
         self.n_branches = 1 + self.imagination_policy_branch # number of imagination branches
         self.delta = config.delta_z
         # D4PG
@@ -367,9 +367,9 @@ class Base_Agent(object):
         
 class RecPolAgent(Base_Agent):
     def __init__(self, config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-                num_in_reducer, maddpg=object, only_policy):
+                num_in_reducer, maddpg=object, only_policy=False):
         super().__init__(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-                        num_in_reducer, maddpg=object, only_policy)
+                        num_in_reducer, maddpg, only_policy)
         self.policy = LSTM_Actor(config,self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
                                 hidden_dim=config.hidden_dim,
                                 discrete_action=config.discrete_action,
@@ -417,9 +417,9 @@ class RecPolAgent(Base_Agent):
         
 class RecCritAgent(Base_Agent):
     def __init__(self, config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-                num_in_reducer, maddpg=object, only_policy):
+                num_in_reducer, maddpg=object, only_policy=False):
         super().__init__(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-                        num_in_reducer, maddpg=object, only_policy)
+                        num_in_reducer, maddpg, only_policy)
         
         self.policy = I2A_Network(config,self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
                         hidden_dim=config.hidden_dim,
@@ -464,9 +464,9 @@ class RecCritAgent(Base_Agent):
 
 class RecAgent(Base_Agent):
     def __init__(self, config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-                num_in_reducer, maddpg=object, only_policy):
+                num_in_reducer, maddpg=object, only_policy=False):
         super().__init__(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-                        num_in_reducer, maddpg=object, only_policy)
+                        num_in_reducer, maddpg, only_policy)
         
         self.policy = LSTM_Actor(config,self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
                                 hidden_dim=config.hidden_dim,
@@ -486,7 +486,7 @@ class RecAgent(Base_Agent):
                                             pol_prime = self.policy_prime,imagined_pol = self.imagination_policy,
                                             LSTM_hidden=config.lstm_hidden,maddpg=maddpg)
 
-            if torch.cuda.device_count() > 1 and config..data_parallel:
+            if torch.cuda.device_count() > 1 and config.data_parallel:
                 self.target_policy = nn.DataParallel(self.target_policy)
             
             self.critic = LSTMNetwork_Critic(config, num_in_critic, 1,
@@ -508,9 +508,9 @@ class RecAgent(Base_Agent):
 
 class NonRecAgent(Base_Agent):
     def __init__(self, config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-                num_in_reducer, maddpg=object, only_policy):
+                num_in_reducer, maddpg=object, only_policy=False):
         super().__init__(config, num_in_pol, num_out_pol, num_in_critic, num_in_EM, num_out_EM, 
-                        num_in_reducer, maddpg=object, only_policy)
+                        num_in_reducer, maddpg, only_policy)
         
         self.policy = I2A_Network(config,self.I2A_num_in_pol, num_out_pol, self.num_total_out_EM,
                         hidden_dim=config.hidden_dim,

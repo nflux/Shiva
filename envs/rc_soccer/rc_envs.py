@@ -81,7 +81,8 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
             os.mkdir(os.getcwd() + '/pretrain/pretrain_data//pt_logs_' + str(env.port))
 
     if config.load_nets:
-        maddpg = mad_algo.MADDPG.init_from_save_evaluation(config.initial_models,env.num_TA) # from evaluation method just loads the networks
+        # from evaluation method just loads the networks
+        maddpg = mad_algo.init_from_save(config, config.inital_models, config.num_left)
     else:
         maddpg = mad_algo.init_from_env(config, env)        
         

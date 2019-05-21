@@ -14,12 +14,32 @@ import pandas as pd
 MSELoss = torch.nn.MSELoss()
 CELoss = torch.nn.CrossEntropyLoss()
 
+def init_from_save(config, load_paths, num_agents):
+    if config.lstm_pol and config.lstm_crit:
+        maddpg = RMADDPG(None, config, load=True, load_paths=initial_models)
+    elif config.lstm_pol:
+        maddpg = RAMADDPG(None, config, load=True, load_paths=initial_models)
+    elif config.lstm_crit:
+        maddpg = RCMADDPG(None, config, load=True, load_paths=initial_models)
+    else:
+        maddpg = VanillaMADDPG(None, config, load=True, load_paths=initial_models)
+    
+    return maddpg
+
 def init_from_env(config, env):
-    maddpg = MADDPG.init_from_env(env, config)
+    if config.lstm_pol and config.lstm_crit:
+        maddpg = RMADDPG(env,config)
+        print(maddpg.gamma)
+        exit(0)
+    elif config.lstm_pol:
+        maddpg = RAMADDPG(env,config)
+    elif config.lstm_crit:
+        maddpg = RCMADDPG(env,config)
+    else:
+        maddpg = VanillaMADDPG(env,config)
 
     if config.multi_gpu:
         maddpg.torch_device = torch.device("cuda:0")
-    
     if config.to_gpu:
         maddpg.device = 'cuda'
     maddpg.prep_training(device=maddpg.device,torch_device=maddpg.torch_device)
@@ -58,7 +78,7 @@ def parallel_step(results,a_i,ran,obs,explore,output,pi_pickle,action_dim=3,para
     results[a_i] = action
 
 class BASE_MADDPG(object):
-    def __init__(self, config, team_net_params, team_alg_types='MADDPG', opp_alg_types='MADDPG', only_policy=False):
+    def __init__(self, config, team_net_params, team_alg_types=[], opp_alg_types=[], only_policy=False):
         self.config = config
         self.num_in_EM = team_net_params[0]['num_in_EM']
         self.num_out_EM = team_net_params[0]['num_out_EM']
@@ -165,9 +185,12 @@ class BASE_MADDPG(object):
                      'team_net_params': team_net_params,
                      'config' : config}
 
+        # print(**init_dict)
+        # exit(0)
         instance = cls(**init_dict)
         instance.init_dict = init_dict
         return instance
+
 
     @classmethod
     def init_from_save_selfplay(cls, filenames=list,nagents=1):
@@ -188,11 +211,12 @@ class BASE_MADDPG(object):
         return instance
 
     @classmethod
-    def init_from_save_evaluation(cls, filenames,nagents=1):
+    def init_from_save(cls, filenames,nagents=1):
         """
         Instantiate instance of this class from file created by 'save' method
         """
         save_dicts = np.asarray([torch.load(filename) for filename in filenames]) # use only filename
+        
         instance = cls(**save_dicts[0]['init_dict'])
         instance.init_dict = save_dicts[0]['init_dict']
 
@@ -1175,8 +1199,16 @@ class BASE_MADDPG(object):
         return clipped_differences.cpu()
 
 class RMADDPG(BASE_MADDPG):
-    def __init__(self, env, config, only_policy = False):
-        self = super().init_from_env(env, config, only_policy)
+    def __init__(self, env, config, only_policy = False, load = False, load_paths = None):
+        if not load:
+            # print(super())
+            # exit()
+            # super(BASE_MADDPG).init_from_env()
+            # self = BASE_MADDPG.init_from_env(env, config)
+            self.init_from_env(env, config)
+            # exit(0)
+        else:
+            super(BASE_MADDPG, self).init_from_save(load_paths, config.num_left)
 
         self.lstm_burn_in = config.burn_in_lstm
         self.hidden_dim_lstm = config.hidden_dim_lstm
@@ -1269,7 +1301,7 @@ class RMADDPG(BASE_MADDPG):
                 del temp_all_hs
                 torch.cuda.empty_cache()
     
-    def update(self, team_sample=[], opp_sample=[], agent_i=0,logger=None,load_same_agent=False,critic=False,policy=True,session_path=""):
+    def update(self, team_sample=[], opp_sample=[], agent_i=0,logger=None,load_same_agent=False,critic=False,policy=True):
         """
         Update parameters of agent model based on sample from replay buffer
         Inputs:
