@@ -80,11 +80,11 @@ class Update:
                     rb_i = np.random.randint(num_buffers)
 
                     for a_i in range(1):
-                        threads.append(mp.Process(target=updates.update_thread,args=(a_i,config,pt_trb,pt_orb,number_of_updates,update_session)))
+                        threads.append(mp.Process(target=self.update_thread,args=(a_i,config,pt_trb,pt_orb,number_of_updates,update_session)))
                 else:
                     if update_session > 75:
                         for a_i in range(1):
-                            threads.append(mp.Process(target=updates.update_thread,args=(a_i,config,env.team_replay_buffer,env.opp_replay_buffer,number_of_updates,update_session)))
+                            threads.append(mp.Process(target=self.update_thread,args=(a_i,config,env.team_replay_buffer,env.opp_replay_buffer,number_of_updates,update_session)))
                     [thr.start() for thr in threads]
                 print("Launching update")
                 start = time.time()
@@ -196,7 +196,6 @@ class Update:
             # from evaluation method just loads the networks
             maddpg = mad.init_from_save(config, initial_models, conifg.num_left)
 
-            # maddpg = MADDPG.init_from_save(initial_models,config.num_left) 
             if config.multi_gpu:
                 maddpg.torch_device = torch.device("cuda:3")
             if config.to_gpu:

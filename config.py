@@ -79,7 +79,9 @@ class RoboConfig(Config):
         else:
             self.conf_dict['discrete_action'] = False
         
-        self.conf_dict['initial_models'] = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
+        self.conf_dict['initial_models'] = ["data/training_sessions/5_21_11_3_vs_3/ensemble_models/ensemble_agent_0/model_0.pth",
+                                            "data/training_sessions/5_21_11_3_vs_3/ensemble_models/ensemble_agent_1/model_0.pth",
+                                            "data/training_sessions/5_21_11_3_vs_3/ensemble_models/ensemble_agent_2/model_0.pth"]
 
         self.conf_dict['burn_in_eps'] = float(self.conf_dict['burn_in']) / self.conf_dict['untouched']
 

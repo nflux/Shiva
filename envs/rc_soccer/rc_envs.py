@@ -84,7 +84,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
 
     if config.load_nets:
         # from evaluation method just loads the networks
-        maddpg = mad_algo.init_from_save(config, config.inital_models, config.num_left)
+        maddpg = mad_algo.init_from_save(config, config.initial_models, config.num_left)
     else:
         maddpg = mad_algo.init_from_config(config)        
         
@@ -281,8 +281,8 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
             t += 1
 
             if t%3000 == 0:
-                team_step_logger_df.to_csv(hist_dir + '/team_%s.csv' % history)
-                opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
+                team_step_logger_df.to_csv(config.hist_dir + '/team_%s.csv' % history)
+                opp_step_logger_df.to_csv(config.hist_dir + '/opp_%s.csv' % history)
                         
             team_episode = []
             opp_episode = []

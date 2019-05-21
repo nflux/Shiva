@@ -14,26 +14,14 @@ import pandas as pd
 MSELoss = torch.nn.MSELoss()
 CELoss = torch.nn.CrossEntropyLoss()
 
-# def init_from_save(config, load_paths, num_agents):
-#     if config.lstm_pol and config.lstm_crit:
-#         maddpg = RMADDPG(None, config, load=True, load_paths=initial_models)
-#     elif config.lstm_pol:
-#         maddpg = RAMADDPG(None, config, load=True, load_paths=initial_models)
-#     elif config.lstm_crit:
-#         maddpg = RCMADDPG(None, config, load=True, load_paths=initial_models)
-#     else:
-#         maddpg = VanillaMADDPG(None, config, load=True, load_paths=initial_models)
-    
-#     return maddpg
-
-def init_from_save(self, config, filenames, nagents=1):
+def init_from_save(config, filenames, nagents=1):
     """
     Instantiate instance of this class from file created by 'save' method
     """
     save_dicts = np.asarray([torch.load(filename) for filename in filenames]) # use only filename
 
     if config.lstm_pol and config.lstm_crit:
-        maddpg = RMADDPG(**save_dicts[0]['init_dict'])
+        maddpg = RMADDPG(config)
         maddpg.init_dict = save_dicts[0]['init_dict']
     elif config.lstm_pol:
         maddpg = RAMADDPG(None, config, load=True, load_paths=initial_models)
