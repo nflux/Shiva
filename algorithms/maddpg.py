@@ -1654,7 +1654,7 @@ class RMADDPG(BASE_MADDPG):
                 self.critic_loss_logger = self.critic_loss_logger.append({'iteration':self.niter,
                                                                             'critic': np.round(vf_loss.item(),4)},
                                                                             ignore_index=True)
-                print("Team (%s) Agent(%i) Q loss" % (side, agent_i),vf_loss)
+                print("Agent(%i) Q loss" % (agent_i),vf_loss)
 
 
         # return priorities

@@ -1,5 +1,44 @@
-The test bench notebook 'DRQN_1_vs_0' runs a simple DQN with RNN for one offense-agent using high level actions [dribble,go_to_ball, reorient & shoot]. 
-make sure to modify the config directory based on the HFO output when you run this notebook.
-before running the notebook, make sure the HFO rcssserver is up, for instance:
+Installation instructions:
 
-./bin/HFO --offense-agents=1 --seed 123 --headless --trials 10000 --frames-per-trial 100
+
+Run the following bash script
+
+#!/bin/bash
+
+#Description: This file is meant to setup a local environment for modification of HFO
+#Note: Change checkout branches to customize configuration.
+
+mkdir shiva
+cd shiva
+
+#Get the RCSSSERVER Repo
+git clone https://github.com/mehrzadshabez/rcssserver.git
+cd rcssserver
+# git checkout gen-pt
+cd ..
+
+#Get the LIBRCSC Repo
+git clone https://github.com/mehrzadshabez/librcsc.git
+cd librcsc
+# git checkout dev
+cd ..
+
+
+#Get the Robocup-Sigma Repo
+git clone https://github.com/mehrzadshabez/Robocup-Sigma.git
+cd Robocup-Sigma
+git checkout dev
+
+cd envs/rc_soccer/HFO
+bash recompile_start.sh
+
+
+
+Training instructions:
+
+from shiva/Robocup-Sigma run
+
+python main.py
+
+--env options: {rc,nmmo}
+--conf options {rc_cpu,rc_gpu,rc_multi_gpu}

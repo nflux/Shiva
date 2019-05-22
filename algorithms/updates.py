@@ -178,8 +178,8 @@ class Update:
                         print(time.time()-start,"<-- Critic Update Cycle")
 
                         [thr.join() for thr in threads]
-                        maddpg.load_ensemble_policy(ensemble_path,ensemble,0) # load only policy from updated policy thread
-                        [maddpg.save_agent(load_path,update_session,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
+                        maddpg.load_ensemble_policy(config.ensemble_path,ensemble,0) # load only policy from updated policy thread
+                        [maddpg.save_agent(config.load_path,update_session,i,config.load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
                         [maddpg.save_ensemble(config.ensemble_path,ensemble,i,config.load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
                     print(time.time()-start,"<-- Full Cycle")
                     cycle += 1

@@ -97,7 +97,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
             maddpg.torch_device = torch.device("cuda:2")
 
     current_ensembles = config.current_ensembles
-    preload_agent2d_path = ''
+    preload_agent2d_path = 'data/saved_models/'
 
     maddpg.prep_training(device=maddpg.device,only_policy=False,torch_device=maddpg.torch_device)
 
@@ -411,7 +411,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
                     if config.agent2d and config.preloaded_agent2d:
                         maddpg.load_agent2d(side='opp',load_same_agent=config.load_same_agent,models_path=preload_agent2d_path,nagents=env.num_OA)
                     elif config.agent2d:
-                        maddpg.load_agent2d(side='opp',models_path =config.session_path +"models/",load_same_agent=config.load_same_agent,nagents=env.num_OA)  
+                        maddpg.load_agent2d(side='opp',models_path =config.session_path,load_same_agent=config.load_same_agent,nagents=env.num_OA)  
                     else:
                             
                         if np.random.uniform(0,1) > config.self_play_prob: # self_play_proba % chance loading self else load an old ensemble for opponent
