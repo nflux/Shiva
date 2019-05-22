@@ -22,7 +22,7 @@ cd ..
 #Get the Robocup-Sigma Repo
 git clone https://github.com/mehrzadshabez/Robocup-Sigma.git
 cd Robocup-Sigma
-git checkout dev
+#git checkout dev
 
 cd envs/rc_soccer/HFO
 bash recompile_start.sh
