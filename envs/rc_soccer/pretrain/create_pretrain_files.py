@@ -1,5 +1,4 @@
-import os
-import sys
+import os, configparser, sys
 sys.path.append('..')
 from pretrain_env import pretrain_env
 import os
@@ -21,7 +20,7 @@ def main(args):
     start_viewer = True
     log_dir = args.log_dir
     #pt_log_dir = args.pt_log_dir
-    pt_log_dir ="pretrain_data"
+    pt_log_dir = "pretrain_data"
 
     # Control Random Initilization of Agents and Ball
     control_rand_init = True

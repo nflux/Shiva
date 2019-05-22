@@ -54,11 +54,10 @@ class RoboEnvsWrapper:
         self.config = conf.RoboConfig(config_parse)
         self.envs = RoboEnvs(self.config)
         self.config.env_inits(self.envs.template_env)
-
+        
         self.maddpg = mad_algo.init_from_config(self.config)
         self.update = updates.Update(self.config, self.envs.team_replay_buffer, self.envs.opp_replay_buffer)
-        #Pretraining **Needs create_pretrain_files.py to test, importing HFO issue
-        # self.pretrainer = pretrainer.pretrain(self.config, self.envs)
+        self.pretrainer = pretrainer.pretrain(self.config, self.envs)
 
     def run(self):
         mp.set_start_method('forkserver',force=True)
