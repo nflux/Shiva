@@ -57,7 +57,7 @@ class pretrain:
         self.pt_threads = []
 
         #UNDER TESTING
-        #self.testMADDPG = mad_algo.VanillaMADDPG(self.env, self.config)
+        self.mad_algo = mad_algo.init_from_config(self.config)
 
         #Begin the pretrain process
         self.pretraining()
@@ -80,10 +80,10 @@ class pretrain:
             # ------------ Pretrain actor/critic same time---------------
             #define/update the noise used for exploration
 
-            mad_algo.scale_noise(0.0)
-            mad_algo.reset_noise()
-            mad_algo.scale_beta(1)
-            update_session = 999999
+            self.mad_algo.scale_noise(0.0)
+            self.mad_algo.reset_noise()
+            self.mad_algo.scale_beta(1)
+            self.update_session = 999999
 
             self.update_cycles()
 
@@ -138,7 +138,7 @@ class pretrain:
             print("Length of centralized buffer: ", len(self.pt_trb))
 
 
-    def update_cycles():
+    def update_cycles(self):
         for u in range(self.pt_update_cycles):
                 print("PT Update Cycle: ",u)
                 print("PT Completion: ",(u*100.0)/(float(self.pt_update_cycles)),"%")
@@ -148,14 +148,14 @@ class pretrain:
                 threads = []
                 for a_i in range(1):
                     threads.append(mp.Process(target=updates.imitation_thread,args=(a_i,self.to_gpu,len(self.pt_trb),self.batch_size,
-                        self.pt_trb,pt_orb,number_of_updates,
+                        self.pt_trb,self.pt_orb,self.number_of_updates,
                         self.load_path,self.update_session,self.ensemble_path,self.forward_pass,self.LSTM,self.LSTM_policy,self.seq_length,self.k_ensembles,self.SIL,self.SIL_update_ratio,self.num_TA,self.load_same_agent,self.multi_gpu,self.session_path,self.data_parallel,self.lstm_burn_in)))
                 [thr.start() for thr in threads]
             
                 agentID = 0
                 buffer_size = len(self.pt_trb)
 
-                number_of_updates = 5000
+                self.number_of_updates = 5000
                 batches_to_sample = 50
                 if len(self.pt_trb) < batch_size*(batches_to_sample):
                     batches_to_sample = 1
@@ -163,10 +163,10 @@ class pretrain:
                 start = time.time()
                 for ensemble in range(self.k_ensembles):
 
-                    mad_algo.load_same_ensembles(self.ensemble_path,self.ensemble,mad_algo.nagents_team,load_same_agent=self.load_same_agent)
+                    self.mad_algo.load_same_ensembles(self.ensemble_path,self.ensemble,self.mad_algo.nagents_team,load_same_agent=self.load_same_agent)
 
                     #start = time.time()
-                    for up in range(number_of_updates):
+                    for up in range(self.number_of_updates):
                         offset = up % batches_to_sample
 
                         if not self.load_same_agent:
@@ -187,8 +187,8 @@ class pretrain:
 
                         if LSTM:
                             team_sample = self.pt_trb.sample(inds[self.batch_size*offset:self.batch_size*(offset+1)],to_gpu=self.to_gpu,device=mad_algo.torch_device)
-                            opp_sample = pt_orb.sample(inds[self.batch_size*offset:self.batch_size*(offset+1)],to_gpu=self.to_gpu,device=mad_algo.torch_device)
-                            priorities=mad_algo.pretrain_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=self.load_same_agent,lstm_burn_in=self.lstm_burn_in)
+                            opp_sample = self.pt_orb.sample(inds[self.batch_size*offset:self.batch_size*(offset+1)],to_gpu=self.to_gpu,device=mad_algo.torch_device)
+                            priorities=self.mad_algo.pretrain_critic_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',load_same_agent=self.load_same_agent,lstm_burn_in=self.lstm_burn_in)
                             #print("Use pretrain function")
                             #pt_trb.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
 

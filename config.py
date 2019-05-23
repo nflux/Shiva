@@ -86,7 +86,7 @@ class RoboConfig(Config):
         self.conf_dict['burn_in_eps'] = float(self.conf_dict['burn_in']) / self.conf_dict['untouched']
 
         self.conf_dict['current_ensembles'] = [0]*self.conf_dict['num_left']
-    
+        
     def env_inits(self, env):
         team_net_params = []
         for acsp, obsp in zip([env.action_list for i in range(env.num_TA)], env.team_obs):
