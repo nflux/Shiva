@@ -20,7 +20,7 @@ cd shiva
 Get the RCSSSERVER Repo:
 
 ```
-git clone https://github.com/mehrzadshabez/rcssserver.git
+git clone https://github.com/nflux/rcssserver.git
 cd rcssserver
 cd ..
 ```
@@ -28,16 +28,16 @@ cd ..
 Get the LIBRCSC Repo:
 
 ```
-git clone https://github.com/mehrzadshabez/librcsc.git
+git clone https://github.com/nflux/librcsc.git
 cd librcsc
 cd ..
 ```
 
-Get the Robocup-Sigma Repo:
+Get the Control-Tasks Repo:
 
 ```
-git clone https://github.com/mehrzadshabez/Robocup-Sigma.git
-cd Robocup-Sigma
+git clone https://github.com/nflux/Control-Tasks.git
+cd Control-Tasks
 ```
 ```
 cd envs/rc_soccer/HFO
@@ -47,7 +47,7 @@ bash recompile_start.sh
 
 ###Training instructions:
 
-from shiva/Robocup-Sigma run
+from shiva/Control-Tasks run
 
 ```
 python main.py
