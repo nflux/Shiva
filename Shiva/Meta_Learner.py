@@ -1,5 +1,20 @@
+import Learner, Validation
+import os
+
 class Meta_Learner():
-    def __init__(self, learners, algorithms, eval_env, agents, elite_agents, optimize_env_hp=False, optimize_learner_hp=False, evolution=False):
+
+    # So I'm thinking I can make reading the configuration file something that happens inside of the ini
+    def __init__(self, config):
+
+        # Passing the config file through validation should produce all the hyperparameters that need to be implemented in 
+        # different algorithms
+
+
+
+        #self, learners, algorithms, eval_env, agents, elite_agents, optimize_env_hp=False, optimize_learner_hp=False, evolution=False
+
+        #self.learners = [for learner in learners]
+
         self.learners = learners
         self.algorithms = algorithms
         self.eval_env = eval_env
@@ -9,9 +24,12 @@ class Meta_Learner():
         self.optimize_learner_hp = optimize_env_hp
         self. evolution = evolution
 
+    
+
+
+
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
-
         # there might be different algorithms that will tune the hyperparameters
 
         pass

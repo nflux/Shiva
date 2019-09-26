@@ -1,3 +1,7 @@
+import Algorithm
+import Replay_Buffer
+import Environment
+
 class Learner():
     
     def __init__(self, agents, environments, algorithm, data):
@@ -16,17 +20,23 @@ class Learner():
     def create_env(self, alg):
         pass
 
-    def get_agents():
+    def get_obs_space(self):
         pass
 
-    def get_alg():
+    def get_agents(self):
+        pass
+
+    def get_alg(self):
         return self.algorithm
 
-    def launch():
+    def launch(self):
         pass
 
-    def save_agent():
+    def save_agent(self):
         pass
 
-    def load_agent():
+    def load_agent(self):
         pass
+
+
+        
