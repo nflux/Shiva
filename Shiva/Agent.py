@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import uuid
 class Agent:
     def __init__(self, obs_dim, action_dim, uid):
@@ -8,26 +9,35 @@ class Agent:
         self.network = Network(self.obs_dim,self.action_dim)
         self.policy = None
         self.target_policy = None
+        self.epsilon = 0.0
        
     
     def policy(self, obs):
         rand = np.random.random()
-        tensor = self.network.Forward(obs)
-        if np.random.ramdon() < 1 - self.epsilon:
-
+        
+        if np.random.random() < 1 - self.epsilon:
+            action = Environmnet.get_action()
         else:
-            
-      
+            obs_a = np.array([obs], copy=False)
+            obs_v = torch.tensor(obs_a).to(device)
+            q_vals_v = self.network.Forward(obs_v)
+            _, act_v = torch.max(q_vals_v, dim=1)
+            action = int(act_v.item())
+
+        return action
         '''
             Obtain Action from current policy. 
         '''
-        return action
+      
 
     def save(self):
-         '''
-            Save the current Obs and Action to obs_
+        '''
+        Save the Current Action and Observation pair to where?
         '''
         pass
+        
+       
+       
 
     def load(self):
         '''
@@ -38,14 +48,9 @@ class Agent:
 
 
 
-class DQAgent:
+class DQAgent(Agent):
     def __init__(self, obs_dim, action_dim, uid):
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
-        self.id = uuid.uuid4()
-        self.network = Network(self.obs_dim,self.action_dim)
-        self.policy = None
-        self.target_policy = None
+        super(DQAgent,self, obs_dim, action_dim, uid).__init__
        
     
     def policy(self, obs):
@@ -56,7 +61,7 @@ class DQAgent:
         return action
 
     def save(self):
-         '''
+        '''
             Save the current Obs and Action
         '''
         pass
