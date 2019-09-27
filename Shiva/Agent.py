@@ -1,23 +1,22 @@
 import numpy as np
 import torch
-import Network as net
+import DQNet as net
 import Environment as env
 import uuid 
 class Agent:
-    def __init__(self, obs_dim, action_dim, uid):
+    def __init__(self, obs_dim, action_dim, uid, optimizer, learningrate):
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.id = uuid.uuid4()
-        self.network = net(self.obs_dim,self.action_dim)
         self.policy = None
         self.target_policy = None
-        self.epsilon = 0.0
+        self.optimizer = None
+        self.learningrate = learningrate
+
+
+
          
-    def policy(self, obs):
-        '''
-            Obtain Action from current policy. 
-        '''
-        pass
+    
 
     def save(self):
         '''
@@ -35,10 +34,12 @@ class Agent:
 
 
 class DQAgent(Agent):
-    def __init__(self, obs_dim, action_dim, uid):
-        super(DQAgent,self, obs_dim, action_dim, uid).__init__
-       
-    
+    def __init__(self, obs_dim, action_dim, uid, optimizer, learningrate):
+        super(DQAgent,self, obs_dim, action_dim, uid, optimizer, learningrate).__init__
+        self.policy = net(action_dim,32,64,obs_dim)
+        self.target_policy = net(action_dim,32, 64 obs_dim)
+        self.optimizer = optimizer(params=self.policy.parameters(), lr=learningrate)
+    '''
     def policy(self, obs, epsilon):
         self.epsilon = epsilon
         rand = np.random.random()
@@ -52,11 +53,11 @@ class DQAgent(Agent):
             _, act_v = torch.max(q_vals_v, dim=1)
             action = int(act_v.item())
 
-        '''
+        
             Obtain Action from current policy by connect . 
-        '''
+        
         return action
-
+        '''
     def save(self):
         '''
             Save the current Obs and Action
