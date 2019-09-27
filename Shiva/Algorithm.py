@@ -135,21 +135,41 @@ class DQAlgorithm(AbstractAlgorithm):
                 None
         '''
         states, actions, rewards, dones, next_states = minibatch
-
+        # make tensors
         states_v = torch.tensor(states).to(device)
         next_states_v = torch.tensor(next_states).to(device)
         actions_v = torch.tensor(actions).to(device)
         rewards_v = torch.tensor(rewards).to(device)
         done_mask = torch.ByteTensor(dones).to(device)
-        
+        # zero optimizer
         agent.optimizer.zero_grad()
-
+        # 1) GRAB Q_VALUE(s_j, a_j)
+        # We pass observations to the first model and extract the
+        # specific Q-values for the taken actions using the gather() tensor operation.
+        # The first argument to the gather() call is a dimension index that we want to
+        # perform gathering on (equal to 1, which corresponds to actions). 
+        # The second argument is a tensor of indices of elements to be chosen
         state_action_values = agent.policy(states_v).gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
+        # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
+        # We apply the target network to our next state observations and 
+        # calculate the maximum Q-value along the same action dimension 1.
+        # Function max() returns both maximum values and indices of those values (so it calculates both max and argmax), 
+        # which is very convenient. However, in this case, we’re interested only in values, so we take
+        # the first entry of the result.
         next_state_values = agent.target_policy(next_states_v).max(1)[0]
+        # 3) OVERWRITE 0 ON ALL Q_HAT_VALUES WHERE s_j IS A TERMINATION STATE
+        # If transition in the batch is from the last step in the episode, then our value of the action doesn’t have a
+        # discounted reward of the next state, as there is no next state to gather reward from
         next_state_values[done_mask] = 0.0
+        # 4) Detach magic
+        # We detach the value from its computation graph to prevent
+        # gradients from flowing into the neural network used to calculate Q
+        # approximation for next states.
+        # Without this our backpropagation of the loss will start to affect both 
+        # predictions for the current state and the next state.
         next_state_values = next_state_values.detach()
 
-        expected_state_action_values = next_state_values * GAMMA + rewards_v
+        expected_state_action_values = next_state_values * self.gamma + rewards_v
 
         loss_v = self.loss_function(state_action_values, expected_state_action_values)
         loss_v.backward()
@@ -168,7 +188,7 @@ class DQAlgorithm(AbstractAlgorithm):
         if random.uniform(0, 1) < epsilon:
             action = random.sample(range(self.action_space), 1)
         else:
-            obs_a = np.array([obs], copy=False)
+            obs_a = np.array([obs], copy=False) # or np.array(obs, copy=False)
             obs_v = torch.tensor(obs_a).to(device)
             q_vals_v = agent.policy(obs_v)
             _, act_v = torch.max(q_vals_v, dim=1)
