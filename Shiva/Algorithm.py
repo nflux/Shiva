@@ -1,18 +1,12 @@
 '''
 TODO
     - Init function
+    - 
+
     - DQAlgorithm._is_epsilon_greedy_action() function to be a decorator so that can be used for other algorithms
 
 
 '''
-
-def init_algorithm(config, obs_dim, ):
-    _return = None
-    if config.algorithm == 'DQN':
-        
-    else:
-
-    return _return
 
 import Agent
 
@@ -35,14 +29,14 @@ class AbstractAlgorithm():
             Input
                 observation_space   Shape of the observation space, aka input to policy network
                 action_space        Shape of the action space, aka output from policy network
-                loss_function:      Function used to calculate the loss during training
-                regularizer:        ?
-                recurrence:         ?
-                optimizer:          Optimization algorithm to train network weights
-                gamma:              Hyperparameter
-                batch_size:         ?
+                loss_function       Function used to calculate the loss during training
+                regularizer         
+                recurrence          
+                optimizer           Optimization algorithm to train network weights
+                gamma               Hyperparameter
+                batch_size          
                 learning_rate       Learning rate used in the optimizer
-                beta:               Hyperparameter
+                beta                Hyperparameter
         '''
         self.observation_space = observation_space
         self.action_space = action_space
@@ -56,7 +50,6 @@ class AbstractAlgorithm():
         self.beta = beta
 
         self.agents = []
-        self.n_steps = 0
 
     # def __repr__(self):
     #     return "AbstractAlgorithm(\n\tObs_space:{0},\n\tAct_space:{1},\n\tLossFunction:{2},\n\tOptimizer:{3},\n\tLearningRate:{4},\n\tRegularizer:{5},\n\tRecurrence:{6},\n\tGamma:{7},\n\tBeta:{8},\n\tBatch_size:{9}\n)".format(
@@ -109,16 +102,11 @@ class AbstractAlgorithm():
         '''
         pass
 
-
-
 ##########################################################################
+#    DQ Algorithm Implementation
+#    
+#    Discrete Action Space
 ##########################################################################
-
-'''
-    DQ Algorithm Implementation
-    
-    Discrete Action Space
-'''
 
 class DQAlgorithm(AbstractAlgorithm):
     def __init__(self,
@@ -132,30 +120,86 @@ class DQAlgorithm(AbstractAlgorithm):
         batch_size: int, 
         learning_rate: np.float, 
         beta: np.float,
-        g_epsilon: np.float):
+        epsilon: set()=(1, 0.02, 10**5),
+        C: int):
+        '''
+            Inputs
+                epsilon        (start, end, decay rate)
+                C              Number of iterations before the target network is updated
+        '''
         super(DQN, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, batch_size, learning_rate, beta)
-        self.g_epsilon = g_epsilon
+        
+        self.epsilon_start = epsilon[0]
+        self.epsilon_end = epsilon[1]
+        self.epsilon_decay = epsilon[2]
+        self.C = C
 
-    def update(self, agent, data):
+    def update(self, agent, minibatch, step_n):
+        '''
+            Implementation
+                1) Calculate what the current expected Q val from each sample on the replay buffer would be
+                2) Calculate loss between current and past reward
+                3) Optimize
+                4) If agent steps reached C, update agent.target network
+
+            Input
+                agent       Agent who we are updating
+                minibatch   Batch from the experience replay buffer
+
+            Returns
+                None
+        '''
+        # Y_j = []
+        # S_j = []
+        # for j_state, j_action, j_reward, j_next_state, j_done in minibatch:
+        #     if j_done:
+        #         y = j_reward
+        #     else:
+        #         y = j_reward + self.gamma * agent.target(j_next_state)
+        #     Y_j.append(y)
+        #     S_j.append(j_state)
+
+        states, actions, rewards, dones, next_states = minibatch
+
+        states_v = torch.tensor(states).to(device)
+        next_states_v = torch.tensor(next_states).to(device)
+        actions_v = torch.tensor(actions).to(device)
+        rewards_v = torch.tensor(rewards).to(device)
+        done_mask = torch.ByteTensor(dones).to(device)
         
 
-    def get_action(self, agent, observation):
-        '''
-            Perform an Epsilon-Greedy action
-        '''
-        if self._is_epsilon_greedy_action():
-            random.sample(range(agent.obs_dim), 1)
-        else:
-            agent.policy(observation)
 
-    def _is_epsilon_greedy_action(self, action):
+        self.optimizer.zero_grad()
+        Y = agent.net(S_j)
+
+        loss_v = self.loss_function(Y, Y_j)
+        loss_v.backward()
+        self.optimizer.step()
+
+        if step_n % self.C == 0:
+            agent.target.load_state_dict(agent.net.state_dict()) # Assuming is PyTorch!
+
+    def get_action(self, agent, observation, step_n):
         '''
-            - This function should be implemented as a Decorator
-            - Do we want Epsilon to decay????
+            With the probability epsilon we take the random action,
+            otherwise we use the past model to obtain the Q-values for all possible actions
+            and choose the best
         '''
-        return random.uniform(0, 1) < self.g_epsilon:
+        epsilon = max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay))
+        return agent.policy(observation, epsilon)
+        # if random.uniform(0, 1) < epsilon:
+        #     action = random.sample(range(agent.obs_dim), 1) # Assuming discrete actions!
+        # else:
+        #     state_a = np.array(observation, copy=False)#np.array([observation], copy=False)
+        #     state_v = torch.tensor(state_a)#.to(device)
+        #     q_vals_v = agent.policy(state_v)
+        #     _, act_v = torch.max(q_vals_v, dim=1)
+        #     action = int(act_v.item())
+        # return action
 
     def create_agent(self):
-        new_agent = DQAgent(self.observation_space.shape[0], self.action_space.shape[0])
+        net_input = self.observation_space.shape[0]
+        net_output = self.action_space.shape[0]
+        new_agent = DQAgent(net_input, net_output)
         self.agents.append(new_agent)
         return new_agent
