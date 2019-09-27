@@ -32,7 +32,7 @@ class AbstractAlgorithm():
                 loss_function       Function used to calculate the loss during training
                 regularizer         
                 recurrence          
-                optimizer           Optimization algorithm to train network weights
+                optimizer           Optimization function to train network weights
                 gamma               Hyperparameter
                 batch_size          
                 learning_rate       Learning rate used in the optimizer
@@ -50,20 +50,6 @@ class AbstractAlgorithm():
         self.beta = beta
 
         self.agents = []
-
-    # def __repr__(self):
-    #     return "AbstractAlgorithm(\n\tObs_space:{0},\n\tAct_space:{1},\n\tLossFunction:{2},\n\tOptimizer:{3},\n\tLearningRate:{4},\n\tRegularizer:{5},\n\tRecurrence:{6},\n\tGamma:{7},\n\tBeta:{8},\n\tBatch_size:{9}\n)".format(
-    #         self.observation_space,
-    #         self.action_space,
-    #         self.loss_function,
-    #         self.optimizer,
-    #         self.learning_rate
-    #         self.regularizer,
-    #         self.recurrence,
-    #         self.gamma,
-    #         self.beta,
-    #         self.batch_size
-    #     )
 
     def update(self, agent, data):
         '''
@@ -110,15 +96,15 @@ class AbstractAlgorithm():
 
 class DQAlgorithm(AbstractAlgorithm):
     def __init__(self,
-        observation_space: np.ndarray,
-        action_space: np.ndarray,
+        observation_space: int,
+        action_space: int,
         loss_function: object, 
         regularizer: object, 
         recurrence: bool, 
         optimizer: object, 
         gamma: np.float, 
         batch_size: int, 
-        learning_rate: np.float, 
+        learning_rate: np.float,
         beta: np.float,
         epsilon: set()=(1, 0.02, 10**5),
         C: int):
@@ -128,7 +114,6 @@ class DQAlgorithm(AbstractAlgorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(DQN, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, batch_size, learning_rate, beta)
-        
         self.epsilon_start = epsilon[0]
         self.epsilon_end = epsilon[1]
         self.epsilon_decay = epsilon[2]
@@ -149,16 +134,6 @@ class DQAlgorithm(AbstractAlgorithm):
             Returns
                 None
         '''
-        # Y_j = []
-        # S_j = []
-        # for j_state, j_action, j_reward, j_next_state, j_done in minibatch:
-        #     if j_done:
-        #         y = j_reward
-        #     else:
-        #         y = j_reward + self.gamma * agent.target(j_next_state)
-        #     Y_j.append(y)
-        #     S_j.append(j_state)
-
         states, actions, rewards, dones, next_states = minibatch
 
         states_v = torch.tensor(states).to(device)
@@ -167,17 +142,21 @@ class DQAlgorithm(AbstractAlgorithm):
         rewards_v = torch.tensor(rewards).to(device)
         done_mask = torch.ByteTensor(dones).to(device)
         
+        agent.optimizer.zero_grad()
 
+        state_action_values = agent.policy(states_v).gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
+        next_state_values = agent.target_policy(next_states_v).max(1)[0]
+        next_state_values[done_mask] = 0.0
+        next_state_values = next_state_values.detach()
 
-        self.optimizer.zero_grad()
-        Y = agent.net(S_j)
+        expected_state_action_values = next_state_values * GAMMA + rewards_v
 
-        loss_v = self.loss_function(Y, Y_j)
+        loss_v = self.loss_function(state_action_values, expected_state_action_values)
         loss_v.backward()
-        self.optimizer.step()
+        agent.optimizer.step()
 
         if step_n % self.C == 0:
-            agent.target.load_state_dict(agent.net.state_dict()) # Assuming is PyTorch!
+            agent.target_policy.load_state_dict(agent.policy.state_dict()) # Assuming is PyTorch!
 
     def get_action(self, agent, observation, step_n):
         '''
@@ -186,20 +165,17 @@ class DQAlgorithm(AbstractAlgorithm):
             and choose the best
         '''
         epsilon = max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay))
-        return agent.policy(observation, epsilon)
-        # if random.uniform(0, 1) < epsilon:
-        #     action = random.sample(range(agent.obs_dim), 1) # Assuming discrete actions!
-        # else:
-        #     state_a = np.array(observation, copy=False)#np.array([observation], copy=False)
-        #     state_v = torch.tensor(state_a)#.to(device)
-        #     q_vals_v = agent.policy(state_v)
-        #     _, act_v = torch.max(q_vals_v, dim=1)
-        #     action = int(act_v.item())
-        # return action
+        if random.uniform(0, 1) < epsilon:
+            action = random.sample(range(self.action_space), 1)
+        else:
+            obs_a = np.array([obs], copy=False)
+            obs_v = torch.tensor(obs_a).to(device)
+            q_vals_v = agent.policy(obs_v)
+            _, act_v = torch.max(q_vals_v, dim=1)
+            action = int(act_v.item())
+        return action
 
     def create_agent(self):
-        net_input = self.observation_space.shape[0]
-        net_output = self.action_space.shape[0]
-        new_agent = DQAgent(net_input, net_output)
+        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer, self.learning_rate)
         self.agents.append(new_agent)
         return new_agent
