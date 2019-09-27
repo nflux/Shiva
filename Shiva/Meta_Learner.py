@@ -1,7 +1,7 @@
 import Learner, Validation
 import os
 
-class Meta_Learner():
+class AbstractMetaLearner():
 
     # So I'm thinking I can make reading the configuration file something that happens inside of the ini
     def __init__(self, config):
@@ -51,3 +51,7 @@ class Meta_Learner():
     def record_metrics(self):
         pass
 
+class MetaLearner(AbstractMetaLearner):
+
+    def __init__():
+        pass

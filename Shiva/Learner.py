@@ -20,8 +20,6 @@ class AbstractLearner():
     def create_env(self, alg):
         pass
 
-    def get_obs_space(self):
-        return Environment.get_obs_space()
 
     def get_agents(self):
         return self.agents
@@ -49,4 +47,7 @@ class Learner(AbstractLearner):
 
 
     def launch(self):
+        Environment.create_env(self.environments)
+        Environment.get_obs_space()
+        buffer = Replay_Buffer.create_buffer()
         
