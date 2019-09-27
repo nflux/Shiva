@@ -2,13 +2,13 @@ import Algorithm
 import Replay_Buffer
 import Environment
 
-class Learner():
+class AbstractLearner():
     
     def __init__(self, agents, environments, algorithm, data):
         self.agents = agents
         self.environments = environments
         self.algorithm = algorithm
-        self.data = data
+        self.data = None
     
 
     def update(self):
@@ -21,10 +21,10 @@ class Learner():
         pass
 
     def get_obs_space(self):
-        pass
+        return Environment.get_obs_space()
 
     def get_agents(self):
-        pass
+        return self.agents
 
     def get_alg(self):
         return self.algorithm
@@ -39,4 +39,14 @@ class Learner():
         pass
 
 
+class Learner(AbstractLearner):
+
+    def __init__(self, agents, environments, algorithm, data):
+        self.agents = agents
+        self.environments = environments
+        self.algorithm = algorithm
+        self.data = None
+
+
+    def launch(self):
         
