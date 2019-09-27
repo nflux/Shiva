@@ -1,43 +1,29 @@
 import numpy as np
 import torch
-import uuid
+import Network as net
+import Environment as env
+import uuid 
 class Agent:
     def __init__(self, obs_dim, action_dim, uid):
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.id = uuid.uuid4()
-        self.network = Network(self.obs_dim,self.action_dim)
+        self.network = net(self.obs_dim,self.action_dim)
         self.policy = None
         self.target_policy = None
         self.epsilon = 0.0
-       
-    
+         
     def policy(self, obs):
-        rand = np.random.random()
-        
-        if np.random.random() < 1 - self.epsilon:
-            action = Environmnet.get_action()
-        else:
-            obs_a = np.array([obs], copy=False)
-            obs_v = torch.tensor(obs_a).to(device)
-            q_vals_v = self.network.Forward(obs_v)
-            _, act_v = torch.max(q_vals_v, dim=1)
-            action = int(act_v.item())
-
-        return action
         '''
             Obtain Action from current policy. 
         '''
-      
+        pass
 
     def save(self):
         '''
         Save the Current Action and Observation pair to where?
         '''
-        pass
-        
-       
-       
+        pass  
 
     def load(self):
         '''
@@ -53,10 +39,21 @@ class DQAgent(Agent):
         super(DQAgent,self, obs_dim, action_dim, uid).__init__
        
     
-    def policy(self, obs):
-        action = self.network.Forward(obs)
+    def policy(self, obs, epsilon):
+        self.epsilon = epsilon
+        rand = np.random.random()
+        
+        if np.random.random() < 1 - self.epsilon:
+            action = env.get_actions()
+        else:
+            obs_a = np.array([obs], copy=False)
+            obs_v = torch.tensor(obs_a).to(device)
+            q_vals_v = self.net.Forward(obs_v)
+            _, act_v = torch.max(q_vals_v, dim=1)
+            action = int(act_v.item())
+
         '''
-            Obtain Action from current policy. 
+            Obtain Action from current policy by connect . 
         '''
         return action
 
@@ -64,11 +61,11 @@ class DQAgent(Agent):
         '''
             Save the current Obs and Action
         '''
-        pass
+
+        torch.save(self.network,"/ShivaAgent"+str(self.id)+ ".pth")
 
     def load(self):
         '''
         Load the Cunrrent action
         '''
-
-        pass
+        torch.load(self.network,"/ShivaAgent"+str(self.id)+ ".pth")
