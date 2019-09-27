@@ -35,7 +35,7 @@ class Agent:
 
 class DQAgent(Agent):
     def __init__(self, obs_dim, action_dim, uid, optimizer, learningrate):
-        super(DQAgent,self, obs_dim, action_dim, uid, optimizer, learningrate).__init__
+        super(DQAgent,self).__init__(obs_dim, action_dim, uid, optimizer, learningrate)
         self.policy = net(action_dim,32,64,obs_dim)
         self.target_policy = net(action_dim,32, 64 obs_dim)
         self.optimizer = optimizer(params=self.policy.parameters(), lr=learningrate)
