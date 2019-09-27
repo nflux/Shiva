@@ -9,11 +9,10 @@ class Meta_Learner():
         # Passing the config file through validation should produce all the hyperparameters that need to be implemented in 
         # different algorithms
 
-
+        for c in config:
+            Validation.validate(c)
 
         #self, learners, algorithms, eval_env, agents, elite_agents, optimize_env_hp=False, optimize_learner_hp=False, evolution=False
-
-        #self.learners = [for learner in learners]
 
         self.learners = learners
         self.algorithms = algorithms
