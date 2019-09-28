@@ -3,17 +3,7 @@ import os
 
 class AbstractMetaLearner():
 
-    # So I'm thinking I can make reading the configuration file something that happens inside of the ini
-    def __init__(self, config):
-
-        # Passing the config file through validation should produce all the hyperparameters that need to be implemented in 
-        # different algorithms
-
-        for c in config:
-            Validation.validate(c)
-
-        #self, learners, algorithms, eval_env, agents, elite_agents, optimize_env_hp=False, optimize_learner_hp=False, evolution=False
-
+    def __init__(self, path):
         self.learners = learners
         self.algorithms = algorithms
         self.eval_env = eval_env
@@ -22,10 +12,6 @@ class AbstractMetaLearner():
         self.optimize_env_hp = optimize_env_hp
         self.optimize_learner_hp = optimize_env_hp
         self. evolution = evolution
-
-    
-
-
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
@@ -51,7 +37,22 @@ class AbstractMetaLearner():
     def record_metrics(self):
         pass
 
+# this is a version of a meta learner that will take a file path to the configuration files
 class MetaLearner(AbstractMetaLearner):
 
-    def __init__():
-        pass
+
+    #self, learners, algorithms, eval_env, agents, elite_agents, optimize_env_hp=False, optimize_learner_hp=False, evolution=False
+
+    def __init__(self, path):
+
+        validation = Validation.validate(path)
+
+        if validation.success():
+            
+            # here we will go through each config and initialize the learners
+            
+            pass
+        else:
+            # in this case validation.message will have something bad
+            print(validation.message)
+            # end the program somehow
