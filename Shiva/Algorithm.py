@@ -1,17 +1,13 @@
 '''
 TODO
-    - Init function
-    - 
-
+    - Init function, maybe
     - DQAlgorithm._is_epsilon_greedy_action() function to be a decorator so that can be used for other algorithms
-
-
 '''
-
-import Agent
 
 import random
 import numpy as np
+
+import torch
 
 class AbstractAlgorithm():
     def __init__(self,
@@ -20,7 +16,7 @@ class AbstractAlgorithm():
         loss_function: object, 
         regularizer: object, 
         recurrence: bool, 
-        optimizer: object, 
+        optimizer_function: object, 
         gamma: np.float, 
         batch_size: int, 
         learning_rate: np.float,
@@ -43,13 +39,14 @@ class AbstractAlgorithm():
         self.loss_function = loss_function
         self.regularizer = regularizer
         self.recurrence = recurrence
-        self.optimizer = optimizer
+        self.optimizer_function = optimizer_function
         self.gamma = gamma
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.beta = beta
 
         self.agents = []
+        self.loss_calc = self.loss_function()
 
     def update(self, agent, data):
         '''
@@ -94,6 +91,8 @@ class AbstractAlgorithm():
 #    Discrete Action Space
 ##########################################################################
 
+from Agent import DQAgent
+
 class DQAlgorithm(AbstractAlgorithm):
     def __init__(self,
         observation_space: int,
@@ -106,14 +105,14 @@ class DQAlgorithm(AbstractAlgorithm):
         batch_size: int, 
         learning_rate: np.float,
         beta: np.float,
-        epsilon: set()=(1, 0.02, 10**5),
+        epsilon: set(),
         C: int):
         '''
             Inputs
-                epsilon        (start, end, decay rate)
+                epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(DQN, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, batch_size, learning_rate, beta)
+        super(DQAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, batch_size, learning_rate, beta)
         self.epsilon_start = epsilon[0]
         self.epsilon_end = epsilon[1]
         self.epsilon_decay = epsilon[2]
@@ -136,11 +135,11 @@ class DQAlgorithm(AbstractAlgorithm):
         '''
         states, actions, rewards, dones, next_states = minibatch
         # make tensors
-        states_v = torch.tensor(states).to(device)
-        next_states_v = torch.tensor(next_states).to(device)
-        actions_v = torch.tensor(actions).to(device)
-        rewards_v = torch.tensor(rewards).to(device)
-        done_mask = torch.ByteTensor(dones).to(device)
+        states_v = torch.tensor(states)#.to(device)
+        next_states_v = torch.tensor(next_states)#.to(device)
+        actions_v = torch.tensor(actions)#.to(device)
+        rewards_v = torch.tensor(rewards)#.to(device)
+        done_mask = torch.ByteTensor(dones)#.to(device)
         # zero optimizer
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j)
@@ -171,7 +170,7 @@ class DQAlgorithm(AbstractAlgorithm):
 
         expected_state_action_values = next_state_values * self.gamma + rewards_v
 
-        loss_v = self.loss_function(state_action_values, expected_state_action_values)
+        loss_v = self.loss_calc(state_action_values, expected_state_action_values)
         loss_v.backward()
         agent.optimizer.step()
 
@@ -186,16 +185,16 @@ class DQAlgorithm(AbstractAlgorithm):
         '''
         epsilon = max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay))
         if random.uniform(0, 1) < epsilon:
-            action = random.sample(range(self.action_space), 1)
+            action = random.sample(range(self.action_space), 1)[0]
         else:
-            obs_a = np.array([obs], copy=False) # or np.array(obs, copy=False)
-            obs_v = torch.tensor(obs_a).to(device)
+            # obs_a = np.array(observation, copy=False) # or np.array([observation], copy=False) # depends how the data comes formated from the buffer
+            obs_v = torch.tensor(observation)#.to(device)
             q_vals_v = agent.policy(obs_v)
-            _, act_v = torch.max(q_vals_v, dim=1)
-            action = int(act_v.item())
+            act_val, act_idx = torch.max(q_vals_v, dim=0) # dim=0 TBD! Works for now
+            action = int(act_idx.item())
         return action
 
     def create_agent(self):
-        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer, self.learning_rate)
+        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate)
         self.agents.append(new_agent)
         return new_agent

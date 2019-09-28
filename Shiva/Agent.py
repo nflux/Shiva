@@ -19,7 +19,6 @@ class Agent:
         self.action_dim = action_dim
         self.id = uuid.uuid4()
         self.policy = None
-        self.target_policy = None
         self.optimizer = None
         self.learningrate = learningrate
 
@@ -43,9 +42,11 @@ class DQAgent(Agent):
         super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learningrate)
 
         # Policy and Target Polict calls the dqnet. Hidden Layer 1 = 32 Hidden Layer 2= 64 
-        self.policy = dqnet(action_dim,32,64,obs_dim)
-
-        self.target_policy = dqnet(action_dim,32, 64, obs_dim)
+        HIDDEN_LAYER_1 = 32
+        HIDDEN_LAYER_2 = 64
+        
+        self.policy = dqnet(obs_dim, HIDDEN_LAYER_1, HIDDEN_LAYER_2, action_dim)
+        self.target_policy = dqnet(obs_dim, HIDDEN_LAYER_1, HIDDEN_LAYER_2, action_dim)
         # Calls the optimizer for the policy
         self.optimizer = optimizer(params=self.policy.parameters(), lr=learningrate)
     
