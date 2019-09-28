@@ -28,7 +28,6 @@ class AbstractMetaLearner():
 
     def evolve(self, new_agents, new_hp):
 
-        self.algorithms
         pass
 
     def evaluate(self, learners):

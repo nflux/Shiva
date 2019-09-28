@@ -9,10 +9,22 @@ class AbstractLearner():
         self.environments = environments
         self.algorithm = algorithm
         self.data = None
+
+        if self.algorithm == 'DQN':
+            learner = DQN_Learner(agents, environments, algorithm, data)
+
+        elif self.algorithm == 'A3C':
+            leaner = A3C_Learner(agents, environments, algorithm, data)
+
+        elif self.algorithm == 'DDPG':
+            leaner = DDPG_Learner(agents, environments, algorithm, data)
+
+        elif self.algorithm == 'MADDPG':
+            leaner = MADDPG_Learner(agents, environments, algorithm, data)
     
 
     def update(self):
-        self.algorithm.update(agents, data)
+        pass
 
     def step(self):
         pass
@@ -21,10 +33,9 @@ class AbstractLearner():
         pass
 
     def get_agents(self):
-        return self.agents
-
+        pass
     def get_alg(self):
-        return self.algorithm
+        pass
 
     def launch(self):
         pass
@@ -38,17 +49,20 @@ class AbstractLearner():
 
 class DQN_Learner(AbstractLearner):
 
-    def __init__(self, 
-                agents, 
-                environments, 
-                algorithm, 
-                data
-        ):
+    def __init__(self, agents, environments, algorithm, data):
         self.agents = agents
         self.environments = environments
         self.algorithm = algorithm
         self.data = None
 
+    def create_env(self, alg):
+        pass
+
+    def get_agents(self):
+        pass
+
+    def get_alg(self):
+        pass
 
     def launch(self):
         # create the environment and get the action and observation spaces
@@ -61,11 +75,27 @@ class DQN_Learner(AbstractLearner):
         Algorithm.create_alg(self.algorithm)
 
     def step(self):
+
+        # probably need to discuss this with Ezequiel
         observation = Environment.get_observation()
         action = Algorithm.get_action()
-        Environment.step()
-        Environment.get_reward()
-        Environment.get_observation()
+        Environment.step(action)
+        reward = Environment.get_reward()
+        next_observation = Environment.get_observation()
+        Replay_Buffer.push(observation, )
+
+    def save_agent(self):
+        pass
+
+    def load_agent(self):
+        pass
+
+
+class DDPG_Learner(AbstractLearner):
+    
+    def __init__(self):
+        pass
+
 
 class MADDPG_Learner(AbstractLearner):
     
@@ -73,5 +103,7 @@ class MADDPG_Learner(AbstractLearner):
         pass
 
 
-class DDPG_Learner(AbstractLearner): 
-        
+class A3C_Learner(AbstractLearner):
+    
+    def __init__(self):
+        pass

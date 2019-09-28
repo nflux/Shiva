@@ -13,6 +13,7 @@ class Validation():
     def __init__(self, path):
         # store the ini directory for later use
         self.file_path = path
+        self.learners = self.read_configs()
 
 
     #  this method will assume that we are going to read more than one config file or a folders of config files
@@ -21,38 +22,73 @@ class Validation():
     #  I can design this so that read configs will go through each file and identify what kind of learner method needs to be implemented
 
 
-    def read_configs(self, config):
+    def read_configs(self):
 
         # parser for ini files
         parser = configparser.ConfigParser()
 
+        def section_extracter(section):
+
+            configs = {}
+
+            for option in parser.options(section):
+                configs[option] = ast.literal_eval(parser.get(section, option))
+
+            return configs
+
+        learners = []
+
         # loop through initialization folder
         for f in listdir(self.file_path):
 
+            learner = {}
+
             # if its a file
             if isfile(join(self.file_path, f)):
+
                 parser.read(join(self.file_path, f))
+                
+                for section in parser.sections():
+                    if section == 'Learner':
+                        learner[section] = section_extracter(section)
+                    elif section == 'Algorithm':
+                        learner[section] = section_extracter(section)
+                    elif section == 'Environment':
+                        learner[section] = section_extracter(section)
+                    elif section == 'Replay_Buffer':
+                        learner[section] = section_extracter(section)
+                    elif section == 'Agent':
+                        learner[section] = section_extracter(section)
+                    elif section == 'Network':
+                        learner[section] = section_extracter(section)
 
 
+                # Now I need to figure out how I'm going to handle and extract the configurations
 
             else:
-                pass
 
+                for f_ in listdir(join(self.file_path, f)):
 
-        conf_dict = {}
-        sections = config.sections()
-        for section in sections:
-            options = config.options(section)
-            for option in options:
-                conf_dict[option] = ast.literal_eval(config.get(section, option))
+                    parser.read(join(self.file_path, f, f_))
 
-        # I think I want to return a list of configurations
-        # It might even be a list of lists of configurations such that everything is modularized
-        return conf_dict
+                    for section in parser.sections():
 
+                        if section == 'Learner':
+                            learner[section] = section_extracter(section)
+                        elif section == 'Algorithm':
+                            learner[section] = section_extracter(section)
+                        elif section == 'Environment':
+                            learner[section] = section_extracter(section)
+                        elif section == 'Replay_Buffer':
+                            learner[section] = section_extracter(section)
+                        elif section == 'Agent':
+                            learner[section] = section_extracter(section)
+                        elif section == 'Network':
+                            learner[section] = section_extracter(section)
 
+            learners.append(learner)
 
-
+        return learners
 
 
     # this method will validate the configurations
@@ -60,9 +96,15 @@ class Validation():
     # we have the check whether or not the hyperparameters are 
     def validate(self):
         
-        
+
         self.success = False
         
         self.sucess = True
 
-validate = Validation()
+
+
+validate = Validation('Initializers')
+
+for l in validate.learners:
+
+    print(l)
