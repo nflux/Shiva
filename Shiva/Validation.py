@@ -14,14 +14,14 @@ class Validation():
         # store the ini directory for later use
         self.file_path = path
         self.learners = self.read_configs()
+        self.success : bool
+        self.message : str
 
 
     #  this method will assume that we are going to read more than one config file or a folders of config files
     #  if its a single config file then it will be assumed that all the configurations for the learner will be in that file
     #  if its a folder of config files it will expect there to be a config file for each component
     #  I can design this so that read configs will go through each file and identify what kind of learner method needs to be implemented
-
-
     def read_configs(self):
 
         # parser for ini files
@@ -49,6 +49,8 @@ class Validation():
                 parser.read(join(self.file_path, f))
                 
                 for section in parser.sections():
+
+                    # I think we need all these if else statements to restrict section names
                     if section == 'Learner':
                         learner[section] = section_extracter(section)
                     elif section == 'Algorithm':
@@ -73,6 +75,7 @@ class Validation():
 
                     for section in parser.sections():
 
+                        # I think we need all these if else statements to restrict section names
                         if section == 'Learner':
                             learner[section] = section_extracter(section)
                         elif section == 'Algorithm':
@@ -96,15 +99,16 @@ class Validation():
     # we have the check whether or not the hyperparameters are 
     def validate(self):
         
-
+        # if there's something wrong with the configuration files
         self.success = False
-        
-        self.sucess = True
+        self.message = "Hyperparamaters not valid"
+        self.message = "Configuration file invalid."
+
+        # if there's nothing wrong with the configuration files
+        self.success = True
 
 
 
-validate = Validation('Initializers')
-
-for l in validate.learners:
-
-    print(l)
+# validate = Validation('Initializers')
+# for l in validate.learners:
+#     print(l)

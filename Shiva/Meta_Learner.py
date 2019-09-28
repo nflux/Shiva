@@ -1,9 +1,17 @@
 import Learner, Validation
-import os
 
 class AbstractMetaLearner():
 
-    def __init__(self, path):
+    def __init__(self, 
+                learners : list, 
+                algorithms : list, 
+                eval_env : str, 
+                agents : list, 
+                elite_agents : list, 
+                optimize_env_hp : bool, 
+                optimize_learner_hp : bool, 
+                evolution : bool):
+
         self.learners = learners
         self.algorithms = algorithms
         self.eval_env = eval_env
@@ -11,7 +19,7 @@ class AbstractMetaLearner():
         self.elite_agents = elite_agents
         self.optimize_env_hp = optimize_env_hp
         self.optimize_learner_hp = optimize_env_hp
-        self. evolution = evolution
+        self.evolution = evolution
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
@@ -40,17 +48,19 @@ class AbstractMetaLearner():
 class MetaLearner(AbstractMetaLearner):
 
 
-    #self, learners, algorithms, eval_env, agents, elite_agents, optimize_env_hp=False, optimize_learner_hp=False, evolution=False
+    #
 
     def __init__(self, path):
 
-        validation = Validation.validate(path)
+        validation = Validation.validate(path)           
 
         if validation.success():
-            
+
+            self.learners = validation.learners
             # here we will go through each config and initialize the learners
-            
-            pass
+            for learner in self.learners:
+                pass
+
         else:
             # in this case validation.message will have something bad
             print(validation.message)
