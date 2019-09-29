@@ -4,6 +4,26 @@ TODO
     - DQAlgorithm._is_epsilon_greedy_action() function to be a decorator so that can be used for other algorithms
 '''
 
+def initialize_algorithm(observation_space: int, action_space: int, _params: list):
+    
+    if _params['algorithm'] == 'DQN':
+        return DQAlgorithm(
+            observation_space = observation_space,
+            action_space = action_space,
+            loss_function = getattr(torch.nn, _params[0]['loss_function']), 
+            regularizer = _params[0]['regularizer'],
+            recurrence = _params[0]['recurrence'], 
+            optimizer = getattr(torch.optim, _params[0]['optimizer']), 
+            gamma = float(_params[0]['gamma']), 
+            learning_rate = float(_params[0]['learning_rate']),
+            beta = _params[0]['beta'],
+            epsilon = (float(_params[0]['epsilon_start']), float(_params[0]['epsilon_end']), float(_params[0]['epsilon_decay'])),
+            C = _params[0]['C'],
+            configs = [_params[1], _params[2]]
+        )
+    else:
+        return None
+
 import random
 import numpy as np
 
@@ -102,7 +122,6 @@ class DQAlgorithm(AbstractAlgorithm):
         recurrence: bool, 
         optimizer: object, 
         gamma: np.float, 
-        batch_size: int, 
         learning_rate: np.float,
         beta: np.float,
         epsilon: set(),
@@ -112,11 +131,15 @@ class DQAlgorithm(AbstractAlgorithm):
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(DQAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, batch_size, learning_rate, beta)
+        super(DQAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, batch_size, learning_rate, beta, configs)
         self.epsilon_start = epsilon[0]
         self.epsilon_end = epsilon[1]
         self.epsilon_decay = epsilon[2]
         self.C = C
+
+        # configs[0] agent
+        # configs[1] network
+        self.configs = configs
 
     def update(self, agent, minibatch, step_n):
         '''
@@ -195,6 +218,6 @@ class DQAlgorithm(AbstractAlgorithm):
         return action
 
     def create_agent(self):
-        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate)
+        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
