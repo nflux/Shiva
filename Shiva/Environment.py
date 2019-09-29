@@ -4,7 +4,7 @@ def initialize_env(env_params):
 
     if env_params['env_type'] == 'Gym':
         env = GymEnvironment(env_params['environment'],env_params['num_agents'],env_params['env_render'])
-        
+
     return env
 
 
@@ -86,11 +86,11 @@ class GymEnvironment(Environment):
 
         self.step_count +=1
 
-        return self.obs
+        return self.obs,self.rews,self.world_status 
 
     def reset(self):
         for i in range(self.num_agents):
             self.obs[i] = self.env.reset()
 
     def load_viewer(self):
-        env.render()
+        self.env.render()

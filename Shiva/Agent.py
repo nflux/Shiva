@@ -3,7 +3,7 @@ import torch
 from Network import DQNet as dqnet
 import uuid 
 class Agent:
-    def __init__(self, obs_dim, action_dim, optimizer, learningrate):
+    def __init__(self, obs_dim, action_dim, optimizer, learning_rate):
         '''
         Base Attributes of Agent
         obs_dim = Observation Dimensions
@@ -12,7 +12,7 @@ class Agent:
         policy = Neural Network Policy
         target_policy = Target Neural Network Policy
         optimizer = Optimier Function
-        learningrate = Learning Rate
+        learning_rate = Learning Rate
 
         '''
         self.obs_dim = obs_dim
@@ -20,26 +20,27 @@ class Agent:
         self.id = uuid.uuid4()
         self.policy = None
         self.optimizer = None
-        self.learningrate = learningrate
+        self.learning_rate = learning_rate
 
     def save(self):
         '''
-        #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
+        # Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
         '''
         pass  
 
     def load(self):
         '''
-        #Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
+        # Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
         '''
         pass
 
+
 class DQAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learningrate):
+    def __init__(self, obs_dim, action_dim, optimizer, learning_rate):
         # Calls the Super Class Agent to do some initialization
-        super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learningrate)
+        super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate)
 
         # Policy and Target Polict calls the dqnet. Hidden Layer 1 = 32 Hidden Layer 2= 64 
         HIDDEN_LAYER_1 = 32
@@ -48,7 +49,7 @@ class DQAgent(Agent):
         self.policy = dqnet(obs_dim, HIDDEN_LAYER_1, HIDDEN_LAYER_2, action_dim)
         self.target_policy = dqnet(obs_dim, HIDDEN_LAYER_1, HIDDEN_LAYER_2, action_dim)
         # Calls the optimizer for the policy
-        self.optimizer = optimizer(params=self.policy.parameters(), lr=learningrate)
+        self.optimizer = optimizer(params=self.policy.parameters(), lr=learning_rate)
     
     def save(self):
         #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
@@ -57,3 +58,33 @@ class DQAgent(Agent):
     def load(self):
         #Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
+
+'''
+The Scenario when DQAgent is passed as a config_tuple
+class DQAgent(Agent):
+    def __init__(self, obs_dim, action_dim, config_tuple):
+
+        # Calls the Super Class Agent to do some initialization
+        super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate)
+
+        # Grabs the Tuples and split it into the proper variables, Optimizer, Learning_Rate, HIDDEN_LAYER 
+        self.optimizer= config_tuple[0]
+        self.learning_rate = config_tuple[1]
+        HIDDEN_LAYER = config_tuple[2]
+
+        # NOTE: The Network Policy should be changed, to make it more dynamic. 
+        self.policy = dqnet(obs_dim, HIDDEN_LAYER[0], HIDDEN_LAYER[1], action_dim)
+        self.target_policy = dqnet(obs_dim, HIDDEN_LAYER[0], HIDDEN_LAYER[1], action_dim)
+
+        # Calls the optimizer for the policy
+        self.optimizer = optimizer(params=self.policy.parameters(), lr=learning_rate)
+    
+    def save(self):
+        #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
+        torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
+
+    def load(self):
+        #Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
+        torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
+
+'''
