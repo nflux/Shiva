@@ -62,7 +62,7 @@ class DQAgent(Agent):
 '''
 The Scenario when DQAgent is passed as a config_tuple
 class DQAgent(Agent):
-    def __init__(self, obs_dim, action_dim, config_tuple):
+    def __init__(self, obs_dim, action_dim, config_tuple):Policy and Target Polict calls the dqnet. Hidden Layer 1 = 32 Hidden Layer 2= 6
 
         # Calls the Super Class Agent to do some initialization
         super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate)
