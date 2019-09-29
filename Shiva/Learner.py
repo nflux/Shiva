@@ -67,7 +67,6 @@ class Learner(AbstractLearner):
         self.algorithm = algorithm
         self.data = None
         self.configs = configs
-        print(self.configs['Algorithm'])
 
     def create_environment(self, alg):
         # create the environment and get the action and observation spaces
@@ -82,25 +81,26 @@ class Learner(AbstractLearner):
 
     def launch(self):
 
-        env = self.create_environment()
-        env.get_obs_space()
-        env.get_action_space()
+        # Launch the environment
+        self.env = self.create_environment(self.configs['Environment'])
+        
+        # Launch the algorithm which will handle the 
+        self.alg = Algorithm(env.get_obs_space(), env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        
+        # Basic replay buffer at the moment
+        self.buffer = Replay_Buffer(self.configs['Replay_Buffer'])
 
-        self.create_environment(self.algorithm)
-        # somehow call the specific replay buffer that we want?
-        buffer = Replay_Buffer.create_buffer()
-        # Create an instance of the algorithm
-        Algorithm.create_alg(self.algorithm)
+        
 
     def step(self):
 
         # probably need to discuss this with Ezequiel
-        observation = Environment.get_observation()
-        action = Algorithm.get_action()
-        Environment.step(action)
-        reward = Environment.get_reward()
-        next_observation = Environment.get_observation()
-        Replay_Buffer.push(observation)
+        observation = self.env.get_observation()
+        action = self.alg.get_action()
+        self.env.step(action)
+        reward = self.env.get_reward()
+        next_observation = self.env.get_observation()
+        self.buffer.push(observation)
 
     def save_agent(self):
         pass
