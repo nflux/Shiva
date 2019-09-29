@@ -1,6 +1,5 @@
 '''
 TODO
-    - Init function, maybe
     - DQAlgorithm._is_epsilon_greedy_action() function to be a decorator so that can be used for other algorithms
 '''
 
@@ -19,7 +18,10 @@ def initialize_algorithm(observation_space: int, action_space: int, _params: lis
             beta = _params[0]['beta'],
             epsilon = (float(_params[0]['epsilon_start']), float(_params[0]['epsilon_end']), float(_params[0]['epsilon_decay'])),
             C = _params[0]['C'],
-            configs = [_params[1], _params[2]]
+            configs = {
+                'agent': _params[1],
+                'network': _params[2]
+            }
         )
     else:
         return None
@@ -65,8 +67,10 @@ class AbstractAlgorithm():
         self.learning_rate = learning_rate
         self.beta = beta
 
-        self.agents = []
         self.loss_calc = self.loss_function()
+
+        self.agents = [self.create_agent() for _ in self.configs['agent']['num_agents']]
+
 
     def update(self, agent, data):
         '''
@@ -136,9 +140,6 @@ class DQAlgorithm(AbstractAlgorithm):
         self.epsilon_end = epsilon[1]
         self.epsilon_decay = epsilon[2]
         self.C = C
-
-        # configs[0] agent
-        # configs[1] network
         self.configs = configs
 
     def update(self, agent, minibatch, step_n):
@@ -218,6 +219,6 @@ class DQAlgorithm(AbstractAlgorithm):
         return action
 
     def create_agent(self):
-        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, list(self.configs.values()))
         self.agents.append(new_agent)
         return new_agent

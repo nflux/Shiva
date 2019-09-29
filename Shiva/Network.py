@@ -1,3 +1,15 @@
+def initialize_network(observation_space: int, action_space: int, _params: list):
+    
+    if _params['algorithm'] == 'DQN':
+        return DQNet(
+            input_size, 
+            HIDDEN_SIZE_1, 
+            HIDDEN_SIZE_2, 
+            output_size
+        )
+    else:
+        return None
+
 import torch
 import torch.nn as nn
 import numpy as np
