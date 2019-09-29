@@ -30,7 +30,6 @@ class AbstractMetaLearner():
         pass
 
     def evolve(self, new_agents, new_hp):
-
         pass
 
     def evaluate(self, learners: list):
@@ -47,17 +46,18 @@ class MetaLearner(AbstractMetaLearner):
 
         validation = Validation(path)
 
-        if validation.success:
+        if True:
 
             self.algorithms = validation.algorithms
 
             # list of learner objects
             learners = []
-            
-            # here we will go through each config and initialize the learners
-            for learner, environment, algorithm in validation.learners,validation.environments, validation.algorithms:
-                learners.append(Learner(learner, environment, algorithm))
 
+            # Either this is still Here might be where multiprocessing will begin
+
+            # here we will go through each config and initialize the learners
+            for learner, environment, algorithm in zip(validation.learners,validation.environments, validation.algorithms):
+                learners.append(Learner(learner, environment, algorithm, []))
 
             # store list of learner objects in metalearner
             self.learners = learners

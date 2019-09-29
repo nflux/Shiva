@@ -102,6 +102,9 @@ class Validation():
         return [learner['Environment']['environment'] for learner in self.learners]
 
 
+
+    # dummy method for now
+
     # this method will validate the configurations
     # I think there's an order I should do things.
     # we have the check whether or not the hyperparameters are 

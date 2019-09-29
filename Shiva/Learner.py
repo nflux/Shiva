@@ -1,6 +1,6 @@
-from Algorithm import DQAlgorithm
+import Algorithm 
 import Replay_Buffer
-import Environment
+import Environment 
 
 class AbstractLearner():
 
@@ -8,7 +8,7 @@ class AbstractLearner():
                 agents : list, 
                 environments : list, 
                 algorithm : str, 
-                data : list
+                data : list,
                 ):
 
         self.agents = agents
@@ -45,7 +45,7 @@ class AbstractLearner():
     def get_agents(self):
         pass
 
-    def get_alg(self):
+    def get_algorithm(self):
         pass
 
     def launch(self):
@@ -65,21 +65,22 @@ class Learner(AbstractLearner):
         self.environments = environments
         self.algorithm = algorithm
         self.data = None
+        print('Hello World')
 
     def create_environment(self, alg):
-        pass
-
-    def get_agents(self):
-        pass
-
-    def get_algorithm(self):
-        pass
-
-    def launch(self):
         # create the environment and get the action and observation spaces
-        Environment.create_env(self.environments)
+        Environment.create_environment(self.environments)
         Environment.get_obs_space()
         Environment.get_action_space()
+
+    def get_agents(self):
+        return self.agents
+
+    def get_algorithm(self):
+        return self.algorithm
+
+    def launch(self):
+        self.create_environment(self.algorithm)
         # somehow call the specific replay buffer that we want?
         buffer = Replay_Buffer.create_buffer()
         # Create an instance of the algorithm
@@ -93,7 +94,7 @@ class Learner(AbstractLearner):
         Environment.step(action)
         reward = Environment.get_reward()
         next_observation = Environment.get_observation()
-        Replay_Buffer.push(observation, )
+        Replay_Buffer.push(observation)
 
     def save_agent(self):
         pass
