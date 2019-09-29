@@ -1,20 +1,10 @@
-import configparser
 import gym
 
-def initialize_env_config(config_file):
-    config = configparser.ConfigParser()
-    config.read(config_file)
+def initialize_env(env_params):
 
-    if config['ENV_PARAMS']['type'] == 'gym':
-        env = gym.make(config['ENV_PARAMS']['env_name'])
-        env = GymEnvironment(env,config['ENV_PARAMS']['num_agent'])
-
-    return env
-
-def initialize_gym_env(environment_name,num_agents):
-    env = gym.make(environment_name)
-    env = GymEnvironment(num_agents)
-
+    if env_params['env_type'] == 'Gym':
+        env = GymEnvironment(env_params['environment'],env_params['num_agents'],env_params['env_render'])
+        
     return env
 
 
@@ -69,8 +59,8 @@ class Environment():
 
 
 class GymEnvironment(Environment):
-    def __init__(self,environment,num_agents):
-        self.env = environment
+    def __init__(self,environment,num_agents,render):
+        self.env = gym.make(environment)
         self.num_agents = num_agents
         self.obs = [0 for i in range(num_agents)]
         self.acs = [0 for i in range(num_agents)]
@@ -79,6 +69,8 @@ class GymEnvironment(Environment):
         self.observation_space = self.env.observation_space.shape if self.env.observation_space.shape != () else self.env.observation_space.n
         self.action_space = self.env.action_space.shape if self.env.action_space.shape != () else self.env.action_space.n
         self.step_count = 0
+        if render:
+            self.load_viewer()
 
 
     def step(self,actions):
