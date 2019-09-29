@@ -57,7 +57,7 @@ class MetaLearner(AbstractMetaLearner):
 
             # here we will go through each config and initialize the learners
             for learner, environment, algorithm in zip(validation.learners,validation.environments, validation.algorithms):
-                learners.append(Learner(learner, environment, algorithm, []))
+                learners.append(Learner([], environment, algorithm, [], learner))
 
             # store list of learner objects in metalearner
             self.learners = learners

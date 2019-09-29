@@ -9,6 +9,7 @@ class AbstractLearner():
                 environments : list, 
                 algorithm : str, 
                 data : list,
+                configs: dict
                 ):
 
         self.agents = agents
@@ -60,18 +61,18 @@ class AbstractLearner():
 
 class Learner(AbstractLearner):
 
-    def __init__(self, agents, environments, algorithm, data):
+    def __init__(self, agents, environments, algorithm, data, configs):
         self.agents = agents
         self.environments = environments
         self.algorithm = algorithm
         self.data = None
-        print('Hello World')
+        self.configs = configs
+        print(self.configs['Algorithm'])
 
     def create_environment(self, alg):
         # create the environment and get the action and observation spaces
-        Environment.create_environment(self.environments)
-        Environment.get_obs_space()
-        Environment.get_action_space()
+        return Environment(self.configs['Environment'],len(self.agents))
+
 
     def get_agents(self):
         return self.agents
@@ -80,6 +81,11 @@ class Learner(AbstractLearner):
         return self.algorithm
 
     def launch(self):
+
+        env = self.create_environment()
+        env.get_obs_space()
+        env.get_action_space()
+
         self.create_environment(self.algorithm)
         # somehow call the specific replay buffer that we want?
         buffer = Replay_Buffer.create_buffer()
