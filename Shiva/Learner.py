@@ -1,14 +1,24 @@
-import Algorithm
+from Algorithm import DQAlgorithm
 import Replay_Buffer
 import Environment
 
 class AbstractLearner():
-    
-    def __init__(self, agents, environments, algorithm, data):
+
+    def __init__(self, 
+                agents : list, 
+                environments : list, 
+                algorithm : str, 
+                data : list
+                ):
+
         self.agents = agents
         self.environments = environments
         self.algorithm = algorithm
         self.data = None
+
+
+    '''
+        not sure if the algorithm should play that big of a role here
 
         if self.algorithm == 'DQN':
             learner = DQN_Learner(agents, environments, algorithm, data)
@@ -21,7 +31,7 @@ class AbstractLearner():
 
         elif self.algorithm == 'MADDPG':
             leaner = MADDPG_Learner(agents, environments, algorithm, data)
-    
+    '''
 
     def update(self):
         pass
@@ -34,6 +44,7 @@ class AbstractLearner():
 
     def get_agents(self):
         pass
+
     def get_alg(self):
         pass
 
@@ -47,7 +58,7 @@ class AbstractLearner():
         pass
 
 
-class DQN_Learner(AbstractLearner):
+class Learner(AbstractLearner):
 
     def __init__(self, agents, environments, algorithm, data):
         self.agents = agents
@@ -55,13 +66,13 @@ class DQN_Learner(AbstractLearner):
         self.algorithm = algorithm
         self.data = None
 
-    def create_env(self, alg):
+    def create_environment(self, alg):
         pass
 
     def get_agents(self):
         pass
 
-    def get_alg(self):
+    def get_algorithm(self):
         pass
 
     def launch(self):
@@ -90,6 +101,9 @@ class DQN_Learner(AbstractLearner):
     def load_agent(self):
         pass
 
+'''
+
+Maybe the learner shouldn't be tied to an algorithm
 
 class DDPG_Learner(AbstractLearner):
     
@@ -107,3 +121,5 @@ class A3C_Learner(AbstractLearner):
     
     def __init__(self):
         pass
+
+'''

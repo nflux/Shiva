@@ -1,4 +1,5 @@
-import Learner, Validation
+from Learner import Learner
+from Validation import Validation
 
 class AbstractMetaLearner():
 
@@ -23,22 +24,16 @@ class AbstractMetaLearner():
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
-        # there might be different algorithms that will tune the hyperparameters
-
         pass
-        #return new_hp
     
-    # these woud breed
     def genetic_crossover(self,agents, elite_agents):
         pass
-
-        #return new_agents
 
     def evolve(self, new_agents, new_hp):
 
         pass
 
-    def evaluate(self, learners):
+    def evaluate(self, learners: list):
         pass
 
     def record_metrics(self):
@@ -48,18 +43,24 @@ class AbstractMetaLearner():
 class MetaLearner(AbstractMetaLearner):
 
 
-    #
-
     def __init__(self, path):
 
-        validation = Validation.validate(path)           
+        validation = Validation(path)
 
-        if validation.success():
+        if validation.success:
 
-            self.learners = validation.learners
+            self.algorithms = validation.algorithms
+
+            # list of learner objects
+            learners = []
+            
             # here we will go through each config and initialize the learners
-            for learner in self.learners:
-                pass
+            for learner, environment, algorithm in validation.learners,validation.environments, validation.algorithms:
+                learners.append(Learner(learner, environment, algorithm))
+
+
+            # store list of learner objects in metalearner
+            self.learners = learners
 
         else:
             # in this case validation.message will have something bad

@@ -14,7 +14,9 @@ class Validation():
         # store the ini directory for later use
         self.file_path = path
         self.learners = self.read_configs()
-        self.success : bool
+        self.environments = self.get_environments()
+        self.algorithms = self.get_algorithms()
+        self.success = self.validate()
         self.message : str
 
 
@@ -93,22 +95,33 @@ class Validation():
 
         return learners
 
+    def get_algorithms(self):
+        return [learner['Algorithm']['algorithm'] for learner in self.learners]
+
+    def get_environments(self):
+        return [learner['Environment']['environment'] for learner in self.learners]
+
 
     # this method will validate the configurations
     # I think there's an order I should do things.
     # we have the check whether or not the hyperparameters are 
     def validate(self):
-        
-        # if there's something wrong with the configuration files
-        self.success = False
-        self.message = "Hyperparamaters not valid"
-        self.message = "Configuration file invalid."
-
         # if there's nothing wrong with the configuration files
-        self.success = True
+        # dummy if statement
+        if True:
+            self.success = True
+            self.message = "Configurations Validated!"
+        # if there's something wrong with the configuration files
+        else:
+            self.success = False
+            # self.message = "Hyperparamaters not valid"
+            self.message = "An error occurred."
+            
 
 
+
+# Testing
 
 # validate = Validation('Initializers')
-# for l in validate.learners:
-#     print(l)
+
+# print(validate.environments)
