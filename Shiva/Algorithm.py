@@ -5,7 +5,7 @@ TODO
 
 def initialize_algorithm(observation_space: int, action_space: int, _params: list):
     
-    if _params['algorithm'] == 'DQN':
+    if _params[0]['algorithm'] == 'DQN':
         return DQAlgorithm(
             observation_space = observation_space,
             action_space = action_space,
@@ -40,7 +40,6 @@ class AbstractAlgorithm():
         recurrence: bool, 
         optimizer_function: object, 
         gamma: np.float, 
-        batch_size: int, 
         learning_rate: np.float,
         beta: np.float):
         '''
@@ -135,7 +134,7 @@ class DQAlgorithm(AbstractAlgorithm):
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(DQAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, batch_size, learning_rate, beta, configs)
+        super(DQAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
         self.epsilon_start = epsilon[0]
         self.epsilon_end = epsilon[1]
         self.epsilon_decay = epsilon[2]

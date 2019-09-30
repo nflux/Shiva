@@ -1,6 +1,6 @@
 import Algorithm 
 import Replay_Buffer
-import Environment 
+import Environment
 
 class AbstractLearner():
 
@@ -70,7 +70,7 @@ class Learner(AbstractLearner):
 
     def create_environment(self, alg):
         # create the environment and get the action and observation spaces
-        return Environment(self.configs['Environment'],len(self.agents))
+        self.env = Environment.initialize_env(self.configs['Environment'])
 
 
     def get_agents(self):
@@ -82,11 +82,11 @@ class Learner(AbstractLearner):
     def launch(self):
 
         # Launch the environment
-        self.env = self.create_environment(self.configs['Environment'])
+        self.create_environment(self.configs['Environment'])
         
         # Launch the algorithm which will handle the 
-        self.alg = Algorithm(env.get_obs_space(), env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        
+        self.alg = Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+    
         # Basic replay buffer at the moment
         self.buffer = Replay_Buffer(self.configs['Replay_Buffer'])
 

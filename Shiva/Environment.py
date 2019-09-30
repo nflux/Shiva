@@ -60,6 +60,8 @@ class Environment():
 
 class GymEnvironment(Environment):
     def __init__(self,environment,num_agents,render):
+
+        #super(GymEnvironment,self).__init__(environment,num_agents)
         self.env = gym.make(environment)
         self.num_agents = num_agents
         self.obs = [0 for i in range(num_agents)]

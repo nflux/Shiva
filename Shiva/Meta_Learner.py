@@ -62,6 +62,10 @@ class MetaLearner(AbstractMetaLearner):
             # store list of learner objects in metalearner
             self.learners = learners
 
+
+            for learner in self.learners: 
+                learner.launch() 
+
         else:
             # in this case validation.message will have something bad
             print(validation.message)
