@@ -1,10 +1,26 @@
+import torch
+import numpy as np
 
 def initialize_buffer(_params: dict):
     return AbstractReplayBuffer()
 
 class AbstractReplayBuffer():
 
-    def __init__(self):
+    def __init__(self,
+                max_size : int,
+                num_agents : int,
+                obs_dim : int,
+                acs_dim : int,
+                current_index : int,
+                filled_index : int,
+                obs_storage : torch.Tensor(),
+                acs_storage : torch.Tensor(),
+                rew_storage : torch.Tensor(),
+                done_storage : torch.Tensor()
+                ):
+        pass
+
+    def push(self):
         pass
 
     def sample(self, size, aux: set() ):
@@ -19,6 +35,12 @@ class AbstractReplayBuffer():
         done = np.array(torch.randint(0, 2, (n_obs,)))
         next_state = np.array(torch.rand(n_obs, observation_space))
         return [states, actions, rewards, done, next_state]
+
+    def roll(self):
+        pass
+    
+    def clear(self):
+        pass
 
 class BasicReplayBuffer(AbstractReplayBuffer):
 

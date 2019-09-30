@@ -68,7 +68,9 @@ class GymEnvironment(Environment):
         self.acs = [0 for i in range(num_agents)]
         self.rews = [0 for i in range(num_agents)]
         self.world_status = [0 for i in range(num_agents)]
-        self.observation_space = self.env.observation_space.shape if self.env.observation_space.shape != () else self.env.observation_space.n
+        # Modified to get Shiva running with cartpole
+        #self.observation_space = self.env.observation_space()[0] if self.env.observation_space.shape != () else self.env.observation_space.n
+        self.observation_space = self.env.observation_space.shape[0]
         self.action_space = self.env.action_space.shape if self.env.action_space.shape != () else self.env.action_space.n
         self.step_count = 0
         if render:

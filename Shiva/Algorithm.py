@@ -17,7 +17,7 @@ def initialize_algorithm(observation_space: int, action_space: int, _params: lis
             learning_rate = float(_params[0]['learning_rate']),
             beta = _params[0]['beta'],
             epsilon = (float(_params[0]['epsilon_start']), float(_params[0]['epsilon_end']), float(_params[0]['epsilon_decay'])),
-            C = _params[0]['C'],
+            C = _params[0]['c'],
             configs = {
                 'agent': _params[1],
                 'network': _params[2]
@@ -41,7 +41,9 @@ class AbstractAlgorithm():
         optimizer_function: object, 
         gamma: np.float, 
         learning_rate: np.float,
-        beta: np.float):
+        beta: np.float,
+        configs: list
+        ):
         '''
             Input
                 observation_space   Shape of the observation space, aka input to policy network
@@ -51,7 +53,6 @@ class AbstractAlgorithm():
                 recurrence          
                 optimizer           Optimization function to train network weights
                 gamma               Hyperparameter
-                batch_size          
                 learning_rate       Learning rate used in the optimizer
                 beta                Hyperparameter
         '''
@@ -62,13 +63,12 @@ class AbstractAlgorithm():
         self.recurrence = recurrence
         self.optimizer_function = optimizer_function
         self.gamma = gamma
-        self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.beta = beta
-
+        self.configs = configs
         self.loss_calc = self.loss_function()
 
-        self.agents = [self.create_agent() for _ in self.configs['agent']['num_agents']]
+        self.agents = [self.create_agent() for _ in range(self.configs['agent']['num_agents'])]
 
 
     def update(self, agent, data):
@@ -128,7 +128,8 @@ class DQAlgorithm(AbstractAlgorithm):
         learning_rate: np.float,
         beta: np.float,
         epsilon: set(),
-        C: int):
+        C: int,
+        configs: list):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
@@ -139,7 +140,6 @@ class DQAlgorithm(AbstractAlgorithm):
         self.epsilon_end = epsilon[1]
         self.epsilon_decay = epsilon[2]
         self.C = C
-        self.configs = configs
 
     def update(self, agent, minibatch, step_n):
         '''
@@ -219,5 +219,4 @@ class DQAlgorithm(AbstractAlgorithm):
 
     def create_agent(self):
         new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, list(self.configs.values()))
-        self.agents.append(new_agent)
         return new_agent
