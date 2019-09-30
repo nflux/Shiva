@@ -1,49 +1,88 @@
 import torch
 import numpy as np
 
-def initialize_buffer(_params: dict):
-    return AbstractReplayBuffer()
+def roll(tensor, rollover):
+    '''
+    Roll over the first axis of a tensor
+    '''
+    return torch.cat((tensor[-rollover:], tensor[:-rollover]))
 
-class AbstractReplayBuffer():
+def roll2(tensor, rollover):
+    '''
+    Roll over the second axis of a tensor
+    '''
+    return torch.cat((tensor[:,-rollover:], tensor[:,:-rollover]), dim=1)
 
-    def __init__(self,
-                max_size : int,
-                num_agents : int,
-                obs_dim : int,
-                acs_dim : int,
-                current_index : int,
-                filled_index : int,
-                obs_storage : torch.Tensor(),
-                acs_storage : torch.Tensor(),
-                rew_storage : torch.Tensor(),
-                done_storage : torch.Tensor()
-                ):
-        pass
+# def initialize_buffer(config):
+#     return BasicReplayBuffer()
+
+class ReplayBuffer(object):
+
+    def __init__(self, max_size, num_agents, obs_dim, acs_dim):
+        self.current_index = 0
+        self.size = 0
+        self.num_agents = num_agents
+        self.obs_buffer= obs_storage
+        self.acs_buffer = acs_storage
+        self.rew_buffer = rew_storage
+        self.done_buffer = done_storage
+        self.obs_dim = obs_dim
+        self.acs_dim = acs_dim
+
+    def __len__(self):
+        return self.size
 
     def push(self):
         pass
 
-    def sample(self, size, aux: set() ):
-        # aux is of the form (n_obs, observation_space, action_space)
-        n_obs = aux[0]
-        observation_space = aux[1]
-        action_space = aux[2]
-        
-        states = np.array(torch.rand(n_obs, observation_space))
-        actions = np.array(torch.randint(0, action_space-1, (n_obs,)))
-        rewards = np.array(torch.rand(n_obs))
-        done = np.array(torch.randint(0, 2, (n_obs,)))
-        next_state = np.array(torch.rand(n_obs, observation_space))
-        return [states, actions, rewards, done, next_state]
-
-    def roll(self):
+    def sample(self):
         pass
     
     def clear(self):
         pass
 
-class BasicReplayBuffer(AbstractReplayBuffer):
+class BasicReplayBuffer(ReplayBuffer):
 
-    def __init__(self):
-        pass
+    def __init__(self, max_size, num_agents, obs_dim, acs_dim):
+        super(BasicReplayBuffer, self).__init__(max_size, num_agents, obs_dim, acs_dim)
+  
+    def push(self, exps):
+        nentries = len(exps)
 
+        if self.current_index + nentries > self.max_size:
+            rollover = self.max_size - self.current_index
+            self.obs_buffer = roll(self.obs_buffer, rollover)
+            self.acs_buffer = roll(self.acs_buffer, rollover)
+            self.rew_buffer = roll(self.rew_buffer, rollover)
+            self.done_buffer = roll(self.done_buffer, rollover)
+            self.next_obs_buffer = roll(self.next_obs_buffer, rollover)
+        
+            self.current_index = 0
+            self.size = self.max_size
+        
+        action_i = self.obs_dim
+        rew_i = action_i + self.acs_dim
+        done_i = rew_i+1
+        next_obs_i = done_i+1
+
+        self.obs_buffer[self.current_index:self.current_index+nentries, :self.num_agents, :self.obs_dim] = exps[:, :, :self.obs_dim]
+        self.ac_buffer[self.current_index:self.current_index+nentries, :self.num_agents, :self.ac_dim] = exps[:, :, action_i:rew_i]
+        self.rew_buffer[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, rew_i: done_i]
+        self.done_buffer[self.curr_i:self.curr_i+nentries, :self.num_agents, :1] = exps[:, :, done_i:done_i+1]
+        self.next_obs_buffer[self.current_index:self.current_index+nentries, :self.num_agents, :self.obs_dim] =  exps[:, :, next_obs_i:]
+
+    def sample(self, inds, to_gpu=False, device='cpu'):
+        if to_gpu:
+            cast = lambda x: Variable(x, requires_grad=False).to(device)
+            cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
+        else:
+            cast = lambda x: Variable(x, requires_grad=False)
+            cast_obs = lambda x: Variable(x, requires_grad=True)
+
+        return (
+                    [cast_obs(self.obs_buffs[inds, i, :]) for i in range(self.num_agents)],
+                    [cast(self.ac_buffs[inds, i, :]) for i in range(self.num_agents)],
+                    [cast(self.rew_buffs[inds, i, :]).squeeze() for i in range(self.num_agents)],
+                    [cast(self.done_buffs[inds, i, :]).squeeze() for i in range(self.num_agents)],
+                    [cast_obs(self.next_obs_buffs[inds, i, :]) for i in range(self.num_agents)]
+                )
