@@ -13,19 +13,21 @@ def roll2(tensor, rollover):
     '''
     return torch.cat((tensor[:,-rollover:], tensor[:,:-rollover]), dim=1)
 
-# def initialize_buffer(config):
-#     return BasicReplayBuffer()
+def initialize_buffer(config, num_agents, obs_space, act_space):
+    return BasicReplayBuffer(config['max_size'], num_agents, obs_space, act_space)
 
-class ReplayBuffer(object):
+class AbstractReplayBuffer(object):
 
     def __init__(self, max_size, num_agents, obs_dim, acs_dim):
         self.current_index = 0
         self.size = 0
         self.num_agents = num_agents
-        self.obs_buffer= obs_storage
-        self.acs_buffer = acs_storage
-        self.rew_buffer = rew_storage
-        self.done_buffer = done_storage
+        self.max_size = max_size
+        self.obs_buffer = torch.zeros((self.max_size, self.num_agents, obs_dim), requires_grad=False)
+        self.ac_buffer = torch.zeros((self.max_size, self.num_agents, acs_dim),requires_grad=False)
+        self.rew_buffer = torch.zeros((self.max_size, self.num_agents, 1),requires_grad=False)
+        self.next_obs_buffer = torch.zeros((self.max_size, self.num_agents, obs_dim),requires_grad=False)
+        self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1),requires_grad=False)    
         self.obs_dim = obs_dim
         self.acs_dim = acs_dim
 
@@ -41,7 +43,7 @@ class ReplayBuffer(object):
     def clear(self):
         pass
 
-class BasicReplayBuffer(ReplayBuffer):
+class BasicReplayBuffer(AbstractReplayBuffer):
 
     def __init__(self, max_size, num_agents, obs_dim, acs_dim):
         super(BasicReplayBuffer, self).__init__(max_size, num_agents, obs_dim, acs_dim)

@@ -108,6 +108,9 @@ class AbstractAlgorithm():
         '''
         pass
 
+    def get_agents(self):
+        return self.agents
+
 ##########################################################################
 #    DQ Algorithm Implementation
 #    
@@ -215,7 +218,7 @@ class DQAlgorithm(AbstractAlgorithm):
             q_vals_v = agent.policy(obs_v)
             act_val, act_idx = torch.max(q_vals_v, dim=0) # dim=0 TBD! Works for now
             action = int(act_idx.item())
-        return action
+        return [action]
 
     def create_agent(self):
         new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, list(self.configs.values()))

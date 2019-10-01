@@ -68,6 +68,12 @@ class MetaLearner(AbstractMetaLearner):
             for learner in self.learners: 
                 learner.launch() 
 
+            done = False
+            for learner in self.learners:
+                while(not done):
+                    done = learner.step()
+                
+
         else:
             # in this case validation.message will have something bad
             print(validation.message)

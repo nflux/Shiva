@@ -11,7 +11,7 @@
 from Meta_Learner import MetaLearner
 
 # declare the path
-ini_path = "Initializers"
+ini_path = "Shiva/Initializers"
 
 
 # then you pass the path to configs to the instance of the metalearner
