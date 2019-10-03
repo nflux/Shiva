@@ -66,9 +66,10 @@ class AbstractAlgorithm():
         self.learning_rate = learning_rate
         self.beta = beta
         self.configs = configs
-        self.loss_calc = self.loss_function()
 
-        self.agents = [self.create_agent() for _ in range(self.configs['agent']['num_agents'])]
+
+        self.loss_calc = self.loss_function()
+        self.agents = []
 
 
     def update(self, agent, data):
@@ -218,8 +219,9 @@ class DQAlgorithm(AbstractAlgorithm):
             q_vals_v = agent.policy(obs_v)
             act_val, act_idx = torch.max(q_vals_v, dim=0) # dim=0 TBD! Works for now
             action = int(act_idx.item())
-        return [action]
+        return action
 
     def create_agent(self):
         new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, list(self.configs.values()))
+        self.agents.append(new_agent)
         return new_agent
