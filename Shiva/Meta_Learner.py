@@ -1,4 +1,4 @@
-from Learner import Learner
+import Learner
 from Validation import Validation
 
 class AbstractMetaLearner():
@@ -39,12 +39,10 @@ class AbstractMetaLearner():
         pass
 
 # this is a version of a meta learner that will take a file path to the configuration files
-class MetaLearner(AbstractMetaLearner):
+class SingleAgentMetaLearner(AbstractMetaLearner):
 
 
     def __init__(self, path):
-
-        
 
         validation = Validation(path)
 
@@ -52,26 +50,14 @@ class MetaLearner(AbstractMetaLearner):
 
             self.algorithms = validation.algorithms
 
-            # list of learner objects
-            learners = []
+            environment = validation.learners[0]['Environment']['environment']
 
-            # Either this is still Here might be where multiprocessing will begin
+            # single learner
+            self.learner = Learner.Single_Agent_Q_Learner([], [environment], validation.algorithms[0], [], validation.learners[0])
 
-            # here we will go through each config and initialize the learners
-            for learner, environment, algorithm in zip(validation.learners,validation.environments, validation.algorithms):
-                learners.append(Learner([], environment, algorithm, [], learner))
+            self.learner.launch() 
 
-            # store list of learner objects in metalearner
-            self.learners = learners
-
-
-            for learner in self.learners: 
-                learner.launch() 
-
-            done = False
-            for learner in self.learners:
-                while(not done):
-                    done = learner.step()
+            self.learner.update()
                 
 
         else:
