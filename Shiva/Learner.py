@@ -56,6 +56,8 @@ class Single_Agent_Q_Learner(AbstractLearner):
         self.data = None
         self.configs = configs
 
+        print(configs)
+
     def create_environment(self):
         # create the environment and get the action and observation spaces
         self.env = Environment.initialize_env(self.configs['Environment'])

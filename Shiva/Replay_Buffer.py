@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 
+import collections
+
 def roll(tensor, rollover):
     '''
     Roll over the first axis of a tensor
@@ -14,7 +16,8 @@ def roll2(tensor, rollover):
     return torch.cat((tensor[:,-rollover:], tensor[:,:-rollover]), dim=1)
 
 def initialize_buffer(config, num_agents, obs_space, act_space):
-    return BasicReplayBuffer(config['max_size'], num_agents, obs_space, act_space)
+    return SimpleExperienceBuffer(config['max_size'], config['batch_size'])
+    # return BasicReplayBuffer(config['max_size'], num_agents, obs_space, act_space)
 
 class AbstractReplayBuffer(object):
 
@@ -42,6 +45,38 @@ class AbstractReplayBuffer(object):
     
     def clear(self):
         pass
+
+
+##########################################################################
+#
+#    Simple Buffer for a Single Agents Experience   
+#
+##########################################################################
+
+class SimpleExperienceBuffer:
+    def __init__(self, capacity, batch_size):
+        self.buffer = collections.deque(maxlen=capacity)
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return len(self.buffer)
+
+    def append(self, experience):
+        self.buffer.append(experience)
+
+    def sample(self):
+        indices = np.random.choice(len(self.buffer), self.batch_size)
+        states, actions, rewards, dones, next_states = zip(*[self.buffer[idx] for idx in indices])
+        return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32), \
+               np.array(dones, dtype=np.uint8), np.array(next_states)
+
+
+##########################################################################
+#
+#   Replay Buffer is capable of storing Multi-Agents 
+#   made by Daniel Tellier
+#
+##########################################################################
 
 class BasicReplayBuffer(AbstractReplayBuffer):
 

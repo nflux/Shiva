@@ -162,8 +162,8 @@ class DQAlgorithm(AbstractAlgorithm):
         '''
         states, actions, rewards, dones, next_states = minibatch
         # make tensors
-        states_v = torch.tensor(states)#.to(device)
-        next_states_v = torch.tensor(next_states)#.to(device)
+        states_v = torch.tensor(states).float()#.to(device)
+        next_states_v = torch.tensor(next_states).float()#.to(device)
         actions_v = torch.tensor(actions)#.to(device)
         rewards_v = torch.tensor(rewards)#.to(device)
         done_mask = torch.ByteTensor(dones)#.to(device)
@@ -215,7 +215,7 @@ class DQAlgorithm(AbstractAlgorithm):
             action = random.sample(range(self.action_space), 1)[0]
         else:
             # obs_a = np.array(observation, copy=False) # or np.array([observation], copy=False) # depends how the data comes formated from the buffer
-            obs_v = torch.tensor(observation)#.to(device)
+            obs_v = torch.tensor(observation).float()#.to(device)
             q_vals_v = agent.policy(obs_v)
             act_val, act_idx = torch.max(q_vals_v, dim=0) # dim=0 TBD! Works for now
             action = int(act_idx.item())
