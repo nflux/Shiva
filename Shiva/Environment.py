@@ -3,15 +3,15 @@ import gym
 def initialize_env(env_params):
 
     if env_params['env_type'] == 'Gym':
-        env = GymEnvironment(env_params['environment'],env_params['num_agents'],env_params['env_render'])
+        env = GymEnvironment(env_params['environment'],env_params['env_render'])
 
     return env
 
 
-class AbstractEnvironment():
-    def __init__(self, environment,num_agents):
-        self.env_name = environment
-        self.num_agents = num_agents
+class Environment():
+    def __init__(self, environment):
+        self.env = environment
+        #self.num_agents = num_agents
         self.obs = [0 for i in range(num_agents)]
         self.acs = [0 for i in range(num_agents)]
         self.rews = [0 for i in range(num_agents)]
@@ -58,46 +58,59 @@ class AbstractEnvironment():
 
 
 
-class GymEnvironment(AbstractEnvironment):
-    def __init__(self,environment,num_agents,render):
-
-        super(GymEnvironment,self).__init__(environment,num_agents)
+class GymEnvironment(Environment):
+    def __init__(self,environment,render):
         self.env = gym.make(environment)
-        # self.num_agents = num_agents
-        # self.obs = [0 for i in range(num_agents)]
-        # self.acs = [0 for i in range(num_agents)]
-        # self.rews = [0 for i in range(num_agents)]
-        # self.world_status = [0 for i in range(num_agents)]
-        # Modified to get Shiva running with cartpole
-        #self.observation_space = self.env.observation_space()[0] if self.env.observation_space.shape != () else self.env.observation_space.n
-        self.observation_space = self.env.observation_space.shape[0]
-        self.action_space = self.env.action_space.shape if self.env.action_space.shape != () else self.env.action_space.n
-        # self.step_count = 0
+        #self.num_agents = num_agents
+        self.obs = self.env.reset()
+        self.acs = 0
+        self.rews = 0
+        self.world_status = False
+        self.observation_space = self.set_observation_space()
+        self.action_space = self.set_action_space()
+        self.step_count = 0
         if render:
             self.load_viewer()
 
 
-    def step(self,actions):
+    def step(self,action):
+            self.acs = action
+            self.obs,self.rews,self.world_status, info = self.env.step(action)
+            self.step_count +=1
 
-        if self.step_count == 0:
-            self.env.step()
-
-        for i in range(self.num_agents):
-            self.acs = actions
-            self.obs[i],self.rews[i],self.world_status[i], info = self.env.step(actions[i])
-
-            if self.world_status[i]:
-                self.world_status[i] = 'Episode Complete'
-            else:
-                self.world_status[i] = 'Episode In Progress'
-
-        self.step_count +=1
-
-        return self.obs,self.rews,self.world_status 
+            return self.obs,self.rews,self.world_status
 
     def reset(self):
-        for i in range(self.num_agents):
-            self.obs[i] = self.env.reset()
+        self.obs = self.env.reset()
+
+    def set_observation_space(self):
+        observation_space = 1
+        if self.env.observation_space.shape != ():
+            for i in range(len(self.env.observation_space.shape)):
+                observation_space *= self.env.observation_space.shape[i]
+        else:
+            observation_space = self.env.observation_space.n
+
+        return observation_space
+
+    def set_action_space(self):
+        action_space = 1
+        if self.env.action_space.shape != ():
+            for i in range(len(self.env.action_space.shape)):
+                action_space *= self.env.action_space.shape[i]
+        else:
+            action_space = self.env.action_space.n
+
+        return action_space
+
+    def get_observation(self):
+        return self.obs
+
+    def get_action(self):
+        return self.acs
+
+    def get_reward(self):
+        return self.rews
 
     def load_viewer(self):
         self.env.render()
