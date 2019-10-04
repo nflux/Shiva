@@ -8,9 +8,9 @@ def initialize_env(env_params):
     return env
 
 
-class AbstractEnvironment():
+class Environment():
     def __init__(self, environment,num_agents):
-        self.env_name = environment
+        self.env = environment
         self.num_agents = num_agents
         self.obs = [0 for i in range(num_agents)]
         self.acs = [0 for i in range(num_agents)]
@@ -58,29 +58,22 @@ class AbstractEnvironment():
 
 
 
-class GymEnvironment(AbstractEnvironment):
+class GymEnvironment(Environment):
     def __init__(self,environment,num_agents,render):
-
-        super(GymEnvironment,self).__init__(environment,num_agents)
         self.env = gym.make(environment)
-        # self.num_agents = num_agents
-        # self.obs = [0 for i in range(num_agents)]
-        # self.acs = [0 for i in range(num_agents)]
-        # self.rews = [0 for i in range(num_agents)]
-        # self.world_status = [0 for i in range(num_agents)]
-        # Modified to get Shiva running with cartpole
-        #self.observation_space = self.env.observation_space()[0] if self.env.observation_space.shape != () else self.env.observation_space.n
-        self.observation_space = self.env.observation_space.shape[0]
+        self.num_agents = num_agents
+        self.obs = [0 for i in range(num_agents)]
+        self.acs = [0 for i in range(num_agents)]
+        self.rews = [0 for i in range(num_agents)]
+        self.world_status = [0 for i in range(num_agents)]
+        self.observation_space = self.env.observation_space.shape if self.env.observation_space.shape != () else self.env.observation_space.n
         self.action_space = self.env.action_space.shape if self.env.action_space.shape != () else self.env.action_space.n
-        # self.step_count = 0
+        self.step_count = 0
         if render:
             self.load_viewer()
 
 
     def step(self,actions):
-
-        if self.step_count == 0:
-            self.env.step()
 
         for i in range(self.num_agents):
             self.acs = actions
@@ -93,7 +86,7 @@ class GymEnvironment(AbstractEnvironment):
 
         self.step_count +=1
 
-        return self.obs,self.rews,self.world_status 
+        return self.obs,self.rews,self.world_status
 
     def reset(self):
         for i in range(self.num_agents):
