@@ -2,7 +2,9 @@ import Algorithm
 import Replay_Buffer
 import Environment
 
-class AbstractLearner():
+from abc import ABC
+
+class AbstractLearner(ABC):
 
     def __init__(self, 
                 agents : list, 
@@ -43,20 +45,18 @@ class AbstractLearner():
         pass
 
 
-class Single_Agent_Q_Learner(AbstractLearner):
+class Single_Agent_Learner(AbstractLearner):
 
     
 
     def __init__(self, agents, environments, algorithm, data, configs):
 
-        super(Single_Agent_Q_Learner,self).__init__(agents, environments, algorithm, data, configs)
+        super(Single_Agent_Learner,self).__init__(agents, environments, algorithm, data, configs)
         self.agents = agents
         self.environments = environments
         self.algorithm = algorithm
         self.data = None
         self.configs = configs
-
-        print(configs)
 
     def create_environment(self):
         # create the environment and get the action and observation spaces
@@ -87,15 +87,15 @@ class Single_Agent_Q_Learner(AbstractLearner):
     def step(self):
 
         # probably need to discuss this with Ezequiel
-        observation = self.env.get_observation(0)
+        observation = self.env.get_observation()
 
         action = self.alg.get_action(self.alg.agents[0], observation, self.env.get_current_step())
 
         next_observation, reward, done = self.env.step(action)
 
-        self.buffer.push([[[*observation, action, reward, *next_observation, int(done)]]])
+        self.buffer.append([observation, action, reward, next_observation, int(done)])
 
-        self.alg.update(self.agents[0], self.buffer.sample(), self.env.get_current_step())
+        self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
 
         return done
 

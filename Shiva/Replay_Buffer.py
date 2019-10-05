@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from torch.autograd import Variable
 
 import collections
 
@@ -78,11 +79,11 @@ class SimpleExperienceBuffer:
 #
 ##########################################################################
 
-class BasicReplayBuffer(AbstractReplayBuffer):
+class MultiAgentReplayBuffer(AbstractReplayBuffer):
 
     def __init__(self, max_size, num_agents, obs_dim, acs_dim):
-        super(BasicReplayBuffer, self).__init__(max_size, num_agents, obs_dim, acs_dim)
-  
+        super(MultiAgentReplayBuffer, self).__init__(max_size, num_agents, obs_dim, acs_dim)
+
     def push(self, exps):
         nentries = len(exps)
 

@@ -1,5 +1,6 @@
 import Learner
 from Validation import Validation
+from abc import ABC
 
 class AbstractMetaLearner():
 
@@ -53,7 +54,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
             environment = validation.learners[0]['Environment']['environment']
 
             # single learner
-            self.learner = Learner.Single_Agent_Q_Learner([], [environment], validation.algorithms[0], [], validation.learners[0])
+            self.learner = Learner.Single_Agent_Learner([], [environment], validation.algorithms[0], [], validation.learners[0])
 
             self.learner.launch() 
 
