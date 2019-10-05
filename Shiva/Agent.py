@@ -1,6 +1,8 @@
 import numpy as np
 import torch
-from Network import DQNet as dqnet
+# from Network import DQNet as dqnet
+import Network_builder
+from importlib import import_module
 import uuid 
 class Agent:
     def __init__(self, obs_dim, action_dim, optimizer, learning_rate, config:list):
@@ -44,13 +46,15 @@ class DQAgent(Agent):
         super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, config)
 
         # Policy and Target Polict calls the dqnet. Hidden Layer 1 = 32 Hidden Layer 2= 64 
-        HIDDEN_LAYER_1 = 32
-        HIDDEN_LAYER_2 = 64
 
-        print(obs_dim,action_dim)
+        nb = Network_builder.NetworkBuilder(obs_dim + action_dim,1, config[1])
+        network_name = nb.getFileName()
+        dqnet = import_module (network_name)
+        #self.policy = dqnet(obs_dim, 32,64,action_dim)
+        #self.target_policy = dqnet(obs_dim, 32,64,action_dim)
         
-        self.policy = dqnet(obs_dim, HIDDEN_LAYER_1, HIDDEN_LAYER_2, action_dim)
-        self.target_policy = dqnet(obs_dim, HIDDEN_LAYER_1, HIDDEN_LAYER_2, action_dim)
+        self.policy = dqnet.DQNet(obs_dim,action_dim)
+        self.target_policy = dqnet.DQNet(obs_dim,action_dim)
         # Calls the optimizer for the policy
         self.optimizer = optimizer(params=self.policy.parameters(), lr=learning_rate)
     

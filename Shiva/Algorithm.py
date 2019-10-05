@@ -175,6 +175,8 @@ class DQAlgorithm(AbstractAlgorithm):
         # The first argument to the gather() call is a dimension index that we want to
         # perform gathering on (equal to 1, which corresponds to actions). 
         # The second argument is a tensor of indices of elements to be chosen
+        # print(agent.policy)
+        # input()
         state_action_values = agent.policy(states_v).gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
         # We apply the target network to our next state observations and 
