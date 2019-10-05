@@ -7,7 +7,6 @@ class NetworkBuilder ():
 			
 			# make a copy of dqnettemplate and call it fileName.py
 			subprocess.call("cp /Network_Templates/DQNetTemplate.py DQNet1.py")
-
 			
 			# use the configs to append the rest of the network to fileName.py
 			with open("DQNet1.py", "a") as file:

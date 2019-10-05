@@ -86,6 +86,8 @@ class Single_Agent_Learner(AbstractLearner):
 
     def step(self):
 
+        self.env.env.render()
+
         # probably need to discuss this with Ezequiel
         observation = self.env.get_observation()
 
@@ -106,7 +108,10 @@ class Single_Agent_Learner(AbstractLearner):
         print("Before training")
         while not done:
             for _ in range(self.configs['Learner']['episodes']):
+                self.env.reset()
                 done = self.step()
+
+        self.env.env.close()
 
         print("After training")
         

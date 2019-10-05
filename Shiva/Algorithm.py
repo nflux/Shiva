@@ -160,7 +160,7 @@ class DQAlgorithm(AbstractAlgorithm):
             Returns
                 None
         '''
-        states, actions, rewards, dones, next_states = minibatch
+        states, actions, rewards, next_states, dones = minibatch
         # make tensors
         states_v = torch.tensor(states).float()#.to(device)
         next_states_v = torch.tensor(next_states).float()#.to(device)

@@ -46,6 +46,8 @@ class DQAgent(Agent):
         # Policy and Target Polict calls the dqnet. Hidden Layer 1 = 32 Hidden Layer 2= 64 
         HIDDEN_LAYER_1 = 32
         HIDDEN_LAYER_2 = 64
+
+        print(obs_dim,action_dim)
         
         self.policy = dqnet(obs_dim, HIDDEN_LAYER_1, HIDDEN_LAYER_2, action_dim)
         self.target_policy = dqnet(obs_dim, HIDDEN_LAYER_1, HIDDEN_LAYER_2, action_dim)
