@@ -87,8 +87,7 @@ class Single_Agent_Learner(AbstractLearner):
     def step(self):
 
         self.env.env.render()
-
-        # probably need to discuss this with Ezequiel
+        
         observation = self.env.get_observation()
 
         action = self.alg.get_action(self.alg.agents[0], observation, self.env.get_current_step())

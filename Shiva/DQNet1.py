@@ -17,3 +17,13 @@ class DQNet(Network):
 
     def forward(self,x):
         return self.net(x)
+        self.net = nn.Sequential(
+            nn.Linear(input_size,32),
+            nn.ReLU(),
+            nn.Linear(32,64),
+            nn.ReLU(),
+            nn.Linear(64,output_size)
+            )
+
+    def forward(self,x):
+        return self.net(x)
