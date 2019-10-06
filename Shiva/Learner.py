@@ -102,12 +102,12 @@ class Single_Agent_Learner(AbstractLearner):
 
     def update(self):
 
-        done = False
 
         print("Before training")
-        while not done:
-            for _ in range(self.configs['Learner']['episodes']):
-                self.env.reset()
+        for _ in range(self.configs['Learner']['episodes']):
+            done = False
+            self.env.reset()
+            while not done:
                 done = self.step()
 
         self.env.env.close()

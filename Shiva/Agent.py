@@ -53,8 +53,8 @@ class DQAgent(Agent):
         #self.policy = dqnet(obs_dim, 32,64,action_dim)
         #self.target_policy = dqnet(obs_dim, 32,64,action_dim)
         
-        self.policy = dqnet.DQNet(obs_dim,action_dim)
-        self.target_policy = dqnet.DQNet(obs_dim,action_dim)
+        self.policy = dqnet.DQNet(obs_dim+action_dim,1)
+        self.target_policy = dqnet.DQNet(obs_dim+action_dim,1)
         # Calls the optimizer for the policy
         self.optimizer = optimizer(params=self.policy.parameters(), lr=learning_rate)
     
