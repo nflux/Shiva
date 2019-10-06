@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import os
 # from Network import DQNet as dqnet
 import Network_builder
 from importlib import import_module
@@ -63,8 +64,14 @@ class DQAgent(Agent):
         torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
 
     def load(self):
-        #Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-        torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
+        if os.path.exists("/ShivaAgent"+str(self.id)+ ".pth"):
+             #Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
+            torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
+        else:
+            print("The Load File for the Shiva Agent Model Does Not Exist")
+
+
+       
 
 '''
 The Scenario when DQAgent is passed as a config_tuple
