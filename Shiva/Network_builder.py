@@ -8,7 +8,7 @@ class NetworkBuilder ():
 			
 			path = os.getcwd()
 			# make a copy of dqnettemplate and call it fileName.py
-			os.system("cp /home/phu/Documents/GitHub/Control-Tasks/Shiva/Network_Templates/DQNetTemplate.py " + path + "/Shiva/DQNet1.py")
+			os.system("cp " + path + "/Shiva/Network_Templates/DQNetTemplate.py " + path + "/Shiva/DQNet1.py")
 			# /home/phu/Documents/GitHub/Control-Tasks/Shiva/Network_Templates/DQNetTemplate.py
 			# use the configs to append the rest of the network to fileName.py
 			with open(path + "/Shiva/DQNet1.py", "a") as file:
@@ -29,7 +29,7 @@ class NetworkBuilder ():
 						file.write(spacing + "nn." + str(configs['activation_function' + str(hdc)]) + "(),\n")
 						hdc +=1
 
-				file.write("\n" + spacing + ")")
+				file.write("\n" + spacing2 + ")")
 
 				file.write("\n\n    def forward(self,x):\n")
 				file.write(spacing2 + "return self.net(x)")
