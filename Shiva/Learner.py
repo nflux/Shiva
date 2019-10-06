@@ -1,4 +1,4 @@
-import Algorithm 
+import Algorithm
 import Replay_Buffer
 import Environment
 
@@ -6,10 +6,10 @@ from abc import ABC
 
 class AbstractLearner(ABC):
 
-    def __init__(self, 
-                agents : list, 
-                environments : list, 
-                algorithm : str, 
+    def __init__(self,
+                agents : list,
+                environments : list,
+                algorithm : str,
                 data : list,
                 configs: dict
                 ):
@@ -47,7 +47,7 @@ class AbstractLearner(ABC):
 
 class Single_Agent_Learner(AbstractLearner):
 
-    
+
 
     def __init__(self, agents, environments, algorithm, data, configs):
 
@@ -70,15 +70,15 @@ class Single_Agent_Learner(AbstractLearner):
         return self.algorithm
 
     def launch(self):
-        
+
         # Launch the environment
         self.create_environment()
-        
-        # Launch the algorithm which will handle the 
+
+        # Launch the algorithm which will handle the
         self.alg = Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        
+
         self.agents = self.alg.create_agent()
-        
+
         # Basic replay buffer at the moment
         self.buffer = Replay_Buffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
 
@@ -87,7 +87,7 @@ class Single_Agent_Learner(AbstractLearner):
     def step(self):
 
         self.env.env.render()
-        
+
         observation = self.env.get_observation()
 
         action = self.alg.get_action(self.alg.agents[0], observation, self.env.get_current_step())
@@ -102,18 +102,18 @@ class Single_Agent_Learner(AbstractLearner):
 
     def update(self):
 
+        done = False
 
         print("Before training")
-        for _ in range(self.configs['Learner']['episodes']):
-            done = False
-            self.env.reset()
-            while not done:
+        while not done:
+            for _ in range(self.configs['Learner']['episodes']):
+                self.env.reset()
                 done = self.step()
 
         self.env.env.close()
 
         print("After training")
-        
+
 
         pass
 
@@ -122,3 +122,28 @@ class Single_Agent_Learner(AbstractLearner):
 
     def load_agent(self):
         pass
+
+
+
+
+class Single_Agent_Imitation_Learner(AbstractLearner):
+    def __init__(self):
+
+        super(ImitationLearner,self).__init(agents,environments,algorithm,data,configs)
+        self.agents = agents
+        self.environments = environments
+        self.algorithm = algorithm
+        self.data = data
+        self.configs = configs
+
+    def create_environment(self):
+        #Initialize environment-config file will specify which environment type
+        self.env = Environment.initialize_env(self.configs['Environment'])
+
+    def get_agents(self):
+        return self.agents[0]
+
+    def get_algorithm(self):
+        return self.Algorithm
+
+    def launch(self):
