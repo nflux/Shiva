@@ -47,14 +47,16 @@ class DQAgent(Agent):
 
         # Policy and Target Polict calls the dqnet. Hidden Layer 1 = 32 Hidden Layer 2= 64 
 
+        
+
         nb = Network_builder.NetworkBuilder(obs_dim + action_dim,1, config[1])
         network_name = nb.getFileName()
         dqnet = import_module (network_name)
         #self.policy = dqnet(obs_dim, 32,64,action_dim)
         #self.target_policy = dqnet(obs_dim, 32,64,action_dim)
-        
-        self.policy = dqnet.DQNet(obs_dim+action_dim,1)
-        self.target_policy = dqnet.DQNet(obs_dim+action_dim,1)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.policy = dqnet.DQNet(obs_dim+action_dim,1).to(device)
+        self.target_policy = dqnet.DQNet(obs_dim+action_dim,1).to(device)
         # Calls the optimizer for the policy
         self.optimizer = optimizer(params=self.policy.parameters(), lr=learning_rate)
     

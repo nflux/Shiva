@@ -83,7 +83,7 @@ class Single_Agent_Learner(AbstractLearner):
         self.buffer = Replay_Buffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
 
         print('Launch done.')
-
+        
     def step(self):
 
         self.env.env.render()
@@ -94,7 +94,7 @@ class Single_Agent_Learner(AbstractLearner):
 
         next_observation, reward, done = self.env.step(action)
 
-        self.buffer.append([observation, action, reward, next_observation, int(done)])
+        self.buffer.append([observation, action, reward, next_observation, done])
 
         self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
 

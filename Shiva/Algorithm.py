@@ -160,13 +160,15 @@ class DQAlgorithm(AbstractAlgorithm):
             Returns
                 None
         '''
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
         states, actions, rewards, next_states, dones = minibatch
         # make tensors
         # states_v = torch.tensor(states).float()#.to(device)
         # next_states_v = torch.tensor(next_states).float()#.to(device)
         # actions_v = torch.tensor(actions)#.to(device)
-        rewards_v = torch.tensor(rewards)#.to(device)
-        done_mask = torch.ByteTensor(dones)#.to(device)
+        rewards_v = torch.tensor(rewards).to(device)
+        done_mask = torch.ByteTensor(dones).to(device)
 
         # zero optimizer
         agent.optimizer.zero_grad()
@@ -176,7 +178,7 @@ class DQAlgorithm(AbstractAlgorithm):
         # The first argument to the gather() call is a dimension index that we want to
         # perform gathering on (equal to 1, which corresponds to actions). 
         # The second argument is a tensor of indices of elements to be chosen
-        input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float()
+        input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(device)
         state_action_values = agent.policy(input_v) #.gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
         # We apply the target network to our next state observations and 
@@ -184,7 +186,7 @@ class DQAlgorithm(AbstractAlgorithm):
         # Function max() returns both maximum values and indices of those values (so it calculates both max and argmax), 
         # which is very convenient. However, in this case, we’re interested only in values, so we take
         # the first entry of the result.
-        input_v = torch.tensor([ np.concatenate([s_i, self.find_best_action(agent.target_policy, s_i)]) for s_i in next_states ]).float()
+        input_v = torch.tensor([ np.concatenate([s_i, self.find_best_action(agent.target_policy, s_i)]) for s_i in next_states ]).float().to(device)
         next_state_values = agent.target_policy(input_v)#.max(1)[0]
         # 3) OVERWRITE 0 ON ALL Q_HAT_VALUES WHERE s_j IS A TERMINATION STATE
         # If transition in the batch is from the last step in the episode, then our value of the action doesn’t have a
@@ -234,11 +236,12 @@ class DQAlgorithm(AbstractAlgorithm):
         Iterates over the action space and returns a one-hot encoded list
     '''
     def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
-        obs_v = torch.tensor(observation).float()#.to(device)
-        best_q, best_act_v = float('-inf'), torch.zeros(self.action_space)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        obs_v = torch.tensor(observation).float().to(device)
+        best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(device)
         for i in range(self.action_space):
             act_v = self.action2one_hot_v(i)
-            q_val = network(torch.cat([obs_v, act_v]))
+            q_val = network(torch.cat([obs_v, act_v.to(device)]))
             if q_val > best_q:
                 best_q = q_val
                 best_act_v = act_v
