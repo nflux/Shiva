@@ -46,9 +46,6 @@ class AbstractLearner(ABC):
 
 
 class Single_Agent_Learner(AbstractLearner):
-
-
-
     def __init__(self, agents, environments, algorithm, data, configs):
 
         super(Single_Agent_Learner,self).__init__(agents, environments, algorithm, data, configs)
@@ -147,3 +144,4 @@ class Single_Agent_Imitation_Learner(AbstractLearner):
         return self.Algorithm
 
     def launch(self):
+        pass
