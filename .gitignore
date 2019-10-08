@@ -1,4 +1,11 @@
 .vscode/
 *.pyc
-*./__pycache__
-./Shiva/__pycache__/
+
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+Shiva/__pycache__/
+Shiva/*.py[cod]

@@ -1,13 +1,10 @@
 import numpy as np
 import torch
 import os
-import Network
-
-# import Network_builder
-# from importlib import import_module
-
 import uuid 
 import copy
+
+import Network
 
 class Agent:
     def __init__(self, network_input, network_output, optimizer, learning_rate, config: dict):

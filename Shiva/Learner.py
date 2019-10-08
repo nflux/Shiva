@@ -55,6 +55,38 @@ class Single_Agent_Learner(AbstractLearner):
         self.data = None
         self.configs = configs
 
+
+    def update(self):
+
+        print("Before training")
+        
+        for _ in range(self.configs['Learner']['episodes']):
+            self.env.reset()
+            done = False
+            while not done:
+                done = self.step()
+
+        self.env.env.close()
+
+        print("After training")
+
+
+    def step(self):
+
+        self.env.env.render()
+
+        observation = self.env.get_observation()
+
+        action = self.alg.get_action(self.alg.agents[0], observation, self.env.get_current_step())
+
+        next_observation, reward, done = self.env.step(action)
+
+        self.buffer.append([observation, action, reward, next_observation, done])
+
+        self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
+
+        return done
+
     def create_environment(self):
         # create the environment and get the action and observation spaces
         self.env = Environment.initialize_env(self.configs['Environment'])
@@ -80,39 +112,7 @@ class Single_Agent_Learner(AbstractLearner):
         self.buffer = Replay_Buffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
 
         print('Launch done.')
-        
-    def step(self):
 
-        self.env.env.render()
-
-        observation = self.env.get_observation()
-
-        action = self.alg.get_action(self.alg.agents[0], observation, self.env.get_current_step())
-
-        next_observation, reward, done = self.env.step(action)
-
-        self.buffer.append([observation, action, reward, next_observation, done])
-
-        self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
-
-        return done
-
-    def update(self):
-
-        done = False
-
-        print("Before training")
-        while not done:
-            for _ in range(self.configs['Learner']['episodes']):
-                self.env.reset()
-                done = self.step()
-
-        self.env.env.close()
-
-        print("After training")
-
-
-        pass
 
     def save_agent(self):
         pass
