@@ -99,3 +99,14 @@ class DQAgent(Agent):
         torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
 
 '''
+
+
+
+class DDPGAgent(Agent):
+    def __init__(self, network_input, network_output, optimizer, learning_rate, config: dict):
+        # Calls the Super Class Agent to do some initialization
+        super(DQAgent,self).__init__(network_input, network_output, optimizer, learning_rate, config)
+        self.policy = Network.initialize_network(network_input, network_output, config['network'])
+        self.target_policy = copy.deepcopy(self.policy)
+        # Calls the optimizer for the policy
+        self.optimizer = optimizer(params=self.policy.parameters(), lr=learning_rate)
