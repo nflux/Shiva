@@ -42,7 +42,7 @@ class AbstractAlgorithm():
         gamma: np.float, 
         learning_rate: np.float,
         beta: np.float,
-        configs: list
+        configs: dict
         ):
         '''
             Input
@@ -133,7 +133,7 @@ class DQAlgorithm(AbstractAlgorithm):
         beta: np.float,
         epsilon: set(),
         C: int,
-        configs: list):
+        configs: dict):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
@@ -237,6 +237,7 @@ class DQAlgorithm(AbstractAlgorithm):
     '''
     def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        
         obs_v = torch.tensor(observation).float().to(device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(device)
         for i in range(self.action_space):
@@ -266,6 +267,8 @@ class DQAlgorithm(AbstractAlgorithm):
     #     return ret
 
     def create_agent(self):
-        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, list(self.configs.values()))
+        network_input = self.observation_space + self.action_space
+        network_output = 1
+        new_agent = DQAgent(network_input, network_output, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent

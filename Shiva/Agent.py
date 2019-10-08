@@ -1,25 +1,31 @@
 import numpy as np
 import torch
 import os
-# from Network import DQNet as dqnet
-import Network_builder
-from importlib import import_module
+import Network
+
+# import Network_builder
+# from importlib import import_module
+
 import uuid 
+import copy
+
 class Agent:
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, config:list):
+    def __init__(self, network_input, network_output, optimizer, learning_rate, config: dict):
         '''
         Base Attributes of Agent
-        obs_dim = Observation Dimensions
-        action_dim = Action Dimensions
-        id = id Dimensions
-        policy = Neural Network Policy
-        target_policy = Target Neural Network Policy
-        optimizer = Optimier Function
-        learning_rate = Learning Rate
+            network_input
+            network_output
+            id = id Dimensions
+            policy = Neural Network Policy
+            target_policy = Target Neural Network Policy
+            optimizer = Optimier Function
+            learning_rate = Learning Rate
 
         '''
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
+        # self.obs_dim = obs_dim
+        # self.action_dim = action_dim
+        self.network_input = network_input
+        self.network_output = network_output
         self.id = uuid.uuid4()
         self.policy = None
         self.optimizer = None
@@ -42,21 +48,11 @@ class Agent:
 
 
 class DQAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, config:list):
+    def __init__(self, network_input, network_output, optimizer, learning_rate, config: dict):
         # Calls the Super Class Agent to do some initialization
-        super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, config)
-
-        
-        # Agent calls network builder
-        nb = Network_builder.NetworkBuilder(obs_dim + action_dim,1, config[1])
-        network_name = nb.getFileName()
-        dqnet = import_module (network_name)
-
-        # Policy and Target Polict calls the dqnet.
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.policy = dqnet.DQNet(obs_dim+action_dim,1).to(device)
-        self.target_policy = dqnet.DQNet(obs_dim+action_dim,1).to(device)
-
+        super(DQAgent,self).__init__(network_input, network_output, optimizer, learning_rate, config)
+        self.policy = Network.initialize_network(network_input, network_output, config['network'])
+        self.target_policy = copy.deepcopy(self.policy)
         # Calls the optimizer for the policy
         self.optimizer = optimizer(params=self.policy.parameters(), lr=learning_rate)
     
