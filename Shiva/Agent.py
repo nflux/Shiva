@@ -7,7 +7,7 @@ import copy
 import Network
 
 class Agent:
-    def __init__(self, obs_dim, action_dim, optimizer_function, learning_rate, config: dict):
+    def __init__(self, obs_dim, action_dim, optimizer_function, learning_rate, id, config: dict):
         '''
         Base Attributes of Agent
             obs_dim
@@ -21,43 +21,71 @@ class Agent:
         '''
         self.obs_dim = obs_dim
         self.action_dim = action_dim
-        self.id = uuid.uuid4()
+        self.id = id
         self.policy = None
         self.optimizer_function = optimizer_function
         self.learning_rate = learning_rate
         self.config = config
 
-    def save(self):
+    def save(self, step):
         '''
+        
         # Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
         '''
+        path = os.getcwd()
+        directory = path+"/Shiva/ShivaAgent/"+str(self.id)+"/"
+        if not os.path.exists(directory): 
+            os.makedirs(directory)
         #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-        torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
+        torch.save(self.policy,path+"/Shiva/ShivaAgent/"+str(self.id)+"/"+str(step)+ ".pth")
 
-    def load(self):
+    def load(self, step):
         '''
         # Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
         '''
-        if os.path.exists("/ShivaAgent"+str(self.id)+ ".pth"):
-             #Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-            torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
+        path = os.getcwd()
+        if os.path.exists(path+"/Shiva/ShivaAgent/"+str(self.id)+"/"+str(step)+ ".pth"):
+            #Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
+            torch.load(self.policy,path+"/Shiva/ShivaAgent/"+str(self.id)+"/"+str(step)+ ".pth")
         else:
             print("The Load File for the Shiva Agent Model Does Not Exist")
 
 
 class DQAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, config: dict):
-        super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, config)
+    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, config: dict):
+        super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate,id, config)
         network_input = obs_dim + action_dim
         network_output = 1
         self.policy = Network.initialize_network(network_input, network_output, config['network'])
         self.target_policy = copy.deepcopy(self.policy)
-        
         self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=learning_rate)
-       
 
+
+
+class DDPGAgent(Agent):
+    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, config: dict):
+        super(DDPGAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate,id, config)
+        network_input = obs_dim + action_dim
+        network_output = 1
+        self.policy = Network.initialize_network(network_input, network_output, config['network'])
+        self.target_policy = copy.deepcopy(self.policy)
+        self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=learning_rate)
+
+
+class ImitationLearnerAgent(Agent):
+    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, config: dict):
+        super(ImitationLearnerAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate,id, config)
+        network_input = obs_dim + action_dim
+        network_output = 1
+        self.policy = Network.initialize_network(network_input, network_output, config['network'])
+        self.target_policy = copy.deepcopy(self.policy)
+        self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=learning_rate)
+
+
+
+# NO Longer In Use Feel Free to Delete if Not needed. 
 '''
 The Scenario when DQAgent is passed as a config_tuple
 class DQAgent(Agent):
@@ -88,16 +116,3 @@ class DQAgent(Agent):
 
 '''
 
-class DDPGAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, config: dict):
-        # Calls the Super Class Agent to do some initialization
-        super(DDPGAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, config)
-        
-        self.actor = Network.initialize_network(obs_dim, action_dim, config['actor'])
-        self.actor_target = copy.deepcopy(self.actor)
-
-        self.critic = Network.initialize_network(obs_dim, action_dim, config['critic'])
-        self.critic_target = copy.deepcopy(self.critic)
-        
-        # Calls the optimizer for the policy
-        self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=learning_rate)
