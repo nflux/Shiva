@@ -74,7 +74,7 @@ class DDPGAgent(Agent):
         self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=learning_rate)
 
 
-class ImitationLearnerAgent(Agent):
+class ImitationAgent(Agent):
     def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, config: dict):
         super(ImitationLearnerAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate,id, config)
         network_input = obs_dim + action_dim
