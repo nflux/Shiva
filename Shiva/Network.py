@@ -9,12 +9,11 @@ def initialize_network(input_dim: int, output_dim: int, _params: dict):
             layers = list(map(int, _params['layers'].split(','))),
             activ_function = [getattr(torch.nn, f) for f in _params['activation_function'].split(',')],
             output_function = getattr(torch.nn, _params['output_function']) if _params['output_function'] != "" else None
-            
     )
 
 #################################################################
 ###                                                           ###
-###     Dynamic Network Class                                 ###
+###     Dynamic Linear Network Class                          ###
 ###     extends torch.nn.Module                               ###
 ###                                                           ###
 #################################################################
@@ -45,6 +44,7 @@ class DynamicLinearNetwork(nn.Module):
                 net_layers.append(nn.Linear(in_layer_size, out_layer_size))
                 net_layers.append(af())
                 in_layer_size = out_layer_size
+                
         last_layer_dim = layers[len(layers)-1] if len(layers) > 1 else layers[0]
         net_layers.append( nn.Linear(last_layer_dim, output_dim) )
         

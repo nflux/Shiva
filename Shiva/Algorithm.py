@@ -267,8 +267,45 @@ class DQAlgorithm(AbstractAlgorithm):
     #     return ret
 
     def create_agent(self):
-        network_input = self.observation_space + self.action_space
-        network_output = 1
-        new_agent = DQAgent(network_input, network_output, self.optimizer_function, self.learning_rate, self.configs)
+        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+        self.agents.append(new_agent)
+        return new_agent
+
+
+##########################################################################
+#    DDPG Algorithm Implementation
+#    
+##########################################################################
+
+class DDPGAlgorithm(AbstractAlgorithm):
+    def __init__(self,
+        observation_space: int,
+        action_space: int,
+        loss_function: object, 
+        regularizer: object, 
+        recurrence: bool, 
+        optimizer: object, 
+        gamma: np.float, 
+        learning_rate: np.float,
+        beta: np.float,
+        epsilon: set(),
+        C: int,
+        configs: dict):
+        '''
+            Inputs
+                epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
+                C              Number of iterations before the target network is updated
+        '''
+        super(DQAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
+        self.epsilon_start = epsilon[0]
+        self.epsilon_end = epsilon[1]
+        self.epsilon_decay = epsilon[2]
+        self.C = C
+
+    def update(self, agent, minibatch, step_n):
+        pass
+
+    def create_agent(self):
+        new_agent = DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
