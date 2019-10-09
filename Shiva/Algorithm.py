@@ -31,6 +31,9 @@ import numpy as np
 
 import torch
 
+import Agent
+import utils.Noise
+
 class AbstractAlgorithm():
     def __init__(self,
         observation_space: np.ndarray,
@@ -117,8 +120,6 @@ class AbstractAlgorithm():
 #    
 #    Discrete Action Space
 ##########################################################################
-
-from Agent import DQAgent
 
 class DQAlgorithm(AbstractAlgorithm):
     def __init__(self,
@@ -259,20 +260,13 @@ class DQAlgorithm(AbstractAlgorithm):
         z[action_idx] = 1
         return z
 
-    # # Currently not being used.
-    # def one_hot(self, tensor):
-    #     _, act_idx = torch.max(tensor, dim=1) # dim=0 TBD! Works for now
-    #     ret = torch.zeros(tensor[0].shape)
-    #     ret[act_idx.item()] = 1
-    #     return ret
-
     def create_agent(self):
-        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+        new_agent = Agent.DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
 
-
 ##########################################################################
+#
 #    DDPG Algorithm Implementation
 #    
 ##########################################################################
@@ -302,8 +296,13 @@ class DDPGAlgorithm(AbstractAlgorithm):
         self.epsilon_decay = epsilon[2]
         self.C = C
 
+        self.ou_noise = Noise.OUNoise(self.action_space)
+
     def update(self, agent, minibatch, step_n):
         pass
+
+    def get_action(self, agent, observation, step_n) -> np.ndarray: # maybe a torch.tensor
+        return agent.actor(observation).data.numpy() + self.ou_noise.noise()
 
     def create_agent(self):
         new_agent = DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)

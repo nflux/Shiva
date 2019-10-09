@@ -93,11 +93,29 @@ class DDPGAgent(Agent):
         # Calls the Super Class Agent to do some initialization
         super(DDPGAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, config)
         
-        self.actor = Network.initialize_network(obs_dim, action_dim, config['actor'])
+        actor_params = {
+            'layers': config['network']['actor_layers'],
+            'activation_function': config['network']['actor_activation_function'],
+            'output_function': config['network']['actor_output_function']
+        }
+        self.actor = Network.initialize_network(obs_dim, action_dim, actor_params)
         self.actor_target = copy.deepcopy(self.actor)
 
-        self.critic = Network.initialize_network(obs_dim, action_dim, config['critic'])
-        self.critic_target = copy.deepcopy(self.critic)
+        critic_head_params = {
+            'layers': config['network']['critic_head_layers'],
+            'activation_function': config['network']['critic_head_activation_function'],
+            'output_function': config['network']['critic_head_output_function']
+        }
+        self.critic_head = Network.initialize_network(obs_dim, action_dim, critic_head_params)
+        self.critic_head_target = copy.deepcopy(self.critic_head)
         
+        critic_tail_params = {
+            'layers': config['network']['critic_tail_layers'],
+            'activation_function': config['network']['critic_tail_activation_function'],
+            'output_function': config['network']['critic_tail_output_function']
+        }
+        self.critic_tail = Network.initialize_network(obs_dim, action_dim, critic_tail_params)
+        self.critic_tail_target = copy.deepcopy(self.critic_tail)
+
         # Calls the optimizer for the policy
         self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=learning_rate)
