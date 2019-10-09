@@ -8,14 +8,12 @@
 
 
 # basically import shiva
-from Meta_Learner import SingleAgentMetaLearner
+from Meta_Learner import initialize_meta
 
 # declare the path
 ini_path = "Shiva/Initializers"
 
-
-# then you pass the path to configs to the instance of the metalearner
-meta = SingleAgentMetaLearner(ini_path)
+meta = initialize_meta(ini_path)
 
 
 # then you can have an overview of all the different learners running at same time

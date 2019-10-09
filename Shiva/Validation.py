@@ -65,6 +65,9 @@ class Validation():
                         learner[section] = section_extracter(section)
                     elif section == 'Network':
                         learner[section] = section_extracter(section)
+                    elif section == 'MetaLearner':
+                        learner[section] = section_extracter(section)
+
 
 
                 # Now I need to figure out how I'm going to handle and extract the configurations
@@ -89,6 +92,8 @@ class Validation():
                         elif section == 'Agent':
                             learner[section] = section_extracter(section)
                         elif section == 'Network':
+                            learner[section] = section_extracter(section)
+                        elif section == 'MetaLearner':
                             learner[section] = section_extracter(section)
 
             learners.append(learner)
