@@ -52,6 +52,10 @@ class Agent:
         else:
             print("The Load File for the Shiva Agent Model Does Not Exist")
 
+    def delete(self, id):
+        path = os.getcwd()
+        if os.path.exists(path+"/Shiva/ShivaAgent/"+str(self.id)):
+            os.remove(path+"/Shiva/ShivaAgent/"+str(self.id))
 
 class DQAgent(Agent):
     def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, config: dict):
