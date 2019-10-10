@@ -17,11 +17,6 @@ def initialize_meta(path : "filepath to config file"):
     # get the configurations from the validation object
     config = validate.learners
 
-    # print(config)
-
-
-    # I could make this a for each loop and be able to generate more than one metalearner
-    # makes me think about how the configuration file structure is going to evole
 
     if config[0]['MetaLearner']['type'] == 'Single':
         return SingleAgentMetaLearner([],
