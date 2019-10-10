@@ -266,8 +266,8 @@ class DQAlgorithm(AbstractAlgorithm):
     #     ret[act_idx.item()] = 1
     #     return ret
 
-    def create_agent(self, id):
-        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, id, self.configs)
+    def create_agent(self, root, id):
+        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, id, root, self.configs)
         self.agents.append(new_agent)
         return new_agent
 

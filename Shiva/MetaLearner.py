@@ -32,7 +32,8 @@ def initialize_meta(path : "filepath to config file"):
                                     config[0]['MetaLearner']['optimize_env_hp'],
                                     config[0]['MetaLearner']['optimize_learner_hp'],
                                     config[0]['MetaLearner']['evolution'],
-                                    config)
+                                    config,
+                                    )
 
 
 class AbstractMetaLearner(ABC):
@@ -107,15 +108,16 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     configs)
 
         # make a directory for this instance of metalearner
-        root = self.makeDirectory()
+        self.root = self.makeDirectory()
 
         # agents, environments, algorithm, data, configs
-        self.learner = Learner.Single_Agent_Learner([], [], self.algorithms, [], configs, self.id_generator())
+        self.learner = Learner.Single_Agent_Learner([], [], self.algorithms, [], configs, self.id_generator(), self.root)
 
         # initialize the learner
         self.learner.launch() 
 
-        # this seems like a learner.run() function
+        # this method seems misleading or inappropriately named
+        # might want to rethink this or live with it
         self.learner.update()
 
         # save the agent that was trained

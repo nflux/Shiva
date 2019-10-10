@@ -7,7 +7,7 @@ import copy
 import Network
 
 class Agent:
-    def __init__(self, obs_dim, action_dim, optimizer_function, learning_rate, id, config: dict):
+    def __init__(self, obs_dim, action_dim, optimizer_function, learning_rate, id, root, config: dict):
         '''
         Base Attributes of Agent
             obs_dim
@@ -26,6 +26,7 @@ class Agent:
         self.optimizer_function = optimizer_function
         self.learning_rate = learning_rate
         self.config = config
+        self.root = root
 
     def save(self, step):
         '''
@@ -33,12 +34,12 @@ class Agent:
         # Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
         '''
-        path = os.getcwd()
-        directory = path+"/Shiva/ShivaAgent/"+str(self.id)+"/"
+
+        directory = self.root + "/Agent/".format(self.id)
         if not os.path.exists(directory): 
             os.makedirs(directory)
         #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-        torch.save(self.policy,path+"/Shiva/ShivaAgent/"+str(self.id)+"/"+str(step)+ ".pth")
+        torch.save(self.policy,directory + 'Agent' + str(self.id) + ".pth")
 
     def load(self, step):
         '''
@@ -54,8 +55,8 @@ class Agent:
 
 
 class DQAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, config: dict):
-        super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate,id, config)
+    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, root, config: dict):
+        super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, id, root, config)
         network_input = obs_dim + action_dim
         network_output = 1
         self.policy = Network.initialize_network(network_input, network_output, config['network'])
@@ -65,8 +66,8 @@ class DQAgent(Agent):
 
 
 class DDPGAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, config: dict):
-        super(DDPGAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate,id, config)
+    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, root, config: dict):
+        super(DDPGAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, id, root, config)
         network_input = obs_dim + action_dim
         network_output = 1
         self.policy = Network.initialize_network(network_input, network_output, config['network'])
@@ -75,8 +76,8 @@ class DDPGAgent(Agent):
 
 
 class ImitationAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, config: dict):
-        super(ImitationLearnerAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate,id, config)
+    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, root, config: dict):
+        super(ImitationLearnerAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, id, root, config)
         network_input = obs_dim + action_dim
         network_output = 1
         self.policy = Network.initialize_network(network_input, network_output, config['network'])
