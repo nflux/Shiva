@@ -134,16 +134,15 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
         date = date[5:] #MM-DD
         time = time[:8]#HH:MM:SS
 
+        # get current path
+        path = os.getcwd()
+
         # make the folder name
         stamp = date + '-' + time
-        root = '/runs/MetaLearner-' + stamp +'/'
+        root = path + '/Shiva/runs/MetaLearner-' + stamp
         
-        # try to create the folder
-        # try:
-        #     original_umask = os.umask(0)
-        #     os.makedirs(root, 0o770)
-        # finally:
-        #     os.umask(original_umask)
+        # make the folder
+        subprocess.Popen("mkdir "+root, shell=True)
         
         # return root for reference  
         return root
