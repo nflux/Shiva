@@ -220,16 +220,6 @@ class DQAlgorithm(AbstractAlgorithm):
             action = random.sample(range(self.action_space), 1)[0]
             best_act = self.action2one_hot(action)
         else:
-            # # Iterate over all the actions to find the highest Q value
-            # obs_v = torch.tensor(observation).float()#.to(device)
-            # best_q, best_act_v = float('-inf'), torch.zeros(self.action_space)
-            # for i in range(self.action_space):
-            #     act_v = self.action2one_hot_v(i)
-            #     q_val = agent.policy(torch.cat([obs_v, act_v]))
-            #     if q_val > best_q:
-            #         best_q = q_val
-            #         best_act_v = act_v
-            # best_act = best_act_v.tolist()
             best_act = self.find_best_action(agent.policy, observation)
         return best_act # replay buffer store lists and env does np.argmax(action)
 
@@ -266,7 +256,7 @@ class DQAlgorithm(AbstractAlgorithm):
         return new_agent
 
 ##########################################################################
-#
+#    
 #    DDPG Algorithm Implementation
 #    
 ##########################################################################
@@ -299,12 +289,37 @@ class DDPGAlgorithm(AbstractAlgorithm):
         self.ou_noise = Noise.OUNoise(self.action_space)
 
     def update(self, agent, minibatch, step_n):
-        pass
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        states, actions, rewards, dones, next_states = minibatch
+        
+        states = torch.tensor(states).to(device)
+        actions = torch.tensor(actions).to(device)
+        rewards = torch.tensor(rewards).to(device)
+        dones_mask = torch.ByteTensor(dones).to(device)
+        next_states = torch.tensor(next_states).to(device)
+
+        # train critic
+        agent.critic_optimizer.zero_grad()
+        next_state_actions = agent.target_actor(next_states)
+        q_next_states = agent.target_critic(next_states, next_state_actions)
+        q_next_states[dones_mask] = 0.0
+        y_i = rewards + self.gamma * q_next_states
+        
+        q_now = agent.critic(states, actions)
+
+        critic_loss = self.loss_calc(q_now, y_i.detach())
+        critic_loss.backward()
+        agent.critic_optimizer.step()
+
+        # train actor
+        agent.actor_optimizer.zero_grad()
+        
 
     def get_action(self, agent, observation, step_n) -> np.ndarray: # maybe a torch.tensor
         return agent.actor(observation).data.numpy() + self.ou_noise.noise()
 
     def create_agent(self):
-        new_agent = DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+        new_agent = Agent.DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
