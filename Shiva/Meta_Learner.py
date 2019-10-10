@@ -27,7 +27,7 @@ def initialize_meta(path):
 
     config = validate.learners
 
-    print(config)
+    # print(config)
 
     if config[0]['MetaLearner']['type'] == 'Single':
         return SingleAgentMetaLearner([],
@@ -113,7 +113,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     configs)
 
 
-        self.makeDirectory()
+        stamp = self.makeDirectory()
 
         if True:
 
@@ -139,7 +139,11 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
 
         time = time[:7]
 
-        root = 'MetaLearner-' + date + '-' + time+'/'
+        stamp = date + '-' + time
+
+        root = 'MetaLearner-' + stamp +'/'
         
         os.system('mkdir ' + root)
+
+        return stamp
 
