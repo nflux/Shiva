@@ -45,6 +45,9 @@ class Validation():
 
             learner = {}
 
+            # This restricts what sections can get passed to the  
+            expected_sections = ['MetaLearner','Learner', 'Algorithm', 'Environment', 'ReplayBuffer', 'Agent', 'Network']
+
             # if its a file
             if isfile(join(self.file_path, f)):
 
@@ -52,23 +55,9 @@ class Validation():
                 
                 for section in parser.sections():
 
-                    # I think we need all these if else statements to restrict section names
-                    if section == 'Learner':
+                    # If the section read in is an allowed section
+                    if section in expected_sections:
                         learner[section] = section_extracter(section)
-                    elif section == 'Algorithm':
-                        learner[section] = section_extracter(section)
-                    elif section == 'Environment':
-                        learner[section] = section_extracter(section)
-                    elif section == 'Replay_Buffer':
-                        learner[section] = section_extracter(section)
-                    elif section == 'Agent':
-                        learner[section] = section_extracter(section)
-                    elif section == 'Network':
-                        learner[section] = section_extracter(section)
-                    elif section == 'MetaLearner':
-                        learner[section] = section_extracter(section)
-
-
 
                 # Now I need to figure out how I'm going to handle and extract the configurations
 
@@ -80,20 +69,7 @@ class Validation():
 
                     for section in parser.sections():
 
-                        # I think we need all these if else statements to restrict section names
-                        if section == 'Learner':
-                            learner[section] = section_extracter(section)
-                        elif section == 'Algorithm':
-                            learner[section] = section_extracter(section)
-                        elif section == 'Environment':
-                            learner[section] = section_extracter(section)
-                        elif section == 'Replay_Buffer':
-                            learner[section] = section_extracter(section)
-                        elif section == 'Agent':
-                            learner[section] = section_extracter(section)
-                        elif section == 'Network':
-                            learner[section] = section_extracter(section)
-                        elif section == 'MetaLearner':
+                        if section in sections:
                             learner[section] = section_extracter(section)
 
             learners.append(learner)

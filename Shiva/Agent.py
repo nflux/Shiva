@@ -1,9 +1,7 @@
 import numpy as np
 import torch
 import os
-import uuid 
 import copy
-
 import Network
 
 class Agent:
@@ -17,7 +15,6 @@ class Agent:
             target_policy = Target Neural Network Policy
             optimizer = Optimier Function
             learning_rate = Learning Rate
-
         '''
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -33,14 +30,14 @@ class Agent:
         # Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
         '''
-        
-        directory = self.root + "/Agents/"
+
+        directory = self.root + "/Agents/" + str(self.id)
 
         if not os.path.exists(directory): 
             os.makedirs(directory)
 
         #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-        torch.save(self.policy,directory + 'Agent' + str(self.id) + "_" + str(step) + ".pth")
+        torch.save(self.policy,directory + '/' + str(self.id) + 'Agent'  + "_" + str(step) + ".pth")
 
     def load(self, step):
         '''

@@ -165,9 +165,6 @@ class DQAlgorithm(AbstractAlgorithm):
 
         states, actions, rewards, next_states, dones = minibatch
         # make tensors
-        # states_v = torch.tensor(states).float()#.to(device)
-        # next_states_v = torch.tensor(next_states).float()#.to(device)
-        # actions_v = torch.tensor(actions)#.to(device)
         rewards_v = torch.tensor(rewards).to(self.device)
         done_mask = torch.ByteTensor(dones).to(self.device)
 
@@ -221,15 +218,6 @@ class DQAlgorithm(AbstractAlgorithm):
             best_act = self.action2one_hot(action)
         else:
             # # Iterate over all the actions to find the highest Q value
-            # obs_v = torch.tensor(observation).float()#.to(device)
-            # best_q, best_act_v = float('-inf'), torch.zeros(self.action_space)
-            # for i in range(self.action_space):
-            #     act_v = self.action2one_hot_v(i)
-            #     q_val = agent.policy(torch.cat([obs_v, act_v]))
-            #     if q_val > best_q:
-            #         best_q = q_val
-            #         best_act_v = act_v
-            # best_act = best_act_v.tolist()
             best_act = self.find_best_action(agent.policy, observation)
         return best_act # replay buffer store lists and env does np.argmax(action)
 

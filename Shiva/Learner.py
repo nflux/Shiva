@@ -3,6 +3,8 @@ import ReplayBuffer
 import Environment
 from abc import ABC
 import subprocess
+from tensorboardX import SummaryWriter
+
 
 class AbstractLearner(ABC):
 
@@ -71,12 +73,6 @@ class Single_Agent_Learner(AbstractLearner):
                         learner_id,
                         root)
 
-        # because of super(), the following commented lines are not needed
-
-        # self.agents = agents                        # this one
-        # self.environments = environments            # this one
-        # self.algorithm = algorithm                  # this one
-        # self.data = None                            # maybe this one
         self.configs = configs[0]                   # this would be kept
         self.id = learner_id                        # this would be kept
         self.root = root
@@ -85,7 +81,6 @@ class Single_Agent_Learner(AbstractLearner):
 
     def update(self):
 
-
         for _ in range(self.configs['Learner']['episodes']):
             self.env.reset()
             done = False
@@ -93,8 +88,8 @@ class Single_Agent_Learner(AbstractLearner):
                 done = self.step()
 
         # make an environment close function
+        # self.env.close()
         self.env.env.close()
-
 
 
     def step(self):
@@ -106,6 +101,8 @@ class Single_Agent_Learner(AbstractLearner):
         action = self.alg.get_action(self.alg.agents[0], observation, self.env.get_current_step())
 
         next_observation, reward, done = self.env.step(action)
+
+        writer = SummaryWriter(self.root + '/Agents/'+ str(self.alg.agents[0].id)  +'/logs')
 
         self.buffer.append([observation, action, reward, next_observation, done])
 
@@ -124,6 +121,7 @@ class Single_Agent_Learner(AbstractLearner):
     def get_algorithm(self):
         return self.algorithm
 
+    # Initialize the model
     def launch(self):
 
         self.root = self.makeDirectory(self.root)
@@ -137,10 +135,7 @@ class Single_Agent_Learner(AbstractLearner):
         self.agents = self.alg.create_agent(self.root, self.id_generator())
 
         # Basic replay buffer at the moment
-        self.buffer = ReplayBuffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
-
-        print('Launch done.')
-
+        self.buffer = ReplayBuffer.initialize_buffer(self.configs['ReplayBuffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
 
     def save_agent(self):
         self.alg.agents[0].save(self.id_generator())
