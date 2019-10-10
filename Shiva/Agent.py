@@ -35,7 +35,7 @@ class Agent:
         torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
         '''
 
-        directory = self.root + "/Agent/".format(self.id)
+        directory = self.root + "/Agents/"
         if not os.path.exists(directory): 
             os.makedirs(directory)
         #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
