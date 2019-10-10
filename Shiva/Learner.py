@@ -19,6 +19,7 @@ class AbstractLearner(ABC):
         self.environments = environments
         self.algorithm = algorithm
         self.data = None
+        self.agentCount = 0
 
     def update(self):
         pass
@@ -44,6 +45,11 @@ class AbstractLearner(ABC):
     def load_agent(self):
         pass
 
+    def id_generator(self):
+
+        id = self.agentCount
+        self.agentCount +=1
+        return id
 
 class Single_Agent_Learner(AbstractLearner):
     def __init__(self, agents, environments, algorithm, data, configs):
@@ -53,7 +59,7 @@ class Single_Agent_Learner(AbstractLearner):
         self.environments = environments
         self.algorithm = algorithm
         self.data = None
-        self.configs = configs
+        self.configs = configs[0]
 
 
     def update(self):
@@ -100,13 +106,15 @@ class Single_Agent_Learner(AbstractLearner):
 
     def launch(self):
 
+        print(self.id_generator())
+
         # Launch the environment
         self.create_environment()
 
         # Launch the algorithm which will handle the
         self.alg = Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
-        self.agents = self.alg.create_agent()
+        self.agents = self.alg.create_agent(self.id_generator())
 
         # Basic replay buffer at the moment
         self.buffer = Replay_Buffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
