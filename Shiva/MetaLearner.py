@@ -3,6 +3,7 @@ from Validation import Validation
 from abc import ABC
 import torch
 import os
+import subprocess
 from datetime import datetime
 
 # Maybe add a function to dictate the meta learner based on the configs
@@ -109,7 +110,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
         root = self.makeDirectory()
 
         # agents, environments, algorithm, data, configs
-        self.learner = Learner.Single_Agent_Learner([], [], self.algorithms, [], configs, self. id_generator())
+        self.learner = Learner.Single_Agent_Learner([], [], self.algorithms, [], configs, self.id_generator())
 
         # initialize the learner
         self.learner.launch() 
@@ -134,12 +135,16 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
         time = time[:8]#HH:MM:SS
 
         # make the folder name
-        stamp = date + '*' + time
-        root = 'MetaLearner-' + stamp +'/'
+        stamp = date + '-' + time
+        root = '/runs/MetaLearner-' + stamp +'/'
         
-        # create the folder
-        os.system('mkdir ' + root)
-
+        # try to create the folder
+        # try:
+        #     original_umask = os.umask(0)
+        #     os.makedirs(root, 0o770)
+        # finally:
+        #     os.umask(original_umask)
+        
         # return root for reference  
         return root
 

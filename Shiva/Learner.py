@@ -52,15 +52,31 @@ class AbstractLearner(ABC):
 
 class Single_Agent_Learner(AbstractLearner):
 
-    def __init__(self, agents, environments, algorithm, data, configs, **kwds):
+    def __init__(self, 
+                agents, 
+                environments, 
+                algorithm, 
+                data, 
+                configs, 
+                learner_id):
 
-        self.agents = agents
-        self.environments = environments
-        self.algorithm = algorithm
-        self.data = None
-        self.configs = configs[0]
+        super().__init__(
+                        agents, 
+                        environments, 
+                        algorithm, 
+                        data, 
+                        configs, 
+                        learner_id)
 
-        super(Single_Agent_Learner,self).__init__(**kwds)
+        # because of super(), the following commented lines are not needed
+
+        # self.agents = agents                        # this one
+        # self.environments = environments            # this one
+        # self.algorithm = algorithm                  # this one
+        # self.data = None                            # maybe this one
+        self.configs = configs[0]                   # this would be kept
+        self.id = learner_id                        # this would be kept
+
 
 
     def update(self):
@@ -117,7 +133,7 @@ class Single_Agent_Learner(AbstractLearner):
         self.agents = self.alg.create_agent(self.id_generator())
 
         # Basic replay buffer at the moment
-        self.buffer = Replay_Buffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
+        self.buffer = ReplayBuffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
 
         print('Launch done.')
 
