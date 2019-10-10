@@ -164,11 +164,11 @@ class DQAlgorithm(AbstractAlgorithm):
 
         states, actions, rewards, next_states, dones = minibatch
         # make tensors
-        # states_v = torch.tensor(states).float()#.to(device)
-        # next_states_v = torch.tensor(next_states).float()#.to(device)
-        # actions_v = torch.tensor(actions)#.to(device)
+        states_v = torch.tensor(states).float()#.to(device)
+        next_states_v = torch.tensor(next_states).float()#.to(device)
+        actions_v = torch.tensor(actions)#.to(device)
         rewards_v = torch.tensor(rewards).to(device)
-        done_mask = torch.ByteTensor(dones).to(device)
+        done_mask = torch.tensor(dones, dtype=torch.bool).to(device)
 
         # zero optimizer
         agent.optimizer.zero_grad()

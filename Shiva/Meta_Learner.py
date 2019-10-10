@@ -27,7 +27,7 @@ def initialize_meta(path):
 
     config = validate.learners
 
-    print(config)
+    # print(config)
 
     if config[0]['MetaLearner']['type'] == 'Single':
         return SingleAgentMetaLearner([],
@@ -113,7 +113,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     configs)
 
 
-        self.makeDirectory()
+        # self.makeDirectory()
 
         if True:
 
