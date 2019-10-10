@@ -30,16 +30,17 @@ class Agent:
 
     def save(self, step):
         '''
-        
         # Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
         '''
-
+        
         directory = self.root + "/Agents/"
+
         if not os.path.exists(directory): 
             os.makedirs(directory)
+
         #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-        torch.save(self.policy,directory + 'Agent' + str(self.id) + ".pth")
+        torch.save(self.policy,directory + 'Agent' + str(self.id) + "_" + str(step) + ".pth")
 
     def load(self, step):
         '''

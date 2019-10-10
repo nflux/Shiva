@@ -121,7 +121,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
         self.learner.update()
 
         # save the agent that was trained
-        self.learner.alg.agents[0].save(3)
+        self.learner.save_agent()
 
 
     # This makes the directory timestamped for the instance of Shiva that is running

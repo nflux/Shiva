@@ -47,7 +47,6 @@ class AbstractLearner(ABC):
         pass
 
     def id_generator(self):
-
         id = self.agentCount
         self.agentCount +=1
         return id
@@ -144,7 +143,7 @@ class Single_Agent_Learner(AbstractLearner):
 
 
     def save_agent(self):
-        pass
+        self.alg.agents[0].save(self.id_generator())
 
     def load_agent(self):
         pass
