@@ -8,7 +8,7 @@
 
 
 # basically import shiva
-from Meta_Learner import initialize_meta
+from MetaLearner import initialize_meta
 
 # declare the path
 ini_path = "Shiva/Initializers"
