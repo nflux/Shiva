@@ -89,14 +89,12 @@ class Single_Agent_Learner(AbstractLearner):
             while not done:
                 done = self.step()
 
-        # make an environment close function
-        # self.env.close()
-        self.env.env.close()
+        self.env.close()
 
 
     def step(self):
-
-        self.env.env.render()
+        
+        self.env.load_viewer()
 
         observation = self.env.get_observation()
 

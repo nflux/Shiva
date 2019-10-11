@@ -4,43 +4,35 @@ import numpy as np
 def initialize_env(env_params):
 
     if env_params['env_type'] == 'Gym':
-        env = GymEnvironment(env_params['environment'],env_params['env_render'])
+        env = GymEnvironment(env_params['environment'], env_params['env_render'])
 
     return env
 
 
-class Environment():
+class AbstractEnvironment():
     def __init__(self, environment):
-        self.env = environment
-        #self.num_agents = num_agents
-        self.obs = [0 for i in range(num_agents)]
-        self.acs = [0 for i in range(num_agents)]
-        self.rews = [0 for i in range(num_agents)]
-        self.world_status = [0 for i in range(num_agents)]
-        self.observation_space = None
-        self.action_space = None
         self.step_count = 0
 
     def step(self,actions):
         pass
 
-    def get_observation(self,agent_idx):
-        return self.obs[agent_idx]
+    def get_observation(self, agent):
+        pass
 
     def get_observations(self):
-        return self.obs
+        pass
 
-    def get_action(self,agent_idx):
-        return self.acs[agent_idx]
+    def get_action(self, agent):
+        pass
 
     def get_actions(self):
-        return self.acs
+        pass
 
-    def get_reward(self,agent_idx):
-        return self.rews[agent_idx]
+    def get_reward(self, agent):
+        pass
 
     def get_rewards(self):
-        return self.rews
+        pass
 
     def get_observation_space(self):
         return self.observation_space
@@ -59,8 +51,8 @@ class Environment():
 
 
 
-class GymEnvironment(Environment):
-    def __init__(self,environment,render):
+class GymEnvironment(AbstractEnvironment):
+    def __init__(self, environment, render=False):
         self.env = gym.make(environment)
         #self.num_agents = num_agents
         self.obs = self.env.reset()
@@ -70,15 +62,13 @@ class GymEnvironment(Environment):
         self.observation_space = self.set_observation_space()
         self.action_space = self.set_action_space()
         self.step_count = 0
-        if render:
-            self.load_viewer()
-
+        self.render = render
 
     def step(self,action):
-            self.acs = action
-            self.obs, self.rews, self.world_status, info = self.env.step(np.argmax(action))
-            self.step_count +=1
-            return self.obs, [self.rews], self.world_status
+        self.acs = action
+        self.obs, self.rews, self.world_status, info = self.env.step(np.argmax(action))
+        self.step_count +=1
+        return self.obs, [self.rews], self.world_status
 
     def reset(self):
         self.obs = self.env.reset()
@@ -113,4 +103,8 @@ class GymEnvironment(Environment):
         return self.rews
 
     def load_viewer(self):
-        self.env.render()
+        if self.render:
+            self.env.render()
+
+    def close(self):
+        self.env.close()

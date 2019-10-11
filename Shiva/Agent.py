@@ -64,7 +64,12 @@ class DQAgent(Agent):
         self.policy = Network.initialize_network(network_input, network_output, config['network'])
         self.target_policy = copy.deepcopy(self.policy)
         self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=learning_rate)
-
+        
+    def get_action(self, obs):
+        '''
+            This should iterate over all the possible actions
+        '''
+        return self.policy(obs)
 
 
 class DDPGAgent(Agent):
