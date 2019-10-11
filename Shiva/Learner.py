@@ -59,7 +59,7 @@ class Single_Agent_Learner(AbstractLearner):
     def update(self):
 
         print("Before training")
-        
+
         for _ in range(self.configs['Learner']['episodes']):
             self.env.reset()
             done = False
@@ -124,14 +124,45 @@ class Single_Agent_Learner(AbstractLearner):
 
 
 class Single_Agent_Imitation_Learner(AbstractLearner):
-    def __init__(self):
-
-        super(ImitationLearner,self).__init(agents,environments,algorithm,data,configs)
+    def __init__(self, agents, expert_agents,environments,algorithm,data,configs):
         self.agents = agents
+        self.expert_agents
         self.environments = environments
         self.algorithm = algorithm
-        self.data = data
+        self.data = data,
         self.configs = configs
+
+
+    def update(self):
+
+        print("Before training")
+
+        for _ in range(self.configs['Learner']['episodes']):
+            self.env.reset()
+            done = False
+            while not done:
+                done = self.step()
+
+        self.env.env.close()
+
+        print("After training")
+
+
+    def step(self):
+        self.env.env.render()
+
+        observation = self.env.get_observation()
+
+        action = self.alg.get_action(self.alg.agents[0], observation, self.env.get_current_step())
+
+        next_observation, reward, done = self.env.step(action)
+
+        self.buffer.append([observation, action, reward, next_observation, done])
+
+        self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
+
+        return done
+
 
     def create_environment(self):
         #Initialize environment-config file will specify which environment type
@@ -141,7 +172,26 @@ class Single_Agent_Imitation_Learner(AbstractLearner):
         return self.agents[0]
 
     def get_algorithm(self):
-        return self.Algorithm
+        return self.algorithm
 
     def launch(self):
+
+        # Launch the environment
+        self.create_environment()
+
+        # Launch the algorithm which will handle the
+        self.alg = Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+
+        self.agents = self.alg.create_agent()
+
+        # Basic replay buffer at the moment
+        self.buffer = Replay_Buffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
+
+        print('Launch done.')
+
+
+    def save_agent(self):
+        pass
+
+    def load_agent(self):
         pass

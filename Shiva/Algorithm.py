@@ -4,16 +4,16 @@ TODO
 '''
 
 def initialize_algorithm(observation_space: int, action_space: int, _params: list):
-    
+
     if _params[0]['algorithm'] == 'DQN':
         return DQAlgorithm(
             observation_space = observation_space,
             action_space = action_space,
-            loss_function = getattr(torch.nn, _params[0]['loss_function']), 
+            loss_function = getattr(torch.nn, _params[0]['loss_function']),
             regularizer = _params[0]['regularizer'],
-            recurrence = _params[0]['recurrence'], 
-            optimizer = getattr(torch.optim, _params[0]['optimizer']), 
-            gamma = float(_params[0]['gamma']), 
+            recurrence = _params[0]['recurrence'],
+            optimizer = getattr(torch.optim, _params[0]['optimizer']),
+            gamma = float(_params[0]['gamma']),
             learning_rate = float(_params[0]['learning_rate']),
             beta = _params[0]['beta'],
             epsilon = (float(_params[0]['epsilon_start']), float(_params[0]['epsilon_end']), float(_params[0]['epsilon_decay'])),
@@ -35,11 +35,11 @@ class AbstractAlgorithm():
     def __init__(self,
         observation_space: np.ndarray,
         action_space: np.ndarray,
-        loss_function: object, 
-        regularizer: object, 
-        recurrence: bool, 
-        optimizer_function: object, 
-        gamma: np.float, 
+        loss_function: object,
+        regularizer: object,
+        recurrence: bool,
+        optimizer_function: object,
+        gamma: np.float,
         learning_rate: np.float,
         beta: np.float,
         configs: dict
@@ -49,8 +49,8 @@ class AbstractAlgorithm():
                 observation_space   Shape of the observation space, aka input to policy network
                 action_space        Shape of the action space, aka output from policy network
                 loss_function       Function used to calculate the loss during training
-                regularizer         
-                recurrence          
+                regularizer
+                recurrence
                 optimizer           Optimization function to train network weights
                 gamma               Hyperparameter
                 learning_rate       Learning rate used in the optimizer
@@ -91,7 +91,7 @@ class AbstractAlgorithm():
 
             Input
                 agent:          the agent we want the action
-                observation:    
+                observation:
 
             Return
                 Action
@@ -114,7 +114,7 @@ class AbstractAlgorithm():
 
 ##########################################################################
 #    DQ Algorithm Implementation
-#    
+#
 #    Discrete Action Space
 ##########################################################################
 
@@ -124,11 +124,11 @@ class DQAlgorithm(AbstractAlgorithm):
     def __init__(self,
         observation_space: int,
         action_space: int,
-        loss_function: object, 
-        regularizer: object, 
-        recurrence: bool, 
-        optimizer: object, 
-        gamma: np.float, 
+        loss_function: object,
+        regularizer: object,
+        recurrence: bool,
+        optimizer: object,
+        gamma: np.float,
         learning_rate: np.float,
         beta: np.float,
         epsilon: set(),
@@ -176,14 +176,14 @@ class DQAlgorithm(AbstractAlgorithm):
         # We pass observations to the first model and extract the
         # specific Q-values for the taken actions using the gather() tensor operation.
         # The first argument to the gather() call is a dimension index that we want to
-        # perform gathering on (equal to 1, which corresponds to actions). 
+        # perform gathering on (equal to 1, which corresponds to actions).
         # The second argument is a tensor of indices of elements to be chosen
         input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(device)
         state_action_values = agent.policy(input_v) #.gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
-        # We apply the target network to our next state observations and 
+        # We apply the target network to our next state observations and
         # calculate the maximum Q-value along the same action dimension 1.
-        # Function max() returns both maximum values and indices of those values (so it calculates both max and argmax), 
+        # Function max() returns both maximum values and indices of those values (so it calculates both max and argmax),
         # which is very convenient. However, in this case, we’re interested only in values, so we take
         # the first entry of the result.
         input_v = torch.tensor([ np.concatenate([s_i, self.find_best_action(agent.target_policy, s_i)]) for s_i in next_states ]).float().to(device)
@@ -196,7 +196,7 @@ class DQAlgorithm(AbstractAlgorithm):
         # We detach the value from its computation graph to prevent
         # gradients from flowing into the neural network used to calculate Q
         # approximation for next states.
-        # Without this our backpropagation of the loss will start to affect both 
+        # Without this our backpropagation of the loss will start to affect both
         # predictions for the current state and the next state.
         next_state_values = next_state_values.detach()
 
@@ -237,7 +237,7 @@ class DQAlgorithm(AbstractAlgorithm):
     '''
     def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        
+
         obs_v = torch.tensor(observation).float().to(device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(device)
         for i in range(self.action_space):
@@ -274,18 +274,18 @@ class DQAlgorithm(AbstractAlgorithm):
 
 ##########################################################################
 #    DDPG Algorithm Implementation
-#    
+#
 ##########################################################################
 
 class DDPGAlgorithm(AbstractAlgorithm):
     def __init__(self,
         observation_space: int,
         action_space: int,
-        loss_function: object, 
-        regularizer: object, 
-        recurrence: bool, 
-        optimizer: object, 
-        gamma: np.float, 
+        loss_function: object,
+        regularizer: object,
+        recurrence: bool,
+        optimizer: object,
+        gamma: np.float,
         learning_rate: np.float,
         beta: np.float,
         epsilon: set(),
@@ -309,3 +309,162 @@ class DDPGAlgorithm(AbstractAlgorithm):
         new_agent = DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
+
+
+###############################################################################
+#
+#Supervised Algorithm Implementation
+#
+###############################################################################
+from Agent import ImitationAgent
+
+class SupervisedAlgorithm(AbstractAlgorithm):
+    def __init__(self,
+        observation_space: int,
+        action_space: int,
+        loss_function: object,
+        regularizer: object,
+        recurrence: bool,
+        optimizer: object,
+        gamma: np.float,
+        learning_rate: np.float,
+        beta: np.float,
+        epsilon: set(),
+        C: int,
+        configs: dict):
+        '''
+            Inputs
+                epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
+                C              Number of iterations before the target network is updated
+        '''
+        super(SupervisedAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
+        self.C = number of training iterations
+    def update(self, agent, minibatch, step_n):
+        '''
+            Implementation
+                1) Collect trajectories from the expert agent on a replay buffer
+                2) Calculate the Cross Entropy Loss between imitation agent and
+                    expert agent actions
+                3) Optimize
+
+            Input
+                agent       Agent who we are updating
+                minibatch   Batch from the experience replay buffer
+
+            Returns
+                None
+        '''
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        states, actions, rewards, next_states, dones = minibatch
+
+        rewards_v = torch.tensor(rewards).to(device)
+        done_mask = torch.ByteTensor(dones).to(device)
+
+        # zero optimizer
+        agent.optimizer.zero_grad()
+
+        #input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(device)
+        input_v = torch.tensor(states).float().to(device)
+        state_action_values = agent.policy(input_v).to(device) #.gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
+        #expert_state_action_values = expert_agent.policy(input_v)
+
+        #next_state_values[done_mask] = 0.0
+        # 4) Detach magic
+        # We detach the value from its computation graph to prevent
+        # gradients from flowing into the neural network used to calculate Q
+        # approximation for next states.
+        # Without this our backpropagation of the loss will start to affect both
+        # predictions for the current state and the next state.
+        #next_state_values = next_state_values.detach()
+
+        #Loss will be the loss between the imitation agent approximated values,
+        #and the expert agent approximated values.
+        loss_v = self.loss_calc(state_action_values, rewards).to(device)
+        loss_v.backward().to(device)
+        agent.optimizer.step().to(device)
+
+
+
+    def create_agent(self):
+        new_agent = ImitationAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+        self.agents.append(new_agent)
+        return new_agent
+
+
+
+
+###############################################################################
+#
+# Dagger Algorithm for Imitation Implementation
+#
+################################################################################
+
+class DaggerAlgorithm(AbstractAlgorithm):
+    def __init__(self,
+        observation_space: int,
+        action_space: int,
+        loss_function: object,
+        regularizer: object,
+        recurrence: bool,
+        optimizer: object,
+        gamma: np.float,
+        learning_rate: np.float,
+        beta: np.float,
+        epsilon: set(),
+        C: int,
+        configs: dict):
+
+        super(DaggerAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
+        self.C = C
+
+    def update(self, imitation_agent,expert_agent, minibatch, step_n):
+        '''
+            Implementation
+                1) Collect Trajectories from the imitation policy
+                2) Calculate the Cross Entropy Loss between the imitation policy's
+                    actions and the actions the expert policy would have taken.
+                3) Optimize
+
+            Input
+                agent       Agent who we are updating
+                minibatch   Batch from the experience replay buffer
+
+            Returns
+                None
+        '''
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        states, actions, rewards, next_states, dones = minibatch
+
+        rewards_v = torch.tensor(rewards).to(device)
+        done_mask = torch.ByteTensor(dones).to(device)
+
+        # zero optimizer
+        agent.optimizer.zero_grad()
+
+        input_v = torch.tensor(states).float().to(device)
+        state_action_prob_dist= imitation_agent.policy(input_v).to(device) #.gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
+        expert_state_action_prob_dist = expert_agent.policy(input_v)
+
+
+        #Loss will be Cross Entropy Loss between the action probabilites produced
+        #by the imitation agent, and the action took by the expert.
+        loss_v = self.loss_calc(state_action_prob_dist, expert_state_action_prob_dist).to(device)
+        loss_v.backward().to(device)
+        imitation_agent.optimizer.step().to(device)
+
+        def get_action(self, agent, observation, step_n) -> np.ndarray:
+
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+            obs_v = torch.tensor(observation).to(device)
+            best_act = action2one_hot(np.argmax(agent.policy(obs_v)))
+
+            return best_act.tolist()# replay buffer store lists and env does np.argmax(action)
+
+
+        def action2one_hot(self, action_idx: int) -> np.ndarray:
+            z = np.zeros(self.action_space)
+            z[action_idx] = 1
+            return z

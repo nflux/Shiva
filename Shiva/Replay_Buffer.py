@@ -31,7 +31,7 @@ class AbstractReplayBuffer(object):
         self.ac_buffer = torch.zeros((self.max_size, self.num_agents, acs_dim),requires_grad=False)
         self.rew_buffer = torch.zeros((self.max_size, self.num_agents, 1),requires_grad=False)
         self.next_obs_buffer = torch.zeros((self.max_size, self.num_agents, obs_dim),requires_grad=False)
-        self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1),requires_grad=False)    
+        self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1),requires_grad=False)
         self.obs_dim = obs_dim
         self.acs_dim = acs_dim
 
@@ -43,14 +43,14 @@ class AbstractReplayBuffer(object):
 
     def sample(self):
         pass
-    
+
     def clear(self):
         pass
 
 
 ##########################################################################
 #
-#    Simple Buffer for a Single Agents Experience   
+#    Simple Buffer for a Single Agents Experience
 #
 ##########################################################################
 
@@ -65,6 +65,9 @@ class SimpleExperienceBuffer:
     def append(self, experience):
         self.buffer.append(experience)
 
+    def clear_buffer(self):
+        self.buffer = collections.deque(maxlen=capacity)
+
     def sample(self):
         indices = np.random.choice(len(self.buffer), self.batch_size)
         states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in indices])
@@ -74,7 +77,7 @@ class SimpleExperienceBuffer:
 
 ##########################################################################
 #
-#   Replay Buffer is capable of storing Multi-Agents 
+#   Replay Buffer is capable of storing Multi-Agents
 #   made by Daniel Tellier
 #
 ##########################################################################
@@ -94,10 +97,10 @@ class MultiAgentReplayBuffer(AbstractReplayBuffer):
             self.rew_buffer = roll(self.rew_buffer, rollover)
             self.done_buffer = roll(self.done_buffer, rollover)
             self.next_obs_buffer = roll(self.next_obs_buffer, rollover)
-        
+
             self.current_index = 0
             self.size = self.max_size
-        
+
         action_i = self.obs_dim
         rew_i = action_i + self.acs_dim
         done_i = rew_i+1
