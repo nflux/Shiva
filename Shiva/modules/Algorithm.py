@@ -275,8 +275,8 @@ class DQAlgorithm(AbstractAlgorithm):
         self.totalLoss = 0
         return average
 
-    def create_agent(self, root, id):
-        new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, id, root, self.configs)
+    def create_agent(self, id):
+        new_agent = DQAgent(id, self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
 
@@ -317,7 +317,7 @@ class DDPGAlgorithm(AbstractAlgorithm):
     def update(self, agent, minibatch, step_n):
         pass
 
-    def create_agent(self):
-        new_agent = DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+    def create_agent(self, id):
+        new_agent = DDPGAgent(id, self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent

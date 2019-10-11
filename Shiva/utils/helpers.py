@@ -40,6 +40,6 @@ def make_dir(new_folder: str) -> str:
 
 def make_dir_timestamp(new_folder: str) -> str:
     date, time = str(datetime.now()).split()
-    new_folder = new_folder + date + '-' + time
+    new_folder = new_folder + date[5:] + '-' + time[0:5]
     return make_dir(new_folder)
 

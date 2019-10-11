@@ -64,7 +64,6 @@ class AbstractMetaLearner():
     def save(self):
         shiva.save(self)
 
-
 # this is a version of a meta learner that will take a file path to the configuration files
 class SingleAgentMetaLearner(AbstractMetaLearner):
 
@@ -89,12 +88,14 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     evolution,
                                                     configs)
 
-        # agents, environments, algorithm, data, configs
-        self.learner = Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs)
+        # agents, environments, algorithm, data, configs for a single agent learner
+        self.learner = Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0])
+        shiva.add_learner_profile(self.learner)
 
         # initialize the learner instances
-        self.learner.launch() 
-
+        self.learner.launch()
+        shiva.update_agents_profile(self.learner)
+        
         # Rus the learner for a number of episodes given by the config
         self.learner.run()
 

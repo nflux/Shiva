@@ -5,44 +5,34 @@ import copy
 import Network
 
 class Agent:
-    def __init__(self, obs_dim, action_dim, optimizer_function, learning_rate, id, root, config: dict):
+    def __init__(self, id, obs_dim, action_dim, optimizer_function, learning_rate, config: dict):
         '''
         Base Attributes of Agent
+            id = given by the learner
             obs_dim
             act_dim
-            id = id
             policy = Neural Network Policy
             target_policy = Target Neural Network Policy
             optimizer = Optimier Function
             learning_rate = Learning Rate
         '''
+        self.id = id
         self.obs_dim = obs_dim
         self.action_dim = action_dim
-        self.id = id
         self.policy = None
         self.optimizer_function = optimizer_function
         self.learning_rate = learning_rate
         self.config = config
-        self.root = root
 
-    def save(self, step):
+    def save(self, save_path, step):
         '''
         # Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
         '''
-
-        directory = "{}/Agents/{}".format(self.root, self.id)
-
-        if not os.path.exists(directory): 
-            os.makedirs(directory)
-
-        save_path = "{}/{}Agent_{}.pth".format(directory, self.id, step)
-
         #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-        torch.save(self.policy, save_path)
+        torch.save(self.policy, save_path + '/Step-' + step + '.pth')
 
     def load(self, path, configs):
-
         '''
         # Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
         torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
@@ -61,7 +51,7 @@ class Agent:
                 return DQAgent(self.obs_dim,self.action_dim, configs['Algorithm']['optimizer'], configs['Algorithm']['learning_rate'], 0, self.root, configs['Network'])
 
             #Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-            torch.load(self.policy,load_path)
+            torch.load(self.policy, load_path)
         else:
             print("The Load File for the Shiva Agent Model Does Not Exist")
 
@@ -72,8 +62,8 @@ class Agent:
             os.remove(file_path)
 
 class DQAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, root, config: dict):
-        super(DQAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, id, root, config)
+    def __init__(self, id, obs_dim, action_dim, optimizer, learning_rate, config: dict):
+        super(DQAgent,self).__init__(id, obs_dim, action_dim, optimizer, learning_rate, config)
         network_input = obs_dim + action_dim
         network_output = 1
         self.policy = Network.initialize_network(network_input, network_output, config['network'])
@@ -88,8 +78,8 @@ class DQAgent(Agent):
 
 
 class DDPGAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, root, config: dict):
-        super(DDPGAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, id, root, config)
+    def __init__(self, id, obs_dim, action_dim, optimizer, learning_rate, config: dict):
+        super(DDPGAgent,self).__init__(id, obs_dim, action_dim, optimizer, learning_rate, config)
         network_input = obs_dim + action_dim
         network_output = 1
         self.policy = Network.initialize_network(network_input, network_output, config['network'])
@@ -98,8 +88,8 @@ class DDPGAgent(Agent):
 
 
 class ImitationAgent(Agent):
-    def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, root, config: dict):
-        super(ImitationLearnerAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, id, root, config)
+    def __init__(self, id, obs_dim, action_dim, optimizer, learning_rate, config: dict):
+        super(ImitationLearnerAgent,self).__init__(id, obs_dim, action_dim, optimizer, learning_rate, config)
         network_input = obs_dim + action_dim
         network_output = 1
         self.policy = Network.initialize_network(network_input, network_output, config['network'])
