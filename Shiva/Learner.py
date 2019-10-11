@@ -53,6 +53,19 @@ class AbstractLearner(ABC):
         self.agentCount +=1
         return id
 
+
+###########################################################################
+# 
+#               Single Agent Learner
+#         
+###########################################################################
+
+'''
+
+    This Learner should be able to handle DQN and DDPG algorithms.
+
+'''
+
 class Single_Agent_Learner(AbstractLearner):
 
     def __init__(self, 
@@ -73,8 +86,8 @@ class Single_Agent_Learner(AbstractLearner):
                         learner_id,
                         root)
 
-        self.configs = configs[0]                   # this would be kept
-        self.id = learner_id                        # this would be kept
+        self.configs = configs[0]
+        self.id = learner_id
         self.root = root
 
         #I'm thinking about getting the saveFrequency here from the config and saving it in self
@@ -83,20 +96,24 @@ class Single_Agent_Learner(AbstractLearner):
 
     def update(self):
 
-        for _ in range(self.configs['Learner']['episodes']):
+        for ep_count in range(self.configs['Learner']['episodes']):
+
             self.env.reset()
+
+            self.totalReward = 0
+
             done = False
             while not done:
-                done = self.step()
+                done = self.step(ep_count)
+                self.writer.add_scalar('Loss', self.alg.get_loss(), self.env.get_current_step())
 
         # make an environment close function
         # self.env.close()
         self.env.env.close()
 
+    # Function to step throught the environment
+    def step(self,ep_count):
 
-    def step(self):
-
-        self.env.env.render()
 
         observation = self.env.get_observation()
 
@@ -104,14 +121,27 @@ class Single_Agent_Learner(AbstractLearner):
 
         next_observation, reward, done = self.env.step(action)
 
-        self.writer.add_scalar('Reward',reward, self.env.get_current_step())
+        # Write to tensorboard
+        self.writer.add_scalar('Reward', reward, self.env.get_current_step())
+
+        # Cumulate the reward
+        self.totalReward += reward[0]
 
         self.buffer.append([observation, action, reward, next_observation, done])
 
         self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
 
+        # when the episode ends
+        if done:
+            # add values to the tensorboard
+            self.writer.add_scalar('Total Reward', self.totalReward, ep_count)
+            self.writer.add_scalar('Average Loss per Episode', self.alg.get_average_loss(self.env.get_current_step()), ep_count)
+
+
+        # Save the model periodically
         if self.env.get_current_step() % self.saveFrequency == 0:
             pass
+
         return done
 
     def create_environment(self):
@@ -136,9 +166,14 @@ class Single_Agent_Learner(AbstractLearner):
         # Launch the algorithm which will handle the
         self.alg = Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
-        self.agents = self.alg.create_agent(self.root, self.id_generator())
+        #self.agents = self.alg.create_agent(self.root, self.id_generator())
+        self.agents = self.load_agent('MountainCar_Agent_300_57151.pth', self.configs)
 
-        self.writer =  SummaryWriter(self.root + '/Agents/'+ str(self.agents.id)  +'/logs')
+        log_dir = "{}/Agents/{}/logs".format(self.root, self.agents.id)
+
+        print("\nHere's the directory to the tensorboard output\n",log_dir)
+
+        self.writer =  SummaryWriter(log_dir)
 
         # Basic replay buffer at the moment
         self.buffer = ReplayBuffer.initialize_buffer(self.configs['ReplayBuffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
@@ -146,8 +181,12 @@ class Single_Agent_Learner(AbstractLearner):
     def save_agent(self):
         self.alg.agents[0].save(self.env.get_current_step())
 
-    def load_agent(self):
-        pass
+    # do this for travis
+    def load_agent(self, path, configs):
+        # first I need to create an agent in alg
+        # then I need to overwrite it
+        self.alg.agents[0].load(path, self.configs)
+
 
     def makeDirectory(self, root):
     
