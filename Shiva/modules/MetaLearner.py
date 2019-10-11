@@ -1,16 +1,17 @@
 import Learner
-from Validation import Validation
-from abc import ABC
+from Validation import Validation # I guess this validation should be at the shiva admin
+from abc import ABC # needed?
 import torch
 import os
-import subprocess
+import subprocess # is really needed? look into os.mkdir
 from datetime import datetime
+
+from settings import shiva
 
 # Maybe add a function to dictate the meta learner based on the configs
 # needs to keep track everytime its used so that it always gives a unique id
 
 def initialize_meta(path : "filepath to config file"):
-
     # validation object reads and checks the configuration files
     validate = Validation(path)
 
@@ -31,7 +32,7 @@ def initialize_meta(path : "filepath to config file"):
                                     )
 
 
-class AbstractMetaLearner(ABC):
+class AbstractMetaLearner():
 
     def __init__(self, 
                 learners : list, 
@@ -43,7 +44,6 @@ class AbstractMetaLearner(ABC):
                 optimize_learner_hp : bool, 
                 evolution : bool,
                 config : list):
-
         self.learners = learners
         self.algorithms = algorithms
         self.eval_env = eval_env
@@ -75,6 +75,8 @@ class AbstractMetaLearner(ABC):
         self.learnerCount +=1
         return id
 
+    def save(self):
+        shiva.save(self)
 
 
 # this is a version of a meta learner that will take a file path to the configuration files
@@ -100,6 +102,8 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     optimize_learner_hp, 
                                                     evolution,
                                                     configs)
+        self.save()
+        return
 
         # make a directory for this instance of metalearner
         self.root = self.makeDirectory()

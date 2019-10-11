@@ -107,13 +107,12 @@ class Single_Agent_Learner(AbstractLearner):
                 done = self.step(ep_count)
                 self.writer.add_scalar('Loss', self.alg.get_loss(), self.env.get_current_step())
 
-        # make an environment close function
-        # self.env.close()
-        self.env.env.close()
+        self.env.close()
 
     # Function to step throught the environment
     def step(self,ep_count):
-
+       
+        self.env.load_viewer()
 
         observation = self.env.get_observation()
 
