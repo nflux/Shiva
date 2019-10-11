@@ -12,21 +12,17 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     traceback.print_stack(file=log)
     log.write(warnings.formatwarning(message, category, filename, lineno, line))
 
-#warnings.showwarning = warn_with_traceback
+warnings.showwarning = warn_with_traceback
 
 '''
-
     Shiva Testing Sandbox
+'''
 
-# basically import shiva
 from MetaLearner import initialize_meta
 
-# declare the path
-'''
-from Meta_Learner import initialize_meta
 # declare the path for the configs
-
 ini_path = "Shiva/Initializers"
+
 meta = initialize_meta(ini_path)
 
 

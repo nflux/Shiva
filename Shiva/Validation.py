@@ -46,7 +46,7 @@ class Validation():
             learner = {}
 
             # This restricts what sections can get passed to the  
-            expected_sections = ['MetaLearner','Learner', 'Algorithm', 'Environment', 'ReplayBuffer', 'Agent', 'Network']
+            expected_sections = ['MetaLearner','Learner', 'Algorithm', 'Environment', 'ReplayBuffer', 'Agent', 'Network', 'ImageProcessing']
 
             # if its a file
             if isfile(join(self.file_path, f)):

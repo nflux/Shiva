@@ -77,6 +77,8 @@ class Single_Agent_Learner(AbstractLearner):
         self.id = learner_id                        # this would be kept
         self.root = root
 
+        #I'm thinking about getting the saveFrequency here from the config and saving it in self
+        self.saveFrequency = configs[0]['Learner']['save_frequency']
 
 
     def update(self):
@@ -102,12 +104,14 @@ class Single_Agent_Learner(AbstractLearner):
 
         next_observation, reward, done = self.env.step(action)
 
-        writer = SummaryWriter(self.root + '/Agents/'+ str(self.alg.agents[0].id)  +'/logs')
+        self.writer.add_scalar('Reward',reward, self.env.get_current_step())
 
         self.buffer.append([observation, action, reward, next_observation, done])
 
         self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
 
+        if self.env.get_current_step() % self.saveFrequency == 0:
+            pass
         return done
 
     def create_environment(self):
@@ -134,11 +138,13 @@ class Single_Agent_Learner(AbstractLearner):
 
         self.agents = self.alg.create_agent(self.root, self.id_generator())
 
+        self.writer =  SummaryWriter(self.root + '/Agents/'+ str(self.agents.id)  +'/logs')
+
         # Basic replay buffer at the moment
         self.buffer = ReplayBuffer.initialize_buffer(self.configs['ReplayBuffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
 
     def save_agent(self):
-        self.alg.agents[0].save(self.id_generator())
+        self.alg.agents[0].save(self.env.get_current_step())
 
     def load_agent(self):
         pass

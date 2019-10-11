@@ -78,7 +78,6 @@ class GymEnvironment(Environment):
             self.acs = action
             self.obs, self.rews, self.world_status, info = self.env.step(np.argmax(action))
             self.step_count +=1
-
             return self.obs, [self.rews], self.world_status
 
     def reset(self):
