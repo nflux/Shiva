@@ -30,7 +30,7 @@ def initialize_meta(path : "filepath to config file"):
                                     )
 
 
-class AbstractMetaLearner(ABC):
+class AbstractMetaLearner(ShivaFiler):
 
     def __init__(self, 
                 learners : list, 
@@ -42,7 +42,7 @@ class AbstractMetaLearner(ABC):
                 optimize_learner_hp : bool, 
                 evolution : bool,
                 config : list):
-
+        super(AbstractMetaLearner, self).__init__(config)
         self.learners = learners
         self.algorithms = algorithms
         self.eval_env = eval_env
