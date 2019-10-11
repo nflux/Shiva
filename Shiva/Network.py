@@ -26,7 +26,6 @@ class DynamicLinearNetwork(nn.Module):
         assert len(activ_function) == 1 or (len(activ_function) > 1 and len(activ_function) == len(layers)), '@layers and @activ_function must be same size if more than one @activ_function is given'
         
         net_layers = []
-        
         net_layers.append(nn.Linear(input_dim, layers[0]))
         net_layers.append(activ_function[0]())
         in_layer_size = layers[0]
