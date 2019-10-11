@@ -134,7 +134,7 @@ class ShivaAdmin():
         # TODO: save self.meta_learner_config file into self._curr_meta_learner_dir
         for learner in self.caller.learners:
             self._save_learner(learner)
-    
+
     def _save_learner(self, learner=None):
         learner = self.caller if learner is None else learner
         self.add_learner_profile(learner)
