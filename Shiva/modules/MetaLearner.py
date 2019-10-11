@@ -1,27 +1,13 @@
-import Learner
-from Validation import Validation # I guess this validation should be at the shiva admin
-from abc import ABC # needed?
-import torch
-import os
-import subprocess # is really needed? look into os.mkdir
-from datetime import datetime
-
 from settings import shiva
+import Learner
 
 # Maybe add a function to dictate the meta learner based on the configs
 # needs to keep track everytime its used so that it always gives a unique id
 
-def initialize_meta(path : "filepath to config file"):
-    # validation object reads and checks the configuration files
-    validate = Validation(path)
-
-    # get the configurations from the validation object
-    config = validate.learners
-
-
+def initialize_meta(config):
     if config[0]['MetaLearner']['type'] == 'Single':
         return SingleAgentMetaLearner([],
-                                    validate.algorithms, # 
+                                    config[0]['Algorithm'], # 
                                     config[0]['MetaLearner']['eval_env'],  # the evaluation environment
                                     [],  # this would have to be a list of agent objects
                                     [],  # this would have to be a list of elite agents objects
@@ -34,7 +20,7 @@ def initialize_meta(path : "filepath to config file"):
 
 class AbstractMetaLearner():
 
-    def __init__(self, 
+    def __init__(self,
                 learners : list, 
                 algorithms : list, 
                 eval_env : str, 
@@ -102,46 +88,15 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     optimize_learner_hp, 
                                                     evolution,
                                                     configs)
-        self.save()
-        return
-
-        # make a directory for this instance of metalearner
-        self.root = self.makeDirectory()
 
         # agents, environments, algorithm, data, configs
-        self.learner = Learner.Single_Agent_Learner([], [], self.algorithms, [], configs, self.id_generator(), self.root)
+        self.learner = Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs)
 
-        # initialize the learner
+        # initialize the learner instances
         self.learner.launch() 
 
-        # this method seems misleading or inappropriately named
-        # might want to rethink this or live with it
-        self.learner.update()
+        # Rus the learner for a number of episodes given by the config
+        self.learner.run()
 
-        # save the agent that was trained
-        self.learner.save_agent()
-
-
-    # This makes the directory timestamped for the instance of Shiva that is running
-    def makeDirectory(self):
-
-        # gets the current date and time
-        date, time = str(datetime.now()).split()
-        
-        # we splice out the parts that we want
-        date = date[5:] #MM-DD
-        time = time[:8] #HH:MM:SS
-
-        # get current path
-        path = os.getcwd()
-
-        # make the folder name
-        stamp = date + '-' + time
-        root = path + '/Shiva/runs/MetaLearner-' + stamp
-        
-        # make the folder
-        subprocess.Popen("mkdir " + root, shell=True)
-        
-        # return root for reference
-        return root
-
+        # save
+        self.save()
