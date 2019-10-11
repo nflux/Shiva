@@ -49,6 +49,9 @@ class ShivaAdmin():
         self.dirs = self._INITS['DIRECTORY']
         self._parse_dirs()
 
+        if self._INITS['SHIVA']['traceback']:
+            helpers.warnings.showwarning = helpers.warn_with_traceback
+
     def __str__(self):
         return "ShivaAdmin"
     
@@ -89,22 +92,29 @@ class ShivaAdmin():
         if not self.need_to_save: pass
         if learner.id not in self._curr_learner_dir:
             self._curr_learner_dir[learner.id] = helpers.make_dir(os.path.join(self._curr_meta_learner_dir, 'L-'+str(learner.id)))
-            print(learner.id, 'Learner profile added')
+            self._curr_agent_dir[learner.id] = {}
+            # print('Learner', learner.id, 'profile added')
 
     def update_agents_profile(self, learner):
         if not self.need_to_save: pass
         self.add_learner_profile(learner)
-        for agent in learner.agents:
-            self._add_agent_profile(learner.id, agent)
+        if type(learner.agents) == list:
+            for agent in learner.agents:
+                self._add_agent_profile(learner.id, agent)
+        else:
+            self._add_agent_profile(learner.id, learner.agents)
 
     def _add_agent_profile(self, learner_id: int, agent):
         if not self.need_to_save: pass
+        print(self._curr_agent_dir, learner_id)
         if agent.id not in self._curr_agent_dir[learner_id]:
             self._curr_agent_dir[learner_id][agent.id] = helpers.make_dir(os.path.join(self._curr_learner_dir[learner_id], 'Agents', str(agent.id)))
+            # print('Agent', agent.id, 'profile added')
 
     def get_agent_dir(self, learner_id, agent):
         self._add_agent_profile(learner_id, agent)
         return self._curr_agent_dir[learner_id][agent.id]
+
     '''
         Saving Implementations
     '''
@@ -129,9 +139,13 @@ class ShivaAdmin():
         learner = self.caller if learner is None else learner
         self.add_learner_profile(learner)
         print("Saving Learner:", learner.id, '@', self._curr_learner_dir[learner.id])
-        for agent in learner.agents:
-            self._add_agent_profile(learner.id, agent)
-            agent.save(self._curr_agent_dir[learner.id][agent.id], learner.env.get_current_step())
+        if type(learner.agents) == list:
+            for agent in learner.agents:
+                self._add_agent_profile(learner.id, agent)
+                agent.save(self._curr_agent_dir[learner.id][agent.id], learner.env.get_current_step())
+        else:
+            self._add_agent_profile(learner.id, learner.agents)
+            agent.save(self._curr_agent_dir[learner.id][learner.agents.id], learner.env.get_current_step())
 
     '''
         Loading Implementations

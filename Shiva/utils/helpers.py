@@ -2,6 +2,7 @@ import configparser
 import ast
 from datetime import datetime
 import os
+import traceback, warnings, sys
 
 def load_config_file_2_dict(_FILENAME: str) -> dict:
     '''
@@ -43,3 +44,12 @@ def make_dir_timestamp(new_folder: str) -> str:
     new_folder = new_folder + date[5:] + '-' + time[0:5]
     return make_dir(new_folder)
 
+'''
+    Utility for debugging
+    Comment last line to enable/disable
+'''
+
+def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
+    log = file if hasattr(file,'write') else sys.stderr
+    traceback.print_stack(file=log)
+    log.write(warnings.formatwarning(message, category, filename, lineno, line))
