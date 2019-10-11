@@ -10,7 +10,6 @@ from datetime import datetime
 # needs to keep track everytime its used so that it always gives a unique id
 
 def initialize_meta(path : "filepath to config file"):
-
     # validation object reads and checks the configuration files
     validate = Validation(path)
 
