@@ -122,6 +122,9 @@ class AbstractAlgorithm():
 
 from Agent import DQAgent
 
+# average loss per episode
+# loss per step
+
 class DQAlgorithm(AbstractAlgorithm):
     def __init__(self,
         observation_space: int,
@@ -146,6 +149,8 @@ class DQAlgorithm(AbstractAlgorithm):
         self.epsilon_end = epsilon[1]
         self.epsilon_decay = epsilon[2]
         self.C = C
+        self.totalLoss = 0
+        self.loss = 0
 
     def update(self, agent, minibatch, step_n):
         '''
@@ -205,6 +210,10 @@ class DQAlgorithm(AbstractAlgorithm):
         expected_state_action_values = next_state_values * self.gamma + rewards_v
 
         loss_v = self.loss_calc(state_action_values, expected_state_action_values)
+
+        self.totalLoss += loss_v
+        self.loss = loss_v
+
         loss_v.backward()
         agent.optimizer.step()
 
@@ -258,10 +267,21 @@ class DQAlgorithm(AbstractAlgorithm):
     #     ret[act_idx.item()] = 1
     #     return ret
 
+    def get_loss(self):
+        return self.loss
+
+    def get_average_loss(self, step):
+        average = self.totalLoss/step
+        self.totalLoss = 0
+        return average
+
     def create_agent(self, root, id):
         new_agent = DQAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, id, root, self.configs)
         self.agents.append(new_agent)
         return new_agent
+
+    def create_empty_agent(self):
+        pass
 
 
 ##########################################################################

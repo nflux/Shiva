@@ -80,7 +80,6 @@ class AbstractMetaLearner(ABC):
 # this is a version of a meta learner that will take a file path to the configuration files
 class SingleAgentMetaLearner(AbstractMetaLearner):
 
-
     def __init__(self, 
                 learners : "list of learner objects but in this case there's only one but there could be more", 
                 algorithms : "list of algorithm name strings", 
@@ -120,8 +119,6 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
 
 
     # This makes the directory timestamped for the instance of Shiva that is running
-
-    # It should put it inside of a runs folder
     def makeDirectory(self):
 
         # gets the current date and time
@@ -129,7 +126,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
         
         # we splice out the parts that we want
         date = date[5:] #MM-DD
-        time = time[:8]#HH:MM:SS
+        time = time[:8] #HH:MM:SS
 
         # get current path
         path = os.getcwd()
