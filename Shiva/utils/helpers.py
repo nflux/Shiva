@@ -28,6 +28,23 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
             r[_h][_key] = ast.literal_eval(parser[_h][_key])
     return r
 
+def dtype_2_configstr(val: object):
+    # iterable
+    try:
+        some_object_iterator = iter(val)
+        return "{}{}{}".format('"', str(val), '"')
+    except TypeError as te:
+        pass
+    # boolean
+    if type(val) == bool:
+        return str(val)
+    # string
+    if type(val) == str:
+        return "{}{}{}".format('"', val, '"')
+    # if type(val) == float or type(val) == int
+    return str(val)
+
+
 def save_dict_2_config_file(config_dict: dict, file_path: str) -> configparser.ConfigParser:
     config = configparser.ConfigParser()
     if type(config_dict) == list:
@@ -36,7 +53,8 @@ def save_dict_2_config_file(config_dict: dict, file_path: str) -> configparser.C
         for section_name, attrs in config_dict.items():
             config.add_section(section_name)
             for attr_name, attr_val in attrs.items():
-                config.set(section_name, attr_name, str(attr_val))
+
+                config.set(section_name, attr_name, dtype_2_configstr(attr_val))
 
     # Writing our configuration file to 'example.cfg'
     with open(file_path, 'w') as configfile:

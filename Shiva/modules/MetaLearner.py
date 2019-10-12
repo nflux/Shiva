@@ -40,6 +40,9 @@ class AbstractMetaLearner():
         self.evolution = evolution
         self.learnerCount = 0
         self.configs = configs
+        
+        env_name = self.configs[0]['Environment']['env_type'] + self.configs[0]['Environment']['environment']
+        shiva.add_meta_profile(self, env_name)
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
