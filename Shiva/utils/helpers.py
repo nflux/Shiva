@@ -28,8 +28,19 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
             r[_h][_key] = ast.literal_eval(parser[_h][_key])
     return r
 
-def save_dict_2_config_file(config: dict, filename: str) -> configparser.ConfigParser:
-    pass
+def save_dict_2_config_file(config_dict: dict, file_path: str) -> configparser.ConfigParser:
+    config = configparser.ConfigParser()
+    if type(config_dict) == list:
+        assert False, "Not expecting a list"
+    else:
+        for section_name, attrs in config_dict.items():
+            config.add_section(section_name)
+            for attr_name, attr_val in attrs.items():
+                config.set(section_name, attr_name, str(attr_val))
+
+    # Writing our configuration file to 'example.cfg'
+    with open(file_path, 'w') as configfile:
+        config.write(configfile)
 
 def make_dir(new_folder: str) -> str:
     # Implement another try block if there are Permission problems

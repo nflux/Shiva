@@ -106,7 +106,6 @@ class ShivaAdmin():
 
     def _add_agent_profile(self, learner_id: int, agent):
         if not self.need_to_save: pass
-        print(self._curr_agent_dir, learner_id)
         if agent.id not in self._curr_agent_dir[learner_id]:
             self._curr_agent_dir[learner_id][agent.id] = helpers.make_dir(os.path.join(self._curr_learner_dir[learner_id], 'Agents', str(agent.id)))
             # print('Agent', agent.id, 'profile added')
@@ -132,6 +131,7 @@ class ShivaAdmin():
     def _save_meta_learner(self):
         print("Saving Meta Learner:", self.caller, '@', self._curr_meta_learner_dir)
         # TODO: save self.meta_learner_config file into self._curr_meta_learner_dir
+        helpers.save_dict_2_config_file(self.caller.configs[0], os.path.join(self._curr_meta_learner_dir, 'config.ini'))
         for learner in self.caller.learners:
             self._save_learner(learner)
 

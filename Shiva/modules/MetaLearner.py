@@ -29,7 +29,7 @@ class AbstractMetaLearner():
                 optimize_env_hp : bool, 
                 optimize_learner_hp : bool, 
                 evolution : bool,
-                config : list):
+                configs : list):
         self.learners = learners
         self.algorithms = algorithms
         self.eval_env = eval_env
@@ -39,6 +39,7 @@ class AbstractMetaLearner():
         self.optimize_learner_hp = optimize_env_hp
         self.evolution = evolution
         self.learnerCount = 0
+        self.configs = configs
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
