@@ -9,7 +9,7 @@ def initialize_meta(config):
         return SingleAgentMetaLearner([],
                                     config[0]['Algorithm'], # 
                                     config[0]['MetaLearner']['eval_env'],  # the evaluation environment
-                                    [],  # this would have to be a list of agent objects
+                                    config[0]['MetaLearner']['agents'],  # this would have to be a list of agent objects
                                     [],  # this would have to be a list of elite agents objects
                                     config[0]['MetaLearner']['optimize_env_hp'],
                                     config[0]['MetaLearner']['optimize_learner_hp'],

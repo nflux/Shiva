@@ -41,7 +41,9 @@ class ShivaAdmin():
         self._curr_agent_dir = {}
         self.writer = {}
         
-        self.VALID_MODES = ['production', 'evaluation']
+        self.MODE_PRODUCTION = 'production'
+        self.MODE_EVALUATION = 'evaluation'
+        self.VALID_MODES = [self.MODE_PRODUCTION, self.MODE_EVALUATION]
         self._INITS = helpers.load_config_file_2_dict(init_dir)
         
         assert 'SHIVA' in self._INITS, 'Needs a [SHIVA] section in file {}'.format(init_dir)
@@ -83,15 +85,19 @@ class ShivaAdmin():
             If its a folder of config files it will expect there to be a config file for each component
             I can design this so that read configs will go through each file and identify what kind of learner method needs to be implemented
         '''
-        self.meta_learner_config = []
-        for f in os.listdir(self.inits_url):
-            f = os.path.join(self.inits_url, f)
-            if os.path.isfile(f):
-                self.meta_learner_config.append(helpers.load_config_file_2_dict(f))
-            else:
-                for subf in os.listdir(os.path.join(self.inits_url, f)):
-                    self.meta_learner_config.append(helpers.load_config_file_2_dict(subf))
-        return self.meta_learner_config
+        
+        if self.mode == self.MODE_PRODUCTION:
+            self.meta_learner_config = helpers.parse_configs(self.inits_url)
+            return self.meta_learner_config
+        elif self.mode == self.MODE_EVALUATION:
+            '''
+                Check if instances to load are there
+                Read them and return
+            '''
+            self.init_loader = helpers.configparser(self.inits_url)
+            meta_learner_to_load = self.init_loader[0]['MetaLearner']['load_run'] + self.output_config_name
+            if os.path.isfile(os.path.join(self.runs_url, meta_learner_to_load)):
+                print('MetaLearner file requested found at {}'.format(meta_learner_to_load))
 
     ###
     #   Administration of directory folders
@@ -162,7 +168,13 @@ class ShivaAdmin():
 
     def _save_meta_learner(self):
         print("Saving Meta Learner:", self.caller, '@', self._curr_meta_learner_dir)
-        helpers.save_dict_2_config_file(self.caller.configs[0], os.path.join(self._curr_meta_learner_dir, 'config.ini'))
+        # create the meta learner configs folder
+        helpers.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
+        # save each config file
+        for cf in self.caller.configs:
+            _filename_ = os.path.split(cf['_filename_'])[-1]
+            helpers.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
+        # save each learner
         for learner in self.caller.learners:
             self._save_learner(learner)
 
@@ -190,10 +202,11 @@ class ShivaAdmin():
         elif 'learner' in inspect.getfile(caller.__class__).lower():
             self._load_learner()
         else:
-            assert False, 'ShivaAdmin saving error'
+            assert False, '{} loading error'.format(self)
 
     def _load_meta_learner(self):
         print("Loading MetaLearner")
+
 
     def _load_learner(self):
         print("Loading Learner")
