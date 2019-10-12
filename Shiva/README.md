@@ -28,4 +28,3 @@ To activate
 cd Control-Tasks/Shiva/
 python .
 ```
-
