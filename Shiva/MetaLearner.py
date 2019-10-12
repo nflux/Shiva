@@ -20,7 +20,7 @@ def initialize_meta(path : "filepath to config file"):
 
     if config[0]['MetaLearner']['type'] == 'Single':
         return SingleAgentMetaLearner([],
-                                    validate.algorithms, # 
+                                    validate.algorithms, #
                                     config[0]['MetaLearner']['eval_env'],  # the evaluation environment
                                     [],  # this would have to be a list of agent objects
                                     [],  # this would have to be a list of elite agents objects
@@ -31,16 +31,17 @@ def initialize_meta(path : "filepath to config file"):
                                     )
 
 
+
 class AbstractMetaLearner(ABC):
 
-    def __init__(self, 
-                learners : list, 
-                algorithms : list, 
-                eval_env : str, 
-                agents : list, 
-                elite_agents : list, 
-                optimize_env_hp : bool, 
-                optimize_learner_hp : bool, 
+    def __init__(self,
+                learners : list,
+                algorithms : list,
+                eval_env : str,
+                agents : list,
+                elite_agents : list,
+                optimize_env_hp : bool,
+                optimize_learner_hp : bool,
                 evolution : bool,
                 config : list):
 
@@ -57,7 +58,7 @@ class AbstractMetaLearner(ABC):
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
         pass
-    
+
     def genetic_crossover(self,agents, elite_agents):
         pass
 
@@ -80,24 +81,24 @@ class AbstractMetaLearner(ABC):
 # this is a version of a meta learner that will take a file path to the configuration files
 class SingleAgentMetaLearner(AbstractMetaLearner):
 
-    def __init__(self, 
-                learners : "list of learner objects but in this case there's only one but there could be more", 
-                algorithms : "list of algorithm name strings", 
-                eval_env : "the name of the evaluation environment; from config file", 
-                agents : "list of agents, in this case there's only one", 
-                elite_agents : "list of elite agent objects from evaluation environment", 
-                optimize_env_hp : "boolean for whether or not we are optimizing hyperparameters", 
-                optimize_learner_hp : "boolean to optimize learner hyperparameters", 
+    def __init__(self,
+                learners : "list of learner objects but in this case there's only one but there could be more",
+                algorithms : "list of algorithm name strings",
+                eval_env : "the name of the evaluation environment; from config file",
+                agents : "list of agents, in this case there's only one",
+                elite_agents : "list of elite agent objects from evaluation environment",
+                optimize_env_hp : "boolean for whether or not we are optimizing hyperparameters",
+                optimize_learner_hp : "boolean to optimize learner hyperparameters",
                 evolution : "boolean for whether are not we will use evolution",
                 configs: "list of all config dictionaries"):
 
-        super(SingleAgentMetaLearner,self).__init__(learners, 
-                                                    algorithms, 
-                                                    eval_env, 
-                                                    agents, 
-                                                    elite_agents, 
-                                                    optimize_env_hp, 
-                                                    optimize_learner_hp, 
+        super(SingleAgentMetaLearner,self).__init__(learners,
+                                                    algorithms,
+                                                    eval_env,
+                                                    agents,
+                                                    elite_agents,
+                                                    optimize_env_hp,
+                                                    optimize_learner_hp,
                                                     evolution,
                                                     configs)
 
@@ -105,10 +106,11 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
         self.root = self.makeDirectory()
 
         # agents, environments, algorithm, data, configs
-        self.learner = Learner.Single_Agent_Learner([], [], self.algorithms, [], configs, self.id_generator(), self.root)
-
+        #self.learner = Learner.Single_Agent_Learner([], [], self.algorithms, [], configs, self.id_generator(), self.root)
+        #Imitation Learner
+        self.learner = Learner.Single_Agent_Imitation_Learner([],'Shiva/EliteAgents/MountainCar_Agent_300_57151', [], self.algorithms, [], configs, self.id_generator(), self.root)
         # initialize the learner
-        self.learner.launch() 
+        self.learner.launch()
 
         # this method seems misleading or inappropriately named
         # might want to rethink this or live with it
@@ -123,7 +125,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
 
         # gets the current date and time
         date, time = str(datetime.now()).split()
-        
+
         # we splice out the parts that we want
         date = date[5:] #MM-DD
         time = time[:8] #HH:MM:SS
@@ -134,10 +136,9 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
         # make the folder name
         stamp = date + '-' + time
         root = path + '/Shiva/runs/MetaLearner-' + stamp
-        
+
         # make the folder
         subprocess.Popen("mkdir " + root, shell=True)
-        
-        # return root for reference  
-        return root
 
+        # return root for reference
+        return root

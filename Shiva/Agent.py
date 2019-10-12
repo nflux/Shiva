@@ -33,7 +33,7 @@ class Agent:
 
         directory = "{}/Agents/{}".format(self.root, self.id)
 
-        if not os.path.exists(directory): 
+        if not os.path.exists(directory):
             os.makedirs(directory)
 
         save_path = "{}/{}Agent_{}.pth".format(directory, self.id, step)
@@ -94,12 +94,9 @@ class DDPGAgent(Agent):
 
 class ImitationAgent(Agent):
     def __init__(self, obs_dim, action_dim, optimizer, learning_rate, id, root, config: dict):
-        super(ImitationLearnerAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, id, root, config)
+        super(ImitationAgent,self).__init__(obs_dim, action_dim, optimizer, learning_rate, id, root, config)
         network_input = obs_dim + action_dim
         network_output = 1
         self.policy = Network.initialize_network(network_input, network_output, config['network'])
         self.target_policy = copy.deepcopy(self.policy)
         self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=learning_rate)
-
-
-

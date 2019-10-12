@@ -23,6 +23,40 @@ def initialize_algorithm(observation_space: int, action_space: int, _params: lis
                 'network': _params[2]
             }
         )
+    elif _params[0]['algorithm'] == 'Imitation':
+        return SupervisedAlgorithm(
+        observation_space = observation_space,
+        action_space = action_space,
+        loss_function = getattr(torch.nn, _params[0]['loss_function']),
+        regularizer = _params[0]['regularizer'],
+        recurrence = _params[0]['recurrence'],
+        optimizer = getattr(torch.optim, _params[0]['optimizer']),
+        gamma = float(_params[0]['gamma']),
+        learning_rate = float(_params[0]['learning_rate']),
+        beta = _params[0]['beta'],
+        epsilon = (float(_params[0]['epsilon_start']), float(_params[0]['epsilon_end']), float(_params[0]['epsilon_decay'])),
+        C = _params[0]['c'],
+        configs = {
+            'agent': _params[1],
+            'network': _params[2]
+        }
+        ), DaggerAlgorithm(
+        observation_space = observation_space,
+        action_space = action_space,
+        loss_function = getattr(torch.nn, _params[0]['loss_function']),
+        regularizer = _params[0]['regularizer'],
+        recurrence = _params[0]['recurrence'],
+        optimizer = getattr(torch.optim, _params[0]['optimizer']),
+        gamma = float(_params[0]['gamma']),
+        learning_rate = float(_params[0]['learning_rate']),
+        beta = _params[0]['beta'],
+        epsilon = (float(_params[0]['epsilon_start']), float(_params[0]['epsilon_end']), float(_params[0]['epsilon_decay'])),
+        C = _params[0]['c'],
+        configs = {
+            'agent': _params[1],
+            'network': _params[2]
+        }
+        )
     else:
         return None
 
@@ -238,7 +272,7 @@ class DQAlgorithm(AbstractAlgorithm):
         Iterates over the action space and returns a one-hot encoded list
     '''
     def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
-        
+
         obs_v = torch.tensor(observation).float().to(self.device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(self.device)
         for i in range(self.action_space):
@@ -350,7 +384,7 @@ class SupervisedAlgorithm(AbstractAlgorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(SupervisedAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
-        self.C = number of training iterations
+        self.C = C
     def update(self, agent, minibatch, step_n):
         '''
             Implementation
@@ -398,8 +432,8 @@ class SupervisedAlgorithm(AbstractAlgorithm):
 
 
 
-    def create_agent(self):
-        new_agent = ImitationAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+    def create_agent(self,root,id):
+        new_agent = ImitationAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate,root,id, self.configs)
         self.agents.append(new_agent)
         return new_agent
 
@@ -457,12 +491,12 @@ class DaggerAlgorithm(AbstractAlgorithm):
 
         input_v = torch.tensor(states).float().to(device)
         state_action_prob_dist= imitation_agent.policy(input_v).to(device) #.gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
-        expert_state_action_prob_dist = expert_agent.policy(input_v)
+        expert_action = expert_agent.policy(input_v)
 
 
         #Loss will be Cross Entropy Loss between the action probabilites produced
         #by the imitation agent, and the action took by the expert.
-        loss_v = self.loss_calc(state_action_prob_dist, expert_state_action_prob_dist).to(device)
+        loss_v = self.loss_calc(state_action_prob_dist, expert_action).to(device)
         loss_v.backward().to(device)
         imitation_agent.optimizer.step().to(device)
 
