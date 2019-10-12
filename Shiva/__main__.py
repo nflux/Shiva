@@ -1,6 +1,7 @@
 import sys
-sys.path.append('./modules')
-sys.path.append('./utils')
+import os
+sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'modules'))
+sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'utils'))
 
 from settings import shiva
 from MetaLearner import initialize_meta

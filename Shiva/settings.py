@@ -2,6 +2,7 @@ import os
 import configparser
 import inspect
 import helpers as helpers
+from tensorboardX import SummaryWriter
 
 INIT_INI = 'init.ini'
 
@@ -38,6 +39,7 @@ class ShivaAdmin():
         self._curr_meta_learner_dir = ''
         self._curr_learner_dir = {}
         self._curr_agent_dir = {}
+        self.writer = {}
 
         self.VALID_MODES = ['production', 'evaluation']
         self._INITS = helpers.load_config_file_2_dict(init_dir)
@@ -84,42 +86,61 @@ class ShivaAdmin():
             else:
                 for subf in os.listdir(os.path.join(self.inits_url, f)):
                     self.meta_learner_config.append(helpers.load_config_file_2_dict(subf))
+        # create the directory for this new meta learner
         if self.need_to_save:
             self._curr_meta_learner_dir = helpers.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, 'ML-'))
         return self.meta_learner_config
 
     def add_learner_profile(self, learner):
-        if not self.need_to_save: pass
+        # print('add_learner_profile', learner)
+        if not self.need_to_save: return
         if learner.id not in self._curr_learner_dir:
             self._curr_learner_dir[learner.id] = helpers.make_dir(os.path.join(self._curr_meta_learner_dir, 'L-'+str(learner.id)))
             self._curr_agent_dir[learner.id] = {}
+            self.writer[learner.id] = {}
             # print('Learner', learner.id, 'profile added')
 
     def update_agents_profile(self, learner):
-        if not self.need_to_save: pass
+        # print('update_agents_profile', learner)
+        if not self.need_to_save: return
         self.add_learner_profile(learner)
         if type(learner.agents) == list:
             for agent in learner.agents:
-                self._add_agent_profile(learner.id, agent)
+                self._add_agent_profile(learner, agent)
         else:
-            self._add_agent_profile(learner.id, learner.agents)
+            self._add_agent_profile(learner, learner.agents)
 
-    def _add_agent_profile(self, learner_id: int, agent):
-        if not self.need_to_save: pass
-        if agent.id not in self._curr_agent_dir[learner_id]:
-            self._curr_agent_dir[learner_id][agent.id] = helpers.make_dir(os.path.join(self._curr_learner_dir[learner_id], 'Agents', str(agent.id)))
-            # print('Agent', agent.id, 'profile added')
+    def _add_agent_profile(self, learner, agent):
+        # print('add_agent_profile', learner, agent)
+        if not self.need_to_save: return
+        if agent.id not in self._curr_agent_dir[learner.id]:
+            self._curr_agent_dir[learner.id][agent.id] = helpers.make_dir(os.path.join(self._curr_learner_dir[learner.id], 'Agents', str(agent.id)))
+            self.init_summary_writer(learner, agent)
+            print('Agent', agent.id, 'profile added')
 
-    def get_agent_dir(self, learner_id, agent):
-        self._add_agent_profile(learner_id, agent)
-        return self._curr_agent_dir[learner_id][agent.id]
+    def get_agent_dir(self, learner, agent):
+        # print('get_agent_dir', learner, agent)
+        self._add_agent_profile(learner, agent)
+        return self._curr_agent_dir[learner.id][agent.id]
+
+    '''
+        Summary Writer Utilities
+    '''
+
+    def init_summary_writer(self, learner, agent):
+        if not self.need_to_save: return
+        self.writer[learner.id][agent.id] =  SummaryWriter(self.get_agent_dir(learner, agent))
+
+    def add_summary_writer(self, learner, agent, scalar_name, value_y, value_x):
+        if not self.need_to_save: return
+        self.writer[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
 
     '''
         Saving Implementations
     '''
 
     def save(self, caller):
-        if not self.need_to_save: pass
+        if not self.need_to_save: return
         self.caller = caller
         if 'metalearner' in inspect.getfile(self.caller.__class__).lower():
             self._save_meta_learner()
@@ -130,7 +151,6 @@ class ShivaAdmin():
 
     def _save_meta_learner(self):
         print("Saving Meta Learner:", self.caller, '@', self._curr_meta_learner_dir)
-        # TODO: save self.meta_learner_config file into self._curr_meta_learner_dir
         helpers.save_dict_2_config_file(self.caller.configs[0], os.path.join(self._curr_meta_learner_dir, 'config.ini'))
         for learner in self.caller.learners:
             self._save_learner(learner)

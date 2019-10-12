@@ -2,7 +2,6 @@ from settings import shiva
 import Algorithm
 import ReplayBuffer
 import Environment
-from tensorboardX import SummaryWriter
 
 class AbstractLearner():
     
@@ -47,7 +46,6 @@ class AbstractLearner():
         id = self.agentCount
         self.agentCount +=1
         return id
-
 
 ###########################################################################
 # 
@@ -96,36 +94,35 @@ class SingleAgentLearner(AbstractLearner):
             done = False
             while not done:
                 done = self.step(ep_count)
-                self.writer.add_scalar('Loss', self.alg.get_loss(), self.env.get_current_step())
+                shiva.add_summary_writer(self, self.agents[0], 'Loss', self.alg.get_loss(), self.env.get_current_step())
 
         self.env.close()
 
     # Function to step throught the environment
-    def step(self,ep_count):
+    def step(self, ep_count):
        
         self.env.load_viewer()
 
         observation = self.env.get_observation()
 
-        action = self.alg.get_action(self.alg.agents[0], observation, self.env.get_current_step())
+        action = self.alg.get_action(self.agents[0], observation, self.env.get_current_step())
 
         next_observation, reward, done = self.env.step(action)
 
         # Write to tensorboard
-        self.writer.add_scalar('Reward', reward, self.env.get_current_step())
+        shiva.add_summary_writer(self, self.agents[0], 'Reward', reward, self.env.get_current_step())
 
         # Cumulate the reward
         self.totalReward += reward[0]
 
         self.buffer.append([observation, action, reward, next_observation, done])
 
-        self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
+        self.alg.update(self.agents[0], self.buffer.sample(), self.env.get_current_step())
 
         # when the episode ends
         if done:
-            # add values to the tensorboard
-            self.writer.add_scalar('Total Reward', self.totalReward, ep_count)
-            self.writer.add_scalar('Average Loss per Episode', self.alg.get_average_loss(self.env.get_current_step()), ep_count)
+            shiva.add_summary_writer(self, self.agents[0], 'Total Reward', self.totalReward, ep_count)
+            shiva.add_summary_writer(self, self.agents[0], 'Average Loss per Episode', self.alg.get_average_loss(self.env.get_current_step()), ep_count)
 
 
         # Save the agent periodically
@@ -155,16 +152,8 @@ class SingleAgentLearner(AbstractLearner):
         # Launch the algorithm which will handle the
         self.alg = Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
-        self.agents = self.alg.create_agent(self.id_generator())
-        # self.agents = self.load_agent('MountainCar_Agent_300_57151.pth', self.configs)
-
-        # log_dir = "{}/Agents/{}/logs".format(self.root, self.agents.id)
+        self.agents.append(self.alg.create_agent(self.id_generator()))
         
-        # print("\nHere's the directory to the tensorboard output\n",log_dir)
-        
-        self.writer =  SummaryWriter(shiva.get_agent_dir(self.id, self.agents))
-
-        # Basic replay buffer at the moment
         self.buffer = ReplayBuffer.initialize_buffer(self.configs['ReplayBuffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
 
 

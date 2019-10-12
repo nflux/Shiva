@@ -92,9 +92,10 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
         # agents, environments, algorithm, data, configs for a single agent learner
         self.learner = Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0])
         shiva.add_learner_profile(self.learner)
-
+        
         # initialize the learner instances
         self.learner.launch()
+        
         shiva.update_agents_profile(self.learner)
         
         # Rus the learner for a number of episodes given by the config
