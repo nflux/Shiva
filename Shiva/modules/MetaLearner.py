@@ -29,7 +29,7 @@ class AbstractMetaLearner():
                 optimize_env_hp : bool, 
                 optimize_learner_hp : bool, 
                 evolution : bool,
-                config : list):
+                configs : list):
         self.learners = learners
         self.algorithms = algorithms
         self.eval_env = eval_env
@@ -39,6 +39,10 @@ class AbstractMetaLearner():
         self.optimize_learner_hp = optimize_env_hp
         self.evolution = evolution
         self.learnerCount = 0
+        self.configs = configs
+        
+        env_name = self.configs[0]['Environment']['env_type'] + self.configs[0]['Environment']['environment']
+        shiva.add_meta_profile(self, env_name)
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
@@ -91,9 +95,10 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
         # agents, environments, algorithm, data, configs for a single agent learner
         self.learner = Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0])
         shiva.add_learner_profile(self.learner)
-
+        
         # initialize the learner instances
         self.learner.launch()
+        
         shiva.update_agents_profile(self.learner)
         
         # Rus the learner for a number of episodes given by the config

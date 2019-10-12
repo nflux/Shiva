@@ -1,9 +1,10 @@
 import sys
-sys.path.append('./modules')
-sys.path.append('./utils')
+import os
+sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'modules'))
+sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'utils'))
 
 from settings import shiva
-from modules.MetaLearner import initialize_meta
+from MetaLearner import initialize_meta
 
 if __name__ == '__main__':
     meta = initialize_meta(shiva.get_inits())
