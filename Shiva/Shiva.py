@@ -128,7 +128,6 @@ class ShivaAdmin():
             self._add_agent_profile(learner, learner.agents)
 
     def _add_agent_profile(self, learner, agent):
-        # print('add_agent_profile', learner, agent)
         if not self.need_to_save: return
         if agent.id not in self._curr_agent_dir[learner.id]:
             self._curr_agent_dir[learner.id][agent.id] = helpers.make_dir(os.path.join(self._curr_learner_dir[learner.id], 'Agents', str(agent.id)))
@@ -181,13 +180,12 @@ class ShivaAdmin():
     def _save_learner(self, learner=None):
         learner = self.caller if learner is None else learner
         self.add_learner_profile(learner)
-        # print("Saving Learner:", learner.id, '@', self._curr_learner_dir[learner.id])
         if type(learner.agents) == list:
             for agent in learner.agents:
-                self._add_agent_profile(learner.id, agent)
+                self._add_agent_profile(learner, agent)
                 agent.save(self._curr_agent_dir[learner.id][agent.id], learner.env.get_current_step())
         else:
-            self._add_agent_profile(learner.id, learner.agents)
+            self._add_agent_profile(learner, learner.agents)
             agent.save(self._curr_agent_dir[learner.id][learner.agents.id], learner.env.get_current_step())
 
     ###
