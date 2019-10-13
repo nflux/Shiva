@@ -41,7 +41,7 @@ class AbstractMetaLearner():
         self.learnerCount = 0
         self.configs = configs
         
-        env_name = self.configs[0]['Environment']['env_type'] + self.configs[0]['Environment']['environment']
+        env_name = self.configs[0]['Environment']['env_type'] + '-' + self.configs[0]['Environment']['environment']
         shiva.add_meta_profile(self, env_name)
 
     # this would play with different hyperparameters until it found the optimal ones
@@ -91,18 +91,18 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     optimize_learner_hp,
                                                     evolution,
                                                     configs)
-
+        
         # agents, environments, algorithm, data, configs for a single agent learner
-        self.learner = Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0])
-        shiva.add_learner_profile(self.learner)
+        self.learners.append(Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0]))
+        shiva.add_learner_profile(self.learners[0])
         
         # initialize the learner instances
-        self.learner.launch()
+        self.learners[0].launch()
         
-        shiva.update_agents_profile(self.learner)
+        shiva.update_agents_profile(self.learners[0])
         
         # Rus the learner for a number of episodes given by the config
-        self.learner.run()
+        self.learners[0].run()
 
         # save
         self.save()

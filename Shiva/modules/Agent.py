@@ -25,35 +25,10 @@ class Agent:
         self.config = config
 
     def save(self, save_path, step):
-        '''
-        # Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-        torch.save(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
-        '''
-        #Saves the current Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-        torch.save(self.policy, save_path + '/Step-' + step + '.pth')
+        torch.save(self.policy, save_path + '/policy.pth')
 
-    def load(self, path, configs):
-        '''
-        # Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-        torch.load(self.policy,"/ShivaAgent"+str(self.id)+ ".pth")
-        '''
-
-        # Checks if the agent has the right file extension
-        assert path[:-4] == '.pth', "Wrong file extension!"
-
-        cwd = os.getcwd()
-
-        load_path = "{}/EliteAgents{}".format(cwd,path)
-
-        if os.path.exists(load_path):
-
-            if 'DQAgent' in path:
-                return DQAgent(self.obs_dim,self.action_dim, configs['Algorithm']['optimizer'], configs['Algorithm']['learning_rate'], 0, self.root, configs['Network'])
-
-            #Loads a Neural Network into a .pth with a name of ShivaAgentxxxx.pth
-            torch.load(self.policy, load_path)
-        else:
-            print("The Load File for the Shiva Agent Model Does Not Exist")
+    def load(self, load_path):
+        torch.load(self.policy, load_path)
 
     def delete(self, id):
         path = os.getcwd()
@@ -75,7 +50,6 @@ class DQAgent(Agent):
             This should iterate over all the possible actions
         '''
         return self.policy(obs)
-
 
 class DDPGAgent(Agent):
     def __init__(self, id, obs_dim, action_dim, optimizer, learning_rate, config: dict):

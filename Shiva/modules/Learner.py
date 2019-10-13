@@ -3,6 +3,19 @@ import Algorithm
 import ReplayBuffer
 import Environment
 
+def initialize_learner(config):
+    if config[0]['Learner']['type'] == 'DQN':
+        return SingleAgentMetaLearner([],
+                                    config[0]['Algorithm'], # 
+                                    config[0]['MetaLearner']['eval_env'],  # the evaluation environment
+                                    [],  # this would have to be a list of agent objects
+                                    [],  # this would have to be a list of elite agents objects
+                                    config[0]['MetaLearner']['optimize_env_hp'],
+                                    config[0]['MetaLearner']['optimize_learner_hp'],
+                                    config[0]['MetaLearner']['evolution'],
+                                    config,
+                                    )
+
 class AbstractLearner():
     
     def __init__(self,
