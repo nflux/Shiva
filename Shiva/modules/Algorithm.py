@@ -432,10 +432,27 @@ class SupervisedAlgorithm(AbstractAlgorithm):
 
 
 
+    def get_action(self, agent, observation, step_n) -> np.ndarray:
+
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        obs_v = torch.tensor(observation).to(device)
+        best_act = action2one_hot(np.argmax(agent.policy(obs_v)))
+
+        return best_act.tolist()
+
     def create_agent(self,root,id):
         new_agent = ImitationAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate,root,id, self.configs)
         self.agents.append(new_agent)
         return new_agent
+
+    def get_loss(self):
+        return self.loss
+
+    def get_average_loss(self, step):
+        average = self.totalLoss/step
+        self.totalLoss = 0
+        return average
 
 
 
@@ -514,3 +531,11 @@ class DaggerAlgorithm(AbstractAlgorithm):
             z = np.zeros(self.action_space)
             z[action_idx] = 1
             return z
+
+        def get_loss(self):
+            return self.loss
+
+        def get_average_loss(self, step):
+            average = self.totalLoss/step
+            self.totalLoss = 0
+            return average
