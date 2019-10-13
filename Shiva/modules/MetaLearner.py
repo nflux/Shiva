@@ -9,7 +9,7 @@ def initialize_meta(config):
         return SingleAgentMetaLearner([],
                                     config[0]['Algorithm'], # 
                                     config[0]['MetaLearner']['eval_env'],  # the evaluation environment
-                                    config[0]['MetaLearner']['agents'],  # this would have to be a list of agent objects
+                                    [],  # this would have to be a list of agent objects
                                     [],  # this would have to be a list of elite agents objects
                                     config[0]['MetaLearner']['optimize_env_hp'],
                                     config[0]['MetaLearner']['optimize_learner_hp'],
@@ -91,7 +91,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     optimize_learner_hp, 
                                                     evolution,
                                                     configs)
-
+        
         # agents, environments, algorithm, data, configs for a single agent learner
         self.learners.append(Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0]))
         shiva.add_learner_profile(self.learners[0])

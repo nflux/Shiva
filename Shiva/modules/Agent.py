@@ -51,7 +51,6 @@ class DQAgent(Agent):
         '''
         return self.policy(obs)
 
-
 class DDPGAgent(Agent):
     def __init__(self, id, obs_dim, action_dim, optimizer, learning_rate, config: dict):
         super(DDPGAgent,self).__init__(id, obs_dim, action_dim, optimizer, learning_rate, config)

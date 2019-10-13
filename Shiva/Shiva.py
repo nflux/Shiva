@@ -1,6 +1,6 @@
 import os
 import configparser
-import inspect
+import inspect, fnmatch, pickle
 import helpers as helpers
 from tensorboardX import SummaryWriter
 
@@ -183,10 +183,16 @@ class ShivaAdmin():
         if type(learner.agents) == list:
             for agent in learner.agents:
                 self._add_agent_profile(learner, agent)
-                agent.save(self._curr_agent_dir[learner.id][agent.id], learner.env.get_current_step())
+                agent_url = self._curr_agent_dir[learner.id][agent.id]
+                agent.save(agent_url, learner.env.get_current_step())
+                with open(agent_url+'/cls.pickle', 'wb') as handle:
+                    pickle.dump(agent, handle, protocol=pickle.HIGHEST_PROTOCOL)
         else:
             self._add_agent_profile(learner, learner.agents)
-            agent.save(self._curr_agent_dir[learner.id][learner.agents.id], learner.env.get_current_step())
+            agent_url = self._curr_agent_dir[learner.id][agent.agents.id]
+            agent.save(agent_url, learner.env.get_current_step())
+            with open(agent_url+'/cls.pickle', 'wb') as handle:
+                pickle.dump(agent, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     ###
     # Loading Implementations
@@ -205,10 +211,20 @@ class ShivaAdmin():
     def _load_meta_learner(self):
         print("Loading MetaLearner")
 
-
     def _load_learner(self):
         print("Loading Learner")
-    
+
+    def _load_agents(self, path):
+        agents = []
+        agents_pickles = helpers.find_pattern_in_path(path, '*.pickle')
+        agents_policies = helpers.find_pattern_in_path(path, '*.pth')
+        assert len(agents_pickles) > 0, "No agents found in {}".format(path)
+        for agent_pickle, agent_policy in zip(agents_pickles, agents_policies):
+            with open(agent_pickle, 'rb') as handle:
+                _new_agent = pickle.load(handle)
+                _new_agent.load(agent_policy)
+                agents.append(_new_agent)
+        return agents
 
 ###########################################################################
 #         

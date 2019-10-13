@@ -91,6 +91,14 @@ def make_dir_timestamp(new_folder: str) -> str:
     new_folder = new_folder + date[5:] + '-' + time[0:5]
     return make_dir(new_folder)
 
+def find_pattern_in_path(path, pattern):
+    result = []
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            if fnmatch.fnmatch(name, pattern):
+                result.append(os.path.join(root, name))
+    return result
+
 '''
     Utility for debugging
     Comment last line to enable/disable
