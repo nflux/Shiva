@@ -28,13 +28,7 @@ class Agent:
         torch.save(self.policy, save_path + '/policy.pth')
 
     def load(self, load_path):
-        torch.load(self.policy, load_path)
-
-    def delete(self, id):
-        path = os.getcwd()
-        file_path = "{}/Shiva/ShivaAgent/{}".format(path,self.id)
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        self.policy = torch.load(load_path)
 
 class DQAgent(Agent):
     def __init__(self, id, obs_dim, action_dim, optimizer, learning_rate, config: dict):

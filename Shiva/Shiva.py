@@ -1,6 +1,6 @@
 import os
 import configparser
-import inspect, fnmatch, pickle
+import inspect, pickle
 import helpers as helpers
 from tensorboardX import SummaryWriter
 
@@ -182,17 +182,17 @@ class ShivaAdmin():
         self.add_learner_profile(learner)
         if type(learner.agents) == list:
             for agent in learner.agents:
-                self._add_agent_profile(learner, agent)
-                agent_url = self._curr_agent_dir[learner.id][agent.id]
-                agent.save(agent_url, learner.env.get_current_step())
-                with open(agent_url+'/cls.pickle', 'wb') as handle:
-                    pickle.dump(agent, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                self._save_agent(learner, agent)
         else:
-            self._add_agent_profile(learner, learner.agents)
-            agent_url = self._curr_agent_dir[learner.id][agent.agents.id]
-            agent.save(agent_url, learner.env.get_current_step())
-            with open(agent_url+'/cls.pickle', 'wb') as handle:
-                pickle.dump(agent, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            self._save_agent(learner, learner.agents)
+
+    def _save_agent(self, learner, agent):
+        self._add_agent_profile(learner, agent)
+        agent_url = self._curr_agent_dir[learner.id][agent.id]
+        agent.save(agent_url, learner.env.get_current_step())
+        with open(agent_url+'/cls.pickle', 'wb') as handle:
+            del(agent.policy)
+            pickle.dump(agent, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     ###
     # Loading Implementations
