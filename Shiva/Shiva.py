@@ -191,7 +191,6 @@ class ShivaAdmin():
         agent_url = self._curr_agent_dir[learner.id][agent.id]
         agent.save(agent_url, learner.env.get_current_step())
         with open(agent_url+'/cls.pickle', 'wb') as handle:
-            del(agent.policy)
             pickle.dump(agent, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     ###
