@@ -6,8 +6,8 @@ def initialize_network(input_dim: int, output_dim: int, _params: dict):
     return DynamicLinearNetwork(
             input_dim = input_dim,
             output_dim = output_dim,
-            layers = list(map(int, _params['layers'].split(','))),
-            activ_function = [getattr(torch.nn, f) for f in _params['activation_function'].split(',')],
+            layers = _params['layers'], # list(map(int, _params['layers'].split(','))),
+            activ_function = [getattr(torch.nn, f) for f in _params['activation_function']],
             output_function = getattr(torch.nn, _params['output_function']) if _params['output_function'] != "" else None
     )
 
