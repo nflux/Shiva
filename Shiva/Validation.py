@@ -64,8 +64,13 @@ class Validation():
                     elif section == 'Agent':
                         learner[section] = section_extracter(section)
                     elif section == 'Network':
-                        learner[section] = section_extracter(section)
-
+                        networks = section_extracter(section)
+                        bobbody = {}
+                        for value in networks['networks']:
+                            bobbody[value] = section_extracter(value)
+                        learner[section] = bobbody
+                        
+                    
 
                 # Now I need to figure out how I'm going to handle and extract the configurations
 
@@ -92,6 +97,8 @@ class Validation():
                             learner[section] = section_extracter(section)
 
             learners.append(learner)
+
+        print(learners)
 
         return learners
 

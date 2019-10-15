@@ -23,6 +23,24 @@ def initialize_algorithm(observation_space: int, action_space: int, _params: lis
                 'network': _params[2]
             }
         )
+    elif _params[0]['algorithm'] == 'DDPG':
+        return DDPGAlgorithm(
+            observation_space = observation_space,
+            action_space = action_space,
+            loss_function = getattr(torch.nn, _params[0]['loss_function']), 
+            regularizer = _params[0]['regularizer'],
+            recurrence = _params[0]['recurrence'], 
+            optimizer = getattr(torch.optim, _params[0]['optimizer']), 
+            gamma = float(_params[0]['gamma']), 
+            learning_rate = float(_params[0]['learning_rate']),
+            beta = _params[0]['beta'],
+            epsilon = (float(_params[0]['epsilon_start']), float(_params[0]['epsilon_end']), float(_params[0]['epsilon_decay'])),
+            C = _params[0]['c'],
+            configs = {
+                'agent': _params[1],
+                'network': _params[2]
+            }
+        )
     else:
         return None
 
@@ -32,7 +50,7 @@ import numpy as np
 import torch
 
 import Agent
-import utils.Noise
+import utils.Noise as Noise
 
 class AbstractAlgorithm():
     def __init__(self,
@@ -272,6 +290,9 @@ class DDPGAlgorithm(AbstractAlgorithm):
         gamma: np.float, 
         learning_rate: np.float,
         beta: np.float,
+        # epsilon_start: np.float,
+        # epsilon_end: np.float,
+        # epsilon_decay: np.float,
         epsilon: set(),
         C: int,
         configs: dict):
@@ -280,7 +301,7 @@ class DDPGAlgorithm(AbstractAlgorithm):
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(DQAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
+        super(DDPGAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
         self.epsilon_start = epsilon[0]
         self.epsilon_end = epsilon[1]
         self.epsilon_decay = epsilon[2]
@@ -291,7 +312,7 @@ class DDPGAlgorithm(AbstractAlgorithm):
     def update(self, agent, minibatch, step_n):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        states, actions, rewards, dones, next_states = minibatch
+        states, actions, rewards, next_states, dones = minibatch
         
         states = torch.tensor(states).to(device)
         actions = torch.tensor(actions).to(device)
@@ -301,12 +322,25 @@ class DDPGAlgorithm(AbstractAlgorithm):
 
         # train critic
         agent.critic_optimizer.zero_grad()
-        next_state_actions = agent.target_actor(next_states)
-        q_next_states = agent.target_critic(next_states, next_state_actions)
-        q_next_states[dones_mask] = 0.0
-        y_i = rewards + self.gamma * q_next_states
+
+        # get q value from states and actions
+
+        q_now = agent.critic(states.float(), actions.float())
         
-        q_now = agent.critic(states, actions)
+        print(next_states)
+
+        # get next state action
+        next_state_actions = agent.target_actor(next_states.float())
+
+        #feed next state action and next state to critic network to get next q value
+        q_next_states = agent.target_critic(next_states.float(), next_state_actions)
+
+        # print(dones_mask)
+
+        # input()    
+
+        q_next_states[dones_mask] = 0.0
+        y_i = rewards.unsqueeze(dim=-1) + self.gamma * q_next_states
 
         critic_loss = self.loss_calc(q_now, y_i.detach())
         critic_loss.backward()
@@ -314,10 +348,34 @@ class DDPGAlgorithm(AbstractAlgorithm):
 
         # train actor
         agent.actor_optimizer.zero_grad()
-        
+
+        # feed action to actor network
+        actor_actions = agent.actor(states.float())
+
+        actor_loss_value = -agent.critic(states.float(), actor_actions)
+        actor_loss_value = actor_loss_value.mean()
+        actor_loss_value.backward()
+        agent.actor_optimizer.step()
+
+        if step_n % self.C == 0:
+            alpha = 1 - 1e-3
+            ac_state = agent.actor.state_dict()
+            tgt_state = agent.target_actor.state_dict()
+            for k, v in ac_state.items():
+                tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
+            agent.target_actor.load_state_dict(tgt_state)
+
+            ac_state = agent.critic.state_dict()
+            tgt_state = agent.target_critic.state_dict()
+            for k, v in ac_state.items():
+                tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
+            agent.target_critic.load_state_dict(tgt_state)
+
 
     def get_action(self, agent, observation, step_n) -> np.ndarray: # maybe a torch.tensor
-        return agent.actor(observation).data.numpy() + self.ou_noise.noise()
+        action = agent.actor(torch.tensor(observation).float()).data.numpy() + self.ou_noise.noise()
+        print("this is the action ->",action)
+        return action
 
     def create_agent(self):
         new_agent = Agent.DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)

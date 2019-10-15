@@ -35,14 +35,16 @@ class DynamicLinearNetwork(nn.Module):
 
 class DDPGActor(nn.Module):
     def __init__(self, obs_dim, action_dim, config):
-        self.net = DynamicLinearSequential(obs_dim, action_dim, parse_layers(config['actor_layers']), parse_functions(config['actor_activation_function']), get_attrs(config['actor_output_function']))
+        super(DDPGActor, self).__init__()
+        self.net = DynamicLinearSequential(obs_dim, action_dim, parse_layers(config['layers']), parse_functions(config['activation_function']), config['last_layer'], get_attrs(config['output_function']))
     def forward(self, x):
         return self.net(x)
 
 class DDPGCritic(nn.Module):
-    def __init__(self, obs_dim, action_dim, critic_params):
-        self.net_head = DynamicLinearSequential(obs_dim, action_dim, parse_layers(config['critic_head_layers']), parse_functions(config['critic_head_activation_function']), get_attrs(config['critic_head_output_function']))
-        self.net_tail = DynamicLinearSequential(obs_dim, action_dim, parse_layers(config['critic_tail_layers']), parse_functions(config['critic_tail_activation_function']), get_attrs(config['critic_tail_output_function']))
+    def __init__(self, obs_dim, action_dim, head_config, tail_config):
+        super(DDPGCritic, self).__init__()
+        self.net_head = DynamicLinearSequential(obs_dim, 400, parse_layers(head_config['layers']), parse_functions(head_config['activation_function']), head_config['last_layer'], get_attrs(head_config['output_function']))
+        self.net_tail = DynamicLinearSequential(action_dim + 400, 1, parse_layers(tail_config['layers']), parse_functions(tail_config['activation_function']), tail_config['last_layer'],get_attrs(tail_config['output_function']) )
     def forward(self, x, a):
         obs = self.net_head(x)
         return self.net_tail(torch.cat([obs, a], dim=1))
@@ -84,10 +86,10 @@ def get_attrs(func_str, package=torch.nn):
     '''
     return getattr(package, func_str) if func_str != "" else None
 
-def DynamicLinearSequential(self, input_dim, output_dim, layers: list, activ_function: list, output_function: object=None):
+def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function: list, last_layer:bool, output_function: object=None):
     '''
         Function that returns a nn.Sequential object determined by the inputs (essentially coming from config)
-        
+        obs_dim
         Input
             @input_dim
             @output_dim
@@ -104,7 +106,7 @@ def DynamicLinearSequential(self, input_dim, output_dim, layers: list, activ_fun
     net_layers.append(nn.Linear(input_dim, layers[0]))
     net_layers.append(activ_function[0]())
     in_layer_size = layers[0]
-        
+    
     if len(activ_function) > 1:
         for i, (out_layer_size, af) in enumerate(zip(layers, activ_function)):
             if i == 0: continue
@@ -118,10 +120,12 @@ def DynamicLinearSequential(self, input_dim, output_dim, layers: list, activ_fun
             net_layers.append(nn.Linear(in_layer_size, out_layer_size))
             net_layers.append(af())
             in_layer_size = out_layer_size
-                
-    last_layer_dim = layers[len(layers)-1] if len(layers) > 1 else layers[0]
-    net_layers.append( nn.Linear(last_layer_dim, output_dim) )
-        
+
+    if last_layer:
+        last_layer_dim = layers[len(layers)-1] if len(layers) > 1 else layers[0]
+        net_layers.append( nn.Linear(last_layer_dim, output_dim) )
+    
+    
     if output_function is not None:
         net_layers.append(output_function())
 

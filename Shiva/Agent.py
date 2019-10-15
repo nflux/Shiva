@@ -103,10 +103,15 @@ class DDPGAgent(Agent):
     def __init__(self, obs_dim, action_dim, optimizer, learning_rate, config: dict):
         super(DDPGAgent, self).__init__(obs_dim, action_dim, optimizer, learning_rate, config)
         
-        self.actor = Network.DDPGActor(obs_dim, action_dim, config['network'])
+        # print(config)
+
+        # print(config['network']['network_actor'])
+        # input()
+
+        self.actor = Network.DDPGActor(obs_dim, action_dim, config['network']['network_actor'])
         self.target_actor = copy.deepcopy(self.actor)
 
-        self.critic = Network.DDPGCritic(obs_dim, action_dim, config['network'])
+        self.critic = Network.DDPGCritic(obs_dim, action_dim, config['network']['network_critic_head'], config['network']['network_critic_tail'])
         self.target_critic = copy.deepcopy(self.critic)
         
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=learning_rate)

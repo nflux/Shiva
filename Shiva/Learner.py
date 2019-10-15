@@ -81,6 +81,8 @@ class Single_Agent_Learner(AbstractLearner):
 
         next_observation, reward, done = self.env.step(action)
 
+        print("does this ever happen")
+
         self.buffer.append([observation, action, reward, next_observation, done])
 
         self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
