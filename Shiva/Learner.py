@@ -2,6 +2,8 @@ import Algorithm
 import Replay_Buffer
 import Environment
 
+from tensorboardX import SummaryWriter
+
 from abc import ABC
 
 class AbstractLearner(ABC):
@@ -60,18 +62,19 @@ class Single_Agent_Learner(AbstractLearner):
 
         print("Before training")
         
-        for _ in range(self.configs['Learner']['episodes']):
+        for ep_count in range(self.configs['Learner']['episodes']):
             self.env.reset()
+            self.totalReward = 0
             done = False
             while not done:
-                done = self.step()
+                done = self.step(ep_count)
 
         self.env.env.close()
 
         print("After training")
 
 
-    def step(self):
+    def step(self, ep_count):
 
         self.env.env.render()
 
@@ -81,11 +84,19 @@ class Single_Agent_Learner(AbstractLearner):
 
         next_observation, reward, done = self.env.step(action)
 
-        print("does this ever happen")
+        self.writer.add_scalar('Reward', reward, self.env.get_current_step())
+
+        self.totalReward += reward
 
         self.buffer.append([observation, action, reward, next_observation, done])
 
         self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
+
+
+        if done:
+            self.writer.add_scalar('Total Reward', self.totalReward, ep_count)
+            self.writer.add_scalar('Average Actor Loss per Episode', self.alg.get_average_actor_loss(self.env.get_current_step()), ep_count)
+            self.writer.add_scalar('Average Critic Loss per Episode', self.alg.get_average_critic_loss(self.env.get_current_step()), ep_count)
 
         return done
 
@@ -109,6 +120,8 @@ class Single_Agent_Learner(AbstractLearner):
         self.alg = Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
         self.agents = self.alg.create_agent()
+
+        self.writer = SummaryWriter()
 
         # Basic replay buffer at the moment
         self.buffer = Replay_Buffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())

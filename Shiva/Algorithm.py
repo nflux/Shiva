@@ -106,6 +106,7 @@ class AbstractAlgorithm():
         '''
         pass
 
+
     def get_action(self, agent, observation):
         '''
             Determines the best action for the agent and a given observation
@@ -309,6 +310,11 @@ class DDPGAlgorithm(AbstractAlgorithm):
 
         self.ou_noise = Noise.OUNoise(self.action_space)
 
+        self.actor_loss = 0
+        self.critic_loss = 0
+        self.totalActorLoss = 0
+        self.totalCriticLoss = 0
+
     def update(self, agent, minibatch, step_n):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -324,14 +330,10 @@ class DDPGAlgorithm(AbstractAlgorithm):
         agent.critic_optimizer.zero_grad()
 
         # get q value from states and actions
-
         q_now = agent.critic(states.float(), actions.float())
-        
-        print(next_states)
 
         # get next state action
         next_state_actions = agent.target_actor(next_states.float())
-
         #feed next state action and next state to critic network to get next q value
         q_next_states = agent.target_critic(next_states.float(), next_state_actions)
 
@@ -343,6 +345,12 @@ class DDPGAlgorithm(AbstractAlgorithm):
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * q_next_states
 
         critic_loss = self.loss_calc(q_now, y_i.detach())
+
+        self.totalCriticLoss += critic_loss
+        self.critic_loss = critic_loss
+
+        # print("critic loss :",critic_loss)
+
         critic_loss.backward()
         agent.critic_optimizer.step()
 
@@ -352,32 +360,63 @@ class DDPGAlgorithm(AbstractAlgorithm):
         # feed action to actor network
         actor_actions = agent.actor(states.float())
 
+        # print(actor_actions)
+        # input()
+        
+
         actor_loss_value = -agent.critic(states.float(), actor_actions)
+        # print("actor loss: ",actor_loss_value)
+
+        # input()
         actor_loss_value = actor_loss_value.mean()
+        # print(actor_loss_value)
+
+
+        self.totalActorLoss += actor_loss_value
+        self.actor_loss = actor_loss_value
+
         actor_loss_value.backward()
         agent.actor_optimizer.step()
 
-        if step_n % self.C == 0:
-            alpha = 1 - 1e-3
-            ac_state = agent.actor.state_dict()
-            tgt_state = agent.target_actor.state_dict()
-            for k, v in ac_state.items():
-                tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
-            agent.target_actor.load_state_dict(tgt_state)
+        # if step_n % self.C == 0:
+        alpha = 1 - 1e-3
+        ac_state = agent.actor.state_dict()
+        tgt_state = agent.target_actor.state_dict()
+        for k, v in ac_state.items():
+            tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
+        agent.target_actor.load_state_dict(tgt_state)
+        print ("actor",tgt_state)
 
-            ac_state = agent.critic.state_dict()
-            tgt_state = agent.target_critic.state_dict()
-            for k, v in ac_state.items():
-                tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
-            agent.target_critic.load_state_dict(tgt_state)
+        ac_state = agent.critic.state_dict()
+        tgt_state = agent.target_critic.state_dict()
+        for k, v in ac_state.items():
+            tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
+        agent.target_critic.load_state_dict(tgt_state)
+        # if step_n % self.C == 0:
+        #     agent.target_actor.load_state_dict(agent.actor.state_dict())
+        #     agent.target_critic.load_state_dict(agent.critic.state_dict())
 
 
     def get_action(self, agent, observation, step_n) -> np.ndarray: # maybe a torch.tensor
         action = agent.actor(torch.tensor(observation).float()).data.numpy() + self.ou_noise.noise()
-        print("this is the action ->",action)
+        action = np.clip(action, -1,1)
         return action
 
-    def create_agent(self):
+    def create_agent(self): 
         new_agent = Agent.DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
+
+    def get_actor_loss(self):
+        return self.actor_loss
+
+    def get_critic_loss(self):
+        return self.critic_loss
+
+    def get_average_actor_loss(self, step):
+        average = self.totalActorLoss/step
+        return average
+
+    def get_average_critic_loss(self, step):
+        average = self.totalCriticLoss/step
+        return average
