@@ -7,7 +7,7 @@ def initialize_env(env_params):
     if env_params['env_type'] == 'Gym':
         env = GymEnvironment(env_params['environment'], env_params['env_render'])
     elif env_params['env_type'] == 'RoboCup':
-        env = RoboCupDDPGEnvironment(env_params, 45000)
+        env = RoboCupDDPGEnvironment(env_params, 4500)
 
     return env
 

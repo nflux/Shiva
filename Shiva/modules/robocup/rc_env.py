@@ -57,11 +57,6 @@ class rc_env:
         self.num_leftBot = config['num_l_bot']
         self.num_rightBot = config['num_r_bot']
 
-        # params for low level actions
-        num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
-        self.left_action_params = np.asarray([[0.0]*num_action_params for i in range(self.num_left)])
-        self.right_action_params = np.asarray([[0.0]*num_action_params for i in range(self.num_right)])
-
         if config['action_level'] == 'low':
             #                   pow,deg   deg       deg         pow,deg    
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
@@ -80,10 +75,10 @@ class rc_env:
             #For new obs reorganization without vailds, changed hfo obs from 59 to 56
             self.left_features = 56 + 13*(self.num_left-1) + 12*self.num_right + 4 + 1 + 2 + 1  + 8
             self.right_features = 56 + 13*(self.num_right-1) + 12*self.num_left + 4 + 1 + 2 + 1 + 8
-        elif config.fl == 'high':
+        elif config['feature_level'] == 'high':
             self.left_features = (6*self.num_left) + (3*self.num_right) + (3*self.num_rightBot) + 6
             self.right_features = (6*self.num_right) + (3*self.num_left) + (3*self.num_rightBot) + 6
-        elif config.fl == 'simple':
+        elif config['feature_level'] == 'simple':
             # 16 - land_feats + 12 - basic feats + 6 per (left/right)
             self.left_features = 28 + (6 * ((self.num_left-1) + self.num_right))
             self.right_features = 28 + (6 * ((self.num_right-1) + self.num_left))
@@ -103,8 +98,12 @@ class rc_env:
         self.sync_at_status = threading.Barrier(self.num_left+self.num_right)
         self.sync_at_reward = threading.Barrier(self.num_left+self.num_right)
 
+        # params for low level actions
+        num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
+
         # Left side actions, obs, rewards
         self.left_actions = np.array([2]*self.num_left)
+        self.left_action_params = np.asarray([[0.0]*num_action_params for i in range(self.num_left)])
         # self.left_actions_OH = np.empty([self.num_left, 8],dtype=float)
         self.left_obs = np.empty([self.num_left,self.left_features],dtype=float)
         self.left_obs_previous = np.empty([self.num_left,self.left_features],dtype=float)
@@ -112,6 +111,7 @@ class rc_env:
 
         # Right side actions, obs, rewards
         self.right_actions = np.array([2]*self.num_right)
+        self.right_action_params = np.asarray([[0.0]*num_action_params for i in range(self.num_right)])
         # self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
         self.right_obs = np.empty([self.num_right,self.right_features],dtype=float)
         self.right_obs_previous = np.empty([self.num_right,self.right_features],dtype=float)
@@ -246,11 +246,11 @@ class rc_env:
 
         if self.left_base == base:
             self.left_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
-                                server_port=port, server_addr='localhost', left_name=base,
+                                server_port=port, server_addr='localhost', team_name=base,
                                                     play_goalie=goalie,record_dir =recorder_dir)
         else:
             self.right_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
-                                server_port=port, server_addr='localhost', left_name=base, 
+                                server_port=port, server_addr='localhost', team_name=base, 
                                                     play_goalie=goalie,record_dir =recorder_dir)
 
         ep_num = 0
@@ -258,7 +258,7 @@ class rc_env:
             while(self.start):
                 ep_num += 1
                 j = 0 # j to maximum episode length
-
+                
                 if self.left_base == base:
                     self.left_obs_previous[agent_ID] = self.left_envs[agent_ID].getState() # Get initial state
                     self.left_obs[agent_ID] = self.left_envs[agent_ID].getState() # Get initial state
@@ -277,7 +277,7 @@ class rc_env:
                         # take the action
                         if act_lvl == 'high':
                             self.left_envs[agent_ID].act(self.action_list[self.left_actions[agent_ID]]) # take the action
-                        elif act_lvl == 'low'
+                        elif act_lvl == 'low':
                             # scale action params
                             a = self.left_actions[agent_ID]
                             # without tackle
@@ -362,8 +362,8 @@ class rc_env:
                   " --log-dir %s --message-size 256"\
                   % (self.fpt, self.untouched, self.num_left,
                      self.num_right, self.num_leftBot, self.num_rightBot, self.port,
-                     self.offense_on_ball, self.seed, self.config.ball_x_min, self.config.ball_x_max,
-                     self.config.ball_y_min, self.config.ball_y_max, self.config.log)
+                     self.config['offense_ball'], self.seed, self.config['ball_x_min'], self.config['ball_x_max'],
+                     self.config['ball_y_min'], self.config['ball_y_max'], self.config['log'])
             #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
             if self.num_leftBot > 0:   cmd += " --offense-left %s" \
                 % (self.config['left_bin'])
@@ -374,9 +374,9 @@ class rc_env:
             if self.config['determ']:      cmd += " --deterministic"
             if self.config['verbose']:            cmd += " --verbose"
             if not self.config['rcss_log']:  cmd += " --no-logging"
-            if self.config.['hfo_log']:       cmd += " --hfo-logging"
-            if self.config.['record_lib']:             cmd += " --record"
-            if self.config.['record_serv']:      cmd += " --log-gen-pt"
+            if self.config['hfo_log']:       cmd += " --hfo-logging"
+            if self.config['record_lib']:             cmd += " --record"
+            if self.config['record_serv']:      cmd += " --log-gen-pt"
             # if self.config['init_env']:
             #     cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
             #             " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
