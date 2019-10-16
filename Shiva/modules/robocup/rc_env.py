@@ -19,30 +19,30 @@ possession_side = 'N'
 class rc_env:
     """rc_env() extends the HFO environment to allow for centralized execution.
     Attributes:
-        num_TA (int): Number of teammate agents. (0-11)
-        num_OA (int): Number of opponent agents. (0-11)
-        num_NPC (int): Number of opponent NPCs. (0-11)
-        team_actions (list): List contains the current timesteps action for each
+        num_TA (int): Number of leftmate agents. (0-11)
+        num_OA (int): Number of rightonent agents. (0-11)
+        num_NPC (int): Number of rightonent NPCs. (0-11)
+        left_actions (list): List contains the current timesteps action for each
             agent. Takes value between 0 - num_states and is converted to HFO action by
             action_list.
         action_list (list): Contains the mapping from numer action value to HFO action.
-        team_should_act (list of bools): Contains a boolean flag for each agent. Is
+        left_should_act (list of bools): Contains a boolean flag for each agent. Is
             activated to be True by Step function and becomes false when agent acts.
-        team_should_act_flag (bool): Boolean flag is True if agents have
+        left_should_act_flag (bool): Boolean flag is True if agents have
             unperformed actions, becomes False if all agents have acted.
-        team_obs (list): List containing obs for each agent.
-        team_obs_previous (list): List containing obs for each agent at previous timestep
-        team_rewards (list): List containing reward for each agent
+        left_obs (list): List containing obs for each agent.
+        left_obs_previous (list): List containing obs for each agent at previous timestep
+        left_rewards (list): List containing reward for each agent
         start (bool): Once all agents have been launched, allows threads to listen for
             actions to take.
         world_states (list): Contains the status of the HFO world.
-        team_envs (list of HFOEnvironment objects): Contains an HFOEnvironment object
-            for each agent on team.
-        opp_xxx attributes: Extend the same functionality for user controlled team
-            to opposing team.
+        left_envs (list of HFOEnvironment objects): Contains an HFOEnvironment object
+            for each agent on left.
+        right_xxx attributes: Extend the same functionality for user controlled left
+            to rightosing left.
     Todo:
-        * Functionality for synchronizing team actions with opponent team actions
-        * Add the ability for team agents to function with npcs taking the place of opponents
+        * Functionality for synchronizing left actions with rightonent left actions
+        * Add the ability for left agents to function with npcs taking the place of rightonents
         """
 
     def __init__(self, config, port):
@@ -61,8 +61,8 @@ class rc_env:
 
         # params for low level actions
         num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
-        self.team_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_left)])
-        self.opp_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_right)])
+        self.left_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_left)])
+        self.right_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_right)])
         if config['action_level'] == 'low':
             #                   pow,deg   deg       deg         pow,deg    
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
@@ -85,9 +85,9 @@ class rc_env:
             self.left_features = (6*self.num_left) + (3*self.num_right) + (3*self.num_rightBot) + 6
             self.right_features = (6*self.num_right) + (3*self.num_left) + (3*self.num_rightBot) + 6
         elif config.fl == 'simple':
-            # 16 - land_feats + 12 - basic feats + 6 per (team/opp)
-            self.left_features = 28 + (6 * ((self.num_left-1) + self.num_right)) + 8
-            self.right_features = 28 + (6 * ((self.num_right-1) + self.num_left)) + 8
+            # 16 - land_feats + 12 - basic feats + 6 per (left/right)
+            self.left_features = 28 + (6 * ((self.num_left-1) + self.num_right))
+            self.right_features = 28 + (6 * ((self.num_right-1) + self.num_left))
 
         self.acs_dim = config['ac_dim']
         self.left_envs = None
@@ -130,32 +130,27 @@ class rc_env:
         
         # Create thread(s) for left side
         for i in range(self.num_left):
+            print("Connecting player %i" % i , "on left %s to the server" % self.left_base)
             if i == 0:
-                print("Connecting player %i" % i , "on team %s to the server" % self.left_base)
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.left_base,
                                                 self.goalie,i,self.fpt,self.act_lvl,))
-                t.start()
             else:
-                print("Connecting player %i" % i , "on team %s to the server" % self.left_base)
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.left_base,
                                                 False,i,self.fpt,self.act_lvl,))
-                t.start()
-
+            t.start()
             time.sleep(1.5)
         
         for i in range(self.num_right):
+            print("Connecting player %i" % i , "on rightonent %s to the server" % self.right_base)
             if i == 0:
-                print("Connecting player %i" % i , "on Opponent %s to the server" % self.right_base)
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.right_base,
                                                 self.goalie,i,self.fpt,self.act_lvl,))
-                t.start()
             else:
-                print("Connecting player %i" % i , "on Opponent %s to the server" % self.right_base)
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.right_base,
                                                 False,i,self.fpt,self.act_lvl,))
-                t.start()
-
+            t.start()
             time.sleep(1.5)
+
         print("All players connected to server")
         self.start = True
 
@@ -172,161 +167,43 @@ class rc_env:
             return self.right_rewards[agent_id]
 
 
-    def Step(self, team_actions, opp_actions, team_params=[], opp_params=[],team_actions_OH = [],opp_actions_OH = []):
-        """ Performs each agents' action from actions and returns tuple (obs,rewards,world_status)
-        Args:
-            actions (list of ints); List of integers corresponding to the action each agent will take
-            side (str): Which team agent belongs to. ('team', 'opp')
-        Returns:
-            Status of HFO World
-        Todo:
-            * Add functionality for opp team
-        """
-        # Queue actions for team
-        for i in range(self.num_TA):
-            self.team_actions_OH[i] = misc.zero_params(team_actions_OH[i].reshape(-1))
-            self.opp_actions_OH[i] = misc.zero_params(opp_actions_OH[i].reshape(-1))
-        [self.Queue_action(i,self.team_base,team_actions[i],team_params) for i in range(len(team_actions))]
-        # Queue actions for opposing team
-        [self.Queue_action(j,self.opp_base,opp_actions[j],opp_params) for j in range(len(opp_actions))]
+    def Step(self, left_actions, right_actions, left_params=[], 
+            right_params=[], left_actions_OH = [], right_actions_OH = []):
+
+        for i in range(self.num_left):
+            self.left_actions_OH[i] = misc.zero_params(left_actions_OH[i].reshape(-1))
+        
+        for i in range(self.num_right):
+            self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
+
+        [self.Queue_action(i,self.left_base,left_actions[i],left_params) for i in range(len(left_actions))]
+        [self.Queue_action(j,self.right_base,right_actions[j],right_params) for j in range(len(right_actions))]
 
         self.sync_after_queue.wait()
-
         self.sync_before_step.wait()
-
-        self.team_rewards = [rew + self.pass_reward if passer else rew for rew,passer in zip(self.team_rewards,self.team_passer)]
-        self.opp_rewwards =[rew + self.pass_reward if passer else rew for rew,passer in zip(self.opp_rewards,self.opp_passer)]
         
-
-        self.team_rewards = np.add( self.team_rewards, self.team_lost_possession)
-        self.opp_rewards = np.add(self.opp_rewards, self.opp_lost_possession)
-
-
-        self.team_passer = [0]*self.num_TA
-        self.opp_passer = [0]*self.num_TA
-        self.team_lost_possession = [0]*self.num_TA
-        self.opp_lost_possession = [0]*self.num_TA
-        return np.asarray(self.team_obs),self.team_rewards,np.asarray(self.opp_team_obs),self.opp_rewards, \
+        return np.asarray(self.left_obs),self.left_rewards,np.asarray(self.right_obs),self.right_rewards, \
                 self.d, self.world_status
 
-
-
     def Queue_action(self,agent_id,base,action,params=[]):
-        """ Queues an action on agent, and if all agents have received action instructions performs the actions.
-        Args:
-            agent_id (int): Agent to receive observation from. (0-11)
-            base (str): Which side an agent belongs to. ('base_left', 'base_right')
-        """
 
-        if self.team_base == base:
-            self.team_actions[agent_id] = action
+        if self.left_base == base:
+            self.left_actions[agent_id] = action
             if self.act_lvl == 'low':
                 for p in range(params.shape[1]):
-                    self.team_action_params[agent_id][p] = params[agent_id][p]
+                    self.left_action_params[agent_id][p] = params[agent_id][p]
         else:
-            self.opp_actions[agent_id] = action
+            self.right_actions[agent_id] = action
             if self.act_lvl == 'low':
                 for p in range(params.shape[1]):
-                    self.opp_action_params[agent_id][p] = params[agent_id][p]
-
-
-#################################################
-######################  Utils for Reward ########
-#################################################
-
-    def get_kickable_status(self,agentID,env):
-        ball_kickable = False
-        ball_kickable = env.isKickable()
-        #print("no implementation")
-        return ball_kickable
-    
-    def get_agent_possession_status(self,agentID,base):
-        if self.team_base == base:
-            if self.agent_possession_team[agentID] == 'L':
-                self.team_possession_counter[agentID] += 1
-            
-            return self.team_possession_counter[agentID]
-        else:
-            if self.agent_possession_opp[agentID] == 'R':
-                self.opp_possession_counter[agentID] += 1
-        #    print("no implementation")
-            return self.opp_possession_counter[agentID]  
-
-
-
-    def closest_player_to_ball(self, team_obs, num_agents):
-        '''
-        teams receive reward based on the distance of their closest agent to the ball
-        '''
-        closest_player_index = 0
-        ball_distance = self.distance_to_ball(team_obs[0])
-        for i in range(1, num_agents):
-            temp_distance = self.distance_to_ball(team_obs[i])
-            if temp_distance < ball_distance:
-                closest_player_index = i
-                ball_distance = temp_distance
-        return ball_distance, closest_player_index
-    
-    def agent_possession_reward(self,base,agentID):
-        '''
-        agent receives reward for possessing ball
-        '''
-        rew_amount = 0.001
-        if self.team_base == base:
-            if self.agent_possession_team[agentID] == 'L':
-                return rew_amount
-        else:
-            if self.agent_possession_opp[agentID] == 'R':
-                return rew_amount
-        return 0.0
-                
-    def unnormalize_unif(self,unif):
-        print("no implementation")
-        return int(np.round(unif * 100,decimals=0))
-            
-    def team_possession_reward(self,base):
-
-        '''
-        teams receive reward based on possession defined by which side had the ball kickable last
-        '''
-        rew_amount = 0.001
-        global possession_side
-        if self.team_base == base:
-            if  possession_side == 'L':
-                    return rew_amount
-            if  possession_side == 'R':
-                    return -rew_amount
-        else: 
-            if  possession_side == 'R':
-                    return rew_amount
-            if  possession_side == 'L':
-                    return -rew_amount
-        #print("no implementation")
-        return 0.0
-        
-        
-    def ball_distance_to_goal(self,obs):
-        goal_center_x = 1.0
-        goal_center_y = 0.0
-        relative_x = obs[self.ball_x] - goal_center_x
-        relative_y = obs[self.ball_y] - goal_center_y
-        ball_distance_to_goal = math.sqrt(relative_x**2 + relative_y**2)
-        return ball_distance_to_goal
-    
- 
-    def distance_to_ball(self, obs):
-        relative_x = obs[self.x]-obs[self.ball_x]
-        relative_y = obs[self.y]-obs[self.ball_y]
-        ball_distance = math.sqrt(relative_x**2+relative_y**2)
-        
-        return ball_distance
+                    self.right_action_params[agent_id][p] = params[agent_id][p]
     
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,param,base):
-        if self.team_base == base:
-            self.action_params = self.team_action_params
+        if self.left_base == base:
+            self.action_params = self.left_action_params
         else:
-            self.action_params = self.opp_action_params
+            self.action_params = self.right_action_params
 
         if param == 0: # dash power
             #return ((self.action_params[agentID][0].clip(-1,1) + 1)/2)*100
@@ -340,85 +217,6 @@ class rc_env:
             return ((self.action_params[agentID][3].clip(-1,1) + 1)/2)*100
         elif param == 4: # kick deg
             return self.action_params[agentID][4].clip(-1,1)*180
-
-        # with tackle
-
-
-    def get_excess_param_distance(self,agentID,base):
-        if self.team_base == base:
-            self.action_params = self.team_action_params
-        else:
-            self.action_params = self.opp_action_params
-
-        distance = 0
-        distance += (self.action_params[agentID][0].clip(-1,1) - self.action_params[agentID][0])**2
-        distance += (self.action_params[agentID][1].clip(-1,1) - self.action_params[agentID][1])**2
-        distance += (self.action_params[agentID][2].clip(-1,1) - self.action_params[agentID][2])**2
-        distance += (self.action_params[agentID][3].clip(-1,1) - self.action_params[agentID][3])**2
-        distance += (self.action_params[agentID][4].clip(-1,1) - self.action_params[agentID][4])**2
-        return distance
-
-    
-    def getPretrainRew(self,s,d,base):
-        
-
-        reward=0.0
-        team_reward = 0.0
-        goal_points = 30.0
-        #---------------------------
-        global possession_side
-        if d:
-            if self.team_base == base:
-            # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
-                if s==1:
-                    reward+= goal_points
-                elif s==2:
-                    reward+=-goal_points
-                elif s==3:
-                    reward+=-0.5
-                elif s==6:
-                    reward+= +goal_points/5.0
-                elif s==7:
-                    reward+= -goal_points/4.0
-
-                return reward
-            else:
-                if s==1:
-                    reward+=-goal_points
-                elif s==2:
-                    reward+=goal_points
-                elif s==3:
-                    reward+=-0.5
-                elif s==6:
-                    reward+= -goal_points/4.0
-                elif s==7:
-                    reward+= goal_points/5.0
-
-        return reward
-       
-    def distance(self,x1,x2,y1,y2):
-        return math.sqrt((x1-x2)**2 + (y1-y2)**2)
-
-    def distances(self,agentID,side):
-        if side == 'left':
-            team_obs = self.team_obs
-            opp_obs =  self.opp_team_obs
-        elif side =='right':
-            team_obs = self.opp_team_obs
-            opp_obs = self.team_obs
-        else:
-            print("Error: Please return a side: ('left', 'right') for side parameter")
-
-        distances_team = []
-        distances_opp = []
-        for i in range(len(team_obs)):
-            distances_team.append(self.distance(team_obs[agentID][self.x],team_obs[i][self.x], team_obs[agentID][self.y],team_obs[i][self.y]))
-            distances_opp.append(self.distance(team_obs[agentID][self.x], -opp_obs[i][self.x], team_obs[agentID][self.y], -opp_obs[i][self.y]))
-        return np.argsort(distances_team), np.argsort(distances_opp)
-
-
-    def unnormalize(self,val):
-        return (val +1.0)/2.0
     
     # Engineered Reward Function
     def getReward(self,s,agentID,base,ep_num):
@@ -447,131 +245,76 @@ class rc_env:
 
         config_dir = HFO.get_config_path() 
         recorder_dir = 'log/'
-        if self.team_base == base:
-            self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
-                                server_port=port, server_addr='localhost', team_name=base,
+
+        if self.left_base == base:
+            self.left_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
+                                server_port=port, server_addr='localhost', left_name=base,
                                                     play_goalie=goalie,record_dir =recorder_dir)
         else:
-            self.opp_team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
-                                server_port=port, server_addr='localhost', team_name=base, 
+            self.right_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
+                                server_port=port, server_addr='localhost', left_name=base, 
                                                     play_goalie=goalie,record_dir =recorder_dir)
 
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        # Once all agents have been loaded,
-        # wait for action command, take action, update: obs, reward, and world status
         ep_num = 0
-
         while(True):
             while(self.start):
                 ep_num += 1
                 j = 0 # j to maximum episode length
 
-                if self.team_base == base:
-
-                    self.team_obs_previous[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # Get initial state
-                    self.team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
-                    self.team_obs_previous[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
+                if self.left_base == base:
+                    self.left_obs_previous[agent_ID] = self.left_envs[agent_ID].getState() # Get initial state
+                    self.left_obs[agent_ID] = self.left_envs[agent_ID].getState() # Get initial state
                 else:
-                    self.opp_team_obs_previous[agent_ID,:-8] = self.opp_team_envs[agent_ID].getState() # Get initial state
-                    self.opp_team_obs[agent_ID,:-8] = self.opp_team_envs[agent_ID].getState() # Get initial state
-                    self.opp_team_obs[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
-                    self.opp_team_obs_previous[agent_ID,-8:] = [0.0,0.0,0.0, 0.0,0.0,0.0,0.0,0.0]
+                    self.right_obs_previous[agent_ID] = self.right_envs[agent_ID].getState() # Get initial state
+                    self.right_obs[agent_ID] = self.right_envs[agent_ID].getState() # Get initial state
 
-
-                self.been_kicked_team = False
-                self.been_kicked_opp = False
+                # self.been_kicked_left = False
+                # self.been_kicked_right = False
                 while j < fpt:
 
                     self.sync_after_queue.wait()
-
                     
                     # take the action
-                    if self.team_base == base:
+                    if self.left_base == base:
                         # take the action
                         if act_lvl == 'high':
-                            self.team_envs[agent_ID].act(self.action_list[self.team_actions[agent_ID]]) # take the action
-                            self.sync_at_status_team[agent_ID] += 1
-                        elif act_lvl == 'low':
-                            # use params for low level actions
-                            
+                            self.left_envs[agent_ID].act(self.action_list[self.left_actions[agent_ID]]) # take the action
+                        elif act_lvl == 'low'
                             # scale action params
-                            a = self.team_actions[agent_ID]
-                            
-                            # with tackle -- outdated
-                            """if a == 0:
-                                self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
-                                #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
-                            elif a == 1:
-                                #print(self.action_list[a],self.action_params[agent_ID][2])
-                                self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][2])
-                            elif a == 2:
-                                #print(self.action_list[a],self.action_params[agent_ID][3])                            
-                                self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][3])           
-                            elif a ==3:
-                                #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
-                                self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
-                            """
-                            
+                            a = self.left_actions[agent_ID]
                             # without tackle
                             if a == 0:
-                                self.team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,0,base),self.get_valid_scaled_param(agent_ID,1,base))
-                                #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
+                                self.left_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,0,base),self.get_valid_scaled_param(agent_ID,1,base))
                             elif a == 1:
-                                #print(self.action_list[a],self.action_params[agent_ID][2])
-                                self.team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,2,base))                       
+                                self.left_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,2,base))                       
                             elif a ==2:
-                                #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
-                                self.team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3,base),self.get_valid_scaled_param(agent_ID,4,base))
-
+                                self.left_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3,base),self.get_valid_scaled_param(agent_ID,4,base))
                     else:
                         # take the action
                         if act_lvl == 'high':
-                            self.opp_team_envs[agent_ID].act(self.action_list[self.opp_actions[agent_ID]]) # take the action
-                            self.sync_at_status_opp[agent_ID] += 1
+                            self.right_envs[agent_ID].act(self.action_list[self.right_actions[agent_ID]]) # take the action
                         elif act_lvl == 'low':
-                            # use params for low level actions
-                            # scale action params
-                            a = self.opp_actions[agent_ID]
-                            
-                            # with tackle -- outdated
-                            """if a == 0:
-                                self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
-                                #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
-                            elif a == 1:team_envs
-                                #print(self.action_list[a],self.action_params[agent_ID][2])
-                                self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][2])
-                            elif a == 2:
-                                #print(self.action_list[a],self.action_params[agent_ID][3])                            
-                                self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][3])           
-                            elif a ==3:
-                                #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
-                                self.team_envs[agent_ID].act(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
-                            """
+                            a = self.right_actions[agent_ID]
                             # without tackle
                             if a == 0:
-                                self.opp_team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,0,base),self.get_valid_scaled_param(agent_ID,1,base))
-                                #print(self.action_list[a],self.action_params[agent_ID][0],self.action_params[agent_ID][1])
+                                self.right_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,0,base),self.get_valid_scaled_param(agent_ID,1,base))
                             elif a == 1:
-                                #print(self.action_list[a],self.action_params[agent_ID][2])
-                                self.opp_team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,2,base))                       
+                                self.right_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,2,base))                       
                             elif a == 2:
-                                #print(self.action_list[a],self.action_params[agent_ID][4],self.action_params[agent_ID][5])
-                                self.opp_team_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3,base),self.get_valid_scaled_param(agent_ID,4,base))
+                                self.right_envs[agent_ID].act(self.action_list[a],self.get_valid_scaled_param(agent_ID,3,base),self.get_valid_scaled_param(agent_ID,4,base))
 
                     self.sync_at_status.wait()
                     
-                    if self.team_base == base:
-                        self.team_obs_previous[agent_ID] = self.team_obs[agent_ID]
-                        self.world_status = self.team_envs[agent_ID].step() # update world                        
-                        self.team_obs[agent_ID,:-8] = self.team_envs[agent_ID].getState() # update obs after all agents have acted
-                        self.team_obs[agent_ID,-8:] =  self.team_actions_OH[agent_ID]
+                    if self.left_base == base:
+                        self.left_obs_previous[agent_ID] = self.left_obs[agent_ID]
+                        self.world_status = self.left_envs[agent_ID].step() # update world                        
+                        self.left_obs[agent_ID] = self.left_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.left_obs[agent_ID] =  self.left_actions_OH[agent_ID]
                     else:
-                        self.opp_team_obs_previous[agent_ID] = self.opp_team_obs[agent_ID]
-                        self.world_status = self.opp_team_envs[agent_ID].step() # update world
-                        self.opp_team_obs[agent_ID,:-8] = self.opp_team_envs[agent_ID].getState() # update obs after all agents have acted
-                        self.opp_team_obs[agent_ID,-8:] =  self.opp_actions_OH[agent_ID]
+                        self.right_obs_previous[agent_ID] = self.right_obs[agent_ID]
+                        self.world_status = self.right_envs[agent_ID].step() # update world
+                        self.right_obs[agent_ID,:-8] = self.right_envs[agent_ID].getState() # update obs after all agents have acted
+                        self.right_obs[agent_ID,-8:] =  self.right_actions_OH[agent_ID]
 
                     self.sync_at_reward.wait()
 
@@ -580,15 +323,14 @@ class rc_env:
                     else:
                         self.d = 1
 
-                    if self.team_base == base:
-                        self.team_rewards[agent_ID] = self.getReward(
-                            self.team_envs[agent_ID].statusToString(self.world_status),agent_ID,base,ep_num) # update reward
+                    if self.left_base == base:
+                        self.left_rewards[agent_ID] = self.getReward(
+                            self.left_envs[agent_ID].statusToString(self.world_status),agent_ID,base,ep_num) # update reward
                     else:
-                        self.opp_rewards[agent_ID] = self.getReward(
-                            self.opp_team_envs[agent_ID].statusToString(self.world_status),agent_ID,base,ep_num) # update reward
+                        self.right_rewards[agent_ID] = self.getReward(
+                            self.right_envs[agent_ID].statusToString(self.world_status),agent_ID,base,ep_num) # update reward
                     j+=1
                     self.sync_before_step.wait()
-
 
                     # Break if episode done
                     if self.d == True:
@@ -614,37 +356,36 @@ class rc_env:
             log_game: Enable game logging. Logs can be used for replay + visualization.
             log_dir: Directory to place game logs (*.rcg).
             """
-            self.server_port = self.port
             cmd = self.hfo_path + \
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
                   " --log-dir %s --message-size 256"\
-                  % (self.fpt, self.untouched, self.num_TA,
-                     self.num_OA, self.num_TNPC, self.num_ONPC, self.port,
+                  % (self.fpt, self.untouched, self.num_left,
+                     self.num_right, self.num_leftBot, self.num_rightBot, self.port,
                      self.offense_on_ball, self.seed, self.config.ball_x_min, self.config.ball_x_max,
                      self.config.ball_y_min, self.config.ball_y_max, self.config.log)
             #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
-            if self.num_TNPC > 0:   cmd += " --offense-team %s" \
-                % (self.config.left_bin)
-            if self.num_ONPC > 0:   cmd += " --defense-team %s" \
-                % (self.config.right_bin)
-            if not self.config.sync_mode:      cmd += " --no-sync"
-            if self.config.fullstate:          cmd += " --fullstate"
-            if self.config.determ:      cmd += " --deterministic"
-            if self.config.verbose:            cmd += " --verbose"
-            if not self.config.rcss_log:  cmd += " --no-logging"
-            if self.config.hfo_log:       cmd += " --hfo-logging"
-            if self.config.record_lib:             cmd += " --record"
-            if self.config.record_serv:      cmd += " --log-gen-pt"
-            if self.config.init_env:
-                cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
-                        " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
-                        " --change-balls-x %f --change-balls-y %f --control-rand-init"\
-                        % (self.config.agents_x_min, self.config.agents_x_max, self.config.agents_y_min, self.config.agents_y_max,
-                            self.config.change_every_x, self.config.change_agents_x, self.config.change_agents_y,
-                            self.config.change_ball_x, self.config.change_ball_y)
+            if self.num_leftBot > 0:   cmd += " --offense-left %s" \
+                % (self.config['left_bin'])
+            if self.num_rightBot > 0:   cmd += " --defense-left %s" \
+                % (self.config['right_bin'])
+            if not self.config['sync_mode']:      cmd += " --no-sync"
+            if self.config['fullstate']:          cmd += " --fullstate"
+            if self.config['determ']:      cmd += " --deterministic"
+            if self.config['verbose']:            cmd += " --verbose"
+            if not self.config['rcss_log']:  cmd += " --no-logging"
+            if self.config.['hfo_log']:       cmd += " --hfo-logging"
+            if self.config.['record_lib']:             cmd += " --record"
+            if self.config.['record_serv']:      cmd += " --log-gen-pt"
+            # if self.config['init_env']:
+            #     cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
+            #             " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
+            #             " --change-balls-x %f --change-balls-y %f --control-rand-init"\
+            #             % (self.config.agents_x_min, self.config.agents_x_max, self.config.agents_y_min, self.config.agents_y_max,
+            #                 self.config.change_every_x, self.config.change_agents_x, self.config.change_agents_y,
+            #                 self.config.change_ball_x, self.config.change_ball_y)
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
@@ -660,6 +401,6 @@ class rc_env:
         if self.viewer is not None:
             os.kill(self.viewer.pid, signal.SIGKILL)
         cmd = HFO.get_viewer_path() +\
-              " --connect --port %d" % (self.server_port)
+              " --connect --port %d" % (self.port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 
