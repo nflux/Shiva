@@ -1,13 +1,32 @@
 import yaml
 
-data = dict(
-    A = 'a',
-    B = dict(
-        C = 'c',
-        D = 'd',
-        E = 'e',
-    )
-)
+confs = {
+    'brock.yaml': {
+        'Pokemon':
+        [
+            'Growleth',
+            'Squritle',
+            'Ratatat'
+        ],
 
-with open('data.yml', 'w') as outfile:
-    yaml.dump(data, outfile, default_flow_style=False)
+        'Items':
+        {
+            'Potion':40
+        }
+    },
+
+    'ash.yaml': {
+        'Pokemon':
+        [
+            'Pikachu',
+            'Pidgy'
+        ],
+
+        'Items':
+        {
+            'Antidote':'Normal'
+        }
+    }
+}
+
+# [yaml.dump(data, open(file, 'w'), default_flow_style=False) for file,data in confs.items()]

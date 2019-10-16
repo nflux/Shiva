@@ -3,11 +3,14 @@ import time
 import threading
 import pandas as pd
 import math
-from .HFO.hfo import hfo
-from .HFO import get_config_path, get_hfo_path, get_viewer_path
 import os, subprocess, time, signal
-from utils import misc as misc
-from algorithms.maddpg import MADDPG
+import HFO
+import HFO.hfo.hfo as hfo
+import misc
+# from .HFO.hfo import hfo
+# from .HFO import get_config_path, get_hfo_path, get_viewer_path
+
+# from utils import misc as misc
 from torch.autograd import Variable
 import torch
 
@@ -41,189 +44,114 @@ class rc_env:
         * Functionality for synchronizing team actions with opponent team actions
         * Add the ability for team agents to function with npcs taking the place of opponents
         """
-    # class constructor
-    # def __init__(self, num_TNPC=0,num_TA = 1,num_OA = 0,num_ONPC = 1,base = 'base_left',
-    #              goalie = False, num_trials = 10000,fpt = 100,feat_lvl = 'high',
-    #              act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
-    #              offense_on_ball=0, fullstate = False, seed = 123,
-    #              ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-    #              verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
-    #              agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
-    #              change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
-    #              change_balls_y=0.1, control_rand_init=False,record=False,record_server=False,
-    #              defense_team_bin='helios15', offense_team_bin='helios16', run_server=False, deterministic=True):
 
     def __init__(self, config, port):
         self.config = config
-
-        self.pass_reward = 0.0
-        self.agent_possession_team = ['N'] * config.num_left
-        self.team_passer = [0]*config.num_left
-        self.opp_passer = [0]*config.num_left
-        self.team_lost_possession = [0]*config.num_left
-        self.opp_lost_possession = [0]*config.num_left
-        self.agent_possession_opp = ['N'] * config.num_right
-        self.team_possession_counter = [0] * config.num_left
-        self.opp_possession_counter = [0] * config.num_right
-        self.team_kickable = [0] * config.num_right
-        self.opp_kickable = [0] * config.num_right
-        self.offense_on_ball = config.offense_ball
-
-        self.untouched = config.untouched
-
-        self.goalie = config.goalie
-        self.team_rew_anneal_ep = config.reward_anneal
+        self.untouched = config['untouched']
+        self.goalie = config['goalie']
         self.port = port
-        self.hfo_path = get_hfo_path()
+        self.hfo_path = HFO.get_hfo_path()
         self.seed = np.random.randint(1000)
-
         self.viewer = None
+
+        self.num_left = config['num_left']
+        self.num_right = config['num_right']
+        self.num_leftBot = config['num_l_bot']
+        self.num_rightBot = config['num_r_bot']
 
         # params for low level actions
         num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
         self.team_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_left)])
         self.opp_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_right)])
-        if config.al == 'low':
+        if config['action_level'] == 'low':
             #                   pow,deg   deg       deg         pow,deg    
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
             self.action_list = [hfo.DASH, hfo.TURN, hfo.KICK]
-
             self.kick_actions = [hfo.KICK] # actions that require the ball to be kickable
-    
-        elif config.al == 'high':
+        elif config['action_level'] == 'high':
             self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL, hfo.MOVE]
             self.kick_actions = [hfo.DRIBBLE, hfo.SHOOT, hfo.PASS] # actions that require the ball to be kickable
-        
-        self.num_TA = config.num_left
-        self.num_OA = config.num_right
-        self.num_ONPC = config.num_r_bot
-        self.num_TNPC = config.num_l_bot
 
-        self.base = 'base_left'
-        self.fpt = config.ep_length
-        self.been_kicked_team = False
-        self.been_kicked_opp = False
-        self.act_lvl = config.al
-        self.feat_lvl = config.fl
-        self.team_possession = False
-        self.opp_possession = False
-        if config.fl == 'low':
+        self.fpt = config['ep_length']
+
+        self.act_lvl = config['action_level']
+        self.feat_lvl = config['feature_level']
+
+        if config['feature_level'] == 'low':
             #For new obs reorganization without vailds, changed hfo obs from 59 to 56
-            self.team_num_features = 56 + 13*(config.num_left-1) + 12*config.num_right + 4 + 1 + 2 + 1  + 8
-            self.opp_num_features = 56 + 13*(config.num_right-1) + 12*config.num_left + 4 + 1 + 2 + 1 + 8
+            self.left_features = 56 + 13*(self.num_left-1) + 12*self.num_right + 4 + 1 + 2 + 1  + 8
+            self.right_features = 56 + 13*(self.num_right-1) + 12*self.num_left + 4 + 1 + 2 + 1 + 8
         elif config.fl == 'high':
-            self.team_num_features = (6*config.num_left) + (3*config.num_right) + (3*num_ONPC) + 6
-            self.opp_num_features = (6*config.num_right) + (3*config.num_left) + (3*num_ONPC) + 6
+            self.left_features = (6*self.num_left) + (3*self.num_right) + (3*self.num_rightBot) + 6
+            self.right_features = (6*self.num_right) + (3*self.num_left) + (3*self.num_rightBot) + 6
         elif config.fl == 'simple':
             # 16 - land_feats + 12 - basic feats + 6 per (team/opp)
-            self.team_num_features = 28 + (6 * ((config.num_left-1) + config.num_right)) + 8
-            self.opp_num_features = 28 + (6 * (config.num_left + (config.num_right-1))) + 8
+            self.left_features = 28 + (6 * ((self.num_left-1) + self.num_right)) + 8
+            self.right_features = 28 + (6 * ((self.num_right-1) + self.num_left)) + 8
 
-        self.acs_dim = config.ac_dim
-        # Feature indexes by name
-        self.stamina = 26
-        self.ball_x = 16
-        self.ball_y = 17
-        self.ball_x_vel = 18
-        self.ball_y_vel = 19
-        self.x = 20
-        self.y = 21
-        self.x_vel = 22
-        self.y_vel = 23
-        self.opp_goal_top_x = 12
-        self.opp_goal_top_y = 13
-        self.opp_goal_bot_x = 14
-        self.opp_goal_bot_y = 15
-
-        # self._start_hfo_server()
-        # self.team_envs = [hfo.HFOEnvironment() for i in range(config.num_left)]
-        # self.opp_team_envs = [hfo.HFOEnvironment() for i in range(config.num_right)]
-        self.team_envs = None
-        self.opp_team_envs = None
+        self.acs_dim = config['ac_dim']
+        self.left_envs = None
+        self.right_envs = None
 
         # flag that says when the episode is done
         self.d = 0
-
         # flag to wait for all the agents to load
         self.start = False
 
-        self.sync_after_queue = threading.Barrier(config.num_left+config.num_right+1)
-        self.sync_before_step = threading.Barrier(config.num_left+config.num_right+1)
-        self.sync_at_status = threading.Barrier(config.num_left+config.num_right)
-        self.sync_at_reward = threading.Barrier(config.num_left+config.num_right)
+        # Various Barriers to keep all agents actions in sync
+        self.sync_after_queue = threading.Barrier(self.num_left+self.num_right+1)
+        self.sync_before_step = threading.Barrier(self.num_left+self.num_right+1)
+        self.sync_at_status = threading.Barrier(self.num_left+self.num_right)
+        self.sync_at_reward = threading.Barrier(self.num_left+self.num_right)
 
-        # Initialization of mutable lists to be passsed to threads
-        # action each team mate is supposed to take when its time to act
-        self.team_actions = np.array([2]*config.num_left)
-        # observation space for all team mate agents
-        self.team_obs = np.empty([config.num_left,self.team_num_features],dtype=float)
-        # previous state for all team agents
-        self.team_obs_previous = np.empty([config.num_left,self.team_num_features],dtype=float)
-        self.team_actions_OH = np.empty([config.num_left,8],dtype=float)
-        self.opp_actions_OH = np.empty([config.num_left,8],dtype=float)
+        # Left side actions, obs, rewards
+        self.left_actions = np.array([2]*self.num_left)
+        self.left_actions_OH = np.empty([self.num_left, 8],dtype=float)
+        self.left_obs = np.empty([self.num_left,self.left_features],dtype=float)
+        self.left_obs_previous = np.empty([self.num_left,self.left_features],dtype=float)
+        self.left_rewards = np.zeros(self.num_left)
 
-        # reward for each agent
-        self.team_rewards = np.zeros(config.num_left)
+        # Right side actions, obs, rewards
+        self.right_actions = np.array([2]*self.num_right)
+        self.right_obs = np.empty([self.num_right,self.right_features],dtype=float)
+        self.right_obs_previous = np.empty([self.num_right,self.right_features],dtype=float)
+        self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
+        self.right_rewards = np.zeros(self.num_right)
 
-        self.opp_actions = np.array([2]*config.num_right)
-        # observation space for all team mate agents
-        self.opp_team_obs = np.empty([config.num_right,self.opp_num_features],dtype=float)
-        # previous state for all team agents
-        self.opp_team_obs_previous = np.empty([config.num_right,self.opp_num_features],dtype=float)
-        # reward for each agent
-        self.opp_rewards = np.zeros(config.num_right)
-
-        # keeps track of world state
         self.world_status = 0
         
-        self.team_base = self.base
-        self.opp_base = ''
-
-        # Create thread for each opponent (set one to goalie)
-        if self.base == 'base_left':
-            self.opp_base = 'base_right'
-        elif self.base == 'base_right':
-            self.opp_base = 'base_left'
+        self.left_base = 'base_left'
+        self.right_base = 'base_right'
         
     def launch(self):
         self._start_hfo_server()
-        self.team_envs = [hfo.HFOEnvironment() for i in range(self.config.num_left)]
-        self.opp_team_envs = [hfo.HFOEnvironment() for i in range(self.config.num_right)]
+        self.left_envs = [hfo.HFOEnvironment() for i in range(self.num_left)]
+        self.right_envs = [hfo.HFOEnvironment() for i in range(self.num_right)]
         
-        # Create thread for each teammate
-        for i in range(self.num_TA):
+        # Create thread(s) for left side
+        for i in range(self.num_left):
             if i == 0:
-                print("Connecting player %i" % i , "on team %s to the server" % self.base)
-                # thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
-                #                                 self.goalie,i,self.fpt,self.act_lvl,))
-                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.base,
+                print("Connecting player %i" % i , "on team %s to the server" % self.left_base)
+                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.left_base,
                                                 self.goalie,i,self.fpt,self.act_lvl,))
-                print("herereerr")
                 t.start()
-                print("herereerr")
             else:
-                print("Connecting player %i" % i , "on team %s to the server" % self.base)
-                # thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.base,
-                #                                 False,i,self.fpt,self.act_lvl,))
-                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.base,
+                print("Connecting player %i" % i , "on team %s to the server" % self.left_base)
+                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.left_base,
                                                 False,i,self.fpt,self.act_lvl,))
                 t.start()
-            print('This is printed next')
+
             time.sleep(1.5)
         
-        for i in range(self.num_OA):
+        for i in range(self.num_right):
             if i == 0:
-                print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
-                # thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
-                #                                 self.goalie,i,self.fpt,self.act_lvl,))
-                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.opp_base,
+                print("Connecting player %i" % i , "on Opponent %s to the server" % self.right_base)
+                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.right_base,
                                                 self.goalie,i,self.fpt,self.act_lvl,))
                 t.start()
             else:
-                print("Connecting player %i" % i , "on Opponent %s to the server" % self.opp_base)
-                # thread.start_new_thread(self.connect,(self.port,self.feat_lvl, self.opp_base,
-                #                                 False,i,self.fpt,self.act_lvl,))
-                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.opp_base,
+                print("Connecting player %i" % i , "on Opponent %s to the server" % self.right_base)
+                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.right_base,
                                                 False,i,self.fpt,self.act_lvl,))
                 t.start()
 
@@ -231,34 +159,17 @@ class rc_env:
         print("All players connected to server")
         self.start = True
 
-        
-
     def Observation(self,agent_id,side):
-        """ Requests and returns observation from an agent from either team.
-        Args:
-            agent_id (int): Agent to receive observation from. (0-11)
-            side (str): Which team agent belongs to. ('team', 'opp')
-        Returns:
-            Observation from requested agent.
-        """
-
-        if side == 'team':
-            return self.team_obs[agent_id]
-        elif side == 'opp':
-            return self.opp_team_obs[agent_id]
+        if side == 'left':
+            return self.left_obs[agent_id]
+        elif side == 'right':
+            return self.right_obs[agent_id]
 
     def Reward(self,agent_id,side):
-        """ Requests and returns reward from an agent from either team.
-        Args:
-            agent_id (int): Agent to receive observation from. (0-11)
-            side (str): Which team agent belongs to. ('team', 'opp')
-        Returns:
-            Reward from requested agent.
-        """
-        if side == 'team':
-            return self.team_rewards[agent_id]
-        elif side == 'opp':
-            return self.opp_rewards[agent_id]
+        if side == 'left':
+            return self.left_rewards[agent_id]
+        elif side == 'right':
+            return self.right_rewards[agent_id]
 
 
     def Step(self, team_actions, opp_actions, team_params=[], opp_params=[],team_actions_OH = [],opp_actions_OH = []):
@@ -510,329 +421,9 @@ class rc_env:
         return (val +1.0)/2.0
     
     # Engineered Reward Function
-    #   To-do: Add the ability of team agents to know if opponent npcs hold ball posession. For now, having npc opponent disables first kick award
     def getReward(self,s,agentID,base,ep_num):
         reward=0.0
-        team_reward = 0.0
-        goal_points = 20.0
-        #---------------------------
-        global possession_side
-        if self.d:
-            if self.team_base == base:
-            # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
-                if s=='Goal_By_Left' and self.agent_possession_team[agentID] == 'L':
-                    reward+= goal_points
-                elif s=='Goal_By_Left':
-                    reward+= goal_points # teammates get 10% of points
-                elif s=='Goal_By_Right':
-                    reward+=-goal_points
-                elif s=='OutOfBounds' and self.agent_possession_team[agentID] == 'L':
-                    reward+=-0.5
-                elif s=='CapturedByLeftGoalie':
-                    reward+=goal_points/5.0
-                elif s=='CapturedByRightGoalie':
-                    reward+= 0 #-goal_points/4.0
-
-                possession_side = 'N' # at the end of each episode we set this to none
-                self.agent_possession_team = ['N'] * self.num_TA
-                return reward
-            else:
-                if s=='Goal_By_Right' and self.agent_possession_opp[agentID] == 'R':
-                    reward+=goal_points
-                elif s=='Goal_By_Right':
-                    reward+=goal_points
-                elif s=='Goal_By_Left':
-                    reward+=-goal_points
-                elif s=='OutOfBounds' and self.agent_possession_opp[agentID] == 'R':
-                    reward+=-0.5
-                elif s=='CapturedByRightGoalie':
-                    reward+=goal_points/5.0
-                elif s=='CapturedByLeftGoalie':
-                    reward+= 0 #-goal_points/4.0
-
-                possession_side = 'N'
-                self.agent_possession_opp = ['N'] * self.num_OA
-                return reward
-        
-
-        
-        if self.team_base == base:
-            team_actions = self.team_actions
-            team_obs = self.team_obs
-            team_obs_previous = self.team_obs_previous
-            opp_obs = self.opp_team_obs
-            opp_obs_previous = self.opp_team_obs_previous
-            num_ag = self.num_TA
-            env = self.team_envs[agentID]
-            kickable = self.team_kickable[agentID]
-            self.team_kickable[agentID] = self.get_kickable_status(agentID,env)
-        else:
-            team_actions = self.opp_actions
-            team_obs = self.opp_team_obs
-            team_obs_previous = self.opp_team_obs_previous
-            opp_obs = self.team_obs
-            opp_obs_previous = self.team_obs_previous
-            num_ag = self.num_OA
-            env = self.opp_team_envs[agentID]
-            kickable = self.opp_kickable[agentID]
-            self.opp_kickable[agentID] = self.get_kickable_status(agentID,env)# update kickable status (it refers to previous timestep, e.g., it WAS kickable )
-
-        if team_obs[agentID][self.stamina] < 0.0 : # LOW STAMINA
-            reward -= 0.003
-            team_reward -= 0.003
-            # print ('low stamina')
-        
-
-
-        ############ Kicked Ball #################
-        
-        if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:            
-            if self.num_OA > 0:
-                if (np.array(self.agent_possession_team) == 'N').all() and (np.array(self.agent_possession_opp) == 'N').all():
-                     #print("First Kick")
-                    reward += 1.5
-                    team_reward +=1.5
-                # set initial ball position after kick
-                    if self.team_base == base:
-                        self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
-                        self.BL_ball_pos_y = team_obs[agentID][self.ball_y]
-                    else:
-                        self.BR_ball_pos_x = team_obs[agentID][self.ball_x]
-                        self.BR_ball_pos_y = team_obs[agentID][self.ball_y]
-                        
-
-        #     # track ball delta in between kicks
-            if self.team_base == base:
-                self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
-                self.BL_ball_pos_y = team_obs[agentID][self.ball_y]
-            else:
-                self.BR_ball_pos_x = team_obs[agentID][self.ball_x]
-                self.BR_ball_pos_y = team_obs[agentID][self.ball_y]
-
-            new_x = team_obs[agentID][self.ball_x]
-            new_y = team_obs[agentID][self.ball_y]
-            
-            if self.team_base == base:
-                ball_delta = math.sqrt((self.BL_ball_pos_x-new_x)**2+ (self.BL_ball_pos_y-new_y)**2)
-                self.BL_ball_pos_x = new_x
-                self.BL_ball_pos_y = new_y
-            else:
-                ball_delta = math.sqrt((self.BR_ball_pos_x-new_x)**2+ (self.BR_ball_pos_y-new_y)**2)
-                self.BR_ball_pos_x = new_x
-                self.BR_ball_pos_y = new_y
-            
-            self.pass_reward = ball_delta * 5.0
-
-        #     ######## Pass Receiver Reward #########
-            if self.team_base == base:
-                if (np.array(self.agent_possession_team) == 'L').any():
-                    prev_poss = (np.array(self.agent_possession_team) == 'L').argmax()
-                    if not self.agent_possession_team[agentID] == 'L':
-                        self.team_passer[prev_poss] += 1 # sets passer flag to whoever passed
-                        # Passer reward is added in step function after all agents have been checked
-                       
-                        reward += self.pass_reward
-                        team_reward += self.pass_reward
-                        #print("received a pass worth:",self.pass_reward)
-        #               #print('team pass reward received ')
-        #         #Remove this check when npc ball posession can be measured
-                if self.num_OA > 0:
-                    if (np.array(self.agent_possession_opp) == 'R').any():
-                        enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-                        self.opp_lost_possession[enemy_possessor] -= 1.0
-                        self.team_lost_possession[agentID] += 1.0
-                        # print('BR lost possession')
-                        self.pass_reward = 0
-
-        #         ###### Change Possession Reward #######
-                self.agent_possession_team = ['N'] * self.num_TA
-                self.agent_possession_opp = ['N'] * self.num_OA
-                self.agent_possession_team[agentID] = 'L'
-                if possession_side != 'L':
-                    possession_side = 'L'    
-                    #reward+=1
-                    #team_reward+=1
-            else:
-                # self.opp_possession_counter[agentID] += 1
-                if (np.array(self.agent_possession_opp) == 'R').any():
-                    prev_poss = (np.array(self.agent_possession_opp) == 'R').argmax()
-                    if not self.agent_possession_opp[agentID] == 'R':
-                        self.opp_passer[prev_poss] += 1 # sets passer flag to whoever passed
-                        reward += self.pass_reward
-                        team_reward += self.pass_reward
-        #                 # print('opp pass reward received ')
-
-                if (np.array(self.agent_possession_team) == 'L').any():
-                    enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-                    self.team_lost_possession[enemy_possessor] -= 1.0
-                    self.opp_lost_possession[agentID] += 1.0
-                    self.pass_reward = 0
-      #             # print('BL lost possession ')
-
-                self.agent_possession_team = ['N'] * self.num_TA
-                self.agent_possession_opp = ['N'] * self.num_OA
-                self.agent_possession_opp[agentID] = 'R'
-                if possession_side != 'R':
-                    possession_side = 'R'
-                    #reward+=1
-                    #team_reward+=1
-
-        ####################### reduce distance to ball - using delta  ##################
-        # all agents rewarded for closer to ball
-        # dist_cur = self.distance_to_ball(team_obs[agentID])
-        # dist_prev = self.distance_to_ball(team_obs_previous[agentID])
-        # d = (0.5)*(dist_prev - dist_cur) # if cur > prev --> +   
-        # if delta > 0:
-        #     reward  += delta
-        #     team_reward += delta
-            
-        ####################### Rewards the closest player to ball for advancing toward ball ############
-        distance_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
-        distance_prev, closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
-        if agentID == closest_agent:
-            delta = (distance_prev - distance_cur)*1.0
-            #if delta > 0:    
-            if True:
-                team_reward += delta
-                reward+= delta
-            
-        ##################################################################################
-            
-        ####################### reduce ball distance to goal ##################
-        # base left kicks
-        r = self.ball_distance_to_goal(team_obs[agentID]) 
-        r_prev = self.ball_distance_to_goal(team_obs_previous[agentID]) 
-        if ((self.team_base == base) and possession_side =='L'):
-            team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-            if agentID == team_possessor:
-                delta = (2*self.num_TA)*(r_prev - r)
-                if True:
-                #if delta > 0:
-                    reward += delta
-                    team_reward += delta
-
-        # base right kicks
-        elif  ((self.team_base != base) and possession_side == 'R'):
-            team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-            if agentID == team_possessor:
-                delta = (2*self.num_TA)*(r_prev - r)
-                if True:
-                #if delta > 0:
-                    reward += delta
-                    team_reward += delta
-                    
-        # non-possessor reward for ball delta toward goal
-        else:
-            delta = (0*self.num_TA)*(r_prev - r)
-            if True:
-            #if delta > 0:
-                reward += delta
-                team_reward += delta       
-
-        # ################## Offensive Behavior #######################
-        # # [Offense behavior]  agents will be rewarded based on maximizing their open angle to opponents goal ( only for non possessors )
-        # if ((self.team_base == base) and possession_side =='L') or ((self.team_base != base) and possession_side == 'R'): # someone on team has ball
-        #     b,_,_ =self.ball_distance_to_goal(team_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        #     if b < 1.5 : # Ball is in scoring range
-        #         if (self.apprx_to_goal(team_obs[agentID]) > 0.0) and (self.apprx_to_goal(team_obs[agentID]) < .85):
-        #             a = self.unnormalize(team_obs[agentID][self.open_goal])
-        #             a_prev = self.unnormalize(team_obs_previous[agentID][self.open_goal])
-        #             if (self.team_base != base):    
-        #                 team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-        #             else:
-        #                 team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-        #             if agentID != team_possessor:
-        #                 reward += (a-a_prev)*2.0
-        #                 team_reward += (a-a_prev)*2.0
-        #             #print("offense behavior: goal angle open ",(a-a_prev)*3.0)
-
-
-        # # [Offense behavior]  agents will be rewarded based on maximizing their open angle to the ball (to receive pass)
-        # if self.num_TA > 1:
-        #     if ((self.team_base == base) and possession_side =='L') or ((self.team_base != base) and possession_side == 'R'): # someone on team has ball
-        #         if (self.team_base != base):
-                    
-        #             team_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-        #             #print("possessor is base right agent",team_possessor)
-
-        #         else:
-        #             team_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-        #             #print("possessor is base left agent",team_possessor)
-
-        #         unif_nums = np.array([self.unnormalize_unif(val) for val in team_obs[team_possessor][self.team_unif_beg:self.team_unif_end]])
-        #         unif_nums_prev = np.array([self.unnormalize_unif(val) for val in team_obs_previous[team_possessor][self.team_unif_beg:self.team_unif_end]])
-        #         if agentID != team_possessor:
-        #             if not (-100 in unif_nums) and not (-100 in unif_nums_prev):
-        #                 angle_delta = self.unnormalize(team_obs[team_possessor][self.team_pass_angle_beg + np.argwhere(unif_nums == (agentID+1))[0][0]]) - self.unnormalize(team_obs_previous[team_possessor][self.team_pass_angle_beg+np.argwhere(unif_nums_prev == (agentID+1))[0][0]])
-        #                 reward += angle_delta
-        #                 team_reward += angle_delta
-        #                 #print("offense behavior: pass angle open ",angle_delta*3.0)
-
-                    
-
-        # ################## Defensive behavior ######################
-
-        # # [Defensive behavior]  agents will be rewarded based on minimizing the opponents open angle to our goal
-        # if ((self.team_base != base) and possession_side == 'L'): # someone on team has ball
-        #     enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-        #     #print("possessor is base left agent",enemy_possessor)
-        #     agent_inds = np.where([self.apprx_to_goal(opp_obs[i]) > -0.75 for i in range(self.num_TA)])[0] # find who is in range
-
-        #     b,_,_ =self.ball_distance_to_goal(opp_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-
-        #     if b < 1.5 : # Ball is in scoring range
-        #         if np.array([self.apprx_to_goal(opp_obs[i]) > -0.75 for i in range(self.num_TA)]).any(): # if anyone is in range on enemy team
-        #             sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[i][self.open_goal]) - self.unnormalize(opp_obs[i][self.open_goal])) for i in agent_inds]) # penalize based on the open angles of the people in range
-        #             reward += sum_angle_delta*2.0
-        #             team_reward += sum_angle_delta*2.0
-        #             angle_delta_possessor = self.unnormalize(opp_obs_previous[enemy_possessor][self.open_goal]) - self.unnormalize(opp_obs[enemy_possessor][self.open_goal])# penalize based on the open angles of the possessor
-        #             reward += angle_delta_possessor*2.0
-        #             team_reward += angle_delta_possessor*2.0
-        #             #print("defensive behavior: block open angle to goal",agent_inds)
-        #             #print("areward for blocking goal: ",angle_delta_possessor*3.0)
-
-        # elif ((self.team_base == base) and possession_side =='R'): 
-        #     enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-        #     #print("possessor is base right agent",enemy_possessor)
-        #     agent_inds = np.where([self.apprx_to_goal(opp_obs[i]) > -0.75 for i in range(self.num_TA)])[0] # find who is in range
-
-        #     b,_,_ =self.ball_distance_to_goal(opp_obs[agentID]) #r is maxed at 2sqrt(2)--> 2.8
-        #     if b < 1.5 : # Ball is in scoring range
-        #         if np.array([self.apprx_to_goal(opp_obs[i]) > -0.75 for i in range(self.num_TA)]).any(): # if anyone is in range on enemy team
-        #             sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[i][self.open_goal]) - self.unnormalize(opp_obs[i][self.open_goal])) for i in agent_inds]) # penalize based on the open angles of the people in range
-        #             reward += sum_angle_delta*2.0
-        #             team_reward += sum_angle_delta*2.0
-        #             angle_delta_possessor = self.unnormalize(opp_obs_previous[enemy_possessor][self.open_goal]) - self.unnormalize(opp_obs[enemy_possessor][self.open_goal])# penalize based on the open angles of the possessor
-        #             reward += angle_delta_possessor*2.0
-        #             team_reward += angle_delta_possessor*2.0
-        #             #print("defensive behavior: block open angle to goal",agent_inds)
-        #             #print("areward for blocking goal: ",angle_delta_possessor*3.0)
-
-
-
-
-        # # [Defensive behavior]  agents will be rewarded based on minimizing the ball open angle to other opponents (to block passes )
-        # if self.num_TA > 1:
-                
-        #     if ((self.team_base != base) and possession_side == 'L'): # someone on team has ball
-        #         enemy_possessor = (np.array(self.agent_possession_team) == 'L').argmax()
-        #         sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[enemy_possessor][self.team_pass_angle_beg+i]) - self.unnormalize(opp_obs[enemy_possessor][self.team_pass_angle_beg+i])) for i in range(self.num_TA-1)]) # penalize based on the open angles of the people in range
-        #         reward += sum_angle_delta*0.3/float(self.num_TA)
-        #         team_reward += sum_angle_delta*0.3/float(self.num_TA)
-        #         #print("defensive behavior: block open passes",enemy_possessor,"has ball")
-        #         #print("reward for blocking",sum_angle_delta*3.0/self.num_TA)
-
-        #     elif ((self.team_base == base) and possession_side =='R'):
-        #         enemy_possessor = (np.array(self.agent_possession_opp) == 'R').argmax()
-        #         sum_angle_delta = np.sum([(self.unnormalize(opp_obs_previous[enemy_possessor][self.team_pass_angle_beg+i]) - self.unnormalize(opp_obs[enemy_possessor][self.team_pass_angle_beg+i])) for i in range(self.num_TA-1)]) # penalize based on the open angles of the people in range
-        #         reward += sum_angle_delta*0.3/float(self.num_TA)
-        #         team_reward += sum_angle_delta*0.3/float(self.num_TA)
-        #         #print("defensive behavior: block open passes",enemy_possessor,"has ball")
-        #         #print("reward for blocking",sum_angle_delta*6.0/float(self.num_TA))
-
-        ##################################################################################
-        rew_percent = 1.0*max(0,(self.team_rew_anneal_ep - ep_num))/self.team_rew_anneal_ep
-        return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
+        return reward
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl):
@@ -854,7 +445,7 @@ class rc_env:
         elif feat_lvl == 'simple':
             feat_lvl = hfo.SIMPLE_LEVEL_FEATURE_SET
 
-        config_dir=get_config_path() 
+        config_dir = HFO.get_config_path() 
         recorder_dir = 'log/'
         if self.team_base == base:
             self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
@@ -1068,7 +659,7 @@ class rc_env:
         
         if self.viewer is not None:
             os.kill(self.viewer.pid, signal.SIGKILL)
-        cmd = get_viewer_path() +\
+        cmd = HFO.get_viewer_path() +\
               " --connect --port %d" % (self.server_port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 

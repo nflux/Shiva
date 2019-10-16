@@ -6,12 +6,9 @@ from torch.autograd import Variable
 import torch.multiprocessing as mp
 import os, dill
 import pandas as pd
-import algorithms.maddpg as mad_algo
-import algorithms.updates as updates
-from .pretrain import pretrain_process as pretrainer
 import time
 import numpy as np
-import config as conf
+# import config as conf
 
 class RoboEnvs:
     def __init__(self, config):
