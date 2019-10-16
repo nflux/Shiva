@@ -14,8 +14,6 @@ import misc
 from torch.autograd import Variable
 import torch
 
-possession_side = 'N'
-
 class rc_env:
     """rc_env() extends the HFO environment to allow for centralized execution.
     Attributes:
@@ -61,8 +59,9 @@ class rc_env:
 
         # params for low level actions
         num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
-        self.left_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_left)])
-        self.right_action_params = np.asarray([[0.0]*num_action_params for i in range(config.num_right)])
+        self.left_action_params = np.asarray([[0.0]*num_action_params for i in range(self.num_left)])
+        self.right_action_params = np.asarray([[0.0]*num_action_params for i in range(self.num_right)])
+
         if config['action_level'] == 'low':
             #                   pow,deg   deg       deg         pow,deg    
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
@@ -106,20 +105,19 @@ class rc_env:
 
         # Left side actions, obs, rewards
         self.left_actions = np.array([2]*self.num_left)
-        self.left_actions_OH = np.empty([self.num_left, 8],dtype=float)
+        # self.left_actions_OH = np.empty([self.num_left, 8],dtype=float)
         self.left_obs = np.empty([self.num_left,self.left_features],dtype=float)
         self.left_obs_previous = np.empty([self.num_left,self.left_features],dtype=float)
         self.left_rewards = np.zeros(self.num_left)
 
         # Right side actions, obs, rewards
         self.right_actions = np.array([2]*self.num_right)
+        # self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
         self.right_obs = np.empty([self.num_right,self.right_features],dtype=float)
         self.right_obs_previous = np.empty([self.num_right,self.right_features],dtype=float)
-        self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
         self.right_rewards = np.zeros(self.num_right)
 
         self.world_status = 0
-        
         self.left_base = 'base_left'
         self.right_base = 'base_right'
         
@@ -167,14 +165,14 @@ class rc_env:
             return self.right_rewards[agent_id]
 
 
-    def Step(self, left_actions, right_actions, left_params=[], 
+    def Step(self, left_actions=[], right_actions=[], left_params=[], 
             right_params=[], left_actions_OH = [], right_actions_OH = []):
 
-        for i in range(self.num_left):
-            self.left_actions_OH[i] = misc.zero_params(left_actions_OH[i].reshape(-1))
+        # for i in range(self.num_left):
+        #     self.left_actions_OH[i] = misc.zero_params(left_actions_OH[i].reshape(-1))
         
-        for i in range(self.num_right):
-            self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
+        # for i in range(self.num_right):
+        #     self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
 
         [self.Queue_action(i,self.left_base,left_actions[i],left_params) for i in range(len(left_actions))]
         [self.Queue_action(j,self.right_base,right_actions[j],right_params) for j in range(len(right_actions))]
@@ -309,12 +307,12 @@ class rc_env:
                         self.left_obs_previous[agent_ID] = self.left_obs[agent_ID]
                         self.world_status = self.left_envs[agent_ID].step() # update world                        
                         self.left_obs[agent_ID] = self.left_envs[agent_ID].getState() # update obs after all agents have acted
-                        self.left_obs[agent_ID] =  self.left_actions_OH[agent_ID]
+                        # self.left_obs[agent_ID] =  self.left_actions_OH[agent_ID]
                     else:
                         self.right_obs_previous[agent_ID] = self.right_obs[agent_ID]
                         self.world_status = self.right_envs[agent_ID].step() # update world
-                        self.right_obs[agent_ID,:-8] = self.right_envs[agent_ID].getState() # update obs after all agents have acted
-                        self.right_obs[agent_ID,-8:] =  self.right_actions_OH[agent_ID]
+                        self.right_obs[agent_ID] = self.right_envs[agent_ID].getState() # update obs after all agents have acted
+                        # self.right_obs[agent_ID,-8:] =  self.right_actions_OH[agent_ID]
 
                     self.sync_at_reward.wait()
 

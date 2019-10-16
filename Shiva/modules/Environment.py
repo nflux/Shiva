@@ -1,17 +1,17 @@
 import gym
+import robocup.rc_env as rc
 import numpy as np
 
 def initialize_env(env_params):
 
     if env_params['env_type'] == 'Gym':
         env = GymEnvironment(env_params['environment'], env_params['env_render'])
+    elif env_params['env_type'] == 'RoboCup':
+        env = RoboCupDDPGEnvironment(env_params, 45000)
 
     return env
 
-
 class AbstractEnvironment():
-    def __init__(self, environment):
-        self.step_count = 0
 
     def step(self,actions):
         pass
@@ -108,3 +108,38 @@ class GymEnvironment(AbstractEnvironment):
 
     def close(self):
         self.env.close()
+
+class RoboCupDDPGEnvironment(AbstractEnvironment):
+    def __init__(self, config, port):
+        self.env = rc.rc_env(config, port)
+        self.env.launch()
+        self.left_actions = self.env.left_actions
+        self.left_params = self.env.left_action_params
+        self.obs = self.env.left_obs
+        self.rews = self.env.left_rewards
+        self.world_status = self.env.world_status
+        self.observation_space = self.env.left_features
+        self.action_space = self.env.acs_dim
+        self.step_count = 0
+        self.render = self.env.config['render']
+        self.done = self.env.d
+
+    def step(self, left_actions, left_params):
+        self.left_actions = left_actions
+        self.left_params = left_params
+        self.obs,self.rews,_,_,self.done,_ = self.env.Step(left_actions=left_actions, left_params=left_params)
+
+        return self.obs, [self.rews], self.done
+
+    def get_observation(self):
+        return self.obs
+
+    def get_actions(self):
+        return self.left_actions, self.left_params
+
+    def get_reward(self):
+        return self.rews
+
+    def load_viewer(self):
+        if self.render:
+            self.env._start_viewer()
