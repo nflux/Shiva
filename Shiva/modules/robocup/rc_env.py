@@ -7,41 +7,20 @@ import os, subprocess, time, signal
 import HFO
 import HFO.hfo.hfo as hfo
 import misc
-# from .HFO.hfo import hfo
-# from .HFO import get_config_path, get_hfo_path, get_viewer_path
-
-# from utils import misc as misc
 from torch.autograd import Variable
 import torch
 
 class rc_env:
-    """rc_env() extends the HFO environment to allow for centralized execution.
-    Attributes:
-        num_TA (int): Number of leftmate agents. (0-11)
-        num_OA (int): Number of rightonent agents. (0-11)
-        num_NPC (int): Number of rightonent NPCs. (0-11)
-        left_actions (list): List contains the current timesteps action for each
-            agent. Takes value between 0 - num_states and is converted to HFO action by
-            action_list.
-        action_list (list): Contains the mapping from numer action value to HFO action.
-        left_should_act (list of bools): Contains a boolean flag for each agent. Is
-            activated to be True by Step function and becomes false when agent acts.
-        left_should_act_flag (bool): Boolean flag is True if agents have
-            unperformed actions, becomes False if all agents have acted.
-        left_obs (list): List containing obs for each agent.
-        left_obs_previous (list): List containing obs for each agent at previous timestep
-        left_rewards (list): List containing reward for each agent
-        start (bool): Once all agents have been launched, allows threads to listen for
-            actions to take.
-        world_states (list): Contains the status of the HFO world.
-        left_envs (list of HFOEnvironment objects): Contains an HFOEnvironment object
-            for each agent on left.
-        right_xxx attributes: Extend the same functionality for user controlled left
-            to rightosing left.
-    Todo:
-        * Functionality for synchronizing left actions with rightonent left actions
-        * Add the ability for left agents to function with npcs taking the place of rightonents
-        """
+    '''
+        Description
+            Class to run the RoboCup Environment. This class runs each agent on
+            its own thread and uses Barriers to make the agents run 
+            synchronously ergo take an action together at each timestep.
+
+        Inputs
+            @config     Contains various Env parameters
+            @port       Required for the robocup server
+    '''
 
     def __init__(self, config, port):
         self.config = config
@@ -122,6 +101,21 @@ class rc_env:
         self.right_base = 'base_right'
         
     def launch(self):
+        '''
+            Description
+                1. Runs the HFO server with all of its given commands (cmd).
+                2. Then runs an HFOEnv per each agent which is the bridge between
+                the C++ code and python code refer to hfo.py to find this class.
+                3. Both for loops create threads for each agent via the connect
+                method which connects to the server and can be further described
+                below.
+                4. NOTE certain sleep timers are required to keep things in sync
+                depending on your computers processing power you may need to
+                adjust these times based off how many agents you are running.
+                5. When self.start is set to True the while loop is entered
+                in the connect method.
+        '''
+
         self._start_hfo_server()
         self.left_envs = [hfo.HFOEnvironment() for i in range(self.num_left)]
         self.right_envs = [hfo.HFOEnvironment() for i in range(self.num_right)]
@@ -153,12 +147,32 @@ class rc_env:
         self.start = True
 
     def Observation(self,agent_id,side):
+        '''
+            Input
+                @agent_id specifies agent ob in a given list
+                @side left or right
+
+            Returns
+                Observation for the right or left depending on the side
+                provided.
+        '''
+
         if side == 'left':
             return self.left_obs[agent_id]
         elif side == 'right':
             return self.right_obs[agent_id]
 
     def Reward(self,agent_id,side):
+        '''
+            Inputs
+                @agent_id specifies agent rew in a given list
+                @side left or right
+
+            Returns
+                Reward for the right or left depending on the side
+                provided.
+        '''
+
         if side == 'left':
             return self.left_rewards[agent_id]
         elif side == 'right':
@@ -167,6 +181,28 @@ class rc_env:
 
     def Step(self, left_actions=[], right_actions=[], left_params=[], 
             right_params=[], left_actions_OH = [], right_actions_OH = []):
+        '''
+            Description
+                Method for the agents to take a single step in the environment.
+                The actions are first queued then the Barrier waits for
+                all the agents to take an action. The next Barrier syncs up all
+                the agents together before taking a step and returning
+                the values. Thus the while loop in connect will start another
+                iteration.
+            
+            Inputs
+                @left_actions list of left actions
+                @right_actions list of right actions
+                @left_params list of params corresponding to each action
+                @right_params similar to left_params
+                @*_OH one-hot-encoded actions
+            
+            Returns
+                Observations
+                Rewards
+                Done Flag: Signals when the episode is over
+                World Status: Determines if the Done Flag is set
+        '''
 
         # for i in range(self.num_left):
         #     self.left_actions_OH[i] = misc.zero_params(left_actions_OH[i].reshape(-1))
@@ -184,6 +220,11 @@ class rc_env:
                 self.d, self.world_status
 
     def Queue_action(self,agent_id,base,action,params=[]):
+        '''
+            Description
+                Queue up the actions and params for the agents before 
+                taking a step in the environment.
+        '''
 
         if self.left_base == base:
             self.left_actions[agent_id] = action
@@ -198,6 +239,10 @@ class rc_env:
     
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,param,base):
+        '''
+            TODO: Ask Andy if this is necessary
+        '''
+
         if self.left_base == base:
             self.action_params = self.left_action_params
         else:
@@ -223,15 +268,25 @@ class rc_env:
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl):
-        """ Connect threaded agent to server
-        Args:
+        '''
+        Description
+            Connect threaded agent to server. And run agents through
+            environment loop ergo recieve an observation, take an action,
+            recieve a new observation, world status, and reward then start
+            all over again. The world status dictates if the done flag
+            should change.
+            
+        Inputs
             feat_lvl: Feature level to use. ('high', 'low', 'simple')
             base: Which base to launch agent to. ('left', 'right)
             goalie: Play goalie. (True, False)
             agent_ID: Integer representing agent index. (0-11)
-        Returns:
+            fpt: Episode length
+            act_lvl: Action level to use. ('high', 'low')
+
+        Returns
             None, thread runs on server continually.
-        """
+        '''
 
 
         if feat_lvl == 'low':
@@ -258,7 +313,7 @@ class rc_env:
             while(self.start):
                 ep_num += 1
                 j = 0 # j to maximum episode length
-                
+
                 if self.left_base == base:
                     self.left_obs_previous[agent_ID] = self.left_envs[agent_ID].getState() # Get initial state
                     self.left_obs[agent_ID] = self.left_envs[agent_ID].getState() # Get initial state
@@ -336,24 +391,11 @@ class rc_env:
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def _start_hfo_server(self):
-            """
-            Starts the Half-Field-Offense server.
-            frames_per_trial: Episodes end after this many steps.
-            untouched_time: Episodes end if the ball is untouched for this many steps.
-            offense_agents: Number of user-controlled offensive players.
-            defense_agents: Number of user-controlled defenders.
-            offense_npcs: Number of offensive bots.
-            defense_npcs: Number of defense bots.
-            sync_mode: Disabling sync mode runs server in real time (SLOW!).
-            port: Port to start the server on.
-            offense_on_ball: Player to give the ball to at beginning of episode.
-            fullstate: Enable noise-free perception.
-            seed: Seed the starting positions of the players and ball.
-            ball_x_[min/max]: Initialize the ball this far downfield: [-1,1]
-            verbose: Verbose server messages.
-            log_game: Enable game logging. Logs can be used for replay + visualization.
-            log_dir: Directory to place game logs (*.rcg).
-            """
+            '''
+                Description
+                    Runs the HFO command to pass parameters to the server. 
+                    Refer to `HFO/bin/HFO` to see how these params are added.
+            '''
             cmd = self.hfo_path + \
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
@@ -390,11 +432,11 @@ class rc_env:
             time.sleep(3) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
-        """
+        '''
         Starts the SoccerWindow visualizer. Note the viewer may also be
         used with a *.rcg logfile to replay a game. See details at
         https://github.com/LARG/HFO/blob/master/doc/manual.pdf.
-        """
+        '''
         
         if self.viewer is not None:
             os.kill(self.viewer.pid, signal.SIGKILL)
