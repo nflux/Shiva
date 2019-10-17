@@ -76,8 +76,12 @@ class GymEnvironment(Environment):
 
     def step(self,action):
             self.acs = action
-            self.obs,self.rews,self.world_status, info = self.env.step(np.argmax(action))
-            self.step_count +=1
+            # why is there an argmax here?
+            action = np.argmax(action)
+            print(action)
+            # input()
+            self.obs,self.rews,self.world_status, info = self.env.step(action)
+            self.step_count +=1 
 
             return self.obs,self.rews,self.world_status
 

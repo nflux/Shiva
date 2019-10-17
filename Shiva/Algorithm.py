@@ -316,6 +316,7 @@ class DDPGAlgorithm(AbstractAlgorithm):
         self.totalCriticLoss = 0
 
     def update(self, agent, minibatch, step_n):
+
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         states, actions, rewards, next_states, dones = minibatch
@@ -326,80 +327,69 @@ class DDPGAlgorithm(AbstractAlgorithm):
         dones_mask = torch.ByteTensor(dones).to(device)
         next_states = torch.tensor(next_states).to(device)
 
+        # apparently the critic isn't even learning
+
         # train critic
         agent.critic_optimizer.zero_grad()
-
         # get q value from states and actions
         q_now = agent.critic(states.float(), actions.float())
-
         # get next state action
         next_state_actions = agent.target_actor(next_states.float())
         #feed next state action and next state to critic network to get next q value
         q_next_states = agent.target_critic(next_states.float(), next_state_actions)
-
-        # print(dones_mask)
-
-        # input()    
-
         q_next_states[dones_mask] = 0.0
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * q_next_states
-
         critic_loss = self.loss_calc(q_now, y_i.detach())
-
         self.totalCriticLoss += critic_loss
         self.critic_loss = critic_loss
-
         # print("critic loss :",critic_loss)
-
         critic_loss.backward()
         agent.critic_optimizer.step()
 
         # train actor
         agent.actor_optimizer.zero_grad()
-
         # feed action to actor network
         actor_actions = agent.actor(states.float())
-
         # print(actor_actions)
         # input()
-        
-
         actor_loss_value = -agent.critic(states.float(), actor_actions)
         # print("actor loss: ",actor_loss_value)
-
         # input()
         actor_loss_value = actor_loss_value.mean()
         # print(actor_loss_value)
-
-
         self.totalActorLoss += actor_loss_value
         self.actor_loss = actor_loss_value
-
         actor_loss_value.backward()
         agent.actor_optimizer.step()
 
-        # if step_n % self.C == 0:
+        # Soft Network Updates
         alpha = 1 - 1e-3
         ac_state = agent.actor.state_dict()
         tgt_state = agent.target_actor.state_dict()
         for k, v in ac_state.items():
             tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
         agent.target_actor.load_state_dict(tgt_state)
-        print ("actor",tgt_state)
+        # print ("actor",tgt_state)
 
         ac_state = agent.critic.state_dict()
         tgt_state = agent.target_critic.state_dict()
         for k, v in ac_state.items():
             tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
         agent.target_critic.load_state_dict(tgt_state)
+        
+        # Hard Network Updates
         # if step_n % self.C == 0:
         #     agent.target_actor.load_state_dict(agent.actor.state_dict())
         #     agent.target_critic.load_state_dict(agent.critic.state_dict())
 
 
     def get_action(self, agent, observation, step_n) -> np.ndarray: # maybe a torch.tensor
-        action = agent.actor(torch.tensor(observation).float()).data.numpy() + self.ou_noise.noise()
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        observation = torch.tensor(observation).to(device)
+        action = agent.actor(observation.float()).cpu().data.numpy() + self.ou_noise.noise()
         action = np.clip(action, -1,1)
+        print(action)
+        # input()
         return action
 
     def create_agent(self): 
@@ -415,8 +405,10 @@ class DDPGAlgorithm(AbstractAlgorithm):
 
     def get_average_actor_loss(self, step):
         average = self.totalActorLoss/step
+        self.totalActorLoss = 0
         return average
 
     def get_average_critic_loss(self, step):
         average = self.totalCriticLoss/step
+        self.totalCriticLoss = 0
         return average

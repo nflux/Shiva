@@ -92,7 +92,6 @@ class Single_Agent_Learner(AbstractLearner):
 
         self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
 
-
         if done:
             self.writer.add_scalar('Total Reward', self.totalReward, ep_count)
             self.writer.add_scalar('Average Actor Loss per Episode', self.alg.get_average_actor_loss(self.env.get_current_step()), ep_count)
