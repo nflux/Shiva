@@ -95,13 +95,15 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     configs
         )
         if self.mode == self.EVAL_MODE:
+
             self.eval_env = []
-            # Load Learners and Agents given in @load_path
-            _loaded_learners = [shiva._load_learner(learner_url) for learner_url in self.configs[0]['Evaluation']['load_path']]
-            # tweak config to pass to Evaluation class
-            self.configs[0]['Evaluation']['learners'] = _loaded_learners
-            # Instance Evaluation class
+            # Load Learners to be passed to the Evaluation
+            self.configs[0]['Evaluation']['learners'] = [shiva._load_learner(learner_url) for learner_url in self.configs[0]['Evaluation']['load_path']]
+            # Create Evaluation class
             self.eval_env.append(Evaluation.initialize_evaluation(self.configs[0]['Evaluation']))
+
+            self.eval_env[0].evaluate_agents()
+
         elif self.mode == self.PROD_MODE:
 
             # agents, environments, algorithm, data, configs for a single agent learner

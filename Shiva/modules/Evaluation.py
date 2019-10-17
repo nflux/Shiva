@@ -3,37 +3,36 @@ import EvaluationEnvironment
 def initialize_evaluation(config):
     print(config)
     if config['env_type'] == 'Gym':
-        return GymEvaluation(config['environment'], config['learners'], config['metrics'], config['env_render'])
+        return GymEvaluation(config['environment'], config['learners'], config['metrics'], config['env_render'], config)
 
 class AbstractEvaluation(object):
     def __init__(self,
-                learners: list,
-                eval_envs: list,
-                eval_config: dict
+                eval_envs: 'list of environment names where to evaluate agents',
+                learners: 'loaded leaners to be evaluated',
+                metrics: 'list of metric names to be recorded',
+                render: 'rendering flag',
+                config: 'whole config passed'
     ):
-        self.learners = learners
         self.eval_envs = eval_envs
-        self.eval_config = eval_config
+        self.learners = learners
+        self.metrics = metrics
+        self.render = render
+        self.config = config
 
-    def evaluate_agents(self,
-                agents: list,
-                envs_config: list):
-        '''
-            Input
-                agents          list of agents to be evaluated
-                envs_config     list of configs for environments to evaluate the agents
-        '''
-        self.agents = agents
-        self.envs_config = envs_config
         self._create_eval_envs()
-        self._start_evals()
+
+    def evaluate_agents(self):
+        '''
+            Starts evaluation process
+        '''
+        pass
 
     def _create_eval_envs(self):
         '''
-            Creates self attributes for the environments where to evaluate the agents
+            This may be specific to each environment
         '''
-        self.eval_envs = [EvaluationEnvironment.initialize_eval_env(config) for config in self.envs_config]
-
+        pass
+    
     def _start_evals(self):
         '''
             This implementation is specific to each environment
@@ -46,30 +45,38 @@ class AbstractEvaluation(object):
 
 class GymEvaluation(AbstractEvaluation):
     def __init__(self, 
-            envs_strs: 'list of envs',
-            agents: 'list of agents',
-            metrics: 'list of metrics to calculate',
+            envs_strs,
+            learners,
+            metrics,
+            render,
+            config
         ):
-        super(GymEvaluation, self).__init__(envs_strs, agents, metrics)
+        super(GymEvaluation, self).__init__(envs_strs, learners, metrics, render, config)
 
-    def _start_evals():
+    def _create_eval_envs(self):
+        self.eval_envs = [ EvaluationEnvironment.initialize_eval_env({'env_type': 'Gym', 'environment': env_name, 'env_render': self.render}) for env_name in self.eval_envs]
+
+    def evaluate_agents(self):
         '''
             Starts the evaluation process of each agent on each environment
                 Maybe it doesn't make sense to have many envs here.... since it's a Gym
         '''
         for env in self.eval_envs:
-            for agent in self.agents:
-                self._make_agent_play(env, agent)
+            for learner in self.learners:
+                for agent in learner:
+                    self._make_agent_play(env, agent)
 
     def _make_agent_play(self, env, agent):
         '''
             Let's the agent play for X episodes
         '''
-        for _ in range(self.eval_config['episodes']):
+        print("Agent {} start".format(agent.id))
+        for _ in range(self.config['episodes']):
             env.reset()
             done = False
             while not done:
                 done = self._step_agent(env, agent)
+        print("Agent {} finish".format(agent.id))
         env.close()
 
     def _step_agent(self, env, agent):

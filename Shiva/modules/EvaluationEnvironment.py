@@ -9,7 +9,6 @@ def initialize_eval_env(env_params):
 class GymEvaluationEnvironment(Environment.GymEnvironment):
     def __init__(self, environment, render):
         super(GymEvaluationEnvironment, self).__init__(environment, render)
-        pass
 
     def get_metrics(self):
         '''
