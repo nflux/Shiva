@@ -1,5 +1,6 @@
 from settings import shiva
-import Learner
+import Learner, Algorithm, Agent
+import Evaluation
 
 # Maybe add a function to dictate the meta learner based on the configs
 # needs to keep track everytime its used so that it always gives a unique id
@@ -15,11 +16,10 @@ def initialize_meta(config):
                                     config[0]['MetaLearner']['optimize_learner_hp'],
                                     config[0]['MetaLearner']['evolution'],
                                     config,
-                                    )
+        )
 
 
-class AbstractMetaLearner():
-
+class AbstractMetaLearner(object):
     def __init__(self,
                 learners : list, 
                 algorithms : list, 
@@ -43,6 +43,9 @@ class AbstractMetaLearner():
         
         env_name = self.configs[0]['Environment']['env_type'] + '-' + self.configs[0]['Environment']['environment']
         shiva.add_meta_profile(self, env_name)
+        
+        self.PROD_MODE, self.EVAL_MODE = 'production', 'evaluation'
+        self.mode = self.configs[0]['MetaLearner']['start_mode']
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
@@ -70,18 +73,17 @@ class AbstractMetaLearner():
 
 # this is a version of a meta learner that will take a file path to the configuration files
 class SingleAgentMetaLearner(AbstractMetaLearner):
-
-    def __init__(self, 
-                learners : "list of learner objects but in this case there's only one but there could be more", 
-                algorithms : "list of algorithm name strings", 
-                eval_env : "the name of the evaluation environment; from config file", 
-                agents : "list of agents, in this case there's only one", 
-                elite_agents : "list of elite agent objects from evaluation environment", 
-                optimize_env_hp : "boolean for whether or not we are optimizing hyperparameters", 
-                optimize_learner_hp : "boolean to optimize learner hyperparameters", 
+    def __init__(self,
+                learners : "list of learner objects but in this case there's only one but there could be more",
+                algorithms : "list of algorithm name strings",
+                eval_env : "the name of the evaluation environment; from config file",
+                agents : "list of agents, in this case there's only one",
+                elite_agents : "list of elite agent objects from evaluation environment",
+                optimize_env_hp : "boolean for whether or not we are optimizing hyperparameters",
+                optimize_learner_hp : "boolean to optimize learner hyperparameters",
                 evolution : "boolean for whether are not we will use evolution",
-                configs: "list of all config dictionaries"):
-
+                configs: "list of all config dictionaries"
+        ):
         super(SingleAgentMetaLearner,self).__init__(learners, 
                                                     algorithms, 
                                                     eval_env, 
@@ -90,19 +92,28 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     optimize_env_hp, 
                                                     optimize_learner_hp, 
                                                     evolution,
-                                                    configs)
-        
-        # agents, environments, algorithm, data, configs for a single agent learner
-        self.learners.append(Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0]))
-        shiva.add_learner_profile(self.learners[0])
-        
-        # initialize the learner instances
-        self.learners[0].launch()
-        
-        shiva.update_agents_profile(self.learners[0])
-        
-        # Rus the learner for a number of episodes given by the config
-        self.learners[0].run()
+                                                    configs
+        )
+        if self.mode == self.EVAL_MODE:
+            self.eval_env = []
+            # Load Learners and Agents given in @load_path
+            _loaded_learners = [shiva._load_learner(learner_url) for learner_url in self.configs[0]['Evaluation']['load_path']]
+            # tweak config to pass to Evaluation class
+            self.configs[0]['Evaluation']['learners'] = _loaded_learners
+            # Instance Evaluation class
+            self.eval_env.append(Evaluation.initialize_evaluation(self.configs[0]['Evaluation']))
+        elif self.mode == self.PROD_MODE:
 
-        # save
-        self.save()
+            # agents, environments, algorithm, data, configs for a single agent learner
+            self.learners.append(Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0]))
+            shiva.add_learner_profile(self.learners[0])
+            # initialize the learner instances
+            self.learners[0].launch()
+            
+            shiva.update_agents_profile(self.learners[0])
+            
+            # Rus the learner for a number of episodes given by the config
+            self.learners[0].run()
+
+            # save
+            self.save()

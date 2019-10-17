@@ -4,7 +4,7 @@ import os
 import copy
 import Network
 
-class Agent:
+class Agent(object):
     def __init__(self, id, obs_dim, action_dim, optimizer_function, learning_rate, config: dict):
         '''
         Base Attributes of Agent
@@ -23,11 +23,11 @@ class Agent:
         self.optimizer_function = optimizer_function
         self.learning_rate = learning_rate
         self.config = config
-
+    
     def save(self, save_path, step):
         torch.save(self.policy, save_path + '/policy.pth')
 
-    def load(self, load_path):
+    def load_net(self, load_path):
         self.policy = torch.load(load_path)
 
 class DQAgent(Agent):
