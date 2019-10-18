@@ -1,6 +1,6 @@
 import os
 import configparser
-import inspect, pickle
+import inspect
 import helpers as helpers
 from tensorboardX import SummaryWriter
 
@@ -218,13 +218,18 @@ class ShivaAdmin():
     def _save_learner(self, learner=None) -> None:
         '''
             Mechanics of saving a Learner
-                Will cascade along all it's agents
+                1-  Pickles the Learner class and save attributes
+                2-  Save all the agents inside
 
             Input
                 @learner        Learner instance we want to save
         '''
         learner = self.caller if learner is None else learner
         self.add_learner_profile(learner) # will only add if was not profiled before
+        # save learner pickle and attributes
+        learner_path = self._curr_learner_dir[learner.id]
+        helpers.save_pickle_obj(learner, os.path.join(learner_path, 'learner_cls.pickle'))
+        # save agents
         if type(learner.agents) == list:
             for agent in learner.agents:
                 self._save_agent(learner, agent)
@@ -234,18 +239,17 @@ class ShivaAdmin():
     def _save_agent(self, learner, agent):
         '''
             Mechanics of saving a Agent
-                1-  Pickles the agent object
-                2-  Uses the agent.save() method which they save their networks (is implemented at the Agent level because they might have multiple networks)
+                1-  Pickles the agent object and save attributes
+                2-  Uses the save() method from the Agent class because Agents could have diff network structures
 
             Input
                 @learner        Learner who owns the agent
                 @agent          Agent we want to save
         '''
         self._add_agent_profile(learner, agent)
-        agent_url = self._curr_agent_dir[learner.id][agent.id]
-        agent.save(agent_url, learner.env.get_current_step())
-        with open(agent_url+'/cls.pickle', 'wb') as handle:
-            pickle.dump(agent, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        agent_path = self._curr_agent_dir[learner.id][agent.id]
+        helpers.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
+        agent.save(agent_path, learner.env.get_current_step())
 
     def load(self, caller, id=None):
         '''
@@ -273,33 +277,42 @@ class ShivaAdmin():
         '''
         print("Loading MetaLearner")
 
-    def _load_learner(self):
+    def _load_learner(self, path: str) -> list:
         '''
-            TODO
-                Implement once needed in order to see what's the best approach
+            For a given @path, the procedure will walk recursively over all the folders inside the @path
+            And find all the learner_cls.pickle files to load
 
-            Returns
-                Learner instance
+            Input
+                @path       Path where the learner files will be located
         '''
-        print("Loading Learner")
+        learners = []
+        learners_pickles = helpers.find_pattern_in_path(path, 'learner_cls.pickle')
+        assert len(learners_pickles) > 0, "No learners found in {}".format(path)
+        for learner_pickle in learners_pickles:
+            print('Loading Learner\n\t{}\n'.format(learner_pickle))
+            _new_learner = helpers.load_pickle_obj(learner_pickle)
+            _new_learner.agents = self._load_agents(path)                
+            learners.append(_new_learner)
+        return learners
 
     def _load_agents(self, path) -> list:
         '''
             For a given @path, the procedure will walk recursively over all the folders inside the @path
-            And find all the .pickle and .pth files to load all those agents
+            And find all the agent_cls.pickle and policy.pth files to load all those agents
 
             Input
                 @path       Path where the agents files will be located
         '''
         agents = []
-        agents_pickles = helpers.find_pattern_in_path(path, '*.pickle')
-        agents_policies = helpers.find_pattern_in_path(path, '*.pth')
+        agents_pickles = helpers.find_pattern_in_path(path, 'agent_cls.pickle')
+        agents_policies = helpers.find_pattern_in_path(path, 'policy.pth')
         assert len(agents_pickles) > 0, "No agents found in {}".format(path)
+        print("Loading Agents..")
         for agent_pickle, agent_policy in zip(agents_pickles, agents_policies):
-            with open(agent_pickle, 'rb') as handle:
-                _new_agent = pickle.load(handle)
-                _new_agent.load(agent_policy)
-                agents.append(_new_agent)
+            print("\t{}\n\t{}\n\n".format(agent_pickle, agent_policy))
+            _new_agent = helpers.load_pickle_obj(agent_pickle)
+            _new_agent.load_net(agent_policy)
+            agents.append(_new_agent)
         return agents
 
 ###########################################################################

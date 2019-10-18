@@ -1,8 +1,9 @@
 import EvaluationEnvironment
 
 def initialize_evaluation(config):
-    if config['env'] == 'Gym':
-        return GymEvaluation()
+    print(config)
+    if config['env_type'] == 'Gym':
+        return GymEvaluation(config['environment'], config['learners'], config['metrics'], config['env_render'])
 
 class AbstractEvaluation(object):
     def __init__(self,
@@ -28,6 +29,9 @@ class AbstractEvaluation(object):
         self._start_evals()
 
     def _create_eval_envs(self):
+        '''
+            Creates self attributes for the environments where to evaluate the agents
+        '''
         self.eval_envs = [EvaluationEnvironment.initialize_eval_env(config) for config in self.envs_config]
 
     def _start_evals(self):
@@ -39,9 +43,14 @@ class AbstractEvaluation(object):
     def rank_agents(self, validation_scores):
         pass
 
+
 class GymEvaluation(AbstractEvaluation):
-    def __init__(self):
-        super(GymEvaluation, self).__init__()
+    def __init__(self, 
+            envs_strs: 'list of envs',
+            agents: 'list of agents',
+            metrics: 'list of metrics to calculate',
+        ):
+        super(GymEvaluation, self).__init__(envs_strs, agents, metrics)
 
     def _start_evals():
         '''
@@ -76,3 +85,5 @@ class GymEvaluation(AbstractEvaluation):
         # if self.env.get_current_step() % self.saveFrequency == 0:
         #     pass
         return done
+
+    
