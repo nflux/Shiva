@@ -7,7 +7,7 @@ import Learner
 def initialize_meta(config):
     if config[0]['MetaLearner']['type'] == 'Single':
         return SingleAgentMetaLearner([],
-                                    config[0]['Algorithm'], # 
+                                    config[0]['Algorithm'], #
                                     config[0]['MetaLearner']['eval_env'],  # the evaluation environment
                                     [],  # this would have to be a list of agent objects
                                     [],  # this would have to be a list of elite agents objects
@@ -21,13 +21,13 @@ def initialize_meta(config):
 class AbstractMetaLearner():
 
     def __init__(self,
-                learners : list, 
-                algorithms : list, 
-                eval_env : str, 
-                agents : list, 
-                elite_agents : list, 
-                optimize_env_hp : bool, 
-                optimize_learner_hp : bool, 
+                learners : list,
+                algorithms : list,
+                eval_env : str,
+                agents : list,
+                elite_agents : list,
+                optimize_env_hp : bool,
+                optimize_learner_hp : bool,
                 evolution : bool,
                 configs : list):
         self.learners = learners
@@ -40,7 +40,7 @@ class AbstractMetaLearner():
         self.evolution = evolution
         self.learnerCount = 0
         self.configs = configs
-        
+
         env_name = self.configs[0]['Environment']['env_type'] + '-' + self.configs[0]['Environment']['environment']
         shiva.add_meta_profile(self, env_name)
 
@@ -91,16 +91,17 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     optimize_learner_hp,
                                                     evolution,
                                                     configs)
-        
+
         # agents, environments, algorithm, data, configs for a single agent learner
-        self.learners.append(Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0]))
+        self.learners.append(Learner.SingleAgentImitationLearner(self.id_generator(), [], [], self.algorithms, [], configs[0],'runs/ML-Gym-CartPole-v1-10-17-16:24/L-0/'))
+        #,'/runs/ML-Gym-CartPole-v1-10-13-16:52'
         shiva.add_learner_profile(self.learners[0])
-        
+
         # initialize the learner instances
         self.learners[0].launch()
-        
+
         shiva.update_agents_profile(self.learners[0])
-        
+
         # Rus the learner for a number of episodes given by the config
         self.learners[0].run()
 

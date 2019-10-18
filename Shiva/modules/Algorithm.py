@@ -378,13 +378,14 @@ class SupervisedAlgorithm(AbstractAlgorithm):
         epsilon: set(),
         C: int,
         configs: dict):
-        '''
-            Inputs
-                epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
-                C              Number of iterations before the target network is updated
-        '''
+
         super(SupervisedAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
         self.C = C
+        self.totalLoss = 0
+        self.loss = 0
+        self.loss_calc = self.loss_function()
+
+
     def update(self, agent, minibatch, step_n):
         '''
             Implementation
@@ -394,13 +395,15 @@ class SupervisedAlgorithm(AbstractAlgorithm):
                 3) Optimize
 
             Input
-                agent       Agent who we are updating
-                minibatch   Batch from the experience replay buffer
+                agent        Agent who we are updating
+                expert agent Agent from which we are imitating
+                minibatch    Batch from the experience replay buffer
 
             Returns
                 None
         '''
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
         states, actions, rewards, next_states, dones = minibatch
 
@@ -410,10 +413,12 @@ class SupervisedAlgorithm(AbstractAlgorithm):
         # zero optimizer
         agent.optimizer.zero_grad()
 
-        #input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(device)
-        input_v = torch.tensor(states).float().to(device)
-        state_action_values = agent.policy(input_v).to(device) #.gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
-        #expert_state_action_values = expert_agent.policy(input_v)
+
+        imitation_input_v = torch.tensor(states).float().to(device)
+        #the output of the imitation agent is a probability distribution across all possible actions
+        action_prob_dist = agent.policy(imitation_input_v)
+        #Cross Entropy takes in action class as target value
+        actions = torch.LongTensor(np.argmax(actions,axis = 1))
 
         #next_state_values[done_mask] = 0.0
         # 4) Detach magic
@@ -422,29 +427,61 @@ class SupervisedAlgorithm(AbstractAlgorithm):
         # approximation for next states.
         # Without this our backpropagation of the loss will start to affect both
         # predictions for the current state and the next state.
-        #next_state_values = next_state_values.detach()
+        #action_prob_dist = action_prob_dist.detach()
 
-        #Loss will be the loss between the imitation agent approximated values,
-        #and the expert agent approximated values.
-        loss_v = self.loss_calc(state_action_values, rewards).to(device)
-        loss_v.backward().to(device)
-        agent.optimizer.step().to(device)
+        #We are using cross entropy loss between the action our imitation Policy
+        #would choose, and the actions the expert agent took
+        loss_v = self.loss_calc(action_prob_dist, actions).to(device)
 
 
+        self.totalLoss += loss_v
+        self.loss = loss_v
 
-    def get_action(self, agent, observation, step_n) -> np.ndarray:
+        loss_v.backward()
+        agent.optimizer.step()
 
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        obs_v = torch.tensor(observation).to(device)
-        best_act = action2one_hot(np.argmax(agent.policy(obs_v)))
+    def get_action(self, agent, observation) -> np.ndarray:
 
-        return best_act.tolist()
+        best_act = self.find_best_action(agent.policy, observation)
 
-    def create_agent(self,root,id):
-        new_agent = ImitationAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate,root,id, self.configs)
+        return best_act # replay buffer store lists and env does np.argmax(action)
+
+    def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
+
+        obs_v = torch.tensor(observation).float().to(self.device)
+        best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(self.device)
+        for i in range(self.action_space):
+            act_v = self.action2one_hot_v(i)
+            q_val = network(torch.cat([obs_v, act_v.to(self.device)]))
+            if q_val > best_q:
+                best_q = q_val
+                best_act_v = act_v
+        best_act = best_act_v.tolist()
+        return best_act
+
+    def create_agent(self, id):
+        new_agent = ImitationAgent(id, self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
+
+
+    def action2one_hot(self, action_idx: int) -> np.ndarray:
+        z = np.zeros(self.action_space)
+        z[action_idx] = 1
+        return z
+
+    def action2one_hot_v(self, action_idx: int) -> torch.tensor:
+        z = torch.zeros(self.action_space)
+        z[action_idx] = 1
+        return z
+
+    def one_hot2action(self,actions):
+        #z = torch.zeros(self.action_space)
+        for action in actions:
+            action = np.argmax(action)
+        return actions
+
 
     def get_loss(self):
         return self.loss
@@ -453,6 +490,7 @@ class SupervisedAlgorithm(AbstractAlgorithm):
         average = self.totalLoss/step
         self.totalLoss = 0
         return average
+
 
 
 
@@ -480,62 +518,108 @@ class DaggerAlgorithm(AbstractAlgorithm):
 
         super(DaggerAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
         self.C = C
+        self.totalLoss = 0
+        self.loss = 0
 
     def update(self, imitation_agent,expert_agent, minibatch, step_n):
         '''
             Implementation
-                1) Collect Trajectories from the imitation policy
+                1) Collect Trajectories from the imitation policy. By choosing
+                    actions according to our initial policy, we are allowing for
+                    for further exploration, so we can encounter new observations
+                    that the expert would not have visited in. This allows us to
+                    encounter and learn from negative situations, as well as the
+                    positive states the expert lead us through.
                 2) Calculate the Cross Entropy Loss between the imitation policy's
                     actions and the actions the expert policy would have taken.
                 3) Optimize
 
             Input
                 agent       Agent who we are updating
+                exper agent Agent we are imitating
                 minibatch   Batch from the experience replay buffer
 
             Returns
                 None
         '''
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+        
         states, actions, rewards, next_states, dones = minibatch
 
-        rewards_v = torch.tensor(rewards).to(device)
-        done_mask = torch.ByteTensor(dones).to(device)
+
+        rewards_v = torch.tensor(rewards).to(self.device)
+        done_mask = torch.tensor(dones, dtype=torch.bool).to(self.device)
 
         # zero optimizer
-        agent.optimizer.zero_grad()
+        imitation_agent.optimizer.zero_grad()
 
         input_v = torch.tensor(states).float().to(device)
-        state_action_prob_dist= imitation_agent.policy(input_v).to(device) #.gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
-        expert_action = expert_agent.policy(input_v)
+        actions_one_hot = torch.zeros((len(actions),2))
+        action_prob_dist = imitation_agent.policy(input_v)
+
+        expert_actions = torch.LongTensor(len(states))
+        for i in range(len(states)):
+            expert_actions[i] = self.find_best_expert_action(expert_agent.policy,states[i])
 
 
         #Loss will be Cross Entropy Loss between the action probabilites produced
         #by the imitation agent, and the action took by the expert.
-        loss_v = self.loss_calc(state_action_prob_dist, expert_action).to(device)
-        loss_v.backward().to(device)
-        imitation_agent.optimizer.step().to(device)
+        loss_v = self.loss_calc(action_prob_dist, expert_actions).to(device)
 
-        def get_action(self, agent, observation, step_n) -> np.ndarray:
-
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-            obs_v = torch.tensor(observation).to(device)
-            best_act = action2one_hot(np.argmax(agent.policy(obs_v)))
-
-            return best_act.tolist()# replay buffer store lists and env does np.argmax(action)
+        self.totalLoss += loss_v
+        self.loss = loss_v
 
 
-        def action2one_hot(self, action_idx: int) -> np.ndarray:
-            z = np.zeros(self.action_space)
-            z[action_idx] = 1
-            return z
+        loss_v.backward()
+        imitation_agent.optimizer.step()
 
-        def get_loss(self):
-            return self.loss
+    def get_action(self, agent, observation, step_n) -> np.ndarray:
+        best_act = self.find_best_action(agent.policy, observation)
 
-        def get_average_loss(self, step):
-            average = self.totalLoss/step
-            self.totalLoss = 0
-            return average
+        return best_act # replay buffer store lists and env does np.argmax(action)
+
+    def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
+
+        return np.argmax(network(torch.tensor(observation).float()).detach()).item()
+
+
+    def find_best_expert_action(self, network, observation: np.ndarray) -> np.ndarray:
+
+        obs_v = torch.tensor(observation).float().to(self.device)
+        best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(self.device)
+        for i in range(self.action_space):
+            act_v = self.action2one_hot_v(i)
+            q_val = network(torch.cat([obs_v, act_v.to(self.device)]))
+            if q_val > best_q:
+                best_q = q_val
+                best_act_v = act_v
+        best_act = best_act_v
+
+        return np.argmax(best_act)
+
+    '''def find_best_actions(self,network,observations) -> torch.tensor:
+
+        z = torch.FloatTensor()
+
+        for observation in observations:
+            z = torch.cat(z,self.find_best_expert_action(network,observation))
+
+        return z'''
+
+    def action2one_hot(self, action_idx: int) -> np.ndarray:
+        z = np.zeros(self.action_space)
+        z[action_idx] = 1
+        return z
+
+    def action2one_hot_v(self, action_idx: int) -> torch.tensor:
+        z = torch.zeros(self.action_space)
+        z[action_idx] = 1
+        return z
+
+    def get_loss(self):
+        return self.loss
+
+    def get_average_loss(self, step):
+        average = self.totalLoss/step
+        self.totalLoss = 0
+        return average
