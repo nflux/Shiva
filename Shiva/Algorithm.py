@@ -312,8 +312,7 @@ class DDPGAlgorithm(AbstractAlgorithm):
 
         self.actor_loss = 0
         self.critic_loss = 0
-        self.totalActorLoss = 0
-        self.totalCriticLoss = 0
+
 
     def update(self, agent, minibatch, step_n):
 
@@ -324,25 +323,30 @@ class DDPGAlgorithm(AbstractAlgorithm):
         states = torch.tensor(states).to(device)
         actions = torch.tensor(actions).to(device)
         rewards = torch.tensor(rewards).to(device)
-        dones_mask = torch.ByteTensor(dones).to(device)
         next_states = torch.tensor(next_states).to(device)
+        dones_mask = torch.ByteTensor(dones).to(device)
 
         # apparently the critic isn't even learning
 
         # train critic
         agent.critic_optimizer.zero_grad()
-        # get q value from states and actions
-        q_now = agent.critic(states.float(), actions.float())
         # get next state action
         next_state_actions = agent.target_actor(next_states.float())
         #feed next state action and next state to critic network to get next q value
         q_next_states = agent.target_critic(next_states.float(), next_state_actions)
+        
+        # what is this doing?
         q_next_states[dones_mask] = 0.0
+
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * q_next_states
+
+        # get q value from states and actions
+        q_now = agent.critic(states.float(), actions.float())
         critic_loss = self.loss_calc(q_now, y_i.detach())
-        self.totalCriticLoss += critic_loss
+
         self.critic_loss = critic_loss
-        # print("critic loss :",critic_loss)
+
+        # print("critic loss:",critic_loss)
         critic_loss.backward()
         agent.critic_optimizer.step()
 
@@ -356,11 +360,12 @@ class DDPGAlgorithm(AbstractAlgorithm):
         # print("actor loss: ",actor_loss_value)
         # input()
         actor_loss_value = actor_loss_value.mean()
-        # print(actor_loss_value)
-        self.totalActorLoss += actor_loss_value
-        self.actor_loss = actor_loss_value
+        # print("actor loss:",actor_loss_value)
+        self.actor_loss = actor_loss_value  
         actor_loss_value.backward()
         agent.actor_optimizer.step()
+
+        # input()
 
         # Soft Network Updates
         alpha = 1 - 1e-3
@@ -388,8 +393,6 @@ class DDPGAlgorithm(AbstractAlgorithm):
         observation = torch.tensor(observation).to(device)
         action = agent.actor(observation.float()).cpu().data.numpy() + self.ou_noise.noise()
         action = np.clip(action, -1,1)
-        print(action)
-        # input()
         return action
 
     def create_agent(self): 
@@ -402,13 +405,3 @@ class DDPGAlgorithm(AbstractAlgorithm):
 
     def get_critic_loss(self):
         return self.critic_loss
-
-    def get_average_actor_loss(self, step):
-        average = self.totalActorLoss/step
-        self.totalActorLoss = 0
-        return average
-
-    def get_average_critic_loss(self, step):
-        average = self.totalCriticLoss/step
-        self.totalCriticLoss = 0
-        return average

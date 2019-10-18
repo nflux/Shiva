@@ -61,20 +61,22 @@ class Single_Agent_Learner(AbstractLearner):
     def update(self):
 
         print("Before training")
-        
+        step_count = 0
         for ep_count in range(self.configs['Learner']['episodes']):
             self.env.reset()
             self.totalReward = 0
             done = False
             while not done:
-                done = self.step(ep_count)
+                done = self.step(step_count, ep_count)
+                step_count += 1
+
 
         self.env.env.close()
 
         print("After training")
 
 
-    def step(self, ep_count):
+    def step(self, step_count, ep_count):
 
         self.env.env.render()
 
@@ -84,18 +86,20 @@ class Single_Agent_Learner(AbstractLearner):
 
         next_observation, reward, done = self.env.step(action)
 
-        self.writer.add_scalar('Reward', reward, self.env.get_current_step())
-
-        self.totalReward += reward
+        # TensorBoard metrics
+        self.writer.add_scalar('Actor Loss per Step', self.alg.get_actor_loss(), step_count)
+        self.writer.add_scalar('Critic Loss per Step', self.alg.get_critic_loss(), step_count)
+        self.writer.add_scalar('Reward', reward, step_count)
+        self.totalReward += reward  
 
         self.buffer.append([observation, action, reward, next_observation, done])
 
         self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
 
+        # TensorBoard Metrics
         if done:
             self.writer.add_scalar('Total Reward', self.totalReward, ep_count)
-            self.writer.add_scalar('Average Actor Loss per Episode', self.alg.get_average_actor_loss(self.env.get_current_step()), ep_count)
-            self.writer.add_scalar('Average Critic Loss per Episode', self.alg.get_average_critic_loss(self.env.get_current_step()), ep_count)
+            self.alg.ou_noise.reset()
 
         return done
 
