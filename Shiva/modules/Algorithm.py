@@ -402,23 +402,25 @@ class SupervisedAlgorithm(AbstractAlgorithm):
             Returns
                 None
         '''
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 
         states, actions, rewards, next_states, dones = minibatch
 
-        rewards_v = torch.tensor(rewards).to(device)
-        done_mask = torch.ByteTensor(dones).to(device)
+        rewards_v = torch.tensor(rewards).to(self.device)
+        done_mask = torch.ByteTensor(dones).to(self.device)
 
         # zero optimizer
         agent.optimizer.zero_grad()
 
 
-        imitation_input_v = torch.tensor(states).float().to(device)
+        imitation_input_v = torch.tensor(states).float().to(self.device)
         #the output of the imitation agent is a probability distribution across all possible actions
         action_prob_dist = agent.policy(imitation_input_v)
         #Cross Entropy takes in action class as target value
         actions = torch.LongTensor(np.argmax(actions,axis = 1))
+        actions = actions.detach()
+
+        #action_prob_dist[done_mask] = 0.0
+
 
         #next_state_values[done_mask] = 0.0
         # 4) Detach magic
@@ -431,7 +433,8 @@ class SupervisedAlgorithm(AbstractAlgorithm):
 
         #We are using cross entropy loss between the action our imitation Policy
         #would choose, and the actions the expert agent took
-        loss_v = self.loss_calc(action_prob_dist, actions).to(device)
+
+        loss_v = self.loss_calc(action_prob_dist, actions).to(self.device)
 
 
         self.totalLoss += loss_v
@@ -543,7 +546,7 @@ class DaggerAlgorithm(AbstractAlgorithm):
                 None
         '''
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        
+
         states, actions, rewards, next_states, dones = minibatch
 
 
@@ -553,18 +556,21 @@ class DaggerAlgorithm(AbstractAlgorithm):
         # zero optimizer
         imitation_agent.optimizer.zero_grad()
 
-        input_v = torch.tensor(states).float().to(device)
+        input_v = torch.tensor(states).float().to(self.device)
         actions_one_hot = torch.zeros((len(actions),2))
         action_prob_dist = imitation_agent.policy(input_v)
+
 
         expert_actions = torch.LongTensor(len(states))
         for i in range(len(states)):
             expert_actions[i] = self.find_best_expert_action(expert_agent.policy,states[i])
+        expert_actions = expert_actions.detach()
 
 
         #Loss will be Cross Entropy Loss between the action probabilites produced
         #by the imitation agent, and the action took by the expert.
-        loss_v = self.loss_calc(action_prob_dist, expert_actions).to(device)
+        loss_v = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
+
 
         self.totalLoss += loss_v
         self.loss = loss_v
@@ -573,6 +579,7 @@ class DaggerAlgorithm(AbstractAlgorithm):
         loss_v.backward()
         imitation_agent.optimizer.step()
 
+
     def get_action(self, agent, observation, step_n) -> np.ndarray:
         best_act = self.find_best_action(agent.policy, observation)
 
@@ -580,7 +587,7 @@ class DaggerAlgorithm(AbstractAlgorithm):
 
     def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
 
-        return np.argmax(network(torch.tensor(observation).float()).detach()).item()
+        return self.action2one_hot(np.argmax(network(torch.tensor(observation).float()).detach()).item())
 
 
     def find_best_expert_action(self, network, observation: np.ndarray) -> np.ndarray:

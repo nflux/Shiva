@@ -75,8 +75,8 @@ class SimpleExperienceBuffer:
                np.array(next_states), np.array(dones, dtype=np.bool)
 
     def full_buffer(self):
-        indices = np.arange(0,len(self.buffer))
-        states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in indices])
+        random_buffer = np.random.permutation(self.buffer)
+        states, actions, rewards, next_states, dones = zip(*[random_buffer[idx] for idx in range(len(random_buffer))])
         return np.array(states),np.array(actions), np.array(rewards,dtype = np.float32), \
             np.array(next_states), np.array(dones, dtype=np.bool)
 

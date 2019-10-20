@@ -93,8 +93,8 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     configs)
 
         # agents, environments, algorithm, data, configs for a single agent learner
-        self.learners.append(Learner.SingleAgentImitationLearner(self.id_generator(), [], [], self.algorithms, [], configs[0],'runs/ML-Gym-CartPole-v1-10-17-16:24/L-0/'))
-        #,'/runs/ML-Gym-CartPole-v1-10-13-16:52'
+        self.learners.append(Learner.SingleAgentImitationLearner(self.id_generator(), [], [], self.algorithms, [], configs[0]))
+
         shiva.add_learner_profile(self.learners[0])
 
         # initialize the learner instances

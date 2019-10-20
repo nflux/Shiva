@@ -2,6 +2,9 @@ from settings import shiva
 import Algorithm
 import ReplayBuffer
 import Environment
+import numpy as np
+import torch
+
 
 def initialize_learner(config):
     if config[0]['Learner']['type'] == 'DQN':
@@ -177,8 +180,7 @@ class SingleAgentImitationLearner(AbstractLearner):
                 environments,
                 algorithm,
                 data,
-                configs,
-                expert_agent):
+                configs):
 
         super().__init__(
                         id,
@@ -193,14 +195,31 @@ class SingleAgentImitationLearner(AbstractLearner):
 
         #I'm thinking about getting the saveFrequency here from the config and saving it in self
         self.saveFrequency = configs['Learner']['save_frequency']
-        self.expert_path = expert_agent
-        self.agents = [None] * 10
+        self.agents = [None] * self.configs['Learner']['dagger_iterations']
 
 
     def run(self):
         self.supervised_update()
         print('Supervised Learning is complete!')
+        print('Loss:',self.supervised_alg.loss)
         self.imitation_update()
+
+    '''def test_run(self,agent,episodes):
+        for ep in range(episodes):
+            self.env.reset()
+            self.totalReward = 0
+
+            done=False
+            while not done:
+                observation = self.env.get_observation()
+                #action = agent.policy(torch.FloatTensor(observation))
+                action = self.supervised_alg.onenp.argmax(agent.policy(torch.tensor(observation).float()).detach())
+                expert_action = self.supervised_alg.get_action(self.expert_agent,observation)
+                print('Imitation action: ',action,' Expert Action: ', expert_action)
+                next_observation, reward, done = self.env.step(action)
+                self.totalReward += 1
+
+            print('Episode Reward:',self.totalReward)'''
 
 
 
@@ -208,6 +227,7 @@ class SingleAgentImitationLearner(AbstractLearner):
     def supervised_update(self):
 
         for ep_count in range(self.configs['Learner']['supervised_episodes']):
+            print(ep_count)
 
             self.env.reset()
 
@@ -222,13 +242,15 @@ class SingleAgentImitationLearner(AbstractLearner):
         # self.env.close()
         self.env.env.close()
 
+        #self.supervised_train()
+
     def imitation_update(self):
 
         for iter_count in range(1,self.configs['Learner']['dagger_iterations']):
 
 
             for ep_count in range(self.configs['Learner']['imitation_episodes']):
-
+                print(ep_count)
                 self.env.reset()
 
                 self.totalReward = 0
@@ -236,13 +258,14 @@ class SingleAgentImitationLearner(AbstractLearner):
                 done = False
                 while not done:
                     done = self.imitation_step(ep_count,iter_count)
-                    shiva.add_summary_writer(self, self.agents[iter_count], 'Loss', self.imitation_alg.get_loss(), self.env.get_current_step())
+                    shiva.add_summary_writer(self, self.agents[iter_count-1], 'Loss', self.imitation_alg.get_loss(), self.env.get_current_step())
 
                     self.env.env.close()
 
 
-            self.imitation_train(iter_count)
+            #self.imitation_train(iter_count)
             print('Policy ',iter_count, ' complete!')
+            print('Loss: ',self.imitation_alg.loss)
 
 
     # Function to step throught the environment
@@ -256,20 +279,21 @@ class SingleAgentImitationLearner(AbstractLearner):
         next_observation, reward, done = self.env.step(action)
 
         # Write to tensorboard
-        shiva.add_summary_writer(self, self.agents[0], 'Reward', reward, self.env.get_current_step())
+        shiva.add_summary_writer(self, self.expert_agent, 'Reward', reward, self.env.get_current_step())
 
         # Cumulate the reward
         self.totalReward += reward[0]
 
         self.replay_buffer.append([observation, action, reward, next_observation, done])
-
-        self.supervised_alg.update(self.agents[0], self.replay_buffer.sample(), self.env.get_current_step())
+        self.supervised_alg.update(self.agents[0],self.replay_buffer.sample(), self.env.get_current_step())
 
         # when the episode ends
         if done:
             # add values to the tensorboard
             shiva.add_summary_writer(self, self.agents[0], 'Total Reward', self.totalReward, ep_count)
             shiva.add_summary_writer(self, self.agents[0], 'Average Loss per Episode', self.supervised_alg.get_average_loss(self.env.get_current_step()), ep_count)
+            print(self.totalReward)
+
 
 
         # Save the model periodically
@@ -280,35 +304,34 @@ class SingleAgentImitationLearner(AbstractLearner):
 
     def imitation_step(self,ep_count,iter_count):
 
-        self.env.load_viewer()
+        #if iter_count == 4:
+            #self.env.load_viewer()
 
         observation = self.env.get_observation()
 
-        action = self.imitation_alg.find_best_action(self.agents[iter_count].policy, observation)#, self.env.get_current_step())
-
+        action = self.imitation_alg.find_best_action(self.agents[iter_count-1].policy, observation)#, self.env.get_current_step())
 
         next_observation, reward, done, = self.env.step(action)
 
-        shiva.add_summary_writer(self, self.agents[iter_count], 'Reward', reward, self.env.get_current_step())
+        shiva.add_summary_writer(self, self.agents[iter_count-1], 'Reward', reward, self.env.get_current_step())
 
         self.totalReward += reward[0]
 
         self.replay_buffer.append([observation,action,reward,next_observation,done])
+        self.imitation_alg.update(self.agents[iter_count],self.expert_agent, self.replay_buffer.sample(), self.env.get_current_step())
 
 
+        #print('Total Reward: ', self.totalReward)
+        #print('Average Loss per Episode', self.supervised_alg.get_average_loss(self.env.get_current_step()))
         # when the episode ends
         if done:
             # add values to the tensorboard
             shiva.add_summary_writer(self, self.agents[iter_count], 'Total Reward', self.totalReward, ep_count)
             shiva.add_summary_writer(self, self.agents[iter_count], 'Average Loss per Episode', self.imitation_alg.get_average_loss(self.env.get_current_step()), ep_count)
+            print(self.totalReward)
+
 
         return done
-
-
-    def imitation_train(self,iter_count):
-
-        self.imitation_alg.update(self.agents[iter_count],self.expert_agent, self.replay_buffer.full_buffer(), self.env.get_current_step())
-
 
 
     def create_environment(self):
@@ -337,7 +360,7 @@ class SingleAgentImitationLearner(AbstractLearner):
         for i in range(len(self.agents)):
             self.agents[i] = self.supervised_alg.create_agent(self.id_generator())
 
-        self.expert_agent = self.load_agent(self.expert_path)
+        self.expert_agent = self.load_agent(self.configs['Learner']['expert_agent'])
 
 
         # Basic replay buffer at the moment
