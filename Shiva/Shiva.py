@@ -284,8 +284,13 @@ class ShivaAdmin():
 
             Input
                 @path       Path where the learner files will be located
+
+            Returns
+                A list of learners
+
         '''
         learners = []
+        print(path)
         learners_pickles = helpers.find_pattern_in_path(path, 'learner_cls.pickle')
         assert len(learners_pickles) > 0, "No learners found in {}".format(path)
         for learner_pickle in learners_pickles:

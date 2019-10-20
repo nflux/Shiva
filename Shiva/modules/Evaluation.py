@@ -1,7 +1,7 @@
 import EvaluationEnvironment
 
 def initialize_evaluation(config):
-    print(config)
+    # print(config)
     if config['env_type'] == 'Gym':
         return GymEvaluation(config['environment'], config['learners'], config['metrics'], config['env_render'], config)
 
@@ -24,18 +24,19 @@ class AbstractEvaluation(object):
     def evaluate_agents(self):
         '''
             Starts evaluation process
+            This implementation is specific to each environment type
         '''
         pass
 
     def _create_eval_envs(self):
         '''
-            This may be specific to each environment
+            This implementation is specific to each environment type
         '''
         pass
     
     def _start_evals(self):
         '''
-            This implementation is specific to each environment
+            This implementation is specific to each environment type
         '''
         pass
 
@@ -45,16 +46,20 @@ class AbstractEvaluation(object):
 
 class GymEvaluation(AbstractEvaluation):
     def __init__(self, 
-            envs_strs,
+            eval_envs,
             learners,
             metrics,
             render,
             config
         ):
-        super(GymEvaluation, self).__init__(envs_strs, learners, metrics, render, config)
+        super(GymEvaluation, self).__init__(eval_envs, learners, metrics, render, config)
 
     def _create_eval_envs(self):
-        self.eval_envs = [ EvaluationEnvironment.initialize_eval_env({'env_type': 'Gym', 'environment': env_name, 'env_render': self.render}) for env_name in self.eval_envs]
+        '''
+            Initializes the evaluation environments
+            It's executed at initialization by the AbstractEvaluation, but the implementation is specific to each Environment
+        '''
+        self.eval_envs = [ EvaluationEnvironment.initialize_eval_env({'env_type': 'Gym', 'environment': env_name, 'env_render': self.render}) for env_name in self.eval_envs ]
 
     def evaluate_agents(self):
         '''
@@ -63,7 +68,7 @@ class GymEvaluation(AbstractEvaluation):
         '''
         for env in self.eval_envs:
             for learner in self.learners:
-                for agent in learner:
+                for agent in learner.agents:
                     self._make_agent_play(env, agent)
 
     def _make_agent_play(self, env, agent):

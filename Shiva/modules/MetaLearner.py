@@ -98,7 +98,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
 
             self.eval_env = []
             # Load Learners to be passed to the Evaluation
-            self.configs[0]['Evaluation']['learners'] = [shiva._load_learner(learner_url) for learner_url in self.configs[0]['Evaluation']['load_path']]
+            self.configs[0]['Evaluation']['learners'] = shiva._load_learner(self.configs[0]['Evaluation']['load_path'])
             # Create Evaluation class
             self.eval_env.append(Evaluation.initialize_evaluation(self.configs[0]['Evaluation']))
 

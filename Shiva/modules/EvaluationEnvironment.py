@@ -2,7 +2,7 @@ import Environment
 
 def initialize_eval_env(env_params):
     assert 'env_type' in env_params, 'Needs @env_type in [EVAL_ENV] config'
-
+    
     if env_params['env_type'] == 'Gym':
         return GymEvaluationEnvironment(env_params['environment'], env_params['env_render'])
 
