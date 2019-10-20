@@ -93,7 +93,7 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     configs)
 
         # agents, environments, algorithm, data, configs for a single agent learner
-        self.learners.append(Learner.SingleAgentImitationLearner(self.id_generator(), [], [], self.algorithms, [], configs[0]))
+        self.learners.append(Learner.SingleAgentLearner(self.id_generator(), [], [], self.algorithms, [], configs[0]))
 
         shiva.add_learner_profile(self.learners[0])
 
