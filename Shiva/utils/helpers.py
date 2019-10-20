@@ -1,9 +1,10 @@
-import configparser
-import ast
-from datetime import datetime
-import os, fnmatch
-import traceback, warnings, sys
+import configparser, ast
+import os, sys
+import fnmatch
+import traceback, warnings
 import pickle, json
+import numpy as np, torch
+from datetime import datetime
 
 def save_pickle_obj(obj, filename):
     '''
@@ -142,12 +143,27 @@ def find_pattern_in_path(path, pattern):
                 result.append(os.path.join(root, name))
     return result
 
-'''
-    Utility for debugging
-    Comment last line to enable/disable
-'''
+def action2one_hot(action_space: int, action_idx: int) -> np.ndarray:
+    '''
+        Returns a one-hot encoded action numpy.ndarray
+    '''
+    z = np.zeros(action_space)
+    z[action_idx] = 1
+    return z
+
+def action2one_hot_v(action_space: int, action_idx: int) -> torch.tensor:
+    '''
+        Returns a one-hot encoded action torch.tensor
+    '''
+    z = torch.zeros(action_space)
+    z[action_idx] = 1
+    return z
 
 def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
+    '''
+        Utility for debugging
+        Comment last line to enable/disable
+    '''
     log = file if hasattr(file,'write') else sys.stderr
     traceback.print_stack(file=log)
     log.write(warnings.formatwarning(message, category, filename, lineno, line))
