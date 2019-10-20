@@ -545,7 +545,7 @@ class DaggerAlgorithm(AbstractAlgorithm):
             Returns
                 None
         '''
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+       # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         states, actions, rewards, next_states, dones = minibatch
 
