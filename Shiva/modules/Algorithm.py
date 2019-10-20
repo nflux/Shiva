@@ -216,7 +216,7 @@ class DQAlgorithm(AbstractAlgorithm):
         # 1) GRAB Q_VALUE(s_j, a_j)
         # We pass observations to the first model and extract the
         # specific Q-values for the taken actions using the gather() tensor operation.
-        # The first argument to the gather() call is a dimension index that we want to
+        # The first arAlgorithmAlgorithmgument to the gather() call is a dimension index that we want to
         # perform gathering on (equal to 1, which corresponds to actions).
         # The second argument is a tensor of indices of elements to be chosen
         input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(self.device)
@@ -498,7 +498,7 @@ class SupervisedAlgorithm(AbstractAlgorithm):
 
 
 
-###############################################################################
+############################################################################### device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 #
 # Dagger Algorithm for Imitation Implementation
 #
