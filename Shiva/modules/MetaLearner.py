@@ -1,6 +1,5 @@
 from settings import shiva
-import Learner, Algorithm, Agent
-import Evaluation
+import Learner, Algorithm, Agent, Evaluation
 
 # Maybe add a function to dictate the meta learner based on the configs
 # needs to keep track everytime its used so that it always gives a unique id
@@ -41,11 +40,11 @@ class AbstractMetaLearner(object):
         self.learnerCount = 0
         self.configs = configs
         
-        env_name = self.configs[0]['Environment']['env_type'] + '-' + self.configs[0]['Environment']['environment']
-        shiva.add_meta_profile(self, env_name)
-        
         self.PROD_MODE, self.EVAL_MODE = 'production', 'evaluation'
         self.mode = self.configs[0]['MetaLearner']['start_mode']
+
+        env_name = self.configs[0]['Environment']['env_type'] + '-' + self.configs[0]['Environment']['environment']
+        shiva.add_meta_profile(self, env_name)
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
@@ -95,14 +94,17 @@ class SingleAgentMetaLearner(AbstractMetaLearner):
                                                     configs
         )
         if self.mode == self.EVAL_MODE:
-
+            
             self.eval_env = []
             # Load Learners to be passed to the Evaluation
-            self.configs[0]['Evaluation']['learners'] = shiva._load_learner(self.configs[0]['Evaluation']['load_path'])
+            self.learners = [ shiva._load_learner(load_path) for load_path in self.configs[0]['Evaluation']['load_path'] ]
+
+            self.configs[0]['Evaluation']['learners'] = self.learners
             # Create Evaluation class
             self.eval_env.append(Evaluation.initialize_evaluation(self.configs[0]['Evaluation']))
-
+            
             self.eval_env[0].evaluate_agents()
+            
 
         elif self.mode == self.PROD_MODE:
 

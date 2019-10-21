@@ -26,6 +26,9 @@ class Agent(object):
         self.config = config
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    def __str__(self):
+        return "<{}:id={}>".format(self.__class__, self.id)
     
     def save(self, save_path, step):
         torch.save(self.policy, save_path + '/policy.pth')
