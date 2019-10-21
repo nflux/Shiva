@@ -1,5 +1,5 @@
 import Algorithm
-import Replay_Buffer
+import ReplayBuffer
 import Environment
 
 from tensorboardX import SummaryWriter
@@ -60,8 +60,8 @@ class Single_Agent_Learner(AbstractLearner):
 
     def update(self):
 
-        print("Before training")
         step_count = 0
+        
         for ep_count in range(self.configs['Learner']['episodes']):
             self.env.reset()
             self.totalReward = 0
@@ -70,19 +70,16 @@ class Single_Agent_Learner(AbstractLearner):
                 done = self.step(step_count, ep_count)
                 step_count += 1
 
-
         self.env.env.close()
-
-        print("After training")
 
 
     def step(self, step_count, ep_count):
 
-        self.env.env.render()
+        # self.env.env.render()
 
         observation = self.env.get_observation()
 
-        action = self.alg.get_action(self.alg.agents[0], observation, self.env.get_current_step())
+        action = self.alg.get_action(self.alg.agents[0], observation, step_count)
 
         next_observation, reward, done = self.env.step(action)
 
@@ -90,11 +87,12 @@ class Single_Agent_Learner(AbstractLearner):
         self.writer.add_scalar('Actor Loss per Step', self.alg.get_actor_loss(), step_count)
         self.writer.add_scalar('Critic Loss per Step', self.alg.get_critic_loss(), step_count)
         self.writer.add_scalar('Reward', reward, step_count)
-        self.totalReward += reward  
+        self.totalReward += reward
 
-        self.buffer.append([observation, action, reward, next_observation, done])
+        self.buffer.append([observation, action, reward, next_observation, int(done)])
 
-        self.alg.update(self.agents, self.buffer.sample(), self.env.get_current_step())
+        if step_count > 0:
+            self.agents = self.alg.update(self.agents, self.buffer.sample(), step_count)
 
         # TensorBoard Metrics
         if done:
@@ -108,7 +106,7 @@ class Single_Agent_Learner(AbstractLearner):
         self.env = Environment.initialize_env(self.configs['Environment'])
 
 
-    def get_agents(self):
+    def get_agents(self):   
         return self.agents[0]
 
     def get_algorithm(self):
@@ -127,7 +125,7 @@ class Single_Agent_Learner(AbstractLearner):
         self.writer = SummaryWriter()
 
         # Basic replay buffer at the moment
-        self.buffer = Replay_Buffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
+        self.buffer = ReplayBuffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
 
         print('Launch done.')
 

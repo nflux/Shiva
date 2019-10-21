@@ -87,8 +87,7 @@ class AbstractAlgorithm():
         self.learning_rate = learning_rate
         self.beta = beta
         self.configs = configs
-
-
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.loss_calc = self.loss_function()
         self.agents = []
 
@@ -180,15 +179,14 @@ class DQAlgorithm(AbstractAlgorithm):
             Returns
                 None
         '''
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         states, actions, rewards, next_states, dones = minibatch
         # make tensors
-        # states_v = torch.tensor(states).float()#.to(device)
-        # next_states_v = torch.tensor(next_states).float()#.to(device)
-        # actions_v = torch.tensor(actions)#.to(device)
-        rewards_v = torch.tensor(rewards).to(device)
-        done_mask = torch.ByteTensor(dones).to(device)
+        # states_v = torch.tensor(states).float()#.to(self.device)
+        # next_states_v = torch.tensor(next_states).float()#.to(self.device)
+        # actions_v = torch.tensor(actions)#.to(self.device)
+        rewards_v = torch.tensor(rewards).to(self.device)
+        done_mask = torch.ByteTensor(dones).to(self.device)
 
         # zero optimizer
         agent.optimizer.zero_grad()
@@ -198,7 +196,7 @@ class DQAlgorithm(AbstractAlgorithm):
         # The first argument to the gather() call is a dimension index that we want to
         # perform gathering on (equal to 1, which corresponds to actions). 
         # The second argument is a tensor of indices of elements to be chosen
-        input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(device)
+        input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(self.device)
         state_action_values = agent.policy(input_v) #.gather(1, actions_v.unsqueeze(-1)).squeeze(-1)
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
         # We apply the target network to our next state observations and 
@@ -206,7 +204,7 @@ class DQAlgorithm(AbstractAlgorithm):
         # Function max() returns both maximum values and indices of those values (so it calculates both max and argmax), 
         # which is very convenient. However, in this case, we’re interested only in values, so we take
         # the first entry of the result.
-        input_v = torch.tensor([ np.concatenate([s_i, self.find_best_action(agent.target_policy, s_i)]) for s_i in next_states ]).float().to(device)
+        input_v = torch.tensor([ np.concatenate([s_i, self.find_best_action(agent.target_policy, s_i)]) for s_i in next_states ]).float().to(self.device)
         next_state_values = agent.target_policy(input_v)#.max(1)[0]
         # 3) OVERWRITE 0 ON ALL Q_HAT_VALUES WHERE s_j IS A TERMINATION STATE
         # If transition in the batch is from the last step in the episode, then our value of the action doesn’t have a
@@ -246,13 +244,12 @@ class DQAlgorithm(AbstractAlgorithm):
         Iterates over the action space and returns a one-hot encoded list
     '''
     def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
-        obs_v = torch.tensor(observation).float().to(device)
-        best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(device)
+        obs_v = torch.tensor(observation).float().to(self.device)
+        best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(self.device)
         for i in range(self.action_space):
             act_v = self.action2one_hot_v(i)
-            q_val = network(torch.cat([obs_v, act_v.to(device)]))
+            q_val = network(torch.cat([obs_v, act_v.to(self.device)]))
             if q_val > best_q:
                 best_q = q_val
                 best_act_v = act_v
@@ -276,7 +273,7 @@ class DQAlgorithm(AbstractAlgorithm):
 
 ##########################################################################
 #    
-#    DDPG Algorithm Implementation
+#    DDPG Implementation for Continuous Actionspaces 
 #    
 ##########################################################################
 
@@ -307,93 +304,137 @@ class DDPGAlgorithm(AbstractAlgorithm):
         self.epsilon_end = epsilon[1]
         self.epsilon_decay = epsilon[2]
         self.C = C
+        self.scale = 0.9
 
-        self.ou_noise = Noise.OUNoise(self.action_space)
+        self.ou_noise = Noise.OUNoise(self.action_space, self.scale)
 
         self.actor_loss = 0
         self.critic_loss = 0
 
 
-    def update(self, agent, minibatch, step_n):
+    def update(self, agent, minibatch, step_count):
 
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+        '''
+            Getting a Batch from the Replay Buffer
+        '''
+        
+        # Batch of Experiences
         states, actions, rewards, next_states, dones = minibatch
-        
-        states = torch.tensor(states).to(device)
-        actions = torch.tensor(actions).to(device)
-        rewards = torch.tensor(rewards).to(device)
-        next_states = torch.tensor(next_states).to(device)
-        dones_mask = torch.ByteTensor(dones).to(device)
 
-        # apparently the critic isn't even learning
+        # Make everything a tensor and send to gpu if available
+        states = torch.tensor(states).to(self.device)
+        actions = torch.tensor(actions).to(self.device)
+        rewards = torch.tensor(rewards).to(self.device)
+        next_states = torch.tensor(next_states).to(self.device)
+        dones_mask = torch.ByteTensor(dones).view(-1,1).to(self.device)
 
-        # train critic
+        '''
+            Training the Critic
+        '''
+
+        # Zero the gradient
         agent.critic_optimizer.zero_grad()
-        # get next state action
-        next_state_actions = agent.target_actor(next_states.float())
-        #feed next state action and next state to critic network to get next q value
-        q_next_states = agent.target_critic(next_states.float(), next_state_actions)
-        
-        # what is this doing?
-        q_next_states[dones_mask] = 0.0
-
-        y_i = rewards.unsqueeze(dim=-1) + self.gamma * q_next_states
-
-        # get q value from states and actions
-        q_now = agent.critic(states.float(), actions.float())
-        critic_loss = self.loss_calc(q_now, y_i.detach())
-
+        # The actions that target actor would do in the next state.
+        next_state_actions_target = agent.target_actor(next_states.float())
+        # The Q-value the target critic estimates for taking those actions in the next state.
+        Q_next_states_target = agent.target_critic(next_states.float(), next_state_actions_target.float())
+        # Sets the Q values of the next states to zero if they were from the last step in an episode.
+        Q_next_states_target[dones_mask] = 0.0
+        # Use the Bellman equation.
+        y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
+        # Get Q values of the batch from states and actions.
+        Q_these_states_main = agent.critic(states.float(), actions.float())
+        # Calculate the loss.
+        critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
+        # Save critic loss for tensorboard
         self.critic_loss = critic_loss
-
-        # print("critic loss:",critic_loss)
+        # Backward propogation!
         critic_loss.backward()
+        # Update the weights in the direction of the gradient.
         agent.critic_optimizer.step()
 
-        # train actor
+        '''
+            Training the Actor
+        '''
+
+        # Zero the gradient
         agent.actor_optimizer.zero_grad()
-        # feed action to actor network
-        actor_actions = agent.actor(states.float())
-        # print(actor_actions)
-        # input()
-        actor_loss_value = -agent.critic(states.float(), actor_actions)
-        # print("actor loss: ",actor_loss_value)
-        # input()
-        actor_loss_value = actor_loss_value.mean()
-        # print("actor loss:",actor_loss_value)
-        self.actor_loss = actor_loss_value  
+        # Get the actions the main actor would take from the initial states
+        current_state_actor_actions = agent.actor(states.float())
+        # Calculate Q value for taking those actions in those states
+        actor_loss_value = agent.critic(states.float(), current_state_actor_actions.float())
+        # miracle line of code
+        param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
+        # Make the Q-value negative and add a penalty if Q > 1 or Q < -1
+        actor_loss_value = -actor_loss_value.mean() + param_reg
+        # Save the actor loss for tensorboard
+        self.actor_loss = actor_loss_value
+        # Backward Propogation!
         actor_loss_value.backward()
+        # Update the weights in the direction of the gradient.
         agent.actor_optimizer.step()
 
-        # input()
+        '''
+            Soft Target Network Updates
+        '''
 
-        # Soft Network Updates
-        alpha = 1 - 1e-3
+        alpha = 0.99
         ac_state = agent.actor.state_dict()
         tgt_state = agent.target_actor.state_dict()
+
         for k, v in ac_state.items():
             tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
         agent.target_actor.load_state_dict(tgt_state)
-        # print ("actor",tgt_state)
 
         ac_state = agent.critic.state_dict()
         tgt_state = agent.target_critic.state_dict()
         for k, v in ac_state.items():
             tgt_state[k] = tgt_state[k] * alpha + (1 - alpha) * v
         agent.target_critic.load_state_dict(tgt_state)
-        
-        # Hard Network Updates
-        # if step_n % self.C == 0:
-        #     agent.target_actor.load_state_dict(agent.actor.state_dict())
-        #     agent.target_critic.load_state_dict(agent.critic.state_dict())
+
+        '''
+            Hard Target Network Updates
+        '''
+
+        # if step_count % 1000 == 0:
+
+        #     for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
+        #         target_param.data.copy_(param.data)
+
+        #     for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
+        #         target_param.data.copy_(param.data)
 
 
-    def get_action(self, agent, observation, step_n) -> np.ndarray: # maybe a torch.tensor
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        observation = torch.tensor(observation).to(device)
-        action = agent.actor(observation.float()).cpu().data.numpy() + self.ou_noise.noise()
-        action = np.clip(action, -1,1)
-        return action
+        return agent
+
+    # Gets actions with a linearly decreasing e greedy strat
+    def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
+
+        if step_count < 0:
+
+            action = np.array([np.random.uniform(0,1) for _ in range(self.action_space)])
+            action += self.ou_noise.noise()
+            action = np.clip(action, -1, 1)
+            return action
+
+        else:
+
+            self.ou_noise.set_scale(0.1)
+
+            observation = torch.tensor(observation).to(self.device)
+            
+            action = agent.actor(observation.float()).cpu().data.numpy()
+
+            # kinda useful for debugging
+            # maybe should change the print to a log
+            if step_count % 100 == 0:
+                print(action)
+            action += self.ou_noise.noise()
+            action = np.clip(action, -1,1)
+
+            return action
+
+
 
     def create_agent(self): 
         new_agent = Agent.DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
@@ -405,3 +446,4 @@ class DDPGAlgorithm(AbstractAlgorithm):
 
     def get_critic_loss(self):
         return self.critic_loss
+

@@ -76,9 +76,11 @@ class GymEnvironment(Environment):
 
     def step(self,action):
             self.acs = action
+
+            # if there's a discrete space or more than one action this might be necessary
             # why is there an argmax here?
-            action = np.argmax(action)
-            print(action)
+            # action = np.argmax(action)
+            # print(action)
             # input()
             self.obs,self.rews,self.world_status, info = self.env.step(action)
             self.step_count +=1 
