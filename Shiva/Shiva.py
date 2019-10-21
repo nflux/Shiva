@@ -277,23 +277,25 @@ class ShivaAdmin():
         '''
         print("Loading MetaLearner")
 
-    def _load_learner(self, path: str) -> list:
+    def _load_learner(self, path: str) -> object:
         '''
-            For a given @path, the procedure will walk recursively over all the folders inside the @path
-            And find all the learner_cls.pickle files to load
+            The procedure will load only one single Learner if found in the given path
 
             Input
                 @path       Path where the learner files will be located
+
+            Returns
+                Learner
         '''
-        learners = []
-        learners_pickles = helpers.find_pattern_in_path(path, 'learner_cls.pickle')
-        assert len(learners_pickles) > 0, "No learners found in {}".format(path)
-        for learner_pickle in learners_pickles:
-            print('Loading Learner\n\t{}\n'.format(learner_pickle))
-            _new_learner = helpers.load_pickle_obj(learner_pickle)
-            _new_learner.agents = self._load_agents(path)                
-            learners.append(_new_learner)
-        return learners
+        learner_pickle = helpers.find_pattern_in_path(path, 'learner_cls.pickle')
+        assert len(learner_pickle) > 0, "No learners found in {}".format(path)
+        assert len(learner_pickle) == 1, "{} learner classes were found in {}".format(str(len(learner_pickle)), path)
+        learner_pickle = learner_pickle[0]
+        print('Loading Learner\n\t{}\n'.format(learner_pickle))
+        learner_path, _ = os.path.split(learner_pickle)
+        _new_learner = helpers.load_pickle_obj(learner_pickle)
+        _new_learner.agents = self._load_agents(learner_path)
+        return _new_learner
 
     def _load_agents(self, path) -> list:
         '''

@@ -53,8 +53,9 @@ class AbstractEnvironment():
 
 class GymEnvironment(AbstractEnvironment):
     def __init__(self, environment, render=False):
+        self.env_name = environment
         self.env = gym.make(environment)
-        #self.num_agents = num_agents
+        # self.num_agents = num_agents
         self.obs = self.env.reset()
         self.acs = 0
         self.rews = 0
@@ -64,13 +65,17 @@ class GymEnvironment(AbstractEnvironment):
         self.step_count = 0
         self.render = render
 
+        # self.reset()
+
     def step(self,action):
         self.acs = action
         self.obs, self.rews, self.world_status, info = self.env.step(np.argmax(action))
-        self.step_count +=1
+        self.step_count += 1
+        self.load_viewer()
         return self.obs, [self.rews], self.world_status
 
     def reset(self):
+        self.step_count = 0
         self.obs = self.env.reset()
 
     def set_observation_space(self):
