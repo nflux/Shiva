@@ -1,3 +1,5 @@
+from settings import shiva
+
 class MetaLearner(object):
     def __init__(self,
                 learners : list, 

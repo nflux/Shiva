@@ -1,3 +1,6 @@
+import robocup.rc_env as rc
+from .Environment import Environment
+
 class RoboCupDDPGEnvironment(Environment):
     def __init__(self, config, port):
         self.env = rc.rc_env(config, port)

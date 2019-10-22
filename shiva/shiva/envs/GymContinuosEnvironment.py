@@ -1,3 +1,6 @@
+import gym
+from .Environment import Environment
+
 class GymContinuosEnvironment(Environment):
     def __init__(self,environment,render):
         self.env = gym.make(environment)

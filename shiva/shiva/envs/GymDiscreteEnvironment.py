@@ -1,3 +1,6 @@
+import gym
+from .Environment import Environment
+
 class GymDiscreteEnvironment(Environment):
     def __init__(self, environment, render=False):
         self.env_name = environment

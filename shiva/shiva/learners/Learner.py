@@ -1,3 +1,5 @@
+from settings import shiva
+
 class Learner(object):
     
     def __init__(self,

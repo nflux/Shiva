@@ -1,4 +1,8 @@
-class SingleAgentImitationLearner(AbstractLearner):
+
+from settings import shiva
+from .Learner import Learner
+
+class SingleAgentImitationLearner(Learner):
     def __init__(self,
                 id,
                 agents,

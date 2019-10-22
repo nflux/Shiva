@@ -1,4 +1,7 @@
 # this is a version of a meta learner that will take a file path to the configuration files
+from settings import shiva
+from .MetaLearner import MetaLearner
+
 class SingleAgentMetaLearner(MetaLearner):
     def __init__(self,
                 learners : "list of learner objects but in this case there's only one but there could be more",
