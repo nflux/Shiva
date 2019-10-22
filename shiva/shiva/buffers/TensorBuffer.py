@@ -1,3 +1,7 @@
+import torch
+import helpers.buffer_handler as bh
+from torch.autograd import Variable
+
 class TensorBuffer(ReplayBuffer):
 
     def __init__(self, max_size, num_agents, obs_dim, acs_dim):
@@ -8,11 +12,11 @@ class TensorBuffer(ReplayBuffer):
 
         if self.current_index + nentries > self.max_size:
             rollover = self.max_size - self.current_index
-            self.obs_buffer = roll(self.obs_buffer, rollover)
-            self.acs_buffer = roll(self.acs_buffer, rollover)
-            self.rew_buffer = roll(self.rew_buffer, rollover)
-            self.done_buffer = roll(self.done_buffer, rollover)
-            self.next_obs_buffer = roll(self.next_obs_buffer, rollover)
+            self.obs_buffer = bh.roll(self.obs_buffer, rollover)
+            self.acs_buffer = bh.roll(self.acs_buffer, rollover)
+            self.rew_buffer = bh.roll(self.rew_buffer, rollover)
+            self.done_buffer = bh.roll(self.done_buffer, rollover)
+            self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
 
             self.current_index = 0
             self.size = self.max_size

@@ -1,3 +1,5 @@
+import torch
+
 class ReplayBuffer(object):
 
     def __init__(self, max_size, num_agents, obs_dim, acs_dim):
