@@ -1,8 +1,7 @@
-class GymEnvironment(Environment):
-    def __init__(self, environment, render=False):
-        self.env_name = environment
+class GymContinuosEnvironment(Environment):
+    def __init__(self,environment,render):
         self.env = gym.make(environment)
-        # self.num_agents = num_agents
+        #self.num_agents = num_agents
         self.obs = self.env.reset()
         self.acs = 0
         self.rews = 0
@@ -10,19 +9,24 @@ class GymEnvironment(Environment):
         self.observation_space = self.set_observation_space()
         self.action_space = self.set_action_space()
         self.step_count = 0
-        self.render = render
+        if render:
+            self.load_viewer()
 
-        # self.reset()
 
     def step(self,action):
-        self.acs = action
-        self.obs, self.rews, self.world_status, info = self.env.step(np.argmax(action))
-        self.step_count += 1
-        self.load_viewer()
-        return self.obs, [self.rews], self.world_status
+            self.acs = action
+
+            # if there's a discrete space or more than one action this might be necessary
+            # why is there an argmax here?
+            # action = np.argmax(action)
+            # print(action)
+            # input()
+            self.obs,self.rews,self.world_status, info = self.env.step(action)
+            self.step_count +=1 
+
+            return self.obs,self.rews,self.world_status
 
     def reset(self):
-        self.step_count = 0
         self.obs = self.env.reset()
 
     def set_observation_space(self):
@@ -55,8 +59,4 @@ class GymEnvironment(Environment):
         return self.rews
 
     def load_viewer(self):
-        if self.render:
-            self.env.render()
-
-    def close(self):
-        self.env.close()
+        self.env.render()
