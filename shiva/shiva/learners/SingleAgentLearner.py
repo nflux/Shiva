@@ -1,4 +1,4 @@
-class Single_Agent_Learner(AbstractLearner):
+class SingleAgentLearner(Learner):
     def __init__(self, agents, environments, algorithm, data, configs):
 
         super(Single_Agent_Learner,self).__init__(agents, environments, algorithm, data, configs)
