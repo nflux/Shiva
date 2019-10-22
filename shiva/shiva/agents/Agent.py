@@ -3,25 +3,20 @@ import numpy as np
 import helpers.misc as misc
 
 class Agent(object):
-    def __init__(self, id, obs_dim, action_dim, optimizer_function, learning_rate, config: dict):
+    def __init__(self, agent_id, config):
         '''
         Base Attributes of Agent
-            id = given by the learner
-            obs_dim
+            agent_id = given by the learner
+            observation_space
             act_dim
             policy = Neural Network Policy
             target_policy = Target Neural Network Policy
             optimizer = Optimier Function
             learning_rate = Learning Rate
         '''
-        self.id = id
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
+        {setattr(self, k, v) for k,v in config.items()}
+        self.agent_id = agent_id
         self.policy = None
-        self.optimizer_function = optimizer_function
-        self.learning_rate = learning_rate
-        self.config = config
-
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def __str__(self):
@@ -45,9 +40,9 @@ class Agent(object):
                 A one-hot encoded list
         '''
         obs_v = torch.tensor(observation).float().to(self.device)
-        best_q, best_act_v = float('-inf'), torch.zeros(self.action_dim).to(self.device)
-        for i in range(self.action_dim):
-            act_v = misc.action2one_hot_v(self.action_dim, i)
+        best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(self.device)
+        for i in range(self.action_space):
+            act_v = misc.action2one_hot_v(self.action_space, i)
             q_val = network(torch.cat([obs_v, act_v.to(self.device)]))
             if q_val > best_q:
                 best_q = q_val

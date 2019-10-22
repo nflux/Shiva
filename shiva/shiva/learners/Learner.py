@@ -42,8 +42,4 @@ class Learner(object):
     def load(self, attrs):
         for key in attrs:
             setattr(self, key, attrs[key])
-
-    def id_generator(self):
-        id = self.agentCount
-        self.agentCount +=1
-        return id
+        

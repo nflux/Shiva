@@ -1,6 +1,7 @@
 import torch
 import helpers.buffer_handler as bh
 from torch.autograd import Variable
+from .ReplayBuffer import ReplayBuffer
 
 class TensorBuffer(ReplayBuffer):
 

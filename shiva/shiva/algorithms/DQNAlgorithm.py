@@ -2,36 +2,20 @@ import numpy as np
 import torch
 import random
 from agents.DQNAgent import DQNAgent
-from helpers.misc import misc
+import helpers.misc as misc
 from .Algorithm import Algorithm
 
 class DQNAlgorithm(Algorithm):
-    def __init__(self,
-        observation_space: int,
-        action_space: int,
-        loss_function: object,
-        regularizer: object,
-        recurrence: bool,
-        optimizer: object,
-        gamma: np.float,
-        learning_rate: np.float,
-        beta: np.float,
-        epsilon: set(),
-        C: int,
-        configs: dict):
+    def __init__(self, config):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(DQNAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
-        self.epsilon_start = epsilon[0]
-        self.epsilon_end = epsilon[1]
-        self.epsilon_decay = epsilon[2]
-        self.C = C
-        
+        super(DQNAlgorithm, self).__init__(config)
         self.totalLoss = 0
         self.loss = 0
+        self.agentCount = 0
 
     def update(self, agent, minibatch, step_n):
         '''
@@ -82,7 +66,7 @@ class DQNAlgorithm(Algorithm):
         loss_v.backward()
         agent.optimizer.step()
 
-        if step_n % self.C == 0:
+        if step_n % self.c == 0:
             agent.target_policy.load_state_dict(agent.policy.state_dict()) # Assuming is PyTorch!
     
     def get_action(self, agent, observation, step_n) -> np.ndarray:
@@ -107,10 +91,11 @@ class DQNAlgorithm(Algorithm):
         self.totalLoss = 0
         return average
 
-    def create_agent(self, id):
-        new_agent = DQNAgent(id, self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
-        self.agents.append(new_agent)
-        return new_agent
+    def create_agent(self, agent_config, net_config):
+        self.agent = DQNAgent(self.id_generator(), agent_config, net_config)
+        return self.agent
 
-    def create_empty_agent(self):
-        pass
+    def id_generator(self):
+        agent_id = self.agentCount
+        self.agentCount +=1
+        return agent_id

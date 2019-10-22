@@ -3,13 +3,13 @@ import networks.DynamicLinearNetwork as DLN
 import copy
 
 class DQNAgent(Agent):
-    def __init__(self, id, obs_dim, action_dim, optimizer, learning_rate, config: dict):
-        super(DQNAgent,self).__init__(id, obs_dim, action_dim, optimizer, learning_rate, config)
-        network_input = obs_dim + action_dim
+    def __init__(self, agent_id, agent_config, net_config):
+        super(DQNAgent,self).__init__(agent_id, agent_config)
+        network_input = self.observation_space + self.action_space
         network_output = 1
-        self.policy = DLN.DynamicLinearNetwork(network_input, network_output, config['network'])
+        self.policy = DLN.DynamicLinearNetwork(network_input, network_output, net_config)
         self.target_policy = copy.deepcopy(self.policy)
-        self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=learning_rate)
+        self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=self.learning_rate)
         
     def get_action(self, obs):
         '''

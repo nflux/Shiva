@@ -2,9 +2,10 @@ import numpy as np
 import collections
 
 class SimpleBuffer:
-    def __init__(self, capacity, batch_size):
-        self.buffer = collections.deque(maxlen=capacity)
-        self.batch_size = batch_size
+    def __init__(self, config):
+        {setattr(self, k, v) for k,v in config.items()}
+        self.buffer = collections.deque(maxlen=self.capacity)
+        # self.batch_size = batch_size
 
     def __len__(self):
         return len(self.buffer)
@@ -13,7 +14,7 @@ class SimpleBuffer:
         self.buffer.append(experience)
 
     def clear_buffer(self):
-        self.buffer = collections.deque(maxlen=capacity)
+        self.buffer = collections.deque(maxlen=self.capacity)
 
     def sample(self):
         indices = np.random.choice(len(self.buffer), self.batch_size)

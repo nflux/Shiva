@@ -2,18 +2,7 @@ import numpy as np
 import torch
 
 class Algorithm():
-    def __init__(self,
-        observation_space: np.ndarray,
-        action_space: np.ndarray,
-        loss_function: object,
-        regularizer: object,
-        recurrence: bool,
-        optimizer_function: object,
-        gamma: np.float,
-        learning_rate: np.float,
-        beta: np.float,
-        configs: dict
-        ):
+    def __init__(self, config):
         '''
             Input
                 observation_space   Shape of the observation space, aka input to policy network
@@ -26,17 +15,7 @@ class Algorithm():
                 learning_rate       Learning rate used in the optimizer
                 beta                Hyperparameter
         '''
-        self.observation_space = observation_space
-        self.action_space = action_space
-        self.loss_function = loss_function
-        self.regularizer = regularizer
-        self.recurrence = recurrence
-        self.optimizer_function = optimizer_function
-        self.gamma = gamma
-        self.learning_rate = learning_rate
-        self.beta = beta
-        self.configs = configs
-
+        {setattr(self, k, v) for k,v in config.items()}
 
         self.loss_calc = self.loss_function()
         self.agents = []

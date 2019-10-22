@@ -2,10 +2,9 @@ import gym
 from .Environment import Environment
 
 class GymDiscreteEnvironment(Environment):
-    def __init__(self, environment, render=False):
-        self.env_name = environment
-        self.env = gym.make(environment)
-        # self.num_agents = num_agents
+    def __init__(self, config):
+        {setattr(self, k, v) for k,v in config.items()}
+        self.env = gym.make(self.env_name)
         self.obs = self.env.reset()
         self.acs = 0
         self.rews = 0
@@ -13,9 +12,6 @@ class GymDiscreteEnvironment(Environment):
         self.observation_space = self.set_observation_space()
         self.action_space = self.set_action_space()
         self.step_count = 0
-        self.render = render
-
-        # self.reset()
 
     def step(self,action):
         self.acs = action

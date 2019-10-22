@@ -3,6 +3,17 @@ import traceback, warnings
 import numpy as np
 import torch
 
+def handle_package(package, class_name):
+    '''
+        This function is used by the parse_functions()
+        
+        Input
+            @func_str       string name of a function     g.e. "ReLU"
+        Return
+            Function definition object (not instantiated)       g.e. nn.ReLU
+    '''
+    return getattr(package, class_name, None)
+
 def action2one_hot(action_space: int, action_idx: int) -> np.ndarray:
     '''
         Returns a one-hot encoded action numpy.ndarray

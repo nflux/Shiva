@@ -1,3 +1,7 @@
+import helpers.misc as misc
+import torch
+import torch.nn as nn
+
 def parse_layers(layers_str):
     '''
         Input
@@ -5,9 +9,9 @@ def parse_layers(layers_str):
         Return
             List of int elements g.e. [20,10,20]
     '''
-    return list(map(int, layers_str.split(',')))
+    return list(map(int, layers_str))
 
-def parse_functions(funcs_str, package=torch.nn):
+def parse_functions(package, funcs_str):
     '''
         Input
             @func_str       coming from the config file as a string     g.e. "ReLU,ReLU,Tanh"
@@ -15,18 +19,7 @@ def parse_functions(funcs_str, package=torch.nn):
         Return
             List of function definitions        g.e. [nn.ReLU, nn.ReLU, nn.Tanh]
     '''
-    return [get_attrs(f, package) for f in funcs_str.split(',')]
-
-def get_attrs(func_str, package=torch.nn):
-    '''
-        This function is used by the parse_functions()
-        
-        Input
-            @func_str       string name of a function     g.e. "ReLU"
-        Return
-            Function definition object (not instantiated)       g.e. nn.ReLU
-    '''
-    return getattr(package, func_str) if func_str != "" else None
+    return [misc.handle_package(package, f) for f in funcs_str]
 
 def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function: list, last_layer:bool, output_function: object=None):
     '''

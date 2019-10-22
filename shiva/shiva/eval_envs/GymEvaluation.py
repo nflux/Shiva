@@ -1,6 +1,8 @@
+from .Evaluation import Evaluation
+
 
 class GymEvaluation(Evaluation):
-    def __init__(self, 
+    def __init__(self,
             eval_envs,
             learners,
             metrics_strings,
