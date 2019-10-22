@@ -1,3 +1,9 @@
+import numpy as np
+import torch
+import helpers.misc as misc
+from agents.ImitationAgent import ImitationAgent
+from .Algorithm import Algorithm
+
 class SupervisedAlgorithm(Algorithm):
     def __init__(self,
         observation_space: int,
@@ -89,7 +95,7 @@ class SupervisedAlgorithm(Algorithm):
         obs_v = torch.tensor(observation).float().to(self.device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(self.device)
         for i in range(self.action_space):
-            act_v = self.action2one_hot_v(i)
+            act_v = misc.action2one_hot_v(i)
             q_val = network(torch.cat([obs_v, act_v.to(self.device)]))
             if q_val > best_q:
                 best_q = q_val
@@ -101,24 +107,6 @@ class SupervisedAlgorithm(Algorithm):
         new_agent = ImitationAgent(id, self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
-
-
-    def action2one_hot(self, action_idx: int) -> np.ndarray:
-        z = np.zeros(self.action_space)
-        z[action_idx] = 1
-        return z
-
-    def action2one_hot_v(self, action_idx: int) -> torch.tensor:
-        z = torch.zeros(self.action_space)
-        z[action_idx] = 1
-        return z
-
-    def one_hot2action(self,actions):
-        #z = torch.zeros(self.action_space)
-        for action in actions:
-            action = np.argmax(action)
-        return actions
-
 
     def get_loss(self):
         return self.loss

@@ -1,3 +1,9 @@
+import numpy as np
+import torch
+import utils.Noise as noise
+from agents.DDPGAgent import DDPGAgent
+from .Algorithm import Algorithm
+
 class DDPGAlgorithm(Algorithm):
     def __init__(self,
         observation_space: int,
@@ -27,7 +33,7 @@ class DDPGAlgorithm(Algorithm):
         self.C = C
         self.scale = 0.9
 
-        self.ou_noise = Noise.OUNoise(self.action_space, self.scale)
+        self.ou_noise = noise.OUNoise(self.action_space, self.scale)
 
         self.actor_loss = 0
         self.critic_loss = 0
@@ -158,7 +164,7 @@ class DDPGAlgorithm(Algorithm):
 
 
     def create_agent(self): 
-        new_agent = Agent.DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+        new_agent = DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
 

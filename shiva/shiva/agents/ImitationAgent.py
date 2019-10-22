@@ -1,4 +1,4 @@
-from Agent import Agent
+from .Agent import Agent
 
 class ImitationAgent(Agent):
     def __init__(self, id, obs_dim, action_dim, optimizer, learning_rate, config: dict):

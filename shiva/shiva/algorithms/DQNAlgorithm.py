@@ -1,3 +1,10 @@
+import numpy as np
+import torch
+import random
+from agents.DQNAgent import DQNAgent
+from helpers.misc import misc
+from .Algorithm import Algorithm
+
 class DQNAlgorithm(Algorithm):
     def __init__(self,
         observation_space: int,
@@ -86,7 +93,7 @@ class DQNAlgorithm(Algorithm):
         epsilon = max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay))
         if random.uniform(0, 1) < epsilon:
             action_idx = random.sample(range(self.action_space), 1)[0]
-            action = helpers.action2one_hot(self.action_space, action_idx)
+            action = misc.action2one_hot(self.action_space, action_idx)
         else:
             # Iterate over all the actions to find the highest Q value
             action = agent.get_action(observation)
@@ -101,7 +108,7 @@ class DQNAlgorithm(Algorithm):
         return average
 
     def create_agent(self, id):
-        new_agent = DQAgent(id, self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+        new_agent = DQNAgent(id, self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
 
