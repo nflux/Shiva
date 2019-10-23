@@ -75,7 +75,7 @@ class Single_Agent_Learner(AbstractLearner):
 
     def step(self, step_count, ep_count):
 
-        # self.env.env.render()
+        self.env.env.render()
 
         observation = self.env.get_observation()
 
@@ -91,7 +91,7 @@ class Single_Agent_Learner(AbstractLearner):
 
         self.buffer.append([observation, action, reward, next_observation, int(done)])
 
-        if step_count > 0:
+        if step_count > 10_000:
             self.agents = self.alg.update(self.agents, self.buffer.sample(), step_count)
 
         # TensorBoard Metrics

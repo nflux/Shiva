@@ -410,7 +410,7 @@ class DDPGAlgorithm(AbstractAlgorithm):
     # Gets actions with a linearly decreasing e greedy strat
     def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
 
-        if step_count < 0:
+        if step_count < 10_000:
 
             action = np.array([np.random.uniform(0,1) for _ in range(self.action_space)])
             action += self.ou_noise.noise()
