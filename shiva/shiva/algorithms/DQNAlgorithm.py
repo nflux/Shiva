@@ -15,7 +15,6 @@ class DQNAlgorithm(Algorithm):
         super(DQNAlgorithm, self).__init__(config)
         self.totalLoss = 0
         self.loss = 0
-        self.agentCount = 0
 
     def update(self, agent, minibatch, step_n):
         '''
@@ -94,8 +93,3 @@ class DQNAlgorithm(Algorithm):
     def create_agent(self, agent_config, net_config):
         self.agent = DQNAgent(self.id_generator(), agent_config, net_config)
         return self.agent
-
-    def id_generator(self):
-        agent_id = self.agentCount
-        self.agentCount +=1
-        return agent_id

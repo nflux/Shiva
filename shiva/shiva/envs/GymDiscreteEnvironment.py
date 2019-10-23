@@ -1,4 +1,5 @@
 import gym
+import numpy as np
 from .Environment import Environment
 
 class GymDiscreteEnvironment(Environment):

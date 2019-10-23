@@ -18,6 +18,7 @@ class Algorithm():
         {setattr(self, k, v) for k,v in config.items()}
 
         self.loss_calc = self.loss_function()
+        self.agentCount = 0
         self.agents = []
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -57,6 +58,11 @@ class Algorithm():
                 Agent
         '''
         pass
+
+    def id_generator(self):
+        agent_id = self.agentCount
+        self.agentCount +=1
+        return agent_id
 
     def get_agents(self):
         return self.agents

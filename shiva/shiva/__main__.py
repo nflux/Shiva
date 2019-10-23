@@ -16,11 +16,11 @@ import argparse
 import os
 import copy
 import torch
-import algorithms, envs, buffers
+import metalearners, learners, algorithms, envs, buffers
 import helpers.misc as misc
 import helpers.config_handler as ch
 
-config_dir = os.getcwd() + '/shiva/configs/'
+config_dir = os.getcwd() + '/configs/'
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -32,9 +32,8 @@ if __name__ == "__main__":
     temp_dict = copy.deepcopy(main_dict)
     types = temp_dict['Types']
 
-    # buffer_class = misc.handle_package(buffers, types['buffer'])
-    # buffer = buffer_class(temp_dict['Buffer'])
-    # print(buffer.__dict__)
+    buffer_class = misc.handle_package(buffers, types['buffer'])
+    buffer = buffer_class(temp_dict['Buffer'])
     env_class = misc.handle_package(envs, types['env'])
     env = env_class(temp_dict['Environment'])
     temp_dict['Algorithm']['observation_space'] = env.observation_space
@@ -48,7 +47,12 @@ if __name__ == "__main__":
     temp_dict['Agent']['optimizer_function'] = algo.optimizer_function
     temp_dict['Agent']['learning_rate'] = algo.learning_rate
     agent = algo.create_agent(temp_dict['Agent'], temp_dict['Network'])
-    print(agent.__dict__)
+    metalearner_class = misc.handle_package(metalearners, types['metalearner'])
+    meta = metalearner_class(algo, env, agent, [], buffer, temp_dict['MetaLearner'], temp_dict['Learner'], types['env'])
+    # meta.create_learner(agent, env, algo, buffer, temp_dict['Learner'])
+    meta.run()
+
+
 
 
 

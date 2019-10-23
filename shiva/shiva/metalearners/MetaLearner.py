@@ -1,31 +1,19 @@
 from settings import shiva
 
 class MetaLearner(object):
-    def __init__(self,
-                learners : list, 
-                algorithms : list, 
-                eval_env : str, 
-                agents : list, 
-                elite_agents : list, 
-                optimize_env_hp : bool, 
-                optimize_learner_hp : bool, 
-                evolution : bool,
-                configs : list):
-        self.learners = learners
-        self.algorithms = algorithms
+    def __init__(self, algorithm, eval_env, agent, elite_agent, buffer, meta_config, learner_config, env_name):
+        {setattr(self, k, v) for k,v in meta_config.items()}
+        self.algorithm = algorithm
         self.eval_env = eval_env
-        self.agents = agents
-        self.elite_agents = elite_agents
-        self.optimize_env_hp = optimize_env_hp
-        self.optimize_learner_hp = optimize_env_hp
-        self.evolution = evolution
+        self.agent = agent
+        self.elite_agent = elite_agent
+        self.buffer = buffer
+        self.meta_config = meta_config
+        self.learner_config = learner_config
         self.learnerCount = 0
-        self.configs = configs
         
         self.PROD_MODE, self.EVAL_MODE = 'production', 'evaluation'
-        self.mode = self.configs[0]['MetaLearner']['start_mode']
 
-        env_name = self.configs[0]['Environment']['env_type'] + '-' + self.configs[0]['Environment']['environment']
         shiva.add_meta_profile(self, env_name)
 
     # this would play with different hyperparameters until it found the optimal ones
@@ -42,6 +30,9 @@ class MetaLearner(object):
         pass
 
     def record_metrics(self):
+        pass
+
+    def create_learner(self, learner_id, config):
         pass
 
     def id_generator(self):

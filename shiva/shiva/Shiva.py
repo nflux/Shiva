@@ -1,7 +1,10 @@
 import os
 import configparser
 import inspect
-import helpers as helpers
+import helpers.dir_handler as dh
+import helpers.file_handler as fh
+import helpers.config_handler as ch
+import helpers.misc as misc
 from tensorboardX import SummaryWriter
 
 ###################################################################################
@@ -46,7 +49,7 @@ class ShivaAdmin():
         self._curr_agent_dir = {}
         self.writer = {}
         
-        self._INITS = helpers.load_config_file_2_dict(init_dir)
+        self._INITS = ch.load_config_file_2_dict(init_dir)
         
         assert 'SHIVA' in self._INITS, 'Needs a [SHIVA] section in file {}'.format(init_dir)
         assert 'DIRECTORY' in self._INITS, 'Need [DIRECTORY] section in file {}'.format(init_dir)
@@ -56,7 +59,7 @@ class ShivaAdmin():
         self._set_dirs_attrs()
 
         if self._INITS['SHIVA']['traceback']:
-            helpers.warnings.showwarning = helpers.warn_with_traceback
+            misc.warnings.showwarning = misc.warn_with_traceback
 
     def __str__(self):
         return "ShivaAdmin"
@@ -71,7 +74,7 @@ class ShivaAdmin():
         for key, folder_name in self.dirs.items():
             directory = self.base_url + folder_name
             setattr(self, key+'_url', directory)
-            helpers.make_dir(os.path.join(self.base_url, directory))
+            dh.make_dir(os.path.join(self.base_url, directory))
 
     def get_inits(self) -> list:
         '''
@@ -80,7 +83,7 @@ class ShivaAdmin():
             Returns
                 A list of config dictionaries
         '''
-        self.meta_learner_config = helpers.parse_configs(self.inits_url)
+        self.meta_learner_config = ch.parse_configs(self.inits_url)
         return self.meta_learner_config
     
     def add_meta_profile(self, meta_learner, env_name: str='') -> None:
@@ -95,7 +98,7 @@ class ShivaAdmin():
         '''
         if self.need_to_save:
             ml_folder_name = 'ML-'+env_name+'-'
-            self._curr_meta_learner_dir = helpers.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, ml_folder_name))
+            self._curr_meta_learner_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, ml_folder_name))
 
     def add_learner_profile(self, learner) -> None:
         '''
@@ -107,7 +110,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         if learner.id not in self._curr_learner_dir:
-            self._curr_learner_dir[learner.id] = helpers.make_dir(os.path.join(self._curr_meta_learner_dir, 'L-'+str(learner.id)))
+            self._curr_learner_dir[learner.id] = dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'L-'+str(learner.id)))
             self._curr_agent_dir[learner.id] = {}
             self.writer[learner.id] = {}
 
@@ -137,7 +140,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         if agent.id not in self._curr_agent_dir[learner.id]:
-            self._curr_agent_dir[learner.id][agent.id] = helpers.make_dir(os.path.join(self._curr_learner_dir[learner.id], 'Agents', str(agent.id)))
+            self._curr_agent_dir[learner.id][agent.id] = dh.make_dir(os.path.join(self._curr_learner_dir[learner.id], 'Agents', str(agent.id)))
             self.init_summary_writer(learner, agent)
 
     def get_agent_dir(self, learner, agent) -> str:
@@ -206,11 +209,11 @@ class ShivaAdmin():
         '''
         print("Saving Meta Learner:", self.caller, '@', self._curr_meta_learner_dir)
         # create the meta learner configs folder
-        helpers.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
+        dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
         # save each config file
         for cf in self.caller.configs:
             _filename_ = os.path.split(cf['_filename_'])[-1]
-            helpers.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
+            ch.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
         # save each learner
         for learner in self.caller.learners:
             self._save_learner(learner)
@@ -228,7 +231,7 @@ class ShivaAdmin():
         self.add_learner_profile(learner) # will only add if was not profiled before
         # save learner pickle and attributes
         learner_path = self._curr_learner_dir[learner.id]
-        helpers.save_pickle_obj(learner, os.path.join(learner_path, 'learner_cls.pickle'))
+        fh.save_pickle_obj(learner, os.path.join(learner_path, 'learner_cls.pickle'))
         # save agents
         if type(learner.agents) == list:
             for agent in learner.agents:
@@ -248,7 +251,7 @@ class ShivaAdmin():
         '''
         self._add_agent_profile(learner, agent)
         agent_path = self._curr_agent_dir[learner.id][agent.id]
-        helpers.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
+        fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
         agent.save(agent_path, learner.env.get_current_step())
 
     def load(self, caller, id=None):
@@ -287,13 +290,13 @@ class ShivaAdmin():
             Returns
                 Learner
         '''
-        learner_pickle = helpers.find_pattern_in_path(path, 'learner_cls.pickle')
+        learner_pickle = dh.find_pattern_in_path(path, 'learner_cls.pickle')
         assert len(learner_pickle) > 0, "No learners found in {}".format(path)
         assert len(learner_pickle) == 1, "{} learner classes were found in {}".format(str(len(learner_pickle)), path)
         learner_pickle = learner_pickle[0]
         print('Loading Learner\n\t{}\n'.format(learner_pickle))
         learner_path, _ = os.path.split(learner_pickle)
-        _new_learner = helpers.load_pickle_obj(learner_pickle)
+        _new_learner = fh.load_pickle_obj(learner_pickle)
         _new_learner.agents = self._load_agents(learner_path)
         return _new_learner
 
@@ -306,13 +309,13 @@ class ShivaAdmin():
                 @path       Path where the agents files will be located
         '''
         agents = []
-        agents_pickles = helpers.find_pattern_in_path(path, 'agent_cls.pickle')
-        agents_policies = helpers.find_pattern_in_path(path, 'policy.pth')
+        agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
+        agents_policies = dh.find_pattern_in_path(path, 'policy.pth')
         assert len(agents_pickles) > 0, "No agents found in {}".format(path)
         print("Loading Agents..")
         for agent_pickle, agent_policy in zip(agents_pickles, agents_policies):
             print("\t{}\n\t{}\n\n".format(agent_pickle, agent_policy))
-            _new_agent = helpers.load_pickle_obj(agent_pickle)
+            _new_agent = fh.load_pickle_obj(agent_pickle)
             _new_agent.load_net(agent_policy)
             agents.append(_new_agent)
         return agents

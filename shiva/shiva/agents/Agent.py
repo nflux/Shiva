@@ -43,6 +43,7 @@ class Agent(object):
         best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(self.device)
         for i in range(self.action_space):
             act_v = misc.action2one_hot_v(self.action_space, i)
+            print(network)
             q_val = network(torch.cat([obs_v, act_v.to(self.device)]))
             if q_val > best_q:
                 best_q = q_val
