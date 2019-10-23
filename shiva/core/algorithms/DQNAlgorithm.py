@@ -6,13 +6,15 @@ import helpers.misc as misc
 from .Algorithm import Algorithm
 
 class DQNAlgorithm(Algorithm):
-    def __init__(self, config):
+    def __init__(self, obs_space, acs_space, configs):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(DQNAlgorithm, self).__init__(config)
+        super(DQNAlgorithm, self).__init__(obs_space, acs_space, configs)
+        self.acs_space = acs_space
+        self.obs_space = obs_space
         self.totalLoss = 0
         self.loss = 0
 
@@ -75,8 +77,8 @@ class DQNAlgorithm(Algorithm):
         '''
         epsilon = max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay))
         if random.uniform(0, 1) < epsilon:
-            action_idx = random.sample(range(self.action_space), 1)[0]
-            action = misc.action2one_hot(self.action_space, action_idx)
+            action_idx = random.sample(range(self.acs_space), 1)[0]
+            action = misc.action2one_hot(self.acs_space, action_idx)
         else:
             # Iterate over all the actions to find the highest Q value
             action = agent.get_action(observation)
@@ -90,6 +92,6 @@ class DQNAlgorithm(Algorithm):
         self.totalLoss = 0
         return average
 
-    def create_agent(self, agent_config, net_config):
-        self.agent = DQNAgent(self.id_generator(), agent_config, net_config)
+    def create_agent(self):
+        self.agent = DQNAgent(self.id_generator(), self.acs_space, self.obs_space, self.configs[1], self.configs[2])
         return self.agent

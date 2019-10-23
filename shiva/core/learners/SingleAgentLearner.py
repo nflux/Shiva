@@ -3,6 +3,7 @@ from .Learner import Learner
 import helpers.misc as misc
 import envs
 import algorithms
+import buffers
 
 class SingleAgentLearner(Learner):
     def __init__(self, learner_id, config):
@@ -116,15 +117,15 @@ class SingleAgentLearner(Learner):
     def launch(self):
 
         # Launch the environment
-        self.env = misc.handle_package(envs, self.configs['Environment']['type'])(self.configs['Environment'])
+        self.env = getattr(envs, self.configs['Environment']['type'])(self.configs['Environment'])
 
         # Launch the algorithm which will handle the
-        self.alg = misc.handle_package(algorithms, self.configs['Algorithm']['type'])(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        self.alg = getattr(algorithms, self.configs['Algorithm']['type'])(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
-        self.agents = self.alg.create_agent()
+        self.agent = self.alg.create_agent()
 
         # Basic replay buffer at the moment
-        self.buffer = ReplayBuffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
+        self.buffer = getattr(buffers,self.configs['Buffer']['type'])(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
         print('Launch done.')
 

@@ -30,22 +30,13 @@ if __name__ == "__main__":
 
     main_dict = ch.load_config_file_2_dict(config_dir + args.config)
 
-
     metalearner_class = misc.handle_package(metalearners, main_dict['MetaLearner']['type'])
 
     meta = metalearner_class(main_dict)
 
 
-
-
     # meta.create_learner(agent, env, algo, buffer, temp_dict['Learner'])
     # meta.run()
-
-
-
-
-
-
 
 
     # temp_dict = copy.deepcopy(main_dict)

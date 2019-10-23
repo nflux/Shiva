@@ -1,6 +1,6 @@
 import os
 from Shiva import ShivaAdmin
 
-INIT_INI = os.getcwd() + '/shiva/init.ini'
+INIT_INI = os.getcwd() + '/core/init.ini'
 
 shiva = ShivaAdmin(INIT_INI)

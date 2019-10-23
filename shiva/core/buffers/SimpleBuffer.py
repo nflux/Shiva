@@ -1,7 +1,8 @@
 import numpy as np
 import collections
+# from buffers import ReplayBuffer
 
-class SimpleBuffer:
+class SimpleBuffer():
 
     '''
         Expected Configs:
@@ -11,10 +12,12 @@ class SimpleBuffer:
 
     '''
 
-    def __init__(self, config):
-        {setattr(self, k, v) for k,v in config.items()}
+    def __init__(self, batch_size, capacity):
+        # super(SimpleBuffer, self).__init__(max_size, num_agents, obs_dim, acs_dim)
+        self.capacity = capacity
         self.buffer = collections.deque(maxlen=self.capacity)
-        # self.batch_size = batch_size
+        self.batch_size = batch_size
+
 
     def __len__(self):
         return len(self.buffer)

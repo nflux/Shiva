@@ -1,15 +1,16 @@
 from .Agent import Agent
 import networks.DynamicLinearNetwork as DLN
 import copy
+import torch.optim
 
 class DQNAgent(Agent):
-    def __init__(self, agent_id, agent_config, net_config):
-        super(DQNAgent,self).__init__(agent_id, agent_config)
-        network_input = self.observation_space + self.action_space
+    def __init__(self, agent_id, acs_space, obs_space, agent_config, net_config):
+        super(DQNAgent,self).__init__(agent_id, acs_space, obs_space, agent_config, net_config)
+        network_input = obs_space + acs_space
         network_output = 1
         self.policy = DLN.DynamicLinearNetwork(network_input, network_output, net_config)
         self.target_policy = copy.deepcopy(self.policy)
-        self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=self.learning_rate)
+        self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=self.policy.parameters(), lr=agent_config['learning_rate'])
         
     def get_action(self, obs):
         '''
