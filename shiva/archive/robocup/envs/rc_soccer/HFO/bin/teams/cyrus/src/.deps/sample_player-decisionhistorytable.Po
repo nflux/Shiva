@@ -1,0 +1,6 @@
+sample_player-decisionhistorytable.o: decisionhistorytable.cpp \
+ /usr/include/stdc-predef.h decisionhistorytable.h
+
+/usr/include/stdc-predef.h:
+
+decisionhistorytable.h:
