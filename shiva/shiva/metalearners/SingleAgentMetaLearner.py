@@ -2,20 +2,15 @@
 from settings import shiva
 from .MetaLearner import MetaLearner
 from learners.SingleAgentLearner import SingleAgentLearner
+import helpers.misc as misc
+import learners
+
 
 class SingleAgentMetaLearner(MetaLearner):
-    def __init__(self,
-                algorithm : "list of algorithm name strings",
-                eval_env : "the name of the evaluation environment; from config file",
-                agent : "list of agents, in this case there's only one",
-                elite_agent : "list of elite agent objects from evaluation environment",
-                buffer,
-                meta_config: "list of all config dictionaries",
-                learner_config,
-                env_name
-        ):
-        super(SingleAgentMetaLearner,self).__init__(algorithm, eval_env, agent, 
-                                                    elite_agent, buffer, meta_config, learner_config, env_name)
+    def __init__(self, configs):
+        super(SingleAgentMetaLearner,self).__init__(configs)
+        self.configs = configs
+        self.run()
     
     def run(self):
 
@@ -35,13 +30,16 @@ class SingleAgentMetaLearner(MetaLearner):
         elif self.start_mode == self.PROD_MODE:
 
             # agents, environments, algorithm, data, configs for a single agent learner
-            self.learner = self.create_learner(self.agent, self.eval_env, 
-                                                self.algorithm, self.buffer, self.learner_config)
+            #agents, environments, algorithm, data, config
+            self.learner = self.create_learner()
+
+            # self.learner = self.create_learner(self.agent, self.eval_env, self.algorithm, self.buffer, self.learner_config)
             shiva.add_learner_profile(self.learner)
+
+
             # initialize the learner instances
-            # self.learner.launch()
-            
-            # shiva.update_agents_profile(self.learners)
+            self.learner.launch()
+            shiva.update_agents_profile(self.learner)
             
             # Runs the learner for a number of episodes given by the config
             self.learner.run()
@@ -49,6 +47,7 @@ class SingleAgentMetaLearner(MetaLearner):
             # save
             self.save()
     
-    def create_learner(self, agent, env, algo, buffer, config):
-        self.learner = SingleAgentLearner(self.id_generator(), agent, env, algo, buffer, config)
-        return self.learner
+    def create_learner(self):
+        learner = misc.handle_package(learners, self.configs['Learner']['type'])
+        return learner(self.id_generator(), self.config)
+        

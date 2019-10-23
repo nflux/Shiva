@@ -15,7 +15,7 @@ class Agent(object):
             learning_rate = Learning Rate
         '''
         {setattr(self, k, v) for k,v in config.items()}
-        self.agent_id = agent_id
+        self.id = agent_id
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

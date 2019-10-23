@@ -1,1 +1,1 @@
-from envs.GymDiscreteEnvironment import GymDiscreteEnvironment
+from envs.GymDiscreteEnvironment import *

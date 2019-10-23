@@ -1,20 +1,12 @@
 from settings import shiva
 
 class MetaLearner(object):
-    def __init__(self, algorithm, eval_env, agent, elite_agent, buffer, meta_config, learner_config, env_name):
-        {setattr(self, k, v) for k,v in meta_config.items()}
-        self.algorithm = algorithm
-        self.eval_env = eval_env
-        self.agent = agent
-        self.elite_agent = elite_agent
-        self.buffer = buffer
-        self.meta_config = meta_config
-        self.learner_config = learner_config
+    def __init__(self, config):
+        {setattr(self, k, v) for k,v in config['MetaLearner'].items()}
+        self.config = config
         self.learnerCount = 0
-        
         self.PROD_MODE, self.EVAL_MODE = 'production', 'evaluation'
-
-        shiva.add_meta_profile(self, env_name)
+        shiva.add_meta_profile(self, config['Environment']['env_name'])
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):

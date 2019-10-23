@@ -2,13 +2,10 @@ from settings import shiva
 
 class Learner(object):
     
-    def __init__(self, learner_id, agent, environment, algorithm, buffer, config):
+    def __init__(self, learner_id, config):
         {setattr(self, k, v) for k,v in config.items()}
-        self.learner_id = learner_id
-        self.agent = agent
-        self.env = environment
-        self.alg = algorithm
-        self.buffer = buffer
+        self.configs = config
+        self.id = learner_id
 
     def update(self):
         pass

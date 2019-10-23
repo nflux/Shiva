@@ -1,10 +1,13 @@
 from settings import shiva
 from .Learner import Learner
+import helpers.misc as misc
+import envs
+import algorithms
 
 class SingleAgentLearner(Learner):
-    def __init__(self, learner_id, agent, environment, algorithm, buffer, config):
+    def __init__(self, learner_id, config):
 
-        super(SingleAgentLearner,self).__init__(learner_id, agent, environment, algorithm, buffer, config)
+        super(SingleAgentLearner,self).__init__(learner_id, config)
 
 
     def run(self):
@@ -110,22 +113,20 @@ class SingleAgentLearner(Learner):
     def get_algorithm(self):
         return self.alg
 
-    # def launch(self):
+    def launch(self):
 
-    #     # Launch the environment
-    #     self.create_environment()
+        # Launch the environment
+        self.env = misc.handle_package(envs, self.configs['Environment']['type'])(self.configs['Environment'])
 
-    #     # Launch the algorithm which will handle the
-    #     self.alg = Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        # Launch the algorithm which will handle the
+        self.alg = misc.handle_package(algorithms, self.configs['Algorithm']['type'])(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
-    #     self.agents = self.alg.create_agent()
+        self.agents = self.alg.create_agent()
 
-    #     self.writer = SummaryWriter()
+        # Basic replay buffer at the moment
+        self.buffer = ReplayBuffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
 
-    #     # Basic replay buffer at the moment
-    #     self.buffer = ReplayBuffer.initialize_buffer(self.configs['Replay_Buffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
-
-    #     print('Launch done.')
+        print('Launch done.')
 
 
     def save_agent(self):

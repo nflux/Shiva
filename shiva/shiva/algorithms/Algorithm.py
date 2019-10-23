@@ -16,7 +16,7 @@ class Algorithm():
                 beta                Hyperparameter
         '''
         {setattr(self, k, v) for k,v in config.items()}
-
+        self.config = config
         self.loss_calc = self.loss_function()
         self.agentCount = 0
         self.agents = []

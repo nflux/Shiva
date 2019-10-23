@@ -1,1 +1,1 @@
-from algorithms.DQNAlgorithm import DQNAlgorithm
+from algorithms.DQNAlgorithm import *

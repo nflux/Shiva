@@ -1,4 +1,7 @@
-class Environment():
+class Environment:
+    def __init__(self, configs):
+        {setattr(self, k, v) for k,v in configs.items()}
+        self.configs = configs
 
     def step(self,actions):
         pass

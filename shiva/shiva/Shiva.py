@@ -123,11 +123,11 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         self.add_learner_profile(learner) # will only add if was not profiled before
-        if type(learner.agents) == list:
-            for agent in learner.agents:
+        if type(learner.agent) == list:
+            for agent in learner.agent:
                 self._add_agent_profile(learner, agent)
         else:
-            self._add_agent_profile(learner, learner.agents)
+            self._add_agent_profile(learner, learner.agent)
 
     def _add_agent_profile(self, learner, agent):
         '''
@@ -211,7 +211,7 @@ class ShivaAdmin():
         # create the meta learner configs folder
         dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
         # save each config file
-        for cf in self.caller.configs:
+        for cf in self.caller.config:
             _filename_ = os.path.split(cf['_filename_'])[-1]
             ch.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
         # save each learner

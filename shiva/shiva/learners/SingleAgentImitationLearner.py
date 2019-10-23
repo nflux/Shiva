@@ -11,16 +11,14 @@ class SingleAgentImitationLearner(Learner):
                 data,
                 configs):
 
-        super().__init__(
-                        id,
+        super(SingleAgentImitationLearner, self).__init__(
+                        id, 
                         agents,
                         environments,
                         algorithm,
                         data,
                         configs,
                         )
-
-
 
         #I'm thinking about getting the saveFrequency here from the config and saving it in self
         self.saveFrequency = configs['Learner']['save_frequency']

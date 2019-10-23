@@ -3,8 +3,8 @@ import numpy as np
 from .Environment import Environment
 
 class GymDiscreteEnvironment(Environment):
-    def __init__(self, config):
-        {setattr(self, k, v) for k,v in config.items()}
+    def __init__(self, configs):
+        super(GymDiscreteEnvironment, self).__init__(configs)
         self.env = gym.make(self.env_name)
         self.obs = self.env.reset()
         self.acs = 0
