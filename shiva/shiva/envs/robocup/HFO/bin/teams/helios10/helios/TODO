@@ -1,0 +1,135 @@
+* 最優先事項
+- 後半終了間際でのプレイヤ交代
+- パスの調整
+- 攻撃陣の動的ポジショニング
+- can_shoot_fromを自分に対しては厳しめに
+- ペナルティキックをBhv_ChainActionで動くようにする
+- Bhv_SideBackDangerMove: シュートコースを防ぐために中に寄りすぎている
+- オフェンス:  teammate_is_marked(pos)を用意する
+- Bhv_AvoidOpponentMark: 敵のマークを外したホームポジション移動．
+    味方ボールのときのみ
+    一定サイクルの間移動させる
+    インターセプトの機会になれば強制キャンセル
+    ホームポジションとXm以上離れればキャンセル
+- ディフェンス:  opponent_is_marked(Player)を用意する
+- Bhv_SideBackDefensiveMove: インターセプトの判定が要調整．敵のトラッ
+   プ位置とのy座標値の差
+     fabs( fabs(opp.y-opp_trap.y) - fabs(me.y-opp_trap.y) )
+   が大きければ早めに諦めた方が良いかもしれない
+- Bhv_SideBackDefensiveMove::doAttackBallOwner
+  MarkTableを参照して，自分がマークすべき敵プレイヤであれば追いかける
+   ようにする
+- ディフェンス: GetBallの探索を汎用化．現在の体の向きで到達できる位置
+   で精度が良ければ，そのまま走り込めるようにする
+- ディフェンス: 直前の意思決定内容を参照できるようにする
+- ディフェンス: 先回り状態の検出．敵ボールホルダーとゴールとの間に体を
+   入れられているかどうかを判定できるようにする．体を入れられていれば
+   ボールを取るために近づく，など
+- コミュニケーション: マークの分析結果をキーパーに喋らせる
+- コミュニケーション: 信頼性カウントをメッセージに含められるようにする
+- Communication: 喋る順番に合わせてchange_viewしておく
+- Communication: 敵がキッカブル状態のときに，ボールが動いていなければ
+   連続して喋らない
+- Bhv_CheckOpponentAttacker
+- Neck_CheckOpponentAttacker
+- ShortDribble,SelfPassで衝突回避のために2回以上のキックを許容する
+- 守備，特にディフェンダーが敵の斜めドリブルを止められていない
+- コーナーキック直後にオフサイドにならないように，オフサイド位置からは
+   ボールに近づかないようにする
+- KeepDribbleGenerator
+- 評価関数: ドリブルで現在状態が敵に密着されている場合は評価を下げる
+- librcsc: ActionChainMessageを作る
+- コミュニケーション: ActionChainを喋らせる
+- Bhv_ChainActionMove, IntentionChainActionMove
+- PredictStateのオフサイドラインをヒューリスティックに上げ下げする？
+- (done)マーク: マーク位置のmin_xよりもマーク対象が手前にある場合．マー
+   ク対象プレイヤのすぐ前方に移動させる
+- (done) ShortDribbleで，ボールと衝突してしまうパターンを許容できるようにする
+- (done)ShortDribble: ダッシュ回数ではなく，総ステップ数で制限し，キックとター
+   ン実行後の残り回数をダッシュとする
+- (done)Neck_ScanPlayersが何かおかしい <- visible distance内のボールを
+   視界に入れようとしていたのが原因
+
+* 要調整
+- ShootGenerator: 敵フィールドプレイヤへのボーナスとしてposCount-1していたものをposCountをそのまま使用するようにした．シュート探索が厳しめになっているので，様子を観て調整が必要．また，SEARCH_UNTIL_MAX_SPEED_AT_SAME_POINTが有効になっていることですぐにシュートを打たないことが多いので，これも要調整
+- FieldAnalyzer::our_goal_is_blocked()
+
+
+
+* librcsc
+- BallObject::isGhost(), ghostCount()
+- Neck_TurnToBallOr(NeckAction*)
+- BallSelfMessage
+- KickTable::calc_max_velcoityのバリエーションとして，velocity_rangeを
+   求められるメソッドを用意する．ボールの初期速度によっては，最小スピー
+   ドが0にならないことがあるため
+- フィールドの信頼性グリッドマップのアクセスインタフェース
+
+* 評価関数関連
+- 敵との距離の計算で敵の移動範囲も考慮する
+- 敵との距離のペナルティを線形関数ではなくガウス関数にする
+- 敵との最短距離だけでなく，密集度も計算する
+- 基本評価を，Xの値ではなくシュート可能エリアからの距離で評価する（できれば関数近似）
+- !pass && 同じball_holder && 一定距離範囲内 の場合に評価を大きく下げるようにする
+- Dribble,SelfPassで，ターン無しのものを高評価にする
+
+
+* ActionGenerator
+- SimpleSelfPass: 2段目以降の簡易検索セルフパス
+- StrictCheckPass: パスの起点が自陣の場合は，敵のチェックを厳しめにする
+- Cross: 敵チェックをもう少しをきちんとやってみる（シュートくらい?）
+- LevelFilterで2ステップ目のアクション生成にのみシンプルスルーパスを入れてみる？
+- CrossGenerator: 距離が遠い場合はもう少し厳しめの判定にする？
+- TurnNeckGenerator
+- HoldBallGenerator(1) 敵にすぐに取られなさそうであれば，周囲を見渡せる方向へ体を向ける
+- HoldBallGenerator(2) ??? パスレシーバを確認するときに，目標方向へ少し蹴り出すことも許容する ???
+- CrossGenerator 1ステップで蹴り出せるコースを優先的に探す
+- SelfPass,SimpleDribble: 敵に与えるボーナスの調整
+- パスのレシーブ位置生成処理をStrictとSimpleで共通化する．レシーバとレシーブ位置のペアのコンテナを返す？
+- 簡易チェックスルーパスの高速化と信頼性向上
+
+* 守備
+- block-position.conf: ブロックの基準位置をフォーメーション設定を流用
+   して決定する．入力は敵プレイヤ
+- mark-position.conf: マークの基本位置をフォーメーション設定を流用して
+   決定する？ボールとプレイヤの両方は入力できないので，ボール位置を何
+   パターン波用意してそれぞれで用意する？
+
+* 首振り
+- ボール追跡時，ボールに注目
+- Neck_PlayerScan 信頼性の低いプレイヤへの首振り
+
+* コミュニケーション
+- ActionChain共有のためのCommunicaion
+
+
+* Analyzer
+- 敵プレイヤが後1-2ステップ以内にボールに触る可能性があるかどうかを厳
+   密に推定する（キープしながらターンするため）
+- DPREAnalyzer: ポジション交換分析
+- MarkAnalyzer調整
+
+
+* 秋山
+- セットプレイ時のパスをStrictPassに置き換える
+- スルーパスの敵に取られるかどうかの判定で，単純にレシーブ位置との距離で判定させてみる
+- Bhv_SetPlayIndirectFreeKick: シュートコースの大きさでパス相手を選択する
+- Bhv_SetPlayIndirectFreeKick: シュートコースにレシーバがいなければ，もっとも近くにいるプレイヤにサポートさせる
+- enum PassType
+
+
+* 下羅
+- Savior改良
+- 評価関数改良
+
+
+* 随時調整
+- can_shoot_fromを甘めに（ゴール前でフリーならOKとか）
+- librcsc: バックパス回避のためのキッカーの判定
+- SimpleDribble,SelfPassの敵のボーナス判定
+
+
+* その他
+- コミュニケーション: ボールの位置のみ（速度含めず）を喋るメッセージを
+   追加する．敵がキッカブルの場合は位置だけを喋らせる
+  速度の大きさが0の場合は速度情報を更新しないことで対応
