@@ -18,7 +18,8 @@ class GymDiscreteEnvironment(Environment):
         self.acs = action
         self.obs, self.rews, self.world_status, info = self.env.step(np.argmax(action))
         self.step_count += 1
-        self.load_viewer()
+        if self.render:
+            self.load_viewer()
         return self.obs, [self.rews], self.world_status
 
     def reset(self):

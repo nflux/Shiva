@@ -44,10 +44,12 @@ class SingleAgentMetaLearner(MetaLearner):
             # Runs the learner for a number of episodes given by the config
             self.learner.run()
 
+            shiva.add_meta_profile(self, self.configs['Environment']['env_name'])
+
             # save
             self.save()
     
     def create_learner(self):
-        learner = misc.handle_package(learners, self.configs['Learner']['type'])
-        return learner(self.id_generator(), self.config)
+        learner = getattr(learners, self.configs['Learner']['type'])
+        return learner(self.id_generator(), self.configs)
         

@@ -1,10 +1,10 @@
 import gym
 from .Environment import Environment
 
-class GymContinuosEnvironment(Environment):
-    def __init__(self,environment,render):
-        self.env = gym.make(environment)
-        #self.num_agents = num_agents
+class GymContinuousEnvironment(Environment):
+    def __init__(self,environment):
+        super(GymContinuousEnvironment,self).__init__(environment)
+        self.env = gym.make(self.env_name)
         self.obs = self.env.reset()
         self.acs = 0
         self.rews = 0
@@ -12,17 +12,15 @@ class GymContinuosEnvironment(Environment):
         self.observation_space = self.set_observation_space()
         self.action_space = self.set_action_space()
         self.step_count = 0
-        if render:
-            self.load_viewer()
-
 
     def step(self,action):
             self.acs = action
-            
-            self.obs,self.rews,self.world_status, info = self.env.step(action)
+            self.obs, self.rews, self.world_status, info = self.env.step(action)
             self.step_count +=1 
+            if self.render:
+                self.load_view()
 
-            return self.obs,self.rews,self.world_status
+            return self.obs, self.rews, self.world_status
 
     def reset(self):
         self.obs = self.env.reset()

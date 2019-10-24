@@ -17,8 +17,8 @@ class SingleAgentLearner(Learner):
             self.totalReward = 0
             done = False
             while not done:
-                step_count +=1
                 done = self.step(step_count, ep_count)
+                step_count +=1
 
         self.env.close()
 
@@ -100,7 +100,6 @@ class SingleAgentLearner(Learner):
     #     # create the environment and get the action and observation spaces
     #     self.env = Environment.initialize_env(self.configs['Environment'])
 
-
     def get_agents(self):   
         return self.agents
 
@@ -118,7 +117,8 @@ class SingleAgentLearner(Learner):
         self.agent = self.alg.create_agent()
 
         # Basic replay buffer at the moment
-        self.buffer = getattr(buffers,self.configs['Buffer']['type'])(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        buffer = getattr(buffers,self.configs['Buffer']['type'])
+        self.buffer = buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
         print('Launch done.')
 
