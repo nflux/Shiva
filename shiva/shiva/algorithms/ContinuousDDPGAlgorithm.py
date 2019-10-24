@@ -5,37 +5,19 @@ from agents.DDPGAgent import DDPGAgent
 from .Algorithm import Algorithm
 
 class ContinuousDDPGAlgorithm(Algorithm):
-    def __init__(self,
-        observation_space: int,
-        action_space: int,
-        loss_function: object, 
-        regularizer: object, 
-        recurrence: bool, 
-        optimizer: object, 
-        gamma: np.float, 
-        learning_rate: np.float,
-        beta: np.float,
-        # epsilon_start: np.float,
-        # epsilon_end: np.float,
-        # epsilon_decay: np.float,
-        epsilon: set(),
-        C: int,
-        configs: dict):
+    def __init__(self, observation_space: int, action_space: int, configs: dict):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(ContinuousDDPGAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
-        self.epsilon_start = epsilon[0]
-        self.epsilon_end = epsilon[1]
-        self.epsilon_decay = epsilon[2]
-        self.C = C
+        super(ContinuousDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
+
+        # self.C = C
+        # self.tau = self.configs['tau']
+
         self.scale = 0.9
-        self.tau = self.configs['tau']
-
-        self.ou_noise = noise.OUNoise(self.action_space, self.scale)
-
+        self.ou_noise = noise.OUNoise(action_space, self.scale)
         self.actor_loss = 0
         self.critic_loss = 0
 
@@ -122,19 +104,6 @@ class ContinuousDDPGAlgorithm(Algorithm):
             tgt_ct_state[k] = tgt_ct_state[k] * self.tau + (1 - self.tau) * v
         agent.target_critic.load_state_dict(tgt_ct_state)
 
-        '''
-            Hard Target Network Updates
-        '''
-
-        # if step_count % 1000 == 0:
-
-        #     for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
-        #         target_param.data.copy_(param.data)
-
-        #     for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
-        #         target_param.data.copy_(param.data)
-
-
         return agent
 
     # Gets actions with a linearly decreasing e greedy strat
@@ -164,10 +133,8 @@ class ContinuousDDPGAlgorithm(Algorithm):
 
             return action
 
-
-
     def create_agent(self): 
-        new_agent = DDPGAgent(self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+        new_agent = DDPGAgent(self.obs_space, self.acs_space, self.optimizer_function, self.learning_rate, self.configs)
         self.agents.append(new_agent)
         return new_agent
 

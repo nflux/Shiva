@@ -17,13 +17,11 @@ class Algorithm():
         '''
         self.configs = configs
         {setattr(self, k, v) for k,v in self.configs[0].items()}
-        # self.loss_calc = self.loss_function()
         self.agentCount = 0
         self.agents = []
         self.obs_space = obs_space
         self.acs_space = acs_space
         self.loss_calc = getattr(torch.nn, configs[0]['loss_function'])
-        print(self.loss_calc)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def update(self, agent, data):

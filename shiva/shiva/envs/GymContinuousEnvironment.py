@@ -17,8 +17,7 @@ class GymContinuousEnvironment(Environment):
             self.acs = action
             self.obs, self.rews, self.world_status, info = self.env.step(action)
             self.step_count +=1 
-            if self.render:
-                self.load_view()
+            self.load_viewer()
 
             return self.obs, self.rews, self.world_status
 
@@ -55,4 +54,5 @@ class GymContinuousEnvironment(Environment):
         return self.rews
 
     def load_viewer(self):
-        self.env.render()
+        if self.render:
+            self.env.render()

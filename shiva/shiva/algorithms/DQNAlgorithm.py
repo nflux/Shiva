@@ -43,7 +43,6 @@ class DQNAlgorithm(Algorithm):
         rewards_v = torch.tensor(rewards).to(self.device)
         done_mask = torch.ByteTensor(dones).to(self.device)
 
-
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j) from minibatch
         input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(self.device)
@@ -67,7 +66,10 @@ class DQNAlgorithm(Algorithm):
 
         loss_v = loss(state_action_values, expected_state_action_values)
 
-        self.loss = loss_v
+        # The only issue is referencing the learner from here for the first parameter
+        shiva.add_summary_writer(self.learner, self, 'Loss per Step', loss_v, step_n)
+
+        # self.loss = loss_v
 
         loss_v.backward()
         agent.optimizer.step()
@@ -90,8 +92,8 @@ class DQNAlgorithm(Algorithm):
             action = agent.get_action(observation)
         return action # replay buffer store lists and env does np.argmax(action)
 
-    def get_loss(self):
-        return self.loss
+    # def get_loss(self):
+    #     return self.loss
 
     def create_agent(self):
         self.agent = DQNAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])

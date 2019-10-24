@@ -22,21 +22,6 @@ class SingleAgentLearner(Learner):
 
         self.env.close()
 
-    # def update(self):
-
-    #     step_count = 0
-        
-    #     for ep_count in range(self.episodes):
-    #         self.env.reset()
-    #         self.totalReward = 0
-    #         done = False
-    #         while not done:
-    #             done = self.step(step_count, ep_count)
-    #             step_count += 1
-
-    #     self.env.env.close()
-
-
     # def step(self, step_count, ep_count):
 
     #     # self.env.env.render()
@@ -96,9 +81,19 @@ class SingleAgentLearner(Learner):
 
         return done
 
-    # def create_environment(self):
-    #     # create the environment and get the action and observation spaces
-    #     self.env = Environment.initialize_env(self.configs['Environment'])
+    def create_environment(self):
+        # create the environment and get the action and observation spaces
+        environment = getattr(envs, self.configs['Environment']['type'])
+        return environment(self.configs['Environment'])
+
+    def create_algorithm(self):
+        algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
+        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        
+    def create_buffer(self):
+        buffer = getattr(buffers,self.configs['Buffer']['type'])
+        return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+
 
     def get_agents(self):   
         return self.agents
@@ -109,16 +104,16 @@ class SingleAgentLearner(Learner):
     def launch(self):
 
         # Launch the environment
-        self.env = getattr(envs, self.configs['Environment']['type'])(self.configs['Environment'])
+        self.env = self.create_environment()
 
         # Launch the algorithm which will handle the
-        self.alg = getattr(algorithms, self.configs['Algorithm']['type'])(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        self.alg = self.create_algorithm()
 
         self.agent = self.alg.create_agent()
 
-        # Basic replay buffer at the moment
-        buffer = getattr(buffers,self.configs['Buffer']['type'])
-        self.buffer = buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        if self.using_buffer:
+            # Basic replay buffer at the moment
+            self.buffer = self.create_buffer()
 
         print('Launch done.')
 
