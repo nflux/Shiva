@@ -1,7 +1,8 @@
 # this is a version of a meta learner that will take a file path to the configuration files
 from settings import shiva
 from .MetaLearner import MetaLearner
-from learners.SingleAgentLearner import SingleAgentLearner
+from learners.SingleAgentDQNLearner import SingleAgentDQNLearner
+from learners.SingleAgentDDPGLearner import SingleAgentDDPGLearner
 import helpers.misc as misc
 import learners
 

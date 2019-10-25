@@ -37,6 +37,10 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
         r[_h] = {}
         for _key in parser[_h]:
             r[_h][_key] = ast.literal_eval(parser[_h][_key])
+            if _h == 'Network':
+                print('aaaaooooga')
+            # print("Check this out: ", r[_h])
+            # input()
     r['_filename_'] = _FILENAME
     return r
 

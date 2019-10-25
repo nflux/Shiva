@@ -6,7 +6,6 @@ import torch.optim
 class DQNAgent(Agent):
     def __init__(self, agent_id, acs_space, obs_space, agent_config, net_config):
         super(DQNAgent,self).__init__(agent_id, acs_space, obs_space, agent_config, net_config)
-        print(obs_space , acs_space)
         network_input = obs_space + acs_space
         network_output = 1
         self.policy = DLN.DynamicLinearNetwork(network_input, network_output, net_config)

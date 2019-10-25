@@ -16,7 +16,6 @@ class DQNAlgorithm(Algorithm):
         super(DQNAlgorithm, self).__init__(obs_space, acs_space, configs)
         self.acs_space = acs_space
         self.obs_space = obs_space
-        self.totalLoss = 0
         self.loss = 0
 
     def update(self, agent, minibatch, step_n):
@@ -64,12 +63,14 @@ class DQNAlgorithm(Algorithm):
 
         loss = self.loss_calc()
 
+        self.loss = loss
+
         loss_v = loss(state_action_values, expected_state_action_values)
 
         # The only issue is referencing the learner from here for the first parameter
-        shiva.add_summary_writer(self.learner, self, 'Loss per Step', loss_v, step_n)
+        # shiva.add_summary_writer(, agent, 'Loss per Step', loss_v, step_n)
 
-        # self.loss = loss_v
+        self.loss = loss_v
 
         loss_v.backward()
         agent.optimizer.step()
@@ -92,8 +93,8 @@ class DQNAlgorithm(Algorithm):
             action = agent.get_action(observation)
         return action # replay buffer store lists and env does np.argmax(action)
 
-    # def get_loss(self):
-    #     return self.loss
+    def get_loss(self):
+        return self.loss
 
     def create_agent(self):
         self.agent = DQNAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])

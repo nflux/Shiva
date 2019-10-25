@@ -18,7 +18,7 @@ class Agent(object):
         self.obs_space = obs_space
         self.acs_space = acs_space
         self.id = agent_id
-        # self.optimizer_function = config['optimizer_function']
+        self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

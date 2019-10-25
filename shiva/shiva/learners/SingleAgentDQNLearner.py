@@ -5,55 +5,25 @@ import envs
 import algorithms
 import buffers
 
-class SingleAgentLearner(Learner):
+class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
-        super(SingleAgentLearner,self).__init__(learner_id, config)
+        super(SingleAgentDQNLearner,self).__init__(learner_id, config)
 
 
     def run(self):
-        step_count = 0
-        for ep_count in range(self.episodes):
+        self.step_count = 0
+        for self.ep_count in range(self.episodes):
             self.env.reset()
             self.totalReward = 0
             done = False
             while not done:
-                done = self.step(step_count, ep_count)
-                step_count +=1
+                done = self.step()
+                self.step_count +=1
 
         self.env.close()
 
-    # def step(self, step_count, ep_count):
-
-    #     # self.env.env.render()
-
-    #     observation = self.env.get_observation()
-
-    #     action = self.alg.get_action(self.alg.agent, observation, step_count)
-
-    #     next_observation, reward, done = self.env.step(action)
-
-    #     # TensorBoard metrics
-    #     self.writer.add_scalar('Actor Loss per Step', self.alg.get_actor_loss(), step_count)
-    #     self.writer.add_scalar('Critic Loss per Step', self.alg.get_critic_loss(), step_count)
-    #     self.writer.add_scalar('Reward', reward, step_count)
-    #     self.totalReward += reward
-
-    #     self.buffer.append([observation, action, reward, next_observation, int(done)])
-
-    #     if step_count > 0:
-    #         self.agents = self.alg.update(self.agents, self.buffer.sample(), step_count)
-
-    #     # TensorBoard Metrics
-    #     if done:
-    #         self.writer.add_scalar('Total Reward', self.totalReward, ep_count)
-    #         self.alg.ou_noise.reset()
-
-    #     return done
-
     # Function to step throught the environment
-    def step(self, step_count, ep_count):
-
-        self.env.load_viewer()
+    def step(self):
 
         observation = self.env.get_observation()
 
@@ -61,22 +31,22 @@ class SingleAgentLearner(Learner):
 
         next_observation, reward, done = self.env.step(action)
 
-        # Write to tensorboard
-        shiva.add_summary_writer(self, self.agent, 'Reward', reward, step_count)
-        shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.get_loss(), step_count)
+        shiva.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.get_loss(), self.step_count)
 
         # Cumulate the reward
         self.totalReward += reward[0]
 
         self.buffer.append([observation, action, reward, next_observation, done])
 
-        self.alg.update(self.agent, self.buffer.sample(), step_count)
+        self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+
         # when the episode ends
         if done:
-            shiva.add_summary_writer(self, self.agent, 'Total Reward', self.totalReward, ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Total Reward', self.totalReward, self.ep_count)
 
         # Save the agent periodically
-        if step_count % self.save_frequency == 0:
+        if self.step_count % self.save_frequency == 0:
             shiva._save_agent(self, self.agent)
 
         return done
@@ -94,8 +64,7 @@ class SingleAgentLearner(Learner):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
-
-    def get_agents(self):   
+    def get_agents(self):
         return self.agents
 
     def get_algorithm(self):
@@ -109,13 +78,15 @@ class SingleAgentLearner(Learner):
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
 
+        # Create the agent
         self.agent = self.alg.create_agent()
-
+        
+        # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment
             self.buffer = self.create_buffer()
 
-        print('Launch done.')
+        print('Launch Successful.')
 
 
     def save_agent(self):
@@ -123,3 +94,24 @@ class SingleAgentLearner(Learner):
 
     def load_agent(self, path):
         return shiva._load_agents(path)[0]
+
+# class MetricsCalculator(object):
+#     '''
+#         Abstract class that it's solely purpose is to calculate metrics
+#         Has access to the Environment
+#     '''
+#     def __init__(self, env, alg):
+#         self.env = env
+#         self.alg = alg
+    
+#     def Reward(self):
+#         return self.env.get_reward()
+        
+#     def LossPerStep(self):
+#         return self.alg.get_loss()
+
+#     def LossActorPerStep(self):
+#         return self.alg.get_actor_loss()
+
+#     def TotalReward(self):
+#         return self.get_total_reward()

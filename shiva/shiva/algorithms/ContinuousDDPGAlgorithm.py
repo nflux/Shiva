@@ -134,7 +134,8 @@ class ContinuousDDPGAlgorithm(Algorithm):
             return action
 
     def create_agent(self): 
-        new_agent = DDPGAgent(self.obs_space, self.acs_space, self.optimizer_function, self.learning_rate, self.configs)
+        print(self.configs)
+        new_agent = DDPGAgent(self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         self.agents.append(new_agent)
         return new_agent
 
