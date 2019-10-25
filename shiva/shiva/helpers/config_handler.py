@@ -33,14 +33,24 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
     parser = configparser.ConfigParser()
     parser.read(_FILENAME)
     r = {}
-    for _h in parser.sections():
-        r[_h] = {}
-        for _key in parser[_h]:
-            r[_h][_key] = ast.literal_eval(parser[_h][_key])
-            if _h == 'Network':
-                print('aaaaooooga')
-            # print("Check this out: ", r[_h])
-            # input()
+    for _section in parser.sections():
+        r[_section] = {}
+
+        # if _section == 'Network':
+        #     # need to grab the list of networks
+        #     networks = []
+        #     for _key in parser[_section]:
+        #         networks = ast.literal_eval(parser[_section][_key])
+        #         for network in networks:
+        #             config = {}
+        #             for __h in parser[network]:
+        #                 config[__h] = ast.literal_eval(parser[network][__h])
+        #             r[_section][network] = config
+
+        # else:
+        for _key in parser[_section]:
+            r[_section][_key] = ast.literal_eval(parser[_section][_key])
+
     r['_filename_'] = _FILENAME
     return r
 

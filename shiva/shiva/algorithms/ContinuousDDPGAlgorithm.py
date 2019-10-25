@@ -93,7 +93,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         tgt_ac_state = agent.target_actor.state_dict()
 
         for k, v in ac_state.items():
-            tgt_state[k] = tgt_ac_state[k] * self.tau + (1 - self.tau) * v
+            tgt_ac_state[k] = tgt_ac_state[k] * self.tau + (1 - self.tau) * v
         agent.target_actor.load_state_dict(tgt_ac_state)
 
         # Update Target Critic
@@ -133,10 +133,10 @@ class ContinuousDDPGAlgorithm(Algorithm):
 
             return action
 
-    def create_agent(self): 
+    def create_agent(self, id): 
         print(self.configs)
-        new_agent = DDPGAgent(self.obs_space, self.acs_space, self.configs[1], self.configs[2])
-        self.agents.append(new_agent)
+        new_agent = DDPGAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+        self.agent = new_agent
         return new_agent
 
     def get_actor_loss(self):

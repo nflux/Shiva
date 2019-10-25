@@ -12,6 +12,7 @@ class SingleAgentMetaLearner(MetaLearner):
     def __init__(self, configs):
         super(SingleAgentMetaLearner,self).__init__(configs)
         self.configs = configs
+        self.learnerCount = 0
         self.run()
 
     def run(self):

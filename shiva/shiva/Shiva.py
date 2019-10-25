@@ -211,12 +211,23 @@ class ShivaAdmin():
         # create the meta learner configs folder
         dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
         # save each config file
-        for cf in self.caller.config:
+        print(self.caller.config)
+        if type(self.caller.config) == dict:
+            cf = self.caller.config
             _filename_ = os.path.split(cf['_filename_'])[-1]
             ch.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
+        elif type(self.caller.config) == list:
+            for cf in self.caller.config:
+                _filename_ = os.path.split(cf['_filename_'])[-1]
+                ch.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
+        else:
+            assert False, "MetaLearner.config must be a list or dictionary"
         # save each learner
-        for learner in self.caller.learners:
-            self._save_learner(learner)
+        try:
+            for learner in self.caller.learners:
+                self._save_learner(learner)
+        except AttributeError:
+            self._save_learner(self.caller.learner)
 
     def _save_learner(self, learner=None) -> None:
         '''

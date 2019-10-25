@@ -30,9 +30,9 @@ class SingleAgentDDPGLearner(Learner):
         next_observation, reward, done = self.env.step(action)
 
         # TensorBoard metrics
-        self.writer.add_scalar('Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
-        self.writer.add_scalar('Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
-        self.writer.add_scalar('Reward', reward, self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
         self.totalReward += reward
 
         self.buffer.append([observation, action, reward, next_observation, int(done)])
@@ -42,7 +42,7 @@ class SingleAgentDDPGLearner(Learner):
 
         # TensorBoard Metrics
         if done:
-            self.writer.add_scalar('Total Reward', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Total Reward', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
 
         return done
@@ -75,7 +75,7 @@ class SingleAgentDDPGLearner(Learner):
         self.alg = self.create_algorithm()
 
         # Create the agent
-        self.agent = self.alg.create_agent()
+        self.agent = self.alg.create_agent(self.get_id())
         
         # if buffer set to true in config
         if self.using_buffer:

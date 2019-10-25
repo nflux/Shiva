@@ -56,3 +56,6 @@ class GymContinuousEnvironment(Environment):
     def load_viewer(self):
         if self.render:
             self.env.render()
+
+    def close(self):
+        self.env.close()
