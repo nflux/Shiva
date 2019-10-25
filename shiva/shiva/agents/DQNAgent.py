@@ -10,16 +10,14 @@ class DQNAgent(Agent):
         self.id = id
         network_input = obs_space + acs_space
         network_output = 1
-
-        print(net_config)
         
         self.policy = nh.DynamicLinearSequential(
                                         network_input, 
                                         network_output, 
-                                        net_config['layers'],
-                                        nh.parse_functions(torch.nn, net_config['activation_function']),
-                                        net_config['last_layer'],
-                                        net_config['output_function']
+                                        net_config['network']['layers'],
+                                        nh.parse_functions(torch.nn, net_config['network']['activation_function']),
+                                        net_config['network']['last_layer'],
+                                        net_config['network']['output_function']
         )
 
         # self.policy = DLN.DynamicLinearNetwork(network_input, network_output, net_config)

@@ -6,7 +6,6 @@ from learners.SingleAgentDDPGLearner import SingleAgentDDPGLearner
 import helpers.misc as misc
 import learners
 
-
 class SingleAgentMetaLearner(MetaLearner):
     def __init__(self, configs):
         super(SingleAgentMetaLearner,self).__init__(configs)
@@ -38,15 +37,12 @@ class SingleAgentMetaLearner(MetaLearner):
             # self.learner = self.create_learner(self.agent, self.eval_env, self.algorithm, self.buffer, self.learner_config)
             shiva.add_learner_profile(self.learner)
 
-
             # initialize the learner instances
             self.learner.launch()
             shiva.update_agents_profile(self.learner)
             
             # Runs the learner for a number of episodes given by the config
             self.learner.run()
-
-            shiva.add_meta_profile(self, self.configs['Environment']['env_name'])
 
             # save
             self.save()

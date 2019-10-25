@@ -36,7 +36,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         actions = torch.tensor(actions).to(self.device)
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        dones_mask = torch.ByteTensor(dones).view(-1,1).to(self.device)
+        dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
 
         '''
             Training the Critic
@@ -134,7 +134,6 @@ class ContinuousDDPGAlgorithm(Algorithm):
             return action
 
     def create_agent(self, id): 
-        print(self.configs)
         new_agent = DDPGAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         self.agent = new_agent
         return new_agent

@@ -211,7 +211,6 @@ class ShivaAdmin():
         # create the meta learner configs folder
         dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
         # save each config file
-        print(self.caller.config)
         if type(self.caller.config) == dict:
             cf = self.caller.config
             _filename_ = os.path.split(cf['_filename_'])[-1]
@@ -221,7 +220,7 @@ class ShivaAdmin():
                 _filename_ = os.path.split(cf['_filename_'])[-1]
                 ch.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
         else:
-            assert False, "MetaLearner.config must be a list or dictionary"
+            assert False, "MetaLearner.config must be a list or a dictionary"
         # save each learner
         try:
             for learner in self.caller.learners:
@@ -244,11 +243,14 @@ class ShivaAdmin():
         learner_path = self._curr_learner_dir[learner.id]
         fh.save_pickle_obj(learner, os.path.join(learner_path, 'learner_cls.pickle'))
         # save agents
-        if type(learner.agents) == list:
-            for agent in learner.agents:
-                self._save_agent(learner, agent)
-        else:
-            self._save_agent(learner, learner.agents)
+        try:
+            if type(learner.agents) == list:
+                for agent in learner.agents:
+                    self._save_agent(learner, agent)
+            else:
+                self._save_agent(learner, learner.agents)
+        except AttributeError: # when learner has only 1 agent
+            self._save_agent(learner, learner.agent)
 
     def _save_agent(self, learner, agent):
         '''

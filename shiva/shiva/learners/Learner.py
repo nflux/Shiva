@@ -3,7 +3,6 @@ from settings import shiva
 class Learner(object):
     
     def __init__(self, learner_id, config):
-        print(config)
         {setattr(self, k, v) for k,v in config['Learner'].items()}
         self.configs = config
         self.id = learner_id
