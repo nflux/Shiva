@@ -3,6 +3,7 @@ from settings import shiva
 from .MetaLearner import MetaLearner
 from learners.SingleAgentDQNLearner import SingleAgentDQNLearner
 from learners.SingleAgentDDPGLearner import SingleAgentDDPGLearner
+from learners.SingleAgentImitationLearner import SingleAgentImitationLearner
 import helpers.misc as misc
 import learners
 
@@ -13,7 +14,7 @@ class SingleAgentMetaLearner(MetaLearner):
         self.configs = configs
         self.learnerCount = 0
         self.run()
-    
+
     def run(self):
 
         if self.start_mode == self.EVAL_MODE:
@@ -25,9 +26,9 @@ class SingleAgentMetaLearner(MetaLearner):
             # self.configs[0]['Evaluation']['learners'] = self.learners
             # # Create Evaluation class
             # self.eval_env.append(Evaluation.initialize_evaluation(self.configs[0]['Evaluation']))
-            
+
             # self.eval_env[0].evaluate_agents()
-            
+
 
         elif self.start_mode == self.PROD_MODE:
 
@@ -42,7 +43,7 @@ class SingleAgentMetaLearner(MetaLearner):
             # initialize the learner instances
             self.learner.launch()
             shiva.update_agents_profile(self.learner)
-            
+
             # Runs the learner for a number of episodes given by the config
             self.learner.run()
 
@@ -50,8 +51,7 @@ class SingleAgentMetaLearner(MetaLearner):
 
             # save
             self.save()
-    
+
     def create_learner(self):
         learner = getattr(learners, self.configs['Learner']['type'])
-        return learner(self.get_id(), self.configs)
-
+        return learner(self.id_generator(), self.configs)

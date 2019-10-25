@@ -1,29 +1,18 @@
 import numpy as np
 import torch
-import helpers.misc as misc
+import random
 from agents.ImitationAgent import ImitationAgent
+import helpers.misc as misc
 from .Algorithm import Algorithm
+from settings import shiva
 
 class SupervisedAlgorithm(Algorithm):
-    def __init__(self,
-        observation_space: int,
-        action_space: int,
-        loss_function: object,
-        regularizer: object,
-        recurrence: bool,
-        optimizer: object,
-        gamma: np.float,
-        learning_rate: np.float,
-        beta: np.float,
-        epsilon: set(),
-        C: int,
-        configs: dict):
+    def __init__(self,obs_space, acs_space, configs):
 
-        super(SupervisedAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
-        self.C = C
-        self.totalLoss = 0
+        super(SupervisedAlgorithm, self).__init__(obs_space,acs_space,configs)
+        self.acs_space = acs_space
+        self.obs_space = obs_space
         self.loss = 0
-        self.loss_calc = self.loss_function()
 
 
     def update(self, agent, minibatch, step_n):
@@ -103,8 +92,8 @@ class SupervisedAlgorithm(Algorithm):
         best_act = best_act_v.tolist()
         return best_act
 
-    def create_agent(self, id):
-        new_agent = ImitationAgent(id, self.observation_space, self.action_space, self.optimizer_function, self.learning_rate, self.configs)
+    def create_agent(self):
+        new_agent = ImitationAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1],self.configs[2])
         self.agents.append(new_agent)
         return new_agent
 
