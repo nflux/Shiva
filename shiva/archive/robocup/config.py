@@ -52,7 +52,7 @@ class RoboConfig(Config):
         else:
             self.conf_dict['a_lr'] = 0.0002
             self.conf_dict['c_lr'] = 0.0001
-        self.conf_dict['delta_z'] = (self.conf_dict['vmax'] - self.conf_dict['vmin']) / (self.conf_dict['n_atoms'] - 1)
+        self.conf_dict['delta_z'] = (float(self.conf_dict['vmax'] - self.conf_dict['vmin'])) / (self.conf_dict['n_atoms'] - 1)
         self.conf_dict['freeze_actor'] = 0.0
         self.conf_dict['freeze_critic'] = 0.0
 
@@ -72,15 +72,45 @@ class RoboConfig(Config):
             self.conf_dict['device'] = 'cpu'
             self.conf_dict['to_gpu'] = False
             torch.set_num_threads(self.conf_dict['num_threads'])
+        self.conf_dict['torch_device'] = torch.device(self.conf_dict['device'])
         
         if self.conf_dict['al'] == 'high':
             self.conf_dict['discrete_action'] = True
         else:
             self.conf_dict['discrete_action'] = False
         
-        self.conf_dict['initial_models'] = ["training_sessions/1_11_8_1_vs_1/ensemble_models/ensemble_agent_0/model_0.pth"]
+        self.conf_dict['initial_models'] = ["data/training_sessions/5_21_15_3_vs_3/ensemble_models/ensemble_agent_0/model_0.pth",
+                                            "data/training_sessions/5_21_15_3_vs_3/ensemble_models/ensemble_agent_1/model_0.pth",
+                                            "data/training_sessions/5_21_15_3_vs_3/ensemble_models/ensemble_agent_2/model_0.pth"]
 
         self.conf_dict['burn_in_eps'] = float(self.conf_dict['burn_in']) / self.conf_dict['untouched']
 
         self.conf_dict['current_ensembles'] = [0]*self.conf_dict['num_left']
+        
+    def env_inits(self, env):
+        team_net_params = []
+        for acsp, obsp in zip([env.action_list for i in range(env.num_TA)], env.team_obs):
+            if self.preprocess:
+                num_in_pol = config.reduced_obs_dim
+            else:
+                num_in_pol = obsp.shape[0]
+            num_in_reducer = obsp.shape[0]
+            num_out_pol =  len(env.action_list)
+
+            if not self.discrete_action:
+                num_out_pol = len(env.action_list) + len(env.team_action_params[0])
+            
+            num_in_EM = (num_out_pol*env.num_TA) + num_in_pol
+            num_out_EM = num_in_pol
+
+            num_in_critic = (num_in_pol - num_out_pol)  + (num_out_pol * env.num_TA *2 ) + (env.num_TA -1)            
+            
+            team_net_params.append({'num_in_pol': num_in_pol,
+                                    'num_out_pol': num_out_pol,
+                                    'num_in_critic': num_in_critic,
+                                    'num_in_EM': num_in_EM,
+                                    'num_out_EM': num_out_EM,
+                                    'num_in_reducer': num_in_reducer})
+
+        setattr(self, 'team_net_params', team_net_params)
     

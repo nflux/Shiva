@@ -10,7 +10,7 @@ class MLPNetwork_Actor(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,maddpg=object):
+    def __init__(self,config, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,maddpg=object):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -22,8 +22,8 @@ class MLPNetwork_Actor(nn.Module):
         super(MLPNetwork_Actor, self).__init__()
         self.agent=agent       
         self.discrete_action = discrete_action
-        self.action_size = 3
-        self.param_size = 5
+        self.action_size = config.ac_dim
+        self.param_size = config.param_dim
         self.count = 0
         if self.agent.device == 'cuda':
             self.cast = lambda x: x.to(maddpg.torch_device)
@@ -90,7 +90,7 @@ class MLPNetwork_Critic(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, agent=object,n_atoms=51,D4PG=False,TD3=False,maddpg=None):
+    def __init__(self,config, input_dim, out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, agent=object,n_atoms=51,D4PG=False,TD3=False, maddpg=None):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -101,8 +101,8 @@ class MLPNetwork_Critic(nn.Module):
         super(MLPNetwork_Critic, self).__init__()
 
         self.agent=agent
-        self.action_size = 3
-        self.param_size = 5
+        self.action_size = config.ac_dim
+        self.param_size = config.param_dim
         self.count = 0
         self.TD3 = TD3
         if D4PG:
@@ -197,7 +197,7 @@ class LSTMNetwork_Critic(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, hidden_dim=int(512), nonlin=F.relu, agent=object,n_atoms=51,D4PG=False,TD3=False,maddpg=object):
+    def __init__(self, config, input_dim, out_dim, hidden_dim=int(512), nonlin=F.relu, agent=object,n_atoms=51,D4PG=False,TD3=False,maddpg=object):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -208,8 +208,8 @@ class LSTMNetwork_Critic(nn.Module):
         super(LSTMNetwork_Critic, self).__init__()
 
         self.agent=agent
-        self.action_size = 3
-        self.param_size = 5
+        self.action_size = config.ac_dim
+        self.param_size = config.param_dim
         self.count = 0
         self.TD3 = TD3
         self.batch_size = agent.batch_size
@@ -342,7 +342,7 @@ class I2A_Network(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object):
+    def __init__(self,config, input_dim, out_dim, EM_out_dim, hidden_dim=int(1024), nonlin=F.relu, norm_in=True, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -354,14 +354,14 @@ class I2A_Network(nn.Module):
 
         self.agent=agent
         self.discrete_action = discrete_action
-        self.action_size = 3
-        self.param_size = 5
+        self.action_size = config.ac_dim
+        self.param_size = config.param_dim
         self.count = 0
         self.n_branches = self.agent.n_branches
         self.rollout_steps = rollout_steps
 
         self.I2A = I2A
-        self.LSTM = maddpg.LSTM
+        self.LSTM = config.lstm_crit
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
 
         # save refs without registering
@@ -601,7 +601,7 @@ class LSTM_Actor(nn.Module):
     """
     MLP network (can be used as value or policy)
     """
-    def __init__(self, input_dim, out_dim, EM_out_dim, hidden_dim=int(512), nonlin=F.relu, norm_in=False, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object):
+    def __init__(self,config, input_dim, out_dim, EM_out_dim, hidden_dim=int(512), nonlin=F.relu, norm_in=False, discrete_action=True,agent=object,I2A=False,rollout_steps=5,EM=object,pol_prime=object,imagined_pol=object,LSTM_hidden=64,maddpg=object):
         """
         Inputs:
             input_dim (int): Number of dimensions in input
@@ -613,8 +613,8 @@ class LSTM_Actor(nn.Module):
 
         self.agent=agent
         self.discrete_action = discrete_action
-        self.action_size = 3
-        self.param_size = 5
+        self.action_size = config.ac_dim
+        self.param_size = config.param_dim
         self.count = 0
         self.n_branches = self.agent.n_branches
         self.rollout_steps = rollout_steps
@@ -623,7 +623,7 @@ class LSTM_Actor(nn.Module):
         self.hidden_dim_lstm = agent.hidden_dim_lstm
         self.batch_size = agent.batch_size
         self.I2A = I2A
-        self.LSTM = maddpg.LSTM
+        self.LSTM = config.lstm_pol
         self.encoder = RolloutEncoder(EM_out_dim,hidden_size=LSTM_hidden)
 
         if agent.device == 'cuda':

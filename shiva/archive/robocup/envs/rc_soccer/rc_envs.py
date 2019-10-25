@@ -20,14 +20,14 @@ class RoboEnvs:
         self.obs_dim = self.template_env.team_num_features
         # self.maddpg = MADDPG.init(config, self.env)
 
-        self.prox_item_size = config.num_left*(2*self.obs_dim + 2*config.ac_dim)
+        self.prox_item_size = config.num_left*(2*self.obs_dim + 2*config.total_ac_dim)
         self.team_replay_buffer = buff.init_buffer(config, config.lstm_crit or config.lstm_pol,
                                                     self.obs_dim, self.prox_item_size)
 
         self.opp_replay_buffer = buff.init_buffer(config, config.lstm_crit or config.lstm_pol,
                                                     self.obs_dim, self.prox_item_size)
         self.max_episodes_shared = 30
-        self.total_dim = (self.obs_dim + config.ac_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + self.prox_item_size
+        self.total_dim = (self.obs_dim + config.total_ac_dim + 5) + config.k_ensembles + 1 + (config.hidden_dim_lstm*4) + self.prox_item_size
 
         self.shared_exps = [[torch.zeros(config.max_num_exps,2*config.num_left,self.total_dim,requires_grad=False).share_memory_() for _ in range(self.max_episodes_shared)] for _ in range(config.num_envs)]
         self.exp_indices = [[torch.tensor(0,requires_grad=False).share_memory_() for _ in range(self.max_episodes_shared)] for _ in range(config.num_envs)]
@@ -53,10 +53,11 @@ class RoboEnvsWrapper:
     def __init__(self, config_parse):
         self.config = conf.RoboConfig(config_parse)
         self.envs = RoboEnvs(self.config)
-        self.maddpg = mad_algo.init(self.config, self.envs.template_env)
+        self.config.env_inits(self.envs.template_env)
+        
+        self.maddpg = mad_algo.init_from_config(self.config)
         self.update = updates.Update(self.config, self.envs.team_replay_buffer, self.envs.opp_replay_buffer)
-        #Pretraining **Needs create_pretrain_files.py to test, importing HFO issue
-        # self.pretrainer = pretrainer.pretrain(self.config, self.envs)
+        self.pretrainer = pretrainer.pretrain(self.config, self.envs)
 
     def run(self):
         mp.set_start_method('forkserver',force=True)
@@ -81,9 +82,10 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
             os.mkdir(os.getcwd() + '/pretrain/pretrain_data//pt_logs_' + str(env.port))
 
     if config.load_nets:
-        maddpg = mad_algo.MADDPG.init_from_save_evaluation(config.initial_models,env.num_TA) # from evaluation method just loads the networks
+        # from evaluation method just loads the networks
+        maddpg = mad_algo.init_from_save(config, config.initial_models, config.num_left)
     else:
-        maddpg = mad_algo.init(config, env)        
+        maddpg = mad_algo.init_from_config(config)        
         
     if config.to_gpu:
         maddpg.device = 'cuda'
@@ -95,7 +97,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
             maddpg.torch_device = torch.device("cuda:2")
 
     current_ensembles = config.current_ensembles
-    preload_agent2d_path = ''
+    preload_agent2d_path = 'data/saved_models/'
 
     maddpg.prep_training(device=maddpg.device,only_policy=False,torch_device=maddpg.torch_device)
 
@@ -278,8 +280,8 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
             t += 1
 
             if t%3000 == 0:
-                team_step_logger_df.to_csv(hist_dir + '/team_%s.csv' % history)
-                opp_step_logger_df.to_csv(hist_dir + '/opp_%s.csv' % history)
+                team_step_logger_df.to_csv(config.hist_dir + '/team_%s.csv' % history)
+                opp_step_logger_df.to_csv(config.hist_dir + '/opp_%s.csv' % history)
                         
             team_episode = []
             opp_episode = []
@@ -409,7 +411,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
                     if config.agent2d and config.preloaded_agent2d:
                         maddpg.load_agent2d(side='opp',load_same_agent=config.load_same_agent,models_path=preload_agent2d_path,nagents=env.num_OA)
                     elif config.agent2d:
-                        maddpg.load_agent2d(side='opp',models_path =config.session_path +"models/",load_same_agent=config.load_same_agent,nagents=env.num_OA)  
+                        maddpg.load_agent2d(side='opp',models_path =config.session_path,load_same_agent=config.load_same_agent,nagents=env.num_OA)  
                     else:
                             
                         if np.random.uniform(0,1) > config.self_play_prob: # self_play_proba % chance loading self else load an old ensemble for opponent

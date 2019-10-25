@@ -1,4 +1,4 @@
-from .maddpg import MADDPG
+import algorithms.maddpg as mad
 import utils.misc as misc
 import numpy as np
 import time
@@ -80,11 +80,11 @@ class Update:
                     rb_i = np.random.randint(num_buffers)
 
                     for a_i in range(1):
-                        threads.append(mp.Process(target=updates.update_thread,args=(a_i,config,pt_trb,pt_orb,number_of_updates,update_session)))
+                        threads.append(mp.Process(target=self.update_thread,args=(a_i,config,pt_trb,pt_orb,number_of_updates,update_session)))
                 else:
                     if update_session > 75:
                         for a_i in range(1):
-                            threads.append(mp.Process(target=updates.update_thread,args=(a_i,config,env.team_replay_buffer,env.opp_replay_buffer,number_of_updates,update_session)))
+                            threads.append(mp.Process(target=self.update_thread,args=(a_i,config,env.team_replay_buffer,env.opp_replay_buffer,number_of_updates,update_session)))
                     [thr.start() for thr in threads]
                 print("Launching update")
                 start = time.time()
@@ -125,67 +125,27 @@ class Update:
                                 #            team_replay_buffer.update_priorities(agentID=m,inds = inds[c*batch_size:(c+1)*batch_size], prio=p,k = ensemble) 
                                 priorities = [] 
 
-                        #inds = np.random.choice(np.arange(len(team_replay_buffer)), size=batch_size, replace=False)
+                        team_sample = env.team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
+                                                                    to_gpu=config.to_gpu, device=maddpg.torch_device)
+                        opp_sample = env.opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
+                                                                    to_gpu=config.to_gpu, device=maddpg.torch_device)
 
-                        # FOR THE LOVE OF GOD DONT USE TORCH TO GET INDICES
-
-                        if config.lstm_crit:
-                            team_sample = env.team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                                        to_gpu=config.to_gpu, device=maddpg.torch_device)
-                            opp_sample = env.opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                                        to_gpu=config.to_gpu, device=maddpg.torch_device)
-
-                            if not config.load_same_agent:
-                                print("No implementation")
-
-                            else:
-                                train_actor = (len(env.team_replay_buffer) > 10000) and False # and (update_session % 2 == 0)
-                                train_critic = (len(env.team_replay_buffer) > config.batch_size)
-                                if train_critic:
-                                    priorities.append(maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=config.forward_pass,load_same_agent=config.load_same_agent,
-                                                    critic=True,policy=False,session_path=config.session_path,lstm_burn_in=config.burn_in_lstm))
-                                if train_actor: # only update actor once 1 mill
-                                    _ = maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=config.forward_pass,
-                                                                                load_same_agent=config.load_same_agent,critic=False,policy=True,session_path=config.session_path)
-
-                                #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
-                                if up % number_of_updates/10 == 0: # update target half way through
-                                    if train_critic and not train_actor:
-                                        maddpg.update_agent_critic(0,number_of_updates/10)
-                                    elif train_critic and train_actor:
-                                        maddpg.update_agent_targets(0,number_of_updates/10)
+                        if not config.load_same_agent:
+                            print("No implementation")
                         else:
-                            if PT:
-                                
-                                team_sample = pt_trb.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                            to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
-                                opp_sample = pt_orb.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                            to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
-                            else:
-                                team_sample = env.team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                            to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
-                                opp_sample = env.opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                            to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
-                            if not config.load_same_agent:
-                                print("no implementation")
-                            else:
-                                train_actor = (len(env.team_replay_buffer) > 1000) and False # and (update_session % 2 == 0)
-                                train_critic = (len(env.team_replay_buffer) > 1000)
-                                if train_critic:
-                                    priorities.append(maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',
-                                                                                        forward_pass=config.forward_pass,load_same_agent=config.load_same_agent,
-                                                                                        critic=True,policy=False,session_path=config.session_path))
-                                if train_actor: # only update actor once 1 mill
-                                    _ = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=config.forward_pass,
-                                                                        load_same_agent=config.load_same_agent,
-                                                                        critic=False,policy=True,session_path=config.session_path)
+                            train_actor = (len(env.team_replay_buffer) > 10000) and False # and (update_session % 2 == 0)
+                            train_critic = (len(env.team_replay_buffer) > config.batch_size)
+                            if train_critic:
+                                priorities.append(maddpg.update(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID,load_same_agent=config.load_same_agent,critic=True,policy=False))
+                            if train_actor: # only update actor once 1 mill
+                                _ = maddpg.update(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID,load_same_agent=config.load_same_agent,critic=False,policy=True)
 
-                                #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
-                                if up % number_of_updates/10 == 0: # update target half way through
-                                    if train_critic and not train_actor:
-                                        maddpg.update_agent_critic(0,number_of_updates/10)
-                                    elif train_critic and train_actor:
-                                        maddpg.update_agent_targets(0,number_of_updates/10)
+                            #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
+                            if up % number_of_updates/10 == 0: # update target half way through
+                                if train_critic and not train_actor:
+                                    maddpg.update_agent_critic(0,number_of_updates/10)
+                                elif train_critic and train_actor:
+                                    maddpg.update_agent_targets(0,number_of_updates/10)
                         if config.sil:
                             for i in range(config.update_ratio):
                                 inds = team_replay_buffer.get_SIL_inds(agentID=m,batch_size=config.batch_size)
@@ -218,8 +178,8 @@ class Update:
                         print(time.time()-start,"<-- Critic Update Cycle")
 
                         [thr.join() for thr in threads]
-                        maddpg.load_ensemble_policy(ensemble_path,ensemble,0) # load only policy from updated policy thread
-                        [maddpg.save_agent(load_path,update_session,i,load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
+                        maddpg.load_ensemble_policy(config.ensemble_path,ensemble,0) # load only policy from updated policy thread
+                        [maddpg.save_agent(config.load_path,update_session,i,config.load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
                         [maddpg.save_ensemble(config.ensemble_path,ensemble,i,config.load_same_agent,torch_device=maddpg.torch_device) for i in range(config.num_left)]
                     print(time.time()-start,"<-- Full Cycle")
                     cycle += 1
@@ -233,8 +193,9 @@ class Update:
         if len(team_replay_buffer) > 1000:
             
             initial_models = [config.ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(config.num_left)]
-            #maddpg = dill.loads(maddpg_pick)
-            maddpg = MADDPG.init_from_save_evaluation(initial_models,config.num_left) # from evaluation method just loads the networks
+            # from evaluation method just loads the networks
+            maddpg = mad.init_from_save(config, initial_models, conifg.num_left)
+
             if config.multi_gpu:
                 maddpg.torch_device = torch.device("cuda:3")
             if config.to_gpu:
@@ -265,32 +226,18 @@ class Update:
                     offset = up % batches_to_sample
                     if up % batches_to_sample == 0:
                         inds = np.random.choice(np.arange(len(team_replay_buffer)), size=config.batch_size*batches_to_sample, replace=False)
-                    if config.lstm_pol or config.lstm_crit:
-                        team_sample = team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                                    to_gpu=config.to_gpu,device=maddpg.torch_device)
-                        opp_sample = opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                                    to_gpu=config.to_gpu,device=maddpg.torch_device)
+                    
+                    team_sample = team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
+                                                                to_gpu=config.to_gpu,device=maddpg.torch_device)
+                    opp_sample = opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
+                                                                to_gpu=config.to_gpu,device=maddpg.torch_device)
 
-                        if not config.load_same_agent:
-                            print("No implementation")
-                        else:                        
-                            _ = maddpg.update_LSTM(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=config.forward_pass,
-                                                    load_same_agent=config.load_same_agent,critic=False,policy=True,session_path=config.session_path,lstm_burn_in=config.burn_in_lstm)
-                            if up % number_of_updates/10 == 0: # update target half way through
-                                maddpg.update_agent_actor(0,number_of_updates/10)
-                    else:
-                        team_sample = team_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                    to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
-                        opp_sample = opp_replay_buffer.sample(inds[config.batch_size*offset:config.batch_size*(offset+1)],
-                                                    to_gpu=config.to_gpu,norm_rews=False,device=maddpg.torch_device)
-                        if not config.load_same_agent:
-                            print("No implementation")
-                        else:
-                            _ = maddpg.update_centralized_critic(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, side='team',forward_pass=config.forward_pass,
-                                                                load_same_agent=config.load_same_agent,critic=False,policy=True,session_path=config.session_path)
-                            #team_replay_buffer.update_priorities(agentID=m,inds = inds, prio=priorities,k = ensemble)
-                            if up % number_of_updates/10 == 0: # update target half way through
-                                maddpg.update_agent_actor(0,number_of_updates/10)
+                    if not config.load_same_agent:
+                        print("No implementation")
+                    else:                        
+                        _ = maddpg.update(team_sample=team_sample, opp_sample=opp_sample, agent_i =agentID, load_same_agent=config.load_same_agent,critic=False,policy=True)
+                        if up % number_of_updates/10 == 0: # update target half way through
+                            maddpg.update_agent_actor(0,number_of_updates/10)
                     if config.sil:
                         for i in range(config.update_ratio):
                             inds = team_replay_buffer.get_SIL_inds(agentID=m,batch_size=config.batch_size)
@@ -317,7 +264,7 @@ def imitation_thread(agentID,to_gpu,buffer_size,batch_size,team_replay_buffer,op
     start = time.time()
     initial_models = [ensemble_path + ("ensemble_agent_%i/model_%i.pth" % (i,0)) for i in range(num_TA)]
     #maddpg = dill.loads(maddpg_pick)
-    maddpg = MADDPG.init_from_save_evaluation(initial_models,num_TA) # from evaluation method just loads the networks
+    maddpg = MADDPG.init_from_save(initial_models,num_TA) # from evaluation method just loads the networks
 
     number_of_updates = 6000
     batches_to_sample = 50

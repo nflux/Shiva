@@ -7,7 +7,8 @@ import argparse
 import os
 import copy
 import torch
-import metalearners, learners, algorithms, envs, buffers
+import metalearners
+from Shiva import ShivaAdmin
 import helpers.misc as misc
 import helpers.config_handler as ch
 
@@ -21,6 +22,8 @@ if __name__ == "__main__":
 
     main_dict = ch.load_config_file_2_dict(config_dir + args.config)
 
+    # global shiva
+    # shiva = ShivaAdmin(main_dict['admin'])
     metalearner_class = misc.handle_package(metalearners, main_dict['MetaLearner']['type'])
 
     meta = metalearner_class(main_dict)
