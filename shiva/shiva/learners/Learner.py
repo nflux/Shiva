@@ -7,6 +7,7 @@ class Learner(object):
         {setattr(self, k, v) for k,v in config['Learner'].items()}
         self.configs = config
         self.id = learner_id
+        self.agentCount = 0
 
     def update(self):
         pass
@@ -32,4 +33,8 @@ class Learner(object):
     def load(self, attrs):
         for key in attrs:
             setattr(self, key, attrs[key])
-        
+
+    def get_id(self):
+        id = self.agentCount
+        self.agentCount +=1
+        return id

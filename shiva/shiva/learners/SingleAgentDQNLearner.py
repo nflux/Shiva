@@ -79,7 +79,7 @@ class SingleAgentDQNLearner(Learner):
         self.alg = self.create_algorithm()
 
         # Create the agent
-        self.agent = self.alg.create_agent()
+        self.agent = self.alg.create_agent(self.get_id())
         
         # if buffer set to true in config
         if self.using_buffer:

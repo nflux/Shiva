@@ -11,6 +11,7 @@ class SingleAgentMetaLearner(MetaLearner):
     def __init__(self, configs):
         super(SingleAgentMetaLearner,self).__init__(configs)
         self.configs = configs
+        self.learnerCount = 0
         self.run()
     
     def run(self):
@@ -52,5 +53,5 @@ class SingleAgentMetaLearner(MetaLearner):
     
     def create_learner(self):
         learner = getattr(learners, self.configs['Learner']['type'])
-        return learner(self.id_generator(), self.configs)
-        
+        return learner(self.get_id(), self.configs)
+

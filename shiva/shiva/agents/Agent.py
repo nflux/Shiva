@@ -3,7 +3,7 @@ import numpy as np
 import helpers.misc as misc
 
 class Agent(object):
-    def __init__(self, agent_id, obs_space, acs_space, agent_config, network_config):
+    def __init__(self, id, obs_space, acs_space, agent_config, network_config):
         '''
         Base Attributes of Agent
             agent_id = given by the learner
@@ -17,7 +17,6 @@ class Agent(object):
         {setattr(self, k, v) for k,v in agent_config.items()}
         self.obs_space = obs_space
         self.acs_space = acs_space
-        self.id = agent_id
         self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
