@@ -1,1 +1,2 @@
-from learners.SingleAgentLearner import *
+from learners.SingleAgentDDPGLearner import *
+from learners.SingleAgentDQNLearner import *

@@ -211,12 +211,23 @@ class ShivaAdmin():
         # create the meta learner configs folder
         dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
         # save each config file
-        for cf in self.caller.config:
+        print(self.caller.config)
+        if type(self.caller.config) == dict:
+            cf = self.caller.config
             _filename_ = os.path.split(cf['_filename_'])[-1]
             ch.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
+        elif type(self.caller.config) == list:
+            for cf in self.caller.config:
+                _filename_ = os.path.split(cf['_filename_'])[-1]
+                ch.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
+        else:
+            assert False, "MetaLearner.config must be a list or dictionary"
         # save each learner
-        for learner in self.caller.learners:
-            self._save_learner(learner)
+        try:
+            for learner in self.caller.learners:
+                self._save_learner(learner)
+        except AttributeError:
+            self._save_learner(self.caller.learner)
 
     def _save_learner(self, learner=None) -> None:
         '''
@@ -319,6 +330,26 @@ class ShivaAdmin():
             _new_agent.load_net(agent_policy)
             agents.append(_new_agent)
         return agents
+
+
+    def _load_agent(self, path) -> list:
+        '''
+            For a given @path, the procedure will walk recursively over all the folders inside the @path
+            And find all the agent_cls.pickle and policy.pth files to load a single agent
+
+            InputW
+                @path       Path where the agents files will be located
+        '''
+
+        agent_pickle = dh.find_pattern_in_path(path, 'agent_cls.pickle')
+        agent_policy = dh.find_pattern_in_path(path, 'policy.pth')
+        assert len(agent_pickle) > 0, "No agent found in {}".format(path)
+        print("Loading Agent..")
+        print("\t{}\n\t{}\n\n".format(agent_pickle, agent_policy))
+        _new_agent = fh.load_pickle_obj(agent_pickle)
+        _new_agent.load_net(agent_policy)
+
+        return _new_agent    
 
 ###########################################################################
 #         

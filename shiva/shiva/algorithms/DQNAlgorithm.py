@@ -4,16 +4,18 @@ import random
 from agents.DQNAgent import DQNAgent
 import helpers.misc as misc
 from .Algorithm import Algorithm
+from settings import shiva
 
 class DQNAlgorithm(Algorithm):
-    def __init__(self, config):
+    def __init__(self, obs_space, acs_space, configs):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(DQNAlgorithm, self).__init__(config)
-        self.totalLoss = 0
+        super(DQNAlgorithm, self).__init__(obs_space, acs_space, configs)
+        self.acs_space = acs_space
+        self.obs_space = obs_space
         self.loss = 0
 
     def update(self, agent, minibatch, step_n):
@@ -38,7 +40,7 @@ class DQNAlgorithm(Algorithm):
         # next_states_v = torch.tensor(next_states).float().to(self.device)
         # actions_v = torch.tensor(actions).to(self.device)
         rewards_v = torch.tensor(rewards).to(self.device)
-        done_mask = torch.tensor(dones, dtype=torch.bool).to(self.device)
+        done_mask = torch.ByteTensor(dones).to(self.device)
 
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j) from minibatch
@@ -46,7 +48,9 @@ class DQNAlgorithm(Algorithm):
         state_action_values = agent.policy(input_v)
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
         # For the observations s_j+1, select an action using the Policy and calculate Q values of those using the Target net
-        input_v = torch.tensor([ np.concatenate([s_i, agent.get_action_target(s_i) ]) for s_i in next_states ]).float().to(self.device)
+
+        input_v = torch.tensor([np.concatenate( [s_i, agent.find_best_action(agent.target_policy, s_i )]) for s_i in next_states ] ).float().to(self.device)
+
         next_state_values = agent.target_policy(input_v)
         # 3) Overwrite 0 on all next_state_values where they were termination states
         next_state_values[done_mask] = 0.0
@@ -57,9 +61,15 @@ class DQNAlgorithm(Algorithm):
 
         expected_state_action_values = next_state_values * self.gamma + rewards_v
 
-        loss_v = self.loss_calc(state_action_values, expected_state_action_values)
+        loss = self.loss_calc()
 
-        self.totalLoss += loss_v
+        self.loss = loss
+
+        loss_v = loss(state_action_values, expected_state_action_values)
+
+        # The only issue is referencing the learner from here for the first parameter
+        # shiva.add_summary_writer(, agent, 'Loss per Step', loss_v, step_n)
+
         self.loss = loss_v
 
         loss_v.backward()
@@ -73,10 +83,11 @@ class DQNAlgorithm(Algorithm):
             With the probability epsilon we take the random action,
             otherwise we use the network to obtain the best Q-value per each action
         '''
-        epsilon = max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay))
+        # this might not be correct implementation of e greedy
+        epsilon = max(self.epsilon_end, self.epsilon_start - (step_n * self.epsilon_decay))
         if random.uniform(0, 1) < epsilon:
-            action_idx = random.sample(range(self.action_space), 1)[0]
-            action = misc.action2one_hot(self.action_space, action_idx)
+            action_idx = random.sample(range(self.acs_space), 1)[0]
+            action = misc.action2one_hot(self.acs_space, action_idx)
         else:
             # Iterate over all the actions to find the highest Q value
             action = agent.get_action(observation)
@@ -85,11 +96,6 @@ class DQNAlgorithm(Algorithm):
     def get_loss(self):
         return self.loss
 
-    def get_average_loss(self, step):
-        average = self.totalLoss/step
-        self.totalLoss = 0
-        return average
-
-    def create_agent(self, agent_config, net_config):
-        self.agent = DQNAgent(self.id_generator(), agent_config, net_config)
+    def create_agent(self, id):
+        self.agent = DQNAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent

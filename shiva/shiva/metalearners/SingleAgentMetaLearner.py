@@ -1,7 +1,8 @@
 # this is a version of a meta learner that will take a file path to the configuration files
 from settings import shiva
 from .MetaLearner import MetaLearner
-from learners.SingleAgentLearner import SingleAgentLearner
+from learners.SingleAgentDQNLearner import SingleAgentDQNLearner
+from learners.SingleAgentDDPGLearner import SingleAgentDDPGLearner
 import helpers.misc as misc
 import learners
 
@@ -10,6 +11,7 @@ class SingleAgentMetaLearner(MetaLearner):
     def __init__(self, configs):
         super(SingleAgentMetaLearner,self).__init__(configs)
         self.configs = configs
+        self.learnerCount = 0
         self.run()
     
     def run(self):
@@ -44,10 +46,12 @@ class SingleAgentMetaLearner(MetaLearner):
             # Runs the learner for a number of episodes given by the config
             self.learner.run()
 
+            shiva.add_meta_profile(self, self.configs['Environment']['env_name'])
+
             # save
             self.save()
     
     def create_learner(self):
-        learner = misc.handle_package(learners, self.configs['Learner']['type'])
-        return learner(self.id_generator(), self.config)
-        
+        learner = getattr(learners, self.configs['Learner']['type'])
+        return learner(self.get_id(), self.configs)
+

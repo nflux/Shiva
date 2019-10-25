@@ -3,7 +3,7 @@ import numpy as np
 import helpers.misc as misc
 
 class Agent(object):
-    def __init__(self, agent_id, config):
+    def __init__(self, id, obs_space, acs_space, agent_config, network_config):
         '''
         Base Attributes of Agent
             agent_id = given by the learner
@@ -14,8 +14,10 @@ class Agent(object):
             optimizer = Optimier Function
             learning_rate = Learning Rate
         '''
-        {setattr(self, k, v) for k,v in config.items()}
-        self.id = agent_id
+        {setattr(self, k, v) for k,v in agent_config.items()}
+        self.obs_space = obs_space
+        self.acs_space = acs_space
+        self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -40,12 +42,10 @@ class Agent(object):
                 A one-hot encoded list
         '''
         obs_v = torch.tensor(observation).float().to(self.device)
-        best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(self.device)
-        for i in range(self.action_space):
-            act_v = misc.action2one_hot_v(self.action_space, i)
-            # print(network)
-            q_val = network(torch.cat([obs_v, act_v.to(self.device)]))
-            # print(len(q_val))
+        best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
+        for i in range(self.acs_space):
+            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device) 
+            q_val = network(torch.cat([obs_v, act_v]))
             if q_val > best_q:
                 best_q = q_val
                 best_act_v = act_v

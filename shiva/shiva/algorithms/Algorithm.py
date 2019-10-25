@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 class Algorithm():
-    def __init__(self, config):
+    def __init__(self, obs_space, acs_space, configs):
         '''
             Input
                 observation_space   Shape of the observation space, aka input to policy network
@@ -15,11 +15,13 @@ class Algorithm():
                 learning_rate       Learning rate used in the optimizer
                 beta                Hyperparameter
         '''
-        {setattr(self, k, v) for k,v in config.items()}
-        self.config = config
-        self.loss_calc = self.loss_function()
+        self.configs = configs
+        {setattr(self, k, v) for k,v in self.configs[0].items()}
         self.agentCount = 0
         self.agents = []
+        self.obs_space = obs_space
+        self.acs_space = acs_space
+        self.loss_calc = getattr(torch.nn, configs[0]['loss_function'])()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def update(self, agent, data):

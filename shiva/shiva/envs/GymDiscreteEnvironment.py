@@ -14,7 +14,7 @@ class GymDiscreteEnvironment(Environment):
         self.action_space = self.set_action_space()
         self.step_count = 0
 
-    def step(self,action):
+    def step(self, action):
         self.acs = action
         self.obs, self.rews, self.world_status, info = self.env.step(np.argmax(action))
         self.step_count += 1
