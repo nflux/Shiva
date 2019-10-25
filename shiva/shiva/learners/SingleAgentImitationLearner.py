@@ -165,7 +165,6 @@ class SingleAgentImitationLearner(Learner):
 
         self.expert_agent = self.load_agent(self.configs['Learner']['expert_agent'])
 
-
         # Basic replay buffer at the moment
         self.replay_buffer = ReplayBuffer.initialize_buffer(self.configs['ReplayBuffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
         #self.imitation_buffer = ReplayBuffer.initialize_buffer(self.configs['ReplayBuffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
