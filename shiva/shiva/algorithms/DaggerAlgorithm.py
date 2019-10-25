@@ -1,27 +1,20 @@
 import numpy as np
 import torch
+import random
+from agents.ImitationAgent import ImitationAgent
 import helpers.misc as misc
 from .Algorithm import Algorithm
+from settings import shiva
 
 class DaggerAlgorithm(Algorithm):
-    def __init__(self,
-        observation_space: int,
-        action_space: int,
-        loss_function: object,
-        regularizer: object,
-        recurrence: bool,
-        optimizer: object,
-        gamma: np.float,
-        learning_rate: np.float,
-        beta: np.float,
-        epsilon: set(),
-        C: int,
-        configs: dict):
+    def __init__(self,obs_space, acs_space, configs):
 
-        super(DaggerAlgorithm, self).__init__(observation_space, action_space, loss_function, regularizer, recurrence, optimizer, gamma, learning_rate, beta, configs)
-        self.C = C
-        self.totalLoss = 0
+        super(DaggerAlgorithm, self).__init__(obs_space, acs_space, configs)
+        self.acs_space = acs_space
+        self.obs_space = obs_space
         self.loss = 0
+
+
 
     def update(self, imitation_agent,expert_agent, minibatch, step_n):
         '''

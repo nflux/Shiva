@@ -1,28 +1,15 @@
 
 from settings import shiva
 from .Learner import Learner
+import helpers.misc as misc
+import envs
+import algorithms
+import buffers
 
 class SingleAgentImitationLearner(Learner):
-    def __init__(self,
-                id,
-                agents,
-                environments,
-                algorithm,
-                data,
-                configs):
+    def __init__(self,learner_id,config):
 
-        super(SingleAgentImitationLearner, self).__init__(
-                        id, 
-                        agents,
-                        environments,
-                        algorithm,
-                        data,
-                        configs,
-                        )
-
-        #I'm thinking about getting the saveFrequency here from the config and saving it in self
-        self.saveFrequency = configs['Learner']['save_frequency']
-        self.agents = [None] * self.configs['Learner']['dagger_iterations']
+        super(SingleAgentImitationLearner, self).__init__(learner_id,config)
 
 
     def run(self):
@@ -30,25 +17,6 @@ class SingleAgentImitationLearner(Learner):
         print('Supervised Learning is complete!')
         print('Loss:',self.supervised_alg.loss)
         self.imitation_update()
-
-    '''def test_run(self,agent,episodes):
-        for ep in range(episodes):
-            self.env.reset()
-            self.totalReward = 0
-
-            done=False
-            while not done:
-                observation = self.env.get_observation()
-                #action = agent.policy(torch.FloatTensor(observation))
-                action = self.supervised_alg.onenp.argmax(agent.policy(torch.tensor(observation).float()).detach())
-                expert_action = self.supervised_alg.get_action(self.expert_agent,observation)
-                print('Imitation action: ',action,' Expert Action: ', expert_action)
-                next_observation, reward, done = self.env.step(action)
-                self.totalReward += 1
-
-            print('Episode Reward:',self.totalReward)'''
-
-
 
 
     def supervised_update(self):
@@ -163,7 +131,13 @@ class SingleAgentImitationLearner(Learner):
 
     def create_environment(self):
         # create the environment and get the action and observation spaces
-        self.env = Environment.initialize_env(self.configs['Environment'])
+        environment = getattr(envs, self.configs['Environment']['type'])
+        return environment(self.configs['Environment'])
+
+    def create_algorithm(self):
+        algorithm = getattr(algorithms, self.configs['Algorithm']['type1'])
+        algorithm2 = getattr(algorithms, self.configs['Algorithm']['type2'])
+        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']]), algorithm2(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
 
     def get_agents(self):
@@ -178,14 +152,16 @@ class SingleAgentImitationLearner(Learner):
 
 
         # Launch the environment
-        self.create_environment()
+        self.env = self.create_environment()
 
         # Launch the algorithm which will handle the
-        self.supervised_alg,self.imitation_alg = Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        self.supervised_alg,self.imitation_alg = self.create_algorithm()
+        #Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         #self.imitation_alg =  Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
+        self.agents = [None] * self.configs['Learner']['dagger_iterations']
         for i in range(len(self.agents)):
-            self.agents[i] = self.supervised_alg.create_agent(self.id_generator())
+            self.agents[i] = self.supervised_alg.create_agent()
 
         self.expert_agent = self.load_agent(self.configs['Learner']['expert_agent'])
 
