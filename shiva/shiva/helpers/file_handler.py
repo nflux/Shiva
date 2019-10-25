@@ -1,5 +1,5 @@
 import pickle, json
-from agents import Agent
+from agents.DQNAgent import *
 
 def save_pickle_obj(obj, filename):
     '''
