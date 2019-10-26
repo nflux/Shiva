@@ -14,14 +14,14 @@ class DDPGAgent(Agent):
 
         self.actor = actor.DDPGActor(obs_dim, 
                                     action_dim, 
-                                    networks['network_actor'])
+                                    networks['actor'])
 
         self.target_actor = copy.deepcopy(self.actor)
 
         self.critic = critic.DDPGCritic(obs_dim, 
                                         action_dim, 
-                                        networks['network_critic_head'], 
-                                        networks['network_critic_tail'])
+                                        networks['critic_head'], 
+                                        networks['critic_tail'])
 
         self.target_critic = copy.deepcopy(self.critic)
 

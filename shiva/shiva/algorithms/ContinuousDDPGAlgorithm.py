@@ -109,9 +109,9 @@ class ContinuousDDPGAlgorithm(Algorithm):
     # Gets actions with a linearly decreasing e greedy strat
     def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
 
-        if step_count < 0:
+        if step_count < self.exploration_steps:
 
-            action = np.array([np.random.uniform(0,1) for _ in range(self.action_space)])
+            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
             action += self.ou_noise.noise()
             action = np.clip(action, -1, 1)
             return action
@@ -119,11 +119,8 @@ class ContinuousDDPGAlgorithm(Algorithm):
         else:
 
             self.ou_noise.set_scale(0.1)
-
             observation = torch.tensor(observation).to(self.device)
-            
             action = agent.actor(observation.float()).cpu().data.numpy()
-
             # kinda useful for debugging
             # maybe should change the print to a log
             if step_count % 100 == 0:

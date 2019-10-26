@@ -33,11 +33,12 @@ class SingleAgentDDPGLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
+
         self.totalReward += reward
 
         self.buffer.append([observation, action, reward, next_observation, int(done)])
 
-        if self.step_count > 0:
+        if self.step_count > self.alg.exploration_steps:
             self.agents = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
         # TensorBoard Metrics
