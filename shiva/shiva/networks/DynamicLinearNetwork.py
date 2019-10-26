@@ -7,13 +7,13 @@ class DynamicLinearNetwork(torch.nn.Module):
         super(DynamicLinearNetwork, self).__init__()
         print(config)
         self.net = nh.DynamicLinearSequential(
-                            input_dim, 
-                            output_dim, 
-                            config['network']['layers'], 
-                            nh.parse_functions(torch.nn, 
+                            input_dim,
+                            output_dim,
+                            config['network']['layers'],
+                            nh.parse_functions(torch.nn,
                             config['network']['activation_function']),
-                            config['network']['last_layer'], 
-                            misc.handle_package(torch.nn, 
+                            config['network']['last_layer'],
+                            misc.handle_package(torch.nn,
                             config['network']['output_function'])
                             )
     def forward(self, x):
