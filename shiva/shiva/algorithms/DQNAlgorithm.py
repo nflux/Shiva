@@ -40,7 +40,7 @@ class DQNAlgorithm(Algorithm):
         # next_states_v = torch.tensor(next_states).float().to(self.device)
         # actions_v = torch.tensor(actions).to(self.device)
         rewards_v = torch.tensor(rewards).to(self.device)
-        done_mask = torch.tensor(dones, dtype=np.bool).to(self.device)
+        done_mask = torch.ByteTensor(dones).to(self.device)
 
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j) from minibatch

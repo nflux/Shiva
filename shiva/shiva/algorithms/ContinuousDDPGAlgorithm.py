@@ -36,7 +36,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         actions = torch.tensor(actions).to(self.device)
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
+        dones_mask = torch.ByteTensor(dones).view(-1,1).to(self.device)
 
         '''
             Training the Critic
@@ -88,21 +88,43 @@ class ContinuousDDPGAlgorithm(Algorithm):
             Soft Target Network Updates
         '''
 
-        # Update Target Actor
-        ac_state = agent.actor.state_dict()
-        tgt_ac_state = agent.target_actor.state_dict()
+        # # Update Target Actor
+        # ac_state = agent.actor.state_dict()
+        # tgt_ac_state = agent.target_actor.state_dict()
 
-        for k, v in ac_state.items():
-            tgt_ac_state[k] = tgt_ac_state[k] * self.tau + (1 - self.tau) * v
-        agent.target_actor.load_state_dict(tgt_ac_state)
+        # for k, v in ac_state.items():
+        #     tgt_ac_state[k] = tgt_ac_state[k] * self.tau + (1 - self.tau) * v
+        # agent.target_actor.load_state_dict(tgt_ac_state)
 
-        # Update Target Critic
-        ct_state = agent.critic.state_dict()
-        tgt_ct_state = agent.target_critic.state_dict()
+        # # Update Target Critic
+        # ct_state = agent.critic.state_dict()
+        # tgt_ct_state = agent.target_critic.state_dict()
 
-        for k, v in ct_state.items():
-            tgt_ct_state[k] = tgt_ct_state[k] * self.tau + (1 - self.tau) * v
-        agent.target_critic.load_state_dict(tgt_ct_state)
+        # for k, v in ct_state.items():
+        #     tgt_ct_state[k] = tgt_ct_state[k] * self.tau + (1 - self.tau) * v
+        # agent.target_critic.load_state_dict(tgt_ct_state)
+
+
+
+        '''
+            Hard Target Network Updates
+        '''
+
+        if step_count % 1000 == 0:
+
+            # for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
+            #     target_param.data.copy_(param.data)
+
+            # for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
+            #     target_param.data.copy_(param.data)
+
+
+            # agent.target_actor.load_state_dict(agent.actor.state_dict())
+            # agent.target_critic.load_state_dict(agent.critic.state_dict())
+
+
+            agent.target_actor = agent.actor
+            agent.target_critic = agent.critic
 
         return agent
 
@@ -121,7 +143,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
             self.ou_noise.set_scale(0.1)
             observation = torch.tensor(observation).to(self.device)
             action = agent.actor(observation.float()).cpu().data.numpy()
-            # kinda useful for debugging
+            # useful for debugging
             # maybe should change the print to a log
             if step_count % 100 == 0:
                 print(action)

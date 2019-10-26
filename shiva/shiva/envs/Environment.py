@@ -38,3 +38,6 @@ class Environment:
 
     def load_viewer(self):
         pass
+
+    def normalize_reward(self):
+        return (self.b-self.a)*(self.rews-self.min)/(self.max-self.min)

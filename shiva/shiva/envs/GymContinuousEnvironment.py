@@ -19,6 +19,9 @@ class GymContinuousEnvironment(Environment):
             self.step_count +=1 
             self.load_viewer()
 
+            if self.normalize:
+                self.rews = self.normalize_reward()
+
             return self.obs, self.rews, self.world_status
 
     def reset(self):
@@ -59,3 +62,5 @@ class GymContinuousEnvironment(Environment):
 
     def close(self):
         self.env.close()
+
+
