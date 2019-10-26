@@ -80,7 +80,7 @@ class SingleAgentImitationLearner(Learner):
         shiva.add_summary_writer(self, self.agents[0], 'Loss per step', self.supervised_alg.get_loss(),self.step_count)
 
         # Cumulate the reward
-        self.totalReward += reward[0]
+        self.totalReward += reward
 
         self.replay_buffer.append([observation, action, reward, next_observation, done])
         self.supervised_alg.update(self.agents[0],self.replay_buffer.sample(), self.step_count)
@@ -111,7 +111,7 @@ class SingleAgentImitationLearner(Learner):
         shiva.add_summary_writer(self, self.agents[0], 'Loss per step', self.imitation_alg.get_loss(), self.step_count)
 
 
-        self.totalReward += reward[0]
+        self.totalReward += reward
 
         self.replay_buffer.append([observation,action,reward,next_observation,done])
         self.imitation_alg.update(self.agents[iter_count],self.expert_agent, self.replay_buffer.sample(), self.env.step_count)
