@@ -6,6 +6,7 @@ import torch.optim
 class ImitationAgent(Agent):
     def __init__(self, id, obs_dim, action_dim, agent_config,net_config):
         super(ImitationAgent,self).__init__(id, obs_dim, action_dim, agent_config,net_config)
+        self.id = id
         network_input = obs_dim
         network_output = action_dim
         self.policy = DLN.DynamicLinearNetwork(network_input, network_output, net_config)

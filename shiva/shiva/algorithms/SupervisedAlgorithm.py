@@ -63,13 +63,10 @@ class SupervisedAlgorithm(Algorithm):
         #We are using cross entropy loss between the action our imitation Policy
         #would choose, and the actions the expert agent took
 
-        loss_v = self.loss_calc(action_prob_dist, actions).to(self.device)
+        self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
 
 
-        self.totalLoss += loss_v
-        self.loss = loss_v
-
-        loss_v.backward()
+        self.loss.backward()
         agent.optimizer.step()
 
 
@@ -82,9 +79,9 @@ class SupervisedAlgorithm(Algorithm):
     def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
 
         obs_v = torch.tensor(observation).float().to(self.device)
-        best_q, best_act_v = float('-inf'), torch.zeros(self.action_space).to(self.device)
-        for i in range(self.action_space):
-            act_v = misc.action2one_hot_v(i)
+        best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
+        for i in range(self.acs_space):
+            act_v = misc.action2one_hot_v(self.acs_space,i)
             q_val = network(torch.cat([obs_v, act_v.to(self.device)]))
             if q_val > best_q:
                 best_q = q_val
@@ -99,8 +96,3 @@ class SupervisedAlgorithm(Algorithm):
 
     def get_loss(self):
         return self.loss
-
-    def get_average_loss(self, step):
-        average = self.totalLoss/step
-        self.totalLoss = 0
-        return average

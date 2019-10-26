@@ -13,6 +13,7 @@ class GymDiscreteEnvironment(Environment):
         self.observation_space = self.set_observation_space()
         self.action_space = self.set_action_space()
         self.step_count = 0
+        self.render = configs['env_render']
 
     def step(self, action):
         self.acs = action
