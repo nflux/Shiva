@@ -76,11 +76,11 @@ class ContinuousDDPGAlgorithm(Algorithm):
         # miracle line of code
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
         # Make the Q-value negative and add a penalty if Q > 1 or Q < -1
-        actor_loss_value = -actor_loss_value.mean() + param_reg
-        # Save the actor loss for tensorboard
-        self.actor_loss = actor_loss_value
+        actor_loss = -actor_loss_value.mean() + param_reg
+        # Save actor loss for tensorboard
+        self.actor_loss = actor_loss
         # Backward Propogation!
-        actor_loss_value.backward()
+        actor_loss.backward()
         # Update the weights in the direction of the gradient.
         agent.actor_optimizer.step()
 
