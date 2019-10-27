@@ -6,7 +6,8 @@
 *   RobocupDDPGEnvironment.py
 *   init.py  
 
-##  Environment.py (Abstract)
+##  Environment.py 
+*   **DESCRIPTION**: This is the abstract class that the other environments will inherit from.
 *   step(self,actions)
     -   **self**
         +   Refers to the Current Instance
@@ -56,6 +57,7 @@
         +   Refers to the Current Instance  
 
 ##  GymContinuousEnvironment.py
+
 
 ##  GymDiscreteEnvironment.py
 
