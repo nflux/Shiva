@@ -4,9 +4,9 @@ import threading
 import pandas as pd
 import math
 import os, subprocess, time, signal
-import HFO
-import HFO.hfo.hfo as hfo
-import misc
+from .HFO import hfo
+from .HFO.hfo import hfo as hfo_env
+from .misc import zero_params
 from torch.autograd import Variable
 import torch
 
@@ -22,12 +22,12 @@ class rc_env:
             @port       Required for the robocup server
     '''
 
-    def __init__(self, config, port):
+    def __init__(self, config):
         self.config = config
         self.untouched = config['untouched']
         self.goalie = config['goalie']
-        self.port = port
-        self.hfo_path = HFO.get_hfo_path()
+        self.port = config['port']
+        self.hfo_path = hfo.get_hfo_path()
         self.seed = np.random.randint(1000)
         self.viewer = None
 
@@ -39,11 +39,11 @@ class rc_env:
         if config['action_level'] == 'low':
             #                   pow,deg   deg       deg         pow,deg    
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
-            self.action_list = [hfo.DASH, hfo.TURN, hfo.KICK]
-            self.kick_actions = [hfo.KICK] # actions that require the ball to be kickable
+            self.action_list = [hfo_env.DASH, hfo_env.TURN, hfo_env.KICK]
+            self.kick_actions = [hfo_env.KICK] # actions that require the ball to be kickable
         elif config['action_level'] == 'high':
-            self.action_list = [hfo.DRIBBLE, hfo.SHOOT, hfo.REORIENT, hfo.GO_TO_BALL, hfo.MOVE]
-            self.kick_actions = [hfo.DRIBBLE, hfo.SHOOT, hfo.PASS] # actions that require the ball to be kickable
+            self.action_list = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.REORIENT, hfo_env.GO_TO_BALL, hfo_env.MOVE]
+            self.kick_actions = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.PASS] # actions that require the ball to be kickable
 
         self.fpt = config['ep_length']
 
@@ -52,8 +52,8 @@ class rc_env:
 
         if config['feature_level'] == 'low':
             #For new obs reorganization without vailds, changed hfo obs from 59 to 56
-            self.left_features = 56 + 13*(self.num_left-1) + 12*self.num_right + 4 + 1 + 2 + 1  + 8
-            self.right_features = 56 + 13*(self.num_right-1) + 12*self.num_left + 4 + 1 + 2 + 1 + 8
+            self.left_features = 56 + 13*(self.num_left-1) + 12*self.num_right + 4 + 1 + 2 + 1
+            self.right_features = 56 + 13*(self.num_right-1) + 12*self.num_left + 4 + 1 + 2 + 1
         elif config['feature_level'] == 'high':
             self.left_features = (6*self.num_left) + (3*self.num_right) + (3*self.num_rightBot) + 6
             self.right_features = (6*self.num_right) + (3*self.num_left) + (3*self.num_rightBot) + 6
@@ -117,8 +117,8 @@ class rc_env:
         '''
 
         self._start_hfo_server()
-        self.left_envs = [hfo.HFOEnvironment() for i in range(self.num_left)]
-        self.right_envs = [hfo.HFOEnvironment() for i in range(self.num_right)]
+        self.left_envs = [hfo_env.HFOEnvironment() for i in range(self.num_left)]
+        self.right_envs = [hfo_env.HFOEnvironment() for i in range(self.num_right)]
         
         # Create thread(s) for left side
         for i in range(self.num_left):
@@ -240,7 +240,8 @@ class rc_env:
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,ac_index,base):
         '''
-            TODO: Ask Andy if this is necessary
+        Description
+            
         '''
 
         if self.left_base == base:
@@ -249,13 +250,13 @@ class rc_env:
             action_params = self.right_action_params
         
         if ac_index == 0: # dash power, degree
-            return action_params[agentID][0].clip(-1,1)*100, \
-                    action_params[agentID][1].clip(-1,1)*180
+            return (action_params[agentID][0].clip(-1,1)*100,
+                    action_params[agentID][1].clip(-1,1)*180)
         elif ac_index == 1: # turn degree
-            return action_params[agentID][2].clip(-1,1)*180
+            return (action_params[agentID][2].clip(-1,1)*180,)
         elif ac_index == 2: # kick power, degree
-            return ((action_params[agentID][3].clip(-1,1) + 1)/2)*100, \
-                    action_params[agentID][4].clip(-1,1)*180
+            return (((action_params[agentID][3].clip(-1,1) + 1)/2)*100,
+                    action_params[agentID][4].clip(-1,1)*180)
     
     # Engineered Reward Function
     def getReward(self,s,agentID,base,ep_num):
@@ -286,13 +287,13 @@ class rc_env:
         '''
 
         if feat_lvl == 'low':
-            feat_lvl = hfo.LOW_LEVEL_FEATURE_SET
+            feat_lvl = hfo_env.LOW_LEVEL_FEATURE_SET
         elif feat_lvl == 'high':
-            feat_lvl = hfo.HIGH_LEVEL_FEATURE_SET
+            feat_lvl = hfo_env.HIGH_LEVEL_FEATURE_SET
         elif feat_lvl == 'simple':
-            feat_lvl = hfo.SIMPLE_LEVEL_FEATURE_SET
+            feat_lvl = hfo_env.SIMPLE_LEVEL_FEATURE_SET
 
-        config_dir = HFO.get_config_path() 
+        config_dir = hfo.get_config_path() 
         recorder_dir = 'log/'
         envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                             server_port=port, server_addr='localhost', team_name=base,
@@ -341,7 +342,7 @@ class rc_env:
 
                     self.sync_at_reward.wait()
 
-                    if self.world_status == hfo.IN_GAME:
+                    if self.world_status == hfo_env.IN_GAME:
                         self.d = 0
                     else:
                         self.d = 1
@@ -386,13 +387,13 @@ class rc_env:
             if self.config['hfo_log']:       cmd += " --hfo-logging"
             if self.config['record_lib']:             cmd += " --record"
             if self.config['record_serv']:      cmd += " --log-gen-pt"
-            # if self.config['init_env']:
-            #     cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
-            #             " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
-            #             " --change-balls-x %f --change-balls-y %f --control-rand-init"\
-            #             % (self.config.agents_x_min, self.config.agents_x_max, self.config.agents_y_min, self.config.agents_y_max,
-            #                 self.config.change_every_x, self.config.change_agents_x, self.config.change_agents_y,
-            #                 self.config.change_ball_x, self.config.change_ball_y)
+            if self.config['init_env']:
+                cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
+                        " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
+                        " --change-balls-x %f --change-balls-y %f --control-rand-init"\
+                        % (self.config['agents_x_min'], self.config['agents_x_max'], self.config['agents_y_min'], self.config['agents_y_max'],
+                            self.config['change_every_x'], self.config['change_agents_x'], self.config['change_agents_y'],
+                            self.config['change_ball_x'], self.config['change_ball_y'])
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
@@ -407,7 +408,7 @@ class rc_env:
         
         if self.viewer is not None:
             os.kill(self.viewer.pid, signal.SIGKILL)
-        cmd = HFO.get_viewer_path() +\
+        cmd = hfo.get_viewer_path() +\
               " --connect --port %d" % (self.port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 
