@@ -123,11 +123,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         self.add_learner_profile(learner) # will only add if was not profiled before
-        if type(learner.agent) == list:
-            for agent in learner.agent:
-                self._add_agent_profile(learner, agent)
-        else:
-            self._add_agent_profile(learner, learner.agent)
+        self._save_learner_agents_mechanics(learner)
 
     def _add_agent_profile(self, learner, agent):
         '''
@@ -243,6 +239,14 @@ class ShivaAdmin():
         learner_path = self._curr_learner_dir[learner.id]
         fh.save_pickle_obj(learner, os.path.join(learner_path, 'learner_cls.pickle'))
         # save agents
+        self._save_learner_agents_mechanics(learner)
+
+    def _save_learner_agents_mechanics(self, learner):
+        '''
+            This procedure is it's own function because is used in other parts of the code
+            If attribute learner.agents is a valid attribute, saves them (if iterable) or assumes is 1 agent
+            If attribute learner.agents is not valid, will try with learner.agent
+        '''
         try:
             if type(learner.agents) == list:
                 for agent in learner.agents:
