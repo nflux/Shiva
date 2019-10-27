@@ -1,9 +1,9 @@
-import robocup.rc_env as rc
+from .robocup.rc_env import rc_env
 from .Environment import Environment
 
 class RoboCupDDPGEnvironment(Environment):
-    def __init__(self, config, port):
-        self.env = rc.rc_env(config, port)
+    def __init__(self, config):
+        self.env = rc_env(config)
         self.env.launch()
         self.left_actions = self.env.left_actions
         self.left_params = self.env.left_action_params
@@ -13,8 +13,10 @@ class RoboCupDDPGEnvironment(Environment):
         self.observation_space = self.env.left_features
         self.action_space = self.env.acs_dim
         self.step_count = 0
-        self.render = self.env.config['render']
+        self.render = self.env.config['env_render']
         self.done = self.env.d
+
+        self.load_viewer()
 
     def step(self, left_actions, left_params):
         self.left_actions = left_actions
