@@ -15,7 +15,7 @@
 ##  DaggerAlgorithm.py
 *   update(self, imitation_agent, expert_agent, minibatch, step_n)
     -   ***DESCRIPTION***
-        +
+        +   
     -   **self**
         +   Refers to the Current Instance
     -   **imitation_agent**
@@ -27,8 +27,8 @@
     -   **step_n**
         +   The current step number.
 *   get_action(self, agent, observation,step_n)
--   ***DESCRIPTION***
-        +
+    -   ***DESCRIPTION***
+        +   
     -   **self**
         +   Refers to the Current Instance
     -   **agent**
@@ -38,8 +38,8 @@
     -   **step_n**
         +   The current Step Number.
 *   find_best_action(self,network, observation: np.ndarray)
--   ***DESCRIPTION***
-        +
+    -   ***DESCRIPTION***
+        +   
     -   **self**
         +   Refers to the Current Instance
     -   **network**
@@ -47,8 +47,8 @@
     -   **observation: np.ndarray**
         +   Pass the observation space as an numpy array.
 *   find_best_expert_action(self, network, observation: np.ndarray)
--   ***DESCRIPTION***
-        +
+    -   ***DESCRIPTION***
+        +   
     -   **self**
         +   Refers to the Current Instance
     -   **network**
@@ -56,7 +56,7 @@
     -   **observaton: np.ndarray**
          +   Pass the observation space as an numpy array.
 *   get_lost(self)
--   ***DESCRIPTION***
+    -   ***DESCRIPTION***
         +
     -   Get the loss value that has been assigned to the agent. 
 
@@ -64,8 +64,8 @@
 
 ##  SupervisedAlgorithm.py
 *   update(self, imitation_agent, expert_agent, minibatch, step_n)
--   ***DESCRIPTION***
-        +
+    -   ***DESCRIPTION***
+        +   
     -   **self**
         +   Refers to the Current Instance
     -   **imitation_agent**
@@ -77,8 +77,8 @@
     -   **step_n**
         +   The current Step Number.
 *   get_action(self, agent, observation,step_n)
--   ***DESCRIPTION***
-        +
+    -   ***DESCRIPTION***
+        +   
     -   **self**
         +   Refers to the Current Instance
     -   **agent**
@@ -88,21 +88,21 @@
     -   **step_n**
         +   The current Step Number.
 *   find_best_action(self,network, observation: np.ndarray)
--   ***DESCRIPTION***
-        +
+    -   ***DESCRIPTION***
+        +   
     -   **self**
         +   Refers to the Current Instance
     -   **network**
     -   **observation: np.ndarray**
 *   find_best_expert_action(self, network, observation: np.ndarray)
--   ***DESCRIPTION***
-        +
+    -   ***DESCRIPTION***
+        +   
     -   **self**
         +   Refers to the Current Instance
     -   **network**
     -   **observaton: np.ndarray**
 *   get_lost(self)
--   ***DESCRIPTION***
-        +
+    -   ***DESCRIPTION***
+        +   
     -   Get the loss value that has been assigned to the agent. 
     
