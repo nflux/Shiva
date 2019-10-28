@@ -23,7 +23,7 @@ class RoboCupDDPGEnvironment(Environment):
         self.left_params = left_params
         self.obs,self.rews,_,_,self.done,_ = self.env.Step(left_actions=left_actions, left_params=left_params)
 
-        return self.obs, [self.rews], self.done
+        return self.obs, self.rews, self.done
 
     def get_observation(self):
         return self.obs
