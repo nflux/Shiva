@@ -518,6 +518,8 @@ class Trainer(object):
         else:
           player = offenseTeam.launch_npc(player_num)
           self.waitOnPlayer(player_num, True)
+          # print('Hello')
+          # input()
           if player_num in offense_unums:
             self._npcPopen.append(player)
             necProcesses.append([player, 'offense_npc_' + str(player_num)])

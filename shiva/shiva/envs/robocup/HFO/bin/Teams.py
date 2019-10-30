@@ -90,8 +90,8 @@ class Helios(Team):
               '--opponent-data-dir %s/data/opponent_data/ -p %d'\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
-    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    offenseOrder =  [1,2,3,4,5,6,7,8,9,10,11]
+    defenseOrder =  [1,2,3,4,5,6,7,8,9,10,11]
     super(Helios, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
