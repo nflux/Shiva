@@ -12,7 +12,7 @@ class SupervisedAlgorithm(Algorithm):
         super(SupervisedAlgorithm, self).__init__(obs_space,acs_space,configs)
         self.acs_space = acs_space
         self.obs_space = obs_space
-        self.acs_distrete = action_space_discrete
+        self.acs_discrete = action_space_discrete
         self.acs_continuous = action_space_continuous
         self.loss = 0
 
@@ -93,7 +93,7 @@ class SupervisedAlgorithm(Algorithm):
         return best_act
 
     def create_agent(self):
-        new_agent = ImitationAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1],self.configs[2])
+        new_agent = ImitationAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])
         self.agents.append(new_agent)
         return new_agent
 

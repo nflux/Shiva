@@ -55,7 +55,7 @@ class SingleAgentImitationLearner(Learner):
 
                 done = False
                 while not done:
-
+                    next_observation, reward, done, _ = self.env.step([0.0,1.0,0.0,0.0])
                     done = self.imitation_step(iter_count)
                     self.step_count+=1
 
@@ -103,7 +103,7 @@ class SingleAgentImitationLearner(Learner):
 
         observation = self.env.get_observation()
 
-        action = self.imitation_alg.find_best_action(self.agents[iter_count-1].policy, observation)#, self.env.get_current_step())
+        action = self.agents[iter_count-1].find_best_action(self.agents[iter_count-1].policy, observation)#, self.env.get_current_step())
 
         next_observation, reward, done, _ = self.env.step(action)
 
