@@ -7,11 +7,14 @@ from .Algorithm import Algorithm
 from settings import shiva
 
 class DaggerAlgorithm(Algorithm):
-    def __init__(self,obs_space, acs_space, configs):
+    def __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
 
         super(DaggerAlgorithm, self).__init__(obs_space, acs_space, configs)
         self.acs_space = acs_space
         self.obs_space = obs_space
+        self.acs_distrete = action_space_discrete
+        self.acs_continuous = action_space_continuous
+        self.action_policy = configs[1]['action_policy']
         self.loss = 0
 
 
@@ -75,8 +78,11 @@ class DaggerAlgorithm(Algorithm):
         return best_act # replay buffer store lists and env does np.argmax(action)
 
     def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
+        if self.action_policy =='argmax':
+            return np.random.choice(network(torch.tensor(observation).float()).detach().numpy())
+        else:
+            return misc.action2one_hot(self.acs_space,np.argmax(network(torch.tensor(observation).float()).detach()).item())
 
-        return misc.action2one_hot(self.acs_space,np.argmax(network(torch.tensor(observation).float()).detach()).item())
 
 
     def find_best_expert_action(self, network, observation: np.ndarray) -> np.ndarray:

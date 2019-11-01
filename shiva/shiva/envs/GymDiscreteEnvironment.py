@@ -11,6 +11,8 @@ class GymDiscreteEnvironment(Environment):
         self.rews = 0
         self.world_status = False
         self.observation_space = self.set_observation_space()
+        self.action_space_continuous = None
+        self.action_space_discrete = None 
         self.action_space = self.set_action_space()
         self.step_count = 0
         self.render = configs['render']
@@ -46,8 +48,10 @@ class GymDiscreteEnvironment(Environment):
         if self.env.action_space.shape != ():
             for i in range(len(self.env.action_space.shape)):
                 action_space *= self.env.action_space.shape[i]
+            self.action_space_continuous = action_space
         else:
             action_space = self.env.action_space.n
+            self.action_space_discrete = action_space
 
         return action_space
 
