@@ -13,14 +13,19 @@ class GymDiscreteEnvironment(Environment):
         self.observation_space = self.set_observation_space()
         self.action_space = self.set_action_space()
         self.step_count = 0
-        self.render = configs['env_render']
+        self.render = configs['render']
 
     def step(self, action):
         self.acs = action
         self.obs, self.rews, self.world_status, info = self.env.step(np.argmax(action))
         self.step_count += 1
         self.load_viewer()
-        return self.obs, self.rews, self.world_status
+
+        if self.normalize:
+            return self.obs, self.normalize_reward(), self.world_status, {'raw_reward': self.rews}
+        else:
+            return self.obs, self.rews, self.world_status, {'raw_reward': self.rews}
+
 
     def reset(self):
         self.step_count = 0

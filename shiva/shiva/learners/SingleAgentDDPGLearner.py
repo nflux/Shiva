@@ -35,7 +35,7 @@ class SingleAgentDDPGLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
-        self.totalReward += reward
+        self.totalReward += more_data['raw_reward']
 
         self.buffer.append([observation, action, reward, next_observation, int(done)])
 
