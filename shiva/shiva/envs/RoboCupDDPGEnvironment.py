@@ -12,6 +12,8 @@ class RoboCupDDPGEnvironment(Environment):
         self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
         self.action_space = self.env.acs_dim
+        self.action_space_discrete = 3
+        self.action_space_continuous = 5
         self.step_count = 0
         self.render = self.env.config['env_render']
         self.done = self.env.d

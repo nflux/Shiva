@@ -51,15 +51,16 @@ class SingleAgentImitationLearner(Learner):
             for self.ep_count in range(self.configs['Learner']['imitation_episodes']):
                 print(self.ep_count)
                 self.env.reset()
-
                 self.totalReward = 0
 
                 done = False
                 while not done:
+
                     done = self.imitation_step(iter_count)
                     self.step_count+=1
 
-                    self.env.env.close()
+                self.env.env.close()
+                print('made it out of the while loop')
 
             print('Policy ',iter_count, ' complete!')
             print('Loss: ',self.imitation_alg.loss)
@@ -73,7 +74,7 @@ class SingleAgentImitationLearner(Learner):
 
         action = self.supervised_alg.get_action(self.expert_agent, observation)
 
-        next_observation, reward, done = self.env.step(action)
+        next_observation, reward, done, _ = self.env.step(action)
 
         # Write to tensorboard
         shiva.add_summary_writer(self, self.expert_agent, 'Reward', reward, self.step_count)
@@ -104,7 +105,7 @@ class SingleAgentImitationLearner(Learner):
 
         action = self.imitation_alg.find_best_action(self.agents[iter_count-1].policy, observation)#, self.env.get_current_step())
 
-        next_observation, reward, done, = self.env.step(action)
+        next_observation, reward, done, _ = self.env.step(action)
 
 
         shiva.add_summary_writer(self, self.agents[0], 'Reward', reward, self.step_count)
@@ -137,7 +138,9 @@ class SingleAgentImitationLearner(Learner):
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type1'])
         algorithm2 = getattr(algorithms, self.configs['Algorithm']['type2'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']]), algorithm2(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        acs_continuous = self.env.action_space_continuous
+        acs_discrete= self.env.action_space_discrete
+        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),acs_discrete,acs_continuous,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']]), algorithm2(self.env.get_observation_space(), self.env.get_action_space(),acs_discrete,acs_continuous,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
 
     def create_buffer(self):
