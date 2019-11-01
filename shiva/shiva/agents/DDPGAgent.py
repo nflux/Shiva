@@ -27,3 +27,12 @@ class DDPGAgent(Agent):
 
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.learning_rate)
+
+
+        # Uncomment to check the networks
+
+        # print(self.actor)
+
+        # print(self.critic)
+
+        # input()

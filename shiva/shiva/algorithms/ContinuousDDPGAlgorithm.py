@@ -36,7 +36,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         actions = torch.tensor(actions).to(self.device)
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        dones_mask = torch.ByteTensor(dones).view(-1,1).to(self.device)
+        dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
 
         '''
             Training the Critic
@@ -112,19 +112,15 @@ class ContinuousDDPGAlgorithm(Algorithm):
 
         if step_count % 1000 == 0:
 
-            # for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
-            #     target_param.data.copy_(param.data)
+            for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
+                target_param.data.copy_(param.data)
 
-            # for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
-            #     target_param.data.copy_(param.data)
+            for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
+                target_param.data.copy_(param.data)
 
 
             # agent.target_actor.load_state_dict(agent.actor.state_dict())
             # agent.target_critic.load_state_dict(agent.critic.state_dict())
-
-
-            agent.target_actor = agent.actor
-            agent.target_critic = agent.critic
 
         return agent
 
