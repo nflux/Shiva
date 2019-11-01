@@ -25,7 +25,7 @@ class SingleAgentDDPGLearner(Learner):
 
         observation = self.env.get_observation()
 
-        action = self.alg.get_action(self.alg.agent, observation, self.step_count)
+        action = self.alg.get_action(self.agent, observation, self.step_count)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
@@ -77,7 +77,10 @@ class SingleAgentDDPGLearner(Learner):
         self.alg = self.create_algorithm()
 
         # Create the agent
-        self.agent = self.alg.create_agent(self.get_id())
+        if self.configs['Learner']['load_agents'] is not False:
+            self.agent = self.load_agent(self.configs['Learner']['load_agents'])
+        else:
+            self.agent = self.alg.create_agent(self.get_id())
         
         # if buffer set to true in config
         if self.using_buffer:
