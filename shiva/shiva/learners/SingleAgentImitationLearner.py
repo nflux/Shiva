@@ -55,12 +55,12 @@ class SingleAgentImitationLearner(Learner):
 
                 done = False
                 while not done:
-                    next_observation, reward, done, _ = self.env.step([0.0,1.0,0.0,0.0])
+                    #next_observation, reward, done, _ = self.env.step([0.0,1.0,0.0,0.0])
                     done = self.imitation_step(iter_count)
                     self.step_count+=1
 
                 self.env.env.close()
-                print('made it out of the while loop')
+
 
             print('Policy ',iter_count, ' complete!')
             print('Loss: ',self.imitation_alg.loss)
@@ -74,14 +74,14 @@ class SingleAgentImitationLearner(Learner):
 
         action = self.supervised_alg.get_action(self.expert_agent, observation)
 
-        next_observation, reward, done, _ = self.env.step(action)
+        next_observation, reward, done, more_data = self.env.step(action)
 
         # Write to tensorboard
         shiva.add_summary_writer(self, self.expert_agent, 'Reward', reward, self.step_count)
         shiva.add_summary_writer(self, self.agents[0], 'Loss per step', self.supervised_alg.get_loss(),self.step_count)
 
         # Cumulate the reward
-        self.totalReward += reward
+        self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         self.replay_buffer.append([observation, action, reward, next_observation, done])
         self.supervised_alg.update(self.agents[0],self.replay_buffer.sample(), self.step_count)
@@ -104,15 +104,15 @@ class SingleAgentImitationLearner(Learner):
         observation = self.env.get_observation()
 
         action = self.agents[iter_count-1].find_best_action(self.agents[iter_count-1].policy, observation)#, self.env.get_current_step())
-
-        next_observation, reward, done, _ = self.env.step(action)
+        
+        next_observation, reward, done, more_data = self.env.step(action)
 
 
         shiva.add_summary_writer(self, self.agents[0], 'Reward', reward, self.step_count)
         shiva.add_summary_writer(self, self.agents[0], 'Loss per step', self.imitation_alg.get_loss(), self.step_count)
 
 
-        self.totalReward += reward
+        self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         self.replay_buffer.append([observation,action,reward,next_observation,done])
         self.imitation_alg.update(self.agents[iter_count],self.expert_agent, self.replay_buffer.sample(), self.env.step_count)

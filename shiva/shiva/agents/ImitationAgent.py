@@ -3,6 +3,7 @@ import networks.DynamicLinearNetwork as DLN
 import copy
 import torch.optim
 import numpy as np
+import helpers.misc as misc
 
 class ImitationAgent(Agent):
     def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config,net_config):
@@ -24,17 +25,27 @@ class ImitationAgent(Agent):
 
 
     def find_best_action(self,network,observation):
+
         full_action = network(torch.tensor(observation).float()).detach().numpy()
-        discrete_action = full_action[:self.acs_discrete]
 
-        if self.action_policy == 'argmax':
-            discrete_action = np.random.choice(discrete_action)
+        if (self.acs_discrete != None):
+            discrete_action = full_action[:self.acs_discrete]
+
+            if self.action_policy == 'argmax':
+                discrete_action = misc.action2one_hot(self.acs_space,np.argmax(discrete_action)).tolist()
+
+            else:
+                sampled_choice = np.zeros(len(discrete_action))
+                sampled_action = np.random.choice(discrete_action)
+                sampled_action = np.where(discrete_action == sampled_action)
+                sampled_choice[sampled_action[0]] = 1.0
+                discrete_action = sampled_choice.tolist()
+
+
+            full_action[:self.acs_discrete] = discrete_action
+            return full_action.tolist()
         else:
-            discrete_action = misc.action2one_hot(self.acs_space,np.argmax(discrete_action))
-
-        full_action[:self.acs_discrete] = discrete_action
-        return torch.from_numpy(full_action)
-
+            return full_action
     '''def find_best_action(self, network, observation: np.ndarray) -> np.ndarray:
         if self.action_policy =='argmax':
             return np.random.choice(network(torch.tensor(observation).float()).detach().numpy())
