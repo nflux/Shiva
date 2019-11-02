@@ -10,6 +10,8 @@ class DQNAgent(Agent):
         self.id = id
         network_input = obs_space + acs_space
         network_output = 1
+
+        print(net_config)
         
         self.policy = nh.DynamicLinearSequential(
                                         network_input, 

@@ -43,14 +43,25 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         agent.critic_optimizer.zero_grad()
         # The actions that target actor would do in the next state.
         next_state_actions_target = agent.target_actor(next_states.float())
+
+        # print("Next states: ",next_states)
+        # print("Next State actions target: ",next_state_actions_target)
+        # input()
+        
         # The Q-value the target critic estimates for taking those actions in the next state.
-        Q_next_states_target = agent.target_critic(next_states.float(), next_state_actions_target.float())
+        Q_next_states_target = agent.target_critic(torch.cat([next_states.float(), next_state_actions_target.float()], 2))
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones_mask] = 0.0
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
+
+        # print(states)
+        # print(actions.unsqueeze(dim=1))
+        # input()
+
+
         # Get Q values of the batch from states and actions.
-        Q_these_states_main = agent.critic(states.float(), actions.float())
+        Q_these_states_main = agent.critic(torch.cat([states.float(), actions.unsqueeze(dim=1).float()],2))
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
         # Backward propogation!
@@ -69,7 +80,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         # Get the actions the main actor would take from the initial states
         current_state_actor_actions = agent.actor(states.float())
         # Calculate Q value for taking those actions in those states
-        actor_loss_value = agent.critic(states.float(), current_state_actor_actions.float())
+        actor_loss_value = agent.critic(torch.cat([states.float(), current_state_actor_actions.float()],2))
         # miracle line of code
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
         # Make the Q-value negative and add a penalty if Q > 1 or Q < -1
@@ -100,8 +111,6 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         for k, v in ct_state.items():
             tgt_ct_state[k] = tgt_ct_state[k] * self.tau + (1 - self.tau) * v
         agent.target_critic.load_state_dict(tgt_ct_state)
-
-
 
         '''
             Hard Target Network Updates

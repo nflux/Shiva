@@ -7,10 +7,10 @@ class ParametrizedDDPGAgent(Agent):
         super(ParametrizedDDPGAgent, self).__init__(id, obs_dim, action_dim, agent_config, networks)
         self.id = id
 
-        self.actor = DynamicLinearNetwork(obs_dim, action_dim, networks)
+        self.actor = DynamicLinearNetwork(obs_dim, action_dim, networks['actor'])
         self.target_actor = copy.deepcopy(self.actor)
 
-        self.critic = DynamicLinearNetwork(obs_dim + action_dim, 1, networks)
+        self.critic = DynamicLinearNetwork(obs_dim + action_dim, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.learning_rate)
