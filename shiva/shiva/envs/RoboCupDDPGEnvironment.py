@@ -28,7 +28,7 @@ class RoboCupDDPGEnvironment(Environment):
         self.left_params = torch.tensor([actions[3:]])
         
         self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
-        if self.rews[0] > 0:
+        if self.rews[0] > 0.01:
             print('\nreward:', self.rews, '\n')
         return self.obs, self.rews, self.done, {'raw_reward': self.rews}
 

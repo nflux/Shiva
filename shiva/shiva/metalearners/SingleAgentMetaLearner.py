@@ -48,6 +48,8 @@ class SingleAgentMetaLearner(MetaLearner):
             # save
             self.save()
 
+        print('bye')
+
     def create_learner(self):
         learner = getattr(learners, self.configs['Learner']['type'])
         return learner(self.get_id(), self.configs)

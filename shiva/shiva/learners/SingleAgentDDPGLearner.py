@@ -36,8 +36,8 @@ class SingleAgentDDPGLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
         self.totalReward += more_data['raw_reward']
-
-        self.buffer.append([observation, action, reward, next_observation, int(done)])
+        # print('to buffer:', observation.shape, action.shape, reward.shape, next_observation.shape, [done])
+        self.buffer.append([observation, action.reshape(1,-1), reward, next_observation, int(done)])
 
         if self.step_count > self.alg.exploration_steps:
             self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
