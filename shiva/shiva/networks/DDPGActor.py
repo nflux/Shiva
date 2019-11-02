@@ -6,7 +6,7 @@ class DDPGActor(nn.Module):
         super(DDPGActor, self).__init__()
         self.net = nh.DynamicLinearSequential(obs_dim, action_dim, 
                         config['layers'], 
-                        nh.parse_functions(nn, config['activation_function']), 
+                        config['activation_function'], 
                         config['last_layer'], 
                         config['output_function']
                         )

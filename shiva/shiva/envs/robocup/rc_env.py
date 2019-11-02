@@ -331,6 +331,7 @@ class rc_env:
                         envs[agent_ID].act(self.action_list[a]) # take the action
                     elif act_lvl == 'low':
                         # without tackle
+                        # print('action:', a)
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID,a,base))
 
                     self.sync_at_status.wait()
