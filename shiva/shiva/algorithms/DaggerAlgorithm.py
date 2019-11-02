@@ -16,6 +16,7 @@ class DaggerAlgorithm(Algorithm):
         self.acs_continuous = action_space_continuous
         self.action_policy = configs[1]['action_policy']
         self.loss = 0
+        self.configs = configs
 
 
 
@@ -62,12 +63,11 @@ class DaggerAlgorithm(Algorithm):
         expert_actions = expert_actions.detach()
 
 
-        #Loss will be Cross Entropy Loss between the action probabilites produced
-        #by the imitation agent, and the action took by the expert.
+        if self.configs[0]['loss_function'] == 'MSELoss':
+            action_prob_dist = action_prob_dist.view(actions.shape[0])
+            expert_actions = expert_actions.float()
+
         self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
-
-
-
         self.loss.backward()
         imitation_agent.optimizer.step()
 

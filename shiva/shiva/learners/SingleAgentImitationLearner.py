@@ -104,7 +104,7 @@ class SingleAgentImitationLearner(Learner):
         observation = self.env.get_observation()
 
         action = self.agents[iter_count-1].find_best_action(self.agents[iter_count-1].policy, observation)#, self.env.get_current_step())
-        
+
         next_observation, reward, done, more_data = self.env.step(action)
 
 
@@ -161,6 +161,7 @@ class SingleAgentImitationLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
+        
 
         # Launch the algorithm which will handle the
         self.supervised_alg,self.imitation_alg = self.create_algorithm()

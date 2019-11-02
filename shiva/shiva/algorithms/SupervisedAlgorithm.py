@@ -15,6 +15,7 @@ class SupervisedAlgorithm(Algorithm):
         self.acs_discrete = action_space_discrete
         self.acs_continuous = action_space_continuous
         self.loss = 0
+        self.configs = configs
 
 
     def update(self, agent, minibatch, step_n):
@@ -66,9 +67,11 @@ class SupervisedAlgorithm(Algorithm):
         #We are using cross entropy loss between the action our imitation Policy
         #would choose, and the actions the expert agent took
 
+        if self.configs[0]['loss_function'] == 'MSELoss':
+            action_prob_dist = action_prob_dist.view(actions.shape[0])
+            actions = actions.float()
+
         self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
-
-
         self.loss.backward()
         agent.optimizer.step()
 

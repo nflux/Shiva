@@ -9,10 +9,10 @@ class GymContinuousEnvironment(Environment):
         self.acs = 0
         self.rews = 0
         self.world_status = False
+        self.action_space_continuous = None
+        self.action_space_discrete = None
         self.observation_space = self.set_observation_space()
         self.action_space = self.set_action_space()
-        self.action_space_continuous = None
-        self.action_space_discrete = None 
         self.step_count = 0
 
     def step(self,action):
@@ -48,6 +48,7 @@ class GymContinuousEnvironment(Environment):
         else:
             action_space = self.env.action_space.n
             self.action_space_discrete = action_space
+        return action_space
 
     def get_observation(self):
         return self.obs

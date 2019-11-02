@@ -20,6 +20,7 @@ class ImitationAgent(Agent):
         self.acs_discrete = acs_discrete
         self.acs_continuous = acs_continuous
         self.network_input = obs_dim
+        
         self.policy = DLN.DynamicLinearNetwork(self.network_input, self.network_output, net_config)
         self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=self.policy.parameters(), lr=agent_config['learning_rate'])
 
