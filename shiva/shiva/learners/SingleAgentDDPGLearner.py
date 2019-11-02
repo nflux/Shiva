@@ -25,6 +25,9 @@ class SingleAgentDDPGLearner(Learner):
 
         observation = self.env.get_observation()
 
+        # print("Observation: ", observation)
+        # input()
+
         action = self.alg.get_action(self.agent, observation, self.step_count)
 
         next_observation, reward, done, more_data = self.env.step(action)
@@ -77,8 +80,8 @@ class SingleAgentDDPGLearner(Learner):
         self.alg = self.create_algorithm()
 
         # Create the agent
-        if self.configs['Learner']['load_agents'] is not False:
-            self.agent = self.load_agent(self.configs['Learner']['load_agents'])
+        if self.load_agents:
+            self.agent = self.load_agent(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
         

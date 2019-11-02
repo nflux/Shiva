@@ -51,8 +51,15 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         Q_next_states_target[dones_mask] = 0.0
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
+
+        # print(states)
+        # print(actions.unsqueeze(dim=1))
+        # input()
+
+
         # Get Q values of the batch from states and actions.
         Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 2) )
+        # Q_these_states_main = agent.critic(torch.cat([states.float(), actions.unsqueeze(dim=1).float()],2))
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
         # Backward propogation!
@@ -102,8 +109,6 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         for k, v in ct_state.items():
             tgt_ct_state[k] = tgt_ct_state[k] * self.tau + (1 - self.tau) * v
         agent.target_critic.load_state_dict(tgt_ct_state)
-
-
 
         '''
             Hard Target Network Updates
