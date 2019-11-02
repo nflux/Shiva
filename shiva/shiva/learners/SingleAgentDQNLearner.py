@@ -35,7 +35,7 @@ class SingleAgentDQNLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.get_loss(), self.step_count)
 
         # Cumulate the reward
-        self.totalReward += more_data['raw_reward']
+        self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         self.buffer.append([observation, action, reward, next_observation, done])
 

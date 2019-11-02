@@ -24,9 +24,9 @@ class GymDiscreteEnvironment(Environment):
         self.load_viewer()
 
         if self.normalize:
-            return self.obs, self.normalize_reward(), self.world_status, {'raw_reward': self.rews}
+            return self.obs, [self.normalize_reward()], self.world_status, {'raw_reward': [self.rews]}
         else:
-            return self.obs, self.rews, self.world_status, {'raw_reward': self.rews}
+            return self.obs, [self.rews], self.world_status, {'raw_reward': [self.rews]}
 
 
     def reset(self):
