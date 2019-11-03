@@ -3,15 +3,15 @@
 ## Contents
 *   Algorithm.py
 *   ContinousDDPGAlgorithm.py
-*   DaggerAlgorithm.py
 *   DQNAlgorithm.py
+*   DaggerAlgorithm.py
 *   SupervisedAlgorithm.py
 *   init.py  
 
 ##  Algorithm.py
 
 ##  ContinousDDPGAlgorithm.py
-
+##  DQNAlgorithm.py
 ##  DaggerAlgorithm.py
 *   Supports Discrete and Continuous Action Space. 
 *   init(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
@@ -64,18 +64,18 @@
         |    **network**  | The network of the expert agent  |
         |   **observation: np.ndarray**  | Pass the observation space as an numpy array.|
 
-*   get_lost(self)
+*   get_loss(self)
     -   ***DESCRIPTION***
         +   Get the loss value to partciular agent, and calculation based on what is set at the config.
     -   Get the loss value that has been assigned to the agent. 
 
-##  DQNAlgorithmpy
+
 
 ##  SupervisedAlgorithm.py
 *   Supports Discrete and Continuous Action Space. 
     -   ***DESCRIPTION***
         +   Initializes the Dagger Algorithm.
-*   __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
+*   init(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
     -   |   Variables   |   Description   |
         |       ---     |       ---       |
         |    **self**   | Refers to the Current Instance. |
@@ -119,7 +119,7 @@
         |    **self**   | Refers to the Current Instance |
         |    **network**  | The network of the expert agent  |
         |   **observation: np.ndarray**  | Pass the observation space as an numpy array.|
-*   get_lost(self)
+*   get_loss(self)
     -   ***DESCRIPTION***
         +   Get the loss value to partciular agent, and calculation based on what is set at the config. 
     -   Get the loss value that has been assigned to the agent. 
