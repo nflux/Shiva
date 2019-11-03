@@ -9,7 +9,14 @@
 
 ##  ImitationAgent.py
 *   Creates an imitation agent .py
-*   def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config,net_config)
-    -   
+*   init(self, id, obs_dim, acs_discrete, acs_continuous, agent_config,net_config)
+    -   **self**
+    -   **id** 
+    -   **obs_dim**
+    -   **acs_discrete**
+    -   **acs_continous**
+    -   **acs_continous**
+    -   **agent_config**
+    
 *   find_best_action(self,network,observation)
  
