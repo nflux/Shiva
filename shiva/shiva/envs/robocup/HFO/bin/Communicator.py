@@ -42,7 +42,7 @@ class Communicator(object):
         self._sock = None
 
   def sendMsg(self,msg):
-    #print 'sending',msg
+    # print 'sending',msg
     self._sock.sendto((msg+'\0').encode('utf-8'),self._addr)
 
   def recvMsg(self,event=None,retryCount=None):

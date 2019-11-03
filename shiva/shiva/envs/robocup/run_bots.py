@@ -1,6 +1,7 @@
 import configparser, ast
 import os, subprocess, time, signal
 from HFO import hfo
+from HFO.bin import Communicator
 
 def load_config_file_2_dict(_FILENAME: str) -> dict:
     '''
@@ -26,6 +27,36 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
             r[_section][_key] = ast.literal_eval(parser[_section][_key])
     r['_filename_'] = _FILENAME
     return r
+
+# class Trainer:
+#     def __init__():
+#         self._coachPort = 2001
+
+#     def initComm(self):
+#         """ Initialize communication to server. """
+#         self._comm = Communicator.ClientCommunicator(port=self._coachPort)
+#         self.send('(init (version 8.0))')
+#         self.checkMsg('(init ok)', retryCount=5)
+#         # self.send('(eye on)')
+#         self.send('(ear on)')
+
+#     def send(self, msg):
+#         """ Send a message. """
+#         self._comm.sendMsg(msg)
+    
+#     def recv(self, retryCount=None):
+#         """ Recieve a message. Retry a specified number of times. """
+#         return self._comm.recvMsg(retryCount=retryCount).strip()
+
+#     def checkMsg(self, expectedMsg, retryCount=None):
+#         """ Check that the next message is same as expected message. """
+#         msg = self.recv(retryCount)
+#         if msg != expectedMsg:
+#             sys.stderr.write('Error with message')
+#             sys.stderr.write('  expected: ' + expectedMsg)
+#             sys.stderr.write('  received: ' + msg)
+#             # print >>sys.stderr,len(expectedMsg),len(msg)
+#             raise ValueError
 
 class Bots:
     def __init__(self, config):

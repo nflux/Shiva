@@ -555,6 +555,9 @@ class Trainer(object):
       self.startGame()
       while self.allPlayersConnected() and self.checkLive(necProcesses) and not self._done:
         prevFrame = self._frame
+        # self.send('(move (ball) -10 10 10 10 10)')
+        # self.send('(move (player ' + self._offenseTeamName + ' 11) -5 10 10 10 10)')
+        # self.send('(change_mode drop_ball)')
         self.listenAndProcess()
     except TimeoutError:
       print('Haven\'t heard from the server for too long, Exiting')

@@ -4,6 +4,7 @@ import helpers.misc as misc
 import envs
 import algorithms
 import buffers
+import numpy as np
 
 class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
@@ -27,23 +28,25 @@ class SingleAgentDQNLearner(Learner):
 
         observation = self.env.get_observation()
 
-        action = self.alg.get_action(self.agent, observation, self.env.get_current_step())
+        # action = self.alg.get_action(self.agent, observation, self.env.get_current_step())
+        left_actions = np.array([2])
+        left_params = np.asarray([np.random.random(5)])
 
-        next_observation, reward, done = self.env.step(action)
+        next_observation, reward, done = self.env.step(left_actions, left_params)
 
-        shiva.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.get_loss(), self.step_count)
+        # shiva.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
+        # shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.get_loss(), self.step_count)
 
-        # Cumulate the reward
-        self.totalReward += reward
+        # # Cumulate the reward
+        # self.totalReward += reward
 
-        self.buffer.append([observation, action, reward, next_observation, done])
+        # self.buffer.append([observation, action, reward, next_observation, done])
 
-        self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+        # self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
-        # when the episode ends
-        if done:
-            shiva.add_summary_writer(self, self.agent, 'Total Reward', self.totalReward, self.ep_count)
+        # # when the episode ends
+        # if done:
+        #     shiva.add_summary_writer(self, self.agent, 'Total Reward', self.totalReward, self.ep_count)
 
         # Save the agent periodically
         # if self.step_count % self.save_frequency == 0:
