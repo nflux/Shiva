@@ -59,7 +59,7 @@ class DaggerAlgorithm(Algorithm):
 
         expert_actions = torch.LongTensor(len(states))
         for i in range(len(states)):
-            expert_actions[i] = self.find_best_expert_action(expert_agent.policy,states[i])
+            expert_actions[i] = torch.from_numpy(expert_agent.find_best_imitation_action(states[i]))
         expert_actions = expert_actions.detach()
 
 
@@ -99,14 +99,6 @@ class DaggerAlgorithm(Algorithm):
 
         return np.argmax(best_act)
 
-    '''def find_best_actions(self,network,observations) -> torch.tensor:
-
-        z = torch.FloatTensor()
-
-        for observation in observations:
-            z = torch.cat(z,self.find_best_expert_action(network,observation))
-
-        return z'''
 
     def get_loss(self):
         return self.loss

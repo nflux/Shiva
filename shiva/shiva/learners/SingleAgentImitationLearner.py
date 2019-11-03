@@ -5,6 +5,7 @@ import helpers.misc as misc
 import envs
 import algorithms
 import buffers
+import torch
 
 class SingleAgentImitationLearner(Learner):
     def __init__(self,learner_id,config):
@@ -72,7 +73,9 @@ class SingleAgentImitationLearner(Learner):
 
         observation = self.env.get_observation()
 
-        action = self.supervised_alg.get_action(self.expert_agent, observation)
+        action = self.expert_agent.find_best_imitation_action(observation)
+        
+        #action = self.supervised_alg.get_action(self.expert_agent, observation)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
@@ -104,6 +107,7 @@ class SingleAgentImitationLearner(Learner):
         observation = self.env.get_observation()
 
         action = self.agents[iter_count-1].find_best_action(self.agents[iter_count-1].policy, observation)#, self.env.get_current_step())
+        #action= torch.LongTensor(action)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
@@ -161,7 +165,7 @@ class SingleAgentImitationLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
-        
+
 
         # Launch the algorithm which will handle the
         self.supervised_alg,self.imitation_alg = self.create_algorithm()
