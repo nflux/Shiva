@@ -75,7 +75,7 @@
 *   Supports Discrete and Continuous Action Space. 
     -   ***DESCRIPTION***
         +   Initializes the Dagger Algorithm.
-    *   __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
+*   __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
     -   |   Variables   |   Description   |
         |       ---     |       ---       |
         |    **self**   | Refers to the Current Instance. |
