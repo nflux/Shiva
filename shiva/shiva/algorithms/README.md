@@ -18,17 +18,11 @@
     -   |   Variables   |   Description   |
         |       ---     |       ---       |
         |    **self**   | Refers to the Current Instance. |
-    -   **self**
-        +   Refers to the Current Instance.
-    -   **obs_space**
-        +   Feed in the observation space.
-    -   **acs_space**
-        +   Feed in the action space. 
-    -   **action_space_discrete**
-        +   Feed in the Discrete Action Space. 
-    -   **action_space_continous**
-        +    Feed in the Continous Action Space. 
-*   update(self, imitation_agent, expert_agent, minibatch, step_n)
+        |   **obs_space**   |Feed in the observation space. |
+        |    **acs_space**   | Feed in the action space.  |
+        |   **action_space_discrete**   | Feed in the Discrete Action Space.  |
+        |     **action_space_continous**   | Feed in the Continous Action Space. |
+
     -   ***DESCRIPTION***
         +   Calculates Trajectories from imation policy and inital policy, but allows for the new agent to explore new observations; in addition, to what the expert agent has led us to. Then we calculate the loss between the imitation agent and expert agent and using a desired loss calcualtion from the config. then we optimize. 
     -   **self**
