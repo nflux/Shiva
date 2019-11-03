@@ -52,7 +52,7 @@
         |       ---     |       ---       |
         |    **self**   | Refers to the Current Instance |
         |    **network**  | Pass the current network of the imitation agent.  |
-        |   ***observation: np.ndarray**  | Pass the observation space as an numpy array.|
+        |   **observation: np.ndarray**  | Pass the observation space as an numpy array.|
         
   
 *   find_best_expert_action(self, network, observation: np.ndarray)
@@ -62,7 +62,7 @@
         |       ---     |       ---       |
         |    **self**   | Refers to the Current Instance |
         |    **network**  | The network of the expert agent  |
-        |   ***observation: np.ndarray**  | Pass the observation space as an numpy array.|
+        |   **observation: np.ndarray**  | Pass the observation space as an numpy array.|
 
 *   get_lost(self)
     -   ***DESCRIPTION***
@@ -97,7 +97,7 @@
 *   get_action(self, agent, observation,step_n)
     -   ***DESCRIPTION***
         +   Gets the action taken from the imitation agent from the observation space that has been fed. 
-     -   |   Variables   |   Description   |
+    -   |   Variables   |   Description   |
         |       ---     |       ---       |
         |    **self**   | Refers to the Current Instance |
         |    **agent**   | Get an action from the imitation agent.  |
@@ -110,8 +110,7 @@
         |       ---     |       ---       |
         |    **self**   | Refers to the Current Instance |
         |    **network**  | Pass the current network of the imitation agent.  |
-        |   ***observation: np.ndarray**  | Pass the observation space as an numpy array.|
-    -   **observation: np.ndarray**
+        |   **observation: np.ndarray**  | Pass the observation space as an numpy array.|
 *   find_best_expert_action(self, network, observation: np.ndarray)
     -   ***DESCRIPTION***
         +   Gets the best expert action from the expert from the array of observations.
@@ -119,7 +118,7 @@
         |       ---     |       ---       |
         |    **self**   | Refers to the Current Instance |
         |    **network**  | The network of the expert agent  |
-        |   ***observation: np.ndarray**  | Pass the observation space as an numpy array.|
+        |   **observation: np.ndarray**  | Pass the observation space as an numpy array.|
 *   get_lost(self)
     -   ***DESCRIPTION***
         +   Get the loss value to partciular agent, and calculation based on what is set at the config. 
