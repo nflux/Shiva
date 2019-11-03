@@ -14,7 +14,10 @@
 
 ##  DaggerAlgorithm.py
 *   Supports Discrete and Continuous Action Space. 
-*   __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
+*   init(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
+    -   |   Variables   |   Description   |
+        |       ---     |       ---       |
+        |    **self**   | Refers to the Current Instance. |
     -   **self**
         +   Refers to the Current Instance.
     -   **obs_space**
@@ -114,11 +117,12 @@
     -   **step_n**
         +   The current Step Number.
 *   find_best_action(self,network, observation: np.ndarray)
-    -   ***DESCRIPTION***
-        +   Gets the best action from an array of observations that has been fed.
+      -   ***DESCRIPTION***
+        +   Gets the best action from an array of observations that has been fed. 
     -   **self**
         +   Refers to the Current Instance
     -   **network**
+        +   Pass the current network of the imitation agent. 
     -   **observation: np.ndarray**
 *   find_best_expert_action(self, network, observation: np.ndarray)
     -   ***DESCRIPTION***
@@ -126,7 +130,9 @@
     -   **self**
         +   Refers to the Current Instance
     -   **network**
+        +   The network of the expert agent.
     -   **observaton: np.ndarray**
+         +   Pass the observation space as an numpy array.
 *   get_lost(self)
     -   ***DESCRIPTION***
         +   Get the loss value to partciular agent, and calculation based on what is set at the config. 
