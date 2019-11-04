@@ -28,36 +28,6 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
     r['_filename_'] = _FILENAME
     return r
 
-# class Trainer:
-#     def __init__():
-#         self._coachPort = 2001
-
-#     def initComm(self):
-#         """ Initialize communication to server. """
-#         self._comm = Communicator.ClientCommunicator(port=self._coachPort)
-#         self.send('(init (version 8.0))')
-#         self.checkMsg('(init ok)', retryCount=5)
-#         # self.send('(eye on)')
-#         self.send('(ear on)')
-
-#     def send(self, msg):
-#         """ Send a message. """
-#         self._comm.sendMsg(msg)
-    
-#     def recv(self, retryCount=None):
-#         """ Recieve a message. Retry a specified number of times. """
-#         return self._comm.recvMsg(retryCount=retryCount).strip()
-
-#     def checkMsg(self, expectedMsg, retryCount=None):
-#         """ Check that the next message is same as expected message. """
-#         msg = self.recv(retryCount)
-#         if msg != expectedMsg:
-#             sys.stderr.write('Error with message')
-#             sys.stderr.write('  expected: ' + expectedMsg)
-#             sys.stderr.write('  received: ' + msg)
-#             # print >>sys.stderr,len(expectedMsg),len(msg)
-#             raise ValueError
-
 class Bots:
     def __init__(self, config):
         {setattr(self, k, v) for k,v in config.items()}
@@ -65,7 +35,7 @@ class Bots:
 
     
     # found from https://github.com/openai/gym-soccer/blob/master/gym_soccer/envs/soccer_env.py
-    def _start_hfo_server(self):
+    def _start_hfo_server(self, imit_port):
 
             cmd = hfo.get_hfo_path() + \
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
@@ -89,7 +59,8 @@ class Bots:
             if not self.rcss_log_game:  cmd += " --no-logging"
             if self.hfo_log_game:       cmd += " --hfo-logging"
             if self.record:             cmd += " --record"
-            if self.record_server:      cmd += " --log-gen-pt" 
+            if self.record_server:      cmd += " --log-gen-pt"
+            if self.imit_port:    cmd += " --imit-port 6003"
             if self.control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

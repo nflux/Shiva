@@ -144,7 +144,7 @@ def main(args):
       launch(monitorCommand + monitorOptions, name='monitor')
     # Launch the Trainer
     from Trainer import Trainer
-    trainer = Trainer(args=args, server_port=server_port, coach_port=coach_port)
+    trainer = Trainer(args=args, server_port=server_port, coach_port=coach_port, imit_port=args.imit_port)
     trainer.initComm()
     # Run
     trainer.run(necProcesses, args.offenseTeam, args.defenseTeam)
@@ -262,6 +262,7 @@ def parseArgs():
                     default=True, help='allow offside kickoff')
   p.add_argument('--log-gen-pt', dest='server_log', action='store_true',
                     help='allow logging of general pre-training')
+  p.add_argument('--imit-port', dest='imit_port', type=int, default=None, help='update later')
 
   args = p.parse_args()
   if args.offenseAgents not in list(range(0, 12)):

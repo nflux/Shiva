@@ -20,12 +20,12 @@ class TimeoutError(Exception):
     return repr(self.value)
 
 class Communicator(object):
-  def __init__(self,host='localhost',port=defaultPort,sock=None):
+  def __init__(self, host='localhost',port=defaultPort,sock=None, sock_type=socket.SOCK_DGRAM):
     self._sock = sock
     self._storedMsg = ''
     self._addr = (host,port)
 
-    self.initialize()
+    self.initialize(sock_type)
 
   def initialize(self):
     if self._sock is None:
@@ -83,10 +83,10 @@ class Communicator(object):
     return pickle.loads(msg)
 
 class ClientCommunicator(Communicator):
-  def initialize(self):
+  def initialize(self, sock_type):
     try:
-      self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-      self._sock.settimeout(5)
+      self._sock = socket.socket(socket.AF_INET, sock_type)
+      self._sock.settimeout(None)
     except:
       sys.stderr.write('Error creating socket')
       raise
