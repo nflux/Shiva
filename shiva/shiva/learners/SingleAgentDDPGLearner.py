@@ -25,6 +25,9 @@ class SingleAgentDDPGLearner(Learner):
 
         observation = self.env.get_observation()
 
+        # print("Observation: ", observation)
+        # input()
+
         action = self.alg.get_action(self.agent, observation, self.step_count)
 
         next_observation, reward, done, more_data = self.env.step(action)
@@ -36,8 +39,8 @@ class SingleAgentDDPGLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
         self.totalReward += more_data['raw_reward']
-
-        self.buffer.append([observation, action, reward, next_observation, int(done)])
+        # print('to buffer:', observation.shape, action.shape, reward.shape, next_observation.shape, [done])
+        self.buffer.append([observation, action.reshape(1,-1), reward, next_observation, int(done)])
 
         if self.step_count > self.alg.exploration_steps:
             self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
@@ -77,8 +80,8 @@ class SingleAgentDDPGLearner(Learner):
         self.alg = self.create_algorithm()
 
         # Create the agent
-        if self.configs['Learner']['load_agents'] is not False:
-            self.agent = self.load_agent(self.configs['Learner']['load_agents'])
+        if self.load_agents:
+            self.agent = self.load_agent(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
         

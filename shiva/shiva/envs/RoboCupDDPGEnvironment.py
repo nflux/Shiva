@@ -1,3 +1,5 @@
+import numpy as np
+import torch
 from .robocup.rc_env import rc_env
 from .Environment import Environment
 
@@ -20,12 +22,15 @@ class RoboCupDDPGEnvironment(Environment):
 
         self.load_viewer()
 
-    def step(self, left_actions, left_params):
-        self.left_actions = left_actions
-        self.left_params = left_params
-        self.obs,self.rews,_,_,self.done,_ = self.env.Step(left_actions=left_actions, left_params=left_params)
-
-        return self.obs, self.rews, self.done
+    def step(self, actions):
+        # print('given actions', actions)
+        self.left_actions = torch.tensor([np.argmax(actions[0:3])])
+        self.left_params = torch.tensor([actions[3:]])
+        
+        self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
+        if self.rews[0] > 0.01:
+            print('\nreward:', self.rews, '\n')
+        return self.obs, self.rews, self.done, {'raw_reward': self.rews}
 
     def get_observation(self):
         return self.obs
@@ -39,3 +44,6 @@ class RoboCupDDPGEnvironment(Environment):
     def load_viewer(self):
         if self.render:
             self.env._start_viewer()
+
+    def close(self):
+        pass
