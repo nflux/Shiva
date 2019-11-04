@@ -259,10 +259,10 @@ class Trainer(object):
     """ Initialize communication to server. """
     self._comm = ClientCommunicator(port=self._coachPort)
     if self._imitPort != None:
-      self._imit_comm = ClientCommunicator(port=self._imitPort, sock_type=socket.SOCK_STREAM)
-      self._imit_comm._sock.bind(('127.0.0.1', self._imitPort))
-      self._imit_comm._sock.listen()
-      self.conn, addr = self._imit_comm._sock.accept()
+      self._imit_comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      self._imit_comm.bind(('127.0.0.1', self._imitPort))
+      self._imit_comm.listen()
+      self.conn, addr = self._imit_comm.accept()
       print('Listen on', addr)
     else:
       self._imit_comm = None
@@ -578,7 +578,6 @@ class Trainer(object):
             msg = self.conn.recv(1024)
             if msg:
               obs = pickle.loads(msg)
-              # print(obs)
               self.send('(move (ball) %f %f %f %f %f)' % (obs[0][-6]*52.5, obs[0][-5]*34, 0, 0, 0))
               self.conn.send(b'True')
               break

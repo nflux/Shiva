@@ -60,7 +60,7 @@ class Bots:
             if self.hfo_log_game:       cmd += " --hfo-logging"
             if self.record:             cmd += " --record"
             if self.record_server:      cmd += " --log-gen-pt"
-            if self.imit_port:    cmd += " --imit-port 6003"
+            if self.contain_imit_port:    cmd += " --imit-port %i" % (self.imit_port)
             if self.control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

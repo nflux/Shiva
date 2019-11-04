@@ -20,25 +20,20 @@ class RoboCupDDPGEnvironment(Environment):
 
         self.load_viewer()
 
-        self._comm = Communicator.ClientCommunicator(port=6003, sock_type=socket.SOCK_STREAM)
-        self._comm._sock.connect(('127.0.0.1', 6003))
+        self._comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._comm.connect(('127.0.0.1', self.imit_port))
         time.sleep(1)
-        # self._comm._sock.bind
 
     def step(self, left_actions, left_params):
         self.left_actions = left_actions
         self.left_params = left_params
         self.obs,self.rews,_,_,self.done,_ = self.env.Step(left_actions=left_actions, left_params=left_params)
 
-        # print(self._comm._addr)
-        # self._comm.sendMsg('HelloWorld')
         while True:
             try:
-                self._comm._sock.sendall(pickle.dumps(self.obs))
-                print('hey')
-                # self._comm._sock.sendall('(move (player ' + 'HELIOS_18_CLONE' + ' 11) -5 10 10 10 10)'.encode())
+                self._comm.sendall(pickle.dumps(self.obs))
                 while True:
-                    msg = self._comm._sock.recv(1024)
+                    msg = self._comm.recv(1024)
                     print(msg)
                     if b'True' == msg:
                         break
