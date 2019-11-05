@@ -13,11 +13,8 @@ class DQNAgent(Agent):
         network_input = obs_space + acs_space
         network_output = 1
 
-<<<<<<< HEAD
-=======
-        print(net_config)
-        
->>>>>>> origin/param-ddpg
+
+
         self.policy = nh.DynamicLinearSequential(
                                         network_input,
                                         network_output,
@@ -54,5 +51,4 @@ class DQNAgent(Agent):
                 best_q = q_val
                 best_act_v = act_v
         best_act = best_act_v
-        
         return np.argmax(best_act).numpy()

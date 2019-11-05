@@ -14,6 +14,7 @@ class SingleAgentImitationLearner(Learner):
 
 
 
+
     def run(self):
 
         self.supervised_update()
@@ -40,7 +41,7 @@ class SingleAgentImitationLearner(Learner):
 
         # make an environment close function
         # self.env.close()
-        self.env.env.close()
+        self.env.close()
         self.agent = self.agents[0]
 
         #self.supervised_train()
@@ -60,7 +61,7 @@ class SingleAgentImitationLearner(Learner):
                     done = self.imitation_step(iter_count)
                     self.step_count+=1
 
-                self.env.env.close()
+                self.env.close()
 
 
             print('Policy ',iter_count, ' complete!')
@@ -74,7 +75,7 @@ class SingleAgentImitationLearner(Learner):
         observation = self.env.get_observation()
 
         action = self.expert_agent.find_best_imitation_action(observation)
-        
+
         #action = self.supervised_alg.get_action(self.expert_agent, observation)
 
         next_observation, reward, done, more_data = self.env.step(action)
