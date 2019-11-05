@@ -26,17 +26,21 @@ class SingleAgentDDPGLearner(Learner):
         observation = self.env.get_observation()
 
         # print("Observation: ", observation)
+        # print('raw obs:', observation.shape)
         # input()
 
         action = self.alg.get_action(self.agent, observation, self.step_count)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
-        # TensorBoard metrics
+        # TensorBoard Step Metrics
         shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
+        # Need to store
+        # - action performed
+        # - 
 
         self.totalReward += more_data['raw_reward']
         # print('to buffer:', observation.shape, action.shape, reward.shape, next_observation.shape, [done])
@@ -45,10 +49,12 @@ class SingleAgentDDPGLearner(Learner):
         if self.step_count > self.alg.exploration_steps:
             self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
-        # TensorBoard Metrics
+        # TensorBoard Episodic Metrics
         if done:
             shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
+            if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
+                shiva.update_agents_profile(self)
 
         return done
 
@@ -59,7 +65,7 @@ class SingleAgentDDPGLearner(Learner):
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])

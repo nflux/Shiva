@@ -60,9 +60,13 @@ class rc_env:
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
             self.action_list = [hfo_env.DASH, hfo_env.TURN, hfo_env.KICK]
             self.kick_actions = [hfo_env.KICK] # actions that require the ball to be kickable
+            self.acs_param_dim = 5
         elif config['action_level'] == 'high':
             self.action_list = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.REORIENT, hfo_env.GO_TO_BALL, hfo_env.MOVE]
             self.kick_actions = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.PASS] # actions that require the ball to be kickable
+            # self.acs_param_dim = ????
+
+        self.acs_dim = len(self.action_list)
 
         self.fpt = config['ep_length']
 
@@ -81,7 +85,6 @@ class rc_env:
             self.left_features = 28 + (6 * ((self.num_left-1) + self.num_right))
             self.right_features = 28 + (6 * ((self.num_right-1) + self.num_left))
 
-        self.acs_dim = config['ac_dim']
         self.left_envs = None
         self.right_envs = None
 
@@ -243,8 +246,7 @@ class rc_env:
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
         
-        return np.asarray(self.left_obs),self.left_rewards,np.asarray(self.right_obs),self.right_rewards, \
-                self.d, self.world_status
+        return np.asarray(self.left_obs), self.left_rewards, np.asarray(self.right_obs), self.right_rewards, self.d, self.world_status
 
     def Queue_action(self,agent_id,base,action,params=[]):
         '''

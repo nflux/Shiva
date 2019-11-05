@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import utils.Noise as noise
+from helpers.calc_helper import np_softmax
 from agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
 from .Algorithm import Algorithm
 
@@ -12,9 +13,8 @@ class ParametrizedDDPGAlgorithm(Algorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(ParametrizedDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
-
         self.scale = 0.9
-        self.ou_noise = noise.OUNoise(action_space, self.scale)
+        self.ou_noise = noise.OUNoise(action_space['discrete']+action_space['param'], self.scale)
         self.actor_loss = 0
         self.critic_loss = 0
 
@@ -24,7 +24,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         '''
             Getting a Batch from the Replay Buffer
         '''
-        
+        # print('update')
         # Batch of Experiences
         states, actions, rewards, next_states, dones = minibatch
 
@@ -34,7 +34,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
         dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
-        # print(states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
+        # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
         '''
             Training the Critic
         '''
@@ -126,19 +126,20 @@ class ParametrizedDDPGAlgorithm(Algorithm):
 
     # Gets actions with a linearly decreasing e greedy strat
     def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
-
+        # print('get action')
         if step_count < self.exploration_steps:
 
-            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space['discrete']+self.acs_space['param'])])
             action += self.ou_noise.noise()
+            action = np.concatenate([ np_softmax(action[:self.acs_space['discrete']]), action[self.acs_space['discrete']:] ])
             action = np.clip(action, -1, 1)
-            # print('random action shape', action.shape)
+            # print('random action shape', action[:self.acs_space['discrete']].sum(), action.shape)
             return action
 
         else:
 
             self.ou_noise.set_scale(0.1)
-            observation = torch.tensor(observation).to(self.device)
+            observation = torch.tensor([observation]).to(self.device)
             action = agent.actor(observation.float()).cpu().data.numpy()
             # useful for debugging
             # maybe should change the print to a log
@@ -148,10 +149,10 @@ class ParametrizedDDPGAlgorithm(Algorithm):
             action += self.ou_noise.noise()
             action = np.clip(action, -1,1)
             # print('actor action shape', action.shape)
-            return action[0]
+            return action[0, 0] # timestamp 0, agent 0
 
-    def create_agent(self, id): 
-        self.agent = ParametrizedDDPGAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self, id):
+        self.agent = ParametrizedDDPGAgent(id, self.obs_space, self.acs_space['discrete']+self.acs_space['param'], self.acs_space['discrete'], self.configs[1], self.configs[2])
         return self.agent
 
     def get_actor_loss(self):
