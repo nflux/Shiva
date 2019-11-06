@@ -7,6 +7,7 @@ from .Environment import Environment
 
 class RoboCupDDPGEnvironment(Environment):
     def __init__(self, config):
+        super(RoboCupDDPGEnvironment, self).__init__(config)
         self.env = rc_env(config)
         self.env.launch()
         self.left_actions = self.env.left_actions
@@ -16,7 +17,6 @@ class RoboCupDDPGEnvironment(Environment):
         self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
         self.action_space = {'discrete': self.env.acs_dim, 'param': self.env.acs_param_dim}
-
         self.step_count = 0
         self.render = self.env.config['env_render']
         self.done = self.env.d
@@ -26,13 +26,12 @@ class RoboCupDDPGEnvironment(Environment):
     def step(self, actions):
         # print('given actions', actions)
 
-        # changed 3 to 4
-
         self.left_actions = torch.tensor([np.argmax(actions[0:3])])
 
         self.left_params = torch.tensor([actions[3:]])
         
         self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
+
         if self.rews[0] > 0.01:
             print('\nreward:', self.rews, '\n')
         return self.obs, self.rews, self.done, {'raw_reward': self.rews}

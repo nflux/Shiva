@@ -6,6 +6,7 @@ import utils.Noise as noise
 from helpers.calc_helper import np_softmax
 from agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
 from .Algorithm import Algorithm
+from settings import shiva
 
 class ParametrizedDDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
@@ -52,12 +53,6 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         Q_next_states_target[dones_mask] = 0.0
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
-
-        # print(states)
-        # print(actions.unsqueeze(dim=1))
-        # input()
-
-
         # Get Q values of the batch from states and actions.
         Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 2) )
         # Calculate the loss.
@@ -83,7 +78,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=1)[self.acs_space['discrete'] + self.acs_space['param']].mean() * 1e-3)/1.0 # regularize using log probabilities
         # penalty for going beyond the bounded interval
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
-        # Make the Q-value negative and add a penalty if Q > 1 or Q < -1
+        # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration
         actor_loss = -actor_loss_value.mean() + param_reg + entropy_reg
         # Backward Propogation!
         actor_loss.backward()
@@ -142,12 +137,9 @@ class ParametrizedDDPGAlgorithm(Algorithm):
 
             self.ou_noise.set_scale(0.1)
             observation = torch.tensor([observation]).to(self.device)
-            # print(observation)
-            # input()
             action = agent.get_action(observation.float()).cpu().data.numpy()
 
             # useful for debugging
-            # maybe should change the print to a log
             if step_count % 100 == 0:
                 # print(action)
                 pass

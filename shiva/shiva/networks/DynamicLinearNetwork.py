@@ -1,6 +1,7 @@
 import helpers.networks_handler as nh
 import helpers.misc as misc
 import torch
+torch.manual_seed(5)
 
 class DynamicLinearNetwork(torch.nn.Module):
     def __init__(self, input_dim, output_dim, config):
