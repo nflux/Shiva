@@ -1,5 +1,7 @@
 import numpy as np
+np.random.seed(5)
 import torch
+torch.manual_seed(5)
 from .robocup.rc_env import rc_env
 from .Environment import Environment
 
@@ -13,6 +15,9 @@ class RoboCupDDPGEnvironment(Environment):
         self.rews = self.env.left_rewards
         self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
+        # print(self.env.acs_dim)
+        # print(self.env.acs_param_dim)
+        # input()
         self.action_space = {'discrete': self.env.acs_dim, 'param': self.env.acs_param_dim}
 
         self.step_count = 0
@@ -23,7 +28,11 @@ class RoboCupDDPGEnvironment(Environment):
 
     def step(self, actions):
         # print('given actions', actions)
+
+        # changed 3 to 4
+
         self.left_actions = torch.tensor([np.argmax(actions[0:3])])
+
         self.left_params = torch.tensor([actions[3:]])
         
         self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)

@@ -1,5 +1,7 @@
 import numpy as np
+np.random.seed(5)
 import torch
+torch.manual_seed(5)
 import utils.Noise as noise
 from helpers.calc_helper import np_softmax
 from agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
@@ -79,8 +81,16 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         current_state_actor_actions = agent.actor(states.float())
         # Calculate Q value for taking those actions in those states
         actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
-        # miracle line of code
+
+        # reg_param = 1.0
+
+        # entropy
+        # entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].mean() * 1e-3)/reg_param # regularize using log probabilities
+        # penalty for going beyond the bounded interval
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
+
+        # param_reg = torch.clamp((curr_pol_out_stacked[:,:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,:,curr_agent.action_dim:]),min=0.0).sum(dim=2).mean() # How much parameters exceed (-1,1) bound
+
         # Make the Q-value negative and add a penalty if Q > 1 or Q < -1
         actor_loss = -actor_loss_value.mean() + param_reg
         # Backward Propogation!
@@ -99,7 +109,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         tgt_ac_state = agent.target_actor.state_dict()
 
         for k, v in ac_state.items():
-            tgt_ac_state[k] = tgt_ac_state[k] * self.tau + (1 - self.tau) * v
+            tgt_ac_state[k] = v*self.tau + (1 - self.tau)*tgt_ac_state[k] 
         agent.target_actor.load_state_dict(tgt_ac_state)
 
         # Update Target Critic
@@ -107,7 +117,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         tgt_ct_state = agent.target_critic.state_dict()
 
         for k, v in ct_state.items():
-            tgt_ct_state[k] = tgt_ct_state[k] * self.tau + (1 - self.tau) * v
+            tgt_ct_state[k] =  v*self.tau + (1 - self.tau)*tgt_ct_state[k] 
         agent.target_critic.load_state_dict(tgt_ct_state)
 
         '''
@@ -140,11 +150,13 @@ class ParametrizedDDPGAlgorithm(Algorithm):
 
             self.ou_noise.set_scale(0.1)
             observation = torch.tensor([observation]).to(self.device)
+            # print(observation)
+            # input()
             action = agent.actor(observation.float()).cpu().data.numpy()
             # useful for debugging
             # maybe should change the print to a log
             if step_count % 100 == 0:
-                # print(action)
+                print(action)
                 pass
             action += self.ou_noise.noise()
             action = np.clip(action, -1,1)
@@ -152,6 +164,8 @@ class ParametrizedDDPGAlgorithm(Algorithm):
             return action[0, 0] # timestamp 0, agent 0
 
     def create_agent(self, id):
+        # print(self.obs_space)
+        # input()
         self.agent = ParametrizedDDPGAgent(id, self.obs_space, self.acs_space['discrete']+self.acs_space['param'], self.acs_space['discrete'], self.configs[1], self.configs[2])
         return self.agent
 

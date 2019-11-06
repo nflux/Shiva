@@ -25,7 +25,7 @@ class SingleAgentDDPGLearner(Learner):
 
         observation = self.env.get_observation()
 
-        # print("Observation: ", observation)
+        # print("Observation: ", observation.shape )
         # print('raw obs:', observation.shape)
         # input()
 
