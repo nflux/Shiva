@@ -16,6 +16,8 @@ class ParametrizedDDPGAgent(Agent):
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.learning_rate)
 
+    def get_action(self, observation):
+        return self.actor(observation)
 
         # Uncomment to check the networks
 
