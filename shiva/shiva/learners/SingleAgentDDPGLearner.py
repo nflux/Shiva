@@ -60,6 +60,9 @@ class SingleAgentDDPGLearner(Learner):
                 self.turns += 1
             elif action == 2:
                 self.kicks += 1
+            shiva.add_summary_writer(self, self.agent, 'Action per Step', action, self.step_count)
+
+            
 
         # Robocup Metrics
         if done and self.env.env_name == 'RoboCup':
