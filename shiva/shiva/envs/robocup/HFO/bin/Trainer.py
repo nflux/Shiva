@@ -307,10 +307,16 @@ class Trainer(object):
       self._lastTrialStart = self._frame
       self.getConnectedPlayers()
 
+  def _hearPlayersFromRef(self, ts, body):
+    print(ts, body)
+
   def _hear(self, body):
     """ Handle a hear message. """
     if body[0] == 'referee':
-      self._hearRef(body)
+      if body[2] == 'imit':
+        self._hearPlayersFromRef(body[1], body[3:])
+      else:
+        self._hearRef(body)
       return
     timestep,playerInfo,msg = body
     try:

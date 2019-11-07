@@ -35,14 +35,14 @@ class Bots:
 
     
     # found from https://github.com/openai/gym-soccer/blob/master/gym_soccer/envs/soccer_env.py
-    def _start_hfo_server(self, imit_port):
+    def _start_hfo_server(self):
 
             cmd = hfo.get_hfo_path() + \
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --message-size 256 --tackle-cycles 1 --no-offside --offside-area-size 0"\
+                  " --log-dir %s --message-size 256 --tackle-cycles 1 --no-offside --run-imit --offside-area-size 0"\
                   % (self.fpt, self.untouched_time, self.leftagents,
                      self.rightagents, self.leftbots, self.rightbots, self.port,
                      self.offense_on_ball, self.seed, self.ball_x_min, self.ball_x_max,

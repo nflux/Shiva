@@ -5,6 +5,7 @@ import socket, time, pickle
 
 class RoboCupDDPGEnvironment(Environment):
     def __init__(self, config):
+        super(RoboCupDDPGEnvironment, self).__init__(config)
         self.env = rc_env(config)
         self.env.launch()
         self.left_actions = self.env.left_actions
@@ -34,7 +35,6 @@ class RoboCupDDPGEnvironment(Environment):
                 self._comm.sendall(pickle.dumps(self.obs))
                 while True:
                     msg = self._comm.recv(1024)
-                    print(msg)
                     if b'True' == msg:
                         break
                 break
