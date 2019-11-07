@@ -75,11 +75,11 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         # Calculate Q value for taking those actions in those states
         actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
         # might not be perfect, needs to be tested more
-        entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=1)[self.acs_space['discrete'] + self.acs_space['param']].mean() * 1e-3)/1.0 # regularize using log probabilities
+        #entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=1)[self.acs_space['discrete'] + self.acs_space['param']].mean() * 1e-3)/1.0 # regularize using log probabilities
         # penalty for going beyond the bounded interval
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
         # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration
-        actor_loss = -actor_loss_value.mean() + param_reg + entropy_reg
+        actor_loss = -actor_loss_value.mean() + param_reg #+ entropy_reg
         # Backward Propogation!
         actor_loss.backward()
         # Update the weights in the direction of the gradient.

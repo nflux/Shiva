@@ -475,7 +475,8 @@ class rc_env:
                 self.left_agent_possesion = ['N'] * self.num_left
                 return reward
             else:
-                if s=='Goal_By_Right' and self.right_agent_possesion[agentID] == 'R':
+                if s=='Goal_By_Right'
+                 and self.right_agent_possesion[agentID] == 'R':
                     reward+=goal_points
                 elif s=='Goal_By_Right':
                     reward+=goal_points
@@ -598,8 +599,8 @@ class rc_env:
                     prev_poss = (np.array(self.right_agent_possesion) == 'R').argmax()
                     if not self.right_agent_possesion[agentID] == 'R':
                         self.right_passer[prev_poss] += 1 # sets passer flag to whoever passed
-                        reward += self.pass_reward
-                        team_reward += self.pass_reward
+                        # reward += self.pass_reward
+                        # team_reward += self.pass_reward
         #                 # print('opp pass reward received ')
 
                 if (np.array(self.left_agent_possesion) == 'L').any():
@@ -648,8 +649,8 @@ class rc_env:
                 delta = (2*self.num_left)*(r_prev - r)
                 if True:
                 #if delta > 0:
-                    reward += delta
-                    team_reward += delta
+                    # reward += delta
+                    # team_reward += delta
 
         # base right kicks
         elif  ((self.right_base == base) and possession_side == 'R'):
@@ -658,16 +659,16 @@ class rc_env:
                 delta = (2*self.num_left)*(r_prev - r)
                 if True:
                 #if delta > 0:
-                    reward += delta
-                    team_reward += delta
+                    # reward += delta
+                    # team_reward += delta
                     
         # non-possessor reward for ball delta toward goal
         else:
             delta = (0*self.num_left)*(r_prev - r)
             if True:
             #if delta > 0:
-                reward += delta
-                team_reward += delta       
+                # reward += delta
+                # team_reward += delta       
 
         # ################## Offensive Behavior #######################
 
