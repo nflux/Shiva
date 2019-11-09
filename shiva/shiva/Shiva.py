@@ -359,7 +359,7 @@ class ShivaAdmin():
         _new_agent = fh.load_pickle_obj(agent_pickle)
         _new_agent.load_net(agent_policy)
 
-        return _new_agent    
+        return _new_agent
 
 ###########################################################################
 #         

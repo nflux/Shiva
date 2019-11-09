@@ -55,3 +55,78 @@ class RoboCupDDPGEnvironment(Environment):
 
     def close(self):
         pass
+
+from pynput.keyboard import Key, KeyCode, Listener
+
+class HumanPlayerInterface():
+    '''
+        Only for RoboCup
+    '''
+    def __init__(self):
+        self.q = []
+        self.listener = Listener(on_release=self.on_release)
+        self.listener.start()
+
+    def on_release(self, key):
+        # print('{0} release'.format(key))
+        self.q.append(key)
+        # if key == Key.esc:
+        #     # Stop listener
+        #     return False
+
+    def get_action(self, obs):
+        '''
+
+        '''
+        if len(self.q) > 0:
+            action = self.q.pop(0)
+            return self.robocup_action(action, obs)
+        else:
+            return None
+
+    def robocup_action(self, action, obs):
+        # print(action, type(action), self.q)
+        # print(obs)
+        # input()
+        if action == Key.up:
+            '''
+                Rotate agent NORTH
+            '''
+            theta = 90
+            action = [0, 1, 0, 0, 0, theta, 0, 0]
+        elif action == Key.down:
+            '''
+                Rotate agent SOUTH
+            '''
+            theta = 90
+            action = [0, 1, 0, 0, 0, theta, 0, 0]
+        elif action == Key.right:
+            '''
+                Rotate agent EAST
+            '''
+            theta = 90
+            action = [0, 1, 0, 0, 0, theta, 0, 0]
+        elif action == Key.left:
+            '''
+                Rotate agent WEST
+            '''
+            theta = 90
+            action = [0, 1, 0, 0, 0, theta, 0, 0]
+        elif action == KeyCode.from_char('k'):
+            '''
+                Agent kicks
+            '''
+            kick_degree = 0
+            kick_power = 50
+            action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
+        elif action == KeyCode.from_char('d'):
+            '''
+                Agent dashes
+            '''
+            dash_degree = 0
+            dash_power = 50
+            action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
+        else:
+            assert False, "Wrong action given"
+
+        return np.array(action)

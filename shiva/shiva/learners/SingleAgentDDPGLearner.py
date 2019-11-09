@@ -30,12 +30,14 @@ class SingleAgentDDPGLearner(Learner):
 
         observation = self.env.get_observation()
 
-        # print("Observation: ", observation.shape )
-        # print('raw obs:', observation.shape)
-        # input()
-
-        action = self.alg.get_action(self.agent, observation, self.step_count)
-
+        if self.manual_play:
+            # This only works for RoboCup!
+            action = self.human.get_action(observation)
+            while action is None:
+                action = self.human.get_action(observation)
+        else:
+            action = self.alg.get_action(self.agent, observation, self.step_count)
+        
         next_observation, reward, done, more_data = self.env.step(action)
 
         # TensorBoard Step Metrics
@@ -47,7 +49,7 @@ class SingleAgentDDPGLearner(Learner):
         self.totalReward += more_data['raw_reward']
         # print('to buffer:', observation.shape, action.shape, reward.shape, next_observation.shape, [done])
         self.buffer.append([observation, action.reshape(1,-1), reward, next_observation, int(done)])
-
+        
         if self.step_count > self.alg.exploration_steps:
             self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
@@ -106,6 +108,9 @@ class SingleAgentDDPGLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
+
+        if self.manual_play:
+            self.human = envs.HumanPlayerInterface()
 
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
