@@ -475,8 +475,7 @@ class rc_env:
                 self.left_agent_possesion = ['N'] * self.num_left
                 return reward
             else:
-                if s=='Goal_By_Right'
-                 and self.right_agent_possesion[agentID] == 'R':
+                if s=='Goal_By_Right' and self.right_agent_possesion[agentID] == 'R':
                     reward+=goal_points
                 elif s=='Goal_By_Right':
                     reward+=goal_points
@@ -651,9 +650,10 @@ class rc_env:
                 #if delta > 0:
                     # reward += delta
                     # team_reward += delta
+                    pass
 
         # base right kicks
-        elif  ((self.right_base == base) and possession_side == 'R'):
+        elif self.right_base == base and possession_side == 'R':
             team_possessor = (np.array(self.right_agent_possesion) == 'R').argmax()
             if agentID == team_possessor:
                 delta = (2*self.num_left)*(r_prev - r)
@@ -661,14 +661,15 @@ class rc_env:
                 #if delta > 0:
                     # reward += delta
                     # team_reward += delta
-                    
+                    pass
         # non-possessor reward for ball delta toward goal
         else:
             delta = (0*self.num_left)*(r_prev - r)
             if True:
             #if delta > 0:
                 # reward += delta
-                # team_reward += delta       
+                # team_reward += delta  
+                pass     
 
         # ################## Offensive Behavior #######################
 

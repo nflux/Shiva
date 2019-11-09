@@ -32,9 +32,9 @@ class RoboCupDDPGEnvironment(Environment):
         
         self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
 
-        print(self.obs)
-        print(len(self.obs[0]))
-        input()
+        # print(self.obs)
+        # print(len(self.obs[0]))
+        # input()
 
         # if self.rews[0] > 0.01:
         print('\nreward:', self.rews, '\n')
