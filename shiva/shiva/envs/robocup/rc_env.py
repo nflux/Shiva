@@ -470,7 +470,7 @@ class rc_env:
                     reward+=goal_points/5.0
                 elif s=='CapturedByRightGoalie':
                     reward+= 0 #-goal_points/4.0
-
+                print("this ran")
                 possession_side = 'N' # at the end of each episode we set this to none
                 self.left_agent_possesion = ['N'] * self.num_left
                 return reward

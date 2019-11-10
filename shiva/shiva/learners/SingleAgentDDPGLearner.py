@@ -32,9 +32,9 @@ class SingleAgentDDPGLearner(Learner):
 
         if self.manual_play:
             # This only works for RoboCup!
-            action = self.human.get_action(observation)
+            action = self.HPI.get_action(observation)
             while action is None:
-                action = self.human.get_action(observation)
+                action = self.HPI.get_action(observation)
         else:
             action = self.alg.get_action(self.agent, observation, self.step_count)
         
@@ -110,7 +110,7 @@ class SingleAgentDDPGLearner(Learner):
         self.env = self.create_environment()
 
         if self.manual_play:
-            self.human = envs.HumanPlayerInterface()
+            self.HPI = envs.HumanPlayerInterface()
 
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()

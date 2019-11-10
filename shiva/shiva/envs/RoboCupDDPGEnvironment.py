@@ -57,6 +57,7 @@ class RoboCupDDPGEnvironment(Environment):
         pass
 
 from pynput.keyboard import Key, KeyCode, Listener
+from math import atan2, pi
 
 class HumanPlayerInterface():
     '''
@@ -68,11 +69,7 @@ class HumanPlayerInterface():
         self.listener.start()
 
     def on_release(self, key):
-        # print('{0} release'.format(key))
         self.q.append(key)
-        # if key == Key.esc:
-        #     # Stop listener
-        #     return False
 
     def get_action(self, obs):
         '''
@@ -85,48 +82,107 @@ class HumanPlayerInterface():
             return None
 
     def robocup_action(self, action, obs):
-        # print(action, type(action), self.q)
-        # print(obs)
-        # input()
+
+        y_rad = obs[0,4]
+        x_rad = obs[0,5]
+
+        print("sin:", y_rad)
+        print("cos", x_rad)
+
+        global_theta = atan2(y_rad, x_rad) * 180 / pi
+        print("global angle:", global_theta)
+        
         if action == Key.up:
             '''
-                Rotate agent NORTH
+                Turn Agent NORTH
             '''
-            theta = 90
-            action = [0, 1, 0, 0, 0, theta, 0, 0]
+            
+            print("North")
+
+            if global_theta == 90:
+                delta = 0
+            else:
+                delta = 90 - global_theta
+                delta = self.normalize_angle(delta)
+
+            action = [0, 1, 0, 0, 0, delta, 0, 0]
+
         elif action == Key.down:
+
             '''
-                Rotate agent SOUTH
+                Turn Agent SOUTH
             '''
-            theta = 90
-            action = [0, 1, 0, 0, 0, theta, 0, 0]
+
+            print("South")
+
+            if global_theta == -90:
+                delta = 0
+            else:
+                delta = -90 + global_theta
+                delta = self.normalize_angle(delta)
+
+            action = [0, 1, 0, 0, 0, delta, 0, 0]
+
         elif action == Key.right:
             '''
-                Rotate agent EAST
+                Turn Agent EAST
             '''
-            theta = 90
-            action = [0, 1, 0, 0, 0, theta, 0, 0]
+
+            print("East")
+
+            if global_theta == 0:
+                delta = 0
+            else:
+                delta = 0 - global_theta
+                delta = self.normalize_angle(delta)
+
+            action = [0, 1, 0, 0, 0, delta, 0, 0]
+
         elif action == Key.left:
             '''
-                Rotate agent WEST
+                Turn Agent WEST
             '''
-            theta = 90
-            action = [0, 1, 0, 0, 0, theta, 0, 0]
+
+            print("West")
+
+            if global_theta == 180 or global_theta == -180:
+                delta = 0
+            else:
+                delta = 180 - global_theta
+                delta = self.normalize_angle(delta)
+
+            action = [0, 1, 0, 0, 0, delta, 0, 0]
+
         elif action == KeyCode.from_char('k'):
             '''
-                Agent kicks
+                Agent Kick
             '''
+
+            print("Kick")
+
             kick_degree = 0
-            kick_power = 50
+            kick_power = self.normalize_power(50)
+
             action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
+
         elif action == KeyCode.from_char('d'):
             '''
-                Agent dashes
+                Agent Dash
             '''
+            print("Dash")
+
             dash_degree = 0
-            dash_power = 50
+            dash_power = self.normalize_power(50)
+
             action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
+
         else:
             assert False, "Wrong action given"
 
         return np.array(action)
+
+    def normalize_angle(self, delta):
+        return 2 * (delta + 180) / 360
+
+    def normalize_power(self, power):
+        return 2 * (power - 100) / 200
