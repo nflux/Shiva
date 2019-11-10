@@ -81,6 +81,17 @@ class HumanPlayerInterface():
         else:
             return None
 
+    '''
+        Manual Control
+
+            u - dash forward
+            j - dash backward
+            ; - 45 degree turn left
+            ' - 45 degree turn right
+        
+    '''
+
+
     def robocup_action(self, action, obs):
 
         y_rad = obs[0,4]
@@ -124,9 +135,9 @@ class HumanPlayerInterface():
             print("Dash")
 
             dash_degree = 0
-            dash_power = self.normalize_power(50)
+            dash_power = self.normalize_power(-50)
 
-            action = [1, 0, 0, -dash_power, dash_degree, 0, 0, 0]
+            action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
 
         elif action == KeyCode.from_char(';'):
             '''
