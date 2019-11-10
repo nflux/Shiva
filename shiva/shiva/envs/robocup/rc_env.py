@@ -129,6 +129,10 @@ class rc_env:
         self.world_status = 0
         self.left_base = 'base_left'
         self.right_base = 'base_right'
+
+
+        self.left_agent_possesion = ['N'] * self.num_left
+
         
     def launch(self):
         '''
@@ -571,8 +575,8 @@ class rc_env:
                         self.left_passer[prev_poss] += 1 # sets passer flag to whoever passed
                         # Passer reward is added in step function after all agents have been checked
                        
-                        reward += self.pass_reward
-                        team_reward += self.pass_reward
+                        # reward += self.pass_reward
+                        # team_reward += self.pass_reward
                         #print("received a pass worth:",self.pass_reward)
         #               #print('team pass reward received ')
         #         #Remove this check when npc ball posession can be measured

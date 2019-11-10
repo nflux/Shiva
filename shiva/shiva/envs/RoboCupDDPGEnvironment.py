@@ -86,6 +86,16 @@ class HumanPlayerInterface():
         y_rad = obs[0,4]
         x_rad = obs[0,5]
 
+        # print out observations of the ball (x y coordinates)
+        # also print out the coordinates of the agent
+
+        # test the x y coordinates to make sure the reward function is using those coordinates and not something else
+        
+
+        # check that if the agent can't see the ball whether or not the coordinates of the ball become -1; therefor invalid
+        # so then we might need the true values if they are invalid
+        # if they are invalid then we need to get the true true from the coach
+
         print("sin:", y_rad)
         print("cos", x_rad)
 
@@ -99,68 +109,44 @@ class HumanPlayerInterface():
         global_theta = atan2(y_rad, x_rad) * 180 / pi
         print("global angle(atan2):", global_theta)
         
-        if action == Key.up:
-            '''
-                Turn Agent NORTH
-            '''
+        if action == KeyCode.from_char('u'):
 
-            print("North")
+            print("Dash")
 
-            if global_theta == 90:
-                delta = 0
-            else:
-                delta = 90 - global_theta
-                delta = self.normalize_angle(delta)
+            dash_degree = 0
+            dash_power = self.normalize_power(50)
 
-            action = [0, 1, 0, 0, 0, delta, 0, 0]
+            action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
 
-        elif action == Key.down:
 
-            '''
-                Turn Agent SOUTH
-            '''
+        elif action == KeyCode.from_char('j'):
 
-            print("South")
+            print("Dash")
 
-            if global_theta == -90:
-                delta = 0
-            else:
-                delta = -90 - global_theta
-                delta = self.normalize_angle(delta)
+            dash_degree = 0
+            dash_power = self.normalize_power(50)
 
-            action = [0, 1, 0, 0, 0, delta, 0, 0]
+            action = [1, 0, 0, -dash_power, dash_degree, 0, 0, 0]
 
-        elif action == Key.right:
+        elif action == KeyCode.from_char(';'):
             '''
                 Turn Agent EAST
             '''
 
             print("East")
 
-            if global_theta == 0:
-                delta = 0
-            else:
-                delta = 0 - global_theta
-                delta = self.normalize_angle(delta)
+            action = [0, 1, 0, 0, 0, -0.25, 0, 0]
 
-            action = [0, 1, 0, 0, 0, delta, 0, 0]
-
-        elif action == Key.left:
+        elif action == KeyCode.from_char("'"):
             '''
                 Turn Agent WEST
             '''
 
             print("West")
 
-            if global_theta == 180 or global_theta == -180:
-                delta = 0
-            else:
-                delta = 180 - global_theta
-                delta = self.normalize_angle(delta)
+            action = [0, 1, 0, 0, 0, .25, 0, 0]
 
-            action = [0, 1, 0, 0, 0, delta, 0, 0]
-
-        elif action == KeyCode.from_char('k'):
+        elif action == KeyCode.from_char("q"):
             '''
                 Agent Kick
             '''
@@ -172,16 +158,6 @@ class HumanPlayerInterface():
 
             action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
 
-        elif action == KeyCode.from_char('d'):
-            '''
-                Agent Dash
-            '''
-            print("Dash")
-
-            dash_degree = 0
-            dash_power = self.normalize_power(50)
-
-            action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
 
         else:
             assert False, "Wrong action given"
@@ -192,4 +168,4 @@ class HumanPlayerInterface():
         return 2 * (delta + 180) / 360
 
     def normalize_power(self, power):
-        return 2 * (power - 100) / 200
+        return (1-(-1)) * (power + 100) / 200
