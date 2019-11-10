@@ -57,7 +57,7 @@ class RoboCupDDPGEnvironment(Environment):
         pass
 
 from pynput.keyboard import Key, KeyCode, Listener
-from math import atan2, pi
+from math import atan2, pi, acos
 
 class HumanPlayerInterface():
     '''
@@ -89,14 +89,21 @@ class HumanPlayerInterface():
         print("sin:", y_rad)
         print("cos", x_rad)
 
+        # acos method for getting global angle
+        th = acos(x_rad) * 180 / pi
+        if y_rad < 0:
+            th *= -1
+        print("global angle(acos):", th)
+
+        # arctan2 method for getting global angle
         global_theta = atan2(y_rad, x_rad) * 180 / pi
-        print("global angle:", global_theta)
+        print("global angle(atan2):", global_theta)
         
         if action == Key.up:
             '''
                 Turn Agent NORTH
             '''
-            
+
             print("North")
 
             if global_theta == 90:
@@ -118,7 +125,7 @@ class HumanPlayerInterface():
             if global_theta == -90:
                 delta = 0
             else:
-                delta = -90 + global_theta
+                delta = -90 - global_theta
                 delta = self.normalize_angle(delta)
 
             action = [0, 1, 0, 0, 0, delta, 0, 0]
