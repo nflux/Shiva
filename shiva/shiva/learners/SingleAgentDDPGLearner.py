@@ -31,7 +31,7 @@ class SingleAgentDDPGLearner(Learner):
         observation = self.env.get_observation()
 
         if self.manual_play:
-            # This only works for RoboCup!
+            # This only works for users to play RoboCup!
             action = self.HPI.get_action(observation)
             while action is None:
                 action = self.HPI.get_action(observation)
@@ -47,8 +47,8 @@ class SingleAgentDDPGLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
         self.totalReward += more_data['raw_reward']
-        # print('to buffer:', observation.shape, action.shape, reward.shape, next_observation.shape, [done])
-        self.buffer.append([observation, action.reshape(1,-1), reward, next_observation, int(done)])
+        # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
+        self.buffer.append([observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)])
         
         if self.step_count > self.alg.exploration_steps:
             self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)

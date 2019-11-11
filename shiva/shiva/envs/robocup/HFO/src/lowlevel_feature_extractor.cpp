@@ -59,8 +59,8 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // }
 
   addFeature(self.posValid() ? FEAT_MAX : FEAT_MIN);
-  // ADD_FEATURE(self_pos.x);
-  // ADD_FEATURE(self_pos.y);
+  addFeature(self_pos);
+  // addFeature(self_pos.y);
 
   // Direction and speed of the agent.
   // addFeature(self.velValid() ? FEAT_MAX : FEAT_MIN);

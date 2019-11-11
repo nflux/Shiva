@@ -4,6 +4,7 @@ import torch
 torch.manual_seed(5)
 from .robocup.rc_env import rc_env
 from .Environment import Environment
+from helpers.misc import action2one_hot_v
 
 class RoboCupDDPGEnvironment(Environment):
     def __init__(self, config):
@@ -23,22 +24,41 @@ class RoboCupDDPGEnvironment(Environment):
 
         self.load_viewer()
 
-    def step(self, actions):
+    def step(self, actions, discrete_select='sample'):
+        '''
+            Input
+                @actions
+                @discrete_select        Specify how to choose the discrete action taken
+                                            argmax      do an argmax on the discrete side
+                                            sample      take the discrete side as a probability distribution to sample from
+
+            Return
+                A set with the following datas in order
+                    next_observation
+                    reward
+                    done
+                    more_data           list of [
+                                            raw_reward,         useful when rewards are normalized
+                                            action_taken        useful if discrete_select == 'sample'
+                                        ]
+
+        '''
         # print('given actions', actions)
 
-        self.left_actions = torch.tensor([np.argmax(actions[0:3])])
+        if discrete_select == 'argmax':
+            act_choice = np.argmax(actions[:self.action_space['discrete']])
+        elif discrete_select == 'sample':
+            act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
+        self.left_actions = torch.tensor([act_choice]).float()
 
-        self.left_params = torch.tensor([actions[3:]])
+        params = actions[self.action_space['discrete']:]
+        self.left_params = torch.tensor([params]).float()
         
         self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
 
-        # print(self.obs)
-        # print(len(self.obs[0]))
-        # input()
-
-        # if self.rews[0] > 0.01:
+        actions_v = torch.cat([action2one_hot_v(self.action_space['discrete'], act_choice), self.left_params[0]])
         print('\nreward:', self.rews, '\n')
-        return self.obs, self.rews, self.done, {'raw_reward': self.rews}
+        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
         return self.obs
@@ -65,11 +85,20 @@ class HumanPlayerInterface():
     '''
     def __init__(self):
         self.q = []
+        self.KEY_DASH = KeyCode.from_char('u')
+        self.KEY_TURN_LEFT = KeyCode.from_char(';')
+        self.KEY_TURN_RIGHT = KeyCode.from_char("'")
+        self.KEY_KICK = KeyCode.from_char("q")
+
         self.listener = Listener(on_release=self.on_release)
         self.listener.start()
 
     def on_release(self, key):
-        self.q.append(key)
+        if self.is_valid_key(key):
+            self.q.append(key)
+    
+    def is_valid_key(self, key):
+        return key in [self.KEY_DASH, self.KEY_TURN_LEFT, self.KEY_TURN_RIGHT, self.KEY_KICK]
 
     def get_action(self, obs):
         '''
@@ -94,6 +123,8 @@ class HumanPlayerInterface():
 
     def robocup_action(self, action, obs):
 
+        # print(obs.shape, obs[0, 45], '\n', obs[0, 47])
+
         y_rad = obs[0,4]
         x_rad = obs[0,5]
 
@@ -107,69 +138,55 @@ class HumanPlayerInterface():
         # so then we might need the true values if they are invalid
         # if they are invalid then we need to get the true true from the coach
 
-        print("sin:", y_rad)
-        print("cos", x_rad)
+        # print("sin:", y_rad)
+        # print("cos", x_rad)
 
         # acos method for getting global angle
         th = acos(x_rad) * 180 / pi
         if y_rad < 0:
             th *= -1
-        print("global angle(acos):", th)
+        # print("global angle(acos):", th)
 
         # arctan2 method for getting global angle
         global_theta = atan2(y_rad, x_rad) * 180 / pi
-        print("global angle(atan2):", global_theta)
+        # print("global angle(atan2):", global_theta)
         
-        if action == KeyCode.from_char('u'):
-
-            print("Dash")
-
+        if action == self.KEY_DASH:
+            '''
+                Dash forward
+            '''
             dash_degree = 0
             dash_power = self.normalize_power(50)
 
             action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
+        # elif action == self.:
+        #     '''
+        #         Dash backwards
+        #     '''
+        #     dash_degree = 0
+        #     dash_power = self.normalize_power(-50)
+        #     action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
 
-
-        elif action == KeyCode.from_char('j'):
-
-            print("Dash")
-
-            dash_degree = 0
-            dash_power = self.normalize_power(-50)
-
-            action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
-
-        elif action == KeyCode.from_char(';'):
+        elif action == self.KEY_TURN_LEFT:
             '''
-                Turn Agent EAST
+                Turn Agent Left
             '''
-
-            print("East")
-
             action = [0, 1, 0, 0, 0, -0.25, 0, 0]
 
-        elif action == KeyCode.from_char("'"):
+        elif action == self.KEY_TURN_RIGHT:
             '''
-                Turn Agent WEST
+                Turn Agent Right
             '''
-
-            print("West")
-
             action = [0, 1, 0, 0, 0, .25, 0, 0]
 
-        elif action == KeyCode.from_char("q"):
+        elif action == self.KEY_KICK:
             '''
                 Agent Kick
             '''
-
-            print("Kick")
-
             kick_degree = 0
             kick_power = self.normalize_power(50)
 
             action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
-
-
         else:
             assert False, "Wrong action given"
 
