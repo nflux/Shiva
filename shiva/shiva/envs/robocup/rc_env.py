@@ -136,6 +136,8 @@ class rc_env:
             self.opp_goal_top_y = 13
             self.opp_goal_bot_x = 14
             self.opp_goal_bot_y = 15
+
+            self.ball_proximity = 51
         elif feature_level == 'simple':
             self.stamina = 26
             self.ball_x = 16
@@ -639,22 +641,22 @@ class rc_env:
                     #reward+=1
                     #team_reward+=1
 
-        print(team_obs[agentID])
+        # print(team_obs[agentID][51])
 
         '''
-            Reward agent for reducing distance to the ball
-            Compares previous observation with current observation in order to calculate euclidean distance to the ball
+            Reward agent for maximizing it's proximity to the ball
         '''
+        reward += team_obs[agentID][self.ball_proximity]
         
-        dist_cur = self.distance_to_ball(team_obs[agentID])
-        dist_prev = self.distance_to_ball(team_obs_previous[agentID])
-        delta = (0.5)*(dist_prev - dist_cur) # if cur > prev --> +
-        # print('player:', team_obs[agentID][self.x], team_obs[agentID][self.y])
-        # print('ball:', team_obs[agentID][self.ball_x], team_obs[agentID][self.ball_y])
-        # print(dist_cur, dist_prev, delta)
-        if delta > 0:
-            reward  += delta
-            team_reward += delta
+        # dist_cur = self.distance_to_ball(team_obs[agentID])
+        # dist_prev = self.distance_to_ball(team_obs_previous[agentID])
+        # delta = (0.5)*(dist_prev - dist_cur) # if cur > prev --> +
+        # # print('player:', team_obs[agentID][self.x], team_obs[agentID][self.y])
+        # # print('ball:', team_obs[agentID][self.ball_x], team_obs[agentID][self.ball_y])
+        # # print(dist_cur, dist_prev, delta)
+        # if delta > 0:
+        #     reward  += delta
+        #     team_reward += delta
 
         rew_percent = 1.0*max(0,(self.rew_anneal_ep - ep_num))/self.rew_anneal_ep
         return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
