@@ -58,22 +58,59 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   //   myfile2 << "Player: " << po->side() << " " << po->pos().x << " " << po->pos().y << std::endl;
   // }
 
+
+  /*
+
+    Observation 0
+    Self Pos Valid [Boolean]
+    Indicates if self position is valid.
+
+  */
   addFeature(self.posValid() ? FEAT_MAX : FEAT_MIN);
   addFeature(self_pos);
+
+
   // addFeature(self_pos.y);
 
   // Direction and speed of the agent.
   // addFeature(self.velValid() ? FEAT_MAX : FEAT_MIN);
   if (self.velValid()) {
+
+    /*
+
+      Observations 1 and 2 
+      Self Vel Angle [Angles: Sin, Cos]
+      Angle of Agent's velocity in Radians.
+
+    */
     addAngFeature(self_ang - self.vel().th());
+
+    /*
+
+      Observation 3 
+      
+      Self Velocity Magnitude [Scalar]
+      Magnitude of the Agent's velocity.
+
+    */
     addNormFeature(self.speed(), 0., observedSelfSpeedMax);
+
   } else {
     addFeature(FEAT_INVALID);
     addFeature(FEAT_INVALID);
     addFeature(FEAT_INVALID);
   }
 
-  // Global Body Angle -- 0:right -90:up 90:down 180/-180:left
+  /*
+
+    Observations 4 and 5
+    Global Body Angle [Angle: Sin, Cos] 
+    Agent's Global Body Angle in Radians.
+
+    if the comment below is true this is something to think about
+    -- 0:right -90:up 90:down 180/-180:left
+
+  */
   addAngFeature(self_ang);
 
   // Neck Angle -- We probably don't need this unless we are
@@ -83,7 +120,24 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   //   std::cout << "FaceAngle: " << self.face() << std::endl;
   // }
 
+
+  /*
+
+    Observation 6
+    Stamina [Integer]
+    Agent's Stamina: Low stamina slows movement.
+
+  */
   addNormFeature(self.stamina(), 0., observedStaminaMax);
+  
+
+  /*
+
+    Observation 7
+    Frozen [Boolean]
+    Indicates if the agent is frozen. Frozen status can happen when tackling or being tackled by another player.
+
+  */
   addFeature(self.isFrozen() ? FEAT_MAX : FEAT_MIN);
 
   // Probabilities - Do we want these???
@@ -92,10 +146,44 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // std::cout << "fouldProb: " << self.foulProbability() << std::endl;
 
   // Features indicating if we are colliding with an object
+  /*
+
+    Observation 8
+    Colliding with Ball [Boolean]
+    Indicates if the agent is colliding with the ball.
+
+  */
   addFeature(self.collidesWithBall()   ? FEAT_MAX : FEAT_MIN);
+  /*
+
+    Observation 9
+    Colliding with Player [Boolean]
+    Indicates the agent is colliding with another player.
+
+  */
   addFeature(self.collidesWithPlayer() ? FEAT_MAX : FEAT_MIN);
+  /*
+
+    Observation 10
+    Colliding with Post [Boolean]
+    Indicates the agent is colliding with a goal post.
+
+  */
   addFeature(self.collidesWithPost()   ? FEAT_MAX : FEAT_MIN);
+  /*
+
+    Observation 11
+    Kickable [Boolean]
+    Indicates the agent is able to kick the ball.
+
+  */
   addFeature(self.isKickable()         ? FEAT_MAX : FEAT_MIN);
+
+  /*
+
+    Observation 
+
+  */
 
   // inertiaPoint estimates the ball point after a number of steps
   // self.inertiaPoint(n_steps);

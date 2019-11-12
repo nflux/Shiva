@@ -123,7 +123,14 @@ class HumanPlayerInterface():
 
     def robocup_action(self, action, obs):
 
-        # print(obs.shape, obs[0, 45], '\n', obs[0, 47])
+        # obs.shape, 
+        # print(obs[0, 17])
+        # print(obs[0,14])
+        # print(obs[0, 20])
+
+        # print(obs[0, 15], '\n', obs[0, 16], '\n')
+
+        
 
         y_rad = obs[0,4]
         x_rad = obs[0,5]
@@ -159,13 +166,6 @@ class HumanPlayerInterface():
             dash_power = self.normalize_power(50)
 
             action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
-        # elif action == self.:
-        #     '''
-        #         Dash backwards
-        #     '''
-        #     dash_degree = 0
-        #     dash_power = self.normalize_power(-50)
-        #     action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
 
         elif action == self.KEY_TURN_LEFT:
             '''
