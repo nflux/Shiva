@@ -15,10 +15,9 @@ class DoneError(Exception):
 class Trainer(object):
   """ Trainer is responsible for setting up the players and game.
   """
-  def __init__(self, args, server_port=6001, coach_port=6002, imit_port=6003):
+  def __init__(self, args, server_port=6001, coach_port=6002):
     self._serverPort = server_port  # The port the server is listening on
     self._coachPort = coach_port # The coach port to talk with the server
-    self._imitPort = imit_port
     self._logDir = args.logDir # Directory to store logs
     self._record = args.record # Record states + actions
     self._numOffense = args.offenseAgents + args.offenseNPCs # Number offensive players
@@ -258,14 +257,14 @@ class Trainer(object):
   def initComm(self):
     """ Initialize communication to server. """
     self._comm = ClientCommunicator(port=self._coachPort)
-    if self._imitPort != None:
-      self._imit_comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      self._imit_comm.bind(('127.0.0.1', self._imitPort))
-      self._imit_comm.listen()
-      self.conn, addr = self._imit_comm.accept()
-      print('Listen on', addr)
-    else:
-      self._imit_comm = None
+    # if self._imitPort != None:
+    #   self._imit_comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #   self._imit_comm.bind(('127.0.0.1', self._imitPort))
+    #   self._imit_comm.listen()
+    #   self.conn, addr = self._imit_comm.accept()
+    #   print('Listen on', addr)
+    # else:
+    #   self._imit_comm = None
     self.send('(init (version 8.0))')
     self.checkMsg('(init ok)', retryCount=5)
     # self.send('(eye on)')
@@ -273,7 +272,7 @@ class Trainer(object):
 
   def _hearRef(self, body):
     """ Handles hear messages from referee. """
-    assert body[0] == 'referee', 'Expected referee message.'
+    # assert body[0] == 'referee', 'Expected referee message.'
     _,ts,event = body
     self._frame = int(ts)
     endOfTrial = False
@@ -313,10 +312,10 @@ class Trainer(object):
   def _hear(self, body):
     """ Handle a hear message. """
     if body[0] == 'referee':
-      if body[2] == 'imit':
-        self._hearPlayersFromRef(body[1], body[3:])
-      else:
-        self._hearRef(body)
+      # if body[2] == 'imit':
+      #   self._hearPlayersFromRef(body[1], body[3:])
+      # else:
+      self._hearRef(body)
       return
     timestep,playerInfo,msg = body
     try:
@@ -570,24 +569,24 @@ class Trainer(object):
       time.sleep(0.1)
       self.startGame()
 
-      if self._imit_comm == None:
-        while self.allPlayersConnected() and self.checkLive(necProcesses) and not self._done:
-          prevFrame = self._frame
-          # self.send('(move (ball) -10 10 10 10 10)')
-          # self.send('(move (player ' + self._offenseTeamName + ' 11) -5 10 10 10 10)')
-          # self.send('(change_mode drop_ball)')
-          self.listenAndProcess()
-      else:
-        while self.allPlayersConnected() and self.checkLive(necProcesses) and not self._done:
-          prevFrame = self._frame
-          while True:
-            msg = self.conn.recv(1024)
-            if msg:
-              obs = pickle.loads(msg)
-              self.send('(move (ball) %f %f %f %f %f)' % (obs[0][-6]*52.5, obs[0][-5]*34, 0, 0, 0))
-              self.conn.send(b'True')
-              break
-          self.listenAndProcess()
+      # if self._imit_comm == None:
+      while self.allPlayersConnected() and self.checkLive(necProcesses) and not self._done:
+        prevFrame = self._frame
+        # self.send('(move (ball) -10 10 10 10 10)')
+        # self.send('(move (player ' + self._offenseTeamName + ' 11) -5 10 10 10 10)')
+        # self.send('(change_mode drop_ball)')
+        self.listenAndProcess()
+      # else:
+      #   while self.allPlayersConnected() and self.checkLive(necProcesses) and not self._done:
+      #     prevFrame = self._frame
+      #     while True:
+      #       msg = self.conn.recv(1024)
+      #       if msg:
+      #         obs = pickle.loads(msg)
+      #         self.send('(move (ball) %f %f %f %f %f)' % (obs[0][-6]*52.5, obs[0][-5]*34, 0, 0, 0))
+      #         self.conn.send(b'True')
+      #         break
+      #     self.listenAndProcess()
     except TimeoutError:
       print('Haven\'t heard from the server for too long, Exiting')
     except (KeyboardInterrupt, DoneError):

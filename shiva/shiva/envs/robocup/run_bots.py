@@ -1,6 +1,7 @@
 import configparser, ast
 import os, subprocess, time, signal
 from HFO import hfo
+import socket
 from HFO.bin import Communicator
 
 def load_config_file_2_dict(_FILENAME: str) -> dict:
@@ -32,6 +33,18 @@ class Bots:
     def __init__(self, config):
         {setattr(self, k, v) for k,v in config.items()}
         self.viewer = None
+        self._comm = Communicator.ClientCommunicator(port=6001)
+        self._comm.sendMsg('(init (version 8.0))')
+        self._comm.sendMsg('(ear on)')
+        # self._comm = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # self._comm.settimeout(None)
+        # msg, addr = self._comm.recvfrom(8192)
+        # print(msg, addr)
+        # self._comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self._comm.bind(('localhost', 6001))
+        # self._comm.listen()
+        # self.conn, addr = self._comm.accept()
+        # print('Accepted', addr)
 
     
     # found from https://github.com/openai/gym-soccer/blob/master/gym_soccer/envs/soccer_env.py
@@ -60,7 +73,6 @@ class Bots:
             if self.hfo_log_game:       cmd += " --hfo-logging"
             if self.record:             cmd += " --record"
             if self.record_server:      cmd += " --log-gen-pt"
-            if self.contain_imit_port:    cmd += " --imit-port %i" % (self.imit_port)
             if self.control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
@@ -71,7 +83,7 @@ class Bots:
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-            time.sleep(3) # Wait for server to startup before connecting a player
+            time.sleep(1) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         """
@@ -91,7 +103,9 @@ class Bots:
         if self.start_viewer:
             self._start_viewer()
         
-        while True: pass
+        while True:
+            # self._comm.sendMsg('(think)')
+            pass
 
 
 if __name__ == "__main__":

@@ -64,9 +64,11 @@ def main(args):
   server_port  = args.port
   coach_port   = args.port + 1
   olcoach_port = args.port + 2
+  imit_port = args.port + 3
   serverCommand = os.path.join(binary_dir, SERVER_BIN)
   serverOptions = ' server::port=%i server::coach_port=%i ' \
                   'server::olcoach_port=%i server::coach=1 ' \
+                  'server::imit_coach_port=%i ' \
                   'server::game_logging=%i server::text_logging=%i ' \
                   'server::hfo_logging=%i server::hfo_log_dir=%s ' \
                   'server::game_log_dir=%s server::text_log_dir=%s '\
@@ -98,7 +100,7 @@ def main(args):
                   'server::forbid_kick_off_offside=%i ' \
                   'server::server_log=%i ' \
                   'server::run_imit=%i' \
-                  %(server_port, coach_port, olcoach_port,
+                  %(server_port, coach_port, olcoach_port, imit_port,
                     args.logging, args.logging, args.hfo_logging,
                     args.logDir, args.logDir, args.logDir,
                     args.sync, args.fullstate, args.fullstate,
@@ -145,7 +147,7 @@ def main(args):
       launch(monitorCommand + monitorOptions, name='monitor')
     # Launch the Trainer
     from Trainer import Trainer
-    trainer = Trainer(args=args, server_port=server_port, coach_port=coach_port, imit_port=args.imit_port)
+    trainer = Trainer(args=args, server_port=server_port, coach_port=coach_port)
     trainer.initComm()
     # Run
     trainer.run(necProcesses, args.offenseTeam, args.defenseTeam)
@@ -263,7 +265,6 @@ def parseArgs():
                     default=True, help='allow offside kickoff')
   p.add_argument('--log-gen-pt', dest='server_log', action='store_true',
                     help='allow logging of general pre-training')
-  p.add_argument('--imit-port', dest='imit_port', type=int, default=None, help='port to talk with main process')
   p.add_argument('--run-imit', dest='run_imit', action='store_true', default=False, help='option to run imitation')
 
   args = p.parse_args()

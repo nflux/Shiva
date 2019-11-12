@@ -387,7 +387,6 @@ class rc_env:
             if self.config['hfo_log']:       cmd += " --hfo-logging"
             if self.config['record_lib']:             cmd += " --record"
             if self.config['record_serv']:      cmd += " --log-gen-pt"
-            if self.config['contain_imit_port']:    cmd += " --imit-port %i" % (self.config['imit_port'])
             if self.config['init_env']:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

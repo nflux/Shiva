@@ -1,7 +1,8 @@
 from .robocup.rc_env import rc_env
 from .Environment import Environment
 from .robocup.HFO.bin import Communicator
-import socket, time, pickle
+# import socket, time, pickle
+import socket, time
 
 class RoboCupDDPGEnvironment(Environment):
     def __init__(self, config):
@@ -21,25 +22,58 @@ class RoboCupDDPGEnvironment(Environment):
 
         self.load_viewer()
 
-        self._comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._comm.connect(('127.0.0.1', self.imit_port))
-        time.sleep(1)
+        while True:
+            try:
+                self.comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.comm.connect(('127.0.0.1', self.imit_port))
+                break
+            except:
+                time.sleep(0.001)
+        # while True:
+        #     self.comm.send(b"True")
+        #     msg = self.comm.recv(8192)
+        #     if msg == b"True":
+        #         break
+
+        # self._comm = Communicator.ClientCommunicator(port=2001)
+        # self._comm.sendMsg('(init (version 8.0))')
+        # self._comm.sendMsg('(ear on)')
+        # self.f = open("demofile2.txt", "a")
+
+        # self._comm = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # self._comm.settimeout(None)
+        # self._comm.sendto(('(init (version 8.0))'+'\0').encode('utf-8'), ('localhost', 2001))
+        # self._comm.connect(('127.0.0.1', 2001))
+        # self._comm.listen()
+        # self.conn, addr = self._comm.accept()
+        # print('Accepted', addr)
+        # input()
+        # time.sleep(1)
 
     def step(self, left_actions, left_params):
         self.left_actions = left_actions
         self.left_params = left_params
         self.obs,self.rews,_,_,self.done,_ = self.env.Step(left_actions=left_actions, left_params=left_params)
 
+        # msg = self._comm.recvMsg()
+        # print(msg)
+        # self._comm.sendMsg('(help)')
+        # while True:
+        #     self._comm.sendMsg('(help)')
+        #     try:
+        #         msg = self._comm.recvMsg()
+        #     except:
+        #         time.sleep(0.001)
+        #     if msg == 'True':
+        #         break
+        
+        # self.f.write("Timestep\n")
         while True:
-            try:
-                self._comm.sendall(pickle.dumps(self.obs))
-                while True:
-                    msg = self._comm.recv(1024)
-                    if b'True' == msg:
-                        break
+            self.comm.send(b"True")
+            msg = self.comm.recv(8192)
+            if msg == b"True":
                 break
-            except:
-                time.sleep(0.0001)
+                
 
         return self.obs, self.rews, self.done
 
