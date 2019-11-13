@@ -1,6 +1,5 @@
 from .robocup.rc_env import rc_env
 from .Environment import Environment
-from .robocup.HFO.bin import Communicator
 # import socket, time, pickle
 import socket, time
 

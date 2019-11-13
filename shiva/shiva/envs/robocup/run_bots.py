@@ -33,20 +33,7 @@ class Bots:
     def __init__(self, config):
         {setattr(self, k, v) for k,v in config.items()}
         self.viewer = None
-        self._comm = Communicator.ClientCommunicator(port=6001)
-        self._comm.sendMsg('(init (version 8.0))')
-        self._comm.sendMsg('(ear on)')
-        # self._comm = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # self._comm.settimeout(None)
-        # msg, addr = self._comm.recvfrom(8192)
-        # print(msg, addr)
-        # self._comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self._comm.bind(('localhost', 6001))
-        # self._comm.listen()
-        # self.conn, addr = self._comm.accept()
-        # print('Accepted', addr)
 
-    
     # found from https://github.com/openai/gym-soccer/blob/master/gym_soccer/envs/soccer_env.py
     def _start_hfo_server(self):
 
