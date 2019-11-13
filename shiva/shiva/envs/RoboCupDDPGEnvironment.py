@@ -29,51 +29,17 @@ class RoboCupDDPGEnvironment(Environment):
                 break
             except:
                 time.sleep(0.001)
-        # while True:
-        #     self.comm.send(b"True")
-        #     msg = self.comm.recv(8192)
-        #     if msg == b"True":
-        #         break
-
-        # self._comm = Communicator.ClientCommunicator(port=2001)
-        # self._comm.sendMsg('(init (version 8.0))')
-        # self._comm.sendMsg('(ear on)')
-        # self.f = open("demofile2.txt", "a")
-
-        # self._comm = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # self._comm.settimeout(None)
-        # self._comm.sendto(('(init (version 8.0))'+'\0').encode('utf-8'), ('localhost', 2001))
-        # self._comm.connect(('127.0.0.1', 2001))
-        # self._comm.listen()
-        # self.conn, addr = self._comm.accept()
-        # print('Accepted', addr)
-        # input()
-        # time.sleep(1)
 
     def step(self, left_actions, left_params):
         self.left_actions = left_actions
         self.left_params = left_params
         self.obs,self.rews,_,_,self.done,_ = self.env.Step(left_actions=left_actions, left_params=left_params)
 
-        # msg = self._comm.recvMsg()
-        # print(msg)
-        # self._comm.sendMsg('(help)')
-        # while True:
-        #     self._comm.sendMsg('(help)')
-        #     try:
-        #         msg = self._comm.recvMsg()
-        #     except:
-        #         time.sleep(0.001)
-        #     if msg == 'True':
-        #         break
-        
-        # self.f.write("Timestep\n")
         while True:
             self.comm.send(b"True")
             msg = self.comm.recv(8192)
             if msg == b"True":
                 break
-                
 
         return self.obs, self.rews, self.done
 
