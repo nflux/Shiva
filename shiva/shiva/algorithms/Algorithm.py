@@ -23,7 +23,7 @@ class Algorithm():
         self.acs_space = acs_space
         self.loss_calc = getattr(torch.nn, configs[0]['loss_function'])()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+        
     def update(self, agent, data):
         '''
             Updates the agents network using the data

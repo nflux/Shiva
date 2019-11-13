@@ -13,9 +13,6 @@ class ContinuousDDPGAlgorithm(Algorithm):
         '''
         super(ContinuousDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
 
-        # self.C = C
-        # self.tau = self.configs['tau']
-
         self.scale = 0.9
         self.ou_noise = noise.OUNoise(action_space, self.scale)
         self.actor_loss = 0
@@ -36,7 +33,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         actions = torch.tensor(actions).to(self.device)
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        dones_mask = torch.ByteTensor(dones).view(-1,1).to(self.device)
+        dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
 
         '''
             Training the Critic
@@ -56,12 +53,12 @@ class ContinuousDDPGAlgorithm(Algorithm):
         Q_these_states_main = agent.critic(states.float(), actions.float())
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
-        # Save critic loss for tensorboard
-        self.critic_loss = critic_loss
         # Backward propogation!
         critic_loss.backward()
         # Update the weights in the direction of the gradient.
         agent.critic_optimizer.step()
+        # Save critic loss for tensorboard
+        self.critic_loss = critic_loss
 
         '''
             Training the Actor
@@ -77,32 +74,32 @@ class ContinuousDDPGAlgorithm(Algorithm):
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
         # Make the Q-value negative and add a penalty if Q > 1 or Q < -1
         actor_loss = -actor_loss_value.mean() + param_reg
-        # Save actor loss for tensorboard
-        self.actor_loss = actor_loss
         # Backward Propogation!
         actor_loss.backward()
         # Update the weights in the direction of the gradient.
         agent.actor_optimizer.step()
+        # Save actor loss for tensorboard
+        self.actor_loss = actor_loss
 
         '''
             Soft Target Network Updates
         '''
 
-        # # Update Target Actor
-        # ac_state = agent.actor.state_dict()
-        # tgt_ac_state = agent.target_actor.state_dict()
+        # Update Target Actor
+        ac_state = agent.actor.state_dict()
+        tgt_ac_state = agent.target_actor.state_dict()
 
-        # for k, v in ac_state.items():
-        #     tgt_ac_state[k] = tgt_ac_state[k] * self.tau + (1 - self.tau) * v
-        # agent.target_actor.load_state_dict(tgt_ac_state)
+        for k, v in ac_state.items():
+            tgt_ac_state[k] = tgt_ac_state[k] * self.tau + (1 - self.tau) * v
+        agent.target_actor.load_state_dict(tgt_ac_state)
 
-        # # Update Target Critic
-        # ct_state = agent.critic.state_dict()
-        # tgt_ct_state = agent.target_critic.state_dict()
+        # Update Target Critic
+        ct_state = agent.critic.state_dict()
+        tgt_ct_state = agent.target_critic.state_dict()
 
-        # for k, v in ct_state.items():
-        #     tgt_ct_state[k] = tgt_ct_state[k] * self.tau + (1 - self.tau) * v
-        # agent.target_critic.load_state_dict(tgt_ct_state)
+        for k, v in ct_state.items():
+            tgt_ct_state[k] = tgt_ct_state[k] * self.tau + (1 - self.tau) * v
+        agent.target_critic.load_state_dict(tgt_ct_state)
 
 
 
@@ -110,21 +107,13 @@ class ContinuousDDPGAlgorithm(Algorithm):
             Hard Target Network Updates
         '''
 
-        if step_count % 1000 == 0:
+        # if step_count % 1000 == 0:
 
-            # for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
-            #     target_param.data.copy_(param.data)
+        #     for target_param,param in zip(agent.target_critic.parameters(), agent.critic.parameters()):
+        #         target_param.data.copy_(param.data)
 
-            # for target_param,param in zip(agent.target_critic.parameters(),agent.critic.parameters()):
-            #     target_param.data.copy_(param.data)
-
-
-            # agent.target_actor.load_state_dict(agent.actor.state_dict())
-            # agent.target_critic.load_state_dict(agent.critic.state_dict())
-
-
-            agent.target_actor = agent.actor
-            agent.target_critic = agent.critic
+        #     for target_param,param in zip(agent.target_actor.parameters(), agent.actor.parameters()):
+        #         target_param.data.copy_(param.data)
 
         return agent
 
@@ -146,7 +135,8 @@ class ContinuousDDPGAlgorithm(Algorithm):
             # useful for debugging
             # maybe should change the print to a log
             if step_count % 100 == 0:
-                print(action)
+                # print(action)
+                pass
             action += self.ou_noise.noise()
             action = np.clip(action, -1,1)
 

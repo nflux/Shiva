@@ -7,11 +7,13 @@ from .Algorithm import Algorithm
 from settings import shiva
 
 class SupervisedAlgorithm(Algorithm):
-    def __init__(self,obs_space, acs_space, configs):
+    def __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
 
         super(SupervisedAlgorithm, self).__init__(obs_space,acs_space,configs)
         self.acs_space = acs_space
         self.obs_space = obs_space
+        self.acs_discrete = action_space_discrete
+        self.acs_continuous = action_space_continuous
         self.loss = 0
 
 
@@ -45,6 +47,7 @@ class SupervisedAlgorithm(Algorithm):
         #the output of the imitation agent is a probability distribution across all possible actions
         action_prob_dist = agent.policy(imitation_input_v)
         #Cross Entropy takes in action class as target value
+
         actions = torch.LongTensor(np.argmax(actions,axis = 1))
         actions = actions.detach()
 
@@ -90,7 +93,7 @@ class SupervisedAlgorithm(Algorithm):
         return best_act
 
     def create_agent(self):
-        new_agent = ImitationAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1],self.configs[2])
+        new_agent = ImitationAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])
         self.agents.append(new_agent)
         return new_agent
 

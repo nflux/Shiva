@@ -16,7 +16,7 @@ def handle_package(package, class_name):
 
 def action2one_hot(action_space: int, action_idx: int) -> np.ndarray:
     '''
-        Returns a one-hot encoded action numpy.ndarray
+        Returns a one-hot encoded numpy.ndarray
     '''
     z = np.zeros(action_space)
     z[action_idx] = 1
@@ -24,7 +24,7 @@ def action2one_hot(action_space: int, action_idx: int) -> np.ndarray:
 
 def action2one_hot_v(action_space: int, action_idx: int) -> torch.tensor:
     '''
-        Returns a one-hot encoded action torch.tensor
+        Returns a one-hot encoded torch.tensor
     '''
     z = torch.zeros(action_space)
     z[action_idx] = 1

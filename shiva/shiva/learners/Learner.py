@@ -7,7 +7,16 @@ class Learner(object):
         self.configs = config
         self.id = learner_id
         self.agentCount = 0
+        self.ep_count = 0
 
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        try:
+            del d['env']
+        except KeyError:
+            del d['envs']
+        return d
+    
     def update(self):
         pass
 
