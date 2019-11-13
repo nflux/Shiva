@@ -205,6 +205,8 @@ class rc_env:
             self.ball_vel_mag = 52
             self.ball_vel_y_rad = 53
             self.ball_vel_x_rad = 54
+            self.ball_x = 55
+            self.ball_y = 56
 
         elif feature_level == 'simple':
 
@@ -738,7 +740,7 @@ class rc_env:
 
         distance_to_ball = self.prox_2_dist(team_obs[agentID][self.ball_proximity])
         distance_to_goal_center = self.prox_2_dist(team_obs[agentID][self.goal_opp_cent_proximity])
-        ball_distance_from_center_goal = math.sqrt( distance_to_ball**2 + distance_to_goal_center**2 - 2 * distance_to_ball * distance_to_goal_center * math.cos(A) )
+        ball_distance_from_center_goal = math.sqrt( distance_to_ball**2 + distance_to_goal_center**2 - (2 * distance_to_ball * distance_to_goal_center * math.cos(A)) )
         print("ball distance from goal:", ball_distance_from_center_goal)
 
         print(team_obs[agentID][self.goal_opp_top_proximity])
@@ -748,7 +750,10 @@ class rc_env:
         self.x = team_obs[agentID][self.field_right_proximity]
         self.y = team_obs[agentID][self.field_top_proximity]
 
-        print('(',self.x, self.y,')')
+        print('(',self.x,',', self.y,')')
+
+        print(team_obs[agentID][self.ball_x])
+        print(team_obs[agentID][self.ball_y])
 
         
         # dist_cur = self.distance_to_ball(team_obs[agentID])

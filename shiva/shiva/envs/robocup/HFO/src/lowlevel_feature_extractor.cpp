@@ -189,25 +189,92 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // self.inertiaPoint(n_steps);
 
   // ======================== LANDMARK FEATURES ======================== //
-  // Top Bottom Center of Goal
+
+  /*
+
+    Observation 12, 13, 14
+    Goal Center
+    sin
+    cos
+    proximity
+
+  */
   rcsc::Vector2D goalCenter(pitchHalfLength, 0.);
   addLandmarkFeatures(goalCenter, self_pos, self_ang);
+
+  /*
+
+    Observation 15, 16, 17
+    Goal Post Top
+    sin
+    cos
+    proximity
+
+  */
   rcsc::Vector2D goalPostTop(pitchHalfLength, -goalHalfWidth);
   addLandmarkFeatures(goalPostTop, self_pos, self_ang);
+
+  /*
+
+    Observation 18, 19, 20
+    Goal Post Bottom
+    sin
+    cos
+    proximity
+
+  */
   rcsc::Vector2D goalPostBot(pitchHalfLength, goalHalfWidth);
   addLandmarkFeatures(goalPostBot, self_pos, self_ang);
 
-  // Top Bottom Center of Penalty Box
+  /*
+
+    Observation 21, 22, 23
+    Penalty Box Center
+    sin
+    cos
+    proximity
+
+  */
   rcsc::Vector2D penaltyBoxCenter(pitchHalfLength - penaltyAreaLength, 0.);
   addLandmarkFeatures(penaltyBoxCenter, self_pos, self_ang);
+
+  /*
+
+    Observation 24, 25, 26
+    Penalty Box Top
+    sin
+    cos
+    proximity
+
+  */
   rcsc::Vector2D penaltyBoxTop(pitchHalfLength - penaltyAreaLength,
                                -penaltyAreaWidth / 2.);
   addLandmarkFeatures(penaltyBoxTop, self_pos, self_ang);
+
+  /*
+
+    Observation 27, 28, 29
+    Penalty Box Bottom
+    sin
+    cos
+    proximity
+
+  */
   rcsc::Vector2D penaltyBoxBot(pitchHalfLength - penaltyAreaLength,
                                penaltyAreaWidth / 2.);
   addLandmarkFeatures(penaltyBoxBot, self_pos, self_ang);
 
   // Corners of the Playable Area
+
+  /*
+
+    Observation 30, 31, 32
+    Center Field Values
+    sin
+    cos
+    proximity
+
+  */
   rcsc::Vector2D centerField(0., 0.);
   addLandmarkFeatures(centerField, self_pos, self_ang);
 
@@ -270,6 +337,29 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
     addFeature(FEAT_INVALID);
     addFeature(FEAT_INVALID);
   }
+
+
+  // I'm trying to add the ball x and y values to the observation space 
+
+    /*
+
+    Observation 55 & 56 
+    
+    Ball Position [Scalar]
+    X and Y of the ball
+
+  */ 
+  // const BallObject& ball = wm.ball();
+  // addFeature(ball.pos().x/pitchHalfLength);
+  // addFeature(ball.pos().y/pitchHalfWidth);
+
+
+  /* This seems like it might get the x and y position of the player*/
+  /*
+  // Self features
+  addFeature(self_pos.x/pitchHalfLength);
+  addFeature(self_pos.y/pitchHalfWidth);
+  */
 
   // largest open goal angle of self
   addNormFeature(calcLargestGoalAngleTeam(wm, self_pos), 0., M_PI);
