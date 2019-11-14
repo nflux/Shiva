@@ -7,6 +7,7 @@ from learners.SingleAgentImitationLearner import SingleAgentImitationLearner
 import helpers.misc as misc
 import learners
 import torch
+import random
 
 class MultipleAgentMetaLearner(MetaLearner):
     def __init__(self, configs):
@@ -14,6 +15,7 @@ class MultipleAgentMetaLearner(MetaLearner):
         self.configs = configs
         self.learnerCount = 0
         self.learnerList = configs["MetaLearner"]["learner_list"]
+        self.learning_rate_range = configs["MetaLearner"]["learning_rate"]
         self.process_list = list()
         self.multiprocessing_learners()
 
@@ -55,6 +57,8 @@ class MultipleAgentMetaLearner(MetaLearner):
 
     def create_learner(self):
         learner = getattr(learners, self.configs['Learner']['type'])
+        self.configs['Agent']['learning_rate'] = random.uniform(self.learning_rate_range[0],self.learning_rate_range[1])
+        print (self.configs['Agent']['learning_rate'])
         return learner(self.get_id(), self.configs)
     
     #threading learners
