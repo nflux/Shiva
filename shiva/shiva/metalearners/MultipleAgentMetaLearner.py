@@ -6,7 +6,7 @@ from learners.SingleAgentDDPGLearner import SingleAgentDDPGLearner
 from learners.SingleAgentImitationLearner import SingleAgentImitationLearner
 import helpers.misc as misc
 import learners
-import threading
+import torch
 
 class MultipleAgentMetaLearner(MetaLearner):
     def __init__(self, configs):
@@ -14,8 +14,8 @@ class MultipleAgentMetaLearner(MetaLearner):
         self.configs = configs
         self.learnerCount = 0
         self.learnerList = configs["MetaLearner"]["learner_list"]
-        self.thread_list = list()
-        self.Threading_multiple_learners()
+        self.process_list = list()
+        self.multiprocessing_learners()
 
     def run(self):
 
@@ -58,11 +58,10 @@ class MultipleAgentMetaLearner(MetaLearner):
         return learner(self.get_id(), self.configs)
     
     #threading learners
-    def Threading_multiple_learners(self):
-        for learner in range(self.learnerList):
-            thread = threading.Thread(target=self.run)
-            self.thread_list.append(thread)
-        for thread in self.thread_list:
-            thread.start()
-        for thread in self.thread_list:
-            thread.join()
+    def multiprocessing_learners(self):
+        for rank in range(self.learnerList):
+            p = torch.multiprocessing.Process(target=self.run)
+            p.start()
+            self.process_list.append(p)
+        for p in self.process_list:
+            p.join()
