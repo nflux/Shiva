@@ -57,6 +57,7 @@ class MultipleAgentMetaLearner(MetaLearner):
         learner = getattr(learners, self.configs['Learner']['type'])
         return learner(self.get_id(), self.configs)
     
+    #threading learners
     def Threading_multiple_learners(self):
         for learner in range(self.learnerList):
             thread = threading.Thread(target=self.run)
