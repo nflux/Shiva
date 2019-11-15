@@ -630,9 +630,10 @@ class rc_env:
         # Low stamina - seems that needs to be implemented (Ezequiel)
 
         if team_obs[agentID][self.stamina] < 0.0 : # LOW STAMINA
-            reward -= 0.003
-            team_reward -= 0.003
+            # reward -= 0.003
+            # team_reward -= 0.003
             # print ('low stamina')
+            pass
         
         # print('sin:', team_obs[agentID][49], '\ncos:', team_obs[agentID][50], '\nprox:', team_obs[agentID][51])
 
@@ -745,14 +746,15 @@ class rc_env:
         #     team_reward += delta
             
         ####################### Rewards the closest player to ball for advancing toward ball ############
-        distance_cur,_ = self.closest_player_to_ball(team_obs, num_ag)
-        distance_prev, closest_agent = self.closest_player_to_ball(team_obs_previous, num_ag)
+        distance_cur, closest_agent = self.closest_player_to_ball(team_obs, num_ag)
+        distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
             delta = (distance_prev - distance_cur)*1.0
             #if delta > 0:    
             if True:
                 team_reward += delta
                 reward+= delta
+                print(distance_cur, delta)
             
         ##################################################################################
             
@@ -795,9 +797,9 @@ class rc_env:
 
         # print(team_obs[agentID][self.ball_x])
         # print(team_obs[agentID][self.ball_y])
-
-        rew_percent = 1.0*max(0,(self.rew_anneal_ep - ep_num))/self.rew_anneal_ep
-        return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
+        return reward
+        # rew_percent = 1.0*max(0,(self.rew_anneal_ep - ep_num))/self.rew_anneal_ep
+        # return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
 
 
 
