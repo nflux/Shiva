@@ -144,7 +144,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
             if step_count % 100 == 0:
                 # print(action)
                 pass
-            action += self.ou_noise.noise()
+            # action += self.ou_noise.noise()
             action = np.clip(action, -1,1)
             # print('actor action shape', action.shape)
             return action[0, 0] # timestamp 0, agent 0
