@@ -62,8 +62,10 @@ class rc_env:
 
         if config['feature_level'] == 'low':
             #For new obs reorganization without vailds, changed hfo obs from 59 to 56
-            self.left_features = 56 + 13*(self.num_left-1) + 12*self.num_right + 4 + 1 + 2 + 1
-            self.right_features = 56 + 13*(self.num_right-1) + 12*self.num_left + 4 + 1 + 2 + 1
+            # self.left_features = 56 + 13*(self.num_left-1) + 12*self.num_right + 4 + 1 + 2 + 1
+            # self.right_features = 56 + 13*(self.num_right-1) + 12*self.num_left + 4 + 1 + 2 + 1
+            self.left_features = 8
+            self.right_features = 8
         elif config['feature_level'] == 'high':
             self.left_features = (6*self.num_left) + (3*self.num_right) + (3*self.num_rightBot) + 6
             self.right_features = (6*self.num_right) + (3*self.num_left) + (3*self.num_rightBot) + 6
@@ -122,23 +124,94 @@ class rc_env:
         self.left_agent_possesion = ['N'] * self.num_left
 
     def set_observation_indexes(self, feature_level):
-        if feature_level == 'low':
-            self.stamina = 6
-            self.ball_x = 16
-            self.ball_y = 17
-            self.ball_x_vel = 18
-            self.ball_y_vel = 19
-            self.x = 20
-            self.y = 21
-            self.x_vel = 22
-            self.y_vel = 23
-            self.opp_goal_top_x = 12
-            self.opp_goal_top_y = 13
-            self.opp_goal_bot_x = 14
-            self.opp_goal_bot_y = 15
 
-            self.ball_proximity = 51
+        if feature_level == 'low':
+
+            '''
+                Agent Values
+            
+            '''
+            self.agent_angle_vel_y_rad = 1
+            self.agent_angle_vel_x_rad = 2
+            self.agent_vel_mag = 3
+            self.agent_angle_global_x_rad = 4
+            self.agent_angle_global_y_rad = 5
+            self.agent_stamina = 6
+            self.agent_frozen = 7
+            self.agent_collision_with_ball = 8
+            self.agent_collision_with_player = 9
+            self.agent_collision_with_post = 10
+            self.agent_kickable = 11
+
+            '''
+                Goal Values
+
+            '''
+            # center of goal
+            self.goal_opp_cent_y = 12
+            self.goal_opp_cent_x = 13
+            self.goal_opp_cent_proximity = 14
+
+            # top of goal
+            self.goal_opp_top_y = 15
+            self.goal_opp_top_x = 16
+            self.goal_opp_top_proximity = 17
+
+            # bottom of goal
+            self.goal_opp_bot_y = 18
+            self.goal_opp_bot_x = 19
+            self.goal_opp_bot_proximity = 20
+
+            '''
+                Field Values
+            
+            '''
+            # center of field
+            self.field_center_y_rad = 30
+            self.field_center_x_rad = 31
+            self.field_center_proximity = 32
+
+            # top left field
+            self.field_top_left_y_rad = 33
+            self.field_top_left_x_rad = 34
+            self.field_top_left_proximity = 35
+
+            # top right field
+            self.field_top_right_y_rad = 36
+            self.field_top_right_x_rad = 37
+            self.field_top_right_proximity = 38
+
+            # bottom right field
+            self.field_bot_right_y_rad = 39
+            self.field_bot_right_x_rad = 40
+            self.field_bot_right_proximity = 41
+
+            # bottom left field
+            self.field_bot_left_y_rad = 42
+            self.field_bot_left_x_rad = 43
+            self.field_bot_left_proximity = 44
+
+            # proximities to sides
+            self.field_left_proximity = 45
+            self.field_right_proximity = 46
+            self.field_top_proximity = 47
+            self.field_bottom_proximity = 48
+
+            '''
+                Ball Values
+
+            '''
+            self.ball_angle_y_rad = 49
+            self.ball_angle_x_rad = 50
+            self.ball_proximity = 51  
+            self.ball_vel_mag = 52
+            self.ball_vel_y_rad = 53
+            self.ball_vel_x_rad = 54
+            self.ball_x = 55
+            self.ball_y = 56
+
         elif feature_level == 'simple':
+
             self.stamina = 26
             self.ball_x = 16
             self.ball_y = 17
@@ -398,7 +471,11 @@ class rc_env:
                         self.d = 1
 
                     rews[agent_ID] = self.getReward(
-                        envs[agent_ID].statusToString(self.world_status),agent_ID,base,ep_num) # update reward
+                        envs[agent_ID].statusToString(self.world_status),
+                        agent_ID,
+                        base,
+                        ep_num
+                    ) # update reward
 
                     j+=1
                     self.sync_before_step.wait()
@@ -468,7 +545,7 @@ class rc_env:
             Reward Engineering - Needs work!
 
             Input
-                s           world status? Not sure...
+                s           world status message
                 agentId     
                 base        left_base or right_base
                 ep_num      episode number
@@ -482,19 +559,23 @@ class rc_env:
         if self.d:
             if self.left_base == base:
             # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
+
                 if s=='Goal_By_Left' and self.left_agent_possesion[agentID] == 'L':
                     reward+= goal_points
+                    print("this ran")
                 elif s=='Goal_By_Left':
                     reward+= goal_points # teammates get 10% of points
+
+                # doesn't seem that this if statement is working
                 elif s=='Goal_By_Right':
                     reward+=-goal_points
+
                 elif s=='OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
                     reward+=-0.5
                 elif s=='CapturedByLeftGoalie':
                     reward+=goal_points/5.0
                 elif s=='CapturedByRightGoalie':
                     reward+= 0 #-goal_points/4.0
-                print("this ran")
                 possession_side = 'N' # at the end of each episode we set this to none
                 self.left_agent_possesion = ['N'] * self.num_left
                 return reward
@@ -515,8 +596,6 @@ class rc_env:
                 possession_side = 'N'
                 self.right_agent_possesion = ['N'] * self.num_right
                 return reward
-        
-
         
         if self.left_base == base:
             team_actions = self.left_actions
@@ -647,6 +726,37 @@ class rc_env:
             Reward agent for maximizing it's proximity to the ball
         '''
         reward += team_obs[agentID][self.ball_proximity]
+
+        '''
+        
+            Reward for Decreasing Ball Distance to Goal
+
+        '''
+        angle_to_ball = math.atan2(team_obs[agentID][self.ball_angle_y_rad], team_obs[agentID][self.ball_angle_x_rad])
+        angle_to_center_goal = math.atan2(team_obs[agentID][self.goal_opp_cent_y], team_obs[agentID][self.goal_opp_cent_x])
+
+        A = abs(angle_to_ball - angle_to_center_goal)
+
+        print(A * 180 / math.pi)
+
+
+        distance_to_ball = self.prox_2_dist(team_obs[agentID][self.ball_proximity])
+        distance_to_goal_center = self.prox_2_dist(team_obs[agentID][self.goal_opp_cent_proximity])
+        ball_distance_from_center_goal = math.sqrt( distance_to_ball**2 + distance_to_goal_center**2 - (2 * distance_to_ball * distance_to_goal_center * math.cos(A)) )
+        print("ball distance from goal:", ball_distance_from_center_goal)
+
+        print(team_obs[agentID][self.goal_opp_top_proximity])
+        print(team_obs[agentID][self.goal_opp_cent_proximity])
+        print(team_obs[agentID][self.goal_opp_bot_proximity])
+
+        self.x = team_obs[agentID][self.field_right_proximity]
+        self.y = team_obs[agentID][self.field_top_proximity]
+
+        print('(',self.x,',', self.y,')')
+
+        print(team_obs[agentID][self.ball_x])
+        print(team_obs[agentID][self.ball_y])
+
         
         # dist_cur = self.distance_to_ball(team_obs[agentID])
         # dist_prev = self.distance_to_ball(team_obs_previous[agentID])
@@ -701,3 +811,6 @@ class rc_env:
         relative_y = obs[self.ball_y] - goal_center_y
         ball_distance_to_goal = math.sqrt(relative_x**2 + relative_y**2)
         return ball_distance_to_goal
+
+    def prox_2_dist(self, prox):
+        return (prox+.8)/1.8
