@@ -19,10 +19,12 @@ class SingleAgentDDPGLearner(Learner):
             self.kicks = 0
             self.turns = 0
             self.dashes = 0
+            self.steps_per_episode = 0
             done = False
             while not done:
                 done = self.step()
                 self.step_count +=1
+                self.steps_per_episode +=1
 
         self.env.close()
 
@@ -51,7 +53,8 @@ class SingleAgentDDPGLearner(Learner):
         self.buffer.append([observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)])
         
         if self.step_count > self.alg.exploration_steps:
-            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            # self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            pass
 
         # Robocup actions
         if self.env.env_name == 'RoboCup':
@@ -74,6 +77,10 @@ class SingleAgentDDPGLearner(Learner):
             self.kicks = 0
             self.turns = 0
             self.dashes = 0
+
+            shiva.add_summary_writer(self, self.agent, 'Steps per Episode', self.steps_per_episode, self.ep_count) 
+
+
 
         # TensorBoard Episodic Metrics
         if done:
@@ -118,9 +125,9 @@ class SingleAgentDDPGLearner(Learner):
         # Create the agent
         if self.load_agents:
             self.agent = self.load_agent(self.load_agents)
+            # self.buffer = self._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
-        
         # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment

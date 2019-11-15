@@ -45,7 +45,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         # Zero the gradient
         agent.critic_optimizer.zero_grad()
         # The actions that target actor would do in the next state.
-        next_state_actions_target = agent.target_actor(next_states.float())
+        next_state_actions_target = agent.target_actor(next_states.float(), hot=True)
         # print(next_state_actions_target.shape, '\n')
         # The Q-value the target critic estimates for taking those actions in the next state.
         Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )
@@ -71,7 +71,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         # Zero the gradient
         agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
-        current_state_actor_actions = agent.actor(states.float())
+        current_state_actor_actions = agent.actor(states.float(), hot=True)
         # Calculate Q value for taking those actions in those states
         actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
         # might not be perfect, needs to be tested more
@@ -146,7 +146,8 @@ class ParametrizedDDPGAlgorithm(Algorithm):
                 pass
             # action += self.ou_noise.noise()
             action = np.clip(action, -1,1)
-            # print('actor action shape', action.shape)
+            print('actor action shape', action.shape)
+        
             return action[0, 0] # timestamp 0, agent 0
 
     def create_agent(self, id):

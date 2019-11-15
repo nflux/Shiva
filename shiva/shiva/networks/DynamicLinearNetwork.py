@@ -36,10 +36,8 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
         super(SoftMaxHeadDynamicLinearNetwork, self).__init__()
         self.config = config
         self.param_ix = param_ix
-        if self.config['gumbel']:
-            self.softmax = partial(torch.nn.functional.gumbel_softmax, tau=1, hard=False, dim=-1)
-        else:
-            self.softmax = torch.nn.Softmax(dim=-1)
+        self.gumbel = partial(torch.nn.functional.gumbel_softmax, tau=1, hard=True, dim=-1)
+        self.softmax = torch.nn.Softmax(dim=-1)
         
         self.net = nh.DynamicLinearSequential(
                             input_dim,
@@ -53,8 +51,9 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
                         )
-    def forward(self, x):
+    def forward(self, x, hot=False):
         o = self.net(x)
-        # softmax = self.softmax(o[:, :, :self.param_ix])
-        # params = o[:, :, self.param_ix:]
-        return torch.cat([self.softmax(o[:, :, :self.param_ix]), o[:, :, self.param_ix:]], dim=2)
+        if hot:
+            return torch.cat([self.gumbel(o[:, :, :self.param_ix]), o[:, :, self.param_ix:]], dim=2)
+        else:
+            return torch.cat([self.softmax(o[:, :, :self.param_ix]), o[:, :, self.param_ix:]], dim=2)

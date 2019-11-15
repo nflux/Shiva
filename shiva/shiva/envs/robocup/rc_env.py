@@ -754,7 +754,8 @@ class rc_env:
             if True:
                 team_reward += delta
                 reward+= delta
-                print(distance_cur, delta)
+                # print(distance_cur, delta)
+                pass
             
         ##################################################################################
             
@@ -768,8 +769,8 @@ class rc_env:
                 delta = (2*self.num_left)*(r_prev - r)
                 if True:
                 #if delta > 0:
-                    # reward += delta
-                    # team_reward += delta
+                    reward += delta
+                    team_reward += delta
                     pass
 
         # base right kicks

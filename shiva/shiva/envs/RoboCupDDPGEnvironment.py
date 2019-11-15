@@ -4,7 +4,7 @@ import torch
 torch.manual_seed(5)
 from .robocup.rc_env import rc_env
 from .Environment import Environment
-from helpers.misc import action2one_hot_v
+from helpers.misc import action2one_hot
 
 class RoboCupDDPGEnvironment(Environment):
     def __init__(self, config):
@@ -56,9 +56,9 @@ class RoboCupDDPGEnvironment(Environment):
         
         self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
 
-        actions_v = torch.cat([action2one_hot_v(self.action_space['discrete'], act_choice), self.left_params[0]])
-        print('\nreward:', self.rews, '\n')
-        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions}
+        actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
+        # print('\nreward:', self.rews, '\n')
+        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
         return self.obs
