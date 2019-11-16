@@ -7,6 +7,8 @@ from helpers.calc_helper import np_softmax
 from agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
 from .Algorithm import Algorithm
 from settings import shiva
+from helpers.misc import action2one_hot_v
+
 
 class ParametrizedDDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
@@ -37,7 +39,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
         dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
-        print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
+        # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
         '''
             Training the Critic
         '''
@@ -45,7 +47,11 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         # Zero the gradient
         agent.critic_optimizer.zero_grad()
         # The actions that target actor would do in the next state.
-        next_state_actions_target = agent.target_actor(next_states.float(), hot=True)
+        next_state_actions_target = agent.target_actor(next_states.float(), hot=False)
+        disc = next_state_actions_target[:,:,:3]
+        l = [action2one_hot_v(disc.shape[2],torch.argmax(d).item()).unsqueeze(dim=0).unsqueeze(dim=0) for d in disc]
+        disc = torch.cat(l, dim=0).to(self.device)
+        next_state_actions_target = torch.cat([disc, next_state_actions_target[:,:,disc.shape[2]:]], dim=2).to(self.device)
         # print(next_state_actions_target.shape, '\n')
         # The Q-value the target critic estimates for taking those actions in the next state.
         Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )

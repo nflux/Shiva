@@ -39,6 +39,8 @@ class SingleAgentDDPGLearner(Learner):
                 action = self.HPI.get_action(observation)
         else:
             action = self.alg.get_action(self.agent, observation, self.step_count)
+
+        # you were going to look at what the action looks like
         
         next_observation, reward, done, more_data = self.env.step(action, discrete_select='argmax')
 
@@ -48,12 +50,15 @@ class SingleAgentDDPGLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
+        # print(more_data['action'])
+        # input()
+
         self.totalReward += more_data['raw_reward']
-        print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
+        # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
         self.buffer.append([observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)])
         
         if self.step_count > self.alg.exploration_steps:
-            # self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
             pass
 
         # Robocup actions
@@ -74,11 +79,11 @@ class SingleAgentDDPGLearner(Learner):
             shiva.add_summary_writer(self, self.agent, 'Kicks per Episode', self.kicks, self.ep_count)
             shiva.add_summary_writer(self, self.agent, 'Turns per Episode', self.turns, self.ep_count)
             shiva.add_summary_writer(self, self.agent, 'Dashes per Episode', self.dashes, self.ep_count) 
+            shiva.add_summary_writer(self, self.agent, 'Steps per Episode', self.steps_per_episode, self.ep_count) 
             self.kicks = 0
             self.turns = 0
             self.dashes = 0
 
-            shiva.add_summary_writer(self, self.agent, 'Steps per Episode', self.steps_per_episode, self.ep_count) 
 
 
 
