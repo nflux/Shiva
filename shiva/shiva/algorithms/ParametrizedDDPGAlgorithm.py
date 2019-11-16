@@ -48,9 +48,13 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         agent.critic_optimizer.zero_grad()
         # The actions that target actor would do in the next state.
         next_state_actions_target = agent.target_actor(next_states.float(), hot=False)
+        # Grab the discrete actions in the batch
         disc = next_state_actions_target[:,:,:3]
-        l = [action2one_hot_v(disc.shape[2],torch.argmax(d).item()).unsqueeze(dim=0).unsqueeze(dim=0) for d in disc]
-        disc = torch.cat(l, dim=0).to(self.device)
+        # generate a list of one hot encodings of the argmax of each discrete action tensors
+        one_hot_encoded_discrete_actions = [action2one_hot_v(disc.shape[2],torch.argmax(d).item()).unsqueeze(dim=0).unsqueeze(dim=0) for d in disc]
+        # concat all the one hot encoded discrete action tensors together
+        disc = torch.cat(one_hot_encoded_discrete_actions, dim=0).to(self.device)
+        # concat the discrete and parameterized actions back together
         next_state_actions_target = torch.cat([disc, next_state_actions_target[:,:,disc.shape[2]:]], dim=2).to(self.device)
         # print(next_state_actions_target.shape, '\n')
         # The Q-value the target critic estimates for taking those actions in the next state.
