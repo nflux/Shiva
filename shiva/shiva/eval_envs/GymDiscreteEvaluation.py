@@ -1,28 +1,18 @@
 from .Evaluation import Evaluation
 
-def initialize_eval_env(env_params):
-    assert 'env_type' in env_params, 'Needs @env_type in [EVAL_ENV] config'
-    
-    if env_params['env_type'] == 'Gym':
-        return EvaluationDiscreteEnvironment(env_params['environment'], env_params['metrics_strings'], env_params['env_render'])
-
-class GymEvaluation(Evaluation):
-    def __init__(self,
-            eval_envs,
-            learners,
-            metrics_strings,
-            render,
-            config
-        ):
-        super(GymEvaluation, self).__init__(eval_envs, learners, metrics_strings, render, config)
+class GymDiscreteEvaluation(Evaluation):
+    def __init__(self, config):
+        super(GymDiscreteEvaluation, self).__init__(config)
+        self.eval_envs = list()
         self.agent_metrics = {}
+    # s, update time from different algo from diff learners, diff random seed, 
 
     def _create_eval_envs(self):
         '''
             Initializes the evaluation environments
             It's executed at initialization by the AbstractEvaluation, but the implementation is specific to each Environment
         '''
-        self.eval_envs = [ EvaluationEnvironment.initialize_eval_env({'env_type': 'Gym', 'environment': env_name, 'metrics_strings': self.metrics_strings, 'env_render': self.render}) for env_name in self.eval_envs ]
+        self.eval_envs = [ EvaluationDiscreteEnvironment.initialize_eval_env({'env_type': 'Gym', 'environment': env_name, 'metrics_strings': self.metrics_strings, 'env_render': self.render}) for env_name in self.eval_envs ]
 
     def evaluate_agents(self):
         '''

@@ -2,10 +2,12 @@
 from settings import shiva
 from .MetaLearner import MetaLearner
 from learners.SingleAgentDQNLearner import SingleAgentDQNLearner
+from eval_envs.GymDiscreteEvaluation import GymDiscreteEvaluation
 from learners.SingleAgentDDPGLearner import SingleAgentDDPGLearner
 from learners.SingleAgentImitationLearner import SingleAgentImitationLearner
 import helpers.misc as misc
 import learners
+import eval_envs
 import torch
 import random
 from scipy import stats
@@ -28,16 +30,21 @@ class MultipleAgentMetaLearner(MetaLearner):
     def run(self):
 
         if self.start_mode == self.EVAL_MODE:
-            pass
-            # self.eval_env = []
-            # # Load Learners to be passed to the Evaluation
-            # self.learners = [ shiva._load_learner(load_path) for load_path in self.configs[0]['Evaluation']['load_path'] ]
-
-            # self.configs[0]['Evaluation']['learners'] = self.learners
+            self.eval_envs = []
+            # Load Learners to be passed to the Evaluation
+            self.learners = [ shiva._load_learner(load_path) for load_path in self.configs['Evaluation']['load_path'] ]
+            
+            #assigning a new attribute in Evaluation called learners.
+            self.configs['Evaluation']['learners'] = self.learners
+            
             # # Create Evaluation class
-            # self.eval_env.append(Evaluation.initialize_evaluation(self.configs[0]['Evaluation']))
+            # print(self.configs['Evaluation'])
+            eval_env = getattr(eval_envs, self.configs['Evaluation']["type"])
+            # print(eval_envs.GymDiscreteEvaluation(self.configs['Evaluation']))
+            self.eval_envs.append(eval_env(self.configs['Evaluation']))
 
-            # self.eval_env[0].evaluate_agents()
+            self.eval_envs[0].evaluate_agents()
+            pass
 
 
         elif self.start_mode == self.PROD_MODE:
