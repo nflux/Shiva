@@ -8,6 +8,8 @@ import helpers.misc as misc
 import learners
 import torch
 import random
+from scipy import stats
+import copy
 
 
 class MultipleAgentMetaLearner(MetaLearner):
@@ -78,6 +80,8 @@ class MultipleAgentMetaLearner(MetaLearner):
         for p in self.process_list:
             p.join()'''
 
+
+    #Run each Learner in a separate process and join the processes when they are all finished running
     def multiprocessing_learners(self):
         for learner in range(len(self.learners)):
             p = torch.multiprocessing.Process(target=self.run_learner(learner))
@@ -86,15 +90,67 @@ class MultipleAgentMetaLearner(MetaLearner):
         for p in self.process_list:
             p.join()
 
-
+    #Run inidivdual learners. Used as the target function for multiprocessing
     def run_learner(self,learner_idx):
         shiva.add_learner_profile(self.learners[learner_idx])
         self.learners[learner_idx].launch()
         shiva.update_agents_profile(self.learners[learner_idx])
         self.learners[learner_idx].run()
 
-
     #fill the list of learners
     def populate_learners(self):
         for learner in range(self.learner_list_size):
             self.learners[learner] = self.create_learner()
+
+    #Conduct Welch's T-test between two agents episode rewards and return whether we reject the null hypothesis
+    def welch_T_Test(self,episodes_1, episodes_2):
+        t,p = stats.ttest_ind(episodes_1, episodes_2, equal_var=False)
+
+        return p < self.configs['MetaLearner']['p_value']
+
+    def truncation(self,learners):
+        truncate_size = int(self.learner_list_size* .2)
+        bottom_20 = learners[self.learner_list_size - truncate_size:]
+        top_20 = learners[:truncate_size]
+
+        for learner in bottom_20:
+            random_top_20 = random.choice(learners)
+            learner.agent.policy = copy.deepcopy(random_top_20.agent.policy)
+            learner.agent.optimizer = copy.deepcopy(random_top_20.agent.optimizer)
+
+    def t_Test(self,learners,episode_rewards):
+        for i in range(len(learners)):
+            idxs = list(range(0,len(learners)))
+            sampled_idx = random.choice(idxs)
+
+            if(self.welch_T_Test(episodes_rewards[i],episode_rewards[sampled_idx])):
+                learners[i].agent.policy = copy.deepcopy(learners[sampled_idx].agent.policy)
+                learners[i].agent.optimizer = copy.deepcopy(learners[sampled_idx].agent.optimizer)
+
+
+    #Resample hyperparameters from the original range dictated in the configuration file
+    def resample(self, learners):
+        for learner in learners:
+            new_lr = random.uniform(self.learning_rate_range[0],self.learning_rate_range[1])
+            learner.agent.optimizer = getattr(torch.optim,agent_config['Agent']['optimizer_function'])(params=learner.agent.policy.parameters(), lr=new_lr)
+            learner.agent.learning_rate = new_lr
+
+    #Perturbate hyperparameters by a random factor randomly selected from predefined factor lists in the configuration file
+    def perturbation(self,learners):
+        for learner in learners:
+            perturbation_factor = random.choice(self.configs['MetaLearner']['perturbation_factors'])
+            new_lr = perturbation_factor * learner.agent.learning_rate
+            learner.agent.optimizer = getattr(torch.optim,agent_config['Agent']['optimizer_function'])(params=learner.agent.policy.parameters(), lr=new_lr)
+            learner.agent.learning_rate = new_lr
+
+    def exploit(self,learners,episode_rewards=None):
+        if self.configs['MetaLearner']['exploit'] == 't_Test':
+            self.t_test(learners,episode_rewards)
+        elif: self.configs['MetaLearner']['exploit'] =='truncatation':
+            self.truncation(learners)
+
+    def explore(self,learners):
+        if self.configs['MetaLearner']['explore'] == 'perturbation':
+            self.perturbation(learners)
+        elif self.configs['MetaLearner']['explore'] == 'resample':
+            self.resample(learners)
