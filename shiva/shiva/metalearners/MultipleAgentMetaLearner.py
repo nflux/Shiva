@@ -20,6 +20,7 @@ class MultipleAgentMetaLearner(MetaLearner):
         self.learner_list_size = configs["MetaLearner"]["learner_list"]
         self.learners = [None] * configs['MetaLearner']['learner_list']
         self.learning_rate_range = configs["MetaLearner"]["learning_rate"]
+        self.episode_rewards = list()
         self.process_list = list()
         #self.multiprocessing_learners()
         self.run()
