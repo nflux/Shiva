@@ -1,50 +1,59 @@
+import gym
+import numpy as np
+from envs.Environment import Environment
 from .Evaluation import Evaluation
+from .GymDiscreteEvaluationEnvironment import GymDiscreteEvaluationEnvironment
 
 class GymDiscreteEvaluation(Evaluation):
-    def __init__(self, config):
-        super(GymDiscreteEvaluation, self).__init__(config)
-        self.eval_envs = list()
-        self.agent_metrics = {}
-    # s, update time from different algo from diff learners, diff random seed, 
-
-    def _create_eval_envs(self):
-        '''
-            Initializes the evaluation environments
-            It's executed at initialization by the AbstractEvaluation, but the implementation is specific to each Environment
-        '''
-        self.eval_envs = [ EvaluationDiscreteEnvironment.initialize_eval_env({'env_type': 'Gym', 'environment': env_name, 'metrics_strings': self.metrics_strings, 'env_render': self.render}) for env_name in self.eval_envs ]
+    def __init__(self,
+                configs: 'whole config passed',
+                learners
+    ):
+        {setattr(self, k, v) for k,v in configs.items()}
+        self.configs = configs
+        self.learners = learners
+        self.eval_envs = [None] * len(learners)
+        self.eval_scores = [None] * len(learners)
+        self._create_eval_envs()
 
     def evaluate_agents(self):
         '''
-            Starts the evaluation process of each agent on each environment
+            Starts evaluation process
+            This implementation is specific to each environment type
         '''
-        for env in self.eval_envs:
-            self.agent_metrics[env.env_name] = {}
-            for learner in self.learners:
-                self.agent_metrics[env.env_name][learner.id] = {}
-                for agent in learner.agents:
-                    print("Start evaluation for {} on {}".format(agent, env))
-                    self._make_agent_play(env, agent)
-                    self.agent_metrics[env.env_name][learner.id][agent.id] = env.get_metrics()
-                    print("Finish evaluation for {}".format(agent))
+        episode_scores = np.zeros(self.configs['episodes'])
+        for i in range(len(self.learners)):
+            for e in range(self.configs['episodes']):
+                self.eval_envs[i].reset()
+                self.totalReward = 0
+                done = False
+                while not done:
+                    done = self.step(i)
+                episode_scores[e] = self.totalReward
+            self.eval_scores[i] = episode_scores
 
-    def _make_agent_play(self, env, agent):
-        '''
-            Let's the agent play for X episodes given by Evaluation config
-        '''
-        for ep_n in range(self.config['episodes']):
-            # print("Episode {}".format(ep_n))
-            env.reset()
-            done = False
-            while not done:
-                done = self._step_agent(env, agent)
-        env.close()
+            self.eval_envs[i].close()
 
-    def _step_agent(self, env, agent):
+
+    def _create_eval_envs(self):
         '''
-            Literally makes the agent do 1 step on the environment
+            This implementation is specific to each environment type
         '''
-        observation = env.get_observation()
-        action = agent.get_action(observation)
-        next_observation, reward, done = env.step(action)
+        for i in range(len(self.eval_envs)):
+            self.eval_envs[i] = GymDiscreteEvaluationEnvironment(self.configs)
+
+    def rank_agents(self, validation_scores):
+        pass
+
+    def step(self,idx):
+
+        observation = self.eval_envs[idx].get_observation()
+
+        action = self.learners[idx].agent.get_action(observation)
+
+        next_observation, reward, done, more_data = self.eval_envs[idx].step(action)
+
+        # Cumulate the reward
+        self.totalReward += reward[0]
+
         return done

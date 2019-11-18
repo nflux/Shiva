@@ -1,4 +1,3 @@
-
 class Evaluation(object):
     def __init__(self,
                 configs: 'whole config passed'
@@ -19,7 +18,7 @@ class Evaluation(object):
             This implementation is specific to each environment type
         '''
         pass
-    
+
     def _start_evals(self):
         '''
             This implementation is specific to each environment type

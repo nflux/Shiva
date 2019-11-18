@@ -33,10 +33,10 @@ class MultipleAgentMetaLearner(MetaLearner):
             self.eval_envs = []
             # Load Learners to be passed to the Evaluation
             self.learners = [ shiva._load_learner(load_path) for load_path in self.configs['Evaluation']['load_path'] ]
-            
+
             #assigning a new attribute in Evaluation called learners.
             self.configs['Evaluation']['learners'] = self.learners
-            
+
             # # Create Evaluation class
             # print(self.configs['Evaluation'])
             eval_env = getattr(eval_envs, self.configs['Evaluation']["type"])
@@ -67,6 +67,10 @@ class MultipleAgentMetaLearner(MetaLearner):
 
 
             self.multiprocessing_learners()
+
+            self.eval = GymDiscreteEvaluation(self.configs['Evaluation'], self.learners)
+            self.eval.evaluate_agents()
+            print(self.eval.eval_scores)
 
             # save
             self.save()
@@ -154,7 +158,7 @@ class MultipleAgentMetaLearner(MetaLearner):
     def exploit(self,learners,episode_rewards=None):
         if self.configs['MetaLearner']['exploit'] == 't_Test':
             self.t_test(learners,episode_rewards)
-        elif: self.configs['MetaLearner']['exploit'] =='truncatation':
+        elif self.configs['MetaLearner']['exploit'] =='truncatation':
             self.truncation(learners)
 
     def explore(self,learners):

@@ -1,3 +1,2 @@
-from .EvaluationDiscreteEnvironment import *
+from .GymDiscreteEvaluationEnvironment import *
 from .GymDiscreteEvaluation import *
-
