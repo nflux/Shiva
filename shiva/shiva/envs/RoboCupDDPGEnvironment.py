@@ -55,9 +55,10 @@ class RoboCupDDPGEnvironment(Environment):
         self.left_params = torch.tensor([params]).float()
         
         self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
-
         actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
+        
         # print('\nreward:', self.rews, '\n')
+        # print("Stepped Action:",actions_v)
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
@@ -125,15 +126,12 @@ class HumanPlayerInterface():
 
         # obs.shape, 
         # print(obs[0, 17])
-        # print(obs[0,14])
-        # print(obs[0, 20])
+        print("(x,y):", obs[0,4], obs[0, 5])
 
         # print(obs[0, 15], '\n', obs[0, 16], '\n')
 
-        
-
-        y_rad = obs[0,4]
-        x_rad = obs[0,5]
+        # x_rad = obs[0,4]
+        # y_rad = obs[0,5]
 
         # print out observations of the ball (x y coordinates)
         # also print out the coordinates of the agent
@@ -149,13 +147,13 @@ class HumanPlayerInterface():
         # print("cos", x_rad)
 
         # acos method for getting global angle
-        th = acos(x_rad) * 180 / pi
-        if y_rad < 0:
-            th *= -1
+        # th = acos(x_rad) * 180 / pi
+        # if y_rad < 0:
+        #     th *= -1
         # print("global angle(acos):", th)
 
         # arctan2 method for getting global angle
-        global_theta = atan2(y_rad, x_rad) * 180 / pi
+        # global_theta = atan2(y_rad, x_rad) * 180 / pi
         # print("global angle(atan2):", global_theta)
         
         if action == self.KEY_DASH:

@@ -6,6 +6,7 @@ import algorithms
 import buffers
 import numpy as np
 np.random.seed(5)
+import copy
 
 class SingleAgentDDPGLearner(Learner):
     def __init__(self, learner_id, config):
@@ -42,7 +43,9 @@ class SingleAgentDDPGLearner(Learner):
 
         # you were going to look at what the action looks like
         
-        next_observation, reward, done, more_data = self.env.step(action, discrete_select='argmax')
+        next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
+
+        # print("reward", reward)
 
         # TensorBoard Step Metrics
         shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
@@ -50,20 +53,29 @@ class SingleAgentDDPGLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
-        # print(more_data['action'])
+        # print(more_data['action'].reshape(1,-1))
         # input()
 
         self.totalReward += more_data['raw_reward']
-        # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
-        self.buffer.append([observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)])
-        
         if self.step_count > self.alg.exploration_steps:
-            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            # print("Observation into buffer", observation)
+            # print("Next Observation into buffer", next_observation)
+            # print("")
+            # input()
             pass
+        # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
+        # self.buffer.append([observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)])
+        t = [observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)]
+        deep = copy.deepcopy(t)
+        self.buffer.append(deep)
+        
+        if self.step_count > self.alg.exploration_steps and self.step_count % 16 == 0:
+            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            # pass
 
         # Robocup actions
         if self.env.env_name == 'RoboCup':
-            action = np.argmax(action[0:3])
+            action = np.argmax(more_data['action'][:3])
             if action == 0:
                 self.dashes += 1
             elif action == 1:
@@ -93,6 +105,7 @@ class SingleAgentDDPGLearner(Learner):
             self.alg.ou_noise.reset()
 
             if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
+                print("Checkpoint!")
                 shiva.update_agents_profile(self)
 
         return done

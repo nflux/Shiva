@@ -64,8 +64,8 @@ class rc_env:
             #For new obs reorganization without vailds, changed hfo obs from 59 to 56
             # self.left_features = 56 + 13*(self.num_left-1) + 12*self.num_right + 4 + 1 + 2 + 1
             # self.right_features = 56 + 13*(self.num_right-1) + 12*self.num_left + 4 + 1 + 2 + 1
-            self.left_features = 8
-            self.right_features = 8
+            self.left_features = 16
+            self.right_features = 16
         elif config['feature_level'] == 'high':
             self.left_features = (6*self.num_left) + (3*self.num_right) + (3*self.num_rightBot) + 6
             self.right_features = (6*self.num_right) + (3*self.num_left) + (3*self.num_rightBot) + 6
@@ -363,6 +363,8 @@ class rc_env:
 
         if self.left_base == base:
             self.left_actions[agent_id] = action
+            # print("rc_env action:", action)
+            # input()
             if self.act_lvl == 'low':
                 for p in range(params.shape[1]):
                     self.left_action_params[agent_id][p] = params[agent_id][p]
@@ -445,9 +447,11 @@ class rc_env:
         while(True):
             while(self.start):
                 ep_num += 1
+                
                 j = 0 # j to maximum episode length
 
                 obs_prev[agent_ID] = envs[agent_ID].getState() # Get initial state
+
                 obs[agent_ID] = envs[agent_ID].getState() # Get initial state
 
                 # self.been_kicked_left = False
@@ -470,6 +474,10 @@ class rc_env:
                     obs_prev[agent_ID] = obs[agent_ID]
                     self.world_status = envs[agent_ID].step() # update world                        
                     obs[agent_ID] = envs[agent_ID].getState() # update obs after all agents have acted
+
+                    # print("rc_env obs agent", obs[agent_ID])
+                    # input()
+
                     # obs[agent_ID] = actions_OH[agent_ID]
 
                     self.sync_at_reward.wait()
@@ -630,8 +638,8 @@ class rc_env:
         # Low stamina - seems that needs to be implemented (Ezequiel)
 
         if team_obs[agentID][self.stamina] < 0.0 : # LOW STAMINA
-            # reward -= 0.003
-            # team_reward -= 0.003
+            reward -= 1
+            team_reward -= 1
             # print ('low stamina')
             pass
         
@@ -643,6 +651,11 @@ class rc_env:
         # print(self.action_list[team_actions[agentID]] in self.kick_actions)
         # print(self.num_right > 0)
         self.right_agent_possesion = 'N'
+
+
+        if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
+            reward -= 1
+
         
         if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:    
             if True:        
@@ -752,8 +765,8 @@ class rc_env:
             delta = (distance_prev - distance_cur)*1.0
             #if delta > 0:    
             if True:
-                team_reward += delta
-                reward+= delta
+                team_reward += delta * 10 
+                reward+= delta * 10
                 # print(distance_cur, delta)
                 pass
             
@@ -769,8 +782,8 @@ class rc_env:
                 delta = (2*self.num_left)*(r_prev - r)
                 if True:
                 #if delta > 0:
-                    reward += delta
-                    team_reward += delta
+                    # reward += delta
+                    # team_reward += delta
                     pass
 
         # base right kicks

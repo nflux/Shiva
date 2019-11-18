@@ -7,7 +7,7 @@ from helpers.calc_helper import np_softmax
 from agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
 from .Algorithm import Algorithm
 from settings import shiva
-from helpers.misc import action2one_hot_v
+from helpers.misc import one_hot_from_logits
 
 
 class ParametrizedDDPGAlgorithm(Algorithm):
@@ -44,18 +44,27 @@ class ParametrizedDDPGAlgorithm(Algorithm):
             Training the Critic
         '''
 
+        # print("states in update")
+        # for state in states:
+        #     print(state)
+        # input()
+
+
         # Zero the gradient
         agent.critic_optimizer.zero_grad()
         # The actions that target actor would do in the next state.
-        next_state_actions_target = agent.target_actor(next_states.float(), hot=False)
+        next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
         # Grab the discrete actions in the batch
-        disc = next_state_actions_target[:,:,:3]
+        disc = next_state_actions_target[:,:,:3].squeeze(dim=1)
         # generate a list of one hot encodings of the argmax of each discrete action tensors
-        one_hot_encoded_discrete_actions = [action2one_hot_v(disc.shape[2],torch.argmax(d).item()).unsqueeze(dim=0).unsqueeze(dim=0) for d in disc]
-        # concat all the one hot encoded discrete action tensors together
-        disc = torch.cat(one_hot_encoded_discrete_actions, dim=0).to(self.device)
+        one_hot_encoded_discrete_actions = one_hot_from_logits(disc).unsqueeze(dim=1)
+
+        # print(one_hot_encoded_discrete_actions.shape)
+        # print(next_state_actions_target[:,:,3:].shape)
+        # input()
+
         # concat the discrete and parameterized actions back together
-        next_state_actions_target = torch.cat([disc, next_state_actions_target[:,:,disc.shape[2]:]], dim=2).to(self.device)
+        next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,3:]], dim=2).to(self.device)
         # print(next_state_actions_target.shape, '\n')
         # The Q-value the target critic estimates for taking those actions in the next state.
         Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )
@@ -81,16 +90,19 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         # Zero the gradient
         agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
-        current_state_actor_actions = agent.actor(states.float(), hot=True)
+        current_state_actor_actions = agent.actor(states.float(), gumbel=True)
+
+        # print("current_state_actor_actions",current_state_actor_actions)
+        # input()
         # Calculate Q value for taking those actions in those states
         actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
-        # might not be perfect, needs to be tested more
-        entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using log probabilities
+        # might not be perfect, needs to be tested more; is not appropriate with one hot encodings?
+        # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using log probabilities
         # print(entropy_reg)
         # penalty for going beyond the bounded interval
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
         # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration
-        actor_loss = -actor_loss_value.mean() + param_reg + entropy_reg
+        actor_loss = -actor_loss_value.mean() + param_reg #+ entropy_reg
         # Backward Propogation!
         actor_loss.backward()
         # Update the weights in the direction of the gradient.
@@ -150,13 +162,16 @@ class ParametrizedDDPGAlgorithm(Algorithm):
             observation = torch.tensor([observation]).to(self.device)
             action = agent.get_action(observation.float()).cpu().data.numpy()
 
+            print("Network Output (after softmax):", action)
+            # input()
+
             # useful for debugging
             if step_count % 100 == 0:
                 # print(action)
                 pass
             # action += self.ou_noise.noise()
-            action = np.clip(action, -1,1)
-            print('actor action shape', action.shape)
+            # action = np.clip(action, -1,1)
+            # print('actor action shape', action.shape)
         
             return action[0, 0] # timestamp 0, agent 0
 

@@ -25,7 +25,7 @@ LowLevelFeatureExtractor::LowLevelFeatureExtractor(int num_teammates,
   // numFeatures++; // action state
   // numFeatures += 2; // Possesor indicators
   // numFeatures++; // timestep
-  numFeatures = 8;
+  numFeatures = 16;
   feature_vec.resize(numFeatures);
 }
 
@@ -58,6 +58,19 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   addNormFeature(self.stamina(), 0., observedStaminaMax);
   addFeature(self.isKickable() ? FEAT_MAX : FEAT_MIN);
 
+  // ball vel x
+  addNormFeature(ball.vel().x, -pitchHalfLength, pitchHalfLength);
+  // ball vel y
+  addNormFeature(ball.vel().y, -pitchHalfWidth, pitchHalfWidth);
+  // ball vel magnitude
+  addNormFeature(ball.vel().r(), 0., observedBallSpeedMax);
+  // agent self x
+  addNormFeature(self.vel().x, -pitchHalfLength, pitchHalfLength);
+  // agent self y
+  addNormFeature(self.vel().y, -pitchHalfWidth, pitchHalfWidth);
+  // agent self speed
+  addNormFeature(self.speed(), 0., observedPlayerSpeedMax);
+  addAngFeature(self_ang);
 
   // std::ofstream myfile;
   // myfile.open("example.txt", std::ios_base::app);
