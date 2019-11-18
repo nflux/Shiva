@@ -12,6 +12,7 @@ import torch
 import random
 from scipy import stats
 import copy
+import numpy as np
 
 
 class MultipleAgentMetaLearner(MetaLearner):
@@ -68,9 +69,12 @@ class MultipleAgentMetaLearner(MetaLearner):
 
             self.multiprocessing_learners()
 
-            self.eval = GymDiscreteEvaluation(self.configs['Evaluation'], self.learners)
-            self.eval.evaluate_agents()
-            print(self.eval.eval_scores)
+        self.eval = GymDiscreteEvaluation(self.configs['Evaluation'], self.learners)
+        self.eval.evaluate_agents()
+        print(self.eval.eval_scores)
+        print(len(self.eval.eval_scores[0]))
+        for i in range(len(self.eval.eval_scores)):
+            print('Average Reward for agent: ', i, '\n', np.average(self.eval.eval_scores[i]))
 
             # save
             self.save()
