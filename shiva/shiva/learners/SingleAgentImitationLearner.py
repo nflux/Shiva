@@ -18,21 +18,14 @@ class SingleAgentImitationLearner(Learner):
     def run(self):
 
         self.supervised_update()
-        print('Supervised Learning is complete!')
-        print('Loss:',self.supervised_alg.loss)
         self.imitation_update()
-
         self.env.close()
 
     def supervised_update(self):
         self.step_count = 0
         for self.ep_count in range(self.configs['Learner']['supervised_episodes']):
-            print(self.ep_count)
-
             self.env.reset()
-
             self.totalReward = 0
-
             done = False
             while not done:
                 done = self.supervised_step()
@@ -51,21 +44,14 @@ class SingleAgentImitationLearner(Learner):
 
             self.step_count=0
             for self.ep_count in range(self.configs['Learner']['imitation_episodes']):
-                print(self.ep_count)
                 self.env.reset()
                 self.totalReward = 0
-
                 done = False
                 while not done:
                     #next_observation, reward, done, _ = self.env.step([0.0,1.0,0.0,0.0])
                     done = self.imitation_step(iter_count)
                     self.step_count+=1
-
                 self.env.close()
-
-
-            print('Policy ',iter_count, ' complete!')
-            print('Loss: ',self.imitation_alg.loss)
             self.agent = self.agents[iter_count]
 
 
