@@ -162,7 +162,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
             observation = torch.tensor([observation]).to(self.device)
             action = agent.get_action(observation.float()).cpu().data.numpy()
 
-            print("Network Output (after softmax):", action)
+            # print("Network Output (after softmax):", action)
             # input()
 
             # useful for debugging

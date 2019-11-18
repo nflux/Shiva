@@ -782,8 +782,8 @@ class rc_env:
                 delta = (2*self.num_left)*(r_prev - r)
                 if True:
                 #if delta > 0:
-                    # reward += delta
-                    # team_reward += delta
+                    reward += delta
+                    team_reward += delta
                     pass
 
         # base right kicks
