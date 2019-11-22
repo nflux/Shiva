@@ -16,7 +16,6 @@ class SimpleBuffer():
         # super(SimpleBuffer, self).__init__(max_size, num_agents, obs_dim, acs_dim)
         self.capacity = capacity
         self.buffer = collections.deque(maxlen=self.capacity)
-        # self.buffer = []
         self.batch_size = batch_size
 
     def __len__(self):
@@ -27,26 +26,12 @@ class SimpleBuffer():
 
 
     def clear_buffer(self):
-        # self.buffer = collections.deque(maxlen=self.capacity)
-        pass
+        self.buffer = collections.deque(maxlen=self.capacity)
 
     def sample(self):
         indices = np.random.choice(len(self.buffer), self.batch_size)
         # print("Indeces",indices)
         states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in indices])
-
-
-        # print(self.buffer)
-        # for d in self.buffer:
-        #     print(d)
-        # input()
-        # print(self.buffer)
-
-
-        # print("states in bufer:")
-        # for state in states:
-        #     print(state)
-        # input()
         
         return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32), \
                np.array(next_states), np.array(dones, dtype=np.bool)

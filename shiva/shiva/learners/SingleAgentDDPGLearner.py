@@ -18,6 +18,7 @@ class SingleAgentDDPGLearner(Learner):
             self.env.reset()
             self.totalReward = 0
             self.kicks = 0
+            self.kicked = 0
             self.turns = 0
             self.dashes = 0
             self.steps_per_episode = 0
@@ -33,6 +34,9 @@ class SingleAgentDDPGLearner(Learner):
 
         observation = self.env.get_observation()
 
+        if self.ep_count == 10:
+            self.manual_play = False 
+
         if self.manual_play:
             # This only works for users to play RoboCup!
             action = self.HPI.get_action(observation)
@@ -40,31 +44,23 @@ class SingleAgentDDPGLearner(Learner):
                 action = self.HPI.get_action(observation)
         else:
             action = self.alg.get_action(self.agent, observation, self.step_count)
-
-        # you were going to look at what the action looks like
         
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
-
-        # print("reward", reward)
 
         # TensorBoard Step Metrics
         shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
+        # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
-        # print(more_data['action'].reshape(1,-1))
-        # input()
+        # If ball was kicked
+        if 150 < reward < 250:
+            self.kicked += 1
+
 
         self.totalReward += more_data['raw_reward']
-        if self.step_count > self.alg.exploration_steps:
-            # print("Observation into buffer", observation)
-            # print("Next Observation into buffer", next_observation)
-            # print("")
-            # input()
-            pass
+
         # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
-        # self.buffer.append([observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)])
         t = [observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)]
         deep = copy.deepcopy(t)
         self.buffer.append(deep)
@@ -91,13 +87,13 @@ class SingleAgentDDPGLearner(Learner):
             shiva.add_summary_writer(self, self.agent, 'Kicks per Episode', self.kicks, self.ep_count)
             shiva.add_summary_writer(self, self.agent, 'Turns per Episode', self.turns, self.ep_count)
             shiva.add_summary_writer(self, self.agent, 'Dashes per Episode', self.dashes, self.ep_count) 
-            shiva.add_summary_writer(self, self.agent, 'Steps per Episode', self.steps_per_episode, self.ep_count) 
+            shiva.add_summary_writer(self, self.agent, 'Steps per Episode', self.steps_per_episode, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Ball Kicks per Episode', self.kicked, self.ep_count)
+
             self.kicks = 0
             self.turns = 0
             self.dashes = 0
-
-
-
+            self.kicked = 0
 
         # TensorBoard Episodic Metrics
         if done:
@@ -143,7 +139,7 @@ class SingleAgentDDPGLearner(Learner):
         # Create the agent
         if self.load_agents:
             self.agent = self.load_agent(self.load_agents)
-            # self.buffer = self._load_buffer(self.load_agents)
+            self.buffer = self._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
         # if buffer set to true in config

@@ -557,6 +557,10 @@ class rc_env:
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 
 
+    '''
+    Try to reward kinda like sequential kicks and give rewards based on the delta distance the ball moved.
+    '''
+
     def getReward(self, s, agentID, base, ep_num):
         '''
             Reward Engineering - Needs work!
@@ -570,7 +574,7 @@ class rc_env:
         '''
         reward=0.0
         team_reward = 0.0
-        goal_points = 20.0
+        goal_points = 300.0
         #---------------------------
         global possession_side
         if self.d:
@@ -655,6 +659,7 @@ class rc_env:
 
         if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
             reward -= 1
+            # pass
 
         
         if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:    
@@ -662,8 +667,8 @@ class rc_env:
             # if self.num_right > 0:
                 if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
                     print("First Kick")
-                    reward += 1.5
-                    team_reward += 1.5
+                    reward += 200.0
+                    team_reward += 200.0
                 # set initial ball position after kick
                     if self.left_base == base:
                         self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
@@ -763,10 +768,11 @@ class rc_env:
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
             delta = (distance_prev - distance_cur)*1.0
-            #if delta > 0:    
-            if True:
-                team_reward += delta * 10 
-                reward+= delta * 10
+            if delta > 0:    
+            # if True:
+                reward+= delta * 10.0
+            else:
+                reward += delta * 5
                 # print(distance_cur, delta)
                 pass
             
@@ -779,11 +785,13 @@ class rc_env:
         if ((self.left_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
-                delta = (2*self.num_left)*(r_prev - r)
-                if True:
-                #if delta > 0:
-                    reward += delta
-                    team_reward += delta
+                delta = (r_prev - r)
+                # if True:
+                if delta > 0:
+                    reward += delta * 30.0
+                    # team_reward += delta * 10.0
+                else:
+                    # reward += delta * 10
                     pass
 
         # base right kicks
@@ -811,6 +819,7 @@ class rc_env:
 
         # print(team_obs[agentID][self.ball_x])
         # print(team_obs[agentID][self.ball_y])
+        # print(reward)
         return reward
         # rew_percent = 1.0*max(0,(self.rew_anneal_ep - ep_num))/self.rew_anneal_ep
         # return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)

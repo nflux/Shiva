@@ -46,8 +46,6 @@ class SingleAgentMetaLearner(MetaLearner):
             self.learner.run()
 
             # save
-            print("It got save")
-            input()
             self.save()
 
         print('bye')

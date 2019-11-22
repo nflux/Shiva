@@ -58,7 +58,6 @@ class RoboCupDDPGEnvironment(Environment):
         actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
         
         # print('\nreward:', self.rews, '\n')
-        # print("Stepped Action:",actions_v)
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
