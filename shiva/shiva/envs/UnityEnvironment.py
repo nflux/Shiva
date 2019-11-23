@@ -8,7 +8,7 @@ class UnityEnvironment(Environment):
         super(UnityEnvironment,self).__init__(environment)
 
         self.env = self.env_name
-        # self.obs = self.env.reset()
+        # self.obs = self.reset()
         self.rews = 0
         self.world_status = False
         self.observation_space = self.set_observation_space()
@@ -29,44 +29,32 @@ class UnityEnvironment(Environment):
 
     def step(self,action):  
          
-        # Establish connection with client. 
-        clientSocket, address = self.s.accept()
-
-        # action = [0.310956 ,0.4244231]
-
         # split the action
         action1 = bytes(str(action[0]) + " ", "utf-8")
         action2 = bytes(str(action[1]) + " ", "utf-8")
 
-        time.sleep(10)
-
         # send back the actions
-        clientSocket.send(action1)
-        clientSocket.send(action2)
+        self.clientSocket.send(action1)
+        self.clientSocket.send(action2)
 
+        srd = self.clientSocket.recv(1024)
 
-        srd = clientSocket.recv(1024)
-
-        print(srd)
+        print("Unity Environment srd:", srd)
 
         # parse srd so we get the reward, done, and next state 
         srd = str(srd).split(' ')
+        
         # this will require more string manipulation
         agent_id = srd[:1]
         next_state = srd[1:8]
 
         # good to go
-        reward = float(srd[8:9])
+        # reward = float(srd[8:9])
         done = srd[9:]
-
 
         self.world_states = bool(done)
 
-
-
-        self.obs, self.rews, self.world_status = self.env.step(action)
         self.step_count +=1
-        self.load_viewer()
 
         if self.normalize:
             return self.obs, self.normalize_reward(), self.world_status, {'raw_reward': self.rews}
@@ -74,7 +62,8 @@ class UnityEnvironment(Environment):
             return self.obs, self.rews, self.world_status, {'raw_reward': self.rews}
 
     def reset(self):
-        self.obs = self.env.reset()
+        pass
+
 
     def set_observation_space(self):
 
@@ -103,9 +92,8 @@ class UnityEnvironment(Environment):
 
     def get_observation(self):
         # Establish connection with client. 
-        clientSocket, address = self.s.accept()
-        # print('Got connection from', address )
-        self.obs = clientSocket.recv(1024)
+        self.clientSocket, self.address = self.s.accept()
+        self.obs = self.clientSocket.recv(1024)
         return self.obs
 
     def get_action(self):
@@ -121,4 +109,4 @@ class UnityEnvironment(Environment):
     def close(self):
         # Close the connection with the client
         clientSocket.close() 
-        self.env.close()
+        # self.env.close()

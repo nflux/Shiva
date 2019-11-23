@@ -106,24 +106,3 @@ class DDPGLearner(Learner):
 
     def load_agent(self, path):
         return shiva._load_agents(path)[0]
-
-# class MetricsCalculator(object):
-#     '''
-#         Abstract class that it's solely purpose is to calculate metrics
-#         Has access to the Environment
-#     '''
-#     def __init__(self, env, alg):
-#         self.env = env
-#         self.alg = alg
-    
-#     def Reward(self):
-#         return self.env.get_reward()
-        
-#     def LossPerStep(self):
-#         return self.alg.get_loss()
-
-#     def LossActorPerStep(self):
-#         return self.alg.get_actor_loss()
-
-#     def TotalReward(self):
-#         return self.get_total_reward()
