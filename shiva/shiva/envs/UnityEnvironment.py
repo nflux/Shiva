@@ -1,5 +1,6 @@
 import gym
 from .Environment import Environment
+import numpy as np
 import socket
 import time 
 
@@ -42,22 +43,19 @@ class UnityEnvironment(Environment):
         print("Unity Environment srd:", srd)
 
         # parse srd so we get the reward, done, and next state 
-        srd = str(srd).split(' ')
-        
+        srd = str(srd).strip('\'').split(' ')
+        print(srd)
+        print(srd[9])
         # this will require more string manipulation
         agent_id = srd[:1]
-        next_state = srd[1:8]
 
-        # good to go
-        # reward = float(srd[8:9])
-        done = srd[9:]
-
-        self.world_states = bool(done)
-
+        self.next_observation = self.bytes2numpy(srd[1],srd[2], srd[3:6], srd[6:9])
+        self.rews = float(srd[9])
+        self.world_states = bool(srd[10])
         self.step_count +=1
 
         if self.normalize:
-            return self.obs, self.normalize_reward(), self.world_status, {'raw_reward': self.rews}
+            return self.next_observation, self.normalize_reward(), self.world_status, {'raw_reward': self.rews}
         else:
             return self.obs, self.rews, self.world_status, {'raw_reward': self.rews}
 
@@ -110,3 +108,11 @@ class UnityEnvironment(Environment):
         # Close the connection with the client
         clientSocket.close() 
         # self.env.close()
+
+    def bytes2numpy(self, a1,a2,p,v):
+        z = float(a1)
+        x = float(a2)
+        pos = np.array([float(s.strip('(').strip(')').strip(',')) for s in pos ])
+        vel = np.array([float(s.strip('(').strip(')').strip(',')) for s in vel ])
+
+        return [z, x, pos, vel]
