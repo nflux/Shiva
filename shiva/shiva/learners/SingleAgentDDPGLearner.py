@@ -60,7 +60,7 @@ class SingleAgentDDPGLearner(Learner):
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        
+
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
@@ -84,7 +84,7 @@ class SingleAgentDDPGLearner(Learner):
             self.agent = self.load_agent(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
-        
+
         # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment
@@ -107,10 +107,10 @@ class SingleAgentDDPGLearner(Learner):
 #     def __init__(self, env, alg):
 #         self.env = env
 #         self.alg = alg
-    
+
 #     def Reward(self):
 #         return self.env.get_reward()
-        
+
 #     def LossPerStep(self):
 #         return self.alg.get_loss()
 
