@@ -37,6 +37,8 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
     assert len(activ_function) == 1 or (len(activ_function) > 1 and len(activ_function) == len(layers)), '@layers and @activ_function must be same size if more than one @activ_function is given'
     
     net_layers = []
+
+    print("Networks Handler: ", input_dim, layers[0])
         
     net_layers.append(nn.Linear(input_dim, layers[0]))
     net_layers.append(activ_function[0]())

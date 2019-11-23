@@ -6,14 +6,16 @@ import algorithms
 import buffers
 from copy import deepcopy
 
-class SingleAgentDDPGLearner(Learner):
+class DDPGLearner(Learner):
     def __init__(self, learner_id, config):
-        super(SingleAgentDDPGLearner,self).__init__(learner_id, config)
+        super(DDPGLearner,self).__init__(learner_id, config)
 
+
+    # so now the done is coming from the environment
     def run(self):
         self.step_count = 0
         for self.ep_count in range(self.episodes):
-            self.env.reset()
+            # self.env.reset()
             self.totalReward = 0
             done = False
             while not done:
@@ -27,6 +29,10 @@ class SingleAgentDDPGLearner(Learner):
         observation = self.env.get_observation()
 
         action = self.alg.get_action(self.agent, observation, self.step_count)
+
+        print("Learner:", observation)
+
+        print("Learner:", action)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
@@ -61,7 +67,7 @@ class SingleAgentDDPGLearner(Learner):
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm(self.env.observation_space, self.env.action_space,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])

@@ -13,10 +13,14 @@ class ContinuousDDPGAlgorithm(Algorithm):
         '''
         super(ContinuousDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
 
+        self.obs_space = observation_space
+        self.acs_space = action_space
         self.scale = 0.9
         self.ou_noise = noise.OUNoise(action_space, self.scale)
         self.actor_loss = 0
         self.critic_loss = 0
+
+        print("ContDDPGAlg Init:", self.obs_space, self.acs_space)
 
 
     def update(self, agent, minibatch, step_count):
