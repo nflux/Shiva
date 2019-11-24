@@ -1,0 +1,50 @@
+Base path: '/opt/Unity/Editor/Data', plugins path '/opt/Unity/Editor/Data/PlaybackEngines'
+Cmd: initializeCompiler
+Cmd: compileComputeKernel
+  api=15 insize=12270 outsize=4685 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=12270 outsize=6471 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=12270 outsize=6400 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=12270 outsize=10870 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=64076 outsize=15783 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=4482 outsize=7259 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=23621 outsize=30340 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=27408 outsize=3259 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=27408 outsize=3335 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=27408 outsize=3814 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=27408 outsize=5035 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=6387 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=5949 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=5626 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=1937 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=1989 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=3142 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=3073 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=3233 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=5294 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=5224 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=6967 ok=1
+Cmd: compileSnippet
+  api=15 type=1 insize=1373 outsize=0 kw=UNITY_PASS_FORWARDBASE DIRECTIONAL SHADOWS_SCREEN LIGHTPROBE_SH _SPECULARHIGHLIGHTS_OFF _GLOSSYREFLECTIONS_OFF pd=UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_RGBM_ENCODING ok=1
+
+Quitting shader compiler process

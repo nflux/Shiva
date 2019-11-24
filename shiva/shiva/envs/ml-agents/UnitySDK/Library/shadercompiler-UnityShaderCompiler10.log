@@ -1,0 +1,54 @@
+Base path: '/opt/Unity/Editor/Data', plugins path '/opt/Unity/Editor/Data/PlaybackEngines'
+Cmd: initializeCompiler
+Cmd: compileComputeKernel
+  api=15 insize=12270 outsize=3383 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=64076 outsize=20179 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=4482 outsize=4148 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=23621 outsize=9103 ok=1
+Cmd: compileComputeKernel
+  error: 1 plat 18 at Tensor.cginc(128): use of potentially uninitialized variable (ReadonlyTensor::SafeGet)
+  error: 1 plat 18 at Tensor.cginc(295): use of potentially uninitialized variable (SharedTensor::SafeGet)
+  api=18 insize=23621 outsize=26308 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=27408 outsize=3403 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=27408 outsize=3202 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=27408 outsize=4281 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=27408 outsize=4738 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=5804 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=5544 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=7735 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=9798 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=2135 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=2110 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=3001 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=3086 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=3080 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=3524 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=2828 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=5489 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=5401 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=5257 ok=1
+Cmd: compileSnippet
+  api=15 type=1 insize=1596 outsize=0 kw=UNITY_PASS_FORWARDBASE DIRECTIONAL SHADOWS_SCREEN LIGHTPROBE_SH pd=UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_RGBM_ENCODING ok=1
+
+Quitting shader compiler process

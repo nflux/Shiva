@@ -1,0 +1,49 @@
+Base path: '/opt/Unity/Editor/Data', plugins path '/opt/Unity/Editor/Data/PlaybackEngines'
+Cmd: initializeCompiler
+Cmd: compileComputeKernel
+  api=15 insize=12270 outsize=4480 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=12270 outsize=5720 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=64076 outsize=11533 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=4482 outsize=4144 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=4482 outsize=7251 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=23621 outsize=16438 ok=1
+Cmd: compileComputeKernel
+  error: 1 plat 15 at Tensor.cginc(128): use of potentially uninitialized variable (ReadonlyTensor::SafeGet)
+  api=15 insize=27408 outsize=6826 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=27408 outsize=4280 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=7326 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=5581 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=5954 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=27408 outsize=5619 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=2133 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=2769 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=3075 ok=1
+Cmd: compileComputeKernel
+  api=15 insize=20360 outsize=3026 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=3233 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=3071 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=5662 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=5494 ok=1
+Cmd: compileComputeKernel
+  api=18 insize=20360 outsize=6260 ok=1
+Cmd: compileSnippet
+  api=15 type=1 insize=1596 outsize=0 kw=UNITY_PASS_FORWARDBASE DIRECTIONAL SHADOWS_SCREEN LIGHTPROBE_SH _ALPHATEST_ON _SPECULARHIGHLIGHTS_OFF _GLOSSYREFLECTIONS_OFF pd=UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_RGBM_ENCODING ok=1
+
+Quitting shader compiler process

@@ -1,6 +1,7 @@
 import gym
 from .Environment import Environment
 import numpy as np
+import torch
 import socket
 import time 
 
@@ -47,17 +48,19 @@ class UnityEnvironment(Environment):
         print(srd)
         print(srd[9])
         # this will require more string manipulation
+
+        # not doing much with this currently
         agent_id = srd[:1]
 
         self.next_observation = self.bytes2numpy(srd[1],srd[2], srd[3:6], srd[6:9])
-        self.rews = float(srd[9])
-        self.world_states = bool(srd[10])
+        self.rews = np.float32(srd[9])
+        self.world_states = np.bool(srd[10])
         self.step_count +=1
 
         if self.normalize:
             return self.next_observation, self.normalize_reward(), self.world_status, {'raw_reward': self.rews}
         else:
-            return self.obs, self.rews, self.world_status, {'raw_reward': self.rews}
+            return self.next_observation, self.rews, self.world_status, {'raw_reward': self.rews}
 
     def reset(self):
         pass
@@ -67,32 +70,18 @@ class UnityEnvironment(Environment):
 
         self.observation_space = 4
         return 4
-        # observation_space = 1
-        # if self.env.observation_space.shape != ():
-        #     for i in range(len(self.env.observation_space.shape)):
-        #         observation_space *= self.env.observation_space.shape[i]
-        # else:
-        #     observation_space = self.env.observation_space.n
-
-        # return observation_space
 
     def set_action_space(self):
         self.action_space = 2
         return 2
-        # self.action_space_continuous = 2
-        # if self.env.action_space.shape != ():
-        #     for i in range(len(self.env.action_space.shape)):
-        #         action_space *= self.env.action_space.shape[i]
-        #     self.action_space_continuous = action_space
-        # else:
-        #     action_space = self.env.action_space.n
-        #     self.action_space_discrete = action_space
 
     def get_observation(self):
         # Establish connection with client. 
         self.clientSocket, self.address = self.s.accept()
-        self.obs = self.clientSocket.recv(1024)
-        return self.obs
+        s = str(self.clientSocket.recv(1024)).strip('\'').split(' ')
+        return self.bytes2numpy(s[1],s[2], s[3:6], s[6:9])
+        
+        
 
     def get_action(self):
         return self.acs
@@ -107,12 +96,23 @@ class UnityEnvironment(Environment):
     def close(self):
         # Close the connection with the client
         clientSocket.close() 
-        # self.env.close()
 
-    def bytes2numpy(self, a1,a2,p,v):
-        z = float(a1)
-        x = float(a2)
-        pos = np.array([float(s.strip('(').strip(')').strip(',')) for s in pos ])
-        vel = np.array([float(s.strip('(').strip(')').strip(',')) for s in vel ])
+    def bytes2numpy(self, a1, a2, p, v):
+        z = np.float32(a1)
+        x = np.float32(a2)
 
-        return [z, x, pos, vel]
+        pos = np.array([np.float32( s.strip('(').strip(')').strip(',') ) for s in p ], dtype=np.float32)
+        vel = np.array([np.float32( s.strip('(').strip(')').strip(',') ) for s in v ], dtype=np.float32)
+
+        test = np.array([z, x, pos, vel])
+
+        print(type(z))
+        print(type(x))
+        print(pos)
+        print(type(pos))
+        print(vel)
+        print(type(vel))
+
+        torch.tensor(test)
+
+        return test
