@@ -129,14 +129,14 @@ class ContinuousDDPGAlgorithm(Algorithm):
             action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
             action += self.ou_noise.noise()
             action = np.clip(action, -1, 1)
-            print(type(action))
-            print("Algorithm Exploration Action:", action)
+            # print(type(action))
+            # print("Algorithm Exploration Action:", action)
             return action
 
         else:
 
             self.ou_noise.set_scale(0.1)
-            print("Algorithm Observation:", observation)
+            # print("Algorithm Observation:", observation)
             observation = torch.tensor(observation).to(self.device)
             action = agent.actor(observation.float()).cpu().data.numpy()
             # maybe should change the print to a log

@@ -30,9 +30,9 @@ class DDPGLearner(Learner):
 
         action = self.alg.get_action(self.agent, observation, self.step_count)
 
-        print("Learner:", observation)
+        # print("Learner:", observation)
 
-        print("Learner:", action)
+        # print("Learner:", action)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
@@ -48,13 +48,16 @@ class DDPGLearner(Learner):
 
         deep = deepcopy(t)
 
+        # print(self.ep_count)
+        # print(t)
+
         self.buffer.append(deep)
 
         if self.step_count > self.alg.exploration_steps:
             self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
         # TensorBoard Metrics
-        if done:
+        if done and self.step_count % 16 == 0:
             shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
 

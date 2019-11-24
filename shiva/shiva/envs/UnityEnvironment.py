@@ -39,22 +39,25 @@ class UnityEnvironment(Environment):
         self.clientSocket.send(action1)
         self.clientSocket.send(action2)
 
+        # time.sleep(0.01)
+
         srd = self.clientSocket.recv(1024)
 
-        print("Unity Environment srd:", srd)
+        # print("Unity Environment srd:", srd)
 
         # parse srd so we get the reward, done, and next state 
         srd = str(srd).strip('\'').split(' ')
-        print(srd)
-        print(srd[9])
+        # print(srd)
+        # print(srd[9])
         # this will require more string manipulation
 
         # not doing much with this currently
-        agent_id = srd[:1]
+        # agent_id = srd[:1]
 
         self.next_observation = self.bytes2numpy(srd[1],srd[2], srd[3:6], srd[6:9])
         self.rews = np.float32(srd[9])
-        self.world_states = np.bool(srd[10])
+        self.world_status = np.bool(srd[10])
+
         self.step_count +=1
 
         if self.normalize:
@@ -65,11 +68,10 @@ class UnityEnvironment(Environment):
     def reset(self):
         pass
 
-
     def set_observation_space(self):
 
         self.observation_space = 4
-        return 4
+        return 8
 
     def set_action_space(self):
         self.action_space = 2
@@ -80,8 +82,6 @@ class UnityEnvironment(Environment):
         self.clientSocket, self.address = self.s.accept()
         s = str(self.clientSocket.recv(1024)).strip('\'').split(' ')
         return self.bytes2numpy(s[1],s[2], s[3:6], s[6:9])
-        
-        
 
     def get_action(self):
         return self.acs
@@ -95,24 +95,13 @@ class UnityEnvironment(Environment):
 
     def close(self):
         # Close the connection with the client
-        clientSocket.close() 
+        self.clientSocket.close() 
 
     def bytes2numpy(self, a1, a2, p, v):
+        # Turn everything into np floats and strip off string characters
         z = np.float32(a1)
         x = np.float32(a2)
-
         pos = np.array([np.float32( s.strip('(').strip(')').strip(',') ) for s in p ], dtype=np.float32)
         vel = np.array([np.float32( s.strip('(').strip(')').strip(',') ) for s in v ], dtype=np.float32)
-
-        test = np.array([z, x, pos, vel])
-
-        print(type(z))
-        print(type(x))
-        print(pos)
-        print(type(pos))
-        print(vel)
-        print(type(vel))
-
-        torch.tensor(test)
-
+        test = np.array([z, x, *list(pos), *list(vel)])
         return test

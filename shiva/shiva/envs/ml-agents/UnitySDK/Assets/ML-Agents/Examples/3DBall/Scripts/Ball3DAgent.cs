@@ -70,22 +70,23 @@ public class Ball3DAgent : Agent
             try {
                 sender.Connect (remoteEP);
 
-                print ("Socket connected to {0}" + sender.RemoteEndPoint.ToString ());
+                // print ("Socket connected to {0}" + sender.RemoteEndPoint.ToString ());
 
                 // Encode the data string into a byte array.  
                 byte[] obs1 = Encoding.ASCII.GetBytes (id.ToString() + " " + state);
 
-                print("Made the obs");
+                // print("Made the obs");
                 // Send the data through the socket.  
                 sender.Send (obs1);       // here's the first obs i send     
-                print("Sent the obs");
+                // print("Sent the obs");
 
                 // Receive the response from the remote device.  
                 int bytesRec = sender.Receive(bytes);
                 actions = Encoding.ASCII.GetString(bytes, 0, bytesRec);
 
-                actionZ = actions[0]; //Double.Parse(actions[0]);
-                actionX = actions[1]; //Double.Parse(actions[1]);
+                actionZ = actions[0]; // Here we overwrite the Tensorflow Brain actions
+                actionX = actions[1]; 
+
 
                 // so it may not always change, it probably learns not to let the velocity get negative, downwards? like falling velocities
                 // it may learn to try to avoid those and the paths that lead up to that 
@@ -102,8 +103,6 @@ public class Ball3DAgent : Agent
                     gameObject.transform.Rotate(new Vector3(1, 0, 0), actionX);
                 }
 
-                // System.Threading.Thread.Sleep(200);
-
                 float z2 = gameObject.transform.rotation.z;
                 float x2 = gameObject.transform.rotation.x;
                 Vector3 pos2 = (ball.transform.position - gameObject.transform.position);
@@ -119,11 +118,13 @@ public class Ball3DAgent : Agent
                     reward = -1f;
                     Done();
                     SetReward(-1f);
+                    AgentReset();
 
                 } else {
                     done = false;
                     reward = 0.1f;
                     SetReward(0.1f);
+                    
                 }
 
                 byte[] srd = Encoding.ASCII.GetBytes(
@@ -133,7 +134,7 @@ public class Ball3DAgent : Agent
                     done.ToString()
                 );
 
-                // looks like I only need to send back done, reward, and next state
+                // send back done, reward, and next state
                 sender.Send(srd);
                 sender.Close();
 
