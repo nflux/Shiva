@@ -44,6 +44,9 @@ public class Ball3DAgent : Agent
         var actionZ = 2f * Mathf.Clamp(vectorAction[0], -1f, 1f);
         var actionX = 2f * Mathf.Clamp(vectorAction[1], -1f, 1f); // mlagents brain action
 
+        print("BrainZ: " + actionZ);
+        print("BrainX: " + actionZ);
+
         string state = z1.ToString() + " " + x1.ToString() + " " +  pos1.ToString() + " " + vel1.ToString();   // here i grab the state from private variables
         string actions = "";
         string next_state = "";
@@ -84,8 +87,8 @@ public class Ball3DAgent : Agent
                 int bytesRec = sender.Receive(bytes);
                 actions = Encoding.ASCII.GetString(bytes, 0, bytesRec);
 
-                actionZ = actions[0]; // Here we overwrite the Tensorflow Brain actions
-                actionX = actions[1]; 
+                actionZ = 0.0f;//actions[0]; // Here we overwrite the Tensorflow Brain actions
+                actionX = 0.0f;//actions[1]; 
 
 
                 // so it may not always change, it probably learns not to let the velocity get negative, downwards? like falling velocities
