@@ -124,7 +124,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         #     for target_param,param in zip(agent.target_actor.parameters(), agent.actor.parameters()):
         #         target_param.data.copy_(param.data)
 
-        # return agent
+        return agent
 
     # Gets actions with a linearly decreasing e greedy strat
     def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor

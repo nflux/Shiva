@@ -40,8 +40,7 @@ class SingleAgentDDPGLearner(Learner):
         self.buffer.append([observation, action, reward, next_observation, int(done)])
 
         if self.step_count > self.alg.exploration_steps:
-            # self.agent = 
-            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
         # TensorBoard Metrics
         if done:
