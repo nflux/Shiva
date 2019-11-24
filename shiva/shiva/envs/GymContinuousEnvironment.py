@@ -44,10 +44,13 @@ class GymContinuousEnvironment(Environment):
         if self.env.action_space.shape != ():
             for i in range(len(self.env.action_space.shape)):
                 action_space *= self.env.action_space.shape[i]
-            self.action_space_continuous = action_space
+            # self.action_space_continuous = action_space
+            # self.action_space = action_space
         else:
             action_space = self.env.action_space.n
-            self.action_space_discrete = action_space
+            # self.action_space_discrete = action_space
+            # self.action_space = action_space
+        return action_space
 
     def get_observation(self):
         return self.obs
