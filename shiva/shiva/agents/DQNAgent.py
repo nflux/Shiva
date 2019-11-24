@@ -12,7 +12,7 @@ class DQNAgent(Agent):
         network_output = 1
         self.learning_rate = agent_config['learning_rate']
 
-        print(net_config)
+        print(self.learning_rate)
 
         self.policy = nh.DynamicLinearSequential(
                                         network_input,
