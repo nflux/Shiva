@@ -27,12 +27,12 @@ class DDPGLearner(Learner):
     def step(self):
 
         observation = self.env.get_observation()
-
+        
         action = self.alg.get_action(self.agent, observation, self.step_count)
 
-        # print("Learner:", observation)
+        print("Learner:", observation)
 
-        # print("Learner:", action)
+        print("Learner:", action)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
@@ -49,7 +49,7 @@ class DDPGLearner(Learner):
         deep = deepcopy(t)
 
         # print(self.ep_count)
-        # print(t)
+        print(t)
 
         self.buffer.append(deep)
 

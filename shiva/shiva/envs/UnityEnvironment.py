@@ -27,17 +27,17 @@ class UnityEnvironment(Environment):
         print("socket binded to {}".format(self.port))
         # put the socket into listening mode 
         self.s.listen(10)      
-        print("socket is listening")   
+        print("socket is listening")
 
     def step(self,action):  
          
         # split the action
-        action1 = bytes(str(action[0]) + " ", "utf-8")
-        action2 = bytes(str(action[1]) + " ", "utf-8")
+        action1 = bytes(str(action) + ' ', "utf-8")
+        # action2 = bytes(str() + " ", "utf-8")
 
         # send back the actions
         self.clientSocket.send(action1)
-        self.clientSocket.send(action2)
+        # self.clientSocket.send(action2)
 
         # time.sleep(0.01)
 

@@ -44,8 +44,8 @@ public class Ball3DAgent : Agent
         var actionZ = 2f * Mathf.Clamp(vectorAction[0], -1f, 1f);
         var actionX = 2f * Mathf.Clamp(vectorAction[1], -1f, 1f); // mlagents brain action
 
-        print("BrainZ: " + actionZ);
-        print("BrainX: " + actionZ);
+        //print("BrainZ: " + actionZ);
+        //print("BrainX: " + actionZ);
 
         string state = z1.ToString() + " " + x1.ToString() + " " +  pos1.ToString() + " " + vel1.ToString();   // here i grab the state from private variables
         string actions = "";
@@ -68,7 +68,7 @@ public class Ball3DAgent : Agent
             // Create a TCP/IP  socket.  
             Socket sender = new Socket (ipAddress.AddressFamily,
                 SocketType.Stream, ProtocolType.Tcp);
-
+            print(id);
             // Connect the socket to the remote endpoint. Catch any errors.  
             try {
                 sender.Connect (remoteEP);
@@ -80,15 +80,16 @@ public class Ball3DAgent : Agent
 
                 // print("Made the obs");
                 // Send the data through the socket.  
-                sender.Send (obs1);       // here's the first obs i send     
+                sender.Send(obs1);       // here's the first obs i send     
                 // print("Sent the obs");
 
                 // Receive the response from the remote device.  
                 int bytesRec = sender.Receive(bytes);
-                actions = Encoding.ASCII.GetString(bytes, 0, bytesRec);
+                actions = Encoding.ASCII.GetString(bytes, 0, bytesRec).Replace("[", "").Replace("]", "");
+                float[] actions_arr = StringToArray(actions, " ");
 
-                actionZ = 0.0f;//actions[0]; // Here we overwrite the Tensorflow Brain actions
-                actionX = 0.0f;//actions[1]; 
+                actionZ = actions_arr[0]; // Here we overwrite the Tensorflow Brain actions
+                actionX = actions_arr[1]; 
 
 
                 // so it may not always change, it probably learns not to let the velocity get negative, downwards? like falling velocities
@@ -153,7 +154,22 @@ public class Ball3DAgent : Agent
             print (e.ToString ());
         }
 
+
     }
+	public float[] StringToArray(string input, string separator)
+	{
+	    string[] stringList = input.Split(separator.ToCharArray(), 
+		                              StringSplitOptions.RemoveEmptyEntries);
+	    float[] list = new float[stringList.Length];
+
+	    for (int i = 0; i < stringList.Length; i++)
+	    {
+		// list[i] = Convert.ChangeType(stringList[i], typeof(float));
+        list[i] = (float) Convert.ToDouble(stringList[i]);
+	    }
+
+	    return list;
+	}
 
     public override void AgentReset()
     {
