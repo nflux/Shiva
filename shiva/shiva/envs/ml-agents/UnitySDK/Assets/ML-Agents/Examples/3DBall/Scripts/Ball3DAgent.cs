@@ -17,6 +17,11 @@ public class Ball3DAgent : Agent
     private Vector3 pos1;
     private Vector3 vel1;
 
+
+    private int step_count;
+    private float totalReward;
+    private float average_reward_per_episode;
+
     public override void InitializeAgent()
     {
         m_BallRb = ball.GetComponent<Rigidbody>();
@@ -68,7 +73,7 @@ public class Ball3DAgent : Agent
             // Create a TCP/IP  socket.  
             Socket sender = new Socket (ipAddress.AddressFamily,
                 SocketType.Stream, ProtocolType.Tcp);
-            print(id);
+            // print(id);
             // Connect the socket to the remote endpoint. Catch any errors.  
             try {
                 sender.Connect (remoteEP);
@@ -90,7 +95,8 @@ public class Ball3DAgent : Agent
 
                 actionZ = actions_arr[0]; // Here we overwrite the Tensorflow Brain actions
                 actionX = actions_arr[1]; 
-
+                // print(actionZ);
+                // print(actionX);
 
                 // so it may not always change, it probably learns not to let the velocity get negative, downwards? like falling velocities
                 // it may learn to try to avoid those and the paths that lead up to that 
@@ -120,6 +126,10 @@ public class Ball3DAgent : Agent
 
                     done = true;
                     reward = -1f;
+                    totalReward += reward;
+                    print(totalReward);
+                    average_reward_per_episode = totalReward / step_count;
+                    // print(step_count);
                     Done();
                     SetReward(-1f);
                     AgentReset();
@@ -127,15 +137,18 @@ public class Ball3DAgent : Agent
                 } else {
                     done = false;
                     reward = 0.1f;
+                    step_count++;
+                    // print(step_count);
+                    totalReward += reward;
                     SetReward(0.1f);
-                    
                 }
 
                 byte[] srd = Encoding.ASCII.GetBytes(
                     id.ToString() + " " +         // the id doesn't seem to matter at the moment
                     next_state + " " +
                     reward.ToString() + " " +
-                    done.ToString()
+                    done.ToString() + " " +
+                    average_reward_per_episode.ToString()
                 );
 
                 // send back done, reward, and next state
@@ -180,6 +193,10 @@ public class Ball3DAgent : Agent
         ball.transform.position = new Vector3(UnityEngine.Random.Range(-1.5f, 1.5f), 4f, UnityEngine.Random.Range(-1.5f, 1.5f))
             + gameObject.transform.position;
         //Reset the parameters when the Agent is reset.
+
+        step_count = 0;
+        totalReward = 0;
+
         SetResetParameters();
     }
 

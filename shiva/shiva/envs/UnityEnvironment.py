@@ -39,7 +39,7 @@ class UnityEnvironment(Environment):
         self.clientSocket.send(action1)
         # self.clientSocket.send(action2)
 
-        # time.sleep(0.01)
+        # time.sleep(0.5)
 
         srd = self.clientSocket.recv(1024)
 
@@ -57,6 +57,7 @@ class UnityEnvironment(Environment):
         self.next_observation = self.bytes2numpy(srd[1],srd[2], srd[3:6], srd[6:9])
         self.rews = np.float32(srd[9])
         self.world_status = np.bool(srd[10])
+        self.aver_rew = np.float32(srd[11])
 
         self.step_count +=1
 
@@ -95,7 +96,14 @@ class UnityEnvironment(Environment):
 
     def close(self):
         # Close the connection with the client
-        self.clientSocket.close() 
+        self.s.shutdown(socket.SHUT_RDWR)
+        self.s.close()
+        try:
+            delattr(self, 'clientSocket')
+            delattr(self, 'address')
+            delattr(self, 's')
+        except AttributeError:
+            pass
 
     def bytes2numpy(self, a1, a2, p, v):
         # Turn everything into np floats and strip off string characters
@@ -103,5 +111,4 @@ class UnityEnvironment(Environment):
         x = np.float32(a2)
         pos = np.array([np.float32( s.strip('(').strip(')').strip(',') ) for s in p ], dtype=np.float32)
         vel = np.array([np.float32( s.strip('(').strip(')').strip(',') ) for s in v ], dtype=np.float32)
-        test = np.array([z, x, *list(pos), *list(vel)])
-        return test
+        return np.array([z, x, *list(pos), *list(vel)])

@@ -31,6 +31,11 @@ class ContinuousDDPGAlgorithm(Algorithm):
         
         # Batch of Experiences
         states, actions, rewards, next_states, dones = minibatch
+        # print('from buffer state:', states[0])
+        # print('from buffer actions:', actions[0])
+        # print('from buffer rewards:', rewards[0])
+        # print('from buffer next_states:', next_states[0])
+        # print('from buffer dones:', dones[0])
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
@@ -119,18 +124,18 @@ class ContinuousDDPGAlgorithm(Algorithm):
         #     for target_param,param in zip(agent.target_actor.parameters(), agent.actor.parameters()):
         #         target_param.data.copy_(param.data)
 
-        return agent
+        # return agent
 
     # Gets actions with a linearly decreasing e greedy strat
     def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
 
         if step_count < self.exploration_steps:
 
-            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+            action = np.array([np.random.uniform(-1,1) for _ in range(self.acs_space)])
             action += self.ou_noise.noise()
             action = np.clip(action, -1, 1)
             # print(type(action))
-            # print("Algorithm Exploration Action:", action)
+            print("random action:", action)
             return action
 
         else:
@@ -145,7 +150,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
                 pass
             action += self.ou_noise.noise()
             action = np.clip(action, -1,1)
-
+            print("from network action", action)
             return action
 
     def create_agent(self, id): 

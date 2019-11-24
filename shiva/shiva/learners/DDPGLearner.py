@@ -9,7 +9,7 @@ from copy import deepcopy
 class DDPGLearner(Learner):
     def __init__(self, learner_id, config):
         super(DDPGLearner,self).__init__(learner_id, config)
-
+        self.done_counter = 0
 
     # so now the done is coming from the environment
     def run(self):
@@ -30,17 +30,19 @@ class DDPGLearner(Learner):
         
         action = self.alg.get_action(self.agent, observation, self.step_count)
 
-        print("Learner:", observation)
+        # print("Learner:", observation)
 
-        print("Learner:", action)
+        # print("Learner:", action)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
         # TensorBoard metrics
         shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
+        # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
+        # shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Action in Z per Step', action[0], self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Action in X per Step', action[1], self.step_count)
 
         self.totalReward += reward  # more_data['raw_reward']
 
@@ -49,16 +51,21 @@ class DDPGLearner(Learner):
         deep = deepcopy(t)
 
         # print(self.ep_count)
-        print(t)
+        # print('to buffer:', t)
 
         self.buffer.append(deep)
 
-        if self.step_count > self.alg.exploration_steps:
-            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+        if self.step_count > self.alg.exploration_steps and self.step_count % 16 == 0:
+            # self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
         # TensorBoard Metrics
-        if done and self.step_count % 16 == 0:
-            shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
+        if done:
+            shiva.add_summary_writer(self, self.agent, 'Ave Reward per Episode', self.env.aver_rew, self.done_counter)
+            # self.alg.ou_noise.reset()
+            self.done_counter += 1
+            
+        if self.step_count % 100 == 0:
             self.alg.ou_noise.reset()
 
         return done
