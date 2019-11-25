@@ -30,7 +30,7 @@ class SingleAgentMetaLearner(MetaLearner):
 
 
         elif self.start_mode == self.PROD_MODE:
-            
+
             # agents, environments, algorithm, data, configs for a single agent learner
             #agents, environments, algorithm, data, config
             self.learner = self.create_learner()
@@ -40,6 +40,7 @@ class SingleAgentMetaLearner(MetaLearner):
 
             # initialize the learner instances
             self.learner.launch()
+            
             shiva.update_agents_profile(self.learner)
 
             # Runs the learner for a number of episodes given by the config
