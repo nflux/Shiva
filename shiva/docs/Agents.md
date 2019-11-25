@@ -1,4 +1,4 @@
-#   Agents Folder
+# Agents
 ## Config Requirements
 Although Agents do vary, your [Agent] section in your config file will look quite similar. Suppose that I wanted to create a DQN agent. I would set up the config the following way:
 ```
@@ -9,17 +9,27 @@ optimizer_function='Adam'
 Below you can see what config requirements different Agents have.
 
 ## Contents
-*   Agent.py
-*   DDPGAgent.py
-*   DQNAgent.py
-*   ImitationAgent.py
-*   init_agent.py
-
+*   Agent
+    * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/Agent.py)
+*   DDPGAgent
+    * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/DDPGAgent.py)
+*   DQNAgent
+    * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/DQNAgent.py)
+*   ImitationAgent
+    * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ImitationAgent.py)
+*   PPOAgent
+    * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/PPOAgent.py)
+*   ParametrizedDDPGAgent
+    * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ParametrizedDDPGAgent.py)
+*   init_agent
+    * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/__init__.py)
 ##  Agent.py
 ___
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/Agent.py)
 Abstract Class
 ##  DDPGAgent.py
 ___
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/DDPGAgent.py)
 * An agent that can work with Basic Continous DDPG.
 ### Config Set Up     
 ```
@@ -29,6 +39,7 @@ optimizer_function='Adam'
 ```
 ##  DQNAgent.py
 ___
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/DQNAgent.py)
 * An agent for basic DQN.
 ### Config Set Up     
 ```
@@ -38,6 +49,7 @@ optimizer_function='Adam'
 ```
 ##  ImitationAgent.py
 ___
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/ImitationAgent.py)
 * An agent for imitation learning.
 ### Config Set Up     
 ```
@@ -48,12 +60,14 @@ learning_rate=0.03
 action_policy='argmax'
 ```
 ##  init_agent.py
-### Config Set Up     
 ___
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/init_agent.py)
+
 * You have to add your modules here so that Shiva will see them.
 
 ##  ParameterizedDDPGAgent.py 
 ___
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/ParameterizedDDPGAgent.py)
 * An agent that can work Parameterized DDPG.
 ### Config Set Up     
 ```
@@ -62,6 +76,8 @@ learning_rate=0.001
 optimizer_function='Adam'
 ```
 ##  PPOAgent.py
+___
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/PPOAgent.py)
 ### Config Set Up     
 ```
 [Agent]
@@ -81,6 +97,7 @@ optimizer_function='Adam'
 ```
 ##  ImitationAgent.py
 ___
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/ImitationAgent.py)
 *   Creates an imitation agent
 *   init(self, id, obs_dim, acs_discrete, acs_continuous, agent_config,net_config)
     -   ***Description***
