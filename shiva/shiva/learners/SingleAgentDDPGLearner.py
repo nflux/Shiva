@@ -39,7 +39,7 @@ class SingleAgentDDPGLearner(Learner):
             action = self.alg.get_action(self.agent, observation, self.step_count)
         
         next_observation, reward, done, more_data = self.env.step(action, discrete_select='argmax')
-
+        
         # TensorBoard Step Metrics
         shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
@@ -51,8 +51,7 @@ class SingleAgentDDPGLearner(Learner):
         self.buffer.append([observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)])
         
         if self.step_count > self.alg.exploration_steps:
-            # self.agent = 
-            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
         # Robocup actions
         if self.env.env_name == 'RoboCup':
@@ -112,6 +111,7 @@ class SingleAgentDDPGLearner(Learner):
 
         if self.manual_play:
             self.HPI = envs.HumanPlayerInterface()
+        
 
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()

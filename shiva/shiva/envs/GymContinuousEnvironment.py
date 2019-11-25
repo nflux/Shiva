@@ -15,16 +15,16 @@ class GymContinuousEnvironment(Environment):
         self.action_space = self.set_action_space()
         self.step_count = 0
 
-    def step(self,action):
+    def step(self, action, **kwargs):
             self.acs = action
             self.obs, self.rews, self.world_status, info = self.env.step(action)
             self.step_count +=1
             self.load_viewer()
 
             if self.normalize:
-                return self.obs, self.normalize_reward(), self.world_status, {'raw_reward': self.rews}
+                return self.obs, self.normalize_reward(), self.world_status, {'raw_reward': self.rews, 'action': action}
             else:
-                return self.obs, self.rews, self.world_status, {'raw_reward': self.rews}
+                return self.obs, self.rews, self.world_status, {'raw_reward': self.rews, 'action': action}
 
     def reset(self):
         self.obs = self.env.reset()
