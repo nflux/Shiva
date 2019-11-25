@@ -3,7 +3,7 @@
 ## Overview
 
 The ShivaAdmin class handles the file management and administrative tasks for the project such as
-* Track and create file directories for the [MetaLearner](https://github.com/nflux/Control-Tasks/tree/merging/shiva/shiva/metalearners), [Learner](https://github.com/nflux/Control-Tasks/tree/merging/shiva/shiva/learners), [Agent](https://github.com/nflux/Control-Tasks/tree/merging/shiva/shiva/agents)
+* Track and create file directories for the [MetaLearner](https://github.com/nflux/Control-Tasks/tree/dev/shiva/shiva/metalearners), [Learner](https://github.com/nflux/Control-Tasks/tree/dev/shiva/shiva/learners), [Agent](https://github.com/nflux/Control-Tasks/tree/dev/shiva/shiva/agents)
 * Handle the saving and loading of
     * config files
     * class pickles
