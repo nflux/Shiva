@@ -22,14 +22,14 @@ Below you can see what config requirements different Agents have.
 *   ParametrizedDDPGAgent
     * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ParametrizedDDPGAgent.py)
 *   init_agent
-    * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/__init__.py)
+    * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/__init__.py)
 ##  Agent.py
 ___
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/Agent.py)
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/Agent.py)
 Abstract Class
 ##  DDPGAgent.py
 ___
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/DDPGAgent.py)
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/DDPGAgent.py)
 * An agent that can work with Basic Continous DDPG.
 ### Config Set Up     
 ```
@@ -39,7 +39,7 @@ optimizer_function='Adam'
 ```
 ##  DQNAgent.py
 ___
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/DQNAgent.py)
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/DQNAgent.py)
 * An agent for basic DQN.
 ### Config Set Up     
 ```
@@ -49,7 +49,7 @@ optimizer_function='Adam'
 ```
 ##  ImitationAgent.py
 ___
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/ImitationAgent.py)
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ImitationAgent.py)
 * An agent for imitation learning.
 ### Config Set Up     
 ```
@@ -61,13 +61,13 @@ action_policy='argmax'
 ```
 ##  init_agent.py
 ___
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/init_agent.py)
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/init_agent.py)
 
 * You have to add your modules here so that Shiva will see them.
 
 ##  ParameterizedDDPGAgent.py 
 ___
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/ParameterizedDDPGAgent.py)
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ParameterizedDDPGAgent.py)
 * An agent that can work Parameterized DDPG.
 ### Config Set Up     
 ```
@@ -77,7 +77,7 @@ optimizer_function='Adam'
 ```
 ##  PPOAgent.py
 ___
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/PPOAgent.py)
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/PPOAgent.py)
 ### Config Set Up     
 ```
 [Agent]
@@ -97,7 +97,7 @@ optimizer_function='Adam'
 ```
 ##  ImitationAgent.py
 ___
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/buffers/ImitationAgent.py)
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ImitationAgent.py)
 *   Creates an imitation agent
 *   init(self, id, obs_dim, acs_discrete, acs_continuous, agent_config,net_config)
     -   ***Description***

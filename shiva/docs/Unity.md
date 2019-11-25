@@ -19,6 +19,6 @@ See below for instructions on how to connect Shiva to your Unity Environment.
 Given that your config is set up appropriately ([how to set up a config file](url)) all you need to do to connect Shiva to Unity is to add our C-sharp client code in your agents file. We set up private variables store the observations when CollectObservations() is called and we added the socket client code in the ActorAction(). With that simple interception we are able to get a handle on the environment.
 
 Here's how we did it in 3DBallAgent.cs for the 3DBall environment.
-[Agent Code](url)
+[Agent Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/ml-agents/UnitySDK/Assets/ML-Agents/Examples/3DBall/Scripts/Ball3DAgent.cs)
  
 
