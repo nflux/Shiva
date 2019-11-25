@@ -23,11 +23,12 @@ Below you can see what config requirements different Agents have.
     * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ParametrizedDDPGAgent.py)
 *   init_agent
     * [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/__init__.py)
-##  Agent.py
+
+##  Agent
 ___
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/Agent.py)
 Abstract Class
-##  DDPGAgent.py
+##  DDPGAgent
 ___
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/DDPGAgent.py)
 * An agent that can work with Basic Continous DDPG.
@@ -37,7 +38,7 @@ ___
 learning_rate=0.001
 optimizer_function='Adam'
 ```
-##  DQNAgent.py
+##  DQNAgent
 ___
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/DQNAgent.py)
 * An agent for basic DQN.
@@ -47,7 +48,7 @@ ___
 learning_rate=0.001
 optimizer_function='Adam'
 ```
-##  ImitationAgent.py
+##  ImitationAgent
 ___
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ImitationAgent.py)
 * An agent for imitation learning.
@@ -59,13 +60,13 @@ optimizer_function='Adam'
 learning_rate=0.03
 action_policy='argmax'
 ```
-##  init_agent.py
+##  init_agent
 ___
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/init_agent.py)
 
 * You have to add your modules here so that Shiva will see them.
 
-##  ParameterizedDDPGAgent.py 
+##  ParameterizedDDPGAgent
 ___
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ParameterizedDDPGAgent.py)
 * An agent that can work Parameterized DDPG.
@@ -75,7 +76,7 @@ ___
 learning_rate=0.001
 optimizer_function='Adam'
 ```
-##  PPOAgent.py
+##  PPOAgent
 ___
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/PPOAgent.py)
 ### Config Set Up     
@@ -95,7 +96,7 @@ ___
 learning_rate=0.001
 optimizer_function='Adam'
 ```
-##  ImitationAgent.py
+##  ImitationAgent
 ___
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/agents/ImitationAgent.py)
 *   Creates an imitation agent
