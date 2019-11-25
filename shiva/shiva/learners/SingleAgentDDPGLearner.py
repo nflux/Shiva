@@ -4,6 +4,8 @@ import helpers.misc as misc
 import envs
 import algorithms
 import buffers
+import numpy as np
+np.random.seed(5)
 
 class SingleAgentDDPGLearner(Learner):
     def __init__(self, learner_id, config):
@@ -14,6 +16,9 @@ class SingleAgentDDPGLearner(Learner):
         for self.ep_count in range(self.episodes):
             self.env.reset()
             self.totalReward = 0
+            self.kicks = 0
+            self.turns = 0
+            self.dashes = 0
             done = False
             while not done:
                 done = self.step()
@@ -25,31 +30,59 @@ class SingleAgentDDPGLearner(Learner):
 
         observation = self.env.get_observation()
 
-        # print("Observation: ", observation)
-        # input()
+        if self.manual_play:
+            # This only works for users to play RoboCup!
+            action = self.HPI.get_action(observation)
+            while action is None:
+                action = self.HPI.get_action(observation)
+        else:
+            action = self.alg.get_action(self.agent, observation, self.step_count)
+        
+        next_observation, reward, done, more_data = self.env.step(action, discrete_select='argmax')
 
-        action = self.alg.get_action(self.agent, observation, self.step_count)
-
-        next_observation, reward, done, more_data = self.env.step(action)
-
-        # TensorBoard metrics
+        # TensorBoard Step Metrics
         shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
         self.totalReward += more_data['raw_reward']
-        # print('to buffer:', observation.shape, action.shape, reward.shape, next_observation.shape, [done])
-        self.buffer.append([observation, action.reshape(1,-1), reward, next_observation, int(done)])
-
+        print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
+        self.buffer.append([observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)])
+        
         if self.step_count > self.alg.exploration_steps:
             # self.agent = 
             self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
-        # TensorBoard Metrics
+        # Robocup actions
+        if self.env.env_name == 'RoboCup':
+            action = np.argmax(action[0:3])
+            if action == 0:
+                self.dashes += 1
+            elif action == 1:
+                self.turns += 1
+            elif action == 2:
+                self.kicks += 1
+            shiva.add_summary_writer(self, self.agent, 'Action per Step', action, self.step_count)
+
+            
+
+        # Robocup Metrics
+        if done and self.env.env_name == 'RoboCup':
+            shiva.add_summary_writer(self, self.agent, 'Kicks per Episode', self.kicks, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Turns per Episode', self.turns, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Dashes per Episode', self.dashes, self.ep_count) 
+            self.kicks = 0
+            self.turns = 0
+            self.dashes = 0
+
+        # TensorBoard Episodic Metrics
         if done:
             shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
+
+            if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
+                shiva.update_agents_profile(self)
 
         return done
 
@@ -76,7 +109,10 @@ class SingleAgentDDPGLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
-        
+
+        if self.manual_play:
+            self.HPI = envs.HumanPlayerInterface()
+
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
 
