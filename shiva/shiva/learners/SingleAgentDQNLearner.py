@@ -4,6 +4,8 @@ import helpers.misc as misc
 import envs
 import algorithms
 import buffers
+import numpy as np
+import random
 
 class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
@@ -59,14 +61,18 @@ class SingleAgentDQNLearner(Learner):
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        try:
+            self.configs['Agent']['learning_rate'] = random.uniform(self.learning_rate[0],self.learning_rate[1])
+            return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        except:
+            return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
-        return self.agents
+        return self.agent
 
     def get_algorithm(self):
         return self.alg

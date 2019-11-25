@@ -1,8 +1,7 @@
 import helpers.networks_handler as nh
 import torch
-import torch.nn as nn
 
-class DDPGCritic(nn.Module):
+class DDPGCritic(torch.nn.Module):
     def __init__(self, obs_dim, action_dim, head_config, tail_config):
         super(DDPGCritic, self).__init__()
         self.net_head = nh.DynamicLinearSequential(obs_dim, 

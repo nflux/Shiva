@@ -18,12 +18,12 @@ class SimpleBuffer():
         self.buffer = collections.deque(maxlen=self.capacity)
         self.batch_size = batch_size
 
-
     def __len__(self):
         return len(self.buffer)
 
     def append(self, experience):
         self.buffer.append(experience)
+
 
     def clear_buffer(self):
         self.buffer = collections.deque(maxlen=self.capacity)

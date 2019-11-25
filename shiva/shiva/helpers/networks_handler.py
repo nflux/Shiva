@@ -2,15 +2,6 @@ import helpers.misc as misc
 import torch
 import torch.nn as nn
 
-# def parse_layers(layers_str):
-#     '''
-#         Input
-#             @layers_str     coming from the config as a string g.e. "20,10,20"
-#         Return
-#             List of int elements g.e. [20,10,20]
-#     '''
-#     return list(map(int, layers_str))
-
 def parse_functions(package, funcs_str):
     '''
         Input
@@ -37,6 +28,8 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
     assert len(activ_function) == 1 or (len(activ_function) > 1 and len(activ_function) == len(layers)), '@layers and @activ_function must be same size if more than one @activ_function is given'
 
     net_layers = []
+
+    print("Networks Handler: ", input_dim, layers[0])
 
     net_layers.append(nn.Linear(input_dim, layers[0]))
     net_layers.append(activ_function[0]())

@@ -22,12 +22,11 @@ class SingleAgentPPOLearner(Learner):
                 while not done:
                     done = self.step()
                     self.step_count +=1
-                print(self.totalReward)
             for epoch in range(self.configs['Algorithm']['update_epochs']):
                 self.alg.update(self.agent,self.buffer.full_buffer(),self.step_count)
             self.buffer.clear_buffer()
             self.agent.target_actor.load_state_dict(self.agent.actor.state_dict())
-            #self.agent.target_critic.load_state_dict(self.agent.critic.state_dict())
+
 
         self.env.close()
 
@@ -44,8 +43,7 @@ class SingleAgentPPOLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action)
 
         # TensorBoard metrics
-        shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.loss, self.step_count)
-        #shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.loss, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']

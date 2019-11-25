@@ -13,6 +13,7 @@ class DDPGAgent(Agent):
 
         # print("Look here: ", networks)
 
+        print("DDPG Agent:", obs_dim, action_dim)
 
 
         self.actor = actor.DDPGActor(obs_dim,

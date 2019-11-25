@@ -12,13 +12,15 @@
 ##  DQNAgent.py
 ##  ImitationAgent.py
 ##  init_agent.py
+##  ParameterizedDDPGAgent.py 
+##  PPOAgent.py
 
 
 ##  ImitationAgent.py
 *   Creates an imitation agent
 *   init(self, id, obs_dim, acs_discrete, acs_continuous, agent_config,net_config)
     -   ***Description***
-        +   Initalizes the Imitationg Agent. 
+        +   Initalizes the Imitation Agent. 
     -   |   Variables   |   Description   |
         |       ---     |       ---       |
         |   **self**    |     The Instance of ImitationAgent.   |

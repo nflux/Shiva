@@ -89,36 +89,10 @@ class PPOAlgorithm(Algorithm):
         agent.optimizer.step()
 
 
-
-
-        #self.actor_loss = policy_loss.mean() + entropy_loss
-        #Backpropogate
-        #self.actor_loss.backward(retain_graph=True)
-        #agent.actor_optimizer.step()
-
-
-        '''
-            Training the Critic
-
-
-        # Zero the gradient
-        agent.critic_optimizer.zero_grad()
-        #MSE value loss_calc
-        #expected_state_action_values = next_state_values * self.gamma + rewards
-        self.critic_loss = self.loss_calc(state_values,new_rewards.unsqueeze(dim=-1))
-        self.critic_loss.backward()
-        agent.critic_optimizer.step()'''
-
-
-
-    def get_actor_loss(self):
-        return self.actor_loss
-
     def get_loss(self):
         return self.loss
 
-    def get_critic_loss(self):
-        return self.critic_loss
+
 
     def create_agent(self):
         self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])
