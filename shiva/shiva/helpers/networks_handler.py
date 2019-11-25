@@ -29,7 +29,9 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
 
     net_layers = []
 
-    print("Networks Handler: ", input_dim, layers[0])        
+    print("Networks Handler: ", input_dim, layers[0])
+
+    print(activ_function)
 
     net_layers.append(nn.Linear(input_dim, layers[0]))
     net_layers.append(activ_function[0]())
