@@ -23,6 +23,7 @@ Are specified in detail below.
 
 ##  Algorithm (Abstract)
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/Algorithm.py)
+
 All the algorithms inherit from this abstract class. Learn more about Shiva's abstract classes [here](https://github.com/nflux/Control-Tasks/blob/demo/shiva/docs/Abstract-Classes.md).
 ##  ContinuousDDPGAlgorithm
 [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/ContinuousDDPGAlgorithm.py)
