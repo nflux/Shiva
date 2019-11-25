@@ -12,8 +12,9 @@ class DQNAgent(Agent):
         self.id = id
         network_input = obs_space + acs_space
         network_output = 1
+        self.learning_rate = agent_config['learning_rate']
 
-
+        print(self.learning_rate)
 
         self.policy = nh.DynamicLinearSequential(
                                         network_input,
@@ -26,7 +27,7 @@ class DQNAgent(Agent):
 
         # self.policy = DLN.DynamicLinearNetwork(network_input, network_output, net_config)
         self.target_policy = copy.deepcopy(self.policy)
-        self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=self.policy.parameters(), lr=agent_config['learning_rate'])
+        self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=self.policy.parameters(), lr=self.learning_rate)
 
     def get_action(self, obs):
         '''

@@ -3,6 +3,7 @@
 
 import sys, numpy, time, os, subprocess, Teams
 from Communicator import ClientCommunicator, TimeoutError
+import socket, pickle
 
 class DoneError(Exception):
   """ This exception is thrown when the Trainer is finished. """
@@ -297,6 +298,9 @@ class Trainer(object):
       self._lastTrialStart = self._frame
       self.getConnectedPlayers()
 
+  def _hearPlayersFromRef(self, ts, body):
+    print(ts, body)
+
   def _hear(self, body):
     """ Handle a hear message. """
     if body[0] == 'referee':
@@ -553,8 +557,12 @@ class Trainer(object):
       print('Starting game')
       time.sleep(0.1)
       self.startGame()
+
       while self.allPlayersConnected() and self.checkLive(necProcesses) and not self._done:
         prevFrame = self._frame
+        # self.send('(move (ball) -10 10 10 10 10)')
+        # self.send('(move (player ' + self._offenseTeamName + ' 11) -5 10 10 10 10)')
+        # self.send('(change_mode drop_ball)')
         self.listenAndProcess()
     except TimeoutError:
       print('Haven\'t heard from the server for too long, Exiting')
