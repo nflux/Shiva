@@ -13,10 +13,14 @@ class ContinuousDDPGAlgorithm(Algorithm):
         '''
         super(ContinuousDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
 
+        self.obs_space = observation_space
+        self.acs_space = action_space
         self.scale = 0.9
         self.ou_noise = noise.OUNoise(action_space, self.scale)
         self.actor_loss = 0
         self.critic_loss = 0
+
+        print("ContDDPGAlg Init:", self.obs_space, self.acs_space)
 
 
     def update(self, agent, minibatch, step_count):
@@ -27,6 +31,11 @@ class ContinuousDDPGAlgorithm(Algorithm):
         
         # Batch of Experiences
         states, actions, rewards, next_states, dones = minibatch
+        # print('from buffer state:', states[0])
+        # print('from buffer actions:', actions[0])
+        # print('from buffer rewards:', rewards[0])
+        # print('from buffer next_states:', next_states[0])
+        # print('from buffer dones:', dones[0])
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
@@ -122,24 +131,26 @@ class ContinuousDDPGAlgorithm(Algorithm):
 
         if step_count < self.exploration_steps:
 
-            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+            action = np.array([np.random.uniform(-1,1) for _ in range(self.acs_space)])
             action += self.ou_noise.noise()
             action = np.clip(action, -1, 1)
+            # print(type(action))
+            print("random action:", action)
             return action
 
         else:
 
             self.ou_noise.set_scale(0.1)
+            # print("Algorithm Observation:", observation)
             observation = torch.tensor(observation).to(self.device)
             action = agent.actor(observation.float()).cpu().data.numpy()
-            # useful for debugging
             # maybe should change the print to a log
             if step_count % 100 == 0:
                 # print(action)
                 pass
             action += self.ou_noise.noise()
             action = np.clip(action, -1,1)
-
+            print("from network action", action)
             return action
 
     def create_agent(self, id): 
