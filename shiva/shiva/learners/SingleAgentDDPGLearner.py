@@ -35,7 +35,7 @@ class SingleAgentDDPGLearner(Learner):
         observation = self.env.get_observation()
 
         if self.ep_count == 10:
-            self.manual_play = False 
+            self.manual_play = False
 
         if self.manual_play:
             # This only works for users to play RoboCup!
@@ -44,7 +44,7 @@ class SingleAgentDDPGLearner(Learner):
                 action = self.HPI.get_action(observation)
         else:
             action = self.alg.get_action(self.agent, observation, self.step_count)
-        
+
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
 
         # TensorBoard Step Metrics
@@ -64,7 +64,7 @@ class SingleAgentDDPGLearner(Learner):
         t = [observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)]
         deep = copy.deepcopy(t)
         self.buffer.append(deep)
-        
+
         if self.step_count > self.alg.exploration_steps and self.step_count % 16 == 0:
             self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
             # pass
@@ -80,13 +80,13 @@ class SingleAgentDDPGLearner(Learner):
                 self.kicks += 1
             shiva.add_summary_writer(self, self.agent, 'Action per Step', action, self.step_count)
 
-            
+
 
         # Robocup Metrics
         if done and self.env.env_name == 'RoboCup':
             shiva.add_summary_writer(self, self.agent, 'Kicks per Episode', self.kicks, self.ep_count)
             shiva.add_summary_writer(self, self.agent, 'Turns per Episode', self.turns, self.ep_count)
-            shiva.add_summary_writer(self, self.agent, 'Dashes per Episode', self.dashes, self.ep_count) 
+            shiva.add_summary_writer(self, self.agent, 'Dashes per Episode', self.dashes, self.ep_count)
             shiva.add_summary_writer(self, self.agent, 'Steps per Episode', self.steps_per_episode, self.ep_count)
             shiva.add_summary_writer(self, self.agent, 'Ball Kicks per Episode', self.kicked, self.ep_count)
 
@@ -114,7 +114,7 @@ class SingleAgentDDPGLearner(Learner):
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        
+
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
@@ -132,7 +132,7 @@ class SingleAgentDDPGLearner(Learner):
 
         if self.manual_play:
             self.HPI = envs.HumanPlayerInterface()
-        
+
 
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()

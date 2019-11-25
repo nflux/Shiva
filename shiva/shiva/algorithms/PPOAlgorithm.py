@@ -16,6 +16,7 @@ class PPOAlgorithm(Algorithm):
         self.gamma = configs[0]['gamma']
         self.actor_loss = 0
         self.critic_loss = 0
+        self.loss = 0
         self.acs_space = acs_space
         self.obs_space = obs_space
         self.acs_discrete = action_space_discrete
@@ -52,14 +53,21 @@ class PPOAlgorithm(Algorithm):
         '''
 
         # Zero the gradient
-        agent.actor_optimizer.zero_grad()
+        #agent.actor_optimizer.zero_grad()
+        agent.optimizer.zero_grad()
         # Get the actions(probabilites) from the main actor
         current_actor_actions = agent.actor(states.float())
+        dist = Categorical(current_actor_actions)
+        actions = torch.tensor(np.argmax(actions,axis=1).numpy()).float()
+        log_probs = dist.log_prob(actions)
+        entropy = dist.entropy()
         #Get the actions(probabilites) from the target actor
         target_actor_actions = agent.target_actor(states.float())
+        dist = Categorical(current_actor_actions)
+        old_log_probs = dist.log_prob(actions)
         #Find the ratio (pi_new / pi_old)
-        #ratios = torch.exp(current_actor_actions - target_actor_actions)
-        ratios = target_actor_actions/ current_actor_actions
+        ratios = torch.exp(log_probs - old_log_probs.detach())
+        #ratios = current_actor_actions/ target_actor_actions.detach()
         # Calculate Q value for taking those actions in those states
         state_values = agent.critic(states.float())
         #Calculate next state values
@@ -73,33 +81,18 @@ class PPOAlgorithm(Algorithm):
         surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage
         #Set the policy loss
         policy_loss = -torch.min(surr1,surr2)
-        entropy = Categorical(current_actor_actions).entropy()
-        entropy_loss = (self.configs[0]['beta']*entropy).mean()
-        self.actor_loss = policy_loss.mean() + entropy_loss
-        #Backpropogate
-        self.actor_loss.backward(retain_graph=True)
-        agent.actor_optimizer.step()
+        #entropy = Categorical(current_actor_actions).entropy()
+        entropy_loss = -(self.configs[0]['beta']*entropy).mean()
+        value_loss = self.loss_calc(state_values, new_rewards.unsqueeze(dim=-1))
+        self.loss = policy_loss.mean() + value_loss + entropy_loss
+        self.loss.backward()
+        agent.optimizer.step()
 
 
-        '''
-            Training the Critic
-        '''
-
-        # Zero the gradient
-        agent.critic_optimizer.zero_grad()
-        #MSE value loss_calc
-        #expected_state_action_values = next_state_values * self.gamma + rewards
-        self.critic_loss = self.loss_calc(state_values,new_rewards.unsqueeze(dim=-1))
-        self.critic_loss.backward()
-        agent.critic_optimizer.step()
+    def get_loss(self):
+        return self.loss
 
 
-
-    def get_actor_loss(self):
-        return self.actor_loss
-
-    def get_critic_loss(self):
-        return self.critic_loss
 
     def create_agent(self):
         self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])

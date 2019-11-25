@@ -9,8 +9,79 @@
 *   init.py  
 
 ##  Algorithm.py
+* Is the abstract class and template in which, which other algorithms would follow. 
+*   init(self,obs_space, acs_space,configs):
+    -   ***DESCRIPTION***
+        +   Initlizes the Dagger Algorithm. 
+    -   |   Variables   |   Description   |
+        |       ---     |       ---       |
+        |    **self**   | Refers to the Current Instance. |
+        |   **obs_space**   |Feed in the observation space. |
+        |    **acs_space**   | Feed in the action space.  |
+        |     **configs**   | Contains the passed configuration from the ini files.  |
+
+*   update(self, agent, data)
+    -   ***DESCRIPTION***
+        +   Updates the agents network using the data
+    -   |   Variables   |   Description   |
+        |       ---     |       ---       |
+        |    **self**   | Refers to the Current Instance. |
+        |   **agent**   |The agent who we want to update it's network |
+        |    **data**   | Data used to train the network.  |
+
+*   get_action(self, agent, observation):
+    -   ***DESCRIPTION***
+        +   Determines the best action for the agent and a given observation. This will return an action
+    -   |   Variables   |   Description   |
+        |       ---     |       ---       |
+        |    **self**   | Refers to the Current Instance. |
+        |   **agent**   | The agent we want the action|
+        |    **observaton**   | Passes the observations from the environment to get an action from the agent.  |
+
+*   create_agent(self):
+    -   ***DESCRIPTION***
+        +   Creates an Agent to start learning, which then returns an agent. 
+    -   |   Variables   |   Description   |
+        |       ---     |       ---       |
+        |    **self**   | Refers to the Current Instance. |
+
+*   id_generator(self):
+    -   ***DESCRIPTION***
+        +   Generates an ID for an agent. 
+    -   |   Variables   |   Description   |
+        |       ---     |       ---       |
+        |    **self**   | Refers to the Current Instance. |
+
+*   get_agents(self):
+    -   ***DESCRIPTION***
+        +   Is a function that allows us to get an agent.
+    -   |   Variables   |   Description   |
+        |       ---     |       ---       |
+        |    **self**   | Refers to the Current Instance. |
+
 
 ##  ContinousDDPGAlgorithm.py
+*   init(self,observation_space, action_space, configs, configs:dict):
+    -   ***DESCRIPTION***
+        +   Initlizes the Dagger Algorithm. 
+    -   |   Variables   |   Description   |
+        |       ---     |       ---       |
+        |    **self**   | Refers to the Current Instance. |
+        |   **observation_space**   |Feed in the observation space. |
+        |    **action_space**   | Feed in the action space.  |
+        |     **configs: dict**   | Contains the passed configuration from the ini files as a dictionary.   |
+
+*   update(self, agent, minibatch, step_count)
+    -   ***DESCRIPTION***
+        +   Initlizes the Dagger Algorithm. 
+    -   |   Variables   |   Description   |
+        |       ---     |       ---       |
+        |    **self**   | Refers to the Current Instance. |
+        |   **agent**   | The agent that gets updated in each step.  |
+        |    **minibatch**   |  The minibatch, is getting some data from the replay buffer.  |
+        |     **step_count**   | Contains the step count. |
+
+        
 ##  DQNAlgorithm.py
 ##  DaggerAlgorithm.py
 *   Supports Discrete and Continuous Action Space. 
@@ -24,7 +95,8 @@
         |    **acs_space**   | Feed in the action space.  |
         |   **action_space_discrete**   | Feed in the Discrete Action Space.  |
         |     **action_space_continous**   | Feed in the Continous Action Space. |
-  
+        |     **configs**   | Contains the passed configuration from the ini files.  |
+
 *   update(self, imitation_agent, expert_agent, minibatch, step_n)
     -   ***DESCRIPTION***
         +   Calculates Trajectories from imation policy and inital policy, but allows for the new agent to explore new observations; in addition, to what the expert agent has led us to. Then we calculate the loss between the imitation agent and expert agent and using a desired loss calcualtion from the config. then we optimize. 
