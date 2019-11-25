@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+torch.manual_seed(5)
+np.random.seed(5)
 import utils.Noise as noise
 from agents.DDPGAgent import DDPGAgent
 from .Algorithm import Algorithm
@@ -59,6 +61,13 @@ class ContinuousDDPGAlgorithm(Algorithm):
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
         # Get Q values of the batch from states and actions.
+        
+        ##### debugging
+        actions = actions.squeeze(dim=-1)
+        # print(states)
+        # print(actions.squeeze(dim=-1)
+        # input()
+
         Q_these_states_main = agent.critic(states.float(), actions.float())
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)

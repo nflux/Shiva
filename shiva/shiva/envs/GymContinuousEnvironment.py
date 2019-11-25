@@ -22,9 +22,9 @@ class GymContinuousEnvironment(Environment):
             self.load_viewer()
 
             if self.normalize:
-                return self.obs, self.normalize_reward(), self.world_status, {'raw_reward': self.rews}
+                return self.obs, self.normalize_reward(), self.world_status, {'raw_reward': self.rews, 'action':action}
             else:
-                return self.obs, self.rews, self.world_status, {'raw_reward': self.rews}
+                return self.obs, self.rews, self.world_status, {'raw_reward': self.rews, 'action':action}
 
     def reset(self):
         self.obs = self.env.reset()
