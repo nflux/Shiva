@@ -1,4 +1,5 @@
 import helpers.networks_handler as nh
+import torch.nn as nn
 import torch
 
 class DDPGActor(torch.nn.Module):
