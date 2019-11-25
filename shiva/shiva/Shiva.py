@@ -254,10 +254,13 @@ class ShivaAdmin():
             if type(learner.agents) == list:
                 for agent in learner.agents:
                     self._save_agent(learner, agent)
+                    self._save_buffer(learner,agent)
             else:
                 self._save_agent(learner, learner.agents)
+                self._save_buffer(learner, learner.agents)
         except AttributeError: # when learner has only 1 agent
             self._save_agent(learner, learner.agent)
+            self._save_buffer(learner, learner.agent)
 
     def _save_agent(self, learner, agent):
         '''
@@ -274,6 +277,15 @@ class ShivaAdmin():
         agent_path = dh.make_dir(agent_path)
         fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
         agent.save(agent_path, learner.env.get_current_step())
+
+    def _save_buffer(self,learner, agent):
+        ''' 
+            Mechanics of saving a Replay Buffer
+
+            1 - pickles the buffer object and saves it in the corresponding agent's folder
+        '''
+        buffer_path = self._curr_agent_dir[learner.id][agent.id]
+        fh.save_pickle_obj(learner.buffer, os.path.join(buffer_path, 'buffer.pickle'))
 
     def load(self, caller, id=None):
         '''
@@ -319,6 +331,7 @@ class ShivaAdmin():
         learner_path, _ = os.path.split(learner_pickle)
         _new_learner = fh.load_pickle_obj(learner_pickle)
         _new_learner.agents = self._load_agents(learner_path)
+        _new_learner.buffer = self._load_buffer(learner_path)
         return _new_learner
 
     def _load_agents(self, path) -> list:
@@ -350,7 +363,6 @@ class ShivaAdmin():
             InputW
                 @path       Path where the agents files will be located
         '''
-
         agent_pickle = dh.find_pattern_in_path(path, 'agent_cls.pickle')
         agent_policy = dh.find_pattern_in_path(path, 'policy.pth')
         assert len(agent_pickle) > 0, "No agent found in {}".format(path)
@@ -360,6 +372,23 @@ class ShivaAdmin():
         _new_agent.load_net(agent_policy)
 
         return _new_agent
+
+
+    def _load_buffer(self, path) -> list:
+        '''
+            For now, we have only 1 buffer per learner
+            
+            Input
+                @path       Learner path
+        '''
+
+        buffer_pickle = dh.find_pattern_in_path(path, 'buffer.pickle')
+        assert len(agent_pickle) > 0, "No buffer found in {}".format(path)
+        print("Loading Buffer..")
+        print("\t{}\n\t{}\n\n".format(buffer_pickle))
+        return fh.load_pickle_obj(buffer_pickle)
+
+    
 
 ###########################################################################
 #         
