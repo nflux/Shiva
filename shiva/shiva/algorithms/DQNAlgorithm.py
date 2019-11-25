@@ -91,6 +91,5 @@ class DQNAlgorithm(Algorithm):
         return self.loss
 
     def create_agent(self, id):
-        print(self.configs[1])
         self.agent = DQNAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent

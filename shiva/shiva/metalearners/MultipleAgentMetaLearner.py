@@ -26,7 +26,6 @@ class MultipleAgentMetaLearner(MetaLearner):
         self.episode_rewards = list()
         self.process_list = list()
         #self.multiprocessing_learners()
-        print (configs)
         self.run()
 
     def run(self):
@@ -66,40 +65,36 @@ class MultipleAgentMetaLearner(MetaLearner):
             self.learner.run()'''
 
             self.populate_learners()
-
+            # self.sample()
 
             self.multiprocessing_learners()
-
+        self.save()
         self.eval = eval_env(self.configs['Evaluation'], self.learners)
         self.eval.evaluate_agents()
-        # print(self.eval.eval_scores)
         for i in range(len(self.eval.eval_scores)):
             print('Average Reward for agent: ', i, '\n', np.average(self.eval.eval_scores[i]))
-
-            # save
-            # if self.start_mode == self.PROD_MODE:
-            #     self.save()
         self.redeployment()
+        
         print('bye')
 
     def redeployment (self):
-        
+        for i in self.learners:
+            i.evaluate = True
         while True:
-            
             self.learners, self.episode_rewards =  self.eval.rank_agents()
             self.exploitation(self.learners, self.episode_rewards)
             self.exploration(self.learners)
-            self.populate_learners()
             self.multiprocessing_learners()
 
 
 
     def create_learner(self):
+        self.configs['Learner']['evaluate'] = False
         learner = getattr(learners, self.configs['Learner']['type'])
         return learner(self.get_id(), self.configs)
 
     '''#threading learners
-    def multiprocessing_learners(self):
+    def multiprocessing_learners(sLearnerelf):
         for rank in range(self.learnerList):
             p = torch.multiprocessing.Process(target=self.run)
             p.start()
@@ -121,6 +116,9 @@ class MultipleAgentMetaLearner(MetaLearner):
     def run_learner(self,learner_idx):
         shiva.add_learner_profile(self.learners[learner_idx])
         self.learners[learner_idx].launch()
+        if self.learners[learner_idx].evaluate == False:
+            self.sample(self.learners[learner_idx])
+        print ("learning rate", learner_idx, self.learners[learner_idx].agent.learning_rate)
         shiva.update_agents_profile(self.learners[learner_idx])
         self.learners[learner_idx].run()
 
@@ -154,6 +152,10 @@ class MultipleAgentMetaLearner(MetaLearner):
                 learners[i].agent.policy = copy.deepcopy(learners[sampled_idx].agent.policy)
                 learners[i].agent.optimizer = copy.deepcopy(learners[sampled_idx].agent.optimizer)
 
+    #randomly sample hyperparameter
+    def sample (self, learner):
+        new_lr = random.uniform(self.learning_rate_range[0],self.learning_rate_range[1])
+        learner.agent.learning_rate = new_lr
 
     #Resample hyperparameters from the original range dictated in the configuration file
     def resample(self, learners):
