@@ -5,6 +5,8 @@ import envs
 import algorithms
 import buffers
 import copy
+import random
+import numpy as np
 
 class SingleAgentPPOLearner(Learner):
     def __init__(self, learner_id, config):
@@ -13,33 +15,31 @@ class SingleAgentPPOLearner(Learner):
     def run(self):
         self.step_count = 0
         for self.ep_count in range(self.episodes):
-            self.env.reset()
-            self.totalReward = 0
-            done = False
-            while not done:
-                done = self.step()
-                self.step_count +=1
+            for count in range(self.configs['Algorithm']['episodes_train']):
+                self.env.reset()
+                self.totalReward = 0
+                done = False
+                while not done:
+                    done = self.step()
+                    self.step_count +=1
             for epoch in range(self.configs['Algorithm']['update_epochs']):
-                self.alg.update(self.agent,self.old_agent,self.buffer.full_buffer(), self.step_count)
+                self.alg.update(self.agent,self.buffer.full_buffer(),self.step_count)
             self.buffer.clear_buffer()
+            self.agent.target_actor.load_state_dict(self.agent.actor.state_dict())
+            self.agent.target_critic.load_state_dict(self.agent.critic.state_dict())
 
         self.env.close()
 
+
     def step(self):
 
-        if self.ep_count % self.configs['Algorithm']['old_policy_update_interval'] == 0:
-            #self.old_agent.actor.load_state_dict(self.agent.actor.state_dict())
-            #self.old_agent.critic.load_state_dict(self.agent.critic.state_dict())
-            self.old_agent = copy.deepcopy(self.agent)
+        '''if self.step_count % self.configs['Algorithm']['old_policy_update_interval'] == 0:
+            self.agent.target_actor.load_state_dict(self.agent.actor.state_dict())
+            self.agent.target_critic.load_state_dict(self.agent.critic.state_dict())'''
 
         observation = self.env.get_observation()
 
-        # print("Observation: ", observation)
-        # input()
-
-        action= self.old_agent.get_action(observation)
-        log_prob = self.old_agent.get_logprob(observation,action).tolist()
-
+        action= self.agent.get_action(observation)
         next_observation, reward, done, more_data = self.env.step(action)
 
         # TensorBoard metrics
@@ -49,7 +49,7 @@ class SingleAgentPPOLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
         # print('to buffer:', observation.shape, action.shape, reward.shape, next_observation.shape, [done])
-        t = [observation, action, reward, log_prob, next_observation, int(done)]
+        t = [observation, action, more_data['raw_reward'], next_observation, int(done)]
         deep = copy.deepcopy(t)
         self.buffer.append(deep)
         #self.alg.update(self.agent,self.buffer, self.step_count)
@@ -93,7 +93,7 @@ class SingleAgentPPOLearner(Learner):
             self.agent= self.load_agent(self.load_agents)
         else:
             self.agent= self.alg.create_agent()
-            self.old_agent = self.alg.create_agent()
+
 
         # if buffer set to true in config
         if self.using_buffer:

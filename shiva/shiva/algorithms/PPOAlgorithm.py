@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.functional as F
 import utils.Noise as noise
 from agents.PPOAgent import PPOAgent
 from .Algorithm import Algorithm
@@ -21,52 +22,77 @@ class PPOAlgorithm(Algorithm):
         self.acs_continuous = action_space_continuous
 
 
-    def update(self, agent, old_agent,minibatch, step_count):
+    def update(self, agent,minibatch, step_count):
         '''
             Getting a Batch from the Replay Buffer
-            '''
-        agent.optimizer.zero_grad()
-            # Batch of Experiences
-        states, old_actions, rewards, old_logprobs, next_states, dones = minibatch
-        new_actions = agent.get_action(states)
-        new_logprobs, entropy = torch.tensor(agent.get_logprobs(states,new_actions)).float()
+        '''
 
+        # Batch of Experiences
+        states, actions, rewards, next_states, dones = minibatch
 
         # Make everything a tensor and send to gpu if available
-        states = torch.tensor(states,requires_grad=True).to(self.device)
-        old_actions = torch.tensor(old_actions.astype(np.float32),requires_grad=True).to(self.device)
-        rewards = torch.tensor(rewards,requires_grad=True).to(self.device)
-        #We will use the next states to get the value of the next state for our advantage function
-        next_states = torch.tensor(next_states,requires_grad=True).to(self.device)
-        #Normalizing the rewards
-        #rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-5)
-        old_logprobs = torch.tensor(old_logprobs,requires_grad=True).to(self.device).float()
-        dones_mask = torch.ByteTensor(dones).to(self.device)
+        states = torch.tensor(states).to(self.device)
+        actions = torch.tensor(actions).to(self.device)
+        rewards = torch.tensor(rewards).to(self.device)
+        next_states = torch.tensor(next_states).to(self.device)
+        done_masks = torch.ByteTensor(dones).to(self.device)
 
+        # Monte Carlo estimate of state rewards:
+        new_rewards = []
+        discounted_reward = 0
+        for reward, done_mask in zip(reversed(rewards), reversed(done_masks)):
+            if done_mask:
+                discounted_reward = 0
+            discounted_reward = reward + (self.gamma * discounted_reward)
+            new_rewards.insert(0, discounted_reward)
+        new_rewards = torch.tensor(new_rewards).float()
 
-        state_values = agent.get_values(states,old_actions).requires_grad_(True)
-        #Used for advantage function
-        new_actions = agent.get_action(next_states)
-        next_state_values = old_agent.get_values(next_states,new_actions).requires_grad_(True)
+        '''
+            Training the Actor
+        '''
 
+        # Zero the gradient
+        agent.actor_optimizer.zero_grad()
+        # Get the actions(probabilites) from the main actor
+        current_actor_actions = agent.actor(states.float())
+        #Get the actions(probabilites) from the target actor
+        target_actor_actions = agent.target_actor(states.float())
+        #Find the ratio (pi_new / pi_old)
+        #ratios = torch.exp(current_actor_actions - target_actor_actions)
+        ratios = target_actor_actions/ current_actor_actions
+        # Calculate Q value for taking those actions in those states
+        state_values = agent.critic(states.float())
+        #Calculate next state values
+        expected_state_action_values = state_values * self.gamma + new_rewards.unsqueeze(dim=-1)
+        #Calculate the advantage term
+        #advantage = (rewards + (self.gamma*new_rewards.unsqueeze(dim=-1)) - state_values).mean()
+        advantage = new_rewards.unsqueeze(dim=-1) - state_values .detach()
 
-        advantage = rewards + (self.gamma*next_state_values) - state_values.detach()
-        print('New logprobs: ', new_logprobs)
-        print('Old logprobs: ', old_logprobs)
-        ratios = torch.exp(new_logprobs - old_logprobs.detach())
-
+        #Calculate objective functions
         surr1 = ratios * advantage
         surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage
-        self.actor_loss = (-torch.min(surr1,surr2) -(self.configs[0]['beta']*entropy)).mean()
+        #Set the policy loss
+        policy_loss = -torch.min(surr1,surr2)
+        entropy = Categorical(current_actor_actions).entropy()
+        entropy_loss = (self.configs[0]['beta']*entropy).mean()
+        self.actor_loss = policy_loss.mean() + entropy_loss
+        #Backpropogate
         self.actor_loss.backward(retain_graph=True)
-        agent.optimizer.step()
+        agent.actor_optimizer.step()
 
-        expected_state_action_values = next_state_values * self.gamma + rewards
-        agent.optimizer_critic.zero_grad()
 
-        self.critic_loss = self.loss_calc(state_values, rewards)
+        '''
+            Training the Critic
+        '''
+
+        # Zero the gradient
+        agent.critic_optimizer.zero_grad()
+        #MSE value loss_calc
+        #expected_state_action_values = next_state_values * self.gamma + rewards
+        self.critic_loss = self.loss_calc(state_values,new_rewards.unsqueeze(dim=-1))
         self.critic_loss.backward()
-        agent.optimizer_critic.step()
+        agent.critic_optimizer.step()
+
 
 
     def get_actor_loss(self):
