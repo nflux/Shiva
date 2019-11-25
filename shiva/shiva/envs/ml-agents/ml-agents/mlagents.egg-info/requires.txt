@@ -1,0 +1,13 @@
+grpcio>=1.11.0
+h5py>=2.9.0
+jupyter
+matplotlib
+mlagents_envs==0.11.0
+numpy<2.0,>=1.13.3
+Pillow>=4.2.1
+protobuf>=3.6
+pyyaml
+tensorflow<2.0,>=1.7
+
+[:platform_system == "Windows"]
+pypiwin32==223
