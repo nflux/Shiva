@@ -31,14 +31,13 @@ class UnityEnvironment(Environment):
 
     def step(self,action):  
          
-        # split the action
-        action1 = bytes(str(action) + ' ', "utf-8")
-        # action2 = bytes(str() + " ", "utf-8")
+        # parse the action into utf8 bytes
+        action = bytes(str(action) + ' ', "utf-8")
 
-        # send back the actions
-        self.clientSocket.send(action1)
-        # self.clientSocket.send(action2)
+        # send the action
+        self.clientSocket.send(action)
 
+        # sometimes used for slowing things down
         # time.sleep(0.5)
 
         srd = self.clientSocket.recv(1024)
@@ -71,7 +70,7 @@ class UnityEnvironment(Environment):
 
     def set_observation_space(self):
 
-        self.observation_space = 4
+        self.observation_space = 8
         return 8
 
     def set_action_space(self):
