@@ -62,3 +62,9 @@
 ##  GymDiscreteEnvironment.py
 
 ##  RobocupDDPGEnvironment.py
+
+
+
+Shiva supports both Gym Continuous Environments (e.g. MountainCarContinuous-v0) and Gym Discrete Environments (e.g. MountainCar-v0). The Discrete action space allows a fixed range of non-negative numbers while the Box action space represents an n-dimensional box.
+
+GymDiscreteEnvironment and GymContinuousEnvironment both inherit from the Environment class. The only difference between the two is that GymDiscreteEnvironment takes the argmax() of the action output from the network before passing it to the environment while GymContinuousEnvironment simply passes the action output.
