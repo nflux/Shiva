@@ -32,7 +32,7 @@ In Manjaro you can use pacman package manager.
 
 >sudo pacman -S cmake boost flex qt4
 
-# Installing RoboCup MacOS
+### Installing RoboCup MacOS
 
 In MacOS you can use homebrew?
 
@@ -52,5 +52,4 @@ At this point you should have shiva installed and ready to run but it would beho
 
 ## Unity
 
-This version of Shiva does not use the gym wrapper developed by Unity's MLAgents. Currently, you need to have Unity editor opened with the current
-scene that you would like to train on.
+This version of Shiva does not use the gym wrapper developed by Unity's MLAgents. This version uses sockets to pass the actions to the Unity environments. Future versions of Shiva will open the scenes you create using just their binaries. editor opened with the current scene that you would like to train on.
