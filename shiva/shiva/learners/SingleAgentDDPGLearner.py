@@ -59,7 +59,7 @@ class SingleAgentDDPGLearner(Learner):
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
@@ -75,7 +75,7 @@ class SingleAgentDDPGLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
-
+        
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
 
