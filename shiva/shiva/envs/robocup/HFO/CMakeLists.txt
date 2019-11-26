@@ -4,7 +4,7 @@ include(ExternalProject)
 
 option(BUILD_SOCCERWINDOW "Build Soccerwindow Visualizer" ON)
 option(INSTALL_ADDITIONAL_TEAMS "Install additional team binaries" OFF)
-option(ONLY_RCSSSERVER "Only compile rcssserver" ON)
+option(ONLY_RCSSSERVER "Only compile rcssserver" OFF)
 
 add_definitions(-DELOG)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fPIC")
