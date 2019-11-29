@@ -66,10 +66,10 @@ class UnityEnvironment2(Environment):
         return self.observations, self.rewards, self.dones, {}
 
     def _clean_actions(self, actions):
-        # print('before:',actions)
+        print('before:',actions)
         if self.BrainParameters.vector_action_space_type == 'discrete':
-            actions = np.argmax(actions)
-        # print('after:',actions)
+            actions = np.array([np.argmax(_act) for _act in actions])
+        print('after:',actions)
         # input()
         return actions
 
