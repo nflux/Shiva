@@ -24,7 +24,7 @@ class SimpleBuffer():
 
     def append(self, experience):
         self.buffer.append(experience)
-
+        
     def clear_buffer(self):
         self.buffer = collections.deque(maxlen=self.capacity)
 

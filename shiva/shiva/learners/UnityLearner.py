@@ -14,24 +14,41 @@ class UnityLearner(Learner):
     # so now the done is coming from the environment
     def run(self):
         self.step_count = 0
-        while self.env.done_counts < self.episodes:
+
+        while self.continue_run():
+            self.exploration_mode = self.step_count < self.alg.exploration_steps
             self.step()
-            self.step_count += 1
         self.env.close()
 
+    def continue_run(self):
+        return (self.episodes > 0 and self.env.done_counts < self.episodes) or (self.steps > 0 and self.step_count < self.steps)
+
     def step(self):
-
+        self.step_count += 1
         observation = self.env.get_observation()
-        
-        action = self.env.get_random_action()
-        # self.alg.get_action(self.agent, observation, self.step_count)
+        # print("Learner:", observation.shape)
+        # action = self.env.get_random_action()
+        action = [self.alg.get_action(self.agent, obs, self.step_count) for obs in observation]
 
-        # print("Learner:", observation)
+        # print("Learner:", observation.shape)
 
         # print("Learner:", action)
 
-        next_observation, reward, done, _ = self.env.step(action)
+        print('step:', self.step_count, '\treward:', self.env.reward_total)
 
+        next_observation, reward, done, _ = self.env.step(action)
+        for obs, act, rew, next_obs, don in zip(observation, action, reward, next_observation, done):
+            exp = [obs, act, rew, next_obs, int(don)]
+            exp = deepcopy(exp)
+            self.buffer.append(exp)
+        
+        if not self.exploration_mode and self.step_count % 8 == 0:
+            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+
+        # self.add_summary_writer(self, self.agent, 'Total Reward', self.env.reward_total, self.step_count)
+        
+        # input()
+        
         # TensorBoard metrics
         # shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
         # shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
@@ -74,7 +91,7 @@ class UnityLearner(Learner):
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.observation_space, self.env.action_space,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm(self.env.observation_space, self.env.action_space, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
@@ -92,18 +109,18 @@ class UnityLearner(Learner):
         self.env = self.create_environment()
 
         # # Launch the algorithm which will handle the
-        # self.alg = self.create_algorithm()
+        self.alg = self.create_algorithm()
 
         # # Create the agent
-        # if self.configs['Learner']['load_agents'] is not False:
-        #     self.agent = self.load_agent(self.configs['Learner']['load_agents'])
-        # else:
-        #     self.agent = self.alg.create_agent(self.get_id())
+        if self.configs['Learner']['load_agents'] is not False:
+            self.agent = self.load_agent(self.configs['Learner']['load_agents'])
+        else:
+            self.agent = self.alg.create_agent(self.get_id())
         
-        # # if buffer set to true in config
-        # if self.using_buffer:
-        #     # Basic replay buffer at the moment
-        #     self.buffer = self.create_buffer()
+        # if buffer set to true in config
+        if self.using_buffer:
+            # Basic replay buffer at the moment
+            self.buffer = self.create_buffer()
 
         print('Launch Successful.')
 
