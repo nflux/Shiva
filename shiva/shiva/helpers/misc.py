@@ -14,13 +14,13 @@ def handle_package(package, class_name):
     '''
     return getattr(package, class_name, None)
 
-def action2one_hot(action_space: int, action_idx: int) -> np.ndarray:
+def action2one_hot(action_space: int, action_idx: int, numpy: bool=True) -> np.ndarray:
     '''
         Returns a one-hot encoded numpy.ndarray
     '''
     z = np.zeros(action_space)
     z[action_idx] = 1
-    return z
+    return z if numpy else list(z)
 
 def action2one_hot_v(action_space: int, action_idx: int) -> torch.tensor:
     '''

@@ -36,11 +36,11 @@ class DQNAlgorithm(Algorithm):
 
         states, actions, rewards, next_states, dones = minibatch
         # make tensors as needed
-        # states_v = torch.tensor(states).float().to(self.device)
-        # next_states_v = torch.tensor(next_states).float().to(self.device)
-        # actions_v = torch.tensor(actions).to(self.device)
-        rewards_v = torch.tensor(rewards).to(self.device)
-        done_mask = torch.tensor(dones, dtype=torch.bool).to(self.device)
+        states_v = torch.tensor(states).float().to(self.device)
+        next_states_v = torch.tensor(next_states).float().to(self.device)
+        actions_v = torch.tensor(actions).to(self.device)
+        rewards_v = torch.tensor(rewards).to(self.device).view(-1, 1)
+        done_mask = torch.tensor(dones, dtype=np.bool).to(self.device)
 
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j) from minibatch
@@ -58,9 +58,10 @@ class DQNAlgorithm(Algorithm):
         # We detach the value from its computation graph to prevent gradients from flowing into the neural network used to calculate Q approximation next states.
         # Without this our backpropagation of the loss will start to affect both predictions for the current state and the next state.
         next_state_values = next_state_values.detach()
-        
         expected_state_action_values = next_state_values * self.gamma + rewards_v
 
+        # print(done_mask.shape, next_state_values.shape)
+        # print(expected_state_action_values.shape, rewards_v.shape)
         self.loss = self.loss_calc(state_action_values, expected_state_action_values)
 
         # The only issue is referencing the learner from here for the first parameter
@@ -77,9 +78,12 @@ class DQNAlgorithm(Algorithm):
             With the probability epsilon we take the random action,
             otherwise we use the network to obtain the best Q-value per each action
         '''
-        # this might not be correct implementation of e greedy
-        epsilon = max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay))
-        if random.uniform(0, 1) < epsilon:
+        if step_n < self.exploration_steps:
+            action_idx = random.sample(range(self.acs_space), 1)[0]
+            action = misc.action2one_hot(self.acs_space, action_idx, numpy=False)
+        elif random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
+            # this might not be correct implementation of e greedy
+            print('greedy')
             action_idx = random.sample(range(self.acs_space), 1)[0]
             action = misc.action2one_hot(self.acs_space, action_idx)
         else:

@@ -284,7 +284,7 @@ MonoBehaviour:
     vectorActionSize: 02000000
     vectorActionDescriptions: []
     vectorActionSpaceType: 1
-  m_Model: {fileID: 5022602860645237092, guid: 20a7b83be6b0c493d9271c65c897eb9b, type: 3}
+  m_Model: {fileID: 0}
   m_InferenceDevice: 0
   m_UseHeuristic: 0
   m_BehaviorName: 3DBall
@@ -306,7 +306,6 @@ MonoBehaviour:
     onDemandDecision: 0
     numberOfActionsBetweenDecisions: 5
   ball: {fileID: 1036225416237908}
-  id: 0
 --- !u!1 &1533320402322554
 GameObject:
   m_ObjectHideFlags: 0
