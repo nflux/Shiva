@@ -5,6 +5,7 @@ np.random.seed(5)
 import utils.Noise as noise
 from agents.DDPGAgent import DDPGAgent
 from .Algorithm import Algorithm
+import time
 
 class ContinuousDDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
@@ -22,7 +23,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         self.actor_loss = 0
         self.critic_loss = 0
 
-        print("ContDDPGAlg Init:", self.obs_space, self.acs_space)
+        # print("ContDDPGAlg Init:", self.obs_space, self.acs_space)
 
 
     def update(self, agent, minibatch, step_count):
@@ -46,6 +47,11 @@ class ContinuousDDPGAlgorithm(Algorithm):
         next_states = torch.tensor(next_states).to(self.device)
         dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
 
+        # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
+        # print('from buffer:', states, actions, rewards, next_states, dones_mask, '\n')
+
+
+
         '''
             Training the Critic
         '''
@@ -54,16 +60,25 @@ class ContinuousDDPGAlgorithm(Algorithm):
         agent.critic_optimizer.zero_grad()
         # The actions that target actor would do in the next state.
         next_state_actions_target = agent.target_actor(next_states.float())
+        # print("Next State Target Actions: ", next_state_actions_target)
+        # print("Next State Target Actions Shape: ", next_state_actions_target.shape)
         # The Q-value the target critic estimates for taking those actions in the next state.
         Q_next_states_target = agent.target_critic(next_states.float(), next_state_actions_target.float())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones_mask] = 0.0
         # Use the Bellman equation.
+        # print(Q_next_states_target.shape)
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
+        # print(rewards.unsqueeze(dim=-1).shape)
+        # print(y_i.shape)
         # Get Q values of the batch from states and actions.
+
+
         
         ##### debugging
+        # print(actions.shape)
         actions = actions.squeeze(dim=-1)
+        # print(actions.shape)
         # print(states)
         # print(actions.squeeze(dim=-1)
         # input()
@@ -86,6 +101,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
         current_state_actor_actions = agent.actor(states.float())
+        # print("Current State Actor Actions Shape: ", next_state_actions_target.shape)
         # Calculate Q value for taking those actions in those states
         actor_loss_value = agent.critic(states.float(), current_state_actor_actions.float())
         # miracle line of code
@@ -98,6 +114,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         agent.actor_optimizer.step()
         # Save actor loss for tensorboard
         self.actor_loss = actor_loss
+        # time.sleep(5)
 
         '''
             Soft Target Network Updates
@@ -140,7 +157,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
 
         if step_count < self.exploration_steps:
 
-            action = np.array([np.random.uniform(-1,1) for _ in range(self.acs_space)])
+            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
             action += self.ou_noise.noise()
             action = np.clip(action, -1, 1)
             # print(type(action))
@@ -149,7 +166,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
 
         else:
 
-            self.ou_noise.set_scale(0.1)
+            self.ou_noise.set_scale(0.9)
             # print("Algorithm Observation:", observation)
             observation = torch.tensor(observation).to(self.device)
             action = agent.actor(observation.float()).cpu().data.numpy()

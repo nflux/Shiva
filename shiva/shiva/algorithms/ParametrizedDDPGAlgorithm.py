@@ -39,7 +39,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
         dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
-        # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
+        print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
         '''
             Training the Critic
         '''
