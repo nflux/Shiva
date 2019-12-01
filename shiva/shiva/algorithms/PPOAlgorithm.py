@@ -76,6 +76,7 @@ class PPOAlgorithm(Algorithm):
         #advantage = (rewards + (self.gamma*new_rewards.unsqueeze(dim=-1)) - state_values).mean()
         advantage = new_rewards.unsqueeze(dim=-1) - state_values .detach()
 
+
         #Calculate objective functions
         surr1 = ratios * advantage
         surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage

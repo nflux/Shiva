@@ -1,6 +1,7 @@
 from settings import shiva
 from .Learner import Learner
 import helpers.misc as misc
+import torch.multiprocessing as mp
 import envs
 import algorithms
 import buffers
@@ -15,32 +16,26 @@ class SingleAgentPPOLearner(Learner):
     def run(self):
         self.step_count = 0
         for self.ep_count in range(self.episodes):
-            for count in range(self.configs['Algorithm']['episodes_train']):
-                self.env.reset()
-                self.totalReward = 0
-                done = False
-                while not done:
-                    done = self.step()
-                    self.step_count +=1
-                print(self.totalReward)
-            for epoch in range(self.configs['Algorithm']['update_epochs']):
+            self.env.reset()
+            self.totalReward = 0
+            done = False
+            while not done:
+                done = self.step()
+                self.step_count +=1
+            if self.step_count % self.configs['Algorithm']['update_steps'] >= 1:
                 self.alg.update(self.agent,self.buffer.full_buffer(),self.step_count)
-            self.buffer.clear_buffer()
-            self.agent.target_actor.load_state_dict(self.agent.actor.state_dict())
-            #self.agent.target_critic.load_state_dict(self.agent.critic.state_dict())
+                self.buffer.clear_buffer()
 
         self.env.close()
 
 
     def step(self):
 
-        '''if self.step_count % self.configs['Algorithm']['old_policy_update_interval'] == 0:
-            self.agent.target_actor.load_state_dict(self.agent.actor.state_dict())
-            self.agent.target_critic.load_state_dict(self.agent.critic.state_dict())'''
-
         observation = self.env.get_observation()
-
-        action= self.agent.get_action(observation)
+        if self.configs['Agent']['action_space'] == 'Discrete':
+            action= self.agent.get_action(observation)
+        elif self.configs['Agent']['action_space'] == 'Continuous':
+            action = self.agent.get_continuous_action(observation)
         next_observation, reward, done, more_data = self.env.step(action)
 
         # TensorBoard metrics
@@ -49,11 +44,10 @@ class SingleAgentPPOLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
-        # print('to buffer:', observation.shape, action.shape, reward.shape, next_observation.shape, [done])
         t = [observation, action, reward, next_observation, int(done)]
         deep = copy.deepcopy(t)
         self.buffer.append(deep)
-        #self.alg.update(self.agent,self.buffer, self.step_count)
+
 
         # TensorBoard Metrics
         if done:
