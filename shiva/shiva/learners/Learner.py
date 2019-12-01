@@ -8,6 +8,8 @@ class Learner(object):
         self.id = learner_id
         self.agentCount = 0
         self.ep_count = 0
+        self.step_count = 0
+        
 
     def __getstate__(self):
         d = dict(self.__dict__)

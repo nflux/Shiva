@@ -5,7 +5,6 @@ import envs
 import algorithms
 import buffers
 import numpy as np
-import random
 
 class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
@@ -13,16 +12,32 @@ class SingleAgentDQNLearner(Learner):
 
 
     def run(self):
-        self.step_count = 0
-        for self.ep_count in range(self.episodes):
+        step_count = 0
+        ep_count = self.ep_count
+        for ep_count in range(self.episodes):
             self.env.reset()
             self.totalReward = 0
             done = False
             while not done:
+                # print (self.id, self.step_count)
                 done = self.step()
                 self.step_count +=1
-
+                step_count += 1
+                if step_count == self.updates_per_iteration:
+                    return None
+            self.ep_count += 1        
         self.env.close()
+
+    # def run(self, updates_per_iteration):
+    #     step_count = 0
+    #     self.env.reset()
+    #     self.totalReward = 0
+    #     done = False
+    #     while (done == True) or (step_count == updates_per_iteration):
+    #         done = self.step()
+    #         self.step_count +=1
+    #         step_count +=1
+
 
     # Function to step throught the environment
     def step(self):

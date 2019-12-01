@@ -64,32 +64,39 @@ class MultipleAgentMetaLearner(MetaLearner):
             # Runs the learner for a number of episodes given by the config
             self.learner.run()'''
 
+            # self.populate_learners()
+            # self.eval = eval_env(self.configs['Evaluation'], self.learners)
+            # self.redeployment()
+            # # self.sample()
+
+            # self.multiprocessing_learners()
             self.populate_learners()
-            # self.sample()
+            self.eval = eval_env(self.configs['Evaluation'], self.learners)
+            self.redeployment()
+                # self.sample()
 
             self.multiprocessing_learners()
-        self.save()
-        self.eval = eval_env(self.configs['Evaluation'], self.learners)
-        self.eval.evaluate_agents()
+        
         for i in range(len(self.eval.eval_scores)):
             print('Average Reward for agent: ', i, '\n', np.average(self.eval.eval_scores[i]))
-        self.redeployment()
-        
+        # self.save()
         print('bye')
 
     def redeployment (self):
         for i in self.learners:
-            i.evaluate = True
-        while True:
-            self.learners, self.episode_rewards =  self.eval.rank_agents()
-            self.exploitation(self.learners, self.episode_rewards)
-            self.exploration(self.learners)
-            self.multiprocessing_learners()
+            i.eval = self.eval
+        # while True:
+        #     self.learners, self.episode_rewards =  self.eval.rank_agents()
+        #     self.exploitation(self.learners, self.episode_rewards)
+        #     self.exploration(self.learners)
+        #     self.multiprocessing_learners()
 
 
 
     def create_learner(self):
-        self.configs['Learner']['evaluate'] = False
+        self.configs['Learner']['eval'] = list()
+        self.configs['Evaluation']['sample'] = False
+        self.configs['Learner']['updates_per_iteration'] = self.updates_per_iteration
         learner = getattr(learners, self.configs['Learner']['type'])
         return learner(self.get_id(), self.configs)
 
@@ -102,30 +109,82 @@ class MultipleAgentMetaLearner(MetaLearner):
         for p in self.process_list:
             p.join()'''
 
+    def check_condition (self):
+        k = True
+        for i in self.learners:
+            if item.ep_count == item.episodes:
+                k = False
+            elif item.ep_count >= item.episodes:
+                k = True
+            else:
+                k = False
+        return k
 
     #Run each Learner in a separate process and join the processes when they are all finished running
     def multiprocessing_learners(self):
-        for learner in range(len(self.learners)):
-            p = torch.multiprocessing.Process(target=self.run_learner(learner))
-            p.start()
-            self.process_list.append(p)
-        for p in self.process_list:
-            p.join()
+        event = torch.multiprocessing.Event()
+        self.eval.event = event
+
+        while not all(item.ep_count >= item.episodes for item in self.learners):
+            self.process_list = []
+            for i in self.learners:
+                print ('id:', i.id, 'ep_count:', i.ep_count,'ep:', i.episodes, 'learning rate:', i.agent.learning_rate)
+            for learner in range(len(self.learners)):
+                if self.learners[learner].ep_count < self.learners[learner].episodes:
+                    s = "learner" + "_" + str(learner)
+                    p = torch.multiprocessing.Process(name=s, target=self.run_learner(learner))
+                    p.start()
+                    self.process_list.append(p)
+            
+            print ("start evaluating...---------------------------------------")
+            
+            self.eval.evaluate_agents()
+            
+            print ("start ranking Agents...-----------------------------------")
+
+            self.learners, self.episode_rewards =  self.eval.rank_agents()
+            
+            for i in range(len(self.eval.eval_scores)):
+                print('Average Reward for agent: ', i, '\n', np.average(self.eval.eval_scores[i]))
+            for i in self.learners:
+                print ('id:', i.id, 'ep_count:', i.ep_count,'ep:', i.episodes, 'learning rate:', i.agent.learning_rate)
+
+            print ("start PBT process...---------------------------------------")
+            self.exploitation(self.learners, self.episode_rewards)
+            
+            self.exploration(self.learners)
+
+            for p in self.process_list:
+                p.join()
+                print(p)
+
+            for i in self.learners:
+                print ('id:', i.id, 'ep_count:', i.ep_count,'ep:', i.episodes)
+            print (all(item.ep_count != item.episodes for item in self.learners))
+
+        print ("finish training")
+            
+        # p = torch.multiprocessing.Pool()
+        # p.map(self.run_learner, range(len(self.learners)))
+        # p.close()
+        # p.join()
+        
 
     #Run inidivdual learners. Used as the target function for multiprocessing
     def run_learner(self,learner_idx):
         shiva.add_learner_profile(self.learners[learner_idx])
-        self.learners[learner_idx].launch()
-        if self.learners[learner_idx].evaluate == False:
-            self.sample(self.learners[learner_idx])
-        print ("learning rate", learner_idx, self.learners[learner_idx].agent.learning_rate)
+        
+        # print ("learning rate", learner_idx, self.learners[learner_idx].agent.learning_rate)
         shiva.update_agents_profile(self.learners[learner_idx])
         self.learners[learner_idx].run()
+        # print("episode",self.learners[learner_idx].ep_count)
 
     #fill the list of learners
     def populate_learners(self):
         for learner in range(self.learner_list_size):
             self.learners[learner] = self.create_learner()
+            self.learners[learner].launch()
+            self.sample(self.learners[learner])
 
     #Conduct Welch's T-test between two agents episode rewards and return whether we reject the null hypothesis
     def welch_T_Test(self,episodes_1, episodes_2):
