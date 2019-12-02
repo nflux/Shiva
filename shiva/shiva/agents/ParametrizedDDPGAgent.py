@@ -1,5 +1,6 @@
 from .Agent import Agent
 import copy
+import numpy as np
 from networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 class ParametrizedDDPGAgent(Agent):

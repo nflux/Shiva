@@ -10,7 +10,7 @@ import numpy as np
 import helpers.misc as misc
 
 class PPOAgent(Agent):
-    def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config,net_config):
+    def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config, net_config):
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.acs_discrete = acs_discrete
@@ -39,14 +39,15 @@ class PPOAgent(Agent):
 
         elif agent_config['action_space'] == 'Continuous':
                 self.policy_base = torch.nn.Sequential(
-                    torch.nn.Linear(self.network_input,net_config['policy_base_output']),
-                    torch.nn.ReLU())
-                self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
+                    torch.nn.Linear(self.network_input, net_config['policy_base_output']),
+                    torch.nn.ReLU()
+                )
+                self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'], self.network_output, net_config['mu'])
                 self.actor = self.mu
-                self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['var'])
-                self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'],1,net_config['critic'])
+                self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'], self.network_output, net_config['var'])
+                self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'], 1, net_config['critic'])
                 params = list(self.policy_base.parameters()) + list(self.mu.parameters()) + list(self.var.parameters()) + list(self.critic.parameters())
-                self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
+                self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
 
 
     def get_action(self,observation):

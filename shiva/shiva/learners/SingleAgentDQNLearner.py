@@ -32,8 +32,8 @@ class SingleAgentDQNLearner(Learner):
 
         next_observation, reward, done, more_data = self.env.step(action)
 
-        shiva.add_summary_writer(self, self.agent, 'Reward per Step', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.get_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Reward_per_Step', reward, self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Loss_per_Step', self.alg.get_loss(), self.step_count)
 
         # Cumulate the reward
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
@@ -44,7 +44,7 @@ class SingleAgentDQNLearner(Learner):
 
         # when the episode ends
         if done:
-            shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
 
         # Save the agent periodically
         # if self.step_count % self.save_frequency == 0:

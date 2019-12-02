@@ -39,7 +39,7 @@ class SingleAgentPPOLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action)
 
         # TensorBoard metrics
-        shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.loss, self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.loss, self.step_count)
         #shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
@@ -51,7 +51,7 @@ class SingleAgentPPOLearner(Learner):
 
         # TensorBoard Metrics
         if done:
-            shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
 
         return done
 
@@ -64,7 +64,7 @@ class SingleAgentPPOLearner(Learner):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
         acs_continuous = self.env.action_space_continuous
         acs_discrete= self.env.action_space_discrete
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),acs_discrete,acs_continuous,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm(self.env.get_observation_space(), self.env.get_action_space(), acs_discrete, acs_continuous, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])

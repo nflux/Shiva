@@ -9,7 +9,7 @@ import math
 
 
 class ContinuousPPOAlgorithm(Algorithm):
-    def __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
+    def __init__(self,obs_space, acs_space, action_space_discrete, action_space_continuous, configs):
 
         super(ContinuousPPOAlgorithm, self).__init__(obs_space,acs_space,configs)
         torch.manual_seed(3)
@@ -100,5 +100,5 @@ class ContinuousPPOAlgorithm(Algorithm):
         return self.critic_loss
 
     def create_agent(self):
-        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])
+        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete, self.acs_continuous, self.configs[1], self.configs[2])
         return self.agent
