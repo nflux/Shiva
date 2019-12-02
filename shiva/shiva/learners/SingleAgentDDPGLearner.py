@@ -122,10 +122,10 @@ class SingleAgentDDPGLearner(Learner):
 #     def __init__(self, env, alg):
 #         self.env = env
 #         self.alg = alg
-    
+
 #     def Reward(self):
 #         return self.env.get_reward()
-        
+
 #     def LossPerStep(self):
 #         return self.alg.get_loss()
 

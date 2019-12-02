@@ -16,6 +16,7 @@ class DaggerAlgorithm(Algorithm):
         self.acs_continuous = action_space_continuous
         self.action_policy = configs[1]['action_policy']
         self.loss = 0
+        self.configs = configs
 
 
 
@@ -52,22 +53,34 @@ class DaggerAlgorithm(Algorithm):
         imitation_agent.optimizer.zero_grad()
 
         input_v = torch.tensor(states).float().to(self.device)
-        actions_one_hot = torch.zeros((len(actions),2))
+
         action_prob_dist = imitation_agent.policy(input_v)
 
-
-        expert_actions = torch.LongTensor(len(states))
+        #initialize tensor to store expert actions queried.
+        if self.configs[0]['loss_function'] == 'MSELoss':
+            expert_actions = torch.zeros([len(states),self.acs_space]).float()
+        elif self.configs[0]['loss_function'] == 'CrossEntropyLoss':
+            expert_actions = torch.zeros([len(states)]).long()
+        #place the experts actions into a single tensor.
         for i in range(len(states)):
-            expert_actions[i] = self.find_best_expert_action(expert_agent.policy,states[i])
-        expert_actions = expert_actions.detach()
+            expert_actions[i] = torch.from_numpy(expert_agent.find_best_imitation_action(states[i]))
 
 
-        #Loss will be Cross Entropy Loss between the action probabilites produced
-        #by the imitation agent, and the action took by the expert.
+        #detach actions to ensure they do not interfere with the network updates.
+        #CrossEntropyLoss requires target to be a long tensor
+        #expert_actions = expert_actions.detach().long()
+
+        #format the shape properly to ensure proper loss calculations
+        if self.configs[0]['loss_function'] == 'MSELoss':
+            if (len(actions.shape) > 1):
+                action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[len(actions.shape)-1])
+            else:
+                action_prob_dist = action_prob_dist.view(actions.shape[0])
+            #MSELoss requires target to be a float tensor
+            #expert_actions = expert_actions.float()
+
+        #calculate loss based on loss functions dictated in the configs
         self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
-
-
-
         self.loss.backward()
         imitation_agent.optimizer.step()
 
@@ -99,14 +112,6 @@ class DaggerAlgorithm(Algorithm):
 
         return np.argmax(best_act)
 
-    '''def find_best_actions(self,network,observations) -> torch.tensor:
-
-        z = torch.FloatTensor()
-
-        for observation in observations:
-            z = torch.cat(z,self.find_best_expert_action(network,observation))
-
-        return z'''
 
     def get_loss(self):
         return self.loss

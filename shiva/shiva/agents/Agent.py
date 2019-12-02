@@ -23,7 +23,7 @@ class Agent(object):
 
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)
-    
+
     def save(self, save_path, step):
         torch.save(self.policy, save_path + '/policy.pth')
 
@@ -37,7 +37,7 @@ class Agent(object):
             Input
                 network         policy network to be used
                 observation     observation from the environment
-            
+
             Returns
                 A one-hot encoded list
         '''
@@ -45,9 +45,7 @@ class Agent(object):
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
         # print(self.acs_space)
         for i in range(self.acs_space):
-            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device) 
-            # print(obs_v.shape, act_v.shape)
-            # print(network)
+            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device)
             q_val = network(torch.cat([obs_v, act_v]))
             if q_val > best_q:
                 best_q = q_val

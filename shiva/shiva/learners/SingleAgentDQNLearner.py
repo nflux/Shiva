@@ -29,6 +29,7 @@ class SingleAgentDQNLearner(Learner):
 
         action = self.alg.get_action(self.agent, observation, self.env.get_current_step())
 
+
         next_observation, reward, done, more_data = self.env.step(action)
 
         shiva.add_summary_writer(self, self.agent, 'Reward per Step', reward, self.step_count)
@@ -59,7 +60,7 @@ class SingleAgentDQNLearner(Learner):
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        
+
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
@@ -80,7 +81,7 @@ class SingleAgentDQNLearner(Learner):
 
         # Create the agent
         self.agent = self.alg.create_agent(self.get_id())
-        
+
         # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment
@@ -103,10 +104,10 @@ class SingleAgentDQNLearner(Learner):
 #     def __init__(self, env, alg):
 #         self.env = env
 #         self.alg = alg
-    
+
 #     def Reward(self):
 #         return self.env.get_reward()
-        
+
 #     def LossPerStep(self):
 #         return self.alg.get_loss()
 
