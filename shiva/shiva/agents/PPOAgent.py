@@ -11,7 +11,7 @@ import helpers.misc as misc
 
 class PPOAgent(Agent):
     def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config, net_config):
-
+        super(PPOAgent, self).__init__(id, obs_dim, (0 if acs_discrete is None else acs_discrete)+(0 if acs_continuous is None else acs_continuous), agent_config, net_config)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.acs_discrete = acs_discrete
         self.acs_continuous = acs_continuous
@@ -50,7 +50,13 @@ class PPOAgent(Agent):
                 self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
 
 
-    def get_action(self,observation):
+    def get_action(self, observation):
+        if self.action_space == 'Discrete':
+            return self.get_discrete_action(observation)
+        elif self.action_space == 'Continuous':
+            return self.get_continuous_action(observation)
+
+    def get_discrete_action(self, observation):
         #retrieve the action given an observation
         full_action = self.target_actor(torch.tensor(observation).float()).detach()
         if(len(full_action.shape) > 1):

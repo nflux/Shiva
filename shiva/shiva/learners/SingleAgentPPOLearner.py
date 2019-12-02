@@ -14,29 +14,50 @@ class SingleAgentPPOLearner(Learner):
         super(SingleAgentPPOLearner,self).__init__(learner_id, config)
 
     def run(self):
+        """
+            Gym run
+            
+            -- Travis to take a look at this comments
+        """
         self.step_count = 0
         for self.ep_count in range(self.episodes):
             self.env.reset()
             self.totalReward = 0
-            done = False
-            while not done:
-                done = self.step()
-                self.step_count +=1
-            if self.step_count % self.configs['Algorithm']['update_steps'] >= 1:
-                self.alg.update(self.agent,self.buffer.full_buffer(),self.step_count)
-                self.buffer.clear_buffer()
+            self.done = False
+            while not self.done:
+                self.step()
+                
+            # this update is now inside the step function
+            # if self.step_count % self.configs['Algorithm']['update_steps'] >= 1: # <-- isn't this almost always true??
+            # if self.step_count % self.configs['Algorithm']['update_steps'] == 0: # <-- you meant this?
+            #
+            #     self.alg.update(self.agent, self.buffer.full_buffer(), self.step_count)
+            #     self.buffer.clear_buffer()
 
         self.env.close()
 
+    def run_(self):
+        """
+            Unity run
+        """
+        self.step_count = 0
+        while self.env.done_counts < self.episodes:
+            self.step()
+        self.env.close()
 
     def step(self):
 
         observation = self.env.get_observation()
-        if self.configs['Agent']['action_space'] == 'Discrete':
-            action= self.agent.get_action(observation)
-        elif self.configs['Agent']['action_space'] == 'Continuous':
-            action = self.agent.get_continuous_action(observation)
+
+        """Temporary fix"""
+        if len(observation.shape) > 1:
+            action = [self.agent.get_action(obs) for obs in observation]
+        else:
+            action = self.agent.get_action(observation)
+        """"""
+            
         next_observation, reward, done, more_data = self.env.step(action)
+        self.done = done
 
         # TensorBoard metrics
         shiva.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.loss, self.step_count)
@@ -44,16 +65,34 @@ class SingleAgentPPOLearner(Learner):
         shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
-        t = [observation, action, reward, next_observation, int(done)]
-        deep = copy.deepcopy(t)
-        self.buffer.append(deep)
 
+        """Temporary fix"""
+        if len(observation.shape) > 1:
+            z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
+            for obs, act, rew, next_obs, don in z:
+                exp = [obs, act, rew, next_obs, int(don)]
+                # exp = copy.deepcopy(exp)
+                self.buffer.append(exp)
+        else:
+            t = [observation, action, reward, next_observation, int(done)]
+            deep = copy.deepcopy(t)
+            self.buffer.append(deep)
+        """"""
+
+        if self.step_count % self.configs['Algorithm']['update_steps'] == 0: # <<-- you meant this?
+            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            self.buffer.clear_buffer()
+
+        # if self.step_count > self.alg.exploration_steps:# and self.step_count % 16 == 0:
+        #     self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
         # TensorBoard Metrics
-        if done:
+        if self.done:
             shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
 
-        return done
+        self.step_count += 1
+
+        # return done
 
     def create_environment(self):
         # create the environment and get the action and observation spaces

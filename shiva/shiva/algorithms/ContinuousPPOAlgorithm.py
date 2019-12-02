@@ -38,6 +38,7 @@ class ContinuousPPOAlgorithm(Algorithm):
         actions = torch.tensor(actions).to(self.device)
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
+        # done_masks = torch.tensor(dones, dtype=np.bool).to(self.device)        
         done_masks = torch.ByteTensor(dones).to(self.device)
 
         values = agent.critic(agent.policy_base(states.float()))
@@ -52,9 +53,9 @@ class ContinuousPPOAlgorithm(Algorithm):
                 gae = delta
             else:
                 delta = reward + (self.gamma * next_val) - val
-                gae = delta + (self.gamma * self.gae_lambda * gae)
-            advantages.insert(0,gae)
-            new_rewards.insert(0,gae + val)
+                gae = delta + (self.gamma * self.gae_lambda * gae) # <-- first iteration gae doesn't exist
+            advantages.insert(0, gae)
+            new_rewards.insert(0, gae + val)
         new_rewards = torch.tensor(new_rewards).float()
         advantages = torch.tensor(advantages).float()
 
