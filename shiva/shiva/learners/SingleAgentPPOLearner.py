@@ -36,6 +36,7 @@ class SingleAgentPPOLearner(Learner):
             action= self.agent.get_action(observation)
         elif self.configs['Agent']['action_space'] == 'Continuous':
             action = self.agent.get_continuous_action(observation)
+            
         next_observation, reward, done, more_data = self.env.step(action)
 
         # TensorBoard metrics

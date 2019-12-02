@@ -57,18 +57,22 @@ class ContinuousPPOAlgorithm(Algorithm):
             new_rewards.insert(0,gae + val)
         new_rewards = torch.tensor(new_rewards).float()
         advantages = torch.tensor(advantages).float()
+        advantages = (advantages - torch.mean(advantages)) / torch.std(advantages)
 
         '''
             Training the Actor
         '''
-        mu = agent.mu(agent.policy_base(states.float()))
+        '''mu = agent.mu(agent.policy_base(states.float()))
         var = agent.var(agent.policy_base(states.float()))
-        old_log_probs = self.log_probs(mu,var,actions).float().detach()
-        advantages = (advantages - torch.mean(advantages)) / torch.std(advantages)
+        old_log_probs = self.log_probs(mu,var,actions).float().detach()'''
+
 
         for epoch in range(self.configs[0]['update_epochs']):
         # Zero the gradient
             agent.optimizer.zero_grad()
+            mu = agent.mu(agent.policy_base(states.float()))
+            var = agent.var(agent.policy_base(states.float()))
+            old_log_probs = self.log_probs(mu,var,actions).float().detach()
             value_loss = self.loss_calc(values.squeeze(dim=-1)[:-1],new_rewards)
             new_log_probs = self.log_probs(mu,var,actions).float()
             ratios = torch.exp(new_log_probs - old_log_probs)
