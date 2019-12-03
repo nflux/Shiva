@@ -32,7 +32,7 @@ class PPOAgent(Agent):
 
         if agent_config['action_space'] == 'Discrete':
             self.actor = DLN.DynamicLinearNetwork(self.network_input, self.network_output, net_config['actor'])
-            self.target_actor = copy.deepcopy(self.actor)
+            #self.target_actor = copy.deepcopy(self.actor)
             self.critic = DLN.DynamicLinearNetwork(self.network_input, 1, net_config['critic'])
             params = list(self.actor.parameters()) +list(self.critic.parameters())
             self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
@@ -51,25 +51,14 @@ class PPOAgent(Agent):
 
     def get_action(self,observation):
         #retrieve the action given an observation
-        full_action = self.target_actor(torch.tensor(observation).float()).detach()
-        if(len(full_action.shape) > 1):
-            full_action = full_action.reshape(len(full_action[0]))
+        action = self.actor(torch.tensor(observation).float()).detach()
+        '''if(len(full_action.shape) > 1):
+            full_action = full_action.reshape(len(full_action[0]))'''
 
-        #Check if there is a discrete component to the action tensor
-        if (self.acs_discrete != None):
-            #If there is, extract the discrete component
-            discrete_action = full_action[: self.acs_discrete]
-            discrete_action = F.softmax(discrete_action,dim=0)
-            dist = Categorical(discrete_action)
-            discrete_action = dist.sample()
-            discrete_action = misc.action2one_hot(self.acs_discrete,discrete_action.item())
-
-            #Recombine the chosen discrete action with the continuous action values
-            full_action = np.concatenate([discrete_action,full_action[self.acs_discrete:]])
-
-            return full_action.tolist()
-        else:
-            return full_action
+        dist = Categorical(action)
+        action = dist.sample()
+        action = misc.action2one_hot(self.acs_discrete,action.item())
+        return action.tolist()
 
     def get_continuous_action(self,observation):
         observation = torch.tensor(observation).float().detach()
