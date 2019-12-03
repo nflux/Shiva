@@ -5,25 +5,25 @@ ___
 *   init
     * [Go to code]()
 *   Environment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/Environment.py)
+    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/Environment.py)
 *   GymContinuousEnvironment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/GymContinuousEnvironment.py)
+    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/GymContinuousEnvironment.py)
 *   GymDiscreteEnvironment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/GymDiscreteEnvironment.py)
+    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/GymDiscreteEnvironment.py)
 *   RobocupDDPGEnvironment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/RoboCupDDPGEnvironment.py)
-*   UnityEnvironment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/UnityEnvironment.py)
+    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/RoboCupDDPGEnvironment.py)
+*   UnityWrapperEnvironment
+    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/UnityWrapperEnvironment.py)
 
 
 ## init
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/__init__.py)
+[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/__init__.py)
 If you add environments, add them to this file as well.
 
 ##  Environment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/Environment.py)
+[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/Environment.py)
 *   **DESCRIPTION**: This is the abstract class that the other environments will inherit from.
 *   step(self,actions)
     -   **self**
@@ -73,12 +73,24 @@ ___
     -   **self**
         +   Refers to the Current Instance  
 
+## UnityEnvironment
+___
+[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/UnityWrapperEnvironment.py)
+### Config Setup
+```
+[Environment]
+type='UnityWrapperEnvironment'
+exec='shiva/envs/unitybuilds/Scene_name/Scene_name.x86_64'
+env_name='Scene_name'
+train_mode = True
+```
+
 ## Gym
 ___
 Shiva supports both Gym Continuous Environments (e.g. MountainCarContinuous-v0) and Gym Discrete Environments (e.g. MountainCar-v0). The Discrete action space allows a fixed range of non-negative numbers while the Box action space represents an n-dimensional box.
 ###  GymContinuousEnvironment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/GymContinuousEnvironment.py)
+[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/GymContinuousEnvironment.py)
 GymDiscreteEnvironment and GymContinuousEnvironment both inherit from the Environment class. The only difference between the two is that GymDiscreteEnvironment takes the argmax() of the action output from the network before passing it to the environment while GymContinuousEnvironment simply passes the action output.
 #### Config Setup
 ```
@@ -94,7 +106,7 @@ num_agents=1
 
 ###  GymDiscreteEnvironment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/GymDiscreteEnvironment.py)
+[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/GymDiscreteEnvironment.py)
 GymDiscreteEnvironment and GymContinuousEnvironment both inherit from the Environment class. The only difference between the two is that GymDiscreteEnvironment takes the argmax() of the action output from the network before passing it to the environment while GymContinuousEnvironment simply passes the action output.
 #### Config Setup
 ```
@@ -109,7 +121,7 @@ num_agents=1
 
 ##  RobocupDDPGEnvironment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/RoboCupDDPGEnvironment.py)
+[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/RoboCupDDPGEnvironment.py)
 ### Config Setup
 ```
 [Environment]
@@ -161,15 +173,4 @@ change_agents_x=0.0
 change_agents_y=0.0
 change_every_x=100
 init_env = True
-```
-## UnityEnvironment
-___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/UnityWrapperEnvironment.py)
-### Config Setup
-```
-[Environment]
-type='UnityWrapperEnvironment'
-exec='shiva/envs/unitybuilds/3DBall/3DBall.x86_64'
-env_name='3DBall'
-train_mode = True
 ```
