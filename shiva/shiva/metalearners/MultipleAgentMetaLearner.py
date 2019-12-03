@@ -201,6 +201,7 @@ class MultipleAgentMetaLearner(MetaLearner):
             random_top_20 = random.choice(learners)
             learner.agent.policy = copy.deepcopy(random_top_20.agent.policy)
             learner.agent.optimizer = copy.deepcopy(random_top_20.agent.optimizer)
+            learner.agent.learning_rate = copy.deepcopy(random_top_20.agent.learning_rate)
 
     def t_Test(self,learners,episode_rewards):
         for i in range(len(learners)):
@@ -210,6 +211,7 @@ class MultipleAgentMetaLearner(MetaLearner):
             if(self.welch_T_Test(episode_rewards[i],episode_rewards[sampled_idx])):
                 learners[i].agent.policy = copy.deepcopy(learners[sampled_idx].agent.policy)
                 learners[i].agent.optimizer = copy.deepcopy(learners[sampled_idx].agent.optimizer)
+                learners[i].agent.learning_rate = copy.deepcopy(learners[sampled_idx].agent.learning_rate)
 
     #randomly sample hyperparameter
     def sample (self, learner):
