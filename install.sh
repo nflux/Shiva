@@ -1,15 +1,26 @@
+#! /usr/bin/env bash
 
 # This script is meant to install all the components of Shiva
-
-# RoboCup Environment
-​
-# A 2D soccer simulation to apply various machine learning algorithms.
 ​
 ## Setup on Ubuntu 16.04
 
 # Build RoboCup
 
-# ​Go to robocup folder
+## Installing python and venv, and creating a virtual environment
+
+# # Installs python 3
+# sudo apt install python3
+# # Installs venv
+# sudo apt-get install python3-venv
+# cd ..
+# # creates a virtual environment just for shiva
+# python3 -m venv shiva
+# # activates the virtual environment
+# source shiva/bin/activate
+# # ​Go to robocup folder
+# cd Control-Tasks
+
+
 cd shiva/shiva/envs/robocup/
 
 # clone the robocup files
@@ -22,10 +33,8 @@ cd HFO
 
 #The above command will create a build/ folder with various executable files
 bash compile.sh
-
 ​
 ## Ready to launch a RoboCup session
-
 
 # Install Unity Python API
 cd ../../ml-agents/ml-agents-envs/
@@ -34,4 +43,8 @@ cd ..
 cd ml-agents
 pip install -e ./
 
-pip install gym tensorboard tensorboardX tensorflow pandas torch
+## Unity API installed
+
+
+# Python dependencies
+pip install gym tensorboard tensorboardX tensorflow pandas torch pynput jupyter
