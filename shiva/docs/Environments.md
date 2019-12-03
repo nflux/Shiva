@@ -168,10 +168,8 @@ ___
 ### Config Setup
 ```
 [Environment]
-type='UnityEnvironment'
+type='UnityWrapperEnvironment'
+exec='shiva/envs/unitybuilds/3DBall/3DBall.x86_64'
 env_name='3DBall'
-action_space='continuous'
-observation_space="continuous"
-render=True
-num_agents=1
+train_mode = True
 ```
