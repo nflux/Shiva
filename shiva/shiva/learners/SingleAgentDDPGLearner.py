@@ -35,8 +35,8 @@ class SingleAgentDDPGLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
 
         # TensorBoard Step Metrics
-        shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
         # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
@@ -55,7 +55,7 @@ class SingleAgentDDPGLearner(Learner):
 
         # TensorBoard Episodic Metrics
         if done:
-            shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
 
             if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:

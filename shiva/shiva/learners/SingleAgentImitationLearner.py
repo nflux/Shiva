@@ -78,7 +78,7 @@ class SingleAgentImitationLearner(Learner):
 
         # Write to tensorboard
         shiva.add_summary_writer(self, self.expert_agent, 'Reward', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agents[0], 'Loss per step', self.supervised_alg.get_loss(),self.step_count)
+        shiva.add_summary_writer(self, self.agents[0], 'Loss_per_step', self.supervised_alg.get_loss(),self.step_count)
 
         # Cumulate the reward
         self.totalReward += reward
@@ -89,7 +89,7 @@ class SingleAgentImitationLearner(Learner):
         # when the episode ends
         if done:
             # add values to the tensorboard
-            shiva.add_summary_writer(self, self.agents[0], 'Total Reward', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agents[0], 'Total_Reward', self.totalReward, self.ep_count)
 
             print(self.totalReward)
 
@@ -109,7 +109,7 @@ class SingleAgentImitationLearner(Learner):
 
 
         shiva.add_summary_writer(self, self.agents[0], 'Reward', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agents[0], 'Loss per step', self.imitation_alg.get_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agents[0], 'Loss_per_step', self.imitation_alg.get_loss(), self.step_count)
 
 
         self.totalReward += reward
@@ -123,7 +123,7 @@ class SingleAgentImitationLearner(Learner):
         # when the episode ends
         if done:
             # add values to the tensorboard
-            shiva.add_summary_writer(self, self.agents[0], 'Total Reward', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agents[0], 'Total_Reward', self.totalReward, self.ep_count)
             print(self.totalReward)
 
 
