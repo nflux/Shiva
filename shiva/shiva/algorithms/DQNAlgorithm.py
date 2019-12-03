@@ -42,9 +42,15 @@ class DQNAlgorithm(Algorithm):
         rewards_v = torch.tensor(rewards).to(self.device).view(-1, 1)
         done_mask = torch.tensor(dones, dtype=np.bool).to(self.device)
 
+        print('from buffer:', states_v.shape, actions_v.shape, rewards_v.shape, next_states_v.shape, done_mask.shape, '\n')
+        # input()
+
+
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j) from minibatch
         input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(self.device)
+        print(input_v.shape)
+        input()
         state_action_values = agent.policy(input_v)
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
         # For the observations s_j+1, select an action using the Policy and calculate Q values of those using the Target net
@@ -95,5 +101,6 @@ class DQNAlgorithm(Algorithm):
         return self.loss
 
     def create_agent(self, id):
+        print(self.configs[1])
         self.agent = DQNAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent

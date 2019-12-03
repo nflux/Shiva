@@ -12,7 +12,7 @@ class GymDiscreteEnvironment(Environment):
         self.world_status = False
         self.observation_space = self.set_observation_space()
         self.action_space_continuous = None
-        self.action_space_discrete = None 
+        self.action_space_discrete = None
         self.action_space = self.set_action_space()
         self.step_count = 0
         self.render = configs['render']

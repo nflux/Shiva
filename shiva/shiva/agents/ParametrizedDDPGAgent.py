@@ -1,3 +1,5 @@
+import numpy as np
+import torch
 from .Agent import Agent
 import copy
 from networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
@@ -26,3 +28,10 @@ class ParametrizedDDPGAgent(Agent):
         # print(self.critic)
 
         # input()
+    def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
+
+            action = self.actor(observation.float()).cpu().data.numpy()
+            observation = torch.tensor(observation).to(self.device)
+            action = np.clip(action, -1,1)
+            # print('actor action shape', action.shape)
+            return action[0]

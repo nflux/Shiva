@@ -9,13 +9,13 @@ class GymContinuousEnvironment(Environment):
         self.acs = 0
         self.rews = 0
         self.world_status = False
+        self.action_space_continuous = None
+        self.action_space_discrete = None
         self.observation_space = self.set_observation_space()
         self.action_space = self.set_action_space()
-        self.action_space_continuous = None
-        self.action_space_discrete = None 
         self.step_count = 0
 
-    def step(self,action):
+    def step(self, action, **kwargs):
             self.acs = action
             self.obs, self.rews, self.world_status, info = self.env.step(action)
             self.step_count +=1

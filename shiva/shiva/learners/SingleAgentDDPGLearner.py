@@ -72,7 +72,7 @@ class SingleAgentDDPGLearner(Learner):
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        
+
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
@@ -91,6 +91,7 @@ class SingleAgentDDPGLearner(Learner):
         if self.manual_play:
             self.HPI = envs.HumanPlayerInterface()
 
+
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
 
@@ -100,6 +101,7 @@ class SingleAgentDDPGLearner(Learner):
             self.buffer = self._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
+
         # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment
@@ -113,24 +115,3 @@ class SingleAgentDDPGLearner(Learner):
 
     def load_agent(self, path):
         return shiva._load_agents(path)[0]
-
-# class MetricsCalculator(object):
-#     '''
-#         Abstract class that it's solely purpose is to calculate metrics
-#         Has access to the Environment
-#     '''
-#     def __init__(self, env, alg):
-#         self.env = env
-#         self.alg = alg
-    
-#     def Reward(self):
-#         return self.env.get_reward()
-        
-#     def LossPerStep(self):
-#         return self.alg.get_loss()
-
-#     def LossActorPerStep(self):
-#         return self.alg.get_actor_loss()
-
-#     def TotalReward(self):
-#         return self.get_total_reward()

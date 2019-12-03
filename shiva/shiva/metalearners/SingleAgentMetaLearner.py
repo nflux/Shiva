@@ -40,6 +40,7 @@ class SingleAgentMetaLearner(MetaLearner):
 
             # initialize the learner instances
             self.learner.launch()
+            
             shiva.update_agents_profile(self.learner)
 
             # Runs the learner for a number of episodes given by the config

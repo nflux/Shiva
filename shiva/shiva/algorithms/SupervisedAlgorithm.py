@@ -15,6 +15,7 @@ class SupervisedAlgorithm(Algorithm):
         self.acs_discrete = action_space_discrete
         self.acs_continuous = action_space_continuous
         self.loss = 0
+        self.configs = configs
 
 
     def update(self, agent, minibatch, step_n):
@@ -48,7 +49,8 @@ class SupervisedAlgorithm(Algorithm):
         action_prob_dist = agent.policy(imitation_input_v)
         #Cross Entropy takes in action class as target value
 
-        actions = torch.LongTensor(np.argmax(actions,axis = 1))
+        #actions = torch.LongTensor(np.argmax(actions,axis = 1))
+        actions = torch.LongTensor(actions)
         actions = actions.detach()
 
         #action_prob_dist[done_mask] = 0.0
@@ -66,14 +68,16 @@ class SupervisedAlgorithm(Algorithm):
         #We are using cross entropy loss between the action our imitation Policy
         #would choose, and the actions the expert agent took
 
+        if self.configs[0]['loss_function'] == 'MSELoss':
+            action_prob_dist = action_prob_dist.view(actions.shape)
+            actions = actions.float()
+        
         self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
-
-
         self.loss.backward()
         agent.optimizer.step()
 
 
-    def get_action(self, agent, observation) -> np.ndarray:
+    '''def get_action(self, agent, observation) -> np.ndarray:
 
         best_act = self.find_best_action(agent.policy, observation)
 
@@ -90,7 +94,7 @@ class SupervisedAlgorithm(Algorithm):
                 best_q = q_val
                 best_act_v = act_v
         best_act = best_act_v.tolist()
-        return best_act
+        return best_act'''
 
     def create_agent(self):
         new_agent = ImitationAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])

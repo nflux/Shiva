@@ -5,6 +5,7 @@ import helpers.misc as misc
 import envs
 import algorithms
 import buffers
+import torch
 
 class SingleAgentImitationLearner(Learner):
     def __init__(self,learner_id,config):
@@ -13,24 +14,18 @@ class SingleAgentImitationLearner(Learner):
 
 
 
+
     def run(self):
 
         self.supervised_update()
-        print('Supervised Learning is complete!')
-        print('Loss:',self.supervised_alg.loss)
         self.imitation_update()
-
         self.env.close()
 
     def supervised_update(self):
         self.step_count = 0
         for self.ep_count in range(self.configs['Learner']['supervised_episodes']):
-            print(self.ep_count)
-
             self.env.reset()
-
             self.totalReward = 0
-
             done = False
             while not done:
                 done = self.supervised_step()
@@ -39,7 +34,7 @@ class SingleAgentImitationLearner(Learner):
 
         # make an environment close function
         # self.env.close()
-        self.env.env.close()
+        self.env.close()
         self.agent = self.agents[0]
 
         #self.supervised_train()
@@ -49,21 +44,14 @@ class SingleAgentImitationLearner(Learner):
 
             self.step_count=0
             for self.ep_count in range(self.configs['Learner']['imitation_episodes']):
-                print(self.ep_count)
                 self.env.reset()
                 self.totalReward = 0
-
                 done = False
                 while not done:
-                    next_observation, reward, done, _ = self.env.step([0.0,1.0,0.0,0.0])
+                    #next_observation, reward, done, _ = self.env.step([0.0,1.0,0.0,0.0])
                     done = self.imitation_step(iter_count)
                     self.step_count+=1
-
-                self.env.env.close()
-                print('made it out of the while loop')
-
-            print('Policy ',iter_count, ' complete!')
-            print('Loss: ',self.imitation_alg.loss)
+                self.env.close()
             self.agent = self.agents[iter_count]
 
 
@@ -72,16 +60,18 @@ class SingleAgentImitationLearner(Learner):
 
         observation = self.env.get_observation()
 
-        action = self.supervised_alg.get_action(self.expert_agent, observation)
+        action = self.expert_agent.find_best_imitation_action(observation)
 
-        next_observation, reward, done, _ = self.env.step(action)
+        #action = self.supervised_alg.get_action(self.expert_agent, observation)
+
+        next_observation, reward, done, more_data = self.env.step(action)
 
         # Write to tensorboard
         shiva.add_summary_writer(self, self.expert_agent, 'Reward', reward, self.step_count)
         shiva.add_summary_writer(self, self.agents[0], 'Loss_per_step', self.supervised_alg.get_loss(),self.step_count)
 
         # Cumulate the reward
-        self.totalReward += reward
+        self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         self.replay_buffer.append([observation, action, reward, next_observation, done])
         self.supervised_alg.update(self.agents[0],self.replay_buffer.sample(), self.step_count)
@@ -104,15 +94,16 @@ class SingleAgentImitationLearner(Learner):
         observation = self.env.get_observation()
 
         action = self.agents[iter_count-1].find_best_action(self.agents[iter_count-1].policy, observation)#, self.env.get_current_step())
+        #action= torch.LongTensor(action)
 
-        next_observation, reward, done, _ = self.env.step(action)
+        next_observation, reward, done, more_data = self.env.step(action)
 
 
         shiva.add_summary_writer(self, self.agents[0], 'Reward', reward, self.step_count)
         shiva.add_summary_writer(self, self.agents[0], 'Loss_per_step', self.imitation_alg.get_loss(), self.step_count)
 
 
-        self.totalReward += reward
+        self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         self.replay_buffer.append([observation,action,reward,next_observation,done])
         self.imitation_alg.update(self.agents[iter_count],self.expert_agent, self.replay_buffer.sample(), self.env.step_count)
@@ -161,6 +152,7 @@ class SingleAgentImitationLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
+
 
         # Launch the algorithm which will handle the
         self.supervised_alg,self.imitation_alg = self.create_algorithm()

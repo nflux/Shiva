@@ -2,15 +2,6 @@ import helpers.misc as misc
 import torch
 import torch.nn as nn
 
-# def parse_layers(layers_str):
-#     '''
-#         Input
-#             @layers_str     coming from the config as a string g.e. "20,10,20"
-#         Return
-#             List of int elements g.e. [20,10,20]
-#     '''
-#     return list(map(int, layers_str))
-
 def parse_functions(package, funcs_str):
     '''
         Input
@@ -35,17 +26,16 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
     assert hasattr(layers, '__iter__'), '@layers input must be iterable - try a list or set'
     assert len(layers) > 0, '@layers input is empty'
     assert len(activ_function) == 1 or (len(activ_function) > 1 and len(activ_function) == len(layers)), '@layers and @activ_function must be same size if more than one @activ_function is given'
-    
+
     net_layers = []
 
-    print("Networks Handler: ", input_dim, layers[0])
-
-    print(activ_function)
+    # print("Networks Handler: ", input_dim, layers[0])
+    # print(activ_function)
 
     net_layers.append(nn.Linear(input_dim, layers[0]))
     net_layers.append(activ_function[0]())
     in_layer_size = layers[0]
-    
+
     if len(activ_function) > 1:
         for i, (out_layer_size, af) in enumerate(zip(layers, activ_function)):
             if i == 0: continue
@@ -63,10 +53,11 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
     if last_layer:
         last_layer_dim = layers[len(layers)-1] if len(layers) > 1 else layers[0]
         net_layers.append( nn.Linear(last_layer_dim, output_dim) )
-    
-    
+
+
     if output_function is not None:
-        net_layers.append(output_function())
+        print(output_dim)
+        net_layers.append(output_function(dim=-1))
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     return nn.Sequential(*net_layers).to(device)

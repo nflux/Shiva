@@ -4,6 +4,8 @@ import helpers.misc as misc
 import envs
 import algorithms
 import buffers
+import numpy as np
+import random
 
 class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
@@ -29,6 +31,7 @@ class SingleAgentDQNLearner(Learner):
 
         action = self.alg.get_action(self.agent, observation, self.env.get_current_step())
 
+
         next_observation, reward, done, more_data = self.env.step(action)
 
         shiva.add_summary_writer(self, self.agent, 'Reward_per_Step', reward, self.step_count)
@@ -36,6 +39,9 @@ class SingleAgentDQNLearner(Learner):
 
         # Cumulate the reward
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
+
+        # print("to buffer:", type(observation), type(action), type(reward), type(next_observation), type(done))
+        # print("to buffer:", observation.shape, action.shape, reward, next_observation.shape, done.shape)
 
         self.buffer.append([observation, action, reward, next_observation, done])
 
@@ -58,14 +64,18 @@ class SingleAgentDQNLearner(Learner):
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        
+        try:
+            self.configs['Agent']['learning_rate'] = random.uniform(self.learning_rate[0],self.learning_rate[1])
+            return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        except:
+            return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
-        return self.agents
+        return self.agent
 
     def get_algorithm(self):
         return self.alg
@@ -80,7 +90,7 @@ class SingleAgentDQNLearner(Learner):
 
         # Create the agent
         self.agent = self.alg.create_agent(self.get_id())
-        
+
         # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment
@@ -103,10 +113,10 @@ class SingleAgentDQNLearner(Learner):
 #     def __init__(self, env, alg):
 #         self.env = env
 #         self.alg = alg
-    
+
 #     def Reward(self):
 #         return self.env.get_reward()
-        
+
 #     def LossPerStep(self):
 #         return self.alg.get_loss()
 
