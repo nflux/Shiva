@@ -164,7 +164,7 @@ init_env = True
 ```
 ## UnityEnvironment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/UnityEnvironment.py)
+[Go to code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/envs/UnityWrapperEnvironment.py)
 ### Config Setup
 ```
 [Environment]
