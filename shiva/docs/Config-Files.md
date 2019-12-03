@@ -24,7 +24,7 @@ optimize_env_hp=False
 optimize_learner_hp=False
 evolution=False
 ```
-You can see all the available MetaLearners [here](https://github.com/nflux/Control-Tasks/tree/demo/shiva/shiva/metalearners).
+You can see all the available MetaLearners [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/shiva/metalearners).
 
 ### Learner Section
 ___
@@ -39,7 +39,7 @@ save_frequency=500
 ;load_path='runs/ML-CartPole-v0-10-24-02:06/L-0'
 load_path=False
 ```
-You can see all the available Learners [here](https://github.com/nflux/Control-Tasks/tree/demo/shiva/shiva/learners).
+You can see all the available Learners [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/shiva/learners).
 
 
 ### Algorithm Section
@@ -59,7 +59,7 @@ epsilon_end=0.02
 epsilon_decay=0.00005
 c=200
 ```
-You can see all the available Algorithms [here](https://github.com/nflux/Control-Tasks/tree/demo/shiva/shiva/algorithms).
+You can see all the available Algorithms [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/shiva/algorithms).
 
 ## Environment Section
 Here you specify the type of environment, the name of the environment, whether or not we are rendering the environment, and normalization values.
@@ -80,7 +80,7 @@ a=-1
 min=-1
 max=100
 ```
-You can see all the available Environments [here](https://github.com/nflux/Control-Tasks/tree/demo/shiva/shiva/envs).
+You can see all the available Environments [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/shiva/envs).
 
 ## Evaluation Section
 If you are doing evaluation you need to specify the type of environment you trained your agents in, the actual environment, the number of evalueation episodes, where you are loading the agent for evaluation from, what metrics you are going to measure by, and whether or not we're going to render the evaluation.
@@ -94,7 +94,7 @@ load_path =         ["runs/ML-Gym-CartPole-v1-10-20-20:07/", "runs/ML-Gym-CartPo
 metrics =           ["AveRewardPerEpisode", "MaxEpisodicReward", "MinEpisodicReward", "AveStepsPerEpisode"]
 env_render =        True
 ```
-You can see all the available Evaluation Environments [here](https://github.com/nflux/Control-Tasks/tree/demo/shiva/shiva/envs).
+You can see all the available Evaluation Environments [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/shiva/envs).
 
 ## Replay Buffer Section
 ___
@@ -107,7 +107,7 @@ type='SimpleBuffer'
 capacity=100_000
 batch_size=32
 ```
-You can see all the available Replay Buffers [here](https://github.com/nflux/Control-Tasks/tree/demo/shiva/shiva/buffers).
+You can see all the available Replay Buffers [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/shiva/buffers).
 
 ## Agent Section
 ___
@@ -117,7 +117,7 @@ For the agent we only specify the optimizer and the learning rate.
 optimizer_function='Adam'
 learning_rate=0.003
 ```
-You can see all the available Agents [here](https://github.com/nflux/Control-Tasks/tree/demo/shiva/shiva/agents).
+You can see all the available Agents [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/shiva/agents).
 
 ## Network Section
 ___
@@ -126,7 +126,7 @@ Here you need to specify the network structure.
 [Network]
 network = {'layers': [400, 300], 'activation_function':["ReLU","ReLU"], 'output_function': None, 'last_layer': True}
 ```
-You can see all the available Networks [here](https://github.com/nflux/Control-Tasks/tree/demo/shiva/shiva/networks).
+You can see all the available Networks [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/shiva/networks).
 
 ## Admin Section
 ___
@@ -140,7 +140,7 @@ save =              True
 traceback =         True
 directory = {'runs': '/runs'}
 ```
-You can see the source code [here](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/Shiva.py).
+You can see the source code [here](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/Shiva.py).
 
 ## Image Processing
 ___
