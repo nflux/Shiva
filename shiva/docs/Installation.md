@@ -54,4 +54,8 @@ At this point you should have shiva installed and ready to run but it would beho
 
 ## Unity
 
-This version of Shiva does not use the gym wrapper developed by Unity's MLAgents. This version uses sockets to pass the actions to the Unity environments. Future versions of Shiva will open the scenes you create using just their binaries. editor opened with the current scene that you would like to train on.
+The pip install above will include the Unity mlagents requirements. If not, try
+
+```
+pip install mlagents-envs
+```
