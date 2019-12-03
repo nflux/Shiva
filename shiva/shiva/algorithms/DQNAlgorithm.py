@@ -49,8 +49,7 @@ class DQNAlgorithm(Algorithm):
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j) from minibatch
         input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(self.device)
-        print(input_v.shape)
-        input()
+
         state_action_values = agent.policy(input_v)
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
         # For the observations s_j+1, select an action using the Policy and calculate Q values of those using the Target net
