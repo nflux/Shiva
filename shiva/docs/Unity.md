@@ -12,7 +12,7 @@ For additional documentation, [Unity API](https://github.com/Unity-Technologies/
   - Make sure the **Behaviour Parameters** has no loaded model and it's empty
   - Stacked observations are supported
   - Only one brain is supported (for now)
-  _ Actions should come in one single branch, either continuous or discrete (no parametrized)
+  - Actions should come in one single branch, either continuous or discrete (no parametrized)
 * The file for the **Scene_name.x86_64** extension should be placed in the **shiva/envs/unitybuilds/** and declared in the **exec** attribute for the config.
 
 **Config Templates**
