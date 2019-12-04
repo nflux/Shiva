@@ -58,7 +58,7 @@ class ContinuousPPOAlgorithm(Algorithm):
                     gae = delta + (self.gamma * self.gae_lambda * gae)
                 advantage.insert(0,gae)
                 new_rewards.insert(0,gae + val)
-            new_rewards = torch.tensor(new_rewards).float()
+            new_rewards = torch.tensor(new_rewards).float().to(self.device)
             advantage = torch.tensor(advantage).float()
             advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
 

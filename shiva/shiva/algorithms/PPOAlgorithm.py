@@ -42,8 +42,8 @@ class PPOAlgorithm(Algorithm):
         next_states = torch.tensor(next_states).to(self.device)
         done_masks = torch.ByteTensor(dones).to(self.device)
 
-        values = agent.critic(states.float())
-        actions = torch.tensor(np.argmax(actions,axis=-1).numpy()).long()
+        values = agent.critic(states.float()).to(self.device)
+        actions = torch.tensor(np.argmax(actions.cpu() ,axis=-1)).to(self.device).long()
 
         for epoch in range(self.configs[0]['update_epochs']):
 
@@ -60,7 +60,7 @@ class PPOAlgorithm(Algorithm):
                     gae = delta + (self.gamma * self.gae_lambda * gae)
                 advantage.insert(0,gae)
                 new_rewards.insert(0,gae + val)
-            new_rewards = torch.tensor(new_rewards).float()
+            new_rewards = torch.tensor(new_rewards).float().to(self.device)
             advantage = torch.tensor(advantage).float()
                     #advantages = (rewards + (self.gamma*new_rewards.unsqueeze(dim=-1)) - values)
                     #advantage = new_rewards - values

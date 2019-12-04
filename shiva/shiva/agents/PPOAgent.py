@@ -40,7 +40,7 @@ class PPOAgent(Agent):
         elif agent_config['action_space'] == 'Continuous':
                 self.policy_base = torch.nn.Sequential(
                     torch.nn.Linear(self.network_input,net_config['policy_base_output']),
-                    torch.nn.ReLU())
+                    torch.nn.ReLU()).to(self.device)
                 self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
                 self.actor = self.mu
                 self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['var'])
@@ -60,12 +60,12 @@ class PPOAgent(Agent):
         return action.tolist()
 
     def get_continuous_action(self,observation):
-        observation = torch.tensor(observation).float().detach()
+        observation = torch.tensor(observation).float().detach().to(self.device)
         base_output = self.policy_base(observation)
-        mu = self.mu(base_output).detach().numpy()
-        sigma = torch.sqrt(self.var(base_output)).detach().numpy()
+        mu = self.mu(base_output).detach().cpu().numpy()
+        sigma = torch.sqrt(self.var(base_output)).detach().cpu().numpy()
         actions = np.random.normal(mu,sigma)
-        self.ou_noise.set_scale(0.1)
+        self.ou_noise.set_scale(0.8)
         actions += self.ou_noise.noise()
         actions = np.clip(actions,-1,1)
         return actions.tolist()
