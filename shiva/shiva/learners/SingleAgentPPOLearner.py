@@ -14,82 +14,69 @@ class SingleAgentPPOLearner(Learner):
         super(SingleAgentPPOLearner,self).__init__(learner_id, config)
 
     def run(self):
-        """
-            Gym run
-            
-            -- Travis to take a look at this comments
-        """
         self.step_count = 0
-        for self.ep_count in range(self.episodes):
+        # for self.ep_count in range(self.episodes):
+        while not self.env.finished(self.episodes):
             self.env.reset()
-            self.totalReward = 0
-            done = False
-            while not done:
-                done = self.step()
+            # self.totalReward = 0
+            # done = False
+            # while not done:
+            while not self.env.is_done():
+                # done = self.step()
+                self.step()
                 self.step_count += 1
-            print('Step: {} episode complete!'.format(self.ep_count))
+                self.collect_metrics() # metrics per step
+            self.ep_count += 1
+            self.collect_metrics(True) # metrics per episode
+            print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward()))
             if self.ep_count % self.configs['Algorithm']['update_episodes'] == 0:
-                self.alg.update(self.agent,self.old_agent,self.buffer.full_buffer(),self.step_count)
+                self.alg.update(self.agent, self.old_agent, self.buffer.full_buffer(), self.step_count)
                 self.buffer.clear_buffer()
                 self.old_agent = copy.deepcopy(self.agent)
-
-
-        self.env.close()
-
-    def run_(self):
-        """
-            Unity run
-        """
-        self.step_count = 0
-        while self.env.done_counts < self.episodes:
-            self.step()
         self.env.close()
 
     def step(self):
 
         observation = self.env.get_observation()
-        if self.configs['Agent']['action_space'] == 'Discrete':
-            action= self.old_agent.get_action(observation)
-        elif self.configs['Agent']['action_space'] == 'Continuous':
-            action = self.old_agent.get_continuous_action(observation)
 
-        next_observation, reward, done, more_data = self.env.step(action)
-        # TensorBoard metrics
-        shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.loss, self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Policy Loss per Step', self.alg.policy_loss, self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Value Loss per Step', self.alg.value_loss, self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Entropy Loss per Step', self.alg.entropy_loss, self.step_count)
-        #shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
-        #shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        #shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
-        self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
-
-        """Temporary fix"""
+        """Temporary fix for Unity as it receives multiple observations"""
         if len(observation.shape) > 1:
+            action = [self.old_agent.get_action(obs) for obs in observation]
+            next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
                 exp = [obs, act, rew, next_obs, int(don)]
-                # exp = copy.deepcopy(exp)
                 self.buffer.append(exp)
         else:
+            action = self.old_agent.get_action(observation)
+            next_observation, reward, done, more_data = self.env.step(action)
             t = [observation, action, reward, next_observation, int(done)]
-            deep = copy.deepcopy(t)
-            self.buffer.append(deep)
+            exp = copy.deepcopy(t)
+            self.buffer.append(exp)
         """"""
 
-        if self.step_count % self.configs['Algorithm']['update_steps'] == 0: # <<-- you meant this?
-            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-            self.buffer.clear_buffer()
+        # if self.configs['Agent']['action_space'] == 'Discrete':
+        #     action= self.old_agent.get_action(observation)
+        # elif self.configs['Agent']['action_space'] == 'Continuous':
+        #     action = self.old_agent.get_continuous_action(observation)
+        
+        # TensorBoard metrics
+        # shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.loss, self.step_count)
+        # shiva.add_summary_writer(self, self.agent, 'Policy Loss per Step', self.alg.policy_loss, self.step_count)
+        # shiva.add_summary_writer(self, self.agent, 'Value Loss per Step', self.alg.value_loss, self.step_count)
+        # shiva.add_summary_writer(self, self.agent, 'Entropy Loss per Step', self.alg.entropy_loss, self.step_count)
+        # #shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
+        # #shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
+        # #shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
+        # self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
+        # t = [observation, action, reward, next_observation, int(done)]
+        # deep = copy.deepcopy(t)
+        # self.buffer.append(deep)
 
-        # if self.step_count > self.alg.exploration_steps:# and self.step_count % 16 == 0:
-        #     self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-
-        # TensorBoard Metrics
-        if self.done:
-            shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
-
-        self.step_count += 1
-
+        # # TensorBoard Metrics
+        # if self.done:
+        #     # shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
+        #     self.collect_metrics(True) # metrics per episode
         # return done
 
     def create_environment(self):
@@ -100,7 +87,7 @@ class SingleAgentPPOLearner(Learner):
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
         acs_continuous = self.env.action_space_continuous
-        acs_discrete= self.env.action_space_discrete
+        acs_discrete = self.env.action_space_discrete
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(), acs_discrete, acs_continuous, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
@@ -125,7 +112,7 @@ class SingleAgentPPOLearner(Learner):
             self.agent= self.load_agent(self.load_agents)
         else:
             self.agent= self.alg.create_agent()
-            self.old_agent = self.alg.create_agent()
+            # self.old_agent = self.alg.create_agent()
             self.old_agent = copy.deepcopy(self.agent)
 
 

@@ -9,7 +9,7 @@ import copy
 
 
 class PPOAlgorithm(Algorithm):
-    def __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
+    def __init__(self,obs_space, acs_space, action_space_discrete, action_space_continuous, configs):
 
         super(PPOAlgorithm, self).__init__(obs_space,acs_space,configs)
 
@@ -30,19 +30,20 @@ class PPOAlgorithm(Algorithm):
         '''
             Getting a Batch from the Replay Buffer
         '''
+        self.step_count = step_count
 
         # Batch of Experiences
         states, actions, rewards, next_states, dones = minibatch
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
-        actions = torch.tensor(actions).to(self.device)
+        actions = torch.tensor(np.argmax(actions, axis=-1)).to(self.device).long()
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
         done_masks = torch.ByteTensor(dones).to(self.device)
 
         values = agent.critic(states.float()).to(self.device)
-        actions = torch.tensor(np.argmax(actions.cpu() ,axis=-1)).to(self.device).long()
+        # actions = torch.tensor(np.argmax(actions.cpu() ,axis=-1)).to(self.device).long()
 
         for epoch in range(self.configs[0]['update_epochs']):
 
@@ -96,7 +97,17 @@ class PPOAlgorithm(Algorithm):
             agent.optimizer.step()
 
 
-
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                ('Algorithm/Loss_per_Step', self.loss),
+                ('Algorithm/Policy_Loss_per_Step', self.policy_loss),
+                ('Algorithm/Value_Loss_per_Step', self.value_loss),
+                ('Algorithm/Entropy_Loss_per_Step', self.entropy_loss),
+            ]
+        else:
+            metrics = []
+        return metrics
 
     def get_actor_loss(self):
         return self.actor_loss
@@ -108,5 +119,5 @@ class PPOAlgorithm(Algorithm):
         return self.critic_loss
 
     def create_agent(self):
-        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])
+        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete, self.acs_continuous, self.configs[1],self.configs[2])
         return self.agent

@@ -25,17 +25,15 @@ class SimpleBuffer():
         self.buffer.append(experience)
         
     def clear_buffer(self):
-        self.buffer = collections.deque(maxlen=self.capacity)
+        # self.buffer = collections.deque(maxlen=self.capacity)
+        self.buffer.clear()
 
     def sample(self):
-        if self.batch_size == self.capacity:
-            return self.full_buffer()
-        else:
-            indices = np.random.choice(len(self.buffer), self.batch_size)
-            states, actions, rewards,next_states, dones = zip(*[self.buffer[idx] for idx in indices])
-            return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32),\
-                np.array(next_states), np.array(dones, dtype=np.bool)
-
+        indices = np.random.choice(len(self.buffer), self.batch_size)
+        states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in indices])
+        return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32),\
+               np.array(next_states), np.array(dones, dtype=np.bool)
+    
     def full_buffer(self):
         states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in range(len(self.buffer))])
         return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32), \
