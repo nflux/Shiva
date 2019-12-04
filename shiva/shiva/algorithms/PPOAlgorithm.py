@@ -24,6 +24,7 @@ class PPOAlgorithm(Algorithm):
         self.obs_space = obs_space
         self.acs_discrete = action_space_discrete
         self.acs_continuous = action_space_continuous
+        torch.manual_seed(configs[0]['manual_seed'])
 
 
     def update(self, agent,old_agent,minibatch, step_count):
@@ -63,7 +64,7 @@ class PPOAlgorithm(Algorithm):
             advantage = torch.tensor(advantage).float()
                     #advantages = (rewards + (self.gamma*new_rewards.unsqueeze(dim=-1)) - values)
                     #advantage = new_rewards - values
-                    #advantages = (advantages - torch.mean(advantages)) / torch.std(advantages)
+            advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
             old_action_probs = old_agent.actor(states.float())
             dist = Categorical(old_action_probs)
             old_log_probs = dist.log_prob(actions)
@@ -75,21 +76,16 @@ class PPOAlgorithm(Algorithm):
             log_probs = dist2.log_prob(actions)
             entropy = dist2.entropy()
             #Find the ratio (pi_new / pi_old)
-            '''ratios = torch.zeros(len(old_action_probs))
-            for i in range(len(old_action_probs)):
-                idx = actions[i].item()
-                ratios[i] = current_action_probs[i][idx]/ old_action_probs[i][idx].detach()'''
-
             ratios = torch.exp(log_probs - old_log_probs.detach())
             #advantage = (rewards + (self.gamma*new_rewards.unsqueeze(dim=-1)) - values)
-
             #Calculate objective functions
-            surr1 = ratios * advantage.mean()
-            surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage.mean()
+            surr1 = ratios * advantage
+            surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage
             #Set the policy loss
             self.policy_loss = -torch.min(surr1,surr2).mean()
             #entropy = Categorical(current_actor_actions).entropy()
-            self.entropy_loss = (self.configs[0]['beta']*entropy).mean()
+
+            self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
             self.value_loss = self.loss_calc(values, new_rewards.unsqueeze(dim=-1))
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
             self.loss.backward(retain_graph = True)

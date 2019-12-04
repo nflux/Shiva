@@ -54,7 +54,6 @@ class PPOAgent(Agent):
         action = self.actor(torch.tensor(observation).float()).detach()
         '''if(len(full_action.shape) > 1):
             full_action = full_action.reshape(len(full_action[0]))'''
-
         dist = Categorical(action)
         action = dist.sample()
         action = misc.action2one_hot(self.acs_discrete,action.item())

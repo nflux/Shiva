@@ -78,7 +78,7 @@ class ContinuousPPOAlgorithm(Algorithm):
             self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
             self.value_loss = self.loss_calc(values,new_rewards.unsqueeze(dim=-1))
 
-            self.loss = self.policy_loss.mean() + self.value_loss + self.entropy_loss
+            self.loss = self.policy_loss + self.value_loss + self.entropy_loss
             self.loss.backward(retain_graph=True)
             agent.optimizer.step()
 
