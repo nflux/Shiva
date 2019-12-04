@@ -83,7 +83,17 @@ class ContinuousPPOAlgorithm(Algorithm):
             self.loss.backward(retain_graph=True)
             agent.optimizer.step()
 
-
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                ('Algorithm/Loss_per_Step', self.loss),
+                ('Algorithm/Policy_Loss_per_Step', self.policy_loss),
+                ('Algorithm/Value_Loss_per_Step', self.value_loss),
+                ('Algorithm/Entropy_Loss_per_Step', self.entropy_loss),
+            ]
+        else:
+            metrics = []
+        return metrics
 
     def log_probs(self, mu, var, actions):
         eq1 = -((mu.double() - actions.double()**2) / (2*var.double().clamp(min=1e-3)))

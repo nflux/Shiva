@@ -14,15 +14,16 @@ class UnityWrapperEnvironment(Environment):
         self.action_space = self.BrainParameters.vector_action_space_size[0]
         self.observation_space = self.BrainParameters.vector_observation_space_size * self.BrainParameters.num_stacked_vector_observations
         
-        # self.action_discrete_size = self.discrete_action_size
-        # self.action_continuous_size = self.action_space - self.action_discrete_size
+        self.action_space_discrete = self.action_space if self.BrainParameters.vector_action_space_type == 'discrete' else None
+        self.action_space_continuous = self.action_space if self.BrainParameters.vector_action_space_type == 'continuous' else None
 
         self.num_instances = len(self.BrainInfo.agents)
         
         self.rewards = np.array(self.BrainInfo.rewards)
         self.reward_total = 0
         self.dones = np.array(self.BrainInfo.local_done)
-        self.done_counts = 0
+        self.done_count = 0
+        self.temp_done_counter = 0 # since we have @self.num_instances, a partial done will be when all instances finished at least once
         
         self.step_count = 0
         self.load_viewer()
@@ -37,20 +38,29 @@ class UnityWrapperEnvironment(Environment):
             self._call()
             print('Worker id:', self.worker_id)
         except:
-            if self.worker_id < 200:
-                # try to connect with 5 worker ids
+            if self.worker_id < 5:
+                # try to connect with 5 worker ids, don't try that much
                 self.worker_id += 1
                 self._connect()
             else:
                 print("Enough worker_id tries..")
 
     def _reset(self):
-
+        '''
+            This only gets called once at connection with Unity server
+        '''
         self.BrainInfo = self.Unity.reset(train_mode=self.train_mode)[self.brain_name]
         self.BrainParameters = self.Unity.brains[self.brain_name]
         self.observations = self.BrainInfo.vector_observations
         self.rewards = self.BrainInfo.rewards
         self.dones = self.BrainInfo.local_done
+
+    def reset(self):
+        '''
+            To be called by Shiva Learner
+            It's just to reinitialize the temporary done counter
+        '''
+        self.temp_done_counter = 0
 
     def get_random_action(self):
         return np.array([np.random.uniform(-1, 1, size=self.action_space) for _ in range(self.num_instances)])
@@ -67,28 +77,34 @@ class UnityWrapperEnvironment(Environment):
         self.observations = np.array(self.BrainInfo.vector_observations)
         self.rewards = np.array(self.BrainInfo.rewards)
         self.dones = np.array(self.BrainInfo.local_done)
-        self.done_counts += sum([ 1 if val else 0 for val in self.dones ])
+        
+        self.step_count += 1 # this are Shiva steps
+        self.done_count += sum([ 1 if val else 0 for val in self.dones ])
+        self.temp_done_counter += self.done_count
         self.reward_total += sum(self.rewards) / self.num_instances
 
         # self.debug()
-
-        # return self._map_data(self.observations, self.rewards, self.dones, {})
         return self.observations, self.rewards, self.dones, {}
 
-    def _map_data(self, observations, rewards, dones, extra_data):
-        """
-            Maps data to the amount of Shiva Learners
-            Is required to chop the data for all the @self.num_instances
-        """
-        # print(observations.shape, rewards.shape, dones.shape)
-        return observations.flatten(), rewards.flatten(), dones.flatten(), extra_data
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [('Raw_Reward_per_Step', sum(self.rewards)/self.num_instances)]
+        else:
+            metrics = [('Raw_Rewards_per_Episode', self.reward_total)]
+        return metrics
+
+    def is_done(self):
+        '''
+            One Shiva episode will be playing the number of instances in Unity
+        '''
+        return self.temp_done_counter >= self.num_instances
 
     def _clean_actions(self, actions):
-        # print('before:',actions)
+        '''
+            Get the argmax when the Action Space is Discrete
+        '''
         if self.BrainParameters.vector_action_space_type == 'discrete':
             actions = np.array([np.argmax(_act) for _act in actions])
-        # print('after:',actions)
-        # input()
         return actions
 
     def get_observation(self):
@@ -98,7 +114,7 @@ class UnityWrapperEnvironment(Environment):
         return self.actions
 
     def get_reward(self):
-        return self.rewards
+        return sum(self.rewards)/self.num_instances
 
     def load_viewer(self):
         pass

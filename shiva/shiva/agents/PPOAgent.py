@@ -19,6 +19,7 @@ class PPOAgent(Agent):
 
 
         if (acs_discrete != None) and (acs_continuous != None):
+            # parametrized PPO?
             self.network_output = self.acs_discrete + self.acs_continuous
             self.ou_noise = noise.OUNoise(acs_discrete+acs_continuous, self.scale)
         elif (self.acs_discrete == None):
@@ -30,17 +31,19 @@ class PPOAgent(Agent):
         self.id = id
         self.network_input = obs_dim
 
-        if agent_config['action_space'] == 'Discrete':
+        if self.action_space == 'Discrete':
+            print('actor:', self.network_input, self.network_output)
             self.actor = DLN.DynamicLinearNetwork(self.network_input, self.network_output, net_config['actor'])
             #self.target_actor = copy.deepcopy(self.actor)
             self.critic = DLN.DynamicLinearNetwork(self.network_input, 1, net_config['critic'])
             params = list(self.actor.parameters()) +list(self.critic.parameters())
             self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
 
-        elif agent_config['action_space'] == 'Continuous':
+        elif self.action_space == 'Continuous':
                 self.policy_base = torch.nn.Sequential(
-                    torch.nn.Linear(self.network_input,net_config['policy_base_output']),
-                    torch.nn.ReLU()).to(self.device)
+                    torch.nn.Linear(self.network_input, net_config['policy_base_output']),
+                    torch.nn.ReLU()
+                ).to(self.device)
                 self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
                 self.actor = self.mu
                 self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'], self.network_output, net_config['var'])
@@ -60,10 +63,9 @@ class PPOAgent(Agent):
         action = self.actor(torch.tensor(observation).float()).detach()
         '''if(len(full_action.shape) > 1):
             full_action = full_action.reshape(len(full_action[0]))'''
-
         dist = Categorical(action)
         action = dist.sample()
-        action = misc.action2one_hot(self.acs_discrete,action.item())
+        action = misc.action2one_hot(self.acs_discrete, action.item())
         return action.tolist()
 
     def get_continuous_action(self,observation):
