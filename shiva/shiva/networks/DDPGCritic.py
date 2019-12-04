@@ -1,6 +1,7 @@
 import helpers.networks_handler as nh
 import torch
 import torch.nn as nn
+torch.manual_seed(5)
 
 class DDPGCritic(nn.Module):
     def __init__(self, obs_dim, action_dim, head_config, tail_config):

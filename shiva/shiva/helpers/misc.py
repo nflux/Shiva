@@ -14,17 +14,17 @@ def handle_package(package, class_name):
     '''
     return getattr(package, class_name, None)
 
-def action2one_hot(action_space: int, action_idx: int) -> np.ndarray:
+def action2one_hot(action_space: int, action_idx: int, numpy: bool=True) -> np.ndarray:
     '''
-        Returns a one-hot encoded action numpy.ndarray
+        Returns a one-hot encoded numpy.ndarray
     '''
     z = np.zeros(action_space)
     z[action_idx] = 1
-    return z
+    return z if numpy else list(z)
 
 def action2one_hot_v(action_space: int, action_idx: int) -> torch.tensor:
     '''
-        Returns a one-hot encoded action torch.tensor
+        Returns a one-hot encoded torch.tensor
     '''
     z = torch.zeros(action_space)
     z[action_idx] = 1
@@ -38,3 +38,8 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     log = file if hasattr(file,'write') else sys.stderr
     traceback.print_stack(file=log)
     log.write(warnings.formatwarning(message, category, filename, lineno, line))
+
+
+def one_hot_from_logits(logits):
+    # print(logits.max(1, keepdim=True))
+    return (logits == logits.max(1, keepdim=True)[0]).float()
