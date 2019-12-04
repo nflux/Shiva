@@ -32,17 +32,16 @@ class PPOAgent(Agent):
 
         if agent_config['action_space'] == 'Discrete':
             self.actor = DLN.DynamicLinearNetwork(self.network_input, self.network_output, net_config['actor'])
-            self.target_actor = copy.deepcopy(self.actor)
+            #self.target_actor = copy.deepcopy(self.actor)
             self.critic = DLN.DynamicLinearNetwork(self.network_input, 1, net_config['critic'])
             params = list(self.actor.parameters()) +list(self.critic.parameters())
             self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
 
         elif agent_config['action_space'] == 'Continuous':
                 self.policy_base = torch.nn.Sequential(
-                    torch.nn.Linear(self.network_input, net_config['policy_base_output']),
-                    torch.nn.ReLU()
-                )
-                self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'], self.network_output, net_config['mu'])
+                    torch.nn.Linear(self.network_input,net_config['policy_base_output']),
+                    torch.nn.ReLU()).to(self.device)
+                self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
                 self.actor = self.mu
                 self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'], self.network_output, net_config['var'])
                 self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'], 1, net_config['critic'])
@@ -58,33 +57,22 @@ class PPOAgent(Agent):
 
     def get_discrete_action(self, observation):
         #retrieve the action given an observation
-        full_action = self.target_actor(torch.tensor(observation).float()).detach()
-        if(len(full_action.shape) > 1):
-            full_action = full_action.reshape(len(full_action[0]))
+        action = self.actor(torch.tensor(observation).float()).detach()
+        '''if(len(full_action.shape) > 1):
+            full_action = full_action.reshape(len(full_action[0]))'''
 
-        #Check if there is a discrete component to the action tensor
-        if (self.acs_discrete != None):
-            #If there is, extract the discrete component
-            discrete_action = full_action[: self.acs_discrete]
-            discrete_action = F.softmax(discrete_action,dim=0)
-            dist = Categorical(discrete_action)
-            discrete_action = dist.sample()
-            discrete_action = misc.action2one_hot(self.acs_discrete,discrete_action.item())
-
-            #Recombine the chosen discrete action with the continuous action values
-            full_action = np.concatenate([discrete_action,full_action[self.acs_discrete:]])
-
-            return full_action.tolist()
-        else:
-            return full_action
+        dist = Categorical(action)
+        action = dist.sample()
+        action = misc.action2one_hot(self.acs_discrete,action.item())
+        return action.tolist()
 
     def get_continuous_action(self,observation):
-        observation = torch.tensor(observation).float().detach()
+        observation = torch.tensor(observation).float().detach().to(self.device)
         base_output = self.policy_base(observation)
-        mu = self.mu(base_output).detach().numpy()
-        sigma = torch.sqrt(self.var(base_output)).detach().numpy()
+        mu = self.mu(base_output).detach().cpu().numpy()
+        sigma = torch.sqrt(self.var(base_output)).detach().cpu().numpy()
         actions = np.random.normal(mu,sigma)
-        self.ou_noise.set_scale(0.1)
+        self.ou_noise.set_scale(0.8)
         actions += self.ou_noise.noise()
         actions = np.clip(actions,-1,1)
         return actions.tolist()

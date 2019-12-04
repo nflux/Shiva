@@ -23,16 +23,16 @@ class SingleAgentPPOLearner(Learner):
         for self.ep_count in range(self.episodes):
             self.env.reset()
             self.totalReward = 0
-            self.done = False
-            while not self.done:
-                self.step()
-                
-            # this update is now inside the step function
-            # if self.step_count % self.configs['Algorithm']['update_steps'] >= 1: # <-- isn't this almost always true??
-            # if self.step_count % self.configs['Algorithm']['update_steps'] == 0: # <-- you meant this?
-            #
-            #     self.alg.update(self.agent, self.buffer.full_buffer(), self.step_count)
-            #     self.buffer.clear_buffer()
+            done = False
+            while not done:
+                done = self.step()
+                self.step_count += 1
+            print('Step: {} episode complete!'.format(self.ep_count))
+            if self.ep_count % self.configs['Algorithm']['update_episodes'] == 0:
+                self.alg.update(self.agent,self.old_agent,self.buffer.full_buffer(),self.step_count)
+                self.buffer.clear_buffer()
+                self.old_agent = copy.deepcopy(self.agent)
+
 
         self.env.close()
 
@@ -48,22 +48,20 @@ class SingleAgentPPOLearner(Learner):
     def step(self):
 
         observation = self.env.get_observation()
+        if self.configs['Agent']['action_space'] == 'Discrete':
+            action= self.old_agent.get_action(observation)
+        elif self.configs['Agent']['action_space'] == 'Continuous':
+            action = self.old_agent.get_continuous_action(observation)
 
-        """Temporary fix"""
-        if len(observation.shape) > 1:
-            action = [self.agent.get_action(obs) for obs in observation]
-        else:
-            action = self.agent.get_action(observation)
-        """"""
-            
         next_observation, reward, done, more_data = self.env.step(action)
-        self.done = done
-
         # TensorBoard metrics
-        shiva.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.loss, self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.loss, self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Policy Loss per Step', self.alg.policy_loss, self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Value Loss per Step', self.alg.value_loss, self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Entropy Loss per Step', self.alg.entropy_loss, self.step_count)
         #shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
+        #shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
+        #shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         """Temporary fix"""
@@ -127,6 +125,8 @@ class SingleAgentPPOLearner(Learner):
             self.agent= self.load_agent(self.load_agents)
         else:
             self.agent= self.alg.create_agent()
+            self.old_agent = self.alg.create_agent()
+            self.old_agent = copy.deepcopy(self.agent)
 
 
         # if buffer set to true in config
