@@ -4,8 +4,6 @@
 ​
 ## Setup on Ubuntu 16.04
 
-# Build RoboCup
-
 ## Installing python and venv, and creating a virtual environment
 
 # Installs python 3
@@ -21,6 +19,9 @@ source shiva/bin/activate
 cd Control-Tasks
 
 cd shiva/shiva/envs/robocup/
+
+# install git
+sudo apt-get install git
 
 # clone the robocup files
 git clone https://github.com/nflux/rcssserver.git
@@ -43,6 +44,9 @@ cd ml-agents
 pip install -e ./
 
 ## Unity API installed
+
+
+### Install cuda and video drivers here
 
 
 # Python dependencies
