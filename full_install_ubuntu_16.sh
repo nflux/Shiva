@@ -12,7 +12,7 @@ sudo apt install python3-pip
 sudo apt-get install python3-venv
 cd ..
 # creates a virtual environment just for shiva
-python3 -m venv shiva
+python3 -m venv Shiva
 # activates the virtual environment
 source shiva/bin/activate
 # ​Go to robocup folder
@@ -20,7 +20,7 @@ cd Control-Tasks
 
 cd shiva/shiva/envs/robocup/
 
-# install git
+install git
 sudo apt-get install git
 
 # clone the robocup files
@@ -35,6 +35,8 @@ cd HFO
 bash compile.sh
 ​
 ## Ready to launch a RoboCup session
+
+# cd shiva/shiva/envs/ml-agents/ml-agents-envs/
 
 # Install Unity Python API
 cd ../../ml-agents/ml-agents-envs/
