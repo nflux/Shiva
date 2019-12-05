@@ -44,9 +44,10 @@ class UnityWrapperEnvironment(Environment):
             else:
                 print("Enough worker_id tries..")
 
-    def reset(self):
-
-        self.BrainInfo = self.Unity.reset(train_mode=self.train_mode)[self.brain_name]
+    def reset(self, new_config=None):
+        if new_config is not None:
+            self.reset_params = new_config
+        self.BrainInfo = self.Unity.reset(train_mode=self.train_mode, config=self.reset_params)[self.brain_name]
         self.BrainParameters = self.Unity.brains[self.brain_name]
         self.observations = self.BrainInfo.vector_observations
         self.rewards = self.BrainInfo.rewards
