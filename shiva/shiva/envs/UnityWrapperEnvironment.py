@@ -30,7 +30,7 @@ class UnityWrapperEnvironment(Environment):
     def _call(self):
         self.brain_name = self.env_name
         self.Unity = UnityEnvironment(file_name=self.exec, worker_id=self.worker_id)
-        self._reset()
+        self.reset()
 
     def _connect(self):
         try:
@@ -44,7 +44,7 @@ class UnityWrapperEnvironment(Environment):
             else:
                 print("Enough worker_id tries..")
 
-    def _reset(self):
+    def reset(self):
 
         self.BrainInfo = self.Unity.reset(train_mode=self.train_mode)[self.brain_name]
         self.BrainParameters = self.Unity.brains[self.brain_name]
