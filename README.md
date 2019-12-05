@@ -24,7 +24,6 @@ git clone https://github.com/nflux/Control-Tasks/
 
 Then we can go into the project structure and start setting up components and dependencies. 
 
-```
 
 ### Installing Unity API
 Now, you want to set up your python virtual environment. You have plenty of options to choose from (anaconda, venv, virtualenv, etc) but regardless which virtual environment manager you use there is a requirements.txt file that you can use to quickly install all the python dependencies. To install the Unity API you have to go to Control-Tasks/shiva/shiva/envs/ml-agents/ml-agents and run
@@ -49,7 +48,7 @@ This version of Shiva uses a gym wrapper around Unity. This version uses a Unity
 
 # Quick Start
 
-Now with Shiva installed you are ready to see what Shiva can do. Let’s use an algorithm already implemented in Shiva and deploy inside of OpenAI gym environment. Simply run the following commands:
+Now with Shiva installed you are ready to see what Shiva can do. Let’s use an algorithm already implemented in Shiva and deploy it inside of an OpenAI gym environment. Simply run the following commands:
 ```
 cd Control-Tasks/shiva
 python -W ignore shiva -config DQN.ini -name testRun 
