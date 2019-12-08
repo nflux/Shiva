@@ -98,7 +98,7 @@ class SingleAgentDDPGLearner(Learner):
         # Create the agent
         if self.load_agents:
             self.agent = self.load_agent(self.load_agents)
-            self.buffer = self._load_buffer(self.load_agents)
+            # self.buffer = self._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
 

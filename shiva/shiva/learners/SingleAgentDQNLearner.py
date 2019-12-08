@@ -89,9 +89,14 @@ class SingleAgentDQNLearner(Learner):
         self.alg = self.create_algorithm()
 
         # Create the agent
-        self.agent = self.alg.create_agent(self.get_id())
-
+        # self.agent = self.alg.create_agent(self.get_id())
+        if self.load_agents:
+            self.agent = self.load_agent(self.load_agents)
+            # self.buffer = self._load_buffer(self.load_agents)
+        else:
+            self.agent = self.alg.create_agent(self.get_id())
         # if buffer set to true in config
+        
         if self.using_buffer:
             # Basic replay buffer at the moment
             self.buffer = self.create_buffer()

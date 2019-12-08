@@ -42,7 +42,7 @@ class DQNAlgorithm(Algorithm):
         rewards_v = torch.tensor(rewards).to(self.device).view(-1, 1)
         done_mask = torch.tensor(dones, dtype=np.bool).to(self.device)
 
-        print('from buffer:', states_v.shape, actions_v.shape, rewards_v.shape, next_states_v.shape, done_mask.shape, '\n')
+        # print('from buffer:', states_v.shape, actions_v.shape, rewards_v.shape, next_states_v.shape, done_mask.shape, '\n')
         # input()
 
 
@@ -88,7 +88,7 @@ class DQNAlgorithm(Algorithm):
             action = misc.action2one_hot(self.acs_space, action_idx, numpy=False)
         elif random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
             # this might not be correct implementation of e greedy
-            print('greedy')
+            # print('greedy')
             action_idx = random.sample(range(self.acs_space), 1)[0]
             action = misc.action2one_hot(self.acs_space, action_idx)
         else:
