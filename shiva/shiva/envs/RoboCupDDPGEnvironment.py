@@ -65,6 +65,9 @@ class RoboCupDDPGEnvironment(Environment):
 
     def get_observation(self):
         return self.obs
+    
+    def get_imit_obs_msg(self):
+        return self.env.getImitObsMsg()
 
     def get_actions(self):
         return self.left_actions, self.left_params
