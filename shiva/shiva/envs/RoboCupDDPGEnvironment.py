@@ -23,6 +23,9 @@ class RoboCupDDPGEnvironment(Environment):
         self.done = self.env.d
 
         self.load_viewer()
+    
+    def isImit(self):
+        return self.run_imit
 
     def step(self, actions, discrete_select='sample'):
         '''
