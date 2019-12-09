@@ -377,7 +377,7 @@ class rc_env:
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
         
-        return np.asarray(self.left_obs), self.left_rewards, np.asarray(self.right_obs), self.right_rewards, self.d, self.world_status
+        return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
     def Queue_action(self,agent_id,base,action,params=[]):
         '''

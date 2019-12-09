@@ -180,7 +180,6 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
     def run(self):
         self.supervised_update()
-        self.replay_buffer.clear_buffer()
         self.imitation_update()
         self.env.close()
     
@@ -241,8 +240,10 @@ class SingleAgentRoboCupImitationLearner(Learner):
         # Cumulate the reward
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
-        self.replay_buffer.append(copy.deepcopy([observation, action, reward, next_observation, done, None]))
-        self.supervised_alg.update(self.agents[0],self.replay_buffer.sample(), self.step_count)
+        self.super_buffer.push(copy.deepcopy([torch.from_numpy(observation), torch.from_numpy(action), torch.from_numpy(reward),
+                                                torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).float()]))
+        # self.replay_buffer.append(copy.deepcopy([observation, action, reward, next_observation, done, None]))
+        self.supervised_alg.update(self.agents[0],self.super_buffer.sample(), self.step_count)
 
         # when the episode ends
         if done:
@@ -268,8 +269,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
-        self.replay_buffer.append(copy.deepcopy([observation,more_data['action'].reshape(1,-1),reward,next_observation,done,bot_action]))
-        self.imitation_alg.update(self.agents[iter_count-1],None, self.replay_buffer.sample(), self.env.step_count)
+        self.dagger_buffer.append(copy.deepcopy([observation,more_data['action'].reshape(1,-1),reward,next_observation,done,bot_action]))
+        self.imitation_alg.update(self.agents[iter_count-1],None, self.dagger_buffer.sample(), self.env.step_count)
 
         #print('Total Reward: ', self.totalReward)
         #print('Average Loss per Episode', self.supervised_alg.get_average_loss(self.env.get_current_step()))
@@ -291,9 +292,11 @@ class SingleAgentRoboCupImitationLearner(Learner):
         algorithm2 = getattr(algorithms, self.configs['Algorithm']['type2'])
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']]), algorithm2(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
-    def create_buffer(self):
-        buffer = getattr(buffers,self.configs['Buffer']['type'])
-        return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+    def create_buffers(self, obs_dim, ac_dim):
+        buffer1 = getattr(buffers,self.configs['Buffer']['type1'])
+        buffer2 = getattr(buffers,self.configs['Buffer']['type2'])
+        return (buffer1(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim),
+                buffer2(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim))
 
     def get_agents(self):
         return self.agents
@@ -309,20 +312,16 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         # Launch the algorithm which will handle the
         self.supervised_alg,self.imitation_alg = self.create_algorithm()
-        #Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        #self.imitation_alg =  Algorithm.initialize_algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
         self.agents = [None] * self.configs['Learner']['dagger_iterations']
         for i in range(len(self.agents)):
             self.agents[i] = self.supervised_alg.create_agent(self.get_id())
         self.agent = self.agents[0]
 
-        # self.expert_agent = self.load_agent(self.configs['Learner']['expert_agent'])
-
         # Basic replay buffer at the moment
         if self.using_buffer:
-            self.replay_buffer = self.create_buffer()
-        #self.imitation_buffer = ReplayBuffer.initialize_buffer(self.configs['ReplayBuffer'], 1, self.env.get_action_space(), self.env.get_observation_space())
+            self.super_buffer, self.dagger_buffer = self.create_buffers(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
+        
         if self.env.isImit():
             cmd = [os.getcwd() + '/shiva/envs/robocup/run_bots.py',]
             p = subprocess.Popen(cmd, shell=False)

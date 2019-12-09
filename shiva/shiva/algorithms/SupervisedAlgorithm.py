@@ -120,25 +120,25 @@ class SupervisedRoboCupAlgorithm(Algorithm):
                 None
         '''
 
-        states, actions, rewards, next_states, dones, _ = minibatch
+        states, actions, rewards, next_states, dones = minibatch
 
-        rewards_v = torch.tensor(rewards).to(self.device)
-        done_mask = torch.ByteTensor(dones).to(self.device)
+        # rewards_v = torch.tensor(rewards).to(self.device)
+        # done_mask = torch.ByteTensor(dones).to(self.device)
 
         # zero optimizer
         agent.actor_optimizer.zero_grad()
 
-        imitation_input_v = torch.tensor(states).float().to(self.device)
+        # imitation_input_v = torch.tensor(states).float().to(self.device)
         #the output of the imitation agent is a probability distribution across all possible actions
-        action_prob_dist = agent.actor(imitation_input_v)
+        action_prob_dist = agent.actor(states)
 
-        actions = torch.tensor(actions).to(self.device).float()
+        # actions = torch.tensor(actions).to(self.device).float()
         actions = actions.detach()
 
         action_prob_dist = action_prob_dist.view(actions.shape)
 
         self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
-        print('super_loss:', self.loss)
+        # print('super_loss:', self.loss)
         self.loss.backward()
         agent.actor_optimizer.step()
 
