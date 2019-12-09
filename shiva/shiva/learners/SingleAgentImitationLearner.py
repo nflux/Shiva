@@ -207,12 +207,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
                 done = self.supervised_step()
                 self.step_count +=1
 
-        # make an environment close function
-        # self.env.close()
-        self.env.close()
         self.agent = self.agents[0]
-
-        #self.supervised_train()
 
     def imitation_update(self):
         for iter_count in range(1,self.configs['Learner']['dagger_iterations']):
@@ -233,16 +228,11 @@ class SingleAgentRoboCupImitationLearner(Learner):
     def supervised_step(self):
 
         observation = self.env.get_observation()
-        # action = self.expert_agent.find_best_imitation_action(observation)
-        # action = self.supervised_alg.get_action(self.expert_agent, observation)
 
-        # print('Before', self.env.get_imit_obs_msg().decode('utf-8'))
         self.send_imit_obs_msgs()
         action = self.recv_imit_acs_msgs()
 
         next_observation, reward, done, more_data = self.env.step(action, discrete_select='argmax')
-
-        # print('After', self.env.get_imit_obs_msg().decode('utf-8'))
 
         # Write to tensorboard
         shiva.add_summary_writer(self, self.agents[0], 'Reward', reward, self.step_count)
@@ -265,15 +255,11 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
     def imitation_step(self,iter_count):
 
-        #if iter_count == 4:
-            #self.env.load_viewer()
-
         observation = self.env.get_observation()
 
         self.send_imit_obs_msgs()
         bot_action = self.recv_imit_acs_msgs()
         action = self.agents[iter_count-1].find_best_imitation_action(observation)#, self.env.get_current_step())
-        #action= torch.LongTensor(action)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
