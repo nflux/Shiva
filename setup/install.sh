@@ -16,7 +16,6 @@ python3 -m venv Shiva
 # activates the virtual environment
 source shiva/bin/activate
 # ​Go to robocup folder
-cd Control-Tasks
 
 cd shiva/shiva/envs/robocup/
 
