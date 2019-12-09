@@ -7,6 +7,7 @@ option(INSTALL_ADDITIONAL_TEAMS "Install additional team binaries" OFF)
 option(ONLY_RCSSSERVER "Only compile rcssserver" OFF)
 
 add_definitions(-DELOG)
+add_definitions(-Wno-deprecated)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fPIC")
 
 find_package(Boost COMPONENTS system filesystem REQUIRED)

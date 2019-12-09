@@ -45,6 +45,14 @@ extern "C" {
   int getNumOpponents(hfo::HFOEnvironment *hfo) {return hfo->getNumOpponents();}
   double getBallX(hfo::HFOEnvironment *hfo) {return hfo->getBallX();}
   double getBallY(hfo::HFOEnvironment *hfo) {return hfo->getBallY();}
+  double getBallVelX(hfo::HFOEnvironment *hfo) {return hfo->getBallVelX();}
+  double getBallVelY(hfo::HFOEnvironment *hfo) {return hfo->getBallVelY();}
+  const int side(hfo::HFOEnvironment *hfo) {return hfo->side();}
+  double getSelfX(hfo::HFOEnvironment *hfo) {return hfo->getSelfX();}
+  double getSelfY(hfo::HFOEnvironment *hfo) {return hfo->getSelfY();}
+  double getSelfAng(hfo::HFOEnvironment *hfo) {return hfo->getSelfAng();}
+  double getSelfVelX(hfo::HFOEnvironment *hfo) {return hfo->getSelfVelX();}
+  double getSelfVelY(hfo::HFOEnvironment *hfo) {return hfo->getSelfVelY();}
   bool isKickable(hfo::HFOEnvironment *hfo) {return hfo->isKickable();}
   void teammateUnumsByProx(hfo::HFOEnvironment *hfo, int *unum_data) {
     const int* unums = hfo->teammateUnumsByProx().data();

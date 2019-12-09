@@ -308,8 +308,8 @@ class Helios11(Team):
               '--opponent-data-dir %s/data/opp_data/ -p %d'\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
-    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    offenseOrder =  [11,8,1,4,5,6,7,8,9,10,3]
+    defenseOrder =  [11,8,1,4,5,6,7,8,9,10,3]
     super(Helios11, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -407,8 +407,8 @@ class Cyrus(Team):
     options = ' -h %s -t %s -p %i --config_dir %s/formations-dt '\
               '--player-config %s/player.conf'\
               % (host, name, port, baseDir, baseDir)
-    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
-    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    offenseOrder =  [11,8,1,4,5,6,7,8,9,10,3]
+    defenseOrder =  [11,8,1,4,5,6,7,8,9,10,3]
     super(Cyrus, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 

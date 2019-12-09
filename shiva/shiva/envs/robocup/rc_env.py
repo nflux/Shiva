@@ -220,7 +220,6 @@ class rc_env:
             # self.ball_y = 56
 
         elif feature_level == 'simple':
-
             self.stamina = 26
             self.ball_x = 16
             self.ball_y = 17
@@ -235,7 +234,6 @@ class rc_env:
             self.opp_goal_bot_x = 14
             self.opp_goal_bot_y = 15
 
-        
     def launch(self):
         '''
             Description
@@ -297,6 +295,33 @@ class rc_env:
             return self.left_obs[agent_id]
         elif side == 'right':
             return self.right_obs[agent_id]
+
+    def getImitObsMsg(self):
+        obsMsg = ""
+        obsMsg += str(self.left_envs[0].getBallX()) + " "
+        obsMsg += str(self.left_envs[0].getBallY()) + " "
+        obsMsg += str(self.left_envs[0].getBallVelX()) + " "
+        obsMsg += str(self.left_envs[0].getBallVelY()) + " "
+
+        for env in self.left_envs:
+            obsMsg += str(env.side()) + " "
+            obsMsg += str(env.getUnum()) + " "
+            obsMsg += str(env.getSelfX()) + " "
+            obsMsg += str(env.getSelfY()) + " "
+            obsMsg += str(env.getSelfAng()) + " "
+            obsMsg += str(env.getSelfVelX()) + " "
+            obsMsg += str(env.getSelfVelY()) + " "
+        
+        for env in self.right_envs:
+            obsMsg += str(env.side()) + " "
+            obsMsg += str(env.getUnum()) + " "
+            obsMsg += str(env.getSelfX()) + " "
+            obsMsg += str(env.getSelfY()) + " "
+            obsMsg += str(env.getSelfAng()) + " "
+            obsMsg += str(env.getSelfVelX()) + " "
+            obsMsg += str(env.getSelfVelY()) + " "
+
+        return str(obsMsg).encode("utf-8")
 
     def Reward(self,agent_id,side):
         '''
@@ -363,8 +388,6 @@ class rc_env:
 
         if self.left_base == base:
             self.left_actions[agent_id] = action
-            # print("rc_env action:", action)
-            # input()
             if self.act_lvl == 'low':
                 for p in range(params.shape[1]):
                     self.left_action_params[agent_id][p] = params[agent_id][p]
@@ -447,11 +470,9 @@ class rc_env:
         while(True):
             while(self.start):
                 ep_num += 1
-                
                 j = 0 # j to maximum episode length
 
                 obs_prev[agent_ID] = envs[agent_ID].getState() # Get initial state
-
                 obs[agent_ID] = envs[agent_ID].getState() # Get initial state
 
                 # self.been_kicked_left = False
@@ -462,6 +483,7 @@ class rc_env:
                     
                     # take the action
                     a = actions[agent_ID]
+                    # print(a)
                     if act_lvl == 'high':
                         envs[agent_ID].act(self.action_list[a]) # take the action
                     elif act_lvl == 'low':
@@ -474,10 +496,6 @@ class rc_env:
                     obs_prev[agent_ID] = obs[agent_ID]
                     self.world_status = envs[agent_ID].step() # update world                        
                     obs[agent_ID] = envs[agent_ID].getState() # update obs after all agents have acted
-
-                    # print("rc_env obs agent", obs[agent_ID])
-                    # input()
-
                     # obs[agent_ID] = actions_OH[agent_ID]
 
                     self.sync_at_reward.wait()
@@ -513,11 +531,11 @@ class rc_env:
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --message-size 256"\
+                  " --log-dir %s --seed %i --message-size 256 --run-bots"\
                   % (self.fpt, self.untouched, self.num_left,
                      self.num_right, self.num_leftBot, self.num_rightBot, self.port,
                      self.config['offense_ball'], self.seed, self.config['ball_x_min'], self.config['ball_x_max'],
-                     self.config['ball_y_min'], self.config['ball_y_max'], self.config['log'])
+                     self.config['ball_y_min'], self.config['ball_y_max'], self.config['log'], self.config['seed'])
             #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
             if self.num_leftBot > 0:   cmd += " --offense-left %s" \
                 % (self.config['left_bin'])
@@ -556,11 +574,6 @@ class rc_env:
               " --connect --port %d" % (self.port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 
-
-    '''
-    Try to reward kinda like sequential kicks and give rewards based on the delta distance the ball moved.
-    '''
-
     def getReward(self, s, agentID, base, ep_num):
         '''
             Reward Engineering - Needs work!
@@ -574,7 +587,7 @@ class rc_env:
         '''
         reward=0.0
         team_reward = 0.0
-        goal_points = 300.0
+        goal_points = 20.0
         #---------------------------
         global possession_side
         if self.d:
@@ -583,7 +596,6 @@ class rc_env:
 
                 if s=='Goal_By_Left' and self.left_agent_possesion[agentID] == 'L':
                     reward+= goal_points
-                    print("this ran")
                 elif s=='Goal_By_Left':
                     reward+= goal_points # teammates get 10% of points
 
@@ -659,16 +671,15 @@ class rc_env:
 
         if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
             reward -= 1
-            # pass
 
         
         if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:    
             if True:        
             # if self.num_right > 0:
                 if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
-                    print("First Kick")
-                    reward += 200.0
-                    team_reward += 200.0
+                    # print("First Kick")
+                    reward += 1.5
+                    team_reward += 1.5
                 # set initial ball position after kick
                     if self.left_base == base:
                         self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
@@ -768,11 +779,10 @@ class rc_env:
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
             delta = (distance_prev - distance_cur)*1.0
-            if delta > 0:    
-            # if True:
-                reward+= delta * 10.0
-            else:
-                reward += delta * 5
+            #if delta > 0:    
+            if True:
+                team_reward += delta * 10 
+                reward+= delta * 10
                 # print(distance_cur, delta)
                 pass
             
@@ -785,13 +795,11 @@ class rc_env:
         if ((self.left_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
-                delta = (r_prev - r)
-                # if True:
-                if delta > 0:
-                    reward += delta * 30.0
-                    # team_reward += delta * 10.0
-                else:
-                    # reward += delta * 10
+                delta = (2*self.num_left)*(r_prev - r)
+                if True:
+                #if delta > 0:
+                    reward += delta
+                    team_reward += delta
                     pass
 
         # base right kicks
@@ -819,14 +827,9 @@ class rc_env:
 
         # print(team_obs[agentID][self.ball_x])
         # print(team_obs[agentID][self.ball_y])
-        # print(reward)
         return reward
         # rew_percent = 1.0*max(0,(self.rew_anneal_ep - ep_num))/self.rew_anneal_ep
         # return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
-
-
-
-
 
     '''
 
@@ -867,3 +870,6 @@ class rc_env:
         relative_y = obs[self.ball_y] - goal_center_y
         ball_distance_to_goal = math.sqrt(relative_x**2 + relative_y**2)
         return ball_distance_to_goal
+
+    def prox_2_dist(self, prox):
+        return (prox+.8)/1.8
