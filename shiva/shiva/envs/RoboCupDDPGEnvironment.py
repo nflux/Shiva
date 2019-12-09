@@ -82,13 +82,13 @@ class RoboCupDDPGEnvironment(Environment):
     def close(self):
         pass
 
-from pynput.keyboard import Key, KeyCode, Listener
-from math import atan2, pi, acos
+
+#from pynput.keyboard import Key, KeyCode, Listener
+#from math import atan2, pi, acos
 
 class HumanPlayerInterface():
-    '''
-        Only for RoboCup
-    '''
+
+    # Only for RoboCup
     def __init__(self):
         self.q = []
         self.KEY_DASH = KeyCode.from_char('u')
@@ -102,14 +102,11 @@ class HumanPlayerInterface():
     def on_release(self, key):
         if self.is_valid_key(key):
             self.q.append(key)
-    
+
     def is_valid_key(self, key):
         return key in [self.KEY_DASH, self.KEY_TURN_LEFT, self.KEY_TURN_RIGHT, self.KEY_KICK]
 
     def get_action(self, obs):
-        '''
-
-        '''
         if len(self.q) > 0:
             action = self.q.pop(0)
             return self.robocup_action(action, obs)
@@ -123,7 +120,7 @@ class HumanPlayerInterface():
             j - dash backward
             ; - 45 degree turn left
             ' - 45 degree turn right
-        
+
     '''
 
 
@@ -142,7 +139,7 @@ class HumanPlayerInterface():
         # also print out the coordinates of the agent
 
         # test the x y coordinates to make sure the reward function is using those coordinates and not something else
-        
+
 
         # check that if the agent can't see the ball whether or not the coordinates of the ball become -1; therefor invalid
         # so then we might need the true values if they are invalid
@@ -160,7 +157,7 @@ class HumanPlayerInterface():
         # arctan2 method for getting global angle
         # global_theta = atan2(y_rad, x_rad) * 180 / pi
         # print("global angle(atan2):", global_theta)
-        
+
         if action == self.KEY_DASH:
             '''
                 Dash forward
