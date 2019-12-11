@@ -531,7 +531,7 @@ class rc_env:
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --seed %i --message-size 256 --run-bots"\
+                  " --log-dir %s --seed %i --message-size 256"\
                   % (self.fpt, self.untouched, self.num_left,
                      self.num_right, self.num_leftBot, self.num_rightBot, self.port,
                      self.config['offense_ball'], self.seed, self.config['ball_x_min'], self.config['ball_x_max'],
@@ -549,6 +549,7 @@ class rc_env:
             if self.config['hfo_log']:       cmd += " --hfo-logging"
             if self.config['record_lib']:             cmd += " --record"
             if self.config['record_serv']:      cmd += " --log-gen-pt"
+            if self.config['run_imit']:         cmd += " --run-bots"
             if self.config['init_env']:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
