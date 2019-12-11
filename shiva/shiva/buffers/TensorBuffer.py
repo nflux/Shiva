@@ -141,7 +141,7 @@ class TensorSingleDaggerRoboCupBuffer(ReplayBuffer):
         self.current_index += 1
 
     def sample(self, device='cpu'):
-        inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=False)
+        inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
         cast = lambda x: Variable(x, requires_grad=False).to(device)
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 

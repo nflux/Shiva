@@ -137,9 +137,9 @@ class SupervisedRoboCupAlgorithm(Algorithm):
 
         action_prob_dist = action_prob_dist.view(actions.shape)
 
-        print(action_prob_dist)
-        print('~~~~~~~')
-        print(actions)
+        # print(action_prob_dist)
+        # print('~~~~~~~')
+        # print(actions)
 
         self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
         # print('super_loss:', self.loss)

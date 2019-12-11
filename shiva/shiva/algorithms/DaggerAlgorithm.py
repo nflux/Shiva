@@ -112,7 +112,7 @@ class DaggerRoboCupAlgorithm(Algorithm):
         self.action_policy = configs[1]['action_policy']
         self.loss = 0
 
-    def update(self, imitation_agent,expert_agent, minibatch, step_n):
+    def update(self, imitation_agent, minibatch, step_n):
         '''
             Implementation
                 1) Collect Trajectories from the imitation policy. By choosing
@@ -149,12 +149,14 @@ class DaggerRoboCupAlgorithm(Algorithm):
         action_prob_dist = imitation_agent.actor(states)
         # expert_actions = torch.from_numpy(expert_actions).float().to(self.device)
 
-        print(action_prob_dist)
-
         if (len(actions.shape) > 1):
             action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[len(actions.shape)-1])
         else:
             action_prob_dist = action_prob_dist.view(actions.shape[0])
+
+        print(action_prob_dist)
+        print('~~~~~~~~~~~~~~~~~~')
+        print(expert_actions)
 
         #calculate loss based on loss functions dictated in the configs
         self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
