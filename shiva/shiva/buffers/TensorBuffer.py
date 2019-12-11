@@ -70,15 +70,6 @@ class TensorSingleSuperRoboCupBuffer(ReplayBuffer):
 
         obs, ac, rew, next_obs, done = exps
 
-        print(obs)
-        print('~~~~~~~~~~~~~~~~')
-        print(ac)
-        print('~~~~~~~~~~~~~~~~')
-        print(rew)
-        print('~~~~~~~~~~~~~~~~')
-        print(done)
-        print('~~~~~~~~~~~~~~~~')
-
         if self.current_index + nentries > self.max_size:
             rollover = self.max_size - self.current_index
             self.obs_buffer = bh.roll(self.obs_buffer, rollover)
@@ -97,22 +88,19 @@ class TensorSingleSuperRoboCupBuffer(ReplayBuffer):
         self.next_obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = next_obs
 
         self.size += 1
+        self.current_index += 1
 
-    def sample(self, to_gpu=False, device='cpu'):
+    def sample(self, device='cpu'):
         inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
-        if to_gpu:
-            cast = lambda x: Variable(x, requires_grad=False).to(device)
-            cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
-        else:
-            cast = lambda x: Variable(x, requires_grad=False)
-            cast_obs = lambda x: Variable(x, requires_grad=True)
+        cast = lambda x: Variable(x, requires_grad=False).to(device)
+        cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
         return (
                     cast_obs(self.obs_buffer[inds, :]),
                     cast(self.acs_buffer[inds, :]),
                     cast(self.rew_buffer[inds, :]).squeeze(),
-                    cast(self.done_buffer[inds, :]).squeeze(),
-                    cast_obs(self.next_obs_buffer[inds, :])
+                    cast_obs(self.next_obs_buffer[inds, :]),
+                    cast(self.done_buffer[inds, :]).squeeze()
         )
 
 class TensorSingleDaggerRoboCupBuffer(ReplayBuffer):
@@ -131,15 +119,6 @@ class TensorSingleDaggerRoboCupBuffer(ReplayBuffer):
 
         obs, ac, rew, next_obs, done, exp_ac = exps
 
-        print(obs)
-        print('~~~~~~~~~~~~~~~~')
-        print(ac)
-        print('~~~~~~~~~~~~~~~~')
-        print(rew)
-        print('~~~~~~~~~~~~~~~~')
-        print(done)
-        print('~~~~~~~~~~~~~~~~')
-
         if self.current_index + nentries > self.max_size:
             rollover = self.max_size - self.current_index
             self.obs_buffer = bh.roll(self.obs_buffer, rollover)
@@ -156,22 +135,21 @@ class TensorSingleDaggerRoboCupBuffer(ReplayBuffer):
         self.rew_buffer[self.current_index:self.current_index+nentries, :1] = rew
         self.done_buffer[self.current_index:self.current_index+nentries, :1] = done
         self.next_obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = next_obs
+        self.expert_acs_buffer[self.current_index:self.current_index+nentries, :self.acs_dim] = exp_ac
 
         self.size += 1
+        self.current_index += 1
 
-    def sample(self, to_gpu=False, device='cpu'):
-        inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
-        if to_gpu:
-            cast = lambda x: Variable(x, requires_grad=False).to(device)
-            cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
-        else:
-            cast = lambda x: Variable(x, requires_grad=False)
-            cast_obs = lambda x: Variable(x, requires_grad=True)
+    def sample(self, device='cpu'):
+        inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=False)
+        cast = lambda x: Variable(x, requires_grad=False).to(device)
+        cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
         return (
                     cast_obs(self.obs_buffer[inds, :]),
                     cast(self.acs_buffer[inds, :]),
                     cast(self.rew_buffer[inds, :]).squeeze(),
+                    cast_obs(self.next_obs_buffer[inds, :]),
                     cast(self.done_buffer[inds, :]).squeeze(),
-                    cast_obs(self.next_obs_buffer[inds, :])
+                    cast(self.expert_acs_buffer[inds, :])
         )

@@ -138,16 +138,18 @@ class DaggerRoboCupAlgorithm(Algorithm):
         states, actions, rewards, next_states, dones, expert_actions = minibatch
 
 
-        rewards_v = torch.tensor(rewards).to(self.device)
-        done_mask = torch.tensor(dones, dtype=torch.bool).to(self.device)
+        # rewards_v = torch.tensor(rewards).to(self.device)
+        # done_mask = torch.tensor(dones, dtype=torch.bool).to(self.device)
 
         # zero optimizer
         imitation_agent.actor_optimizer.zero_grad()
 
-        input_v = torch.tensor(states).float().to(self.device)
+        # input_v = torch.tensor(states).float().to(self.device)
 
-        action_prob_dist = imitation_agent.actor(input_v)
-        expert_actions = torch.from_numpy(expert_actions).float().to(self.device)
+        action_prob_dist = imitation_agent.actor(states)
+        # expert_actions = torch.from_numpy(expert_actions).float().to(self.device)
+
+        print(action_prob_dist)
 
         if (len(actions.shape) > 1):
             action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[len(actions.shape)-1])
