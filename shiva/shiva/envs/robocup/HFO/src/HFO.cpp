@@ -197,6 +197,10 @@ double HFOEnvironment::getSelfVelY() {
   return agent->world().self().vel().y;
 }
 
+double HFOEnvironment::getStamina() {
+  return agent->world().self().stamina();
+}
+
 bool HFOEnvironment::isKickable() {
   return agent->world().self().isKickable();
 }

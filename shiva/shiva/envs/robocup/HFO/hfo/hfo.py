@@ -129,6 +129,8 @@ hfo_lib.getSelfVelX.argtypes = [c_void_p]
 hfo_lib.getSelfVelX.restype = c_double
 hfo_lib.getSelfVelY.argtypes = [c_void_p]
 hfo_lib.getSelfVelY.restype = c_double
+hfo_lib.getStamina.argtypes = [c_void_p]
+hfo_lib.getStamina.restype = c_double
 hfo_lib.isKickable.argtypes = [c_void_p]
 hfo_lib.isKickable.restype = c_bool
 hfo_lib.teammateUnumsByProx.argtypes = [c_void_p, c_void_p]
@@ -257,6 +259,9 @@ class HFOEnvironment(object):
   
   def getSelfVelY(self):
     return hfo_lib.getSelfVelY(self.obj)
+
+  def getStamina(self):
+    return hfo_lib.getStamina(self.obj)
   
   def isKickable(self):
     """ Returns true if ball is kickable for the given agent """

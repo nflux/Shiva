@@ -53,6 +53,7 @@ extern "C" {
   double getSelfAng(hfo::HFOEnvironment *hfo) {return hfo->getSelfAng();}
   double getSelfVelX(hfo::HFOEnvironment *hfo) {return hfo->getSelfVelX();}
   double getSelfVelY(hfo::HFOEnvironment *hfo) {return hfo->getSelfVelY();}
+  double getStamina(hfo::HFOEnvironment *hfo) {return hfo->getStamina(); }
   bool isKickable(hfo::HFOEnvironment *hfo) {return hfo->isKickable();}
   void teammateUnumsByProx(hfo::HFOEnvironment *hfo, int *unum_data) {
     const int* unums = hfo->teammateUnumsByProx().data();

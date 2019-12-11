@@ -311,6 +311,7 @@ class rc_env:
             obsMsg += str(env.getSelfAng()) + " "
             obsMsg += str(env.getSelfVelX()) + " "
             obsMsg += str(env.getSelfVelY()) + " "
+            obsMsg += str(env.getStamina()) + " "
         
         for env in self.right_envs:
             obsMsg += str(env.side()) + " "
@@ -320,6 +321,7 @@ class rc_env:
             obsMsg += str(env.getSelfAng()) + " "
             obsMsg += str(env.getSelfVelX()) + " "
             obsMsg += str(env.getSelfVelY()) + " "
+            obsMsg += str(env.getStamina()) + " "
 
         return str(obsMsg).encode("utf-8")
 
