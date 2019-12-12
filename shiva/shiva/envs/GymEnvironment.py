@@ -91,6 +91,9 @@ class GymEnvironment(Environment):
         return self.reward_step
 
     def get_total_reward(self):
+        '''
+            Returns episodic reward
+        '''
         return self.reward_episode
 
     def load_viewer(self):

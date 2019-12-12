@@ -25,8 +25,6 @@ class UnityWrapperEnvironment(Environment):
         self.rewards = np.array(self.BrainInfo.rewards)
         self.reward_total = 0
         self.dones = np.array(self.BrainInfo.local_done)
-        self.done_count = 0
-        self.temp_done_counter = 0 # since we have @self.num_instances, a partial done will be when all instances finished at least once
         
         self.step_count = 0
         self.load_viewer()
@@ -37,16 +35,17 @@ class UnityWrapperEnvironment(Environment):
         self._reset()
 
     def _connect(self):
-        try:
-            self._call()
-            print('Worker id:', self.worker_id)
-        except:
-            if self.worker_id < 200:
-                # try to connect with different worker ids
-                self.worker_id += 1
-                self._connect()
-            else:
-                assert False, 'Enough worker_id tries.'
+        self._call()
+        # try:
+        #     self._call()
+        #     print('Worker id:', self.worker_id)
+        # except:
+        #     if self.worker_id < 3:
+        #         # try to connect with different worker ids
+        #         self.worker_id += 1
+        #         # self._connect()
+        #     else:
+        #         assert False, 'Enough worker_id tries.'
 
     def _reset(self, new_config=None):
         '''
@@ -61,12 +60,16 @@ class UnityWrapperEnvironment(Environment):
         self.rewards = self.BrainInfo.rewards
         self.dones = self.BrainInfo.local_done
 
+        self.reset()
+
     def reset(self):
         '''
             To be called by Shiva Learner
-            It's just to reinitialize the temporary done counter
+            It's just to reinitialize the temporary done counter due to the multiagents on Unity
         '''
         self.temp_done_counter = 0
+        self.reward_episodic = 0
+        self.steps_episodic = 0
 
     def get_random_action(self):
         return np.array([np.random.uniform(-1, 1, size=self.action_space) for _ in range(self.num_instances)])
@@ -84,9 +87,11 @@ class UnityWrapperEnvironment(Environment):
         self.rewards = np.array(self.BrainInfo.rewards)
         self.dones = np.array(self.BrainInfo.local_done)
         
-        self.step_count += 1 # this are Shiva steps
-        self.done_count += sum([ 1 if val else 0 for val in self.dones ])
-        self.temp_done_counter += self.done_count
+        self.steps_episodic += 1
+        self.step_count += self.steps_episodic # this are Shiva steps
+        self.temp_done_counter = sum([ 1 if val else 0 for val in self.dones ])
+        self.done_count += self.temp_done_counter
+        self.reward_episodic += sum(self.rewards)
         self.reward_total += sum(self.rewards) / self.num_instances
 
         # self.debug()
@@ -121,6 +126,12 @@ class UnityWrapperEnvironment(Environment):
 
     def get_reward(self):
         return sum(self.rewards)/self.num_instances
+
+    def get_total_reward(self):
+        '''
+            Returns Shivas episodic reward
+        '''
+        return self.reward_episodic / self.num_instances
 
     def load_viewer(self):
         pass
