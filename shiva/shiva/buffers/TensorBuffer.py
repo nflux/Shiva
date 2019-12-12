@@ -79,7 +79,7 @@ class TensorSingleSuperRoboCupBuffer(ReplayBuffer):
             self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
 
             self.current_index = 0
-            self.size = self.max_size
+            # self.size = self.max_size
 
         self.obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = obs
         self.acs_buffer[self.current_index:self.current_index+nentries, :self.acs_dim] = ac
@@ -87,7 +87,8 @@ class TensorSingleSuperRoboCupBuffer(ReplayBuffer):
         self.done_buffer[self.current_index:self.current_index+nentries, :1] = done
         self.next_obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = next_obs
 
-        self.size += 1
+        if self.size < self.max_size:
+            self.size += 1
         self.current_index += 1
 
     def sample(self, device='cpu'):
@@ -128,7 +129,7 @@ class TensorSingleDaggerRoboCupBuffer(ReplayBuffer):
             self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
 
             self.current_index = 0
-            self.size = self.max_size
+            # self.size = self.max_size
 
         self.obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = obs
         self.acs_buffer[self.current_index:self.current_index+nentries, :self.acs_dim] = ac
@@ -137,7 +138,8 @@ class TensorSingleDaggerRoboCupBuffer(ReplayBuffer):
         self.next_obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = next_obs
         self.expert_acs_buffer[self.current_index:self.current_index+nentries, :self.acs_dim] = exp_ac
 
-        self.size += 1
+        if self.size < self.max_size:
+            self.size += 1
         self.current_index += 1
 
     def sample(self, device='cpu'):
