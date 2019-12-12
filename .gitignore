@@ -1,11 +1,10 @@
+# VSCode
 .vscode/
-*.pyc
-
-
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 
-Shiva/__pycache__/
-Shiva/*.py[cod]
+# Server
+nohup.out
+
