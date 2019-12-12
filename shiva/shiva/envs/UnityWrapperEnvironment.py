@@ -2,11 +2,14 @@ from .Environment import Environment
 from mlagents.envs.environment import UnityEnvironment
 import os
 import numpy as np
+import time
 
 from helpers.misc import action2one_hot
 
 class UnityWrapperEnvironment(Environment):
     def __init__(self, config):
+        assert UnityEnvironment.API_VERSION == 'API-11', 'Shiva only support mlagents api v11'
+
         super(UnityWrapperEnvironment, self).__init__(config)
         self.worker_id = 0
         self._connect()
@@ -31,7 +34,7 @@ class UnityWrapperEnvironment(Environment):
     def _call(self):
         self.brain_name = self.env_name
         self.Unity = UnityEnvironment(file_name=self.exec, worker_id=self.worker_id, no_graphics= not self.render)
-        self.reset()
+        self._reset()
 
     def _connect(self):
         try:
@@ -45,7 +48,7 @@ class UnityWrapperEnvironment(Environment):
             else:
                 assert False, 'Enough worker_id tries.'
 
-    def reset(self, new_config=None):
+    def _reset(self, new_config=None):
         '''
             This only gets called once at connection with Unity server
         '''
