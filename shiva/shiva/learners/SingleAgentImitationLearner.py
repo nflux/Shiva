@@ -235,7 +235,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         # Write to tensorboard
         shiva.add_summary_writer(self, self.agents[0], 'Reward', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agents[0], 'Loss per step', self.supervised_alg.get_loss(),self.step_count)
+        shiva.add_summary_writer(self, self.agents[0], 'Loss_per_step', self.supervised_alg.get_loss(),self.step_count)
 
         # Cumulate the reward
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
@@ -248,7 +248,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
         # when the episode ends
         if done:
             # add values to the tensorboard
-            shiva.add_summary_writer(self, self.agents[0], 'Total Reward', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agents[0], 'Total_Reward', self.totalReward, self.ep_count)
 
             # print(self.totalReward)
 
@@ -265,7 +265,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action)
 
         shiva.add_summary_writer(self, self.agents[0], 'Reward', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agents[0], 'Loss per step', self.imitation_alg.get_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agents[0], 'Loss_per_step', self.imitation_alg.get_loss(), self.step_count)
 
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
@@ -279,7 +279,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
         # when the episode ends
         if done:
             # add values to the tensorboard
-            shiva.add_summary_writer(self, self.agents[0], 'Total Reward', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agents[0], 'Total_Reward', self.totalReward, self.ep_count)
             if self.ep_count % 10000 == 0:
                 shiva._save_agent(self, self.agents[iter_count-1])
             # print(self.totalReward)
