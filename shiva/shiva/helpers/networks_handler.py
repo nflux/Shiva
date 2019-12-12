@@ -2,15 +2,6 @@ import helpers.misc as misc
 import torch
 import torch.nn as nn
 
-# def parse_layers(layers_str):
-#     '''
-#         Input
-#             @layers_str     coming from the config as a string g.e. "20,10,20"
-#         Return
-#             List of int elements g.e. [20,10,20]
-#     '''
-#     return list(map(int, layers_str))
-
 def parse_functions(package, funcs_str):
     '''
         Input

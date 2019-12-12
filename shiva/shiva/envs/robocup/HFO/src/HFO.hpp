@@ -66,6 +66,22 @@ class HFOEnvironment {
 
   virtual double getBallY();
 
+  virtual double getBallVelX();
+  
+  virtual double getBallVelY();
+
+  virtual const int side();
+
+  virtual double getSelfX();
+
+  virtual double getSelfY();
+
+  virtual double getSelfAng();
+
+  virtual double getSelfVelX();
+
+  virtual double getSelfVelY();
+
   virtual bool isKickable();
 
   const std::vector<int>& teammateUnumsByProx();

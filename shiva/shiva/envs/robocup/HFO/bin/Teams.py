@@ -81,7 +81,8 @@ class Helios(Team):
     binaryPath = os.path.join(baseDir, binaryName)
     options = '--player-config %s/player.conf -h %s -t %s '\
               '--formation-conf-dir %s/data/formations '\
-              '--role-conf %s/data/role.conf --ball-table %s/data/ball_table.dat '\
+              '--role-conf %s/data/role.conf '\
+              '--ball-table %s/data/ball_table.dat '\
               '--chain-search-method BestFirstSearch --evaluator-name Default '\
               '--max-chain-length 4 --max-evaluate-size 1000 '\
               '--sirm-evaluator-param-dir %s/data/sirm_evaluator/ '\
@@ -90,8 +91,8 @@ class Helios(Team):
               '--opponent-data-dir %s/data/opponent_data/ -p %d'\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
-    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    offenseOrder =  [11,2,3,4,5,6,7,8,9,10,1]
+    defenseOrder =  [11,2,3,4,5,6,7,8,9,10,1]
     super(Helios, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -123,11 +124,11 @@ class Helios18(Team):
               '--svm-formation-classifier-model %s/data/svm_formation_classifier/svm.model ' \
               '--goalie-position-dir %s/data/goalie_position/ '\
               '--intercept-conf-dir %s/data/intercept_probability/ '\
-              '--opponent-data-dir %s/data/opponent_data/ --record -p %d '\
+              '--opponent-data-dir %s/data/opponent_data/ -p %d '\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
-    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    offenseOrder =  [11,8,3,4,5,6,7,8,9,10,1]
+    defenseOrder =  [11,8,3,4,5,6,7,8,9,10,1]
     super(Helios18, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
   def launch_npc(self, player_num):
@@ -307,8 +308,8 @@ class Helios11(Team):
               '--opponent-data-dir %s/data/opp_data/ -p %d'\
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, port)
-    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
-    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    offenseOrder =  [11,8,1,4,5,6,7,8,9,10,3]
+    defenseOrder =  [11,8,1,4,5,6,7,8,9,10,3]
     super(Helios11, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 
@@ -406,8 +407,8 @@ class Cyrus(Team):
     options = ' -h %s -t %s -p %i --config_dir %s/formations-dt '\
               '--player-config %s/player.conf'\
               % (host, name, port, baseDir, baseDir)
-    offenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
-    defenseOrder =  [1,8,11,4,5,6,7,8,9,10,11]
+    offenseOrder =  [11,8,1,4,5,6,7,8,9,10,3]
+    defenseOrder =  [11,8,1,4,5,6,7,8,9,10,3]
     super(Cyrus, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
 

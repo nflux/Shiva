@@ -144,7 +144,7 @@ status_t HFOEnvironment::step() {
   agent->preAction();
   current_cycle = agent->currentTime().cycle();
   status_t status = agent->getGameStatus();
-  // If the episode is over, take three NOOPs to refresh state features
+  // If the episode is over, take two NOOPs to refresh state features
   if (status != IN_GAME && status != SERVER_DOWN) {
     for (int i = 0; i < 2; ++i) {
       act(NOOP);
@@ -160,6 +160,41 @@ double HFOEnvironment::getBallX() {
 
 double HFOEnvironment::getBallY() {
   return agent->world().ball().pos().y;
+}
+
+double HFOEnvironment::getBallVelX() {
+  return agent->world().ball().vel().x;
+}
+
+double HFOEnvironment::getBallVelY() {
+  return agent->world().ball().vel().y;
+}
+
+const int HFOEnvironment::side() {
+  if(agent->world().self().side() == rcsc::LEFT)
+    return 1;
+  else
+    return -1;
+}
+
+double HFOEnvironment::getSelfX() {
+  return agent->world().self().pos().x;
+}
+
+double HFOEnvironment::getSelfY() {
+  return agent->world().self().pos().y;
+}
+
+double HFOEnvironment::getSelfAng() {
+  return agent->world().self().body().radian();
+}
+
+double HFOEnvironment::getSelfVelX() {
+  return agent->world().self().vel().x;
+}
+
+double HFOEnvironment::getSelfVelY() {
+  return agent->world().self().vel().y;
 }
 
 bool HFOEnvironment::isKickable() {

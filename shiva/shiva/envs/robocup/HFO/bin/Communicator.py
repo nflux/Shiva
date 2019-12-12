@@ -20,7 +20,7 @@ class TimeoutError(Exception):
     return repr(self.value)
 
 class Communicator(object):
-  def __init__(self,host='localhost',port=defaultPort,sock=None):
+  def __init__(self, host='localhost',port=defaultPort,sock=None):
     self._sock = sock
     self._storedMsg = ''
     self._addr = (host,port)
@@ -42,7 +42,7 @@ class Communicator(object):
         self._sock = None
 
   def sendMsg(self,msg):
-    #print 'sending',msg
+    # print 'sending',msg
     self._sock.sendto((msg+'\0').encode('utf-8'),self._addr)
 
   def recvMsg(self,event=None,retryCount=None):
@@ -86,7 +86,7 @@ class ClientCommunicator(Communicator):
   def initialize(self):
     try:
       self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-      self._sock.settimeout(5)
+      self._sock.settimeout(None)
     except:
       sys.stderr.write('Error creating socket')
       raise

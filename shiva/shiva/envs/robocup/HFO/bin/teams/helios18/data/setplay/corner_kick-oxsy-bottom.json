@@ -1,0 +1,44 @@
+{
+	"name": "corner_kick oxsy bottom",
+	"condition" : {
+		"playmode" : "corner_kick",
+		"ball_region" : "(c 52.5 34.0 5.0)",
+		"team_name_list" : "Oxsy"
+	},
+	"plan" : {
+		"field_evaluator": "SetplayDefault",
+		"max_count": 120,
+		"action_list" : [
+			{
+				"start_count" : 0,
+				"type": "move",
+				"kicker": 10,
+				"formation" : "cornerkick-our-pre-formation-type-o-zhong2018-v5.conf"
+			},
+			{
+				"start_count" : 70,
+				"type": "move",
+				"kicker": 10,
+				"formation" : "cornerkick-our-post-formation-type-o-zhong2018-v5.conf"
+			},
+			{
+				"start_count" : 80,
+				"type": "pass",
+				"kicker": 10,
+				"target_player": 8,
+				"target_point_x": 51.0,
+				"target_point_y": 17.0,
+				"formation" : "cornerkick-our-post-formation-type-o-zhong2018-v5.conf"
+			},
+			{
+				"start_count" : 85,
+				"type": "pass",
+				"kicker": 8,
+				"target_player": 11,
+				"target_point_x": 42.0,
+				"target_point_y": 8.0,
+				"formation" : "cornerkick-our-post-formation-type-o-zhong2018-v5.conf"
+			}
+		]
+	}
+}

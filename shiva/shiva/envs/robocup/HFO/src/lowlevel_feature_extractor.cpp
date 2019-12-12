@@ -71,7 +71,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // agent self speed
   addNormFeature(self.speed(), 0., observedPlayerSpeedMax);
   addAngFeature(self_ang);
-
+  
   // std::ofstream myfile;
   // myfile.open("example.txt", std::ios_base::app);
   // for(AbstractPlayerCont::const_iterator it=allPlayers.begin(); it != allPlayers.end(); it++){

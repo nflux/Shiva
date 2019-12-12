@@ -15,6 +15,7 @@ class ImitationAgent(Agent):
             self.network_output = self.acs_continuous
         else:
             self.network_output = self.acs_discrete
+        super(ImitationAgent,self).__init__(id, obs_dim, self.network_output, agent_config,net_config)
         self.id = id
         self.network_input = obs_dim
 

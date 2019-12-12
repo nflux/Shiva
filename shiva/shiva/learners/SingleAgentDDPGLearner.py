@@ -35,8 +35,8 @@ class SingleAgentDDPGLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
 
         # TensorBoard Step Metrics
-        shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
         # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
@@ -55,7 +55,7 @@ class SingleAgentDDPGLearner(Learner):
 
         # TensorBoard Episodic Metrics
         if done:
-            shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
 
             if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
@@ -72,7 +72,7 @@ class SingleAgentDDPGLearner(Learner):
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        
+
     def create_buffer(self):
         buffer = getattr(buffers,self.configs['Buffer']['type'])
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
@@ -91,13 +91,14 @@ class SingleAgentDDPGLearner(Learner):
         if self.manual_play:
             self.HPI = envs.HumanPlayerInterface()
 
+
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
 
         # Create the agent
         if self.load_agents:
             self.agent = self.load_agent(self.load_agents)
-            self.buffer = self._load_buffer(self.load_agents)
+            # self.buffer = self._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
         # if buffer set to true in config
@@ -113,24 +114,3 @@ class SingleAgentDDPGLearner(Learner):
 
     def load_agent(self, path):
         return shiva._load_agents(path)[0]
-
-# class MetricsCalculator(object):
-#     '''
-#         Abstract class that it's solely purpose is to calculate metrics
-#         Has access to the Environment
-#     '''
-#     def __init__(self, env, alg):
-#         self.env = env
-#         self.alg = alg
-
-#     def Reward(self):
-#         return self.env.get_reward()
-
-#     def LossPerStep(self):
-#         return self.alg.get_loss()
-
-#     def LossActorPerStep(self):
-#         return self.alg.get_actor_loss()
-
-#     def TotalReward(self):
-#         return self.get_total_reward()

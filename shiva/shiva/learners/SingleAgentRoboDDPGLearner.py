@@ -48,8 +48,8 @@ class SingleAgentRoboDDPGLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
 
         # TensorBoard Step Metrics
-        shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
+        shiva.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
         # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
         shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
@@ -80,17 +80,17 @@ class SingleAgentRoboDDPGLearner(Learner):
                 self.turns += 1
             elif action == 2:
                 self.kicks += 1
-            shiva.add_summary_writer(self, self.agent, 'Action per Step', action, self.step_count)
+            shiva.add_summary_writer(self, self.agent, 'Action_per_Step', action, self.step_count)
 
             
 
         # Robocup Metrics
         if done and self.env.env_name == 'RoboCup':
-            shiva.add_summary_writer(self, self.agent, 'Kicks per Episode', self.kicks, self.ep_count)
-            shiva.add_summary_writer(self, self.agent, 'Turns per Episode', self.turns, self.ep_count)
-            shiva.add_summary_writer(self, self.agent, 'Dashes per Episode', self.dashes, self.ep_count) 
-            shiva.add_summary_writer(self, self.agent, 'Steps per Episode', self.steps_per_episode, self.ep_count)
-            shiva.add_summary_writer(self, self.agent, 'Ball Kicks per Episode', self.kicked, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Kicks_per_Episode', self.kicks, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Turns_per_Episode', self.turns, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Dashes_per_Episode', self.dashes, self.ep_count) 
+            shiva.add_summary_writer(self, self.agent, 'Steps_per_Episode', self.steps_per_episode, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Ball_Kicks_per_Episode', self.kicked, self.ep_count)
 
             self.kicks = 0
             self.turns = 0
@@ -99,7 +99,7 @@ class SingleAgentRoboDDPGLearner(Learner):
 
         # TensorBoard Episodic Metrics
         if done:
-            shiva.add_summary_writer(self, self.agent, 'Total Reward per Episode', self.totalReward, self.ep_count)
+            shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
 
             if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:

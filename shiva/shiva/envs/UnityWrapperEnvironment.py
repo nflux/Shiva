@@ -30,26 +30,29 @@ class UnityWrapperEnvironment(Environment):
 
     def _call(self):
         self.brain_name = self.env_name
-        self.Unity = UnityEnvironment(file_name=self.exec, worker_id=self.worker_id)
-        self._reset()
+        self.Unity = UnityEnvironment(file_name=self.exec, worker_id=self.worker_id, no_graphics= not self.render)
+        self.reset()
 
     def _connect(self):
         try:
             self._call()
             print('Worker id:', self.worker_id)
         except:
-            if self.worker_id < 5:
-                # try to connect with 5 worker ids, don't try that much
+            if self.worker_id < 200:
+                # try to connect with different worker ids
                 self.worker_id += 1
                 self._connect()
             else:
-                print("Enough worker_id tries..")
+                assert False, 'Enough worker_id tries.'
 
-    def _reset(self):
+    def reset(self, new_config=None):
         '''
             This only gets called once at connection with Unity server
         '''
-        self.BrainInfo = self.Unity.reset(train_mode=self.train_mode)[self.brain_name]
+        if new_config is not None:
+            self.reset_params = new_config
+        self.BrainInfoDict = self.Unity.reset(train_mode=self.train_mode, config=self.reset_params)
+        self.BrainInfo = self.BrainInfoDict[self.brain_name]
         self.BrainParameters = self.Unity.brains[self.brain_name]
         self.observations = self.BrainInfo.vector_observations
         self.rewards = self.BrainInfo.rewards
@@ -72,8 +75,8 @@ class UnityWrapperEnvironment(Environment):
         # make sure discrete side is one hot encoded
         self.actions = self._clean_actions(actions)
         # self.actions = actions
-
-        self.BrainInfo = self.Unity.step(self.actions)[self.brain_name]
+        self.BrainInfoDict = self.Unity.step(self.actions)
+        self.BrainInfo = self.BrainInfoDict[self.brain_name]
         self.observations = np.array(self.BrainInfo.vector_observations)
         self.rewards = np.array(self.BrainInfo.rewards)
         self.dones = np.array(self.BrainInfo.local_done)

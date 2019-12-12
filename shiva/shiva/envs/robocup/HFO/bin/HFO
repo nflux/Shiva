@@ -64,9 +64,11 @@ def main(args):
   server_port  = args.port
   coach_port   = args.port + 1
   olcoach_port = args.port + 2
+  imit_port = args.port + 3
   serverCommand = os.path.join(binary_dir, SERVER_BIN)
   serverOptions = ' server::port=%i server::coach_port=%i ' \
                   'server::olcoach_port=%i server::coach=1 ' \
+                  'server::imit_coach_port=%i ' \
                   'server::game_logging=%i server::text_logging=%i ' \
                   'server::hfo_logging=%i server::hfo_log_dir=%s ' \
                   'server::game_log_dir=%s server::text_log_dir=%s '\
@@ -96,8 +98,9 @@ def main(args):
                   'server::use_offside=%i ' \
                   'server::offside_active_area_size=%f ' \
                   'server::forbid_kick_off_offside=%i ' \
-                  'server::server_log=%i' \
-                  %(server_port, coach_port, olcoach_port,
+                  'server::server_log=%i ' \
+                  'server::run_imit=%i' \
+                  %(server_port, coach_port, olcoach_port, imit_port,
                     args.logging, args.logging, args.hfo_logging,
                     args.logDir, args.logDir, args.logDir,
                     args.sync, args.fullstate, args.fullstate,
@@ -111,14 +114,14 @@ def main(args):
                     args.change_balls_x, args.change_balls_y, args.control_rand_init,
                     args.messageSize, args.verbose, args.tackle_cycles, 
                     args.offside, args.offside_area_size, args.forbid_offside_kickoff,
-                    args.server_log)
+                    args.server_log, args.run_imit)
 
   if args.deterministic:
     serverOptions += ' server::player_rand=0 ' \
                      'server::ball_rand=0 ' \
                      'server::kick_rand=0 ' \
-                     'server::wind_rand=0'  \
-                     'server::tackle_rand_factor=0' \
+                     'server::wind_rand=0 '  \
+                     'server::tackle_rand_factor=0 ' \
                      'server::foul_detect_probability=0'
 
   try:
@@ -144,7 +147,7 @@ def main(args):
       launch(monitorCommand + monitorOptions, name='monitor')
     # Launch the Trainer
     from Trainer import Trainer
-    trainer = Trainer(args=args, server_port=server_port, coach_port=coach_port)
+    trainer = Trainer(args=args, server_port=server_port, coach_port=coach_port, is_learner=not args.run_imit, run_bots=args.run_bots)
     trainer.initComm()
     # Run
     trainer.run(necProcesses, args.offenseTeam, args.defenseTeam)
@@ -262,6 +265,8 @@ def parseArgs():
                     default=True, help='allow offside kickoff')
   p.add_argument('--log-gen-pt', dest='server_log', action='store_true',
                     help='allow logging of general pre-training')
+  p.add_argument('--run-imit', dest='run_imit', action='store_true', default=False, help='option to run imitation')
+  p.add_argument('--run-bots', dest='run_bots', action='store_true', default=False, help='option to run imitation')
 
   args = p.parse_args()
   if args.offenseAgents not in list(range(0, 12)):

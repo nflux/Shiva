@@ -113,6 +113,22 @@ hfo_lib.getBallX.argtypes = [c_void_p]
 hfo_lib.getBallX.restype = c_double
 hfo_lib.getBallY.argtypes = [c_void_p]
 hfo_lib.getBallY.restype = c_double
+hfo_lib.getBallVelX.argtypes = [c_void_p]
+hfo_lib.getBallVelX.restype = c_double
+hfo_lib.getBallVelY.argtypes = [c_void_p]
+hfo_lib.getBallVelY.restype = c_double
+hfo_lib.side.argtypes = [c_void_p]
+hfo_lib.side.restype = c_int
+hfo_lib.getSelfX.argtypes = [c_void_p]
+hfo_lib.getSelfX.restype = c_double
+hfo_lib.getSelfY.argtypes = [c_void_p]
+hfo_lib.getSelfY.restype = c_double
+hfo_lib.getSelfAng.argtypes = [c_void_p]
+hfo_lib.getSelfAng.restype = c_double
+hfo_lib.getSelfVelX.argtypes = [c_void_p]
+hfo_lib.getSelfVelX.restype = c_double
+hfo_lib.getSelfVelY.argtypes = [c_void_p]
+hfo_lib.getSelfVelY.restype = c_double
 hfo_lib.isKickable.argtypes = [c_void_p]
 hfo_lib.isKickable.restype = c_bool
 hfo_lib.teammateUnumsByProx.argtypes = [c_void_p, c_void_p]
@@ -217,6 +233,30 @@ class HFOEnvironment(object):
   def getBallY(self):
     """ Returns ball y position in terms of the agent """
     return hfo_lib.getBallY(self.obj)
+  
+  def getBallVelX(self):
+    return hfo_lib.getBallVelX(self.obj)
+
+  def getBallVelY(self):
+    return hfo_lib.getBallVelY(self.obj)
+  
+  def side(self):
+    return hfo_lib.side(self.obj)
+  
+  def getSelfX(self):
+    return hfo_lib.getSelfX(self.obj)
+  
+  def getSelfY(self):
+    return hfo_lib.getSelfY(self.obj)
+
+  def getSelfAng(self):
+    return hfo_lib.getSelfAng(self.obj)
+  
+  def getSelfVelX(self):
+    return hfo_lib.getSelfVelX(self.obj)
+  
+  def getSelfVelY(self):
+    return hfo_lib.getSelfVelY(self.obj)
   
   def isKickable(self):
     """ Returns true if ball is kickable for the given agent """

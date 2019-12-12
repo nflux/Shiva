@@ -3,6 +3,7 @@
 
 import sys, numpy, time, os, subprocess, Teams
 from Communicator import ClientCommunicator, TimeoutError
+import socket, pickle
 
 class DoneError(Exception):
   """ This exception is thrown when the Trainer is finished. """
@@ -14,9 +15,15 @@ class DoneError(Exception):
 class Trainer(object):
   """ Trainer is responsible for setting up the players and game.
   """
-  def __init__(self, args, server_port=6001, coach_port=6002):
+  def __init__(self, args, server_port=6001, coach_port=6002, is_learner=False, run_bots=False):
     self._serverPort = server_port  # The port the server is listening on
     self._coachPort = coach_port # The coach port to talk with the server
+    self._isLearner = is_learner
+    if is_learner:
+      self.train_type = 'Learner'
+    else:
+      self.train_type = 'Bot'
+    self._runBots = run_bots
     self._logDir = args.logDir # Directory to store logs
     self._record = args.record # Record states + actions
     self._numOffense = args.offenseAgents + args.offenseNPCs # Number offensive players
@@ -291,11 +298,14 @@ class Trainer(object):
       self._done = True
     if endOfTrial:
       self._numTrials += 1
-      print('EndOfTrial: LG:%d RG:%d / BCLG:%d BCRG:%d Trials:%d Frame:%d Event:%s'%\
+      print(self.train_type, 'EndOfTrial: LG:%d RG:%d / BCLG:%d BCRG:%d Trials:%d Frame:%d Event:%s'%\
         (self._numGoalsByLeft, self._numGoalsByRight, self._numBallsCapturedByLG, self._numBallsCapturedByRG, self._numTrials, self._frame, event))
       self._numFrames += self._frame - self._lastTrialStart
       self._lastTrialStart = self._frame
       self.getConnectedPlayers()
+
+  def _hearPlayersFromRef(self, ts, body):
+    print(ts, body)
 
   def _hear(self, body):
     """ Handle a hear message. """
@@ -469,7 +479,7 @@ class Trainer(object):
     self._isPlaying = True
 
   def printStats(self):
-    print('TotalFrames = %i, AvgFramesPerTrial = %.1f, AvgFramesPerGoal = %.1f'\
+    print(self.train_type, 'TotalFrames = %i, AvgFramesPerTrial = %.1f, AvgFramesPerGoal = %.1f'\
       %(self._numFrames,
         self._numFrames / float(self._numTrials) if self._numTrials > 0 else float('nan'),
         self._numGoalFrames / float(self._numGoalsByLeft + self._numGoalsByRight) if (self._numGoalsByLeft + self._numGoalsByRight) > 0 else float('nan')))
@@ -553,6 +563,7 @@ class Trainer(object):
       print('Starting game')
       time.sleep(0.1)
       self.startGame()
+
       while self.allPlayersConnected() and self.checkLive(necProcesses) and not self._done:
         prevFrame = self._frame
         self.listenAndProcess()

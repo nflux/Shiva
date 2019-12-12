@@ -1,18 +1,69 @@
-# Algorithm Folder
+# Algorithms
 ## Config Requirements
+Are specified in detail below.
 ## Contents
-*   Algorithm.py
-*   ContinousDDPGAlgorithm.py
-*   DQNAlgorithm.py
-*   DaggerAlgorithm.py
-*   SupervisedAlgorithm.py
-*   init.py  
+*   Algorithm (Abstract)
+    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/Algorithm.py)
+*   ContinousDDPGAlgorithm
+    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/ContinuousDDPGAlgorithm.py)
+*   DQNAlgorithm
+    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/DQNAlgorithm.py)
+*   DaggerAlgorithm
+    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/DaggerAlgorithm.py)
+*   DiscreteDDPGAlgorithm
+    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/DiscreteDDPGAlgorithm.py)
+*   ParameterizedDDPGAlgorithm
+    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/ParametrizedDDPGAlgorithm.py)
+*   PPOAlgorithm
+    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/PPOAlgorithm.py)
+*   SupervisedAlgorithm
+    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/SupervisedAlgorithm.py)
+*   init
+    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/__init__.py)
 
-##  Algorithm.py
+##  Algorithm (Abstract)
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/Algorithm.py)
 
-##  ContinousDDPGAlgorithm.py
-##  DQNAlgorithm.py
-##  DaggerAlgorithm.py
+All the algorithms inherit from this abstract class. Learn more about Shiva's abstract classes [here](https://github.com/nflux/Control-Tasks/blob/demo/shiva/docs/Abstract-Classes.md).
+##  ContinuousDDPGAlgorithm
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/ContinuousDDPGAlgorithm.py)
+### Config Set Up     
+```
+[Algorithm]
+algorithm='DDPG'
+type="ContinuousDDPGAlgorithm"
+exploration_steps=2000
+replay_buffer=True
+loss_function='MSELoss'
+regularizer=0
+recurrence=0
+gamma=0.9999
+beta=0
+epsilon_start=1
+epsilon_end=0.02
+epsilon_decay=0.00005
+c=200
+tau=0.99
+```
+##  DQNAlgorithm
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/DQNAlgorithm.py)
+### Config Set Up     
+```
+[Algorithm]
+type='DQNAlgorithm'
+replay_buffer=True
+loss_function='MSELoss'
+regularizer=0
+recurrence=False
+gamma=0.99
+beta=0
+epsilon_start=1
+epsilon_end=0.02
+epsilon_decay=0.00005
+c=200
+```
+##  DaggerAlgorithm
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/DaggerAlgorithm.py)
 *   Supports Discrete and Continuous Action Space. 
 *   init(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
     -   ***DESCRIPTION***
@@ -69,9 +120,91 @@
         +   Get the loss value to partciular agent, and calculation based on what is set at the config.
     -   Get the loss value that has been assigned to the agent. 
 
+### Config Set Up     
+```
+[Algorithm]
+type1='SupervisedAlgorithm'
+type2='DaggerAlgorithm'
+replay_buffer=True
+learning_rate=0.01
+optimizer='Adam'
+loss_function='MSELoss'
+regularizer=0
+recurrence=0
+gamma=0.99
+beta=0
+epsilon_start=1
+epsilon_end=0.02
+epsilon_decay=0.00005
+c=200
+```
 
-
+##  DiscreteDDPGAlgorithm
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/DiscreteDDPGAlgorithm.py)
+### Config Set Up     
+```
+[Algorithm]
+algorithm='DDPG'
+type="DiscreteDDPGAlgorithm"
+exploration_steps=10_000
+replay_buffer=True
+loss_function='MSELoss'
+regularizer=0
+recurrence=0
+gamma=0.99
+beta=0
+epsilon_start=1
+epsilon_end=0.02
+epsilon_decay=0.00005
+c=200
+tau=0.999
+```
+## ParameterizedDDPGAlgorithm
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/ParametrizedDDPGAlgorithm.py)
+### Config Set Up     
+```
+[Algorithm]
+algorithm='DDPG'
+type="ParametrizedDDPGAlgorithm"
+exploration_steps=10_000
+replay_buffer=True
+loss_function='MSELoss'
+regularizer=0
+recurrence=0
+gamma=0.99
+beta=0
+epsilon_start=1
+epsilon_end=0.02
+epsilon_decay=0.00005
+c=200
+tau=0.0001
+```
+## PPO
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/PPOAlgorithm.py)
+### Config Set Up     
+```
+[Algorithm]
+algorithm='PPO'
+type="PPOAlgorithm"
+episodes_train = 10
+old_policy_update_interval = 1000
+update_epochs = 5
+exploration_steps=0
+replay_buffer=True
+loss_function='MSELoss'
+regularizer=0
+recurrence=0
+gamma=0.9
+beta=0.1
+epsilon_clip = 0.1
+epsilon_start= 1
+epsilon_end=0.02
+epsilon_decay=0.00005
+c=200
+tau=0.99
+```
 ##  SupervisedAlgorithm.py
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/SupervisedAlgorithm.py)
 *   Supports Discrete and Continuous Action Space. 
     -   ***DESCRIPTION***
         +   Initializes the Dagger Algorithm.
@@ -123,4 +256,24 @@
     -   ***DESCRIPTION***
         +   Get the loss value to partciular agent, and calculation based on what is set at the config. 
     -   Get the loss value that has been assigned to the agent. 
-    
+    ### Config Set Up     
+```
+[Algorithm]
+type1='SupervisedAlgorithm'
+type2='DaggerAlgorithm'
+replay_buffer=True
+learning_rate=0.01
+optimizer='Adam'
+loss_function='MSELoss'
+regularizer=0
+recurrence=0
+gamma=0.99
+beta=0
+epsilon_start=1
+epsilon_end=0.02
+epsilon_decay=0.00005
+c=200
+```
+
+## init
+[Link to Code](https://github.com/nflux/Control-Tasks/blob/demo/shiva/shiva/algorithms/__init__.py)
