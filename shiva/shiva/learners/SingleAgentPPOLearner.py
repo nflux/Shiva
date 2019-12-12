@@ -28,7 +28,7 @@ class SingleAgentPPOLearner(Learner):
                 self.collect_metrics() # metrics per step
             self.ep_count += 1
             self.collect_metrics(True) # metrics per episode
-            print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward()))
+            print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_total_reward()))
             if self.ep_count % self.configs['Algorithm']['update_episodes'] == 0:
                 self.alg.update(self.agent, self.old_agent, self.buffer.full_buffer(), self.step_count)
                 self.buffer.clear_buffer()
@@ -59,7 +59,7 @@ class SingleAgentPPOLearner(Learner):
         #     action= self.old_agent.get_action(observation)
         # elif self.configs['Agent']['action_space'] == 'Continuous':
         #     action = self.old_agent.get_continuous_action(observation)
-        
+
         # TensorBoard metrics
         # shiva.add_summary_writer(self, self.agent, 'Loss per Step', self.alg.loss, self.step_count)
         # shiva.add_summary_writer(self, self.agent, 'Policy Loss per Step', self.alg.policy_loss, self.step_count)

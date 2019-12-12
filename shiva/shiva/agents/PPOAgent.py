@@ -16,6 +16,7 @@ class PPOAgent(Agent):
         self.acs_discrete = acs_discrete
         self.acs_continuous = acs_continuous
         self.scale = 0.9
+        print('Action_Space: ', self.action_space)
 
 
         if (acs_discrete != None) and (acs_continuous != None):
