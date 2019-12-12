@@ -2,7 +2,7 @@ class Environment:
     def __init__(self, configs):
         {setattr(self, k, v) for k,v in configs.items()}
         self.configs = configs
-        self.done_counts = 0
+        self.done_count = 0
         self.total_episodes_to_play = None
 
     def step(self,actions):
