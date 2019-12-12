@@ -43,7 +43,7 @@ class ContinuousPPOAlgorithm(Algorithm):
         done_masks = torch.ByteTensor(dones).to(self.device)
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(agent.policy_base(states.float()))
-        next_values = agent.critic(agent.policy_base(states.float())).to(self.device)
+        next_values = agent.critic(agent.policy_base(next_states.float())).to(self.device)
 
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
@@ -79,7 +79,7 @@ class ContinuousPPOAlgorithm(Algorithm):
             #Set the policy loss
             self.policy_loss = -torch.min(surr1,surr2).mean()
             entropy = (torch.log(2*math.pi*var_new) +1)/2
-            self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
+            self.entropy_loss = (self.configs[0]['beta']*entropy).mean()
             self.value_loss = self.loss_calc(values,new_rewards.unsqueeze(dim=-1))
 
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
