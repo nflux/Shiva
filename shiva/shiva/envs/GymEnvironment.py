@@ -90,6 +90,9 @@ class GymEnvironment(Environment):
     def get_reward(self):
         return self.reward_step
 
+    def get_reward_episode(self):
+        return self.reward_episode
+
     def load_viewer(self):
         if self.render:
             self.env.render()
