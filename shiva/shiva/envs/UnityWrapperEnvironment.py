@@ -29,7 +29,7 @@ class UnityWrapperEnvironment(Environment):
 
     def _call(self):
         self.brain_name = self.env_name
-        self.Unity = UnityEnvironment(file_name=self.exec, worker_id=self.worker_id, no_graphics=self.render)
+        self.Unity = UnityEnvironment(file_name=self.exec, worker_id=self.worker_id, no_graphics= not self.render)
         self.reset()
 
     def _connect(self):

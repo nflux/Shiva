@@ -40,7 +40,7 @@ class DQNAlgorithm(Algorithm):
         next_states_v = torch.tensor(next_states).float().to(self.device)
         actions_v = torch.tensor(actions).to(self.device)
         rewards_v = torch.tensor(rewards).to(self.device).view(-1, 1)
-        done_mask = torch.tensor(dones, dtype=np.bool).to(self.device)
+        done_mask = torch.tensor(dones, dtype=torch.bool).to(self.device)
 
         # print('from buffer:', states_v.shape, actions_v.shape, rewards_v.shape, next_states_v.shape, done_mask.shape, '\n')
         # input()
