@@ -43,7 +43,7 @@ class PPOAlgorithm(Algorithm):
 
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float())
-        next_values = agent.critic(states.float()).to(self.device)
+        next_values = agent.critic(next_states.float()).to(self.device)
 
         for epoch in range(self.configs[0]['update_epochs']):
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
@@ -73,18 +73,18 @@ class PPOAlgorithm(Algorithm):
             entropy = dist.entropy()
             #Get the actions(probabilites) from the target actor
             target_actor_actions = old_agent.actor(states.float())
-            dist = Categorical(target_actor_actions)
-            old_log_probs = dist.log_prob(actions)
+            dist2 = Categorical(target_actor_actions)
+            old_log_probs = dist2.log_prob(actions)
             #Find the ratio (pi_new / pi_old)
             ratios = torch.exp(log_probs - old_log_probs.detach())
             #Calculate objective functions
             surr1 = ratios * advantages
             surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantages
             #Set the policy loss
-            policy_loss = -torch.min(surr1,surr2).mean()
-            entropy_loss = -(self.configs[0]['beta']*entropy).mean()
-            value_loss = self.loss_calc(values, new_rewards.unsqueeze(dim=-1))
-            self.loss = policy_loss + value_loss + entropy_loss
+            self.policy_loss = -torch.min(surr1,surr2).mean()
+            self.entropy_loss = (self.configs[0]['beta']*entropy).mean()
+            self.value_loss = self.loss_calc(values, new_rewards.unsqueeze(dim=-1))
+            self.loss = self.policy_loss + self.value_loss + self.entropy_loss
             self.loss.backward(retain_graph = True)
             agent.optimizer.step()
 
