@@ -269,10 +269,10 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
-        self.dagger_buffer.push(copy.deepcopy([torch.from_numpy(observation),torch.from_numpy(more_data['action'].reshape(1,-1)),
+        self.buffer.push(copy.deepcopy([torch.from_numpy(observation),torch.from_numpy(more_data['action'].reshape(1,-1)),
                                                 torch.from_numpy(reward),torch.from_numpy(next_observation),torch.from_numpy(np.array([done])).float(),
                                                 torch.from_numpy(bot_action)]))
-        self.imitation_alg.update(self.agents[iter_count-1], self.dagger_buffer.sample(self.imitation_alg.device), self.step_count)
+        self.imitation_alg.update(self.agents[iter_count-1], self.buffer.sample(self.imitation_alg.device), self.step_count)
 
         #print('Total Reward: ', self.totalReward)
         #print('Average Loss per Episode', self.supervised_alg.get_average_loss(self.env.get_current_step()))
@@ -280,6 +280,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
         if done:
             # add values to the tensorboard
             shiva.add_summary_writer(self, self.agents[0], 'Total Reward', self.totalReward, self.ep_count)
+            if self.ep_count % 10000 == 0:
+                shiva._save_agent(self, self.agents[iter_count-1])
             # print(self.totalReward)
 
         return done
@@ -322,7 +324,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         # Basic replay buffer at the moment
         if self.using_buffer:
-            self.super_buffer, self.dagger_buffer = self.create_buffers(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
+            self.super_buffer, self.buffer = self.create_buffers(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
         
         if self.env.isImit():
             cmd = [os.getcwd() + '/shiva/envs/robocup/run_bots.py',]

@@ -154,10 +154,6 @@ class DaggerRoboCupAlgorithm(Algorithm):
         else:
             action_prob_dist = action_prob_dist.view(actions.shape[0])
 
-        print(action_prob_dist)
-        print('~~~~~~~~~~~~~~~~~~')
-        print(expert_actions)
-
         #calculate loss based on loss functions dictated in the configs
         self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
         print('Dagger_loss:', self.loss)
