@@ -12,10 +12,13 @@ class PPOAlgorithm(Algorithm):
 
         super(PPOAlgorithm, self).__init__(obs_space,acs_space,configs)
 
+        torch.manual_seed(self.configs[0]['manual_seed'])
         self.epsilon_clip = configs[0]['epsilon_clip']
         self.gamma = configs[0]['gamma']
-        self.actor_loss = 0
-        self.critic_loss = 0
+        self.gae_lambda = configs[0]['lambda']
+        self.policy_loss = 0
+        self.value_loss = 0
+        self.entropy_loss = 0
         self.loss = 0
         self.acs_space = acs_space
         self.obs_space = obs_space
@@ -23,7 +26,7 @@ class PPOAlgorithm(Algorithm):
         self.acs_continuous = action_space_continuous
 
 
-    def update(self, agent,minibatch, step_count):
+    def update(self, agent,old_agent,minibatch, step_count):
         '''
             Getting a Batch from the Replay Buffer
         '''
@@ -38,55 +41,52 @@ class PPOAlgorithm(Algorithm):
         next_states = torch.tensor(next_states).to(self.device)
         done_masks = torch.ByteTensor(dones).to(self.device)
 
-        # Monte Carlo estimate of state rewards:
-        new_rewards = []
-        discounted_reward = 0
-        for reward, done_mask in zip(reversed(rewards), reversed(done_masks)):
-            if done_mask:
-                discounted_reward = 0
-            discounted_reward = reward + (self.gamma * discounted_reward)
-            new_rewards.insert(0, discounted_reward)
-        new_rewards = torch.tensor(new_rewards).float()
+        #Calculate approximated state values and next state values using the critic
+        values = agent.critic(states.float())
+        next_values = agent.critic(states.float()).to(self.device)
 
-        '''
-            Training the Actor
-        '''
+        for epoch in range(self.configs[0]['update_epochs']):
+            #Calculate Discounted Rewards and Advantages using the General Advantage Equation
+            new_rewards = []
+            advantages = []
+            delta= 0
+            gae = 0
+            for i in reversed(range(len(rewards))):
+                if done_masks[i]:
+                    delta = rewards[i]-values[i]
+                    gae = delta
+                else:
+                    delta = rewards[i] + self.gamma * next_values[i]  - values[i]
+                    gae = delta + self.gamma * self.gae_lambda * gae
+                new_rewards.insert(0,gae+values[i])
+                advantages.insert(0,gae)
+            #Format discounted rewards and advantages for torch use
+            new_rewards = torch.tensor(new_rewards).float().to(self.device)
+            advantages = torch.tensor(advantages).float()
+            advantages = (advantages - torch.mean(advantages)) / torch.std(advantages)
 
-        # Zero the gradient
-        #agent.actor_optimizer.zero_grad()
-        agent.optimizer.zero_grad()
-        # Get the actions(probabilites) from the main actor
-        current_actor_actions = agent.actor(states.float())
-        dist = Categorical(current_actor_actions)
-        actions = torch.tensor(np.argmax(actions,axis=1).numpy()).float()
-        log_probs = dist.log_prob(actions)
-        entropy = dist.entropy()
-        #Get the actions(probabilites) from the target actor
-        target_actor_actions = agent.target_actor(states.float())
-        dist = Categorical(current_actor_actions)
-        old_log_probs = dist.log_prob(actions)
-        #Find the ratio (pi_new / pi_old)
-        ratios = torch.exp(log_probs - old_log_probs.detach())
-        #ratios = current_actor_actions/ target_actor_actions.detach()
-        # Calculate Q value for taking those actions in those states
-        state_values = agent.critic(states.float())
-        #Calculate next state values
-        expected_state_action_values = state_values * self.gamma + new_rewards.unsqueeze(dim=-1)
-        #Calculate the advantage term
-        #advantage = (rewards + (self.gamma*new_rewards.unsqueeze(dim=-1)) - state_values).mean()
-        advantage = new_rewards.unsqueeze(dim=-1) - state_values .detach()
-
-        #Calculate objective functions
-        surr1 = ratios * advantage
-        surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage
-        #Set the policy loss
-        policy_loss = -torch.min(surr1,surr2)
-        #entropy = Categorical(current_actor_actions).entropy()
-        entropy_loss = -(self.configs[0]['beta']*entropy).mean()
-        value_loss = self.loss_calc(state_values, new_rewards.unsqueeze(dim=-1))
-        self.loss = policy_loss.mean() + value_loss + entropy_loss
-        self.loss.backward()
-        agent.optimizer.step()
+            agent.optimizer.zero_grad()
+            current_actor_actions = agent.actor(states.float())
+            dist = Categorical(current_actor_actions)
+            actions = torch.tensor(np.argmax(actions).numpy()).float()
+            log_probs = dist.log_prob(actions)
+            entropy = dist.entropy()
+            #Get the actions(probabilites) from the target actor
+            target_actor_actions = old_agent.actor(states.float())
+            dist = Categorical(target_actor_actions)
+            old_log_probs = dist.log_prob(actions)
+            #Find the ratio (pi_new / pi_old)
+            ratios = torch.exp(log_probs - old_log_probs.detach())
+            #Calculate objective functions
+            surr1 = ratios * advantages
+            surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantages
+            #Set the policy loss
+            policy_loss = -torch.min(surr1,surr2).mean()
+            entropy_loss = -(self.configs[0]['beta']*entropy).mean()
+            value_loss = self.loss_calc(values, new_rewards.unsqueeze(dim=-1))
+            self.loss = policy_loss + value_loss + entropy_loss
+            self.loss.backward(retain_graph = True)
+            agent.optimizer.step()
 
     def get_metrics(self, episodic=False):
         if not episodic:
