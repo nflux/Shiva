@@ -28,7 +28,7 @@ class SingleAgentPPOLearner(Learner):
                 self.collect_metrics() # metrics per step
             self.ep_count += 1
             self.collect_metrics(True) # metrics per episode
-            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.ep_count, self.env.steps_episodic, self.env.get_total_reward()))
+            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.ep_count, self.env.steps_per_episode, self.env.get_total_reward()))
             if self.ep_count % self.configs['Algorithm']['update_episodes'] == 0:
                 self.alg.update(self.agent, self.old_agent, self.buffer.full_buffer(), self.step_count)
                 self.buffer.clear_buffer()

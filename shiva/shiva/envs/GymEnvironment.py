@@ -8,7 +8,7 @@ class GymEnvironment(Environment):
         self.env = gym.make(self.env_name)
         self.obs = self.env.reset()
         self.acs = 0
-        self.reward_step = 0
+        self.reward_per_step = 0
         self.done = False
         self.action_space_continuous = None
         self.action_space_discrete = None
@@ -16,7 +16,7 @@ class GymEnvironment(Environment):
         self.action_space = self.set_action_space()
 
         self.step_count = 0
-        self.steps_episodic = 0
+        self.steps_per_episode = 0
         self.done_count = 0
         self.reward_total = 0
         self.render = configs['render']
@@ -24,35 +24,43 @@ class GymEnvironment(Environment):
     def step(self, action):
         self.acs = action
         action4Gym = np.argmax(action) if self.action_space_continuous is None else action
-        self.obs, self.reward_step, self.done, info = self.env.step(action4Gym)
-
-        self.step_count += 1
-        self.steps_episodic += 1
+        self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         self.load_viewer()
-        if self.done:
-            self.done_count += 1
-        else:
-            self.reward_episode += self.reward_step
+        '''
+            Metrics collection
+                Episodic # of steps             self.steps_per_episode --> is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
+                Cumulative # of steps           self.step_count
+                Cumulative # of episodes        self.done_count
+                Step Reward                     self.reward_per_step
+                Episodic Reward                 self.reward_per_episode
+                Cumulative Reward               self.reward_total
+        '''
+        self.steps_per_episode += 1
+        self.step_count += self.steps_per_episode
+        self.done_count += 1 if self.done else 0
+        self.reward_per_step = self.reward_per_step
+        self.reward_per_episode += self.reward_per_step
+        self.reward_total += self.reward_per_episode
 
         if self.normalize:
-            return self.obs, self.normalize_reward(self.reward_step), self.done, {'raw_reward': self.reward_step, 'action': action}
+            return self.obs, self.normalize_reward(self.reward_per_step), self.done, {'raw_reward': self.reward_per_step, 'action': action}
         else:
-            return self.obs, self.reward_step, self.done, {'raw_reward': self.reward_step, 'action': action}
+            return self.obs, self.reward_per_step, self.done, {'raw_reward': self.reward_per_step, 'action': action}
 
     def get_metrics(self, episodic=False):
         if not episodic:
-            metrics = [('Reward/Raw_Reward_per_Step', self.reward_step)]
+            metrics = [('Reward/Per_Step', self.reward_per_step)]
         else:
-            metrics = [('Reward/Raw_Rewards_per_Episode', self.reward_episode)]
+            metrics = [('Reward/Per_Episode', self.reward_per_episode)]
         return metrics
 
     def is_done(self):
         return self.done
 
     def reset(self):
-        self.step_count = 0
-        self.steps_episodic = 0
-        self.reward_episode = 0
+        self.steps_per_episode = 0
+        self.reward_per_step = 0
+        self.reward_per_episode = 0
         self.done = False
         self.obs = self.env.reset()
 
@@ -91,13 +99,13 @@ class GymEnvironment(Environment):
         return self.acs
 
     def get_reward(self):
-        return self.reward_step
+        return self.reward_per_step
 
     def get_total_reward(self):
         '''
             Returns episodic reward
         '''
-        return self.reward_episode
+        return self.reward_per_episode
 
     def load_viewer(self):
         if self.render:
