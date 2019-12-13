@@ -26,10 +26,10 @@ class Learner(object):
             metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
             if not episodic:
                 for metric_name, y_val in metrics:
-                    shiva.add_summary_writer(self, self.agent, metric_name, y_val, self.step_count)
+                    shiva.add_summary_writer(self, self.agent, metric_name, y_val, self.env.step_count)
             else:
                 for metric_name, y_val in metrics:
-                    shiva.add_summary_writer(self, self.agent, metric_name, y_val, self.ep_count)
+                    shiva.add_summary_writer(self, self.agent, metric_name, y_val, self.env.done_count)
         else:
             assert False, "The Learner attribute 'agent' was not found. Either name the attribute 'agent' or could be that MultiAgent Metrics are not yet supported."
     

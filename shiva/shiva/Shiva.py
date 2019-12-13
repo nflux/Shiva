@@ -348,7 +348,7 @@ class ShivaAdmin():
         assert len(agents_pickles) > 0, "No agents found in {}".format(path)
         print("Loading Agents..")
         for agent_pickle, agent_policy in zip(agents_pickles, agents_policies):
-            print("\t{}\n\t{}\n\n".format(agent_pickle, agent_policy))
+            print("\t{}\n\t{}\n".format(agent_pickle, agent_policy))
             _new_agent = fh.load_pickle_obj(agent_pickle)
             _new_agent.load_net(agent_policy)
             agents.append(_new_agent)
@@ -367,7 +367,7 @@ class ShivaAdmin():
         agent_policy = dh.find_pattern_in_path(path, 'policy.pth')
         assert len(agent_pickle) > 0, "No agent found in {}".format(path)
         print("Loading Agent..")
-        print("\t{}\n\t{}\n\n".format(agent_pickle, agent_policy))
+        print("\t{}\n\t{}\n".format(agent_pickle, agent_policy))
         _new_agent = fh.load_pickle_obj(agent_pickle)
         _new_agent.load_net(agent_policy)
 
@@ -382,10 +382,10 @@ class ShivaAdmin():
                 @path       Learner path
         '''
 
-        buffer_pickle = dh.find_pattern_in_path(path, 'buffer.pickle')
-        assert len(agent_pickle) > 0, "No buffer found in {}".format(path)
+        buffer_pickle = dh.find_pattern_in_path(path, 'buffer.pickle')[0]
+        assert len(buffer_pickle) > 0, "No buffer found in {}".format(path)
         print("Loading Buffer..")
-        print("\t{}\n\t{}\n\n".format(buffer_pickle))
+        print("\t{}\n".format(buffer_pickle))
         return fh.load_pickle_obj(buffer_pickle)
 
     
