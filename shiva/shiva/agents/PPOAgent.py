@@ -13,6 +13,8 @@ class PPOAgent(Agent):
     def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config, net_config):
         super(PPOAgent, self).__init__(id, obs_dim, (0 if acs_discrete is None else acs_discrete)+(0 if acs_continuous is None else acs_continuous), agent_config, net_config)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        torch.manual_seed(agent_config['manual_seed'])
+        np.random.seed(agent_config['manual_seed'])
         self.acs_discrete = acs_discrete
         self.acs_continuous = acs_continuous
         self.scale = 0.9
@@ -72,11 +74,13 @@ class PPOAgent(Agent):
     def get_continuous_action(self,observation):
         observation = torch.tensor(observation).float().detach().to(self.device)
         base_output = self.policy_base(observation)
-        mu = self.mu(base_output).detach().cpu().numpy()
-        sigma = torch.sqrt(self.var(base_output)).detach().cpu().numpy()
+        mu = self.mu(base_output).detach().to(self.device).numpy()
+        var = torch.abs(self.var(base_output)).to(self.device)
+        sigma = torch.sqrt(var).detach().to(self.device).numpy()
+
         actions = np.random.normal(mu,sigma)
-        self.ou_noise.set_scale(0.8)
-        actions += self.ou_noise.noise()
+        #self.ou_noise.set_scale(0.8)
+        #actions += self.ou_noise.noise()
         actions = np.clip(actions,-1,1)
         return actions.tolist()
 
@@ -86,7 +90,7 @@ class PPOAgent(Agent):
         mu = self.mu(base_output)
         var = self.var(base_output)
         value = self.critic(base_output)
-        return my, var, value
+        return mu, var, value
 
 
     def save(self, save_path, step):

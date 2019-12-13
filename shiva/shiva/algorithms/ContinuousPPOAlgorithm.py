@@ -44,7 +44,6 @@ class ContinuousPPOAlgorithm(Algorithm):
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(agent.policy_base(states.float()))
         next_values = agent.critic(agent.policy_base(next_states.float())).to(self.device)
-
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
@@ -68,11 +67,11 @@ class ContinuousPPOAlgorithm(Algorithm):
             advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
             agent.optimizer.zero_grad()
             mu_new = agent.mu(agent.policy_base(states.float()))
-            var_new = agent.var(agent.policy_base(states.float()))
+            var_new = torch.abs(agent.var(agent.policy_base(states.float())))
             mu_old = old_agent.mu(old_agent.policy_base(states.float()))
-            var_old = old_agent.var(old_agent.policy_base(states.float()))
-            old_log_probs = self.log_probs(mu_old,var_old,actions).float().detach()
-            new_log_probs = self.log_probs(mu_new,var_new,actions).float()
+            var_old = torch.abs(old_agent.var(old_agent.policy_base(states.float())))
+            old_log_probs = self.log_probs(mu_old,var_old,actions).mean().float().detach()
+            new_log_probs = self.log_probs(mu_new,var_new,actions).mean().float()
             ratios = torch.exp(new_log_probs - old_log_probs)
             surr1 = ratios * advantage
             surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage

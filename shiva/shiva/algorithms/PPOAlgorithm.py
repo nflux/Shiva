@@ -13,6 +13,7 @@ class PPOAlgorithm(Algorithm):
         super(PPOAlgorithm, self).__init__(obs_space,acs_space,configs)
 
         torch.manual_seed(self.configs[0]['manual_seed'])
+        np.random.seed(self.configs[0]['manual_seed'])
         self.epsilon_clip = configs[0]['epsilon_clip']
         self.gamma = configs[0]['gamma']
         self.gae_lambda = configs[0]['lambda']
@@ -45,6 +46,11 @@ class PPOAlgorithm(Algorithm):
         values = agent.critic(states.float())
         next_values = agent.critic(next_states.float()).to(self.device)
 
+        actions = torch.tensor(np.argmax(actions).numpy()).float()
+        target_actor_actions = old_agent.actor(states.float())
+        dist2 = Categorical(target_actor_actions)
+        old_log_probs = dist2.log_prob(actions)
+
         for epoch in range(self.configs[0]['update_epochs']):
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
             new_rewards = []
@@ -68,13 +74,13 @@ class PPOAlgorithm(Algorithm):
             agent.optimizer.zero_grad()
             current_actor_actions = agent.actor(states.float())
             dist = Categorical(current_actor_actions)
-            actions = torch.tensor(np.argmax(actions).numpy()).float()
+            #actions = torch.tensor(np.argmax(actions).numpy()).float()
             log_probs = dist.log_prob(actions)
             entropy = dist.entropy()
             #Get the actions(probabilites) from the target actor
-            target_actor_actions = old_agent.actor(states.float())
-            dist2 = Categorical(target_actor_actions)
-            old_log_probs = dist2.log_prob(actions)
+            #target_actor_actions = old_agent.actor(states.float())
+            #dist2 = Categorical(target_actor_actions)
+            #old_log_probs = dist2.log_prob(actions)
             #Find the ratio (pi_new / pi_old)
             ratios = torch.exp(log_probs - old_log_probs.detach())
             #Calculate objective functions
@@ -82,7 +88,7 @@ class PPOAlgorithm(Algorithm):
             surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantages
             #Set the policy loss
             self.policy_loss = -torch.min(surr1,surr2).mean()
-            self.entropy_loss = (self.configs[0]['beta']*entropy).mean()
+            self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
             self.value_loss = self.loss_calc(values, new_rewards.unsqueeze(dim=-1))
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
             self.loss.backward(retain_graph = True)

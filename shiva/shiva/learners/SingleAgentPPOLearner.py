@@ -2,6 +2,7 @@ from settings import shiva
 from .Learner import Learner
 import helpers.misc as misc
 import torch.multiprocessing as mp
+import torch
 import envs
 import algorithms
 import buffers
@@ -12,6 +13,8 @@ import numpy as np
 class SingleAgentPPOLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentPPOLearner,self).__init__(learner_id, config)
+        np.random.seed(self.configs['Algorithm']['manual_seed'])
+        torch.manual_seed(self.configs['Algorithm']['manual_seed'])
 
     def run(self):
         self.step_count = 0
