@@ -16,6 +16,7 @@ class GymEnvironment(Environment):
         self.action_space = self.set_action_space()
 
         self.step_count = 0
+        self.steps_episodic = 0
         self.done_count = 0
         self.reward_total = 0
         self.render = configs['render']
@@ -25,7 +26,8 @@ class GymEnvironment(Environment):
         action4Gym = np.argmax(action) if self.action_space_continuous is None else action
         self.obs, self.reward_step, self.done, info = self.env.step(action4Gym)
 
-        self.step_count +=1
+        self.step_count += 1
+        self.steps_episodic += 1
         self.load_viewer()
         if self.done:
             self.done_count += 1
@@ -49,6 +51,7 @@ class GymEnvironment(Environment):
 
     def reset(self):
         self.step_count = 0
+        self.steps_episodic = 0
         self.reward_episode = 0
         self.done = False
         self.obs = self.env.reset()
@@ -91,9 +94,6 @@ class GymEnvironment(Environment):
         return self.reward_step
 
     def get_total_reward(self):
-        '''
-            Returns episodic reward
-        '''
         return self.reward_episode
 
     def load_viewer(self):
