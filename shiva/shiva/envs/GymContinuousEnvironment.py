@@ -3,6 +3,7 @@ from .Environment import Environment
 
 class GymContinuousEnvironment(Environment):
     def __init__(self,environment):
+        assert False, "Deprecated Environment. Use plain GymEnvironment"
         super(GymContinuousEnvironment,self).__init__(environment)
         self.env = gym.make(self.env_name)
         self.obs = self.env.reset()

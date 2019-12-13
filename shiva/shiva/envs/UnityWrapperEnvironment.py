@@ -29,23 +29,23 @@ class UnityWrapperEnvironment(Environment):
         self.step_count = 0
         self.load_viewer()
 
-    def _call(self):
+    def _connect(self):
         self.brain_name = self.env_name
         self.Unity = UnityEnvironment(file_name=self.exec, worker_id=self.worker_id, no_graphics= not self.render)
         self._reset()
 
-    def _connect(self):
-        self._call()
-        # try:
-        #     self._call()
-        #     print('Worker id:', self.worker_id)
-        # except:
-        #     if self.worker_id < 3:
-        #         # try to connect with different worker ids
-        #         self.worker_id += 1
-        #         # self._connect()
-        #     else:
-        #         assert False, 'Enough worker_id tries.'
+    # def _connect(self):
+    #     self._call()
+    #     try:
+    #         self._call()
+    #         print('Worker id:', self.worker_id)
+    #     except:
+    #         if self.worker_id < 3:
+    #             # try to connect with different worker ids
+    #             self.worker_id += 1
+    #             # self._connect()
+    #         else:
+    #             assert False, 'Enough worker_id tries.'
 
     def _reset(self, new_config=None):
         '''
@@ -67,41 +67,47 @@ class UnityWrapperEnvironment(Environment):
             To be called by Shiva Learner
             It's just to reinitialize the temporary done counter due to the multiagents on Unity
         '''
+        self.steps_per_episode = 0
         self.temp_done_counter = 0
-        self.reward_episodic = 0
-        self.steps_episodic = 0
+        self.reward_per_step = 0
+        self.reward_per_episode = 0
 
     def get_random_action(self):
         return np.array([np.random.uniform(-1, 1, size=self.action_space) for _ in range(self.num_instances)])
 
     def step(self, actions):
-        """
-            Need to do some manipulation of the data when many instances map to 1 agent
-        """
-        # make sure discrete side is one hot encoded
         self.actions = self._clean_actions(actions)
-        # self.actions = actions
         self.BrainInfoDict = self.Unity.step(self.actions)
         self.BrainInfo = self.BrainInfoDict[self.brain_name]
         self.observations = np.array(self.BrainInfo.vector_observations)
         self.rewards = np.array(self.BrainInfo.rewards)
         self.dones = np.array(self.BrainInfo.local_done)
-        
-        self.steps_episodic += 1
-        self.step_count += self.steps_episodic # this are Shiva steps
-        self.temp_done_counter = sum([ 1 if val else 0 for val in self.dones ])
+        '''
+            Metrics collection
+                Episodic # of steps             self.steps_per_episode --> is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
+                Cumulative # of steps           self.step_count
+                Temporary episode count         self.temp_done_counter --> used for the is_done() call. Zeroed on reset().
+                Cumulative # of episodes        self.done_count
+                Step Reward                     self.reward_per_step
+                Episodic Reward                 self.reward_per_episode
+                Cumulative Reward               self.reward_total
+        '''
+        self.steps_per_episode += self.num_instances
+        self.step_count += self.steps_per_episode
+        self.temp_done_counter += sum([ 1 if val else 0 for val in self.dones ])
         self.done_count += self.temp_done_counter
-        self.reward_episodic += sum(self.rewards)
-        self.reward_total += sum(self.rewards) / self.num_instances
+        self.reward_per_step = sum(self.rewards) / self.num_instances
+        self.reward_per_episode += self.reward_per_step
+        self.reward_total += self.reward_per_episode
 
         # self.debug()
         return self.observations, self.rewards, self.dones, {}
 
     def get_metrics(self, episodic=False):
         if not episodic:
-            metrics = [('Raw_Reward_per_Step', sum(self.rewards)/self.num_instances)]
+            metrics = [('Reward/Per_Step', self.reward_per_step)]
         else:
-            metrics = [('Raw_Rewards_per_Episode', self.reward_total)]
+            metrics = [('Reward/Per_Episode', self.reward_per_episode)]
         return metrics
 
     def is_done(self):
@@ -128,10 +134,7 @@ class UnityWrapperEnvironment(Environment):
         return sum(self.rewards)/self.num_instances
 
     def get_total_reward(self):
-        '''
-            Returns Shivas episodic reward
-        '''
-        return self.reward_episodic / self.num_instances
+        return self.reward_per_episode
 
     def load_viewer(self):
         pass
