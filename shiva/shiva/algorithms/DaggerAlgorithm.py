@@ -112,7 +112,7 @@ class DaggerRoboCupAlgorithm(Algorithm):
         self.action_policy = configs[1]['action_policy']
         self.loss = 0
 
-    def update(self, imitation_agent,expert_agent, minibatch, step_n):
+    def update(self, imitation_agent, minibatch, step_n):
         '''
             Implementation
                 1) Collect Trajectories from the imitation policy. By choosing
@@ -138,41 +138,22 @@ class DaggerRoboCupAlgorithm(Algorithm):
         states, actions, rewards, next_states, dones, expert_actions = minibatch
 
 
-        rewards_v = torch.tensor(rewards).to(self.device)
-        done_mask = torch.tensor(dones, dtype=torch.bool).to(self.device)
+        # rewards_v = torch.tensor(rewards).to(self.device)
+        # done_mask = torch.tensor(dones, dtype=torch.bool).to(self.device)
 
         # zero optimizer
         imitation_agent.actor_optimizer.zero_grad()
 
-        input_v = torch.tensor(states).float().to(self.device)
+        # input_v = torch.tensor(states).float().to(self.device)
 
-        action_prob_dist = imitation_agent.actor(input_v)
-        expert_actions = torch.from_numpy(expert_actions).float().to(self.device)
+        action_prob_dist = imitation_agent.actor(states)
+        # expert_actions = torch.from_numpy(expert_actions).float().to(self.device)
 
-        #initialize tensor to store expert actions queried.
-        # if self.configs[0]['loss_function'] == 'MSELoss':
-        #     expert_actions = torch.zeros([len(states),self.acs_dim]).float()
-        # elif self.configs[0]['loss_function'] == 'CrossEntropyLoss':
-        #     expert_actions = torch.zeros([len(states)]).long()
-        # #place the experts actions into a single tensor.
-        # for i in range(len(states)):
-        #     expert_actions[i] = torch.from_numpy(expert_agent.find_best_imitation_action(states[i]))
-
-
-
-        #detach actions to ensure they do not interfere with the network updates.
-        #CrossEntropyLoss requires target to be a long tensor
-        #expert_actions = expert_actions.detach().long()
-
-        #format the shape properly to ensure proper loss calculations
-        # if self.configs[0]['loss_function'] == 'MSELoss':
         if (len(actions.shape) > 1):
             action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[len(actions.shape)-1])
         else:
             action_prob_dist = action_prob_dist.view(actions.shape[0])
-            #MSELoss requires target to be a float tensor
-            #expert_actions = expert_actions.float()
-        # print(action_prob_dist)
+
         #calculate loss based on loss functions dictated in the configs
         self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
         print('Dagger_loss:', self.loss)
@@ -190,20 +171,6 @@ class DaggerRoboCupAlgorithm(Algorithm):
             return np.random.choice(network(torch.tensor(observation).float()).detach().numpy())
         else:
             return misc.action2one_hot(self.acs_dim,np.argmax(network(torch.tensor(observation).float()).detach()).item())
-
-    # def find_best_expert_action(self, network, observation: np.ndarray) -> np.ndarray:
-
-    #     obs_v = torch.tensor(observation).float().to(self.device)
-    #     best_q, best_act_v = float('-inf'), torch.zeros(self.acs_dim).to(self.device)
-    #     for i in range(self.acs_space):
-    #         act_v = misc.action2one_hot_v(self.acs_space,i)
-    #         q_val = network(torch.cat([obs_v, act_v.to(self.device)]))
-    #         if q_val > best_q:
-    #             best_q = q_val
-    #             best_act_v = act_v
-    #     best_act = best_act_v
-
-    #     return np.argmax(best_act)
 
     def get_loss(self):
         return self.loss

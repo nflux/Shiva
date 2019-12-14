@@ -16,7 +16,4 @@ bash compile.sh
 ​
 ## Ready to launch a RoboCup session
 
-## Run pip off req.txt
-pip install -r requirements.txt
-
 ### Install cuda and video drivers here

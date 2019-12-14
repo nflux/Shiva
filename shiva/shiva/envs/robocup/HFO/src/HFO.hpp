@@ -82,6 +82,8 @@ class HFOEnvironment {
 
   virtual double getSelfVelY();
 
+  virtual double getStamina();
+
   virtual bool isKickable();
 
   const std::vector<int>& teammateUnumsByProx();

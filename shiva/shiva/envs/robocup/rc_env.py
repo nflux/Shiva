@@ -311,6 +311,7 @@ class rc_env:
             obsMsg += str(env.getSelfAng()) + " "
             obsMsg += str(env.getSelfVelX()) + " "
             obsMsg += str(env.getSelfVelY()) + " "
+            obsMsg += str(env.getStamina()) + " "
         
         for env in self.right_envs:
             obsMsg += str(env.side()) + " "
@@ -320,6 +321,7 @@ class rc_env:
             obsMsg += str(env.getSelfAng()) + " "
             obsMsg += str(env.getSelfVelX()) + " "
             obsMsg += str(env.getSelfVelY()) + " "
+            obsMsg += str(env.getStamina()) + " "
 
         return str(obsMsg).encode("utf-8")
 
@@ -377,7 +379,7 @@ class rc_env:
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
         
-        return np.asarray(self.left_obs), self.left_rewards, np.asarray(self.right_obs), self.right_rewards, self.d, self.world_status
+        return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
     def Queue_action(self,agent_id,base,action,params=[]):
         '''
@@ -531,7 +533,7 @@ class rc_env:
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --seed %i --message-size 256 --run-bots"\
+                  " --log-dir %s --seed %i --message-size 256"\
                   % (self.fpt, self.untouched, self.num_left,
                      self.num_right, self.num_leftBot, self.num_rightBot, self.port,
                      self.config['offense_ball'], self.seed, self.config['ball_x_min'], self.config['ball_x_max'],
@@ -549,6 +551,7 @@ class rc_env:
             if self.config['hfo_log']:       cmd += " --hfo-logging"
             if self.config['record_lib']:             cmd += " --record"
             if self.config['record_serv']:      cmd += " --log-gen-pt"
+            if self.config['run_imit']:         cmd += " --run-bots"
             if self.config['init_env']:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

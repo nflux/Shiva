@@ -272,6 +272,7 @@ class ShivaAdmin():
                 @learner        Learner who owns the agent
                 @agent          Agent we want to save
         '''
+        if not self.need_to_save: return
         self._add_agent_profile(learner, agent)
         agent_path = os.path.join(self._curr_agent_dir[learner.id][agent.id], 'Ep'+str(learner.ep_count))
         agent_path = dh.make_dir(agent_path)
