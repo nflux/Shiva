@@ -22,12 +22,10 @@ class SingleAgentTD3Learner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.step_count += 1
                 self.alg.update(self.agent, self.buffer, self.step_count)
                 self.collect_metrics() # metrics per step
-            self.ep_count += 1
             self.collect_metrics(True) # metrics per episode
-            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.ep_count, self.env.steps_per_episode, self.env.get_total_reward()))
+            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_total))
         self.env.close()
 
     def step(self):
