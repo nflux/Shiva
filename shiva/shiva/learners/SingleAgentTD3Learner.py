@@ -64,7 +64,7 @@ class SingleAgentTD3Learner(Learner):
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
-        return self.agents
+        return self.agent
 
     def get_algorithm(self):
         return self.alg
@@ -74,6 +74,7 @@ class SingleAgentTD3Learner(Learner):
         self.alg = self.create_algorithm()
         if self.load_agents:
             self.agent = self.load_agent(self.load_agents)
+            self.alg.agent = self.agent
         else:
             self.agent = self.alg.create_agent(self.get_id())
 
@@ -87,4 +88,4 @@ class SingleAgentTD3Learner(Learner):
         pass
 
     def load_agent(self, path):
-        return shiva._load_agents(path)[0]
+        return shiva._load_agent(path)

@@ -344,8 +344,9 @@ class ShivaAdmin():
         '''
         agents = []
         agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
-        agents_policies = dh.find_pattern_in_path(path, 'policy.pth')
+        agents_policies = dh.find_pattern_in_path(path, '.pth')
         assert len(agents_pickles) > 0, "No agents found in {}".format(path)
+        print("Loading multiple agents is not yet so friendly. Try using shiva._load_agent()")
         print("Loading Agents..")
         for agent_pickle, agent_policy in zip(agents_pickles, agents_policies):
             print("\t{}\n\t{}\n".format(agent_pickle, agent_policy))
@@ -364,13 +365,14 @@ class ShivaAdmin():
                 @path       Path where the agents files will be located
         '''
         agent_pickle = dh.find_pattern_in_path(path, 'agent_cls.pickle')
-        agent_policy = dh.find_pattern_in_path(path, 'policy.pth')
+        agent_policy = dh.find_pattern_in_path(path, '.pth')
         assert len(agent_pickle) > 0, "No agent found in {}".format(path)
+        assert len(agent_pickle) == 1, "Multiple agent_cls.pickles found. Try using shiva._load_agents()"
         print("Loading Agent..")
         print("\t{}\n\t{}\n".format(agent_pickle, agent_policy))
-        _new_agent = fh.load_pickle_obj(agent_pickle)
-        _new_agent.load_net(agent_policy)
-
+        _new_agent = fh.load_pickle_obj(agent_pickle[0])
+        for policy_file in agent_policy:
+            _new_agent.load_net(policy_file)
         return _new_agent
 
 

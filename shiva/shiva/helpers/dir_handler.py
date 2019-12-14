@@ -25,6 +25,7 @@ def find_pattern_in_path(path, pattern):
     result = []
     for root, dirs, files in os.walk(path):
         for name in files:
-            if fnmatch.fnmatch(name, pattern):
+            # if fnmatch.fnmatch(name, pattern):
+            if pattern in name:
                 result.append(os.path.join(root, name))
     return result
