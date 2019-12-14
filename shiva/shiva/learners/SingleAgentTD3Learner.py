@@ -55,8 +55,6 @@ class SingleAgentTD3Learner(Learner):
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        # acs_continuous = self.env.action_space_continuous
-        # acs_discrete = self.env.action_space_discrete
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):

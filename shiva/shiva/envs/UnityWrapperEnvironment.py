@@ -13,7 +13,7 @@ class UnityWrapperEnvironment(Environment):
         super(UnityWrapperEnvironment, self).__init__(config)
         self.worker_id = 0
         self._connect()
-
+        # self.debug()
         self.action_space = self.BrainParameters.vector_action_space_size[0]
         self.observation_space = self.BrainParameters.vector_observation_space_size * self.BrainParameters.num_stacked_vector_observations
         
@@ -111,7 +111,7 @@ class UnityWrapperEnvironment(Environment):
         else:
             metrics = [
                 ('Reward/Per_Episode', self.reward_per_episode),
-                ('Env/Steps_Per_Episode', self.steps_per_episode)
+                ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
         return metrics
 
@@ -128,6 +128,12 @@ class UnityWrapperEnvironment(Environment):
         if self.BrainParameters.vector_action_space_type == 'discrete':
             actions = np.array([np.argmax(_act) for _act in actions])
         return actions
+
+    def get_action_space(self):
+        return self.action_space
+
+    def get_observation_space(self):
+        return self.observation_space
 
     def get_observation(self):
         return self.observations

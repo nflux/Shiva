@@ -114,25 +114,26 @@ class TD3Algorithm(Algorithm):
             """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
             self.agent.actor.eval()
             with torch.no_grad():
-                self.action = self.agent.actor(torch.tensor(observation, dtype=torch.float)).cpu().data.numpy()
+                obs = torch.tensor(observation, dtype=torch.float)
+                self.action = self.agent.actor(obs).cpu().data.numpy()
             self.agent.actor.train()
             # action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
             self.action += self.ou_noise.noise()
             return self.action
 
     def create_agent(self, id): 
-        new_agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
-        self.agent = new_agent
-        return new_agent
+        self.agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+        return self.agent
 
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss),
                 ('Algorithm/Critic_Loss', self.critic_loss_2),
-                ('Algorithm/Critic_2_Loss', self.critic_loss_2),
-                ('Agent/Actor_output', self.action[0])
+                ('Algorithm/Critic_2_Loss', self.critic_loss_2)
             ]
+            for i, ac in enumerate(self.action):
+                metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
         else:
             metrics = []
         return metrics

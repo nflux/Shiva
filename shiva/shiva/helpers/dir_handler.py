@@ -1,13 +1,19 @@
 import os, datetime
 import fnmatch
 
-def make_dir(new_folder: str) -> str:
+def make_dir(new_folder: str, overwrite=False) -> str:
     # Implement another try block if there are Permission problems
-
-    try:
+    if overwrite:
+        try:
+            os.makedirs(new_folder)
+        except FileExistsError:
+            pass
+    else:
+        i = 1
+        while os.path.isdir(new_folder):
+            new_folder = new_folder + '_' + str(i)
+            i += 1
         os.makedirs(new_folder)
-    except FileExistsError:
-        pass
     return new_folder
 
 def make_dir_timestamp(new_folder: str, create_new_timestamp_folder=False, name_append: str=None) -> str:

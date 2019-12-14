@@ -99,6 +99,7 @@ class ShivaAdmin():
         if self.need_to_save:
             ml_folder_name = env_name
             self._curr_meta_learner_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, ml_folder_name))
+            print("New MetaLearner @ {}".format(self._curr_meta_learner_dir))
 
     def add_learner_profile(self, learner) -> None:
         '''
