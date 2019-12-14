@@ -108,17 +108,17 @@ class TD3Algorithm(Algorithm):
     # Gets actions with a linearly decreasing e greedy strat
     def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
         if step_count < self.exploration_steps:
-            action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
-            return action
+            self.action = np.array([np.random.uniform(-1, 1) for _ in range(self.acs_space)])
+            return self.action
         else:
             """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
             self.agent.actor.eval()
             with torch.no_grad():
-                action = self.agent.actor(torch.tensor(observation, dtype=torch.float)).cpu().data.numpy()
+                self.action = self.agent.actor(torch.tensor(observation, dtype=torch.float)).cpu().data.numpy()
             self.agent.actor.train()
             # action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
-            action += self.ou_noise.noise()
-            return action
+            self.action += self.ou_noise.noise()
+            return self.action
 
     def create_agent(self, id): 
         new_agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
@@ -130,7 +130,8 @@ class TD3Algorithm(Algorithm):
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss),
                 ('Algorithm/Critic_Loss', self.critic_loss_2),
-                ('Algorithm/Critic_2_Loss', self.critic_loss_2)
+                ('Algorithm/Critic_2_Loss', self.critic_loss_2),
+                ('Agent/Actor_output', self.action[0])
             ]
         else:
             metrics = []
