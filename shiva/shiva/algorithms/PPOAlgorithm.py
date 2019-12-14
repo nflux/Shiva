@@ -48,40 +48,34 @@ class PPOAlgorithm(Algorithm):
 
         actions = torch.tensor(np.argmax(actions).numpy()).float()
         target_actor_actions = old_agent.actor(states.float())
-        dist2 = Categorical(target_actor_actions)
-        old_log_probs = dist2.log_prob(actions)
+        dist = Categorical(target_actor_actions)
+        old_log_probs = dist.log_prob(actions)
+
+        new_rewards = []
+        advantages = []
+        delta= 0
+        gae = 0
+        for i in reversed(range(len(rewards))):
+            if done_masks[i]:
+                delta = rewards[i]-values[i]
+                gae = delta
+            else:
+                delta = rewards[i] + self.gamma * next_values[i]  - values[i]
+                gae = delta + self.gamma * self.gae_lambda * gae
+            new_rewards.insert(0,gae+values[i])
+            advantages.insert(0,gae)
+        #Format discounted rewards and advantages for torch use
+        new_rewards = torch.tensor(new_rewards).float().to(self.device)
+        advantages = torch.tensor(advantages).float()
+        advantages = (advantages - torch.mean(advantages)) / torch.std(advantages)
 
         for epoch in range(self.configs[0]['update_epochs']):
-            #Calculate Discounted Rewards and Advantages using the General Advantage Equation
-            new_rewards = []
-            advantages = []
-            delta= 0
-            gae = 0
-            for i in reversed(range(len(rewards))):
-                if done_masks[i]:
-                    delta = rewards[i]-values[i]
-                    gae = delta
-                else:
-                    delta = rewards[i] + self.gamma * next_values[i]  - values[i]
-                    gae = delta + self.gamma * self.gae_lambda * gae
-                new_rewards.insert(0,gae+values[i])
-                advantages.insert(0,gae)
-            #Format discounted rewards and advantages for torch use
-            new_rewards = torch.tensor(new_rewards).float().to(self.device)
-            advantages = torch.tensor(advantages).float()
-            advantages = (advantages - torch.mean(advantages)) / torch.std(advantages)
 
             agent.optimizer.zero_grad()
             current_actor_actions = agent.actor(states.float())
-            dist = Categorical(current_actor_actions)
-            #actions = torch.tensor(np.argmax(actions).numpy()).float()
-            log_probs = dist.log_prob(actions)
-            entropy = dist.entropy()
-            #Get the actions(probabilites) from the target actor
-            #target_actor_actions = old_agent.actor(states.float())
-            #dist2 = Categorical(target_actor_actions)
-            #old_log_probs = dist2.log_prob(actions)
-            #Find the ratio (pi_new / pi_old)
+            dist2 = Categorical(current_actor_actions)
+            log_probs = dist2.log_prob(actions)
+            entropy = dist2.entropy()
             ratios = torch.exp(log_probs - old_log_probs.detach())
             #Calculate objective functions
             surr1 = ratios * advantages
@@ -93,6 +87,7 @@ class PPOAlgorithm(Algorithm):
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
             self.loss.backward(retain_graph = True)
             agent.optimizer.step()
+
 
     def get_metrics(self, episodic=False):
         if not episodic:
