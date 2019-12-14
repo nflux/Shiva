@@ -24,7 +24,7 @@ class DynamicLinearNetwork(torch.nn.Module):
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
                         ).to(self.device)
     def forward(self, x):
-        return self.net(x.to(self.device))
+        return self.net(x)
 
 class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
     def __init__(self, input_dim, output_dim, param_ix, config):

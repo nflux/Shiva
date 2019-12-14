@@ -5,3 +5,4 @@ from learners.SingleAgentImitationLearner import *
 from learners.SingleAgentPPOLearner import *
 from learners.DDPGLearner import *
 from learners.UnityLearner import *
+from learners.SingleAgentTD3Learner import *

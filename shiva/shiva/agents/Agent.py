@@ -52,3 +52,9 @@ class Agent(object):
                 best_act_v = act_v
         best_act = best_act_v.tolist()
         return best_act
+
+    @staticmethod
+    def copy_model_over(from_model, to_model):
+        """Copies model parameters from from_model to to_model"""
+        for to_model, from_model in zip(to_model.parameters(), from_model.parameters()):
+            to_model.data.copy_(from_model.data.clone())
