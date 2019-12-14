@@ -42,44 +42,46 @@ class ContinuousPPOAlgorithm(Algorithm):
         # done_masks = torch.tensor(dones, dtype=np.bool).to(self.device)
         done_masks = torch.ByteTensor(dones).to(self.device)
         #Calculate approximated state values and next state values using the critic
-        values = agent.critic(agent.policy_base(states.float())).to(self.device)
+        values = agent.critic(agent.policy_base(states.float()))
         next_values = agent.critic(agent.policy_base(next_states.float())).to(self.device)
+
+        mu_old = old_agent.mu(old_agent.policy_base(states.float()))
+        var_old = torch.abs(old_agent.var(old_agent.policy_base(states.float())))
+        old_log_probs = self.log_probs(mu_old,var_old,actions).mean().float().detach()
+
+        #Calculate Discounted Rewards and Advantages using the General Advantage Equation
+        new_rewards = []
+        advantage = []
+        delta= 0
+        gae = 0
+        for i in reversed(range(len(rewards))):
+            if done_masks[i]:
+                delta = rewards[i]-values[i]
+                gae = delta
+            else:
+                delta = rewards[i] + self.gamma * next_values[i]  - values[i]
+                gae = delta + self.gamma * self.gae_lambda * gae
+            new_rewards.insert(0,gae+values[i])
+            advantage.insert(0,gae)
+        #Format discounted rewards and advantages for torch use
+        new_rewards = torch.tensor(new_rewards).float().to(self.device)
+        advantage = torch.tensor(advantage).float()
+        #Normalize the advantages
+        advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
-            #Calculate Discounted Rewards and Advantages using the General Advantage Equation
-            new_rewards = []
-            advantage = []
-            delta= 0
-            gae = 0
-            for i in reversed(range(len(rewards))):
-                if done_masks[i]:
-                    delta = rewards[i]-values[i]
-                    gae = delta
-                else:
-                    delta = rewards[i] + self.gamma * next_values[i]  - values[i]
-                    gae = delta + self.gamma * self.gae_lambda * gae
-                new_rewards.insert(0,gae+values[i])
-                advantage.insert(0,gae)
-            #Format discounted rewards and advantages for torch use
-            new_rewards = torch.tensor(new_rewards).float().to(self.device)
-            advantage = torch.tensor(advantage).float().to(self.device)
-            #Normalize the advantages
-            advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
             agent.optimizer.zero_grad()
-            mu_new = agent.mu(agent.policy_base(states.float())).to(self.device)
-            var_new = torch.abs(agent.var(agent.policy_base(states.float()))).to(self.device)
-            mu_old = old_agent.mu(old_agent.policy_base(states.float())).to(self.device)
-            var_old = torch.abs(old_agent.var(old_agent.policy_base(states.float())).to(self.device))
-            old_log_probs = self.log_probs(mu_old,var_old,actions).mean().float().detach().to(self.device)
-            new_log_probs = self.log_probs(mu_new,var_new,actions).mean().float().to(self.device)
-            ratios = torch.exp(new_log_probs - old_log_probs).to(self.device)
-            surr1 = (ratios * advantage).to(self.device)
-            surr2 = (torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage).to(self.device)
+            mu_new = agent.mu(agent.policy_base(states.float()))
+            var_new = torch.abs(agent.var(agent.policy_base(states.float())))
+            new_log_probs = self.log_probs(mu_new,var_new,actions).mean().float()
+            ratios = torch.exp(new_log_probs - old_log_probs)
+            surr1 = ratios * advantage
+            surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage
             #Set the policy loss
-            self.policy_loss = -torch.min(surr1,surr2).mean().to(self.device)
+            self.policy_loss = -torch.min(surr1,surr2).mean()
             entropy = (torch.log(2*math.pi*var_new) +1)/2
-            self.entropy_loss = (self.configs[0]['beta']*entropy).mean().to(self.device)
-            self.value_loss = self.loss_calc(values,new_rewards.unsqueeze(dim=-1)).to(self.device)
+            self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
+            self.value_loss = self.loss_calc(values,new_rewards.unsqueeze(dim=-1))
 
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
             self.loss.backward(retain_graph=True)
