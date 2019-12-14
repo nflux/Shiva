@@ -97,7 +97,7 @@ class ShivaAdmin():
                 @env_name           Environment name to append to the Meta Learner folder
         '''
         if self.need_to_save:
-            ml_folder_name = 'ML-'+env_name
+            ml_folder_name = env_name
             self._curr_meta_learner_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, ml_folder_name))
 
     def add_learner_profile(self, learner) -> None:
