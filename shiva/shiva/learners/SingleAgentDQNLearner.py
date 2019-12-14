@@ -21,9 +21,10 @@ class SingleAgentDQNLearner(Learner):
                 self.step()
                 self.step_count += 1
                 self.collect_metrics() # metrics per step
+                self.alg.update(self.agent, self.buffer.sample(), self.step_count)
             self.ep_count += 1
             self.collect_metrics(True) # metrics per episode
-            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            # self.alg.update(self.agent, self.buffer.sample(), self.step_count)
             print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.get_total_reward()))
         self.env.close()
 

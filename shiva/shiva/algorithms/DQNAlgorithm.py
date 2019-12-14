@@ -39,24 +39,29 @@ class DQNAlgorithm(Algorithm):
         # make tensors as needed
         states_v = torch.tensor(states).float().to(self.device)
         next_states_v = torch.tensor(next_states).float().to(self.device)
-        actions_v = torch.tensor(actions).to(self.device)
+        actions_v = torch.tensor(actions).float().to(self.device)
         rewards_v = torch.tensor(rewards).to(self.device).view(-1, 1)
         done_mask = torch.tensor(dones, dtype=torch.bool).to(self.device)
 
-        # print('from buffer:', states_v.shape, actions_v.shape, rewards_v.shape, next_states_v.shape, done_mask.shape, '\n')
+        print('from buffer:', states_v.shape, actions_v.shape, rewards_v.shape, next_states_v.shape, done_mask.shape, '\n')
         # input()
 
 
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j) from minibatch
-        input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(self.device)
+        input_v = torch.cat([states_v, actions_v], dim=1)
+        # input_v = torch.tensor([ np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions) ]).float().to(self.device)
 
         state_action_values = agent.policy(input_v)
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
         # For the observations s_j+1, select an action using the Policy and calculate Q values of those using the Target net
 
-        input_v = torch.tensor([np.concatenate( [s_i, agent.find_best_action(agent.target_policy, s_i )]) for s_i in next_states ] ).float().to(self.device)
 
+        ## This appear to be the bottleneck
+        best_actions = torch.tensor([agent.find_best_action(agent.target_policy, s_i) for s_i in next_states_v]).float().to(self.device).reshape(-1, actions_v.shape[1])
+
+        # input_v = torch.tensor([np.concatenate( [s_i, agent.find_best_action(agent.target_policy, s_i )]) for s_i in next_states ] ).float().to(self.device)
+        input_v =  torch.cat([next_states_v, best_actions], dim=1)
         next_state_values = agent.target_policy(input_v)
         # 3) Overwrite 0 on all next_state_values where they were termination states
         next_state_values[done_mask] = 0.0

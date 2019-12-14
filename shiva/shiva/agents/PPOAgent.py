@@ -74,9 +74,9 @@ class PPOAgent(Agent):
     def get_continuous_action(self,observation):
         observation = torch.tensor(observation).float().detach().to(self.device)
         base_output = self.policy_base(observation)
-        mu = self.mu(base_output).detach().to(self.device).numpy()
+        mu = self.mu(base_output).detach().to(self.device).detach().cpu().numpy()
         var = torch.abs(self.var(base_output)).to(self.device)
-        sigma = torch.sqrt(var).detach().to(self.device).numpy()
+        sigma = torch.sqrt(var).detach().to(self.device).detach().cpu().numpy()
 
         actions = np.random.normal(mu,sigma)
         #self.ou_noise.set_scale(0.8)
