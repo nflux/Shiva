@@ -3,8 +3,9 @@ import torch
 import time
 from agents.TD3Agent import TD3Agent
 from .Algorithm import Algorithm
-from utils.Gaussian_Exploration import Gaussian_Exploration
-from utils.OU_Noise_Exploration import OU_Noise_Exploration
+# from utils.Gaussian_Exploration import Gaussian_Exploration
+# from utils.OU_Noise_Exploration import OU_Noise_Exploration
+import utils.Noise as noise
 
 class TD3Algorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
@@ -14,13 +15,18 @@ class TD3Algorithm(Algorithm):
         self.obs_space = observation_space
         self.acs_space = action_space
 
-        self.exploration_strategy = OU_Noise_Exploration(action_space, self.configs[0])
-        self.exploration_strategy_critic = Gaussian_Exploration(self.configs[0])
+        # self.exploration_strategy = OU_Noise_Exploration(action_space, self.configs[0])
+        # self.exploration_strategy_critic = Gaussian_Exploration(self.configs[0])
+        self.ou_noise = noise.OUNoise(action_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        self.ou_noise_critic = noise.OUNoise(action_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+
         self.actor_loss = 0
         self.critic_loss_1 = 0
         self.critic_loss_2 = 0
 
     def update(self, agent, buffer, step_count):
+        if step_count < self.exploration_steps:
+            return
         self.agent = agent
         for _ in range(self.update_iterations):
             states, actions, rewards, next_states, dones = buffer.sample()
@@ -40,7 +46,7 @@ class TD3Algorithm(Algorithm):
 
             critic_expected_1 = self.agent.critic(torch.cat((states, actions), 1))
             critic_expected_2 = self.agent.critic_2(torch.cat((states, actions), 1))
-            
+
             self.critic_loss_1 = self.loss_calc(critic_expected_1, critic_targets)
             self.critic_loss_2 = self.loss_calc(critic_expected_2, critic_targets)
 
@@ -68,10 +74,11 @@ class TD3Algorithm(Algorithm):
         """Computes the critic values for next states to be used in the loss for the critic"""
         with torch.no_grad():
             actions_next = self.agent.actor(next_states)
-            actions_next_with_noise =  self.exploration_strategy_critic.perturb_action_for_exploration_purposes({"action": actions_next})
+            # actions_next_with_noise =  self.exploration_strategy_critic.perturb_action_for_exploration_purposes({"action": actions_next})
+            actions_next_with_noise = actions_next + torch.tensor(self.ou_noise_critic.noise(), dtype=torch.float)
             critic_targets_next_1 = self.agent.target_critic(torch.cat((next_states, actions_next_with_noise), 1))
             critic_targets_next_2 = self.agent.target_critic_2(torch.cat((next_states, actions_next_with_noise), 1))
-            critic_targets_next = torch.min(torch.cat((critic_targets_next_1, critic_targets_next_2),1), dim=1)[0].unsqueeze(-1)
+            critic_targets_next = torch.min(torch.cat((critic_targets_next_1, critic_targets_next_2),1), dim=-1)[0].unsqueeze(-1)
         return critic_targets_next
 
     def compute_critic_values_for_current_states(self, rewards, critic_targets_next, dones):
@@ -109,7 +116,8 @@ class TD3Algorithm(Algorithm):
             with torch.no_grad():
                 action = self.agent.actor(torch.tensor(observation, dtype=torch.float)).cpu().data.numpy()
             self.agent.actor.train()
-            action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
+            # action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
+            action += self.ou_noise.noise()
             return action
 
     def create_agent(self, id): 

@@ -17,15 +17,14 @@ class SingleAgentTD3Learner(Learner):
         torch.manual_seed(self.configs['Algorithm']['manual_seed'])
 
     def run(self):
-        self.step_count = 0
         while not self.env.finished(self.episodes):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.alg.update(self.agent, self.buffer, self.step_count)
-                self.collect_metrics() # metrics per step
-            self.collect_metrics(True) # metrics per episode
-            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_total))
+                self.alg.update(self.agent, self.buffer, self.env.step_count)
+                self.collect_metrics(episodic=False)
+            self.collect_metrics(episodic=True)
+            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))
         self.env.close()
 
     def step(self):

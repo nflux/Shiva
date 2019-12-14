@@ -3,7 +3,7 @@ np.random.seed(5)
 import torch
 torch.manual_seed(5)
 from .Agent import Agent
-import copy
+import copy, os
 from networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 class TD3Agent(Agent):
@@ -29,10 +29,16 @@ class TD3Agent(Agent):
 
     def get_action(self, observation):
         return self.actor(observation)
-        
-    def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
-        observation = torch.tensor(observation).to(self.device)
-        action = self.actor(observation.float()).cpu().data.numpy()
-        action = np.clip(action, -1,1)
-        # print('actor action shape', action.shape)
-        return action[0]
+
+    def save(self, save_path, step):
+        torch.save(self.actor, save_path + '/actor.pth')
+        torch.save(self.target_actor, save_path + '/target_actor.pth')
+        torch.save(self.critic, save_path + '/critic.pth')
+        torch.save(self.target_critic, save_path + '/target_critic.pth')
+        torch.save(self.critic_2, save_path + '/critic_2.pth')
+        torch.save(self.target_critic_2, save_path + '/target_critic_2.pth')
+
+    def load_net(self, load_path):
+        network = torch.load(load_path)
+        attr = os.path.split('/')[-1].replace('.pth', '')
+        setattr(self, attr, network)
