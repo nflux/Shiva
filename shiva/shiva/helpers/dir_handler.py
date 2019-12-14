@@ -10,9 +10,11 @@ def make_dir(new_folder: str, overwrite=False) -> str:
             pass
     else:
         i = 1
-        while os.path.isdir(new_folder):
-            new_folder = new_folder + '_' + str(i)
+        temp = new_folder
+        while os.path.isdir(temp):
+            temp = new_folder + '_' + str(i)
             i += 1
+        new_folder = temp
         os.makedirs(new_folder)
     return new_folder
 

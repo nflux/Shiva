@@ -74,7 +74,7 @@ class ShivaAdmin():
         for key, folder_name in self.dirs.items():
             directory = self.base_url + folder_name
             setattr(self, key+'_url', directory)
-            dh.make_dir(os.path.join(self.base_url, directory))
+            dh.make_dir(os.path.join(self.base_url, directory), overwrite=True)
 
     def get_inits(self) -> list:
         '''
