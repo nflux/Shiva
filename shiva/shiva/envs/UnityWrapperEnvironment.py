@@ -16,16 +16,16 @@ class UnityWrapperEnvironment(Environment):
 
         self.action_space = self.BrainParameters.vector_action_space_size[0]
         self.observation_space = self.BrainParameters.vector_observation_space_size * self.BrainParameters.num_stacked_vector_observations
-        
+
         self.action_space_discrete = self.action_space if self.BrainParameters.vector_action_space_type == 'discrete' else None
         self.action_space_continuous = self.action_space if self.BrainParameters.vector_action_space_type == 'continuous' else None
 
         self.num_instances = len(self.BrainInfo.agents)
-        
+
         self.rewards = np.array(self.BrainInfo.rewards)
         self.reward_total = 0
         self.dones = np.array(self.BrainInfo.local_done)
-        
+
         self.step_count = 0
         self.load_viewer()
 

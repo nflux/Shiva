@@ -2,12 +2,21 @@ from .Agent import Agent
 from .Agent import Agent
 import networks.DynamicLinearNetwork as DLN
 from torch.distributions import Categorical
+from torch.distributions import Normal
 from torch.nn import functional as F
+import torch.nn as nn
 import utils.Noise as noise
 import copy
 import torch
 import numpy as np
 import helpers.misc as misc
+
+def init_layer(layer):
+    w = layer.weight.data
+    w.normal_(0,1)
+    w *= 1.0 / (torch.sqrt(w.pow(2).sum(1,keepdim=True)))
+    torch.nn.init.constant_(layer.bias.data,0)
+    return layer
 
 class PPOAgent(Agent):
     def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config, net_config):
@@ -39,23 +48,40 @@ class PPOAgent(Agent):
             self.actor = DLN.DynamicLinearNetwork(self.network_input, self.network_output, net_config['actor'])
             #self.target_actor = copy.deepcopy(self.actor)
             self.critic = DLN.DynamicLinearNetwork(self.network_input, 1, net_config['critic'])
-            params = list(self.actor.parameters()) +list(self.critic.parameters())
-            self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
+            self.params = list(self.actor.parameters()) +list(self.critic.parameters())
+            self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=self.params, lr=agent_config['learning_rate'])
 
         elif self.action_space == 'Continuous':
-                self.policy_base = torch.nn.Sequential(
+                '''self.policy_base = torch.nn.Sequential(
                     torch.nn.Linear(self.network_input, net_config['policy_base_output']),
                     torch.nn.ReLU()
                 ).to(self.device)
                 self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
                 self.actor = self.mu
                 self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'], self.network_output, net_config['var'])
-                self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'], 1, net_config['critic'])
-                params = list(self.policy_base.parameters()) + list(self.mu.parameters()) + list(self.var.parameters()) + list(self.critic.parameters())
-                self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
+                self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'], 1, net_config['critic'])'''
+                self.actor = nn.Sequential(
+                    init_layer(nn.Linear(self.network_input,64)),
+                    nn.Tanh(),
+                    init_layer(nn.Linear(64,64)),
+                    nn.Tanh(),
+                    init_layer(nn.Linear(64,self.network_output))
+                )
+                self.critic = nn.Sequential(
+                    init_layer(nn.Linear(self.network_input,64)),
+                    nn.Tanh(),
+                    init_layer(nn.Linear(64,64)),
+                    nn.Tanh(),
+                    init_layer(nn.Linear(64,1)),
+                )
+                self.mu = init_layer(nn.Linear(64,self.network_output))
+                #self.log_std = torch.zeros(1,self.network_output).requires_grad_(True)
+                self.log_std = nn.Parameter(torch.zeros(1,self.network_output))
+                self.params = list(self.actor.parameters()) + list(self.critic.parameters())
+                self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.params, lr=agent_config['learning_rate'])
 
 
-    def get_action(self, observation):
+    def forward(self, observation):
         if self.action_space == 'Discrete':
             return self.get_discrete_action(observation)
         elif self.action_space == 'Continuous':
@@ -73,16 +99,14 @@ class PPOAgent(Agent):
 
     def get_continuous_action(self,observation):
         observation = torch.tensor(observation).float().detach().to(self.device)
-        base_output = self.policy_base(observation)
-        mu = self.mu(base_output).detach().to(self.device).detach().cpu().numpy()
-        var = torch.abs(self.var(base_output)).to(self.device)
-        sigma = torch.sqrt(var).detach().to(self.device).detach().cpu().numpy()
-
-        actions = np.random.normal(mu,sigma)
+        mu = self.actor(observation)
+        log_std = self.log_std
+        dist = Normal(mu,log_std)
+        actions = dist.sample()
         #self.ou_noise.set_scale(0.8)
         #actions += self.ou_noise.noise()
-        actions = np.clip(actions,-1,1)
-        return actions.tolist()
+        #actions = np.clip(actions,-1,1)
+        return actions.squeeze(dim=0).tolist()
 
     def evaluate(self,observation):
         observation = torch.tensor(observation).float().detach()

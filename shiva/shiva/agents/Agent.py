@@ -1,9 +1,11 @@
 import torch
+import torch.nn as nn
 import numpy as np
 import helpers.misc as misc
 
-class Agent(object):
+class Agent(nn.Module):
     def __init__(self, id, obs_space, acs_space, agent_config, network_config):
+        super(Agent,self).__init__()
         '''
         Base Attributes of Agent
             agent_id = given by the learner
@@ -45,7 +47,7 @@ class Agent(object):
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
         # print(self.acs_space)
         for i in range(self.acs_space):
-            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device) 
+            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device)
             q_val = network(torch.cat([obs_v, act_v]))
             if q_val > best_q:
                 best_q = q_val

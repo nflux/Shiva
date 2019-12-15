@@ -44,7 +44,7 @@ class SingleAgentPPOLearner(Learner):
 
         """Temporary fix for Unity as it receives multiple observations"""
         if len(observation.shape) > 1:
-            action = [self.old_agent.get_action(obs) for obs in observation]
+            action = [self.old_agent(obs) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
