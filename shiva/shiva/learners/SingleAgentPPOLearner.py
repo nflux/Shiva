@@ -52,7 +52,7 @@ class SingleAgentPPOLearner(Learner):
                 # print(act, rew, don)
                 self.buffer.append(exp)
         else:
-            action = self.old_agent.get_action(observation)
+            action = self.old_agent(observation)
             next_observation, reward, done, more_data = self.env.step(action)
             t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)

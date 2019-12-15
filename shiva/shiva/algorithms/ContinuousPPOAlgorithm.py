@@ -92,7 +92,7 @@ class ContinuousPPOAlgorithm(Algorithm):
 
             self.loss = self.policy_loss + 0.5*self.value_loss + self.entropy_loss
             self.loss.backward(retain_graph=True)
-            #nn.utils.clip_grad_norm_(agent.parameters(), self.max_grad_norm)
+            nn.utils.clip_grad_norm_(agent.parameters(), self.max_grad_norm)
             agent.optimizer.step()
 
     def get_metrics(self, episodic=False):
