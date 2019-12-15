@@ -79,14 +79,12 @@ class ContinuousPPOAlgorithm(Algorithm):
             log_std= agent.log_std.expand_as(mu_new)
             dist2 = Normal(mu_new,log_std.exp())
             log_probs = dist2.log_prob(actions).sum(-1,keepdim=True)
-            print(mu_new)
-            input()
             entropy = dist2.entropy().sum(-1).mean()
 
             ratios = torch.exp(log_probs - old_log_probs.detach())
             surr1 = ratios * advantage
 
-            surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage
+            surr2 = torch.clamp(ratios,1.0 - self.epsilon_clip,1.0 + self.epsilon_clip) * advantage
             #Set the policy loss
             self.policy_loss = -torch.min(surr1,surr2).mean()
             self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
@@ -94,7 +92,7 @@ class ContinuousPPOAlgorithm(Algorithm):
 
             self.loss = self.policy_loss + 0.5*self.value_loss + self.entropy_loss
             self.loss.backward(retain_graph=True)
-            nn.utils.clip_grad_norm_(agent.parameters(), self.max_grad_norm)
+            #nn.utils.clip_grad_norm_(agent.parameters(), self.max_grad_norm)
             agent.optimizer.step()
 
     def get_metrics(self, episodic=False):

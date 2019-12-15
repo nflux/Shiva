@@ -61,24 +61,24 @@ class PPOAgent(Agent):
                 self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'], self.network_output, net_config['var'])
                 self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'], 1, net_config['critic'])'''
                 self.actor = nn.Sequential(
-                    init_layer(nn.Linear(self.network_input,64)),
+                    init_layer(nn.Linear(self.network_input,128)),
                     nn.Tanh(),
-                    init_layer(nn.Linear(64,64)),
+                    init_layer(nn.Linear(128,128)),
                     nn.Tanh(),
-                    init_layer(nn.Linear(64,self.network_output))
+                    init_layer(nn.Linear(128,self.network_output))
                 )
                 self.critic = nn.Sequential(
-                    init_layer(nn.Linear(self.network_input,64)),
+                    init_layer(nn.Linear(self.network_input,128)),
                     nn.Tanh(),
-                    init_layer(nn.Linear(64,64)),
+                    init_layer(nn.Linear(128,128)),
                     nn.Tanh(),
-                    init_layer(nn.Linear(64,1)),
+                    init_layer(nn.Linear(128,1)),
                 )
-                self.mu = init_layer(nn.Linear(64,self.network_output))
+                #self.mu = init_layer(nn.Linear(64,self.network_output))
                 #self.log_std = torch.zeros(1,self.network_output).requires_grad_(True)
                 self.log_std = nn.Parameter(torch.zeros(1,self.network_output))
                 self.params = list(self.actor.parameters()) + list(self.critic.parameters())
-                self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.params, lr=agent_config['learning_rate'])
+                self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.parameters(), lr=agent_config['learning_rate'],eps=agent_config['eps'])
 
 
     def forward(self, observation):
