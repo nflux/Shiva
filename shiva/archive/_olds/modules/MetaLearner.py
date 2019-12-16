@@ -1,4 +1,4 @@
-from settings import shiva
+from __main__ import shiva
 import Learner, Algorithm, Agent, Evaluation
 
 # Maybe add a function to dictate the meta learner based on the configs

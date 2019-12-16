@@ -39,27 +39,25 @@ from tensorboardX import SummaryWriter
 ###################################################################################
 
 class ShivaAdmin():
-    def __init__(self, init_dir):
+    def __init__(self, config):
         '''
             Input
-                @init_dir       Absolute path for the ShivaAdmin ini file declared in settings.py
+                @config       Dictionary of the Shiva Admin config
         '''
+        self.config = config
+        
+        self.need_to_save = self.config['save']
+        self.traceback = self.config['traceback']
+        self.dirs = self.config['directory']
+        self._set_dirs_attrs()
+
+        if self.traceback:
+            misc.warnings.showwarning = misc.warn_with_traceback
+
         self._curr_meta_learner_dir = ''
         self._curr_learner_dir = {}
         self._curr_agent_dir = {}
         self.writer = {}
-        
-        self._INITS = ch.load_config_file_2_dict(init_dir)
-        
-        assert 'SHIVA' in self._INITS, 'Needs a [SHIVA] section in file {}'.format(init_dir)
-        assert 'DIRECTORY' in self._INITS, 'Need [DIRECTORY] section in file {}'.format(init_dir)
-        
-        self.need_to_save = self._INITS['SHIVA']['save']
-        self.dirs = self._INITS['DIRECTORY']
-        self._set_dirs_attrs()
-
-        if self._INITS['SHIVA']['traceback']:
-            misc.warnings.showwarning = misc.warn_with_traceback
 
     def __str__(self):
         return "ShivaAdmin"
@@ -70,21 +68,22 @@ class ShivaAdmin():
             These directories come from the section DIRECTORY in the init.ini (or other given by user at settings.py
             The procedure as well creates the needed folders for this directories if they don't exist
         '''
+        assert 'runs' in self.dirs, "Need the 'runs' key on the 'directory' attribute on the [admin] section of the config"
         self.base_url = os.path.abspath('.')
         for key, folder_name in self.dirs.items():
             directory = self.base_url + folder_name
             setattr(self, key+'_url', directory)
             dh.make_dir(os.path.join(self.base_url, directory))
 
-    def get_inits(self) -> list:
-        '''
-            This procedure reads the *.ini files in path given by user at the init.ini file, section [DIRECTORY], attribute INITS
-
-            Returns
-                A list of config dictionaries
-        '''
-        self.meta_learner_config = ch.parse_configs(self.inits_url)
-        return self.meta_learner_config
+    # def get_inits(self) -> list:
+    #     '''
+    #         This procedure reads the *.ini files in path given by user at the init.ini file, section [DIRECTORY], attribute INITS
+    #
+    #         Returns
+    #             A list of config dictionaries
+    #     '''
+    #     self.meta_learner_config = ch.parse_configs(self.inits_url)
+    #     return self.meta_learner_config
     
     def add_meta_profile(self, meta_learner, env_name: str='') -> None:
         '''

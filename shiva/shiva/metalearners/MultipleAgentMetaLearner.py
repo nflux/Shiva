@@ -1,5 +1,5 @@
 # this is a version of a meta learner that will take a file path to the configuration files
-from settings import shiva
+from __main__ import shiva
 from .MetaLearner import MetaLearner
 from learners.SingleAgentDQNLearner import SingleAgentDQNLearner
 from eval_envs.GymDiscreteEvaluation import GymDiscreteEvaluation

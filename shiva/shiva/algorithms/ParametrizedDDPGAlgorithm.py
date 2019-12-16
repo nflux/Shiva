@@ -6,7 +6,7 @@ import utils.Noise as noise
 from helpers.calc_helper import np_softmax
 from agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
 from .Algorithm import Algorithm
-from settings import shiva
+from __main__ import shiva
 from helpers.misc import one_hot_from_logits
 
 

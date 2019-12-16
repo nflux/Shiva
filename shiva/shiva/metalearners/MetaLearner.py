@@ -1,4 +1,4 @@
-from settings import shiva
+from __main__ import shiva
 
 class MetaLearner(object):
     def __init__(self, config):

@@ -27,7 +27,7 @@ directory = {'runs': '/runs'}
 And it’s accessible with one simple import
 
 ```python
-from settings import shiva
+from __main__ import shiva
 ```
 ## Saving
 

@@ -4,7 +4,7 @@ import random
 from agents.DQNAgent import DQNAgent
 import helpers.misc as misc
 from .Algorithm import Algorithm
-from settings import shiva
+from __main__ import shiva
 
 class DQNAlgorithm(Algorithm):
     def __init__(self, obs_space, acs_space, configs):

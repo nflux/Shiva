@@ -1,4 +1,4 @@
-from settings import shiva
+from __main__ import shiva
 import Algorithm
 import ReplayBuffer
 import Environment
