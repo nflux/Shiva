@@ -1,13 +1,21 @@
 import os, datetime
 import fnmatch
 
-def make_dir(new_folder: str) -> str:
+def make_dir(new_folder: str, overwrite=False) -> str:
     # Implement another try block if there are Permission problems
-
-    try:
+    if overwrite:
+        try:
+            os.makedirs(new_folder)
+        except FileExistsError:
+            pass
+    else:
+        i = 1
+        temp = new_folder
+        while os.path.isdir(temp):
+            temp = new_folder + '_' + str(i)
+            i += 1
+        new_folder = temp
         os.makedirs(new_folder)
-    except FileExistsError:
-        pass
     return new_folder
 
 def make_dir_timestamp(new_folder: str, create_new_timestamp_folder=False, name_append: str=None) -> str:
@@ -25,6 +33,7 @@ def find_pattern_in_path(path, pattern):
     result = []
     for root, dirs, files in os.walk(path):
         for name in files:
-            if fnmatch.fnmatch(name, pattern):
+            # if fnmatch.fnmatch(name, pattern):
+            if pattern in name:
                 result.append(os.path.join(root, name))
     return result

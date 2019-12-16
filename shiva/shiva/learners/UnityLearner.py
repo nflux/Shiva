@@ -1,4 +1,4 @@
-from settings import shiva
+from __main__ import shiva
 from .Learner import Learner
 import helpers.misc as misc
 import envs
@@ -14,24 +14,17 @@ class UnityLearner(Learner):
     # so now the done is coming from the environment
     def run(self):
         self.step_count = 0
-
-        while self.continue_run():
+        while not self.env.finished(self.episodes):
             self.exploration_mode = self.step_count < self.alg.exploration_steps
             self.step()
+            self.step_count += 1
         self.env.close()
 
-    def continue_run(self):
-        return (self.episodes > 0 and self.env.done_counts < self.episodes) or (self.steps > 0 and self.step_count < self.steps)
-
     def step(self):
-        self.step_count += 1
         observation = self.env.get_observation()
-        # print("Learner:", observation.shape)
-        # action = self.env.get_random_action()
         action = [self.alg.get_action(self.agent, obs, self.step_count) for obs in observation]
 
         # print("Learner:", observation.shape)
-
         # print("Learner:", action)
 
         print('step:', self.step_count, '\treward:', self.env.reward_total)
@@ -44,45 +37,6 @@ class UnityLearner(Learner):
         
         if not self.exploration_mode and self.step_count % 8 == 0:
             self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-
-        # self.add_summary_writer(self, self.agent, 'Total Reward', self.env.reward_total, self.step_count)
-        
-        # input()
-        
-        # TensorBoard metrics
-        # shiva.add_summary_writer(self, self.agent, 'Actor Loss per Step', self.alg.get_actor_loss(), self.step_count)
-        # shiva.add_summary_writer(self, self.agent, 'Critic Loss per Step', self.alg.get_critic_loss(), self.step_count)
-        # # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        # # shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
-        # shiva.add_summary_writer(self, self.agent, 'Action in Z per Step', action[0], self.step_count)
-        # shiva.add_summary_writer(self, self.agent, 'Action in X per Step', action[1], self.step_count)
-
-        # self.totalReward += reward  # more_data['raw_reward']
-
-        # t = [observation, action, reward, next_observation, int(done)]
-
-        # deep = deepcopy(t)
-
-        # print(self.ep_count)
-        # print('to buffer:', t)
-
-        # self.buffer.append(deep)
-
-        # if self.step_count > self.alg.exploration_steps and self.step_count % 16 == 0:
-        #     self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-            # self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-
-        # TensorBoard Metrics
-        # if done:
-        #     shiva.add_summary_writer(self, self.agent, 'Ave Reward per Episode', self.env.aver_rew, self.done_counter)
-        #     # self.alg.ou_noise.reset()
-        #     self.done_counter += 1
-            
-        # if self.step_count % 100 == 0:
-        #     self.alg.ou_noise.reset()
-
-        # No need to return anything
-        # return True
 
     def create_environment(self):
         # create the environment and get the action and observation spaces

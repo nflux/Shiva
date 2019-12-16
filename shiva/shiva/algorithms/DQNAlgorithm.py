@@ -4,7 +4,7 @@ import random
 from agents.DQNAgent import DQNAgent
 import helpers.misc as misc
 from .Algorithm import Algorithm
-from settings import shiva
+from __main__ import shiva
 
 class DQNAlgorithm(Algorithm):
     def __init__(self, obs_space, acs_space, configs):
@@ -14,6 +14,7 @@ class DQNAlgorithm(Algorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(DQNAlgorithm, self).__init__(obs_space, acs_space, configs)
+        torch.manual_seed(self.manual_seed)
         self.acs_space = acs_space
         self.obs_space = obs_space
         self.loss = 0
@@ -100,6 +101,14 @@ class DQNAlgorithm(Algorithm):
         return self.loss
 
     def create_agent(self, id):
-        print(self.configs[1])
         self.agent = DQNAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
+
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                ('Algorithm/Loss_per_Step', self.loss)
+            ]
+        else:
+            metrics = []
+        return metrics

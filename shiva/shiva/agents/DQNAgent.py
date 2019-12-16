@@ -14,8 +14,6 @@ class DQNAgent(Agent):
         network_output = 1
         self.learning_rate = agent_config['learning_rate']
 
-        print(network_input)
-
         self.policy = nh.DynamicLinearSequential(
                                         network_input,
                                         network_output,
@@ -24,8 +22,6 @@ class DQNAgent(Agent):
                                         net_config['network']['last_layer'],
                                         net_config['network']['output_function']
         )
-
-        print(self.policy)
 
         # self.policy = DLN.DynamicLinearNetwork(network_input, network_output, net_config)
         self.target_policy = copy.deepcopy(self.policy)

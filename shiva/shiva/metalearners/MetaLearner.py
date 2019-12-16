@@ -1,4 +1,4 @@
-from settings import shiva
+from __main__ import shiva
 
 class MetaLearner(object):
     def __init__(self, config):
@@ -6,7 +6,8 @@ class MetaLearner(object):
         self.config = config
         self.learnerCount = 0
         self.PROD_MODE, self.EVAL_MODE = 'production', 'evaluation'
-        shiva.add_meta_profile(self, config['Environment']['env_name'])
+        folder_name = '-'.join([config['Algorithm']['type'], config['Environment']['env_name']])
+        shiva.add_meta_profile(self, folder_name)
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
