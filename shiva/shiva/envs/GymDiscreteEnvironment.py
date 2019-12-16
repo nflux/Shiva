@@ -4,6 +4,7 @@ from .Environment import Environment
 
 class GymDiscreteEnvironment(Environment):
     def __init__(self, configs):
+        assert False, "Deprecated Environment. Use plain GymEnvironment"
         super(GymDiscreteEnvironment, self).__init__(configs)
         self.env = gym.make(self.env_name)
         self.obs = self.env.reset()

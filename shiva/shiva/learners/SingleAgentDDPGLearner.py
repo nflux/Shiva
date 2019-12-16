@@ -101,7 +101,6 @@ class SingleAgentDDPGLearner(Learner):
             # self.buffer = self._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
-
         # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment
