@@ -1,4 +1,4 @@
-from settings import shiva
+from __main__ import shiva
 from .Learner import Learner
 import helpers.misc as misc
 # import torch.multiprocessing as mp
