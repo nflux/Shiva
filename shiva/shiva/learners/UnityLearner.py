@@ -12,22 +12,34 @@ class UnityLearner(Learner):
         self.done_counter = 0
 
     # so now the done is coming from the environment
+    # def run(self):
+    #     self.step_count = 0
+    #     while not self.env.finished(self.episodes):
+    #         self.exploration_mode = self.step_count < self.alg.exploration_steps
+    #         self.step()
+    #         self.step_count += 1
+    #     self.env.close()
+
     def run(self):
-        self.step_count = 0
         while not self.env.finished(self.episodes):
-            self.exploration_mode = self.step_count < self.alg.exploration_steps
-            self.step()
-            self.step_count += 1
+            self.env.reset()
+            while not self.env.is_done():
+                self.exploration_mode = self.env.step_count < self.alg.exploration_steps
+                self.step()
+                # self.alg.update(self.agent, self.buffer, self.env.step_count)
+                self.collect_metrics(episodic=False)
+            self.collect_metrics(episodic=True)
+            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))
         self.env.close()
 
     def step(self):
         observation = self.env.get_observation()
-        action = [self.alg.get_action(self.agent, obs, self.step_count) for obs in observation]
+        action = [self.alg.get_action(self.agent, obs, self.env.step_count) for obs in observation]
 
         # print("Learner:", observation.shape)
         # print("Learner:", action)
 
-        print('step:', self.step_count, '\treward:', self.env.reward_total)
+        # print('step:', self.step_count, '\treward:', self.env.reward_total)
 
         next_observation, reward, done, _ = self.env.step(action)
         for obs, act, rew, next_obs, don in zip(observation, action, reward, next_observation, done):
@@ -35,8 +47,8 @@ class UnityLearner(Learner):
             exp = deepcopy(exp)
             self.buffer.append(exp)
         
-        if not self.exploration_mode and self.step_count % 8 == 0:
-            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+        if not self.exploration_mode and self.env.step_count % 8 == 0:
+            self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
 
     def create_environment(self):
         # create the environment and get the action and observation spaces

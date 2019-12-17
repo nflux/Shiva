@@ -172,7 +172,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
             action = agent.actor(observation.float()).cpu().data.numpy()
             # maybe should change the print to a log
             if step_count % 100 == 0:
-                print(action)
+                # print(action)
                 pass
             action += self.ou_noise.noise()
             action = np.clip(action, -1,1)
@@ -189,3 +189,15 @@ class ContinuousDDPGAlgorithm(Algorithm):
 
     def get_critic_loss(self):
         return self.critic_loss
+
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                ('Algorithm/Actor_Loss', self.actor_loss),
+                ('Algorithm/Critic_Loss', self.critic_loss),
+            ]
+            # for i, ac in enumerate(self.action):
+                # metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
+        else:
+            metrics = []
+        return metrics
