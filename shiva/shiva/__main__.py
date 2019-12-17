@@ -1,9 +1,5 @@
-import argparse
-import os
-import copy
-import torch
+import sys, os, argparse
 from ShivaAdmin import ShivaAdmin
-# import metalearners
 from importlib import import_module
 import helpers.misc as misc
 import helpers.config_handler as ch
@@ -12,10 +8,10 @@ config_dir = os.getcwd() + '/configs/'
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", required=True, type=str, help='Config file name')
+    parser.add_argument("-c", "--config", required=False, type=str, help='Config file name')
     parser.add_argument("-n", "--name", required=False, type=str, help="Name of the run")
     args = parser.parse_args()
-
+    
     main_dict = ch.load_config_file_2_dict(config_dir + args.config)
 
     shiva = ShivaAdmin(main_dict['Admin'])
