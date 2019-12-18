@@ -25,7 +25,9 @@ class GymEnvironment(Environment):
 
     def step(self, action):
         self.acs = action
+        print(action)
         action4Gym = np.argmax(action) if self.action_space_continuous is None else action
+        print(action4Gym)
         self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         self.load_viewer()
         '''

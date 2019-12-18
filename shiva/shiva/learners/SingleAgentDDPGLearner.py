@@ -49,7 +49,7 @@ class SingleAgentDDPGLearner(Learner):
         deep = copy.deepcopy(t)
         self.buffer.append(deep)
         
-        if self.step_count > self.alg.exploration_steps:# and self.step_count % 16 == 0:
+        if self.step_count > self.alg.exploration_steps and self.step_count % 16 == 0:
             self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
             # pass
 

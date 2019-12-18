@@ -1,4 +1,5 @@
 from algorithms.DQNAlgorithm import *
+from algorithms.DiscreteDDPGAlgorithm import *
 from algorithms.ContinuousDDPGAlgorithm import *
 from algorithms.ParametrizedDDPGAlgorithm import *
 from algorithms.DaggerAlgorithm import *

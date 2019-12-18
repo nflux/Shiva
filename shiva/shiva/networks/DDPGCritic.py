@@ -22,4 +22,6 @@ class DDPGCritic(torch.nn.Module):
     
     def forward(self, x, a):
         obs = self.net_head(x)
+        # print(a.shape)
+        # print(obs.shape)
         return self.net_tail(torch.cat([obs, a], dim=1))

@@ -43,7 +43,7 @@ class DiscreteDDPGAlgorithm(Algorithm):
         # Zero the gradient
         agent.critic_optimizer.zero_grad()
         # The actions that target actor would do in the next state.
-        next_state_actions_target = agent.target_actor(next_states.float())
+        next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
         # The Q-value the target critic estimates for taking those actions in the next state.
         Q_next_states_target = agent.target_critic(next_states.float(), next_state_actions_target.float())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
@@ -51,7 +51,8 @@ class DiscreteDDPGAlgorithm(Algorithm):
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
         # Get Q values of the batch from states and actions.
-        Q_these_states_main = agent.critic(states.float(), actions.float())
+        # print(actions.shape)
+        Q_these_states_main = agent.critic(states.float(), actions.float().squeeze())
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
         # Backward propogation!
@@ -68,7 +69,7 @@ class DiscreteDDPGAlgorithm(Algorithm):
         # Zero the gradient
         agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
-        current_state_actor_actions = agent.actor(states.float())
+        current_state_actor_actions = agent.actor(states.float(), gumbel=True)
         # Calculate Q value for taking those actions in those states
         actor_loss_value = agent.critic(states.float(), current_state_actor_actions.float())
         # miracle line of code
@@ -123,8 +124,8 @@ class DiscreteDDPGAlgorithm(Algorithm):
 
         if step_count < self.exploration_steps:
 
-            index = randint(0,3)
-            action = [0]*4
+            index = randint(0,2)
+            action = [0]*3
             action[index] = 1
             action = np.array(action)
             # action += self.ou_noise.noise()
