@@ -8,3 +8,4 @@ __pycache__/
 # Server
 nohup.out
 
+.idea/*

@@ -1,10 +1,8 @@
-from __main__ import shiva
-from .Learner import Learner
-import helpers.misc as misc
-import envs
-import algorithms
-import buffers
 from copy import deepcopy
+
+from shiva.core.admin import Admin
+from shiva.learners.Learner import Learner
+from shiva.helpers.config_handler import load_class
 
 class UnityLearner(Learner):
     def __init__(self, learner_id, config):
@@ -24,9 +22,6 @@ class UnityLearner(Learner):
         observation = self.env.get_observation()
         action = [self.alg.get_action(self.agent, obs, self.step_count) for obs in observation]
 
-        # print("Learner:", observation.shape)
-        # print("Learner:", action)
-
         print('step:', self.step_count, '\treward:', self.env.reward_total)
 
         next_observation, reward, done, _ = self.env.step(action)
@@ -39,17 +34,16 @@ class UnityLearner(Learner):
             self.alg.update(self.agent, self.buffer.sample(), self.step_count)
 
     def create_environment(self):
-        # create the environment and get the action and observation spaces
-        environment = getattr(envs, self.configs['Environment']['type'])
-        return environment(self.configs['Environment'])
+        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        return env_class(self.configs['Environment'])
 
     def create_algorithm(self):
-        algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.observation_space, self.env.action_space, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        
+        algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+
     def create_buffer(self):
-        buffer = getattr(buffers,self.configs['Buffer']['type'])
-        return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
         return self.agents
@@ -83,4 +77,4 @@ class UnityLearner(Learner):
         pass
 
     def load_agent(self, path):
-        return shiva._load_agents(path)[0]
+        return Admin._load_agents(path)[0]

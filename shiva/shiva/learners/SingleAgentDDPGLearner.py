@@ -1,16 +1,14 @@
-from __main__ import shiva
-from .Learner import Learner
-import helpers.misc as misc
-import envs
-import algorithms
-import buffers
 import numpy as np
-np.random.seed(5)
 import copy
+
+from shiva.core.admin import Admin
+from shiva.learners.Learner import Learner
+from shiva.helpers.config_handler import load_class
 
 class SingleAgentDDPGLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentDDPGLearner,self).__init__(learner_id, config)
+        np.random.seed(5)
 
     def run(self):
         self.step_count = 0
@@ -35,10 +33,10 @@ class SingleAgentDDPGLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
 
         # TensorBoard Step Metrics
-        shiva.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
+        Admin.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
+        Admin.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
         # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
+        Admin.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
         self.totalReward += more_data['raw_reward']
 
@@ -55,27 +53,26 @@ class SingleAgentDDPGLearner(Learner):
 
         # TensorBoard Episodic Metrics
         if done:
-            shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
+            Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
 
             if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
                 print("Checkpoint!")
-                shiva.update_agents_profile(self)
+                Admin.update_agents_profile(self)
 
         return done
 
     def create_environment(self):
-        # create the environment and get the action and observation spaces
-        environment = getattr(envs, self.configs['Environment']['type'])
-        return environment(self.configs['Environment'])
+        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        return env_class(self.configs['Environment'])
 
     def create_algorithm(self):
-        algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
-        buffer = getattr(buffers,self.configs['Buffer']['type'])
-        return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
         return self.agents
@@ -113,4 +110,4 @@ class SingleAgentDDPGLearner(Learner):
         pass
 
     def load_agent(self, path):
-        return shiva._load_agents(path)[0]
+        return Admin._load_agents(path)[0]

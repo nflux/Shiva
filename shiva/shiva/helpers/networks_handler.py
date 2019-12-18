@@ -1,4 +1,4 @@
-import helpers.misc as misc
+import shiva.helpers.misc as misc
 import torch
 import torch.nn as nn
 
@@ -53,8 +53,10 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
 
 
     if output_function is not None:
-        print(output_dim)
-        net_layers.append(output_function(dim=-1))
+        try:
+            net_layers.append(output_function(dim=-1))
+        except TypeError:
+            net_layers.append(output_function())
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     return nn.Sequential(*net_layers).to(device)

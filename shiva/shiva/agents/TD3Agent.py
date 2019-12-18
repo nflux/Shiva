@@ -1,14 +1,20 @@
-import numpy as np
-np.random.seed(5)
-import torch
-torch.manual_seed(5)
-from .Agent import Agent
 import copy, os
-from networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
+import numpy as np
+import torch
+
+from shiva.agents.Agent import Agent
+from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 class TD3Agent(Agent):
     def __init__(self, id, obs_dim, action_dim, agent_config: dict, networks: dict):
         super(TD3Agent, self).__init__(id, obs_dim, action_dim, agent_config, networks)
+        try:
+            torch.manual_seed(self.manual_seed)
+            np.random.seed(self.manual_seed)
+        except:
+            torch.manual_seed(5)
+            np.random.seed(5)
+
         self.id = id
 
         self.actor = DynamicLinearNetwork(obs_dim, action_dim, networks['actor'])
