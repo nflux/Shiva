@@ -8,7 +8,6 @@ class DynamicLinearNetwork(torch.nn.Module):
     def __init__(self, input_dim, output_dim, config):
         super(DynamicLinearNetwork, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
         # print(config)
         self.config = config
         self.net = nh.DynamicLinearSequential(
@@ -57,11 +56,19 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
         a = self.net(x)
         if gumbel:
             # print("Network Output (before gumbel):", x, a)
-            return torch.cat([self.gumbel(a[:, :, :self.param_ix]), a[:, :, self.param_ix:]], dim=2)
+            if len(a.shape) == 3:
+                return torch.cat([self.gumbel(a[:, :, :self.param_ix]), a[:, :, self.param_ix:]], dim=2)
+            elif len(a.shape) == 2:
+                return torch.cat([self.gumbel(a[:, :self.param_ix]), a[:, self.param_ix:]], dim=1)
+            else:
+                return torch.cat([self.gumbel(a[:self.param_ix]), a[self.param_ix:]], dim=0)
+
         else:
             # print("Network Output (before softmax):", x, a)
             if len(a.shape) == 3:
                 return torch.cat([self.softmax(a[:, :, :self.param_ix]), a[:, :, self.param_ix:]], dim=2)
-            else:
+            elif len(a.shape) == 2:
                 return torch.cat([self.softmax(a[:, :self.param_ix]), a[:, self.param_ix:]], dim=1)
+            else:
+                return torch.cat([self.softmax(a[:self.param_ix]), a[self.param_ix:]], dim=0)
 

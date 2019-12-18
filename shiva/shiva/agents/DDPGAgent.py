@@ -6,6 +6,9 @@ import torch
 import numpy as np
 import helpers.misc as misc
 
+from networks.DynamicLinearNetwork import SoftMaxHeadDynamicLinearNetwork
+
+
 class DDPGAgent(Agent):
     def __init__(self, id, obs_dim, action_dim, agent_config: dict, networks: dict):
         super(DDPGAgent, self).__init__(id, obs_dim, action_dim, agent_config, networks)
@@ -16,7 +19,8 @@ class DDPGAgent(Agent):
         # print("DDPG Agent:", obs_dim, action_dim)
 
 
-        self.actor = actor.DDPGActor(obs_dim,
+        self.actor = SoftMaxHeadDynamicLinearNetwork(obs_dim,
+                                    action_dim,
                                     action_dim,
                                     networks['actor'])
 

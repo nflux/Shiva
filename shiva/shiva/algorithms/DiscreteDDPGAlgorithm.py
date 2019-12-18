@@ -18,6 +18,7 @@ class DiscreteDDPGAlgorithm(Algorithm):
         self.ou_noise = noise.OUNoise(action_space, self.scale)
         self.actor_loss = 0
         self.critic_loss = 0
+        self.acs_space = action_space
 
 
     def update(self, agent, minibatch, step_count):
@@ -35,6 +36,7 @@ class DiscreteDDPGAlgorithm(Algorithm):
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
         dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
+        # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
 
         '''
             Training the Critic
@@ -103,8 +105,6 @@ class DiscreteDDPGAlgorithm(Algorithm):
             tgt_ct_state[k] = tgt_ct_state[k] * self.tau + (1 - self.tau) * v
         agent.target_critic.load_state_dict(tgt_ct_state)
 
-
-
         '''
             Hard Target Network Updates
         '''
@@ -124,17 +124,17 @@ class DiscreteDDPGAlgorithm(Algorithm):
 
         if step_count < self.exploration_steps:
 
-            index = randint(0,2)
-            action = [0]*3
+            index = randint(0,self.acs_space-1)
+            action = [0]*self.acs_space
             action[index] = 1
-            action = np.array(action)
+            action = np.array(action, dtype=np.float64)
             # action += self.ou_noise.noise()
             # action = np.clip(action, -1, 1)
             return action
 
         else:
 
-            self.ou_noise.set_scale(0.1)
+            self.ou_noise.set_scale(0.8)
             observation = torch.tensor(observation).to(self.device)
             action = agent.actor(observation.float()).cpu().data.numpy()
             # useful for debugging
@@ -142,7 +142,7 @@ class DiscreteDDPGAlgorithm(Algorithm):
             if step_count % 100 == 0:
                 # print(action)
                 pass
-            # action += self.ou_noise.noise()
+            action += self.ou_noise.noise()
             action = np.clip(action, -1,1)
 
             return action
