@@ -5,7 +5,7 @@ import numpy as np
 
 class test_buffers(TestCase):
     
-it bran    def test_simple_buffer(self):
+    def test_simple_buffer(self):
         # print(os.getcwd())
         assert 1 == 1
         
