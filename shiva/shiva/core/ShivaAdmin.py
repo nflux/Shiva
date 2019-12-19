@@ -176,7 +176,9 @@ class ShivaAdmin():
                 @value_x            Usually time
         '''
         if not self.need_to_save: return
+        print('before writing learner_id {}\tagent_id {}\tscalar {}\tvalue_y {}\tvalue_x {}'.format(learner.id, agent.id, scalar_name, value_y, value_x))
         self.writer[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
+        print('after writing!')
 
     def save(self, caller) -> None:
         '''
