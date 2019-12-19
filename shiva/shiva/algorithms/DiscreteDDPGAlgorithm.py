@@ -148,8 +148,8 @@ class DiscreteDDPGAlgorithm(Algorithm):
 
             return action
 
-    def create_agent(self, id): 
-        new_agent = DDPGAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self):
+        new_agent = DDPGAgent(self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         self.agent = new_agent
         return new_agent
 

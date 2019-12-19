@@ -91,8 +91,8 @@ class SupervisedAlgorithm(Algorithm):
         best_act = best_act_v.tolist()
         return best_act'''
 
-    def create_agent(self, id):
-        new_agent = ImitationAgent(id,self.obs_space,self.acs_space,self.configs[1],self.configs[2])
+    def create_agent(self):
+        new_agent = ImitationAgent(self.obs_space,self.acs_space,self.configs[1],self.configs[2])
         self.agents.append(new_agent)
         return new_agent
 

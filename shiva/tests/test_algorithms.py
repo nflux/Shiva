@@ -2,10 +2,12 @@ from unittest import TestCase
 from unittest.mock import Mock, MagicMock, patch
 import numpy as np
 import torch
+from copy import deepcopy
 
-from shiva.algorithms.DQNAlgorithm import DQNAlgorithm
-from shiva.buffers.SimpleBuffer import SimpleBuffer
-from shiva.agents.DQNAgent import DQNAgent
+import logging
+# logging.basicConfig(filename='example.log', level=logging.DEBUG)
+LOGGER = logging.getLogger(__name__)
+
 from shiva.helpers.config_handler import load_class, load_config_file_2_dict
 from shiva.helpers.dir_handler import find_pattern_in_path
 
@@ -41,10 +43,6 @@ class test_algorithms(TestCase):
         self.next_observations_t = torch.rand(self.n_agents, self.observation_space)
         self.dones_t = torch.randint(0, 2, (1, self.n_agents))
 
-    def set_agent(self):
-        cls = load_class('shiva.agents', self.config['Agent']['type'])
-        self.agent = cls(0, self.action_space, self.observation_space, self.config['Agent'], self.config['Network'])
-
     def set_buffer(self):
         cls = load_class('shiva.buffers', self.config['Buffer']['type'])
         self.buffer = cls(self.batch_size, self.capacity)
@@ -53,18 +51,32 @@ class test_algorithms(TestCase):
 
     def set_algorithm(self):
         cls = load_class('shiva.algorithms', self.config['Algorithm']['type'])
-        self.alg = cls(self.observation_space, self.action_space, self.config)
+        try:
+            self.alg = cls(self.observation_space, self.action_space, [self.config['Algorithm'], self.config['Agent'], self.config['Network']])
+        except:
+            # PPO
+            self.alg = cls(self.observation_space, self.action_space, None, 1, [self.config['Algorithm'], self.config['Agent'], self.config['Network']])
+
+    def set_agent(self):
+        self.agent = self.alg.create_agent()
 
     def test_algorithms(self):
         for template in self.templates:
             self.config = load_config_file_2_dict(template)
-            self.set_agent()
+            LOGGER.info('Algorithm test for {}'.format(self.config['Algorithm']['type']))
+            self.config['Admin']['Save'] = False
             self.set_buffer()
             self.set_algorithm()
-            self.testing()
-
-    def testing(self):
-        try:
-            self.alg.update(self.agent, self.buffer, 1000)
-        except:
-            self.alg.update(self.agent, self.buffer.sample(), 1000)
+            self.set_agent()
+            try:
+                # DQN and DDPG
+                self.alg.update(self.agent, self.buffer.sample(), 1000)
+            except:
+                try:
+                    # PPO to fix, put the extra agent on the algorithm
+                    self.agent2 = deepcopy(self.agent)
+                    self.alg.update(self.agent, self.agent2, self.buffer.sample(), 1000)
+                except:
+                    # TD3
+                    self.alg.update(self.agent, self.buffer, 1000)
+            LOGGER.info('\tUpdate() OK')

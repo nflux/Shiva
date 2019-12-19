@@ -159,10 +159,10 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         
             return action[0, 0] # timestamp 0, agent 0
 
-    def create_agent(self, id):
+    def create_agent(self):
         # print(self.obs_space)
         # input()
-        self.agent = ParametrizedDDPGAgent(id, self.obs_space, self.acs_space['discrete']+self.acs_space['param'], self.acs_space['discrete'], self.configs[1], self.configs[2])
+        self.agent = ParametrizedDDPGAgent(self.obs_space, self.acs_space['discrete']+self.acs_space['param'], self.acs_space['discrete'], self.configs[1], self.configs[2])
         return self.agent
 
     def get_actor_loss(self):
