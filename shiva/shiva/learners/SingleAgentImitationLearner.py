@@ -300,7 +300,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
         # self.agents = [None] * self.configs['Learner']['dagger_iterations']
         # for i in range(len(self.agents)):
         #     self.agents[i] = self.supervised_alg.create_agent(self.get_id())
-        self.agent = self.supervised_alg.create_agent(self.get_id())
+        self.agent = self.supervised_alg.create_agent()
 
         # Basic replay buffer at the moment
         if self.using_buffer:

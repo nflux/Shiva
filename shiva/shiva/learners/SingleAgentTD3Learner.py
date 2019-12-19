@@ -69,7 +69,7 @@ class SingleAgentTD3Learner(Learner):
             self.agent = self.load_agent(self.load_agents)
             self.alg.agent = self.agent
         else:
-            self.agent = self.alg.create_agent(self.get_id())
+            self.agent = self.alg.create_agent()
 
         if self.using_buffer:
             self.buffer = self.create_buffer()
