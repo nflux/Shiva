@@ -77,7 +77,7 @@ class SingleAgentDQNLearner(Learner):
             self.agent = Admin._load_agents(self.load_agents)[0]
             self.buffer = Admin._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent(self.get_id())
+            self.agent = self.alg.create_agent()
 
         if self.using_buffer:
             self.buffer = self.create_buffer()

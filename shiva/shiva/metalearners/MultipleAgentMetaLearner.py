@@ -165,10 +165,10 @@ class MultipleAgentMetaLearner(MetaLearner):
 
     #Run inidivdual learners. Used as the target function for multiprocessing
     def run_learner(self, learner_idx):
-        shiva.add_learner_profile(self.learners[learner_idx])
+        Admin.add_learner_profile(self.learners[learner_idx])
         
         # print ("learning rate", learner_idx, self.learners[learner_idx].agent.learning_rate)
-        shiva.update_agents_profile(self.learners[learner_idx])
+        Admin.update_agents_profile(self.learners[learner_idx])
         self.learners[learner_idx].run()
         # print("episode",self.learners[learner_idx].ep_count)
 
