@@ -15,6 +15,7 @@ class Learner(object):
     def __getstate__(self):
         d = dict(self.__dict__)
         try:
+            del d['eval']
             del d['env']
         except KeyError:
             del d['envs']

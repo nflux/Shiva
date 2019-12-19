@@ -72,7 +72,7 @@ class MultipleAgentMetaLearner(MetaLearner):
         
         for i in range(len(self.eval.eval_scores)):
             print('Average Reward for agent: ', i, '\n', np.average(self.eval.eval_scores[i]))
-        # self.save()
+        self.save()
         print('bye')
 
     def redeployment (self):
