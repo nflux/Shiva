@@ -33,17 +33,17 @@ class SingleAgentDDPGLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
 
         # TensorBoard Step Metrics
-        Admin.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
-        # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
+        # Admin.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
+        # Admin.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
+        # # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
+        # Admin.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
-        self.totalReward += more_data['raw_reward']
+        # self.totalReward += more_data['raw_reward']
 
         # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
         # print('to buffer:', observation, more_data['action'], reward, next_observation, [done])
 
-        t = [observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)]
+        t = [observation, action, reward, next_observation, int(done)]
         deep = copy.deepcopy(t)
         self.buffer.append(deep)
         
@@ -53,7 +53,7 @@ class SingleAgentDDPGLearner(Learner):
 
         # TensorBoard Episodic Metrics
         if done:
-            Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
+            # Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
 
             if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
@@ -97,7 +97,7 @@ class SingleAgentDDPGLearner(Learner):
             self.agent = self.load_agent(self.load_agents)
             # self.buffer = self._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent(self.get_id())
+            self.agent = self.alg.create_agent()
         # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment

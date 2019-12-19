@@ -98,7 +98,7 @@ class DDPGLearner(Learner):
         if self.configs['Learner']['load_agents'] is not False:
             self.agent = self.load_agent(self.configs['Learner']['load_agents'])
         else:
-            self.agent = self.alg.create_agent(self.get_id())
+            self.agent = self.alg.create_agent()
         
         # if buffer set to true in config
         if self.using_buffer:

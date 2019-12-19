@@ -6,6 +6,7 @@ from shiva.helpers.config_handler import load_class
 
 class UnityLearner(Learner):
     def __init__(self, learner_id, config):
+        # assert False, 'Deprecated Class - try using another Learner'
         super(UnityLearner,self).__init__(learner_id, config)
         self.done_counter = 0
 
@@ -63,7 +64,7 @@ class UnityLearner(Learner):
         if self.configs['Learner']['load_agents'] is not False:
             self.agent = self.load_agent(self.configs['Learner']['load_agents'])
         else:
-            self.agent = self.alg.create_agent(self.get_id())
+            self.agent = self.alg.create_agent()
         
         # if buffer set to true in config
         if self.using_buffer:
