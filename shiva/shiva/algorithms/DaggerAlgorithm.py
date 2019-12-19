@@ -1,14 +1,16 @@
 import numpy as np
 import torch
 import random
-from agents.ImitationAgent import ImitationAgent
-import helpers.misc as misc
-from .Algorithm import Algorithm
-from __main__ import shiva
+
+from shiva.agents.ImitationAgent import ImitationAgent
+from shiva.helpers import misc
+from shiva.algorithms.Algorithm import Algorithm
 
 class DaggerAlgorithm(Algorithm):
     def __init__(self,obs_space,acs_space,configs):
         super(DaggerAlgorithm, self).__init__(obs_space, acs_space, configs)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
         self.action_policy = configs[1]['action_policy']
         self.loss = 0
 

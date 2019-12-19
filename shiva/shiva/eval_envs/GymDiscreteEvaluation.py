@@ -1,8 +1,9 @@
 import gym
 import numpy as np
-from envs.Environment import Environment
-from .Evaluation import Evaluation
-from .GymDiscreteEvaluationEnvironment import GymDiscreteEvaluationEnvironment
+
+from shiva.envs.Environment import Environment
+from shiva.eval_envs.Evaluation import Evaluation
+from shiva.eval_envs.GymDiscreteEvaluationEnvironment import GymDiscreteEvaluationEnvironment
 
 class GymDiscreteEvaluation(Evaluation):
     def __init__(self,

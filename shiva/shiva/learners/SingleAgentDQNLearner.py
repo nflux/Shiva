@@ -1,12 +1,10 @@
-from __main__ import shiva
-from .Learner import Learner
-import helpers.misc as misc
-import envs
-import algorithms
-import buffers
 import numpy as np
 import random
 import copy
+
+from shiva.core.admin import Admin
+from shiva.learners.Learner import Learner
+from shiva.helpers.config_handler import load_class
 
 class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
@@ -49,21 +47,20 @@ class SingleAgentDQNLearner(Learner):
         """"""
 
     def create_environment(self):
-        # create the environment and get the action and observation spaces
-        environment = getattr(envs, self.configs['Environment']['type'])
-        return environment(self.configs['Environment'])
+        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        return env_class(self.configs['Environment'])
 
     def create_algorithm(self):
-        algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
+        algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         try:
             self.configs['Agent']['learning_rate'] = random.uniform(self.learning_rate[0],self.learning_rate[1])
-            return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         except:
-            return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
-        buffer = getattr(buffers,self.configs['Buffer']['type'])
-        return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
         return self.agent
@@ -72,52 +69,17 @@ class SingleAgentDQNLearner(Learner):
         return self.alg
 
     def launch(self):
-
-        # Launch the environment
         self.env = self.create_environment()
 
-        # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
 
-        # Create the agent
-        # self.agent = self.alg.create_agent(self.get_id())
         if self.load_agents:
-            self.agent = self.load_agent(self.load_agents)
-            self.buffer = shiva._load_buffer(self.load_agents)
+            self.agent = Admin._load_agents(self.load_agents)[0]
+            self.buffer = Admin._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_id())
-        # if buffer set to true in config
-        
+
         if self.using_buffer:
-            # Basic replay buffer at the moment
             self.buffer = self.create_buffer()
 
         print('Launch Successful.')
-
-
-    def save_agent(self):
-        pass
-
-    def load_agent(self, path):
-        return shiva._load_agents(path)[0]
-
-# class MetricsCalculator(object):
-#     '''
-#         Abstract class that it's solely purpose is to calculate metrics
-#         Has access to the Environment
-#     '''
-#     def __init__(self, env, alg):
-#         self.env = env
-#         self.alg = alg
-
-#     def Reward(self):
-#         return self.env.get_reward()
-
-#     def LossPerStep(self):
-#         return self.alg.get_loss()
-
-#     def LossActorPerStep(self):
-#         return self.alg.get_actor_loss()
-
-#     def TotalReward(self):
-#         return self.get_total_reward()
