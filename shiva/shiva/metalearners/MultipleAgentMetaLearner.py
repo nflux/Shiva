@@ -127,12 +127,12 @@ class MultipleAgentMetaLearner(MetaLearner):
 
         while not all(item.ep_count >= item.episodes for item in self.learners):
             self.process_list = []
-            for i in self.learners:
-                print ('id:', i.id, 'ep_count:', i.ep_count,'ep:', i.episodes, 'learning rate:', i.agent.learning_rate)
-            for learner in range(len(self.learners)):
-                if self.learners[learner].ep_count < self.learners[learner].episodes:
+            for learner in self.learners:
+                print ('id:', learner.id, 'ep_count:', learner.ep_count,'ep:', learner.episodes, 'learning rate:', learner.agent.learning_rate)
+            # for learner in range(len(self.learners)):
+                if learner.ep_count < learner.episodes:
                     s = "learner" + "_" + str(learner)
-                    p = torch.multiprocessing.Process(name=s, target=self.run_learner(learner))
+                    p = torch.multiprocessing.Process(name=s, target=self.run_learner(learner.id))
                     p.start()
                     self.process_list.append(p)
             
@@ -171,7 +171,7 @@ class MultipleAgentMetaLearner(MetaLearner):
         
 
     #Run inidivdual learners. Used as the target function for multiprocessing
-    def run_learner(self,learner_idx):
+    def run_learner(self, learner_idx):
         shiva.add_learner_profile(self.learners[learner_idx])
         
         # print ("learning rate", learner_idx, self.learners[learner_idx].agent.learning_rate)

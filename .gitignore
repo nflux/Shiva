@@ -9,3 +9,7 @@ __pycache__/
 
 Shiva/__pycache__/
 Shiva/*.py[cod]
+
+.idea/
+
+shiva/shiva/envs/unitybuilds/
