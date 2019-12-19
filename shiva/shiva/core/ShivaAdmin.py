@@ -206,7 +206,7 @@ class ShivaAdmin():
 
             No input because we are only handling only ONE MetaLearner
         '''
-        print("Saving Meta Learner:", self.caller, '@', self._curr_meta_learner_dir)
+        print("Saving Meta Learner @ {}".format(self._curr_meta_learner_dir))
         # create the meta learner configs folder
         dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
         # save each config file

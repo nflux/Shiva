@@ -4,6 +4,8 @@ from scipy import stats
 import copy
 import numpy as np
 
+from torch.optim.lr_scheduler import LambdaLR
+
 from shiva.core.admin import Admin
 from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_class
@@ -144,7 +146,7 @@ class MultipleAgentMetaLearner(MetaLearner):
 
             print ("start PBT process...---------------------------------------")
             self.exploitation(self.learners, self.episode_rewards)
-            
+
             self.exploration(self.learners)
 
             for p in self.process_list:
@@ -165,27 +167,28 @@ class MultipleAgentMetaLearner(MetaLearner):
 
     #Run inidivdual learners. Used as the target function for multiprocessing
     def run_learner(self, learner_idx):
-        Admin.add_learner_profile(self.learners[learner_idx])
-        
-        # print ("learning rate", learner_idx, self.learners[learner_idx].agent.learning_rate)
-        Admin.update_agents_profile(self.learners[learner_idx])
+        # Admin.add_learner_profile(self.learners[learner_idx])
+        #
+        # # print ("learning rate", learner_idx, self.learners[learner_idx].agent.learning_rate)
+        # Admin.update_agents_profile(self.learners[learner_idx])
         self.learners[learner_idx].run()
         # print("episode",self.learners[learner_idx].ep_count)
 
     #fill the list of learners
     def populate_learners(self):
-        for learner in range(self.learner_list_size):
-            self.learners[learner] = self.create_learner()
-            self.learners[learner].launch()
-            self.sample(self.learners[learner])
+        for learner_id in range(self.learner_list_size):
+            self.learners[learner_id] = self.create_learner()
+            Admin.add_learner_profile(self.learners[learner_id])
+            self.learners[learner_id].launch()
+            Admin.update_agents_profile(self.learners[learner_id])
+            self.sample(self.learners[learner_id])
 
     #Conduct Welch's T-test between two agents episode rewards and return whether we reject the null hypothesis
     def welch_T_Test(self,episodes_1, episodes_2):
-        t,p = stats.ttest_ind(episodes_1, episodes_2, equal_var=False)
-
+        t, p = stats.ttest_ind(episodes_1, episodes_2, equal_var=False)
         return p < self.configs['MetaLearner']['p_value']
 
-    def truncation(self,learners):
+    def truncation(self, learners):
         truncate_size = int(self.learner_list_size* .2)
         bottom_20 = learners[self.learner_list_size - truncate_size:]
         top_20 = learners[:truncate_size]
@@ -208,23 +211,29 @@ class MultipleAgentMetaLearner(MetaLearner):
 
     #randomly sample hyperparameter
     def sample (self, learner):
-        new_lr = random.uniform(self.learning_rate_range[0],self.learning_rate_range[1])
+        new_lr = random.uniform(self.learning_rate_range[0], self.learning_rate_range[1])
         learner.agent.learning_rate = new_lr
 
     #Resample hyperparameters from the original range dictated in the configuration file
     def resample(self, learners):
         for learner in learners:
             new_lr = random.uniform(self.learning_rate_range[0],self.learning_rate_range[1])
-            learner.agent.optimizer = getattr(torch.optim,self.configs['Agent']['optimizer_function'])(params=learner.agent.policy.parameters(), lr=new_lr)
-            learner.agent.learning_rate = new_lr
+            lmbda = lambda epoch: new_lr
+            scheduler = LambdaLR(learner.agent.optimizer, lr_lambda=lmbda)
+            scheduler.step()
+            # learner.agent.optimizer = getattr(torch.optim,self.configs['Agent']['optimizer_function'])(params=learner.agent.policy.parameters(), lr=new_lr)
+            # learner.agent.learning_rate = new_lr
 
     #Perturbate hyperparameters by a random factor randomly selected from predefined factor lists in the configuration file
     def perturbation(self,learners):
         for learner in learners:
             perturbation_factor = random.choice(self.configs['MetaLearner']['perturbation_factors'])
-            new_lr = perturbation_factor * learner.agent.learning_rate
-            learner.agent.optimizer = getattr(torch.optim,self.configs['Agent']['optimizer_function'])(params=learner.agent.policy.parameters(), lr=new_lr)
-            learner.agent.learning_rate = new_lr
+            lmbda = lambda epoch: perturbation_factor
+            scheduler = LambdaLR(learner.agent.optimizer, lr_lambda=lmbda)
+            scheduler.step()
+            # new_lr = perturbation_factor * learner.agent.learning_rate
+            # learner.agent.optimizer = getattr(torch.optim,self.configs['Agent']['optimizer_function'])(params=learner.agent.policy.parameters(), lr=new_lr)
+            # learner.agent.learning_rate = new_lr
 
     def exploitation(self, learners, episode_rewards):
         if self.configs['MetaLearner']['exploit'] == 't_Test':
