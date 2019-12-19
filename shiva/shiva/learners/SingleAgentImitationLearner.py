@@ -58,13 +58,13 @@ class SingleAgentImitationLearner(Learner):
 
         # Write to tensorboard
         Admin.add_summary_writer(self, self.expert_agent, 'Reward', reward, self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Loss per step', self.supervised_alg.get_loss(),self.step_count)
+        Admin.add_summary_writer(self, self.agent, 'Loss per step', self.imitation_alg.get_loss(),self.step_count)
 
         # Cumulate the reward
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         self.replay_buffer.append([observation, action, reward, next_observation, done])
-        self.supervised_alg.update(self.agent,self.replay_buffer.sample(), self.step_count)
+        self.imitation_alg.supervised_update(self.agent,self.replay_buffer.sample(), self.step_count)
 
         # when the episode ends
         if done:
@@ -93,10 +93,8 @@ class SingleAgentImitationLearner(Learner):
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         self.replay_buffer.append([observation,action,reward,next_observation,done])
-        self.imitation_alg.update(self.agent,self.expert_agent, self.replay_buffer.sample(), self.env.step_count)
+        self.imitation_alg.dagger_update(self.agent,self.expert_agent, self.replay_buffer.sample(), self.env.step_count)
 
-        #print('Total Reward: ', self.totalReward)
-        #print('Average Loss per Episode', self.supervised_alg.get_average_loss(self.env.get_current_step()))
         # when the episode ends
         if done:
             # add values to the tensorboard
@@ -112,11 +110,10 @@ class SingleAgentImitationLearner(Learner):
         return environment(self.configs['Environment'])
 
     def create_algorithm(self):
-        algorithm = load_class('shiva.algorithms', self.configs['Algorithm']['type1'])
-        algorithm2 = load_class('shiva.algorithms', self.configs['Algorithm']['type2'])
+        algorithm = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         acs_continuous = self.env.action_space_continuous
         acs_discrete= self.env.action_space_discrete
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),acs_discrete,acs_continuous,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']]), algorithm2(self.env.get_observation_space(), self.env.get_action_space(),acs_discrete,acs_continuous,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),acs_discrete,acs_continuous,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
         buffer = load_class('shiva.buffers', self.configs['Buffer']['type'])
@@ -135,7 +132,7 @@ class SingleAgentImitationLearner(Learner):
         self.env = self.create_environment()
 
         # Launch the algorithm which will handle the
-        self.supervised_alg,self.imitation_alg = self.create_algorithm()
+        self.imitation_alg = self.create_algorithm()
 
         self.agent = self.supervised_alg.create_agent()
 
@@ -215,7 +212,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         # Write to tensorboard
         Admin.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.supervised_alg.get_loss(),self.step_count)
+        Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(),self.step_count)
 
         # Cumulate the reward
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
@@ -223,7 +220,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.super_buffer.push(copy.deepcopy([torch.from_numpy(observation), torch.from_numpy(action), torch.from_numpy(reward),
                                                 torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).float()]))
         # self.replay_buffer.append(copy.deepcopy([observation, action, reward, next_observation, done, None]))
-        self.supervised_alg.update(self.agent,self.super_buffer.sample(self.supervised_alg.device), self.step_count)
+        self.imitation_alg.supervised_update(self.agent,self.super_buffer.sample(self.imitation_alg.device), self.step_count)
 
         # when the episode ends
         if done:
@@ -252,10 +249,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.buffer.push(copy.deepcopy([torch.from_numpy(observation),torch.from_numpy(more_data['action'].reshape(1,-1)),
                                                 torch.from_numpy(reward),torch.from_numpy(next_observation),torch.from_numpy(np.array([done])).float(),
                                                 torch.from_numpy(bot_action)]))
-        self.imitation_alg.update(self.agent, self.buffer.sample(self.imitation_alg.device), self.step_count)
+        self.imitation_alg.dagger_update(self.agent, self.buffer.sample(self.imitation_alg.device), self.step_count)
 
-        #print('Total Reward: ', self.totalReward)
-        #print('Average Loss per Episode', self.supervised_alg.get_average_loss(self.env.get_current_step()))
         # when the episode ends
         if done:
             # add values to the tensorboard
@@ -271,10 +266,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
         return env_class(self.configs['Environment'])
 
     def create_algorithm(self):
-        algorithm = load_class('shiva.algorithms', self.configs['Algorithm']['type1'])
-        algorithm2 = load_class('shiva.algorithms', self.configs['Algorithm']['type2'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']]), \
-               algorithm2(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        algorithm = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
+        return algorithm(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffers(self, obs_dim, ac_dim):
         buffer1 = load_class('shiva.buffers', self.configs['Buffer']['type1'])
@@ -295,12 +288,9 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.env = self.create_environment()
 
         # Launch the algorithm which will handle the
-        self.supervised_alg,self.imitation_alg = self.create_algorithm()
+        self.imitation_alg = self.create_algorithm()
 
-        # self.agents = [None] * self.configs['Learner']['dagger_iterations']
-        # for i in range(len(self.agents)):
-        #     self.agents[i] = self.supervised_alg.create_agent(self.get_id())
-        self.agent = self.supervised_alg.create_agent()
+        self.agent = self.imitation_alg.create_agent()
 
         # Basic replay buffer at the moment
         if self.using_buffer:
