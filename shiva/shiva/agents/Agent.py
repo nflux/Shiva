@@ -58,3 +58,9 @@ class Agent(object):
         """Copies model parameters from from_model to to_model"""
         for to_model, from_model in zip(to_model.parameters(), from_model.parameters()):
             to_model.data.copy_(from_model.data.clone())
+    
+    @staticmethod
+    def mod_lr(optim, lr):
+        for g in optim.param_groups:
+            print(g['lr'])
+            g['lr'] = lr

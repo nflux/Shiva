@@ -227,8 +227,6 @@ class SingleAgentRoboCupImitationLearner(Learner):
             # add values to the tensorboard
             Admin.add_summary_writer(self, self.agent, 'Total_Reward', self.totalReward, self.ep_count)
 
-            # print(self.totalReward)
-
         return done
 
     def imitation_step(self):
@@ -255,9 +253,12 @@ class SingleAgentRoboCupImitationLearner(Learner):
         if done:
             # add values to the tensorboard
             Admin.add_summary_writer(self, self.agent, 'Total_Reward', self.totalReward, self.ep_count)
-            if self.ep_count % self.configs['Learner']['save_frequency'] == 0:
+            if self.configs['Admin']['save'] and (self.ep_count % self.configs['Learner']['save_frequency'] == 0):
                 Admin._save_agent(self, self.agent)
-            # print(self.totalReward)
+            if self.ep_count % self.configs['Agent']['lr_decay_every'] == 0:
+                lr = max(self.agent.learning_rate-self.agent.lr_decay, self.agent.lr_end)
+                self.agent.learning_rate = lr
+                self.agent.mod_lr(self.agent.actor_optimizer, self.agent.learning_rate)
 
         return done
 

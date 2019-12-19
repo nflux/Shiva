@@ -214,7 +214,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
 
         #calculate loss based on loss functions dictated in the configs
         self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
-        print('Dagger_loss:', self.loss)
+        # print('Dagger_loss:', self.loss)
         self.loss.backward()
         imitation_agent.actor_optimizer.step()
     
@@ -232,7 +232,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
         action_prob_dist = action_prob_dist.view(actions.shape)
 
         self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
-        print('super_loss:', self.loss)
+        # print('super_loss:', self.loss)
         self.loss.backward()
         agent.actor_optimizer.step()
 
