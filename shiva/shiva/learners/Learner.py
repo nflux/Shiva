@@ -10,15 +10,19 @@ class Learner(object):
         self.agentCount = 0
         self.ep_count = 0
         self.step_count = 0
-        
+        self.checkpoints_made = 0
 
     def __getstate__(self):
         d = dict(self.__dict__)
         try:
-            del d['eval']
             del d['env']
         except KeyError:
             del d['envs']
+        return d
+        try:
+            del d['eval']
+        except KeyError:
+            pass
         return d
 
     def collect_metrics(self, episodic=False):
@@ -36,7 +40,16 @@ class Learner(object):
                     Admin.add_summary_writer(self, self.agent, metric_name, y_val, self.env.done_count)
         else:
             assert False, "The Learner attribute 'agent' was not found. Either name the attribute 'agent' or could be that MultiAgent Metrics are not yet supported."
-    
+
+    def checkpoint(self):
+        assert hasattr(self, 'save_checkpoint_episodes'), "Learner needs 'save_checkpoint_episodes' attribute in config - put 0 if don't want to save checkpoints"
+        if self.save_checkpoint_episodes > 0:
+            t = self.save_checkpoint_episodes * self.checkpoints_made
+            if self.env.done_count > t:
+                print("%% Saving checkpoint at episode {} %%".format(self.env.done_count))
+                Admin.update_agents_profile(self)
+                self.checkpoints_made += 1
+
     def update(self):
         assert 'Not implemented'
         pass

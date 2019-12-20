@@ -176,9 +176,9 @@ class ShivaAdmin():
                 @value_x            Usually time
         '''
         if not self.need_to_save: return
-        print('before writing learner_id {}\tagent_id {}\tscalar {}\tvalue_y {}\tvalue_x {}'.format(learner.id, agent.id, scalar_name, value_y, value_x))
+        # print('before writing learner_id {}\tagent_id {}\tscalar {}\tvalue_y {}\tvalue_x {}'.format(learner.id, agent.id, scalar_name, value_y, value_x))
         self.writer[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
-        print('after writing!')
+        # print('after writing!')
 
     def save(self, caller) -> None:
         '''
@@ -279,7 +279,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         self._add_agent_profile(learner, agent)
-        agent_path = os.path.join(self._curr_agent_dir[learner.id][agent.id], 'Ep'+str(learner.env.ep_count))
+        agent_path = os.path.join(self._curr_agent_dir[learner.id][agent.id], 'Ep'+str(learner.env.done_count))
         agent_path = dh.make_dir(agent_path)
         fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
         agent.save(agent_path, learner.env.get_current_step())

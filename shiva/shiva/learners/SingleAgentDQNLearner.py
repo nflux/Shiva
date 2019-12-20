@@ -13,7 +13,6 @@ class SingleAgentDQNLearner(Learner):
     def run(self):
         step_count_per_run = 0
         while not self.env.finished(self.episodes):
-            print('here')
             self.env.reset()
             while not self.env.is_done():
                 self.step()
@@ -28,10 +27,11 @@ class SingleAgentDQNLearner(Learner):
                         return None
                 except:
                     pass
-                ''''''
                 step_count_per_run += 1
-            self.collect_metrics(True) # metrics per episode
+                ''''''
             self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
+            self.collect_metrics(True) # metrics per episode
+            self.checkpoint()
             # print('Learner {}\tEpisode {} complete on {} steps!\tEpisodic reward: {} '.format(self.id, self.ep_count, self.env.steps_per_episode, self.env.reward_per_episode))
 
         self.env.close()
