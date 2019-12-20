@@ -10,23 +10,33 @@ class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentDQNLearner,self).__init__(learner_id, config)
 
-    def run(self, train=True):
-        self.step_count = 0
-        # for self.ep_count in range(self.episodes):
+    def run(self):
+        step_count_per_run = 0
         while not self.env.finished(self.episodes):
+            print('here')
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.step_count += 1
                 self.collect_metrics() # metrics per step
-            self.ep_count += 1
+                # print('LEARNER {}\tStep {}\tSessionSteps: {}\tDones: {}\tReward: {}'.format(self.id, self.env.steps_per_episode, self.env.step_count, self.env.done_count, self.env.reward_per_step))
+
+                ''' FOR MULTIPROCESS PBT PURPOSES '''
+                self.step_count = self.env.step_count
+                self.ep_count = self.env.done_count
+                try:
+                    if self.multi and step_count_per_run >= self.updates_per_iteration:
+                        return None
+                except:
+                    pass
+                ''''''
+                step_count_per_run += 1
             self.collect_metrics(True) # metrics per episode
-            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.get_total_reward()))
+            self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
+            # print('Learner {}\tEpisode {} complete on {} steps!\tEpisodic reward: {} '.format(self.id, self.ep_count, self.env.steps_per_episode, self.env.reward_per_episode))
+
         self.env.close()
 
     def step(self):
-
         observation = self.env.get_observation()
 
         """Temporary fix for Unity as it receives multiple observations"""
