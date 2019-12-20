@@ -8,3 +8,10 @@ __pycache__/
 # Server
 nohup.out
 
+.idea/*
+Shiva/__pycache__/
+Shiva/*.py[cod]
+
+.idea/
+
+shiva/shiva/envs/unitybuilds/

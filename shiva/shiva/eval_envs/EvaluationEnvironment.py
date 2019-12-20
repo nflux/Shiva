@@ -1,5 +1,6 @@
-from envs.Environment import Environment
 import gym
+
+from shiva.envs.Environment import Environment
 
 class EvaluationEnvironment(Environment):
     def __init__(self, configs):
@@ -26,7 +27,6 @@ class EvaluationEnvironment(Environment):
 
     def get_reward(self):
         pass
-
 
     def load_viewer(self):
         pass

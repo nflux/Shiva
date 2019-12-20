@@ -1,6 +1,7 @@
-import helpers.networks_handler as nh
 import torch.nn as nn
 import torch
+
+from shiva.helpers import networks_handler as nh
 
 class DDPGActor(torch.nn.Module):
     def __init__(self, obs_dim, action_dim, config):

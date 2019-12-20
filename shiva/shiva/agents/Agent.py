@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import helpers.misc as misc
+import shiva.helpers.misc as misc
 
 class Agent(object):
     def __init__(self, id, obs_space, acs_space, agent_config, network_config):

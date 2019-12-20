@@ -1,17 +1,13 @@
-from settings import shiva
-from .Learner import Learner
-import helpers.misc as misc
 import torch.multiprocessing as mp
-import envs
-import algorithms
-import buffers
-import copy
-import random
+import copy, random
 import numpy as np
+
+from shiva.core.admin import Admin
+from shiva.learners.Learner import Learner
 
 class SingleAgentLearner(Learner):
     '''
-        Start idea of a Single Agent Learner being able to play on Unity and Gym 
+        Start idea of a Single Agent Learner being able to play on Unity and Gym
             - potentially being able to play on RoboCup as well
 
     '''
@@ -62,9 +58,8 @@ class SingleAgentLearner(Learner):
         """"""
 
     def create_environment(self):
-        # create the environment and get the action and observation spaces
-        environment = getattr(envs, self.configs['Environment']['type'])
-        return environment(self.configs['Environment'])
+        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        return env_class(self.configs['Environment'])
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
@@ -73,8 +68,8 @@ class SingleAgentLearner(Learner):
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(), acs_discrete, acs_continuous, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
-        buffer = getattr(buffers,self.configs['Buffer']['type'])
-        return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
         return self.agents
@@ -110,4 +105,4 @@ class SingleAgentLearner(Learner):
         pass
 
     def load_agent(self, path):
-        return shiva._load_agents(path)[0]
+        return Admin._load_agents(path)[0]

@@ -1,16 +1,14 @@
-from __main__ import shiva
-from .Learner import Learner
-import helpers.misc as misc
-import envs
-import algorithms
-import buffers
 import numpy as np
-np.random.seed(5)
 import copy
+
+from shiva.core.admin import Admin
+from shiva.learners.Learner import Learner
+from shiva.helpers.config_handler import load_class
 
 class SingleAgentRoboDDPGLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentRoboDDPGLearner,self).__init__(learner_id, config)
+        np.random.seed(5)
 
     def run(self):
         self.step_count = 0
@@ -48,10 +46,10 @@ class SingleAgentRoboDDPGLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
 
         # TensorBoard Step Metrics
-        shiva.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
+        Admin.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
+        Admin.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
         # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        shiva.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
+        Admin.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
         # If ball was kicked
         if 150 < reward < 250:
@@ -80,17 +78,17 @@ class SingleAgentRoboDDPGLearner(Learner):
                 self.turns += 1
             elif action == 2:
                 self.kicks += 1
-            shiva.add_summary_writer(self, self.agent, 'Action_per_Step', action, self.step_count)
+            Admin.add_summary_writer(self, self.agent, 'Action_per_Step', action, self.step_count)
 
             
 
         # Robocup Metrics
         if done and self.env.env_name == 'RoboCup':
-            shiva.add_summary_writer(self, self.agent, 'Kicks_per_Episode', self.kicks, self.ep_count)
-            shiva.add_summary_writer(self, self.agent, 'Turns_per_Episode', self.turns, self.ep_count)
-            shiva.add_summary_writer(self, self.agent, 'Dashes_per_Episode', self.dashes, self.ep_count) 
-            shiva.add_summary_writer(self, self.agent, 'Steps_per_Episode', self.steps_per_episode, self.ep_count)
-            shiva.add_summary_writer(self, self.agent, 'Ball_Kicks_per_Episode', self.kicked, self.ep_count)
+            Admin.add_summary_writer(self, self.agent, 'Kicks_per_Episode', self.kicks, self.ep_count)
+            Admin.add_summary_writer(self, self.agent, 'Turns_per_Episode', self.turns, self.ep_count)
+            Admin.add_summary_writer(self, self.agent, 'Dashes_per_Episode', self.dashes, self.ep_count)
+            Admin.add_summary_writer(self, self.agent, 'Steps_per_Episode', self.steps_per_episode, self.ep_count)
+            Admin.add_summary_writer(self, self.agent, 'Ball_Kicks_per_Episode', self.kicked, self.ep_count)
 
             self.kicks = 0
             self.turns = 0
@@ -99,27 +97,26 @@ class SingleAgentRoboDDPGLearner(Learner):
 
         # TensorBoard Episodic Metrics
         if done:
-            shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
+            Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
 
             if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
                 print("Checkpoint!")
-                shiva.update_agents_profile(self)
+                Admin.update_agents_profile(self)
 
         return done
 
     def create_environment(self):
-        # create the environment and get the action and observation spaces
-        environment = getattr(envs, self.configs['Environment']['type'])
-        return environment(self.configs['Environment'])
+        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        return env_class(self.configs['Environment'])
 
     def create_algorithm(self):
-        algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         
     def create_buffer(self):
-        buffer = getattr(buffers,self.configs['Buffer']['type'])
-        return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
         return self.agents
@@ -143,7 +140,7 @@ class SingleAgentRoboDDPGLearner(Learner):
             self.agent = self.load_agent(self.load_agents)
             self.buffer = self._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent(self.get_id())
+            self.agent = self.alg.create_agent()
         # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment
@@ -156,4 +153,4 @@ class SingleAgentRoboDDPGLearner(Learner):
         pass
 
     def load_agent(self, path):
-        return shiva._load_agents(path)[0]
+        return Admin._load_agents(path)[0]

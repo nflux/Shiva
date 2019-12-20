@@ -1,10 +1,10 @@
-from .Environment import Environment
-from mlagents.envs.environment import UnityEnvironment
 import os
 import numpy as np
 import time
 
-from helpers.misc import action2one_hot
+from mlagents.envs.environment import UnityEnvironment
+from shiva.envs.Environment import Environment
+from shiva.helpers.misc import action2one_hot
 
 class UnityWrapperEnvironment(Environment):
     def __init__(self, config):

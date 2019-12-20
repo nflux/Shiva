@@ -1,15 +1,10 @@
-# this is a version of a meta learner that will take a file path to the configuration files
-from __main__ import shiva
-from .MetaLearner import MetaLearner
-from learners.SingleAgentDQNLearner import SingleAgentDQNLearner
-from learners.SingleAgentDDPGLearner import SingleAgentDDPGLearner
-from learners.SingleAgentImitationLearner import SingleAgentImitationLearner
-import helpers.misc as misc
-import learners
+from shiva.core.admin import Admin
+from shiva.metalearners.MetaLearner import MetaLearner
+from shiva.helpers.config_handler import load_class
 
 class SingleAgentMetaLearner(MetaLearner):
     def __init__(self, configs):
-        super(SingleAgentMetaLearner,self).__init__(configs)
+        super(SingleAgentMetaLearner, self).__init__(configs)
         self.configs = configs
         self.learnerCount = 0
         self.run()
@@ -31,26 +26,20 @@ class SingleAgentMetaLearner(MetaLearner):
 
         elif self.start_mode == self.PROD_MODE:
 
-            # agents, environments, algorithm, data, configs for a single agent learner
-            #agents, environments, algorithm, data, config
             self.learner = self.create_learner()
 
-            # self.learner = self.create_learner(self.agent, self.eval_env, self.algorithm, self.buffer, self.learner_config)
-            shiva.add_learner_profile(self.learner)
+            Admin.add_learner_profile(self.learner)
 
-            # initialize the learner instances
             self.learner.launch()
             
-            shiva.update_agents_profile(self.learner)
+            Admin.update_agents_profile(self.learner)
 
-            # Runs the learner for a number of episodes given by the config
             self.learner.run()
 
-            # save
             self.save()
 
         print('bye')
 
     def create_learner(self):
-        learner = getattr(learners, self.configs['Learner']['type'])
+        learner = load_class('shiva.learners', self.configs['Learner']['type'])
         return learner(self.get_id(), self.configs)

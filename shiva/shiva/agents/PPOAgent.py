@@ -1,13 +1,13 @@
-from .Agent import Agent
-from .Agent import Agent
-import networks.DynamicLinearNetwork as DLN
+import copy
+import numpy as np
+import torch
 from torch.distributions import Categorical
 from torch.nn import functional as F
-import utils.Noise as noise
-import copy
-import torch
-import numpy as np
-import helpers.misc as misc
+
+from shiva.agents.Agent import Agent
+from shiva.networks import DynamicLinearNetwork as DLN
+from shiva.utils import Noise as noise
+from shiva.helpers import misc
 
 class PPOAgent(Agent):
     def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config, net_config):
@@ -15,6 +15,7 @@ class PPOAgent(Agent):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         torch.manual_seed(agent_config['manual_seed'])
         np.random.seed(agent_config['manual_seed'])
+
         self.acs_discrete = acs_discrete
         self.acs_continuous = acs_continuous
         self.scale = 0.9

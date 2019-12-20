@@ -1,18 +1,22 @@
-import numpy as np
-np.random.seed(5)
 import torch
-torch.manual_seed(5)
-from .robocup.rc_env import rc_env
-from .Environment import Environment
-from helpers.misc import action2one_hot
+import numpy as np
+
+from shiva.envs.robocup.rc_env import rc_env
+from shiva.envs.Environment import Environment
+from shiva.helpers.misc import action2one_hot
 
 class RoboCupDDPGEnvironment(Environment):
     def __init__(self, config):
         super(RoboCupDDPGEnvironment, self).__init__(config)
+        np.random.seed(5)
+        torch.manual_seed(5)
+
         self.env = rc_env(config)
         self.env.launch()
+
         self.left_actions = self.env.left_actions
         self.left_params = self.env.left_action_params
+
         self.obs = self.env.left_obs
         self.rews = self.env.left_rewards
         self.world_status = self.env.world_status

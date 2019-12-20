@@ -1,8 +1,9 @@
-import torch
 import numpy as np
-import helpers.buffer_handler as bh
+import torch
 from torch.autograd import Variable
-from .ReplayBuffer import ReplayBuffer
+
+from shiva.buffers.ReplayBuffer import ReplayBuffer
+from shiva.helpers import buffer_handler as bh
 
 class TensorBuffer(ReplayBuffer):
 

@@ -1,14 +1,11 @@
 import numpy as np
-np.random.seed(5)
 import torch
-torch.manual_seed(5)
-import utils.Noise as noise
-from helpers.calc_helper import np_softmax
-from agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
-from .Algorithm import Algorithm
-from __main__ import shiva
-from helpers.misc import one_hot_from_logits
 
+from shiva.utils import Noise as noise
+from shiva.helpers.calc_helper import np_softmax
+from shiva.agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
+from shiva.algorithms.Algorithm import Algorithm
+from shiva.helpers.misc import one_hot_from_logits
 
 class ParametrizedDDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
@@ -18,6 +15,8 @@ class ParametrizedDDPGAlgorithm(Algorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(ParametrizedDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
         self.scale = 0.9
         self.ou_noise = noise.OUNoise(action_space['discrete']+action_space['param'], self.scale)
         self.actor_loss = 0
@@ -160,10 +159,10 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         
             return action[0, 0] # timestamp 0, agent 0
 
-    def create_agent(self, id):
+    def create_agent(self):
         # print(self.obs_space)
         # input()
-        self.agent = ParametrizedDDPGAgent(id, self.obs_space, self.acs_space['discrete']+self.acs_space['param'], self.acs_space['discrete'], self.configs[1], self.configs[2])
+        self.agent = ParametrizedDDPGAgent(self.obs_space, self.acs_space['discrete']+self.acs_space['param'], self.acs_space['discrete'], self.configs[1], self.configs[2])
         return self.agent
 
     def get_actor_loss(self):

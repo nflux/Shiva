@@ -1,8 +1,9 @@
 import gym
 import numpy as np
-from envs.Environment import Environment
-from .Evaluation import Evaluation
-from .GymDiscreteEvaluationEnvironment import GymDiscreteEvaluationEnvironment
+
+from shiva.envs.Environment import Environment
+from shiva.eval_envs.Evaluation import Evaluation
+from shiva.eval_envs.GymDiscreteEvaluationEnvironment import GymDiscreteEvaluationEnvironment
 
 class GymDiscreteEvaluation(Evaluation):
     def __init__(self,
@@ -22,7 +23,6 @@ class GymDiscreteEvaluation(Evaluation):
             Starts evaluation process
             This implementation is specific to each environment type
         '''
-        
         for i in range(len(self.learners)):
             episode_scores = np.zeros(self.configs['episodes'])
             for e in range(self.configs['episodes']):
@@ -63,6 +63,7 @@ class GymDiscreteEvaluation(Evaluation):
 
     def step(self,idx):
         observation = self.eval_envs[idx].get_observation()
+        # print (self.learners[idx])
         action = self.learners[idx].agent.get_action(observation)
 
         next_observation, reward, done, more_data = self.eval_envs[idx].step(action)

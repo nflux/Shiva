@@ -1,20 +1,21 @@
 import numpy as np
 import torch
 import time
-from agents.TD3Agent import TD3Agent
-from .Algorithm import Algorithm
+
+from shiva.agents.TD3Agent import TD3Agent
+from shiva.algorithms.Algorithm import Algorithm
 # from utils.Gaussian_Exploration import Gaussian_Exploration
 # from utils.OU_Noise_Exploration import OU_Noise_Exploration
-import utils.Noise as noise
+from shiva.utils import Noise as noise
 
 class TD3Algorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
         super(TD3Algorithm, self).__init__(observation_space, action_space, configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
+
         self.obs_space = observation_space
         self.acs_space = action_space
-
         # self.exploration_strategy = OU_Noise_Exploration(action_space, self.configs[0])
         # self.exploration_strategy_critic = Gaussian_Exploration(self.configs[0])
         self.ou_noise = noise.OUNoise(action_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
@@ -124,8 +125,8 @@ class TD3Algorithm(Algorithm):
             self.action += self.ou_noise.noise()
             return self.action
 
-    def create_agent(self, id): 
-        self.agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self):
+        self.agent = TD3Agent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):

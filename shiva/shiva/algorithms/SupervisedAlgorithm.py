@@ -1,15 +1,16 @@
 import numpy as np
 import torch
 import random
-from agents.ImitationAgent import ImitationAgent
-from agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
-import helpers.misc as misc
-from .Algorithm import Algorithm
-from __main__ import shiva
+
+from shiva.agents.ImitationAgent import ImitationAgent
+from shiva.agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
+from shiva.algorithms.Algorithm import Algorithm
 
 class SupervisedAlgorithm(Algorithm):
     def __init__(self,obs_space,acs_space,configs):
         super(SupervisedAlgorithm, self).__init__(obs_space, acs_space, configs)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
         self.loss = 0
 
     def update(self, agent, minibatch, step_n):
@@ -90,8 +91,8 @@ class SupervisedAlgorithm(Algorithm):
         best_act = best_act_v.tolist()
         return best_act'''
 
-    def create_agent(self, id):
-        new_agent = ImitationAgent(id,self.obs_space,self.acs_space,self.configs[1],self.configs[2])
+    def create_agent(self):
+        new_agent = ImitationAgent(self.obs_space,self.acs_space,self.configs[1],self.configs[2])
         self.agents.append(new_agent)
         return new_agent
 

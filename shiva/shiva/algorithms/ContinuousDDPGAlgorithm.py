@@ -1,11 +1,10 @@
 import numpy as np
 import torch
-torch.manual_seed(5)
-np.random.seed(5)
-import utils.Noise as noise
-from agents.DDPGAgent import DDPGAgent
-from .Algorithm import Algorithm
 import time
+
+from shiva.utils import Noise as noise
+from shiva.agents.DDPGAgent import DDPGAgent
+from shiva.algorithms.Algorithm import Algorithm
 
 class ContinuousDDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
@@ -15,6 +14,8 @@ class ContinuousDDPGAlgorithm(Algorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(ContinuousDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
 
         self.obs_space = observation_space
         self.acs_space = action_space
@@ -179,8 +180,8 @@ class ContinuousDDPGAlgorithm(Algorithm):
             # print("from network action", action)
             return action
 
-    def create_agent(self, id): 
-        new_agent = DDPGAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self):
+        new_agent = DDPGAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         self.agent = new_agent
         return new_agent
 
@@ -193,11 +194,9 @@ class ContinuousDDPGAlgorithm(Algorithm):
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
-                ('Algorithm/Actor_Loss', self.actor_loss),
-                ('Algorithm/Critic_Loss', self.critic_loss),
+                ('Algorithm/Actor_Loss_per_Step', self.actor_loss),
+                ('Algorithm/Critic_Loss_per_Step', self.critic_loss),
             ]
-            # for i, ac in enumerate(self.action):
-                # metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
         else:
             metrics = []
         return metrics

@@ -1,10 +1,10 @@
 import os
 import configparser
 import inspect
-import helpers.dir_handler as dh
-import helpers.file_handler as fh
-import helpers.config_handler as ch
-import helpers.misc as misc
+import shiva.helpers.dir_handler as dh
+import shiva.helpers.file_handler as fh
+import shiva.helpers.config_handler as ch
+import shiva.helpers.misc as misc
 from tensorboardX import SummaryWriter
 
 ###################################################################################
@@ -39,7 +39,10 @@ from tensorboardX import SummaryWriter
 ###################################################################################
 
 class ShivaAdmin():
-    def __init__(self, config):
+    def __init__(self):
+        pass
+
+    def init(self, config):
         '''
             Input
                 @config       Dictionary of the Shiva Admin config
@@ -173,7 +176,9 @@ class ShivaAdmin():
                 @value_x            Usually time
         '''
         if not self.need_to_save: return
+        # print('before writing learner_id {}\tagent_id {}\tscalar {}\tvalue_y {}\tvalue_x {}'.format(learner.id, agent.id, scalar_name, value_y, value_x))
         self.writer[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
+        # print('after writing!')
 
     def save(self, caller) -> None:
         '''
@@ -203,7 +208,7 @@ class ShivaAdmin():
 
             No input because we are only handling only ONE MetaLearner
         '''
-        print("Saving Meta Learner:", self.caller, '@', self._curr_meta_learner_dir)
+        print("Saving Meta Learner @ {}".format(self._curr_meta_learner_dir))
         # create the meta learner configs folder
         dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
         # save each config file
@@ -274,7 +279,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         self._add_agent_profile(learner, agent)
-        agent_path = os.path.join(self._curr_agent_dir[learner.id][agent.id], 'Ep'+str(learner.ep_count))
+        agent_path = os.path.join(self._curr_agent_dir[learner.id][agent.id], 'Ep'+str(learner.env.done_count))
         agent_path = dh.make_dir(agent_path)
         fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
         agent.save(agent_path, learner.env.get_current_step())

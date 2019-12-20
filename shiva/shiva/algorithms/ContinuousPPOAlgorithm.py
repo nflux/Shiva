@@ -1,18 +1,19 @@
 import numpy as np
 import torch
 import torch.functional as F
-import utils.Noise as noise
-from agents.PPOAgent import PPOAgent
-from .Algorithm import Algorithm
 from torch.distributions import Categorical
 import math
 
+from shiva.utils import Noise as noise
+from shiva.agents.PPOAgent import PPOAgent
+from shiva.algorithms.Algorithm import Algorithm
 
 class ContinuousPPOAlgorithm(Algorithm):
     def __init__(self,obs_space, acs_space, action_space_discrete, action_space_continuous, configs):
-
         super(ContinuousPPOAlgorithm, self).__init__(obs_space,acs_space,configs)
-        torch.manual_seed(self.configs[0]['manual_seed'])
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
+
         self.epsilon_clip = configs[0]['epsilon_clip']
         self.gamma = configs[0]['gamma']
         self.gae_lambda = configs[0]['lambda']
