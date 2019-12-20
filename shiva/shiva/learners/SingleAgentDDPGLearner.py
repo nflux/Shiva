@@ -32,32 +32,17 @@ class SingleAgentDDPGLearner(Learner):
         
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
 
-        # TensorBoard Step Metrics
-        # Admin.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
-        # Admin.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
-        # # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        # Admin.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
-
-        # self.totalReward += more_data['raw_reward']
-
-        # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
-        # print('to buffer:', observation, more_data['action'], reward, next_observation, [done])
-
         t = [observation, action, reward, next_observation, int(done)]
         deep = copy.deepcopy(t)
         self.buffer.append(deep)
         
         if self.step_count > self.alg.exploration_steps:# and self.step_count % 16 == 0:
-            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-            # pass
+            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
 
-        # TensorBoard Episodic Metrics
         if done:
-            # Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
             self.alg.ou_noise.reset()
-
-            if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
-                print("Checkpoint!")
+            if self.env.done_count % self.save_checkpoint_episodes == 0:
+                print("%% Saving checkpoint at episode {} %%".format(self.env.done_count))
                 Admin.update_agents_profile(self)
 
         return done
@@ -95,13 +80,13 @@ class SingleAgentDDPGLearner(Learner):
         # Create the agent
         if self.load_agents:
             self.agent = self.load_agent(self.load_agents)
-            # self.buffer = self._load_buffer(self.load_agents)
+            self.buffer = self._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent()
-        # if buffer set to true in config
-        if self.using_buffer:
-            # Basic replay buffer at the moment
-            self.buffer = self.create_buffer()
+            # if buffer set to true in config
+            if self.using_buffer:
+                # Basic replay buffer at the moment
+                self.buffer = self.create_buffer()
 
         print('Launch Successful.')
 

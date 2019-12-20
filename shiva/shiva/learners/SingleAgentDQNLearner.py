@@ -10,7 +10,7 @@ class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentDQNLearner,self).__init__(learner_id, config)
 
-    def run(self):
+    def run(self, train=True):
         self.step_count = 0
         # for self.ep_count in range(self.episodes):
         while not self.env.finished(self.episodes):
@@ -46,10 +46,6 @@ class SingleAgentDQNLearner(Learner):
             self.buffer.append(exp)
         """"""
 
-    def create_environment(self):
-        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs['Environment'])
-
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         try:
@@ -62,12 +58,6 @@ class SingleAgentDQNLearner(Learner):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
         return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
-    def get_agents(self):
-        return self.agent
-
-    def get_algorithm(self):
-        return self.alg
-
     def launch(self):
         self.env = self.create_environment()
 
@@ -78,8 +68,7 @@ class SingleAgentDQNLearner(Learner):
             self.buffer = Admin._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent()
-
-        if self.using_buffer:
-            self.buffer = self.create_buffer()
+            if self.using_buffer:
+                self.buffer = self.create_buffer()
 
         print('Launch Successful.')

@@ -277,7 +277,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         self._add_agent_profile(learner, agent)
-        agent_path = os.path.join(self._curr_agent_dir[learner.id][agent.id], 'Ep'+str(learner.ep_count))
+        agent_path = os.path.join(self._curr_agent_dir[learner.id][agent.id], 'Ep'+str(learner.env.ep_count))
         agent_path = dh.make_dir(agent_path)
         fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
         agent.save(agent_path, learner.env.get_current_step())
