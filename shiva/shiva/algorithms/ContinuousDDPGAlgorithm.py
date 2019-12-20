@@ -190,3 +190,6 @@ class ContinuousDDPGAlgorithm(Algorithm):
 
     def get_critic_loss(self):
         return self.critic_loss
+
+    def __str__(self):
+        return 'ContinuousDDPGAlgorithm'

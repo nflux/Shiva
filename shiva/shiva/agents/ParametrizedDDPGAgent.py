@@ -43,3 +43,6 @@ class ParametrizedDDPGAgent(Agent):
         action = np.clip(action, -1,1)
         # print('actor action shape', action.shape)
         return action[0]
+
+    def __str__(self):
+        return 'ParametrizedDDPGAgent'

@@ -114,3 +114,6 @@ class PPOAlgorithm(Algorithm):
     def create_agent(self):
         self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])
         return self.agent
+
+    def __str__(self):
+        return 'PPOAlgorithm'

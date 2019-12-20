@@ -50,3 +50,6 @@ class DDPGAgent(Agent):
         action = np.clip(action, -1,1)
 
         return action
+
+    def __str__(self):
+        return 'DDPGAgent'

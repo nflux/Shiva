@@ -1,5 +1,5 @@
 from unittest import TestCase
-from unittest.mock import Mock, MagicMock, patch
+# from unittest.mock import Mock, MagicMock, patch
 import numpy as np
 import torch
 from copy import deepcopy
@@ -54,29 +54,35 @@ class test_algorithms(TestCase):
         try:
             self.alg = cls(self.observation_space, self.action_space, [self.config['Algorithm'], self.config['Agent'], self.config['Network']])
         except:
-            # PPO
+            '''
+                PPO exception
+            '''
             self.alg = cls(self.observation_space, self.action_space, None, 1, [self.config['Algorithm'], self.config['Agent'], self.config['Network']])
+        LOGGER.info('\t{} successfully created'.format(self.alg))
 
     def set_agent(self):
         self.agent = self.alg.create_agent()
+        LOGGER.info('\t{} successfully created'.format(self.agent))
 
     def test_algorithms(self):
         for template in self.templates:
             self.config = load_config_file_2_dict(template)
-            LOGGER.info('Algorithm test for {}'.format(self.config['Algorithm']['type']))
+            LOGGER.info('Test for {}'.format(self.config['Algorithm']['type']))
             self.config['Admin']['Save'] = False
             self.set_buffer()
             self.set_algorithm()
             self.set_agent()
-            try:
-                # DQN and DDPG
+
+            if 'PPO' in str(self.alg):
+                self.agent2 = deepcopy(self.agent)
+                self.alg.update(self.agent, self.agent2, self.buffer.full_buffer(), 1000)
+
+            elif 'DDPG' in str(self.alg) or 'DQN' in str(self.alg):
                 self.alg.update(self.agent, self.buffer.sample(), 1000)
-            except:
-                try:
-                    # PPO to fix, put the extra agent on the algorithm
-                    self.agent2 = deepcopy(self.agent)
-                    self.alg.update(self.agent, self.agent2, self.buffer.sample(), 1000)
-                except:
-                    # TD3
-                    self.alg.update(self.agent, self.buffer, 1000)
-            LOGGER.info('\tUpdate() OK')
+
+            elif 'TD3' in str(self.alg):
+                self.alg.update(self.agent, self.buffer, 1000)
+            else:
+                assert False, 'Unknown update() for {} - please implement unittest'.format(self.alg)
+
+            LOGGER.info('\t{}.Update() passed'.format(self.alg))

@@ -52,3 +52,6 @@ class DQNAgent(Agent):
                 best_act_v = act_v
         best_act = best_act_v
         return np.argmax(best_act).numpy()
+
+    def __str__(self):
+        return 'DQNAgent'

@@ -57,3 +57,6 @@ class ImitationAgent(Agent):
             return np.random.choice(network(torch.tensor(observation).float()).detach().numpy())
         else:
             return misc.action2one_hot(self.acs_space,np.argmax(network(torch.tensor(observation).float()).detach()).item())'''
+
+    def __str__(self):
+        return 'ImitationAgent'

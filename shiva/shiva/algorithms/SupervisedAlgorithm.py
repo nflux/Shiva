@@ -99,6 +99,9 @@ class SupervisedAlgorithm(Algorithm):
     def get_loss(self):
         return self.loss
 
+    def __str__(self):
+        return 'SupervisedAlgorithm'
+
 class SupervisedRoboCupAlgorithm(Algorithm):
     def __init__(self,obs_space,acs_space,configs):
         super(SupervisedRoboCupAlgorithm, self).__init__(obs_space, acs_space, configs)
@@ -154,3 +157,6 @@ class SupervisedRoboCupAlgorithm(Algorithm):
 
     def get_loss(self):
         return self.loss
+
+    def __str__(self):
+        return 'SupervisedRobocupAlgorithm'

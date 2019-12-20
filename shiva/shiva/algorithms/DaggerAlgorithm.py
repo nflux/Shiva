@@ -107,6 +107,9 @@ class DaggerAlgorithm(Algorithm):
     def get_loss(self):
         return self.loss
 
+    def __str__(self):
+        return 'DaggerAlgorithm'
+
 class DaggerRoboCupAlgorithm(Algorithm):
     def __init__(self,obs_space,acs_space,configs):
         super(DaggerRoboCupAlgorithm, self).__init__(obs_space, acs_space, configs)
@@ -176,3 +179,6 @@ class DaggerRoboCupAlgorithm(Algorithm):
 
     def get_loss(self):
         return self.loss
+
+    def __str__(self):
+        return 'DaggerRobocupAlgorithm'
