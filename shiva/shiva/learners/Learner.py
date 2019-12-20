@@ -47,7 +47,7 @@ class Learner(object):
 
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs['Environment'])
+        return env_class(self.configs)
 
     def get_agents(self):
         assert 'Not implemented'

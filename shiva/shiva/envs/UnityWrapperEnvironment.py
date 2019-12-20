@@ -3,12 +3,14 @@ import numpy as np
 import time
 
 from mlagents.envs.environment import UnityEnvironment
+from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
+
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
 
 class UnityWrapperEnvironment(Environment):
     def __init__(self, config):
-        assert UnityEnvironment.API_VERSION == 'API-11', 'Shiva only support mlagents api v11'
+        assert UnityEnvironment.API_VERSION == 'API-11' or UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents api v11 or v12'
 
         super(UnityWrapperEnvironment, self).__init__(config)
         self.worker_id = 0
@@ -31,7 +33,14 @@ class UnityWrapperEnvironment(Environment):
 
     def _connect(self):
         self.brain_name = self.env_name
-        self.Unity = UnityEnvironment(file_name=self.exec, worker_id=self.worker_id, no_graphics= not self.render)
+        self.channel = EngineConfigurationChannel()
+        self.Unity = UnityEnvironment(
+            file_name= self.exec,
+            base_port = self.port,
+            seed = self.configs['Algorithm']['manual_seed'],
+            side_channels = [self.channel],
+            no_graphics= not self.render
+        )
         self._reset()
 
     # def _connect(self):
@@ -50,6 +59,7 @@ class UnityWrapperEnvironment(Environment):
     def _reset(self, new_config=None):
         '''
             This only gets called once at connection with Unity server
+            UnityEnvironment v11
         '''
         if new_config is not None:
             self.reset_params = new_config
@@ -59,8 +69,22 @@ class UnityWrapperEnvironment(Environment):
         self.observations = self.BrainInfo.vector_observations
         self.rewards = self.BrainInfo.rewards
         self.dones = self.BrainInfo.local_done
-
         self.reset()
+
+    # def _reset(self, new_config=None):
+    #     '''
+    #         This only gets called once at connection with Unity server
+    #         UnityEnvironment v12.1
+    #     '''
+    #     if new_config is not None:
+    #         self.reset_params = new_config
+    #     self.Unity.reset()
+    #     self.BrainInfo = self.BrainInfoDict[self.brain_name]
+    #     self.BrainParameters = self.Unity.brains[self.brain_name]
+    #     self.observations = self.BrainInfo.vector_observations
+    #     self.rewards = self.BrainInfo.rewards
+    #     self.dones = self.BrainInfo.local_done
+    #     self.reset()
 
     def reset(self):
         '''
