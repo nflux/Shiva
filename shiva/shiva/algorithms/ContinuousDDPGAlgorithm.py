@@ -19,7 +19,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
         self.obs_space = observation_space
         self.acs_space = action_space
         self.scale = 0.9
-        self.ou_noise = noise.OUNoise(action_space, self.scale)
+        self.ou_noise = noise.OUNoise(action_space['discrete']+action_space['param'], self.scale)
         self.actor_loss = 0
         self.critic_loss = 0
 

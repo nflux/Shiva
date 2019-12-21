@@ -5,14 +5,23 @@ from .Environment import Environment
 class GymEnvironment(Environment):
     def __init__(self, configs):
         super(GymEnvironment,self).__init__(configs)
+        # self.env = gym.make(self.env_name).env
         self.env = gym.make(self.env_name)
+        # self.env.max_episode_steps = 1000
+
         self.obs = self.env.reset()
 
         self.done = False
         self.action_space_continuous = None
         self.action_space_discrete = None
         self.observation_space = self.set_observation_space()
-        self.action_space = self.set_action_space()
+        # self.action_space = self.set_action_space()
+
+        if self.action_space == "discrete":
+            self.action_space = {'discrete': self.set_action_space() , 'param': 0}
+        elif self.action_space == "continuous":
+            self.action_space = {'discrete': 0 , 'param': self.set_action_space()}
+
 
         self.steps_per_episode = 0
         self.step_count = 0
@@ -25,9 +34,9 @@ class GymEnvironment(Environment):
 
     def step(self, action):
         self.acs = action
-        print(action)
+        # print(self.action_space_continuous)
         action4Gym = np.argmax(action) if self.action_space_continuous is None else action
-        print(action4Gym)
+        # print(action4Gym)
         self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         self.load_viewer()
         '''
@@ -40,11 +49,28 @@ class GymEnvironment(Environment):
                 Cumulative Reward               self.reward_total
         '''
         self.steps_per_episode += 1
+
+
+
         self.step_count += 1
         self.done_count += 1 if self.done else 0
         # self.reward_per_step = self.reward_per_step
         self.reward_per_episode += self.reward_per_step
         self.reward_total += self.reward_per_step
+
+        # if self.done:
+        #     print(self.steps_per_episode)
+
+
+        '''
+            You can specify the max steps in the gym environment by changing the max_steps
+            config in your .ini file.
+        '''
+
+        # if self.steps_per_episode % self.max_steps == 0 or (self.done and self.steps_per_episode % 200 != 0):
+        #     self.done = True
+        # else:
+        #     self.done = False
 
         if self.normalize:
             return self.obs, self.normalize_reward(self.reward_per_step), self.done, {'raw_reward': self.reward_per_step, 'action': action}

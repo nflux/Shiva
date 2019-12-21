@@ -49,13 +49,14 @@ class SingleAgentDDPGLearner(Learner):
         deep = copy.deepcopy(t)
         self.buffer.append(deep)
         
-        if self.step_count > self.alg.exploration_steps and self.step_count % 16 == 0:
+        if self.step_count > self.alg.exploration_steps: #and self.step_count % 16 == 0:
             self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
             # pass
 
         # TensorBoard Episodic Metrics
         if done:
             shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
+            print("Episode {} complete. Total Reward: {}".format(self.ep_count, self.totalReward))
             self.alg.ou_noise.reset()
 
             if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:

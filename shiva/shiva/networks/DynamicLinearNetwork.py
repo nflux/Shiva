@@ -52,7 +52,7 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
                         )
-    def forward(self, x, gumbel=False):    
+    def forward(self, x, gumbel=False):
         a = self.net(x)
         if gumbel:
             # print("Network Output (before gumbel):", x, a)

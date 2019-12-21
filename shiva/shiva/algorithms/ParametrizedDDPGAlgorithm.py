@@ -18,10 +18,11 @@ class ParametrizedDDPGAlgorithm(Algorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(ParametrizedDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
-        self.scale = 0.9
-        self.ou_noise = noise.OUNoise(action_space['discrete']+action_space['param'], self.scale)
+        self.ou_noise = noise.OUNoise(action_space['discrete']+action_space['param'], self.exploration_noise)
         self.actor_loss = 0
         self.critic_loss = 0
+        self.discrete = action_space['discrete']
+        self.param = action_space['param']
 
 
     def update(self, agent, minibatch, step_count):
@@ -39,7 +40,7 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
         dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
-        print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
+        # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
         '''
             Training the Critic
         '''
@@ -48,21 +49,65 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         agent.critic_optimizer.zero_grad()
         # The actions that target actor would do in the next state.
         next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
-        # Grab the discrete actions in the batch
-        disc = next_state_actions_target[:,:,:3].squeeze(dim=1)
-        # generate a list of one hot encodings of the argmax of each discrete action tensors
-        one_hot_encoded_discrete_actions = one_hot_from_logits(disc).unsqueeze(dim=1)
-        # concat the discrete and parameterized actions back together
-        next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,3:]], dim=2).to(self.device)
+
+
+        if self.discrete > 0:
+
+            # Grab the discrete actions in the batch
+            if len(next_state_actions_target.shape) == 3:
+                discrete_actions = next_state_actions_target[:,:,:self.discrete].squeeze(dim=1)
+            elif len(next_state_actions_target.shape) == 2:
+                discrete_actions = next_state_actions_target[:,:self.discrete].squeeze(dim=0)
+                # print("discrete action shape",discrete_actions.shape())
+            else:
+                discrete_actions = next_state_actions_target[:self.discrete]
+
+            # # generate a list of one hot encodings of the argmax of each discrete action tensors
+            # one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions).unsqueeze(dim=1)
+
+            # Grab the discrete actions in the batch
+            if len(next_state_actions_target.shape) == 3:
+                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions).unsqueeze(dim=1)
+            elif len(next_state_actions_target.shape) == 2:
+                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
+                # print("one hot encoded actions shape:",one_hot_encoded_discrete_actions.shape())
+            else:
+                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
+            # concat the discrete and parameterized actions back together
+
+            if len(next_state_actions_target.shape) == 3:
+                next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,self.discrete:]], dim=2).to(self.device)
+            elif len(next_state_actions_target.shape) == 2:
+                next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,self.discrete:]], dim=1).to(self.device)
+            else:
+                next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[self.discrete:]], dim=0).to(self.device)
+       
         # print(next_state_actions_target.shape, '\n')
         # The Q-value the target critic estimates for taking those actions in the next state.
-        Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )
+
+        # Grab the discrete actions in the batch
+        if len(next_state_actions_target.shape) == 3:
+            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )
+        elif len(next_state_actions_target.shape) == 2:
+            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 1) )
+        else:
+            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
+
+
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones_mask] = 0.0
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
         # Get Q values of the batch from states and actions.
-        Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 2) )
+
+        # Grab the discrete actions in the batch
+        if len(next_state_actions_target.shape) == 3:
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 2) )
+        elif len(next_state_actions_target.shape) == 2:
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float().squeeze(dim=1)], 1) )
+        else:
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 0) )
+
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
         # Backward propogation!
@@ -79,9 +124,19 @@ class ParametrizedDDPGAlgorithm(Algorithm):
         # Zero the gradient
         agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
-        current_state_actor_actions = agent.actor(states.float(), gumbel=True)
-        # Calculate Q value for taking those actions in those states
-        actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
+        if self.discrete > 0:
+            # Grab the discrete actions in the 
+            current_state_actor_actions = agent.actor(states.float(), gumbel=True)
+        else:
+            current_state_actor_actions = agent.actor(states.float())
+
+        # Calculate Q value for taking those actions in those states'
+        if len(next_state_actions_target.shape) == 3:
+            actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
+        elif len(next_state_actions_target.shape) == 2:
+            actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 1) )
+        else:
+            actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 0) )
         # might not be perfect, needs to be tested more; is not appropriate with one hot encodings?
         # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using log probabilities
         # penalty for going beyond the bounded interval
@@ -133,17 +188,17 @@ class ParametrizedDDPGAlgorithm(Algorithm):
     def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
         # print('get action')
         if step_count < self.exploration_steps:
-
-            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space['discrete']+self.acs_space['param'])])
+            self.ou_noise.set_scale(self.exploration_noise)
+            action = np.array([np.random.uniform(0,1) for _ in range(self.discrete+self.param)])
             action += self.ou_noise.noise()
-            action = np.concatenate([ np_softmax(action[:self.acs_space['discrete']]), action[self.acs_space['discrete']:] ])
+            action = np.concatenate([ np_softmax(action[:self.discrete]), action[self.discrete:] ])
             action = np.clip(action, -1, 1)
             # print('random action shape', action[:self.acs_space['discrete']].sum(), action.shape)
             return action
 
         else:
 
-            self.ou_noise.set_scale(0.1)
+            self.ou_noise.set_scale(self.training_noise)
             observation = torch.tensor([observation]).to(self.device)
             action = agent.get_action(observation.float()).cpu().data.numpy()
 
@@ -157,13 +212,20 @@ class ParametrizedDDPGAlgorithm(Algorithm):
             # action += self.ou_noise.noise()
             # action = np.clip(action, -1,1)
             # print('actor action shape', action.shape)
-        
-            return action[0, 0] # timestamp 0, agent 0
+
+            size = len(action.shape)
+            if size == 3:
+                return action[0, 0]
+            elif size == 2:
+                return action[0]
+            else:    
+                return action
 
     def create_agent(self, id):
         # print(self.obs_space)
         # input()
-        self.agent = ParametrizedDDPGAgent(id, self.obs_space, self.acs_space['discrete']+self.acs_space['param'], self.acs_space['discrete'], self.configs[1], self.configs[2])
+        # print(self.acs_space['discrete'],self.acs_space['param'])
+        self.agent = ParametrizedDDPGAgent(id, self.obs_space, self.discrete+self.param, self.discrete, self.configs[1], self.configs[2])
         return self.agent
 
     def get_actor_loss(self):

@@ -68,7 +68,7 @@ class PPOAlgorithm(Algorithm):
                 advantages.insert(0,gae)
             #Format discounted rewards and advantages for torch use
             new_rewards = torch.tensor(new_rewards).float().to(self.device)
-            advantages = torch.tensor(advantages).float()
+            advantages = torch.tensor(advantages).float().to(self.device)
             advantages = (advantages - torch.mean(advantages)) / torch.std(advantages)
 
             agent.optimizer.zero_grad()

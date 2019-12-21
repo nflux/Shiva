@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import utils.Noise as noise
+from helpers.misc import action2one_hot, one_hot_from_logits
+from helpers.calc_helper import np_softmax
 from agents.DDPGAgent import DDPGAgent
 from .Algorithm import Algorithm
 from random import randint
@@ -15,7 +17,8 @@ class DiscreteDDPGAlgorithm(Algorithm):
         super(DiscreteDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
 
         self.scale = 0.9
-        self.ou_noise = noise.OUNoise(action_space, self.scale)
+        # self.ou_noise = noise.OUNoise(action_space, self.scale)
+        self.ou_noise = noise.OUNoise(action_space['discrete']+action_space['param'], self.scale)
         self.actor_loss = 0
         self.critic_loss = 0
         self.acs_space = action_space
@@ -46,8 +49,10 @@ class DiscreteDDPGAlgorithm(Algorithm):
         agent.critic_optimizer.zero_grad()
         # The actions that target actor would do in the next state.
         next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
+        # print(next_state_actions_target)
+        one_hot_encoded_actions = one_hot_from_logits(next_state_actions_target)
         # The Q-value the target critic estimates for taking those actions in the next state.
-        Q_next_states_target = agent.target_critic(next_states.float(), next_state_actions_target.float())
+        Q_next_states_target = agent.target_critic(next_states.float(), one_hot_encoded_actions.float())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones_mask] = 0.0
         # Use the Bellman equation.
@@ -119,17 +124,27 @@ class DiscreteDDPGAlgorithm(Algorithm):
 
         return agent
 
+    # def get_metrics(self, episodic=False):
+    #     if not episodic:
+    #         metrics = [
+    #             ('Algorithm/Loss_per_Step', self.loss),
+    #             ('Algorithm/Policy_Loss_per_Step', self.policy_loss),
+    #             ('Algorithm/Value_Loss_per_Step', self.value_loss),
+    #             ('Algorithm/Entropy_Loss_per_Step', self.entropy_loss),
+    #         ]
+    #     else:
+    #         metrics = []
+    #     return metrics
+
     # Gets actions with a linearly decreasing e greedy strat
     def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
 
         if step_count < self.exploration_steps:
-
-            index = randint(0,self.acs_space-1)
-            action = [0]*self.acs_space
-            action[index] = 1
-            action = np.array(action, dtype=np.float64)
-            # action += self.ou_noise.noise()
-            # action = np.clip(action, -1, 1)
+            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+            action += self.ou_noise.noise()
+            action = np_softmax(action)
+            action = np.clip(action, -1, 1)            
+            action = action2one_hot(self.acs_space, np.argmax(action), True)            
             return action
 
         else:
@@ -137,13 +152,16 @@ class DiscreteDDPGAlgorithm(Algorithm):
             self.ou_noise.set_scale(0.8)
             observation = torch.tensor(observation).to(self.device)
             action = agent.actor(observation.float()).cpu().data.numpy()
+            action += self.ou_noise.noise()
+            action = np.clip(action, -1,1)
+            action = action2one_hot(self.acs_space, np.argmax(action), True)
+
             # useful for debugging
             # maybe should change the print to a log
             if step_count % 100 == 0:
                 # print(action)
                 pass
-            action += self.ou_noise.noise()
-            action = np.clip(action, -1,1)
+
 
             return action
 
