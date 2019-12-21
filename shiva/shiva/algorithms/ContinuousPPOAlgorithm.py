@@ -45,33 +45,38 @@ class ContinuousPPOAlgorithm(Algorithm):
         values = agent.critic(agent.policy_base(states.float()))
         next_values = agent.critic(agent.policy_base(states.float())).to(self.device)
 
+
+        #Calculate Discounted Rewards and Advantages using the General Advantage Equation
+        new_rewards = []
+        advantage = []
+        delta= 0
+        gae = 0
+        for i in reversed(range(len(rewards))):
+            if done_masks[i]:
+                delta = rewards[i]-values[i]
+                gae = delta
+            else:
+                delta = rewards[i] + self.gamma * next_values[i]  - values[i]
+                gae = delta + self.gamma * self.gae_lambda * gae
+            new_rewards.insert(0,gae+values[i])
+            advantage.insert(0,gae)
+        #Format discounted rewards and advantages for torch use
+        new_rewards = torch.tensor(new_rewards).float().to(self.device)
+        advantage = torch.tensor(advantage).float()
+        #Normalize the advantages
+        advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
+
+        mu_old = old_agent.mu(old_agent.policy_base(states.float()))
+        var_old = old_agent.var(old_agent.policy_base(states.float()))
+        old_log_probs = self.log_probs(mu_old,var_old,actions).float().detach()
+
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
-            #Calculate Discounted Rewards and Advantages using the General Advantage Equation
-            new_rewards = []
-            advantage = []
-            delta= 0
-            gae = 0
-            for i in reversed(range(len(rewards))):
-                if done_masks[i]:
-                    delta = rewards[i]-values[i]
-                    gae = delta
-                else:
-                    delta = rewards[i] + self.gamma * next_values[i]  - values[i]
-                    gae = delta + self.gamma * self.gae_lambda * gae
-                new_rewards.insert(0,gae+values[i])
-                advantage.insert(0,gae)
-            #Format discounted rewards and advantages for torch use
-            new_rewards = torch.tensor(new_rewards).float().to(self.device)
-            advantage = torch.tensor(advantage).float()
-            #Normalize the advantages
-            advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
+
             agent.optimizer.zero_grad()
             mu_new = agent.mu(agent.policy_base(states.float()))
             var_new = agent.var(agent.policy_base(states.float()))
-            mu_old = old_agent.mu(old_agent.policy_base(states.float()))
-            var_old = old_agent.var(old_agent.policy_base(states.float()))
-            old_log_probs = self.log_probs(mu_old,var_old,actions).float().detach()
+
             new_log_probs = self.log_probs(mu_new,var_new,actions).float()
             ratios = torch.exp(new_log_probs - old_log_probs)
             surr1 = ratios * advantage
