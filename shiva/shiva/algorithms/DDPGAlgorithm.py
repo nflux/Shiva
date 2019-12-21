@@ -10,20 +10,19 @@ from __main__ import shiva
 from helpers.misc import one_hot_from_logits
 
 
-class ParametrizedDDPGAlgorithm(Algorithm):
+class DDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(ParametrizedDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
-        self.ou_noise = noise.OUNoise(action_space['discrete']+action_space['param'], self.exploration_noise)
+        super(DDPGAlgorithm, self).__init__(observation_space, action_space, configs)
         self.actor_loss = 0
         self.critic_loss = 0
         self.discrete = action_space['discrete']
         self.param = action_space['param']
-
+        self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
 
     def update(self, agent, minibatch, step_count):
 

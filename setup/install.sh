@@ -4,20 +4,8 @@
 ​
 ## Setup on Ubuntu 16.04
 
-## Installing python and venv, and creating a virtual environment
-
-# Installs python 3
-sudo apt install python3-pip
-# Installs venv
-sudo apt-get install python3-venv
-cd ../..
-# creates a virtual environment just for shiva
-python3 -m venv Shiva
-# activates the virtual environment
-source shiva/bin/activate
 # ​Go to robocup folder
-
-cd Control-Tasks/shiva/shiva/envs/robocup/
+cd ../shiva/shiva/envs/robocup/
 
 install git
 sudo apt-get install git

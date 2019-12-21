@@ -18,6 +18,7 @@ class UnityLearner(Learner):
             self.exploration_mode = self.step_count < self.alg.exploration_steps
             self.step()
             self.step_count += 1
+            self.env.reset()
         self.env.close()
 
     def step(self):
