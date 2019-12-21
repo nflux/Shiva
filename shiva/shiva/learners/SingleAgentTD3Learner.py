@@ -1,20 +1,15 @@
-from __main__ import shiva
-from .Learner import Learner
-import helpers.misc as misc
-# import torch.multiprocessing as mp
 import torch
-import envs
-import algorithms
-import buffers
 import copy
 import random
 import numpy as np
 
+from shiva.core.admin import Admin
+from shiva.learners.Learner import Learner
+from shiva.helpers.config_handler import load_class
+
 class SingleAgentTD3Learner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentTD3Learner ,self).__init__(learner_id, config)
-        np.random.seed(self.configs['Algorithm']['manual_seed'])
-        torch.manual_seed(self.configs['Algorithm']['manual_seed'])
 
     def run(self):
         while not self.env.finished(self.episodes):
@@ -22,7 +17,8 @@ class SingleAgentTD3Learner(Learner):
             while not self.env.is_done():
                 self.step()
                 self.alg.update(self.agent, self.buffer, self.env.step_count)
-                self.collect_metrics(episodic=False)
+                self.collect_metrics()
+            # self.alg.update(self.agent, self.buffer, self.env.step_count)
             self.collect_metrics(episodic=True)
             print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))
         self.env.close()
@@ -49,17 +45,16 @@ class SingleAgentTD3Learner(Learner):
         """"""
 
     def create_environment(self):
-        # create the environment and get the action and observation spaces
-        environment = getattr(envs, self.configs['Environment']['type'])
-        return environment(self.configs['Environment'])
+        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        return env_class(self.configs['Environment'])
 
     def create_algorithm(self):
-        algorithm = getattr(algorithms, self.configs['Algorithm']['type'])
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
-        buffer = getattr(buffers,self.configs['Buffer']['type'])
-        return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
         return self.agent
@@ -86,4 +81,4 @@ class SingleAgentTD3Learner(Learner):
         pass
 
     def load_agent(self, path):
-        return shiva._load_agent(path)
+        return Admin._load_agent(path)

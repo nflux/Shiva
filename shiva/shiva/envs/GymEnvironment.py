@@ -1,6 +1,6 @@
 import gym
 import numpy as np
-from .Environment import Environment
+from shiva.envs.Environment import Environment
 
 class GymEnvironment(Environment):
     def __init__(self, configs):

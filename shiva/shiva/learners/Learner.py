@@ -1,4 +1,5 @@
-from __main__ import shiva
+from shiva.core.admin import Admin
+from shiva.helpers.config_handler import load_class
 
 class Learner(object):
     
@@ -26,33 +27,39 @@ class Learner(object):
             metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
             if not episodic:
                 for metric_name, y_val in metrics:
-                    shiva.add_summary_writer(self, self.agent, metric_name, y_val, self.env.step_count)
+                    Admin.add_summary_writer(self, self.agent, metric_name, y_val, self.env.step_count)
             else:
                 for metric_name, y_val in metrics:
-                    shiva.add_summary_writer(self, self.agent, metric_name, y_val, self.env.done_count)
+                    Admin.add_summary_writer(self, self.agent, metric_name, y_val, self.env.done_count)
         else:
             assert False, "The Learner attribute 'agent' was not found. Either name the attribute 'agent' or could be that MultiAgent Metrics are not yet supported."
     
     def update(self):
+        assert 'Not implemented'
         pass
 
     def step(self):
+        assert 'Not implemented'
         pass
 
-    def create_env(self, alg):
-        pass
+    def create_environment(self):
+        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        return env_class(self.configs['Environment'])
 
     def get_agents(self):
+        assert 'Not implemented'
         pass
 
     def get_algorithm(self):
+        assert 'Not implemented'
         pass
 
     def launch(self):
+        assert 'Not implemented'
         pass
 
     def save(self):
-        shiva.save(self)
+        Admin.save(self)
 
     def load(self, attrs):
         for key in attrs:

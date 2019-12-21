@@ -1,19 +1,12 @@
-# this is a version of a meta learner that will take a file path to the configuration files
-from __main__ import shiva
-from .MetaLearner import MetaLearner
-from learners.SingleAgentDQNLearner import SingleAgentDQNLearner
-from eval_envs.GymDiscreteEvaluation import GymDiscreteEvaluation
-from learners.SingleAgentDDPGLearner import SingleAgentDDPGLearner
-from learners.SingleAgentImitationLearner import SingleAgentImitationLearner
-import helpers.misc as misc
-import learners
-import eval_envs
 import torch
 import random
 from scipy import stats
 import copy
 import numpy as np
 
+from shiva.core.admin import Admin
+from shiva.metalearners.MetaLearner import MetaLearner
+from shiva.helpers.config_handler import load_class
 
 class MultipleAgentMetaLearner(MetaLearner):
     def __init__(self, configs):
@@ -30,11 +23,11 @@ class MultipleAgentMetaLearner(MetaLearner):
         self.run()
 
     def run(self):
-        eval_env = getattr(eval_envs, self.configs['Evaluation']["type"])
+        eval_env = load_class('shiva.eval_envs', self.configs['Evaluation']["type"])
         if self.start_mode == self.EVAL_MODE:
             # self.eval_envs = []
             # Load Learners to be passed to the Evaluation
-            self.learners = [ shiva._load_learner(load_path) for load_path in self.configs['Evaluation']['load_path'] ]
+            self.learners = [ Admin._load_learner(load_path) for load_path in self.configs['Evaluation']['load_path'] ]
 
             #assigning a new attribute in Evaluation called learners.
             # self.configs['Evaluation']['learners'] = self.learners
@@ -95,8 +88,8 @@ class MultipleAgentMetaLearner(MetaLearner):
 
 
     def create_learner(self):
-        learner = getattr(learners, self.configs['Learner']['type'])
-        return learner(self.get_id(), self.configs)
+        learner_class = load_class('shiva.learners', self.configs['Learner']['type'])
+        return learner_class(self.get_id(), self.configs)
 
     '''#threading learners
     def multiprocessing_learners(self):

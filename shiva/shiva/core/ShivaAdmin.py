@@ -1,10 +1,10 @@
 import os
 import configparser
 import inspect
-import helpers.dir_handler as dh
-import helpers.file_handler as fh
-import helpers.config_handler as ch
-import helpers.misc as misc
+import shiva.helpers.dir_handler as dh
+import shiva.helpers.file_handler as fh
+import shiva.helpers.config_handler as ch
+import shiva.helpers.misc as misc
 from tensorboardX import SummaryWriter
 
 ###################################################################################
@@ -39,7 +39,10 @@ from tensorboardX import SummaryWriter
 ###################################################################################
 
 class ShivaAdmin():
-    def __init__(self, config):
+    def __init__(self):
+        pass
+
+    def init(self, config):
         '''
             Input
                 @config       Dictionary of the Shiva Admin config

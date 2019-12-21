@@ -1,11 +1,10 @@
 import numpy as np
 import torch
-torch.manual_seed(5)
-np.random.seed(5)
-import utils.Noise as noise
-from agents.DDPGAgent import DDPGAgent
-from .Algorithm import Algorithm
 import time
+
+from shiva.utils import Noise as noise
+from shiva.agents.DDPGAgent import DDPGAgent
+from shiva.algorithms.Algorithm import Algorithm
 
 class ContinuousDDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
@@ -15,6 +14,8 @@ class ContinuousDDPGAlgorithm(Algorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(ContinuousDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
 
         self.obs_space = observation_space
         self.acs_space = action_space

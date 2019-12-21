@@ -1,5 +1,5 @@
-import configparser, ast
-import os
+import configparser, ast, os
+from importlib import import_module
 
 def parse_configs(url: str) -> list:
     '''
@@ -14,6 +14,12 @@ def parse_configs(url: str) -> list:
             for subf in os.listdir(os.path.join(url, f)):
                 _return.append(load_config_file_2_dict(subf))
     return _return
+
+def load_class(module_path, class_name) -> object:
+    module_name = module_path + '.' + class_name
+    module = import_module(module_name)
+    cls = getattr(module, class_name)
+    return cls
 
 def load_config_file_2_dict(_FILENAME: str) -> dict:
     '''

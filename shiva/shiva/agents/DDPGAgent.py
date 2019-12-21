@@ -1,10 +1,11 @@
-from .Agent import Agent
-import networks.DDPGActor as actor
-import networks.DDPGCritic as critic
 import copy
 import torch
 import numpy as np
-import helpers.misc as misc
+
+from shiva.agents.Agent import Agent
+from shiva.networks.DDPGActor import DDPGActor
+from shiva.networks.DDPGCritic import DDPGCritic
+from shiva.helpers import misc
 
 from networks.DynamicLinearNetwork import SoftMaxHeadDynamicLinearNetwork
 
@@ -26,7 +27,7 @@ class DDPGAgent(Agent):
 
         self.target_actor = copy.deepcopy(self.actor)
 
-        self.critic = critic.DDPGCritic(obs_dim,
+        self.critic = DDPGCritic(obs_dim,
                                         action_dim,
                                         networks['critic_head'],
                                         networks['critic_tail'])

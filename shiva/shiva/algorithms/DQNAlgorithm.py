@@ -1,10 +1,10 @@
 import numpy as np
 import torch
 import random
-from agents.DQNAgent import DQNAgent
-import helpers.misc as misc
-from .Algorithm import Algorithm
-from __main__ import shiva
+
+from shiva.algorithms.Algorithm import Algorithm
+from shiva.agents.DQNAgent import DQNAgent
+from shiva.helpers.misc import action2one_hot
 
 class DQNAlgorithm(Algorithm):
     def __init__(self, obs_space, acs_space, configs):
@@ -15,6 +15,7 @@ class DQNAlgorithm(Algorithm):
         '''
         super(DQNAlgorithm, self).__init__(obs_space, acs_space, configs)
         torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
         self.acs_space = acs_space
         self.obs_space = obs_space
         self.loss = 0
@@ -86,12 +87,12 @@ class DQNAlgorithm(Algorithm):
         '''
         if step_n < self.exploration_steps:
             action_idx = random.sample(range(self.acs_space), 1)[0]
-            action = misc.action2one_hot(self.acs_space, action_idx, numpy=False)
+            action = action2one_hot(self.acs_space, action_idx, numpy=False)
         elif random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
             # this might not be correct implementation of e greedy
             # print('greedy')
             action_idx = random.sample(range(self.acs_space), 1)[0]
-            action = misc.action2one_hot(self.acs_space, action_idx)
+            action = action2one_hot(self.acs_space, action_idx)
         else:
             # Iterate over all the actions to find the highest Q value
             action = agent.get_action(observation)

@@ -1,11 +1,10 @@
 import numpy as np
 import torch
-import utils.Noise as noise
-from helpers.misc import action2one_hot, one_hot_from_logits
-from helpers.calc_helper import np_softmax
-from agents.DDPGAgent import DDPGAgent
-from .Algorithm import Algorithm
 from random import randint
+
+from shiva.utils import Noise as noise
+from shiva.agents.DDPGAgent import DDPGAgent
+from shiva.algorithms.Algorithm import Algorithm
 
 class DiscreteDDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
@@ -15,7 +14,8 @@ class DiscreteDDPGAlgorithm(Algorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(DiscreteDDPGAlgorithm, self).__init__(observation_space, action_space, configs)
-
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
         self.scale = 0.9
         # self.ou_noise = noise.OUNoise(action_space, self.scale)
         self.ou_noise = noise.OUNoise(action_space['discrete']+action_space['param'], self.scale)

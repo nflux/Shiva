@@ -1,9 +1,10 @@
-from .Agent import Agent
-import networks.DynamicLinearNetwork as DLN
+import numpy as np
 import copy
 import torch.optim
-import numpy as np
-import helpers.misc as misc
+
+from shiva.agents.Agent import Agent
+from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork as DLN
+from shiva.helpers import misc
 
 class ImitationAgent(Agent):
     def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config,net_config):
