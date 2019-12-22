@@ -2,12 +2,21 @@ from .Agent import Agent
 from .Agent import Agent
 import networks.DynamicLinearNetwork as DLN
 from torch.distributions import Categorical
+from torch.distributions.normal import Normal
 from torch.nn import functional as F
 import utils.Noise as noise
 import copy
 import torch
+import torch.nn as nn
 import numpy as np
 import helpers.misc as misc
+
+def init_layer(layer):
+    weights = layer.weight.data
+    weights.normal_(0,1)
+    weights *= 1.0 / torch.sqrt(weights.pow(2).sum(1,keepdim=True))
+    nn.init.constant_(layer.bias.data,0)
+    return layer
 
 class PPOAgent(Agent):
     def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config, net_config):
@@ -40,15 +49,17 @@ class PPOAgent(Agent):
             self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
 
         elif self.action_space == 'Continuous':
+                self.std = net_config['std']
                 self.policy_base = torch.nn.Sequential(
-                    torch.nn.Linear(self.network_input, net_config['policy_base_output']),
+                    init_layer(torch.nn.Linear(self.network_input, net_config['policy_base_output'])),
                     torch.nn.ReLU()
                 ).to(self.device)
                 self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
                 self.actor = self.mu
                 self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'], self.network_output, net_config['var'])
+                #self.var = torch.full((self.network_output,),self.std**2,requires_grad=True).to(self.device)
                 self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'], 1, net_config['critic'])
-                params = list(self.policy_base.parameters()) + list(self.mu.parameters()) + list(self.var.parameters()) + list(self.critic.parameters())
+                params = list(self.policy_base.parameters()) + list(self.mu.parameters())  + list(self.critic.parameters())#+ list(self.var.parameters())
                 self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
 
 
@@ -68,14 +79,27 @@ class PPOAgent(Agent):
         action = misc.action2one_hot(self.acs_discrete, action.item())
         return action.tolist()
 
+    '''def get_continuous_action(self,observation):
+        observation = torch.tensor(observation).float().detach().to(self.device)
+        base_output = self.policy_base(observation)
+        mu = self.mu(base_output).detach().cpu()
+        cov_mat = torch.diag(self.var)
+        dist = MultivariateNormal(mu,cov_mat)
+        action = dist.sample()
+        self.ou_noise.set_scale(0.8)
+        action += torch.tensor(self.ou_noise.noise()).float()
+        action = torch.clamp(action,-1,1)
+        return action.tolist()'''
+
     def get_continuous_action(self,observation):
         observation = torch.tensor(observation).float().detach().to(self.device)
         base_output = self.policy_base(observation)
-        mu = self.mu(base_output).detach().cpu().numpy()
-        sigma = torch.sqrt(self.var(base_output)).detach().cpu().numpy()
-        actions = np.random.normal(mu,sigma)
+        mu = self.mu(base_output).to(self.device)
+        sigma = torch.sqrt(self.var(base_output)).to(self.device)
+        #actions = np.random.normal(mu,sigma)
+        actions = Normal(mu,sigma).sample()
         self.ou_noise.set_scale(0.8)
-        actions += self.ou_noise.noise()
+        actions +=torch.tensor(self.ou_noise.noise()).float()
         actions = np.clip(actions,-1,1)
         return actions.tolist()
 

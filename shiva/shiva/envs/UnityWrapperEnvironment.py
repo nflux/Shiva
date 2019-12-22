@@ -13,18 +13,18 @@ class UnityWrapperEnvironment(Environment):
 
         self.action_space = self.BrainParameters.vector_action_space_size[0]
         self.observation_space = self.BrainParameters.vector_observation_space_size * self.BrainParameters.num_stacked_vector_observations
-        
+
         self.action_space_discrete = self.action_space if self.BrainParameters.vector_action_space_type == 'discrete' else None
         self.action_space_continuous = self.action_space if self.BrainParameters.vector_action_space_type == 'continuous' else None
-
-        self.num_instances = len(self.BrainInfo.agents)
         
+        self.num_instances = len(self.BrainInfo.agents)
+
         self.rewards = np.array(self.BrainInfo.rewards)
         self.reward_total = 0
         self.dones = np.array(self.BrainInfo.local_done)
         self.done_count = 0
         self.temp_done_counter = 0 # since we have @self.num_instances, a partial done will be when all instances finished at least once
-        
+
         self.step_count = 0
         self.load_viewer()
 
@@ -61,6 +61,7 @@ class UnityWrapperEnvironment(Environment):
             It's just to reinitialize the temporary done counter
         '''
         self.temp_done_counter = 0
+        self.reward_episodic = 0
 
     def get_random_action(self):
         return np.array([np.random.uniform(-1, 1, size=self.action_space) for _ in range(self.num_instances)])
@@ -77,16 +78,17 @@ class UnityWrapperEnvironment(Environment):
         self.observations = np.array(self.BrainInfo.vector_observations)
         self.rewards = np.array(self.BrainInfo.rewards)
         self.dones = np.array(self.BrainInfo.local_done)
-        
+
         self.step_count += 1 # this are Shiva steps
         self.done_count += sum([ 1 if val else 0 for val in self.dones ])
         self.temp_done_counter += self.done_count
         self.reward_total += sum(self.rewards) / self.num_instances
+        self.reward_episodic += sum(self.rewards)
 
         # self.debug()
         return self.observations, self.rewards, self.dones, {}
 
-    def get_metrics(self, episodic=False):
+    def get_metrics(self, episodic=True):
         if not episodic:
             metrics = [('Raw_Reward_per_Step', sum(self.rewards)/self.num_instances)]
         else:
@@ -115,6 +117,9 @@ class UnityWrapperEnvironment(Environment):
 
     def get_reward(self):
         return sum(self.rewards)/self.num_instances
+
+    def get_reward_episode(self):
+        return self.reward_episodic
 
     def load_viewer(self):
         pass

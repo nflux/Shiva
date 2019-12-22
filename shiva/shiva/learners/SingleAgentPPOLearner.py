@@ -12,6 +12,7 @@ import numpy as np
 class SingleAgentPPOLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentPPOLearner,self).__init__(learner_id, config)
+        self.queues = [mp.Queue(1000)] * 12
 
     def run(self):
         self.step_count = 0
@@ -40,13 +41,24 @@ class SingleAgentPPOLearner(Learner):
         observation = self.env.get_observation()
 
         """Temporary fix for Unity as it receives multiple observations"""
-        if len(observation.shape) > 1:
+        '''if len(observation.shape) > 1:
             action = [self.old_agent.get_action(obs) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
                 exp = [obs, act, rew, next_obs, int(don)]
-                self.buffer.append(exp)
+                self.buffer.append(exp)'''
+        if len(observation.shape) > 1:
+            action = [self.old_agent.get_action(obs) for obs in observation]
+            next_observation, reward, done, more_data = self.env.step(action)
+            for i in range(len(action)):
+                z = copy.deepcopy(zip([observation[i]], [action[i]], [reward[i]], [next_observation[i]], [done[i]]))
+                for obs, act, rew, next_obs, don in z:
+                    exp = [obs, act, rew, next_obs, int(don)]
+                    self.queues[i].put(exp)
+                    if don == True:
+                        while not self.queues[i].empty():
+                            self.buffer.append(self.queues[i].get())
         else:
             action = self.old_agent.get_action(observation)
             next_observation, reward, done, more_data = self.env.step(action)
