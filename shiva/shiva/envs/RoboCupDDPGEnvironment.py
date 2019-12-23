@@ -17,13 +17,15 @@ class RoboCupDDPGEnvironment(Environment):
         self.left_actions = self.env.left_actions
         self.left_params = self.env.left_action_params
 
+        # print("this many actions",self.left_actions)
+
         self.obs = self.env.left_obs
         self.rews = self.env.left_rewards
         self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
         self.action_space = {'discrete': self.env.acs_dim, 'param': self.env.acs_param_dim}
         self.step_count = 0
-        self.render = self.env.config['env_render']
+        self.render = self.env.env_render
         self.done = self.env.d
 
         self.load_viewer()
@@ -57,11 +59,24 @@ class RoboCupDDPGEnvironment(Environment):
         elif discrete_select == 'sample':
             act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
         self.left_actions = torch.tensor([act_choice]).float()
-
+        # print(self.action_space['discrete'])
         params = actions[self.action_space['discrete']:]
+        # print(params)
         self.left_params = torch.tensor([params]).float()
-        
-        self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
+
+        # I think that i might have to make so that it only gets
+        if self.discretized:
+
+            if 0 <= self.left_actions <= 188:
+                self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[0], left_params=self.left_actions)
+            elif 189 <= self.left_actions <= 197:
+                self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[1], left_params=self.left_actions)
+            else:
+                self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[2], left_params=self.left_actions)
+
+        else:
+            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
+            
         actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
         
         # print('\nreward:', self.rews, '\n')

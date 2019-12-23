@@ -3,7 +3,7 @@ import torch
 import random
 
 from shiva.agents.ImitationAgent import ImitationAgent
-from shiva.agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
+from shiva.agents.DDPGAgent import DDPGAgent
 from shiva.algorithms.Algorithm import Algorithm
 
 class SupervisedAlgorithm(Algorithm):

@@ -43,17 +43,17 @@ class SingleAgentDDPGLearner(Learner):
         # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
         # print('to buffer:', observation, more_data['action'], reward, next_observation, [done])
 
-        t = [observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)]
-        deep = copy.deepcopy(t)
-        self.buffer.append(deep)
+        experience = [observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)]
+        experience = copy.deepcopy(experience)
+        self.buffer.append(experience)
         
         if self.step_count > self.alg.exploration_steps: #and self.step_count % 16 == 0:
-            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.step_count)
+            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
             # pass
 
         # TensorBoard Episodic Metrics
         if done:
-            shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
+            Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
             print("Episode {} complete. Total Reward: {}".format(self.ep_count, self.totalReward))
             self.alg.ou_noise.reset()
 

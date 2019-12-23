@@ -7,10 +7,7 @@ class GymEnvironment(Environment):
         super(GymEnvironment,self).__init__(configs)
         # self.env = gym.make(self.env_name).env
         self.env = gym.make(self.env_name)
-        # self.env.max_episode_steps = 1000
-
         self.obs = self.env.reset()
-
         self.done = False
         self.action_space_continuous = None
         self.action_space_discrete = None
@@ -18,10 +15,9 @@ class GymEnvironment(Environment):
         # self.action_space = self.set_action_space()
 
         if self.action_space == "discrete":
-            self.action_space = {'discrete': self.set_action_space() , 'param': 0}
+            self.action_space = {'discrete': self.set_action_space() , 'param': 0, 'acs_space': self.set_action_space()}
         elif self.action_space == "continuous":
-            self.action_space = {'discrete': 0 , 'param': self.set_action_space()}
-
+            self.action_space = {'discrete': 0 , 'param': self.set_action_space(), 'acs_space': self.set_action_space()}
 
         self.steps_per_episode = 0
         self.step_count = 0
@@ -29,8 +25,6 @@ class GymEnvironment(Environment):
         self.reward_per_step = 0
         self.reward_per_episode = 0
         self.reward_total = 0
-
-        self.render = configs['render']
 
     def step(self, action):
         self.acs = action
@@ -54,7 +48,6 @@ class GymEnvironment(Environment):
 
         self.step_count += 1
         self.done_count += 1 if self.done else 0
-        # self.reward_per_step = self.reward_per_step
         self.reward_per_episode += self.reward_per_step
         self.reward_total += self.reward_per_step
 

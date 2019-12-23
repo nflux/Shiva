@@ -18,8 +18,8 @@ class TD3Algorithm(Algorithm):
         self.acs_space = action_space
         # self.exploration_strategy = OU_Noise_Exploration(action_space, self.configs[0])
         # self.exploration_strategy_critic = Gaussian_Exploration(self.configs[0])
-        self.ou_noise = noise.OUNoise(action_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
-        self.ou_noise_critic = noise.OUNoise(action_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        self.ou_noise = noise.OUNoise(action_space['acs_space'], self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        self.ou_noise_critic = noise.OUNoise(action_space['acs_space'], self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
 
         self.actor_loss = 0
         self.critic_loss_1 = 0
@@ -77,9 +77,9 @@ class TD3Algorithm(Algorithm):
     def compute_critic_values_for_next_states(self, next_states):
         """Computes the critic values for next states to be used in the loss for the critic"""
         with torch.no_grad():
-            actions_next = self.agent.actor(next_states)
+            actions_next = self.agent.actor(next_states.to(self.device))
             # actions_next_with_noise =  self.exploration_strategy_critic.perturb_action_for_exploration_purposes({"action": actions_next})
-            actions_next_with_noise = actions_next + torch.tensor(self.ou_noise_critic.noise(), dtype=torch.float)
+            actions_next_with_noise = actions_next + torch.tensor(self.ou_noise_critic.noise(), dtype=torch.float).to(self.device)
             critic_targets_next_1 = self.agent.target_critic(torch.cat((next_states, actions_next_with_noise), 1))
             critic_targets_next_2 = self.agent.target_critic_2(torch.cat((next_states, actions_next_with_noise), 1))
             critic_targets_next = torch.min(torch.cat((critic_targets_next_1, critic_targets_next_2),1), dim=-1)[0].unsqueeze(-1)

@@ -15,14 +15,16 @@ class UnityWrapperEnvironment(Environment):
         self._connect()
         # self.debug()
 
-        if self.action_space == "discrete":
-            self.action_space = {'discrete': self.BrainParameters.vector_action_space_size[0] , 'param': 0}
-        elif self.action_space == "continuous":
-            self.action_space = {'discrete': 0 , 'param': self.BrainParameters.vector_action_space_size[0]}
-        # else self.action_space == "parameterized":
-        #     self.action_space = {'discrete:'}
+        if self.action_space:
+            if self.action_space == "discrete":
+                self.action_space = {'discrete': self.BrainParameters.vector_action_space_size[0] , 'param': 0}
+            elif self.action_space == "continuous":
+                self.action_space = {'discrete': 0 , 'param': self.BrainParameters.vector_action_space_size[0]}
+            # else self.action_space == "parameterized":
+            #     self.action_space = {'discrete:'}
+        else:
+            self.action_space = self.BrainParameters.vector_action_space_size[0]
 
-        # self.action_space = self.BrainParameters.vector_action_space_size[0]
         self.observation_space = self.BrainParameters.vector_observation_space_size * self.BrainParameters.num_stacked_vector_observations
         
         self.action_space_discrete = self.action_space if self.BrainParameters.vector_action_space_type == 'discrete' else None

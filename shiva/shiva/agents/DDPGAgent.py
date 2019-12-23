@@ -5,9 +5,9 @@ import copy
 from shiva.agents.Agent import Agent
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
-class ParametrizedDDPGAgent(Agent):
+class DDPGAgent(Agent):
     def __init__(self, id, obs_dim, action_dim, param_ix, agent_config: dict, networks: dict):
-        super(ParametrizedDDPGAgent, self).__init__(id, obs_dim, action_dim, agent_config, networks)
+        super(DDPGAgent, self).__init__(id, obs_dim, action_dim, agent_config, networks)
         try:
             torch.manual_seed(self.manual_seed)
             np.random.seed(self.manual_seed)
@@ -28,6 +28,15 @@ class ParametrizedDDPGAgent(Agent):
 
     def get_action(self, observation):
         return self.actor(observation)
+        
+    def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
+        observation = torch.tensor(observation).to(self.device)
+        action = self.actor(observation.float()).cpu().data.numpy()
+        action = np.clip(action, -1,1)
+        # print('actor action shape', action.shape)
+        return action[0]
+
+
 
         # Uncomment to check the networks
 
@@ -36,10 +45,3 @@ class ParametrizedDDPGAgent(Agent):
         # print(self.critic)
 
         # input()
-        
-    def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
-        observation = torch.tensor(observation).to(self.device)
-        action = self.actor(observation.float()).cpu().data.numpy()
-        action = np.clip(action, -1,1)
-        # print('actor action shape', action.shape)
-        return action[0]

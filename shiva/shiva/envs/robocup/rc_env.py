@@ -25,40 +25,58 @@ class rc_env:
     '''
 
     def __init__(self, config):
-        self.config = config
-        self.untouched = config['untouched']
-        self.goalie = config['goalie']
-        self.port = config['port']
+        {setattr(self, k, v) for k,v in config.items()}
         self.hfo_path = hfo.get_hfo_path()
         self.seed = np.random.randint(1000)
         self.viewer = None
 
-        self.rew_anneal_ep = config['reward_anneal']
 
-        self.num_left = config['num_left']
-        self.num_right = config['num_right']
-        self.num_leftBot = config['num_l_bot']
-        self.num_rightBot = config['num_r_bot']
-
-        if config['action_level'] == 'low':
+        if self.action_level == 'low' and not self.discretized:
             #                   pow,deg   deg       deg         pow,deg    
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
             self.action_list = [hfo_env.DASH, hfo_env.TURN, hfo_env.KICK]
             self.kick_actions = [hfo_env.KICK] # actions that require the ball to be kickable
             self.acs_param_dim = 5
+
+        elif self.action_level == 'low' and self.discretized:
+
+            self.power_discretization = np.linspace(0,100,21).tolist()
+            self.degree_discretization = np.linspace(-180,180,9).tolist()
+
+            # Reference Tables
+            self.DASH_TABLE = []
+            self.KICK_TABLE = []
+            self.TURN_TABLE = self.degree_discretization
+
+            for dash_power in self.power_discretization:
+                for dash_degree in self.degree_discretization:
+                    self.DASH_TABLE.append(((dash_power,dash_degree)))
+                    self.KICK_TABLE.append(((dash_power,dash_degree)))
+
+            self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
+            self.ACTION_MATRIX = self.DASH_TABLE + self.TURN_TABLE + self.KICK_TABLE
+            self.kick_actions = self.KICK_TABLE
+
+            self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
+            self.acs_param_dim = 0
+            for item in self.ACTION_MATRIX:
+                print(item)
+            print(len(self.DASH_TABLE)) #+ len(self.TURN_TABLE) + len(self.KICK_TABLE))
+            print(len(self.DASH_TABLE) + len(self.TURN_TABLE))
+            print(len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE))
+            # print(DASH_TABLE + TURN_TABLE + KICK_TABLE)
+
+
         elif config['action_level'] == 'high':
             self.action_list = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.REORIENT, hfo_env.GO_TO_BALL, hfo_env.MOVE]
             self.kick_actions = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.PASS] # actions that require the ball to be kickable
             # self.acs_param_dim = ????
 
-        self.acs_dim = len(self.action_list)
 
-        self.fpt = config['ep_length']
+        self.act_lvl = self.action_level
+        self.feat_lvl = self.feature_level
 
-        self.act_lvl = config['action_level']
-        self.feat_lvl = config['feature_level']
-
-        self.set_observation_indexes(config['feature_level'])
+        self.set_observation_indexes(self.feature_level)
 
         if config['feature_level'] == 'low':
             #For new obs reorganization without vailds, changed hfo obs from 59 to 56
@@ -66,10 +84,10 @@ class rc_env:
             # self.right_features = 56 + 13*(self.num_right-1) + 12*self.num_left + 4 + 1 + 2 + 1
             self.left_features = 16
             self.right_features = 16
-        elif config['feature_level'] == 'high':
-            self.left_features = (6*self.num_left) + (3*self.num_right) + (3*self.num_rightBot) + 6
-            self.right_features = (6*self.num_right) + (3*self.num_left) + (3*self.num_rightBot) + 6
-        elif config['feature_level'] == 'simple':
+        elif self.feature_level == 'high':
+            self.left_features = (6*self.num_left) + (3*self.num_right) + (3*self.num_r_bot) + 6
+            self.right_features = (6*self.num_right) + (3*self.num_left) + (3*self.num_r_bot) + 6
+        elif self.feature_level == 'simple':
             # 16 - land_feats + 12 - basic feats + 6 per (left/right)
             # Feature indexes by name
             self.left_features = 28 + (6 * ((self.num_left-1) + self.num_right))
@@ -136,89 +154,6 @@ class rc_env:
             self.stamina = 6
             self.kickable = 7
 
-            # '''
-            #     Agent Values
-            
-            # '''
-            # self.agent_angle_vel_y_rad = 1
-            # self.agent_angle_vel_x_rad = 2
-            # self.agent_vel_mag = 3
-            # self.agent_angle_global_x_rad = 4
-            # self.agent_angle_global_y_rad = 5
-            # self.agent_stamina = 6
-            # self.agent_frozen = 7
-            # self.agent_collision_with_ball = 8
-            # self.agent_collision_with_player = 9
-            # self.agent_collision_with_post = 10
-            # self.agent_kickable = 11
-
-            # '''
-            #     Goal Values
-
-            # '''
-            # # center of goal
-            # self.goal_opp_cent_y = 12
-            # self.goal_opp_cent_x = 13
-            # self.goal_opp_cent_proximity = 14
-
-            # # top of goal
-            # self.goal_opp_top_y = 15
-            # self.goal_opp_top_x = 16
-            # self.goal_opp_top_proximity = 17
-
-            # # bottom of goal
-            # self.goal_opp_bot_y = 18
-            # self.goal_opp_bot_x = 19
-            # self.goal_opp_bot_proximity = 20
-
-            # '''
-            #     Field Values
-            
-            # '''
-            # # center of field
-            # self.field_center_y_rad = 30
-            # self.field_center_x_rad = 31
-            # self.field_center_proximity = 32
-
-            # # top left field
-            # self.field_top_left_y_rad = 33
-            # self.field_top_left_x_rad = 34
-            # self.field_top_left_proximity = 35
-
-            # # top right field
-            # self.field_top_right_y_rad = 36
-            # self.field_top_right_x_rad = 37
-            # self.field_top_right_proximity = 38
-
-            # # bottom right field
-            # self.field_bot_right_y_rad = 39
-            # self.field_bot_right_x_rad = 40
-            # self.field_bot_right_proximity = 41
-
-            # # bottom left field
-            # self.field_bot_left_y_rad = 42
-            # self.field_bot_left_x_rad = 43
-            # self.field_bot_left_proximity = 44
-
-            # # proximities to sides
-            # self.field_left_proximity = 45
-            # self.field_right_proximity = 46
-            # self.field_top_proximity = 47
-            # self.field_bottom_proximity = 48
-
-            # '''
-            #     Ball Values
-
-            # '''
-            # self.ball_angle_y_rad = 49
-            # self.ball_angle_x_rad = 50
-            # self.ball_proximity = 51  
-            # self.ball_vel_mag = 52
-            # self.ball_vel_y_rad = 53
-            # self.ball_vel_x_rad = 54
-            # self.ball_x = 55
-            # self.ball_y = 56
-
         elif feature_level == 'simple':
             self.stamina = 26
             self.ball_x = 16
@@ -259,10 +194,10 @@ class rc_env:
             print("Connecting player %i" % i , "on left %s to the server" % self.left_base)
             if i == 0:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.left_base,
-                                                self.goalie,i,self.fpt,self.act_lvl,self.left_envs,))
+                                                self.goalie,i,self.ep_length,self.act_lvl,self.left_envs,))
             else:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.left_base,
-                                                False,i,self.fpt,self.act_lvl,self.left_envs,))
+                                                False,i,self.ep_length,self.act_lvl,self.left_envs,))
             t.start()
             time.sleep(1.5)
         
@@ -270,10 +205,10 @@ class rc_env:
             print("Connecting player %i" % i , "on rightonent %s to the server" % self.right_base)
             if i == 0:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.right_base,
-                                                self.goalie,i,self.fpt,self.act_lvl,self.right_envs,))
+                                                self.goalie,i,self.ep_length,self.act_lvl,self.right_envs,))
             else:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.right_base,
-                                                False,i,self.fpt,self.act_lvl,self.right_envs,))
+                                                False,i,self.ep_length,self.act_lvl,self.right_envs,))
             t.start()
             time.sleep(1.5)
 
@@ -390,9 +325,16 @@ class rc_env:
 
         if self.left_base == base:
             self.left_actions[agent_id] = action
-            if self.act_lvl == 'low':
+            if self.act_lvl == 'low' and not self.discretized:
                 for p in range(params.shape[1]):
                     self.left_action_params[agent_id][p] = params[agent_id][p]
+
+            # i was thinking that maybe I could choose the action here        
+            elif self.act_lvl == 'low' and self.discretized:
+                # print("this ran")
+                for p in range(params.shape[0]):
+                    # print(params)
+                    self.left_action_params[agent_id][p] = params.item()#params[agent_id][p]
         else:
             self.right_actions[agent_id] = action
             if self.act_lvl == 'low':
@@ -402,7 +344,7 @@ class rc_env:
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,ac_index,base):
         '''
-        Description
+            Description
             
         '''
 
@@ -410,19 +352,109 @@ class rc_env:
             action_params = self.left_action_params
         else:
             action_params = self.right_action_params
+
+        # print(action_params)
+
+        '''
         
+            So it looks like I need to map the intervals to the discrete values we have in place. And that will be the index.
+        
+        '''
+
+        if self.discretized:
+
+            # print(int(action_params[agentID][0]))
+
+            if 0 <= int(action_params[agentID][0]) <= 188:
+                return self.ACTION_MATRIX[int(action_params[agentID][0])]
+            elif 189 <= int(action_params[agentID][0]) <= 197:
+                return (self.ACTION_MATRIX[int(action_params[agentID][0])],)
+            else:
+                return self.ACTION_MATRIX[int(action_params[agentID][0])]
+
+
         if ac_index == 0: # dash power, degree
-            return (action_params[agentID][0].clip(-1,1)*100,
-                    action_params[agentID][1].clip(-1,1)*180)
+
+            dash_power =  action_params[agentID][0].clip(-1,1)*100
+            dash_degree = action_params[agentID][1].clip(-1,1)*180
+
+            if self.discretized:
+
+                dash_index = self.discretize_power(dash_power)
+                dash_power = self.power_discretization[dash_index]
+                # dash_power = -100 + self.pow_coef*(power_index % 8)
+
+                dash_index = self.discretize_degree(dash_degree)
+                dash_degree = self.degree_discretization[dash_index]
+                # dash_degree = -180 + self.ang_coef*(dash_index // 8)
+            
+            # print(dash_power, dash_degree)
+            # input()
+
+            return self.DASH_TABLE[dash_index]
+            # return (dash_power, dash_degree)
+
         elif ac_index == 1: # turn degree
-            return (action_params[agentID][2].clip(-1,1)*180,)
+
+            turn_degree = action_params[agentID][2].clip(-1,1)*180
+
+            if self.discretized:
+                turn_index = self.discretize_degree(turn_degree)
+                turn_degree = self.degree_discretization[turn_index]
+                # turn_degree = -180 + self.ang_coef*(turn_index % 8)
+
+            # strange that there's nothing after the comma
+            return (self.TURN_TABLE[turn_index],)
+
         elif ac_index == 2: # kick power, degree
-            return (((action_params[agentID][3].clip(-1,1) + 1)/2)*100,
-                    action_params[agentID][4].clip(-1,1)*180)
+
+            kick_power = ((action_params[agentID][3].clip(-1,1) + 1)/2)*100
+            kick_degree = action_params[agentID][4].clip(-1,1)*180
+
+            print(kick_power, kick_degree)
+            input()   
+
+            if self.discretized:
+                kick_index = self.discretize_power(kick_power)
+                kick_power = self.power_discretization[kick_index]
+                # kick_power - -100 + self.pow_coef*(kick_index % 8)
+
+                kick_index = self.discretize_degree(kick_degree)
+                kick_degree = self.degree_discretization[kick_index]
+
+ 
+            return self.KICK_TABLE[kick_index]
+
+                # kick_degree = -180 + self.ang_coef*(kick_index // 8)
+
+            # print(kick_power, kick_degree)
+            # input()
+
+            return self.KICK_TABLE[kick_index]
+
+
+
+    def discretize_power(self, power):
+
+        for i, p in enumerate(self.power_discretization):
+            if power <= p:
+                return i
+
+        # print(power)
+
+        assert False, "power was not discretized"
+
+    def discretize_degree(self, angle):
+
+        for i, d in enumerate(self.degree_discretization):
+            if angle <= d:
+                return i
+
+        assert False, "degree was not discretized"
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl,envs):
+    def connect(self,port,feat_lvl, base, goalie, agent_ID,ep_length,act_lvl,envs):
         '''
         Description
             Connect threaded agent to server. And run agents through
@@ -436,7 +468,7 @@ class rc_env:
             base: Which base to launch agent to. ('base_left', 'base_right)
             goalie: Play goalie. (True, False)
             agent_ID: Integer representing agent index. (0-11)
-            fpt: Episode length
+            ep_length: Episode length
             act_lvl: Action level to use. ('high', 'low')
             envs: left or right agent environments
 
@@ -479,19 +511,33 @@ class rc_env:
 
                 # self.been_kicked_left = False
                 # self.been_kicked_right = False
-                while j < fpt:
+                while j < ep_length:
 
                     self.sync_after_queue.wait()
                     
                     # take the action
                     a = actions[agent_ID]
-                    # print(a)
+
                     if act_lvl == 'high':
                         envs[agent_ID].act(self.action_list[a]) # take the action
-                    elif act_lvl == 'low':
+                    elif act_lvl == 'low' and not self.discretized:
                         # without tackle
                         # print('action:', a)
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID,a,base))
+                    elif act_lvl == 'low' and self.discretized:
+                        # print(self.action_list[0])
+                        # print("look here", a)
+                        # envs[agent_ID].act(a, *self.get_valid_scaled_param(agent_ID, a, base))
+                        
+                        t = self.left_action_params[agent_ID][0]
+                        # print("t right before .act():",t)
+                        
+                        if 0 <= t < 189:
+                            envs[agent_ID].act(0, *self.get_valid_scaled_param(agent_ID, a, base))
+                        elif 189 <= t <= 197:
+                            envs[agent_ID].act(1, *self.get_valid_scaled_param(agent_ID, a, base))
+                        else:
+                            envs[agent_ID].act(3, *self.get_valid_scaled_param(agent_ID, a, base))
 
                     self.sync_at_status.wait()
                     
@@ -534,31 +580,31 @@ class rc_env:
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
                   " --log-dir %s --seed %i --message-size 256"\
-                  % (self.fpt, self.untouched, self.num_left,
-                     self.num_right, self.num_leftBot, self.num_rightBot, self.port,
-                     self.config['offense_ball'], self.seed, self.config['ball_x_min'], self.config['ball_x_max'],
-                     self.config['ball_y_min'], self.config['ball_y_max'], self.config['log'], self.config['seed'])
+                  % (self.ep_length, self.untouched, self.num_left,
+                     self.num_right, self.num_l_bot, self.num_r_bot, self.port,
+                     self.offense_ball, self.seed, self.ball_x_min, self.ball_x_max,
+                     self.ball_y_min, self.ball_y_max, self.log, self.seed)
             #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
-            if self.num_leftBot > 0:   cmd += " --offense-left %s" \
-                % (self.config['left_bin'])
-            if self.num_rightBot > 0:   cmd += " --defense-left %s" \
-                % (self.config['right_bin'])
-            if not self.config['sync_mode']:      cmd += " --no-sync"
-            if self.config['fullstate']:          cmd += " --fullstate"
-            if self.config['determ']:      cmd += " --deterministic"
-            if self.config['verbose']:            cmd += " --verbose"
-            if not self.config['rcss_log']:  cmd += " --no-logging"
-            if self.config['hfo_log']:       cmd += " --hfo-logging"
-            if self.config['record_lib']:             cmd += " --record"
-            if self.config['record_serv']:      cmd += " --log-gen-pt"
-            if self.config['run_imit']:         cmd += " --run-bots"
-            if self.config['init_env']:
+            if self.num_l_bot > 0:   cmd += " --offense-left %s" \
+                % (self.left_bin)
+            if self.num_r_bot > 0:   cmd += " --defense-left %s" \
+                % (self.right_bin)
+            if not self.sync_mode:      cmd += " --no-sync"
+            if self.fullstate:          cmd += " --fullstate"
+            if self.determ:      cmd += " --deterministic"
+            if self.verbose:            cmd += " --verbose"
+            if not self.rcss_log:  cmd += " --no-logging"
+            if self.hfo_log:       cmd += " --hfo-logging"
+            if self.record_lib:             cmd += " --record"
+            if self.record_serv:      cmd += " --log-gen-pt"
+            if self.run_imit:         cmd += " --run-bots"
+            if self.init_env:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
                         " --change-balls-x %f --change-balls-y %f --control-rand-init"\
-                        % (self.config['agents_x_min'], self.config['agents_x_max'], self.config['agents_y_min'], self.config['agents_y_max'],
-                            self.config['change_every_x'], self.config['change_agents_x'], self.config['change_agents_y'],
-                            self.config['change_ball_x'], self.config['change_ball_y'])
+                        % (self.agents_x_min, self.agents_x_max, self.agents_y_min, self.agents_y_max,
+                            self.change_every_x, self.change_agents_x, self.change_agents_y,
+                            self.change_ball_x, self.change_ball_y)
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
@@ -672,6 +718,8 @@ class rc_env:
         self.right_agent_possesion = 'N'
 
 
+        # print("team_actions agent", team_actions[agentID])
+
         if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
             reward -= 1
 
@@ -680,8 +728,8 @@ class rc_env:
             if True:        
             # if self.num_right > 0:
                 if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
-                    # print("First Kick")
-                    reward += 1.5
+                    print("First Kick")
+                    reward += 10
                     team_reward += 1.5
                 # set initial ball position after kick
                     if self.left_base == base:
@@ -784,7 +832,7 @@ class rc_env:
             delta = (distance_prev - distance_cur)*1.0
             #if delta > 0:    
             if True:
-                team_reward += delta * 10 
+                team_reward += delta
                 reward+= delta * 10
                 # print(distance_cur, delta)
                 pass
@@ -800,8 +848,8 @@ class rc_env:
             if agentID == team_possessor:
                 delta = (2*self.num_left)*(r_prev - r)
                 if True:
-                #if delta > 0:
-                    reward += delta
+                # if delta > 0:
+                    reward += delta * 2
                     team_reward += delta
                     pass
 
@@ -831,7 +879,7 @@ class rc_env:
         # print(team_obs[agentID][self.ball_x])
         # print(team_obs[agentID][self.ball_y])
         return reward
-        # rew_percent = 1.0*max(0,(self.rew_anneal_ep - ep_num))/self.rew_anneal_ep
+        # rew_percent = 1.0*max(0,(self.reward_anneal - ep_num))/self.reward_anneal
         # return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
 
     '''
