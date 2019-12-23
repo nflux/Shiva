@@ -50,8 +50,8 @@ class rc_env:
 
             for dash_power in self.power_discretization:
                 for dash_degree in self.degree_discretization:
-                    self.DASH_TABLE.append(((dash_power,dash_degree)))
-                    self.KICK_TABLE.append(((dash_power,dash_degree)))
+                    self.DASH_TABLE.append((dash_power,dash_degree))
+                    self.KICK_TABLE.append((dash_power,dash_degree))
 
             self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
             self.ACTION_MATRIX = self.DASH_TABLE + self.TURN_TABLE + self.KICK_TABLE
@@ -59,11 +59,11 @@ class rc_env:
 
             self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
             self.acs_param_dim = 0
-            for item in self.ACTION_MATRIX:
-                print(item)
-            print(len(self.DASH_TABLE)) #+ len(self.TURN_TABLE) + len(self.KICK_TABLE))
-            print(len(self.DASH_TABLE) + len(self.TURN_TABLE))
-            print(len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE))
+            # for item in self.ACTION_MATRIX:
+            #     print(item)
+            # print(len(self.DASH_TABLE)) #+ len(self.TURN_TABLE) + len(self.KICK_TABLE))
+            # print(len(self.DASH_TABLE) + len(self.TURN_TABLE))
+            # print(len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE))
             # print(DASH_TABLE + TURN_TABLE + KICK_TABLE)
 
 
@@ -353,8 +353,6 @@ class rc_env:
         else:
             action_params = self.right_action_params
 
-        # print(action_params)
-
         '''
         
             So it looks like I need to map the intervals to the discrete values we have in place. And that will be the index.
@@ -363,8 +361,6 @@ class rc_env:
 
         if self.discretized:
 
-            # print(int(action_params[agentID][0]))
-
             if 0 <= int(action_params[agentID][0]) <= 188:
                 return self.ACTION_MATRIX[int(action_params[agentID][0])]
             elif 189 <= int(action_params[agentID][0]) <= 197:
@@ -372,65 +368,24 @@ class rc_env:
             else:
                 return self.ACTION_MATRIX[int(action_params[agentID][0])]
 
+        else:
 
-        if ac_index == 0: # dash power, degree
+            if ac_index == 0: # dash power, degree
 
-            dash_power =  action_params[agentID][0].clip(-1,1)*100
-            dash_degree = action_params[agentID][1].clip(-1,1)*180
+                dash_power =  action_params[agentID][0].clip(-1,1)*100
+                dash_degree = action_params[agentID][1].clip(-1,1)*180
+                return (dash_power, dash_degree)
 
-            if self.discretized:
+            elif ac_index == 1: # turn degree
 
-                dash_index = self.discretize_power(dash_power)
-                dash_power = self.power_discretization[dash_index]
-                # dash_power = -100 + self.pow_coef*(power_index % 8)
+                turn_degree = action_params[agentID][2].clip(-1,1)*180
+                return (turn_degree,)
 
-                dash_index = self.discretize_degree(dash_degree)
-                dash_degree = self.degree_discretization[dash_index]
-                # dash_degree = -180 + self.ang_coef*(dash_index // 8)
-            
-            # print(dash_power, dash_degree)
-            # input()
+            elif ac_index == 2: # kick power, degree
 
-            return self.DASH_TABLE[dash_index]
-            # return (dash_power, dash_degree)
-
-        elif ac_index == 1: # turn degree
-
-            turn_degree = action_params[agentID][2].clip(-1,1)*180
-
-            if self.discretized:
-                turn_index = self.discretize_degree(turn_degree)
-                turn_degree = self.degree_discretization[turn_index]
-                # turn_degree = -180 + self.ang_coef*(turn_index % 8)
-
-            # strange that there's nothing after the comma
-            return (self.TURN_TABLE[turn_index],)
-
-        elif ac_index == 2: # kick power, degree
-
-            kick_power = ((action_params[agentID][3].clip(-1,1) + 1)/2)*100
-            kick_degree = action_params[agentID][4].clip(-1,1)*180
-
-            print(kick_power, kick_degree)
-            input()   
-
-            if self.discretized:
-                kick_index = self.discretize_power(kick_power)
-                kick_power = self.power_discretization[kick_index]
-                # kick_power - -100 + self.pow_coef*(kick_index % 8)
-
-                kick_index = self.discretize_degree(kick_degree)
-                kick_degree = self.degree_discretization[kick_index]
-
- 
-            return self.KICK_TABLE[kick_index]
-
-                # kick_degree = -180 + self.ang_coef*(kick_index // 8)
-
-            # print(kick_power, kick_degree)
-            # input()
-
-            return self.KICK_TABLE[kick_index]
+                kick_power = ((action_params[agentID][3].clip(-1,1) + 1)/2)*100
+                kick_degree = action_params[agentID][4].clip(-1,1)*180
+                return (kick_power, kick_degree)
 
 
 
@@ -646,12 +601,9 @@ class rc_env:
                 if s=='Goal_By_Left' and self.left_agent_possesion[agentID] == 'L':
                     reward+= goal_points
                 elif s=='Goal_By_Left':
-                    reward+= goal_points # teammates get 10% of points
-
-                # doesn't seem that this if statement is working
+                    reward+= goal_points # teammates get 10% of pointsssss
                 elif s=='Goal_By_Right':
                     reward+=-goal_points
-
                 elif s=='OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
                     reward+=-0.5
                 elif s=='CapturedByLeftGoalie':
@@ -833,7 +785,7 @@ class rc_env:
             #if delta > 0:    
             if True:
                 team_reward += delta
-                reward+= delta * 10
+                reward+= delta * 1
                 # print(distance_cur, delta)
                 pass
             
