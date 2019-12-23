@@ -30,6 +30,12 @@ class RoboCupDDPGEnvironment(Environment):
     
     def isImit(self):
         return self.run_imit
+    
+    def isAnyKickable(self):
+        return self.env.checkKickable('left')
+    
+    def isGoal(self):
+        return self.env.checkGoal()
 
     def step(self, actions, discrete_select='sample'):
         '''

@@ -198,26 +198,6 @@ class ImitationRoboCupAlgorithm(Algorithm):
         self.action_policy = configs[1]['action_policy']
         self.loss = 0
     
-    def dagger_update(self, imitation_agent, minibatch, step_n):
-
-        states, actions, rewards, next_states, dones, expert_actions = minibatch
-
-        # zero optimizer
-        imitation_agent.actor_optimizer.zero_grad()
-
-        action_prob_dist = imitation_agent.actor(states)
-
-        if (len(actions.shape) > 1):
-            action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[len(actions.shape)-1])
-        else:
-            action_prob_dist = action_prob_dist.view(actions.shape[0])
-
-        #calculate loss based on loss functions dictated in the configs
-        self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
-        # print('Dagger_loss:', self.loss)
-        self.loss.backward()
-        imitation_agent.actor_optimizer.step()
-    
     def supervised_update(self, agent, minibatch, step_n):
 
         states, actions, rewards, next_states, dones = minibatch
@@ -235,6 +215,30 @@ class ImitationRoboCupAlgorithm(Algorithm):
         # print('super_loss:', self.loss)
         self.loss.backward()
         agent.actor_optimizer.step()
+    
+    def dagger_update(self, imitation_agent, minibatch, step_n):
+
+        states, actions, rewards, next_states, dones, expert_actions = minibatch
+
+        # zero optimizer
+        imitation_agent.actor_optimizer.zero_grad()
+
+        action_prob_dist = imitation_agent.actor(states)
+        # print('before', action_prob_dist)
+
+        if (len(actions.shape) > 1):
+            action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[len(actions.shape)-1])
+        else:
+            action_prob_dist = action_prob_dist.view(actions.shape[0])
+        
+        # print('after', action_prob_dist)
+        # print('exper', expert_actions)
+
+        #calculate loss based on loss functions dictated in the configs
+        self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
+        # print('Dagger_loss:', self.loss)
+        self.loss.backward()
+        imitation_agent.actor_optimizer.step()
 
     def create_agent(self):
         new_agent = ParametrizedDDPGAgent(self.id_generator(),self.obs_space,self.acs_space['discrete']+self.acs_space['param'],self.acs_space['discrete'],self.configs[1],self.configs[2])

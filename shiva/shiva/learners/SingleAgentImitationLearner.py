@@ -160,6 +160,10 @@ class SingleAgentImitationLearner(Learner):
 class SingleAgentRoboCupImitationLearner(Learner):
     def __init__(self,learner_id,config):
         super(SingleAgentRoboCupImitationLearner, self).__init__(learner_id,config)
+        self.totalGoals = 0
+        self.kicks = 0
+        self.totalKicks = 0
+        self.lr_decay = (self.configs['Agent']['learning_rate']-self.configs['Agent']['lr_end'])/self.configs['Learner']['imitation_episodes']
 
     def run(self):
         self.supervised_update()
@@ -194,6 +198,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
         for self.ep_count in range(self.configs['Learner']['imitation_episodes']):
             self.env.reset()
             self.totalReward = 0
+            self.kicks = 0
             done = False
             while not done:
                 done = self.imitation_step()
@@ -235,7 +240,11 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         self.send_imit_obs_msgs()
         bot_action = self.recv_imit_acs_msgs()
-        action = self.agent.find_best_imitation_action(observation)#, self.env.get_current_step())
+        action = self.agent.find_best_imitation_action(observation)
+
+        if self.step_count % 100 == 0:
+            print('expert', bot_action)
+            print('learner', action)
 
         next_observation, reward, done, more_data = self.env.step(action)
 
@@ -243,6 +252,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
         Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(), self.step_count)
 
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
+
+        self.kicks += self.env.isAnyKickable()
 
         self.buffer.push(copy.deepcopy([torch.from_numpy(observation),torch.from_numpy(more_data['action'].reshape(1,-1)),
                                                 torch.from_numpy(reward),torch.from_numpy(next_observation),torch.from_numpy(np.array([done])).float(),
@@ -253,11 +264,16 @@ class SingleAgentRoboCupImitationLearner(Learner):
         if done:
             # add values to the tensorboard
             Admin.add_summary_writer(self, self.agent, 'Total_Reward', self.totalReward, self.ep_count)
+            self.totalKicks += 1 if self.kicks else 0
+            Admin.add_summary_writer(self, self.agent, 'Kick_Percentage', (self.totalKicks/(self.ep_count+1))*100.0, self.ep_count)
+            self.totalGoals += self.env.isGoal()
+            Admin.add_summary_writer(self, self.agent, 'Goal_Percentage', (self.totalGoals/(self.ep_count+1))*100.0, self.ep_count)
             if self.configs['Admin']['save'] and (self.ep_count % self.configs['Learner']['save_frequency'] == 0):
                 Admin._save_agent(self, self.agent)
-            if self.ep_count % self.configs['Agent']['lr_decay_every'] == 0:
-                lr = max(self.agent.learning_rate-self.agent.lr_decay, self.agent.lr_end)
-                self.agent.learning_rate = lr
+            
+            if self.ep_count % self.configs['Agent']['lr_change_every'] == 0:
+                self.agent.learning_rate = self.configs['Agent']['learning_rate'] - (self.ep_count * self.lr_decay)
+                print('lr', str(self.agent.learning_rate))
                 self.agent.mod_lr(self.agent.actor_optimizer, self.agent.learning_rate)
 
         return done

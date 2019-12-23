@@ -577,6 +577,15 @@ class rc_env:
               " --connect --port %d" % (self.port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 
+    def checkKickable(self, side):
+        if side == 'left':
+            return any([e.isKickable() for e in self.left_envs])
+        else:
+            return any([e.isKickable() for e in self.right_envs])
+    
+    def checkGoal(self):
+        return self.left_envs[0].statusToString(self.world_status) == 'Goal_By_Left'
+
     def getReward(self, s, agentID, base, ep_num):
         '''
             Reward Engineering - Needs work!
