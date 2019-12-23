@@ -242,10 +242,6 @@ class SingleAgentRoboCupImitationLearner(Learner):
         bot_action = self.recv_imit_acs_msgs()
         action = self.agent.find_best_imitation_action(observation)
 
-        if self.step_count % 100 == 0:
-            print('expert', bot_action)
-            print('learner', action)
-
         next_observation, reward, done, more_data = self.env.step(action)
 
         Admin.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
