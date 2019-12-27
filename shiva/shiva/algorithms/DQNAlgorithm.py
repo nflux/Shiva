@@ -108,7 +108,8 @@ class DQNAlgorithm(Algorithm):
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
-                ('Algorithm/Loss_per_Step', self.loss)
+                ('Algorithm/Loss_per_Step', self.loss),
+                ('Agent/learning_rate', self.agent.learning_rate)
             ]
         else:
             metrics = []
