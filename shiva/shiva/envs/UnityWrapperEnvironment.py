@@ -2,7 +2,7 @@ import os
 import numpy as np
 import time
 
-from mlagents.envs.environment import UnityEnvironment
+from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 
 from shiva.envs.Environment import Environment
@@ -10,29 +10,15 @@ from shiva.helpers.misc import action2one_hot
 
 class UnityWrapperEnvironment(Environment):
     def __init__(self, config):
-        assert UnityEnvironment.API_VERSION == 'API-11' or UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents api v11 or v12'
+        assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents api v11 or v12'
 
         super(UnityWrapperEnvironment, self).__init__(config)
         self.worker_id = 0
         self._connect()
-        # self.debug()
-        self.action_space = self.BrainParameters.vector_action_space_size[0]
-        self.observation_space = self.BrainParameters.vector_observation_space_size * self.BrainParameters.num_stacked_vector_observations
-        
-        self.action_space_discrete = self.action_space if self.BrainParameters.vector_action_space_type == 'discrete' else None
-        self.action_space_continuous = self.action_space if self.BrainParameters.vector_action_space_type == 'continuous' else None
-
-        self.num_instances = len(self.BrainInfo.agents)
-        
-        self.rewards = np.array(self.BrainInfo.rewards)
-        self.reward_total = 0
-        self.dones = np.array(self.BrainInfo.local_done)
-        
-        self.step_count = 0
-        self.load_viewer()
+        self.set_initial_values()
 
     def _connect(self):
-        self.brain_name = self.env_name
+        self.group_id = self.env_name
         self.channel = EngineConfigurationChannel()
         self.Unity = UnityEnvironment(
             file_name= self.exec,
@@ -41,71 +27,56 @@ class UnityWrapperEnvironment(Environment):
             side_channels = [self.channel],
             no_graphics= not self.render
         )
-        self._reset()
+        self.Unity.reset()
+        self.groups = self.Unity.get_agent_groups()
 
-    # def _connect(self):
-    #     self._call()
-    #     try:
-    #         self._call()
-    #         print('Worker id:', self.worker_id)
-    #     except:
-    #         if self.worker_id < 3:
-    #             # try to connect with different worker ids
-    #             self.worker_id += 1
-    #             # self._connect()
-    #         else:
-    #             assert False, 'Enough worker_id tries.'
-
-    def _reset(self, new_config=None):
-        '''
-            This only gets called once at connection with Unity server
-            UnityEnvironment v11
-        '''
-        if new_config is not None:
-            self.reset_params = new_config
-        self.BrainInfoDict = self.Unity.reset(train_mode=self.train_mode, config=self.reset_params)
-        self.BrainInfo = self.BrainInfoDict[self.brain_name]
-        self.BrainParameters = self.Unity.brains[self.brain_name]
-        self.observations = self.BrainInfo.vector_observations
-        self.rewards = self.BrainInfo.rewards
-        self.dones = self.BrainInfo.local_done
+        # we only control 1 agent spec..
+        assert self.group_id in self.groups, "Wrong env_name provided.. (corresponds to Unity's Agent Group ID)"
+        self.GroupSpec = self.Unity.get_agent_group_spec(self.group_id)
         self.reset()
-
-    # def _reset(self, new_config=None):
-    #     '''
-    #         This only gets called once at connection with Unity server
-    #         UnityEnvironment v12.1
-    #     '''
-    #     if new_config is not None:
-    #         self.reset_params = new_config
-    #     self.Unity.reset()
-    #     self.BrainInfo = self.BrainInfoDict[self.brain_name]
-    #     self.BrainParameters = self.Unity.brains[self.brain_name]
-    #     self.observations = self.BrainInfo.vector_observations
-    #     self.rewards = self.BrainInfo.rewards
-    #     self.dones = self.BrainInfo.local_done
-    #     self.reset()
 
     def reset(self):
         '''
             To be called by Shiva Learner
-            It's just to reinitialize the temporary done counter due to the multiagents on Unity
+            It's just to reinitialize our metrics. Unity resets the environment on its own..
         '''
         self.steps_per_episode = 0
         self.temp_done_counter = 0
         self.reward_per_step = 0
         self.reward_per_episode = 0
 
+    def set_initial_values(self):
+        self.action_space = self.get_action_space()
+        self.observation_space = self.get_observation_space()
+
+        self.action_space_discrete = self.action_space if self.GroupSpec.is_action_discrete() else None
+        self.action_space_continuous = self.action_space if self.GroupSpec.is_action_continuous() else None
+
+        self.batched_step_results = self.Unity.get_step_result(self.group_id)
+
+        self.num_instances = self.batched_step_results.n_agents()
+        self.instances_ids = self.batched_step_results.agent_id
+
+        self.observations = self.batched_step_results.obs
+        self.rewards = self.batched_step_results.reward
+        self.dones = self.batched_step_results.done
+
+        self.reward_total = 0
+        self.step_count = 0
+
     def get_random_action(self):
         return np.array([np.random.uniform(-1, 1, size=self.action_space) for _ in range(self.num_instances)])
 
     def step(self, actions):
         self.actions = self._clean_actions(actions)
-        self.BrainInfoDict = self.Unity.step(self.actions)
-        self.BrainInfo = self.BrainInfoDict[self.brain_name]
-        self.observations = np.array(self.BrainInfo.vector_observations)
-        self.rewards = np.array(self.BrainInfo.rewards)
-        self.dones = np.array(self.BrainInfo.local_done)
+
+        self.Unity.set_actions(self.group_id, self.actions)
+        self.Unity.step()
+        self.batched_step_results = self.Unity.get_step_result(self.group_id)
+
+        self.observations = self.batched_step_results.obs
+        self.rewards = self.batched_step_results.reward
+        self.dones = self.batched_step_results.done
         '''
             Metrics collection
                 Episodic # of steps             self.steps_per_episode --> is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
@@ -148,19 +119,26 @@ class UnityWrapperEnvironment(Environment):
     def _clean_actions(self, actions):
         '''
             Get the argmax when the Action Space is Discrete
+            else,
+                make sure it's numpy array
         '''
-        if self.BrainParameters.vector_action_space_type == 'discrete':
+        if self.GroupSpec.is_action_discrete():
             actions = np.array([np.argmax(_act) for _act in actions])
+        elif type(actions) != np.ndarray:
+            actions = np.array(actions)
         return actions
 
     def get_action_space(self):
-        return self.action_space
+        return self.GroupSpec.action_size
 
     def get_observation_space(self):
-        return self.observation_space
+        '''
+            Unsure why Unity does the double indexing.
+        '''
+        return self.GroupSpec.observation_shapes[0][0]
 
     def get_observation(self):
-        return self.observations
+        return self.batched_step_results.obs[0]
 
     def get_actions(self):
         return self.actions
@@ -180,5 +158,6 @@ class UnityWrapperEnvironment(Environment):
 
     def debug(self):
         print('self -->', self.__dict__)
-        print('BrainInfo -->', self.BrainInfo.__dict__)
-        print('BrainParameters -->', self.BrainParameters.__dict__)
+        # print('UnityEnv -->', self.Unity.__dict__)
+        print('GroupSpec -->', self.GroupSpec.__dict__)
+        print('BatchStepResults -->', self.batched_step_results.__dict__)
