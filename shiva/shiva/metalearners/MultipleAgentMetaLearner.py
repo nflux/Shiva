@@ -188,7 +188,7 @@ class MultipleAgentMetaLearner(MetaLearner):
             self.sample(self.learners[learner_id])
 
     #Conduct Welch's T-test between two agents episode rewards and return whether we reject the null hypothesis
-    def welch_T_Test(self,episodes_1, episodes_2):
+    def welch_T_Test(self, episodes_1, episodes_2):
         t, p = stats.ttest_ind(episodes_1, episodes_2, equal_var=False)
         return p < self.configs['MetaLearner']['p_value']
 
@@ -203,7 +203,7 @@ class MultipleAgentMetaLearner(MetaLearner):
             learner.agent.optimizer = copy.deepcopy(random_top_20.agent.optimizer)
             learner.agent.learning_rate = copy.deepcopy(random_top_20.agent.learning_rate)
 
-    def t_Test(self,learners,episode_rewards):
+    def t_Test(self, learners, episode_rewards):
         for i in range(len(learners)):
             idxs = list(range(0,len(learners)))
             sampled_idx = random.choice(idxs)
@@ -241,7 +241,7 @@ class MultipleAgentMetaLearner(MetaLearner):
 
     def exploitation(self, learners, episode_rewards):
         if self.configs['MetaLearner']['exploit'] == 't_Test':
-            self.t_Test(learners,episode_rewards)
+            self.t_Test(learners, episode_rewards)
         elif self.configs['MetaLearner']['exploit'] =='truncation':
             self.truncation(learners)
 

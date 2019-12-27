@@ -70,7 +70,7 @@ class DDPGLearner(Learner):
 
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs['Environment'])
+        return env_class(self.configs)
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
