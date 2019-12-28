@@ -8,29 +8,29 @@ Are specified in detail below.
 ## Contents
 ___
 * __init__
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/__init__.py)
+    * [Go to code](../shiva/learners/__init__.py)
 * DDPGLearner
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/DDPGLearner.py)
+    * [Go to code](../shiva/learners/DDPGLearner.py)
 * Learner
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/Learner.py)
+    * [Go to code](../shiva/learners/Learner.py)
 * SingleAgentDDPGLearner
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/SingleAgentDQNLearner.py)
+    * [Go to code](../shiva/learners/SingleAgentDQNLearner.py)
 * SingleAgentDQNLearner
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/SingleAgentDQNLearner.py)
+    * [Go to code](../shiva/learners/SingleAgentDQNLearner.py)
 * SingleAgentImitationLearner
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/SingleAgentImitationLearner.py)
+    * [Go to code](../shiva/learners/SingleAgentImitationLearner.py)
 * SingleAgentPPOLearner
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/SingleAgentPPOLearner.py)
+    * [Go to code](../shiva/learners/SingleAgentPPOLearner.py)
 
 
 ## __init__
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/__init__.py)
+[Go to Code](../shiva/learners/__init__.py)
 
 
 ##  DDPGLearner
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/DDPGLearner.py)
+[Go to Code](../shiva/learners/DDPGLearner.py)
 
 ### Config Set Up     
 ```
@@ -44,7 +44,7 @@ load_agents=False
 
 ##  Learner
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/Learner.py)
+[Go to Code](../shiva/learners/Learner.py)
 
 ### Config Set Up     
 ```
@@ -58,7 +58,7 @@ load_agents=False
 
 ##  SingleAgentDDPGLearner
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/DDPGLearner.py)
+[Go to Code](../shiva/learners/DDPGLearner.py)
 
 ### Config Set Up     
 ```
@@ -74,7 +74,7 @@ manual_play = False
 
 ##  SingleAgentDQNLearner
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/SingleAgentDQNLearner.py)
+[Go to Code](../shiva/learners/SingleAgentDQNLearner.py)
 
 ### Config Set Up     
 ```
@@ -91,7 +91,7 @@ load_path=False
 
 ##  SingleAgentImitationLearner
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/SingleAgentImitationLearner.py)
+[Go to Code](../shiva/learners/SingleAgentImitationLearner.py)
 
 ### Config Set Up     
 ```
@@ -108,7 +108,7 @@ expert_agent='runs/ML-RoboCup-11-04-12:53/L-0'
 
 ##  SingleAgentPPOLearner
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/learners/SingleAgentPPOLearner.py)
+[Go to Code](../shiva/learners/SingleAgentPPOLearner.py)
 
 ### Config Set Up     
 ```

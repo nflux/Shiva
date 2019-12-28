@@ -1,12 +1,12 @@
 # ShivaAdmin
 
 ## Contents
-*   [ShivaAdmin.py](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/Shiva.py).
+*   [ShivaAdmin.py](../shiva/Shiva.py).
 
 ## Overview
 
 The ShivaAdmin class handles and simplifies the file management and administrative tasks for the project such as
-* Track and create file directories for the [MetaLearner](https://github.com/nflux/Control-Tasks/tree/dev/shiva/shiva/metalearners), [Learner](https://github.com/nflux/Control-Tasks/tree/dev/shiva/shiva/learners), [Agent](https://github.com/nflux/Control-Tasks/tree/dev/shiva/shiva/agents)
+* Track and create file directories for the [MetaLearner](../shiva/metalearners), [Learner](../shiva/learners), [Agent](../shiva/agents)
 * Handle the saving and loading of
     * config files
     * class pickles
@@ -31,7 +31,7 @@ from __main__ import shiva
 ```
 ## Saving
 
-The agents will be saved in the [runs](https://github.com/nflux/Control-Tasks/tree/master/shiva/runs) under their corresponding MetaLearner and Learner folder. The config used, the Learner and Agents classes will be saved with their corresponding networks and parameters.
+The agents will be saved in the [runs](../runs) under their corresponding MetaLearner and Learner folder. The config used, the Learner and Agents classes will be saved with their corresponding networks and parameters.
 
 From the Learner class, just do a
 
