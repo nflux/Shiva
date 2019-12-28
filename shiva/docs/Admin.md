@@ -1,7 +1,7 @@
-# ShivaAdmin
+# Shiva Admin
 
 ## Contents
-*   [ShivaAdmin.py](../shiva/Shiva.py).
+*   [ShivaAdmin.py](../shiva/core/ShivaAdmin.py).
 
 ## Overview
 
@@ -21,13 +21,13 @@ Requires the following section in the config file
 [Admin]
 save =              True
 traceback =         True
-directory = {'runs': '/runs'}
+directory =         {'runs': '/runs'}
 ```
 
 And it’s accessible with one simple import
 
 ```python
-from __main__ import shiva
+from shiva.core.admin import Admin
 ```
 ## Saving
 
@@ -36,24 +36,24 @@ The agents will be saved in the [runs](../runs) under their corresponding MetaLe
 From the Learner class, just do a
 
 ```python
-shiva.update_agents_profile(self)
+Admin.update_agents_profile(self)
 ```
 
 **Note**
   - self is the Learner class
-  - Make sure the MetaLearner have added their profiles with ShivaAdmin before any saving. A common workflow of the MetaLearner would be:
+  - Make sure the MetaLearner have added their profiles with Admin before any saving. A common workflow of the MetaLearner would be:
   
 ```python
 self.learner = self.create_learner()
-shiva.add_learner_profile(self.learner)
+Admin.add_learner_profile(self.learner)
 self.learner.launch() # learner launches a whole learning instance
-shiva.update_agents_profile(self.learner)
+Admin.update_agents_profile(self.learner)
 self.save()
 ```
 
 ## TensorBoard
 
-To save metrics on Tensorboard, use the following ShivaAdmin functions
+To save metrics on Tensorboard, use the following Admin functions
 ```python
 def init_summary_writer(self, learner, agent) -> None:
         '''
@@ -80,5 +80,5 @@ def init_summary_writer(self, learner, agent) -> None:
 Do a simple call from the learners such as
 
 ```python
-shiva.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
+Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
 ```
