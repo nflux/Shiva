@@ -173,7 +173,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
             action = agent.actor(observation.float()).cpu().data.numpy()
             # maybe should change the print to a log
             if step_count % 100 == 0:
-                print(action)
+                # print(action)
                 pass
             action += self.ou_noise.noise()
             action = np.clip(action, -1,1)

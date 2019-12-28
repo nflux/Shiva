@@ -22,7 +22,7 @@ class UnityWrapperEnvironment(Environment):
         self.channel = EngineConfigurationChannel()
         self.Unity = UnityEnvironment(
             file_name= self.exec,
-            base_port = self.port,
+            # base_port = self.port,
             seed = self.configs['Algorithm']['manual_seed'],
             side_channels = [self.channel],
             no_graphics= not self.render
@@ -57,7 +57,7 @@ class UnityWrapperEnvironment(Environment):
         self.num_instances = self.batched_step_results.n_agents()
         self.instances_ids = self.batched_step_results.agent_id
 
-        self.observations = self.batched_step_results.obs
+        self.observations = self.batched_step_results.obs[0]
         self.rewards = self.batched_step_results.reward
         self.dones = self.batched_step_results.done
 
@@ -74,7 +74,7 @@ class UnityWrapperEnvironment(Environment):
         self.Unity.step()
         self.batched_step_results = self.Unity.get_step_result(self.group_id)
 
-        self.observations = self.batched_step_results.obs
+        self.observations = self.batched_step_results.obs[0]
         self.rewards = self.batched_step_results.reward
         self.dones = self.batched_step_results.done
         '''
@@ -138,7 +138,7 @@ class UnityWrapperEnvironment(Environment):
         return self.GroupSpec.observation_shapes[0][0]
 
     def get_observation(self):
-        return self.batched_step_results.obs[0]
+        return self.observations
 
     def get_actions(self):
         return self.actions

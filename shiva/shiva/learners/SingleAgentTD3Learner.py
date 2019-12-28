@@ -11,7 +11,7 @@ class SingleAgentTD3Learner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentTD3Learner ,self).__init__(learner_id, config)
 
-    def run(self):
+    def run(self, train=True):
         while not self.env.finished(self.episodes):
             self.env.reset()
             while not self.env.is_done():

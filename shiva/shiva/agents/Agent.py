@@ -30,6 +30,9 @@ class Agent(object):
     def load_net(self, load_path):
         self.policy = torch.load(load_path)
 
+    def get_action(self, obs):
+        return self.find_best_action(self.policy, obs)
+
     def find_best_action(self, network, observation) -> np.ndarray:
         '''
             Iterates over the action space to find the one with the highest Q value
@@ -43,9 +46,8 @@ class Agent(object):
         '''
         obs_v = torch.tensor(observation).float().to(self.device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
-        # print(self.acs_space)
         for i in range(self.acs_space):
-            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device) 
+            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device)
             q_val = network(torch.cat([obs_v, act_v]))
             if q_val > best_q:
                 best_q = q_val
