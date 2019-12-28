@@ -1,5 +1,5 @@
 # The Abstracts 
-* The abstracts are our super classes that contains the templets and functions that the child classes are expected to follow. Each of these abstract templates grabs the config's from their assigned portion from the .ini file, which gives the user a more refined settings to suit their needs. 
+* The abstracts are our super classes that contains the templates and functions that the child classes are expected to follow. Each of these abstract templates grabs the config's from their assigned portion from the .ini file, which gives the user a more refined settings to suit their needs. 
 ## The Abstracts Includes
  * AbstractMetaLearner
  * AbstractLearner

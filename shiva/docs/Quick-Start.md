@@ -23,6 +23,6 @@ or
 ```
 python -W ignore shiva -c Unity.ini -n run
 ```
-This will run DQN in the Basic environment.
+This will run DQN in the Unity Basic environment.
 
 There are a lot of configuration files [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/configs) that you can reference as well as the documentation found [here](https://github.com/nflux/Control-Tasks/tree/master/shiva/docs). Also every module has config examples in their respective readme.
