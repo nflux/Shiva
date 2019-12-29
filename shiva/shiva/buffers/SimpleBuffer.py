@@ -23,7 +23,7 @@ class SimpleBuffer():
 
     def append(self, experience):
         self.buffer.append(experience)
-        
+
     def clear_buffer(self):
         # self.buffer = collections.deque(maxlen=self.capacity)
         self.buffer.clear()
@@ -33,7 +33,7 @@ class SimpleBuffer():
         states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in indices])
         return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32),\
                np.array(next_states), np.array(dones, dtype=np.bool)
-    
+
     def full_buffer(self):
         states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in range(len(self.buffer))])
         return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32), \

@@ -39,8 +39,8 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
         self.config = config
         self.param_ix = param_ix
         self.gumbel = partial(torch.nn.functional.gumbel_softmax, tau=1, hard=True, dim=-1)
-        self.softmax = torch.nn.Softmax(dim=-1)
-        
+        self.softmax = torch.nn.Softmax(dim=2)
+
         self.net = nh.DynamicLinearSequential(
                             input_dim,
                             output_dim,
@@ -53,7 +53,7 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
                         )
-    def forward(self, x, gumbel=False):    
+    def forward(self, x, gumbel=False):
         a = self.net(x)
         if gumbel:
             # print("Network Output (before gumbel):", x, a)

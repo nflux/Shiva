@@ -16,7 +16,7 @@ class UnityWrapperEnvironment(Environment):
 
         self.action_space_discrete = self.action_space if self.BrainParameters.vector_action_space_type == 'discrete' else None
         self.action_space_continuous = self.action_space if self.BrainParameters.vector_action_space_type == 'continuous' else None
-        
+
         self.num_instances = len(self.BrainInfo.agents)
 
         self.rewards = np.array(self.BrainInfo.rewards)
@@ -24,6 +24,7 @@ class UnityWrapperEnvironment(Environment):
         self.dones = np.array(self.BrainInfo.local_done)
         self.done_count = 0
         self.temp_done_counter = 0 # since we have @self.num_instances, a partial done will be when all instances finished at least once
+        
 
         self.step_count = 0
         self.load_viewer()
