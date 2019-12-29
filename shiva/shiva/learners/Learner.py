@@ -1,3 +1,4 @@
+import csv
 from shiva.core.admin import Admin
 from shiva.helpers.config_handler import load_class
 
@@ -30,6 +31,9 @@ class Learner(object):
             This works for Single Agent Learner
             For Multi Agent Learner we need to implemenet the else statement
         '''
+        # with open('metrics.csv', 'w', newline = ' ') as csvfile:
+        #     fieldnames = ['steps','rewards']
+        #     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         if hasattr(self, 'agent') and type(self.agent) is not list:
             metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
             if not episodic:
