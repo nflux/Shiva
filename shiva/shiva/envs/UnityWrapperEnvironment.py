@@ -69,7 +69,6 @@ class UnityWrapperEnvironment(Environment):
 
     def step(self, actions):
         self.actions = self._clean_actions(actions)
-
         self.Unity.set_actions(self.group_id, self.actions)
         self.Unity.step()
         self.batched_step_results = self.Unity.get_step_result(self.group_id)
@@ -123,17 +122,22 @@ class UnityWrapperEnvironment(Environment):
                 make sure it's numpy array
         '''
         if self.GroupSpec.is_action_discrete():
-            actions = np.array([np.argmax(_act) for _act in actions])
+            actions = np.array([[np.argmax(_act)] for _act in actions])
         elif type(actions) != np.ndarray:
             actions = np.array(actions)
         return actions
 
     def get_action_space(self):
-        return self.GroupSpec.action_size
+        if self.GroupSpec.is_action_discrete():
+            self.num_branches = self.GroupSpec.action_size # this is the number of independent actions
+            # we currently only deal with 1 independent action
+            return self.GroupSpec.discrete_action_branches[0] # grab the first branch only
+        elif self.GroupSpec.is_action_continuous():
+            return self.GroupSpec.action_size
 
     def get_observation_space(self):
         '''
-            Unsure why Unity does the double indexing.
+            Unsure why Unity does the double indexing on observations..
         '''
         return self.GroupSpec.observation_shapes[0][0]
 
@@ -157,7 +161,10 @@ class UnityWrapperEnvironment(Environment):
         delattr(self, 'Unity')
 
     def debug(self):
-        print('self -->', self.__dict__)
-        # print('UnityEnv -->', self.Unity.__dict__)
-        print('GroupSpec -->', self.GroupSpec.__dict__)
-        print('BatchStepResults -->', self.batched_step_results.__dict__)
+        try:
+            print('self -->', self.__dict__)
+            # print('UnityEnv -->', self.Unity.__dict__)
+            print('GroupSpec -->', self.GroupSpec)
+            print('BatchStepResults -->', self.batched_step_results.__dict__)
+        except:
+            print('debug except')
