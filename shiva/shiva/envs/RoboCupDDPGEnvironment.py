@@ -76,8 +76,11 @@ class RoboCupDDPGEnvironment(Environment):
 
         else:
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
-            
-        actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
+        
+        if self.discretized:
+            actions_v = action2one_hot(self.action_space['discrete'], act_choice)
+        else:
+            actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
         
         # print('\nreward:', self.rews, '\n')
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}

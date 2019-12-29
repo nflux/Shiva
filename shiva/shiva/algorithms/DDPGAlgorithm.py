@@ -34,6 +34,8 @@ class DDPGAlgorithm(Algorithm):
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
         dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
+        # print(actions)
+        # input()
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
 
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \

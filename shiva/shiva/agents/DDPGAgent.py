@@ -23,8 +23,8 @@ class DDPGAgent(Agent):
         self.critic = DynamicLinearNetwork(obs_dim + action_dim, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
-        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.learning_rate)
-        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.learning_rate)
+        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
     def get_action(self, observation):
         return self.actor(observation)

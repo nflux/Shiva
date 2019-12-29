@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 from shiva.envs.Environment import Environment
+from shiva.helpers.misc import action2one_hot
 
 class GymEnvironment(Environment):
     def __init__(self, configs):
@@ -26,10 +27,18 @@ class GymEnvironment(Environment):
         self.reward_per_episode = 0
         self.reward_total = 0
 
-    def step(self, action):
+    def step(self, action, discrete_select='argmax'):
         self.acs = action
         # print(self.action_space_continuous)
-        action4Gym = np.argmax(action) if self.action_space_continuous is None else action
+
+
+        if discrete_select == 'argmax':
+            action4Gym = np.argmax(action) if self.action_space_continuous is None else action
+        elif discrete_select == 'sample':
+            action4Gym = np.random.choice(len(action), p=action)
+
+
+
         # print(action4Gym)
         self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         self.load_viewer()
@@ -59,6 +68,9 @@ class GymEnvironment(Environment):
             You can specify the max steps in the gym environment by changing the max_steps
             config in your .ini file.
         '''
+
+        if self.action_space['discrete'] != 0:
+            action = action2one_hot(self.action_space['discrete'], action4Gym)
 
         # if self.steps_per_episode % self.max_steps == 0 or (self.done and self.steps_per_episode % 200 != 0):
         #     self.done = True

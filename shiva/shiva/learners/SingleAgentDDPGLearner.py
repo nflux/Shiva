@@ -29,8 +29,8 @@ class SingleAgentDDPGLearner(Learner):
         observation = self.env.get_observation()
 
         action = self.alg.get_action(self.agent, observation, self.step_count)
-        
-        next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
+
+        next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.action_selection_method)
 
         # TensorBoard Step Metrics
         Admin.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
