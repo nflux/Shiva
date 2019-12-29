@@ -3,7 +3,7 @@ from shiva.core.admin import Admin
 from shiva.helpers.config_handler import load_config_file_2_dict, load_class
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--config", required=False, type=str, help='Config file name')
+parser.add_argument("-c", "--config", required=True, type=str, help='Config file name')
 parser.add_argument("-n", "--name", required=False, type=str, help="Name of the run")
 args = parser.parse_args()
 

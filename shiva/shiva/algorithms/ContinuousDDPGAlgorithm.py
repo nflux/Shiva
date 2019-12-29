@@ -190,3 +190,13 @@ class ContinuousDDPGAlgorithm(Algorithm):
 
     def get_critic_loss(self):
         return self.critic_loss
+
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                ('Algorithm/Actor_Loss_per_Step', self.actor_loss),
+                ('Algorithm/Critic_Loss_per_Step', self.critic_loss),
+            ]
+        else:
+            metrics = []
+        return metrics

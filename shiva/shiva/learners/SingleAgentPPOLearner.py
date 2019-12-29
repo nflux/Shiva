@@ -33,6 +33,7 @@ class SingleAgentPPOLearner(Learner):
                 self.alg.update(self.agent, self.old_agent, self.buffer.full_buffer(), self.step_count)
                 self.buffer.clear_buffer()
                 self.old_agent = copy.deepcopy(self.agent)
+            self.checkpoint()
         self.env.close()
 
     def step(self):
