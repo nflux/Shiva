@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.functional as F
 import utils.Noise as noise
+from torch.nn import Softmax as Softmax
 from agents.PPOAgent import PPOAgent
 from .Algorithm import Algorithm
 from torch.distributions import Categorical
@@ -24,13 +25,15 @@ class PPOAlgorithm(Algorithm):
         self.obs_space = obs_space
         self.acs_discrete = action_space_discrete
         self.acs_continuous = action_space_continuous
+        self.softmax = Softmax(dim=-1)
 
 
-    def update(self, agent,old_agent,minibatch, step_count):
+    def update(self, agent,old_agent,buffer, step_count):
         '''
             Getting a Batch from the Replay Buffer
         '''
         self.step_count = step_count
+        minibatch = buffer.full_buffer()
 
         # Batch of Experiences
         states, actions, rewards, next_states, dones = minibatch
@@ -94,6 +97,8 @@ class PPOAlgorithm(Algorithm):
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
             self.loss.backward(retain_graph = True)
             agent.optimizer.step()
+        print('Done updating')
+        buffer.clear_buffer()
 
 
     def get_metrics(self, episodic=False):

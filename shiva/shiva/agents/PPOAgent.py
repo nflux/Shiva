@@ -3,7 +3,7 @@ from .Agent import Agent
 import networks.DynamicLinearNetwork as DLN
 from torch.distributions import Categorical
 from torch.distributions.normal import Normal
-from torch.nn import functional as F
+from torch.nn import Softmax as Softmax
 import utils.Noise as noise
 import copy
 import torch
@@ -25,6 +25,7 @@ class PPOAgent(Agent):
         self.acs_discrete = acs_discrete
         self.acs_continuous = acs_continuous
         self.scale = 0.9
+        self.softmax = Softmax(dim=-1)
 
 
         if (acs_discrete != None) and (acs_continuous != None):
@@ -42,7 +43,7 @@ class PPOAgent(Agent):
 
         if self.action_space == 'Discrete':
             print('actor:', self.network_input, self.network_output)
-            self.actor = DLN.SoftMaxHeadDynamicLinearNetwork(self.network_input, self.network_output,0, net_config['actor'])
+            self.actor = DLN.DynamicLinearNetwork(self.network_input, self.network_output, net_config['actor'])
             #self.target_actor = copy.deepcopy(self.actor)
             self.critic = DLN.DynamicLinearNetwork(self.network_input, 1, net_config['critic'])
             params = list(self.actor.parameters()) +list(self.critic.parameters())
@@ -81,6 +82,7 @@ class PPOAgent(Agent):
     def get_discrete_action(self, observation):
         #retrieve the action given an observation
         action = self.actor(torch.tensor(observation).float()).detach()
+        action = self.softmax(action)
         '''if(len(full_action.shape) > 1):
             full_action = full_action.reshape(len(full_action[0]))'''
         dist = Categorical(action)
@@ -132,7 +134,15 @@ class PPOAgent(Agent):
         return my, var, value
 
 
-    def save(self, save_path, step):
-        torch.save(self.actor, save_path + '/actor.pth')
-        torch.save(self.critic, save_path +'/critic.pth')
+    def save_agent(self, save_path,step):
+        torch.save(self.actor.state_dict(), save_path + '/actor.pth')
+        torch.save(self.critic.state_dict(), save_path +'/critic.pth')
         torch.save(self,save_path + '/agent.pth')
+
+    def save(self,save_path,step):
+        torch.save(self.actor, save_path + '/actor.pth')
+        torch.save(self.actor,save_path + '/actor.pth')
+
+    def load(self,save_path):
+        self.actor.load_state_dict(torch.load(save_path+'/actor.pth'))
+        self.critic.load_state_dict(torch.load(save_path+'/critic.pth'))

@@ -2,6 +2,7 @@ from settings import shiva
 from .Learner import Learner
 import helpers.misc as misc
 import torch.multiprocessing as mp
+import os
 import torch
 import envs
 import algorithms
@@ -23,20 +24,32 @@ class SingleAgentMultiEnvLearner(Learner):
         super(SingleAgentMultiEnvLearner,self).__init__(learner_id, config)
         self.queue = mp.Queue(maxsize=self.queue_size)
         self.ep_count = torch.zeros(1).share_memory_()
-        self.updates = 0
+        self.updates = 1
+        self.agent_dir = os.getcwd() + '/experts/GymMulti'
 
 
     def run(self):
         self.step_count = 0
         while self.ep_count < self.episodes:
             while not self.queue.empty():
-                self.buffer.append(self.queue.get())
+                exp = self.queue.get()
+                observations, actions, rewards, next_observations, dones = zip(*exp)
+                print(np.array(rewards).sum())
+                for i in range(len(observations)):
+                    self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
                 self.ep_count += 1
-            if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] > self.updates:
-                self.alg.update(self.agent,self.old_agent,self.buffer.full_buffer,self.step_count)
-                self.buffer.clear_buffer()
-                self.old_agent = copy.deepcopy(self.agent())
+            if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
+                print(self.ep_count)
+                self.alg.update(self.agent,self.old_agent,self.buffer,self.step_count)
+                self.agent.save(self.agent_dir,self.step_count)
+                self.updates += 1
+                print('Copied')
                 #Add save policy function here
+
+        self.p.join()
+        print('Hello')
+        del(self.p)
+        del(self.queue)
 
 
     def step(self):
@@ -64,7 +77,7 @@ class SingleAgentMultiEnvLearner(Learner):
         # create the environment and get the action and observation spaces
 
         environment = getattr(envs, self.configs['Environment']['type'])
-        return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count)
+        return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count,self.agent_dir,self.episodes)
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])

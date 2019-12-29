@@ -61,6 +61,8 @@ class SingleAgentPPOLearner(Learner):
                 for obs, act, rew, next_obs, don in z:
                     self.rewards[i] += rew
                     exp = [obs, act, rew, next_obs, int(don)]
+                    print(exp)
+                    input()
                     self.queues[i].put(exp)
                     if don == True:
                         while not self.queues[i].empty():

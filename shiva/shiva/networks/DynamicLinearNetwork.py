@@ -39,7 +39,7 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
         self.config = config
         self.param_ix = param_ix
         self.gumbel = partial(torch.nn.functional.gumbel_softmax, tau=1, hard=True, dim=-1)
-        self.softmax = torch.nn.Softmax(dim=2)
+        self.softmax = torch.nn.Softmax(dim=-1)
 
         self.net = nh.DynamicLinearSequential(
                             input_dim,
