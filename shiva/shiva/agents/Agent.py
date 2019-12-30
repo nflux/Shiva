@@ -25,7 +25,7 @@ class Agent(object):
         return "<{}:id={}>".format(self.__class__, self.id)
 
     def save(self, save_path, step):
-        torch.save(self.policy, save_path + '/policy.pth')
+        torch.save({'state_dict':self.policy.state_dict()}, save_path + '/policy.pth')
 
     def load_net(self, load_path):
         self.policy = torch.load(load_path)

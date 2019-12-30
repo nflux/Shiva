@@ -8,10 +8,13 @@ __pycache__/
 # Server
 nohup.out
 
-.idea/*
-Shiva/__pycache__/
-Shiva/*.py[cod]
+# JupyterNotebooks
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
 
+# IPython
+profile_default/
+ipython_config.py
+
+# Misc
 .idea/
-
-shiva/shiva/envs/unitybuilds/
