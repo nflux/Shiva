@@ -1,4 +1,5 @@
 import csv
+# import os.path
 from shiva.core.admin import Admin
 from shiva.helpers.config_handler import load_class
 
@@ -13,6 +14,7 @@ class Learner(object):
         self.step_count = 0
         self.checkpoints_made = 0
 
+        
     def __getstate__(self):
         d = dict(self.__dict__)
         try:
@@ -31,19 +33,41 @@ class Learner(object):
             This works for Single Agent Learner
             For Multi Agent Learner we need to implemenet the else statement
         '''
-        # with open('metrics.csv', 'w', newline = ' ') as csvfile:
-        #     fieldnames = ['steps','rewards']
-        #     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        
         if hasattr(self, 'agent') and type(self.agent) is not list:
             metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
             if not episodic:
                 for metric_name, y_val in metrics:
                     Admin.add_summary_writer(self, self.agent, metric_name, y_val, self.env.step_count)
+                    try:
+                        f = open("Benchmark/"+str(metric_name)+'.csv')
+                        f.close()
+                    except FileNotFoundError:
+                        file = open("Benchmark/"+str(metric_name)+'.csv', 'w+')
+                        file.close()
+                    
+                    with open("Benchmark/"+str(metric_name)+'.csv', 'a', newline='') as csvfile:
+                        fieldnames = ['steps','rewards']
+                        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                        writer.writerow({'steps': self.env.step_count, 'rewards': str(y_val)})
             else:
                 for metric_name, y_val in metrics:
                     Admin.add_summary_writer(self, self.agent, metric_name, y_val, self.env.done_count)
+
+                    try:
+                        f = open("Benchmark/"+str(metric_name)+'.csv')
+                        f.close()
+                    except FileNotFoundError:
+                        file = open("Benchmark/"+str(metric_name)+'.csv', 'w+')
+                        file.close()
+                    with open("Benchmark/"+str(metric_name)+'.csv', 'a', newline='') as csvfile:
+                        fieldnames = ['steps','rewards']
+                        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                        writer.writerow({'steps': self.env.step_count, 'rewards': str(y_val)})
         else:
             assert False, "The Learner attribute 'agent' was not found. Either name the attribute 'agent' or could be that MultiAgent Metrics are not yet supported."
+        
 
     def checkpoint(self):
         assert hasattr(self, 'save_checkpoint_episodes'), "Learner needs 'save_checkpoint_episodes' attribute in config - put 0 if don't want to save checkpoints"
