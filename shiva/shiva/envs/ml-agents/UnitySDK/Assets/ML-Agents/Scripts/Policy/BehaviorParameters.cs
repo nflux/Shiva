@@ -30,6 +30,7 @@ namespace MLAgents
         {
             get { return m_BehaviorName; }
         }
+       
 
         public IPolicy GeneratePolicy(Func<float[]> heuristic)
         {
@@ -59,6 +60,19 @@ namespace MLAgents
             m_Model = model;
             m_InferenceDevice = inferenceDevice;
             m_BehaviorName = behaviorName;
+        }
+
+        public bool Heuristic
+        {
+            get
+            {
+                return m_UseHeuristic;
+            }
+
+             set
+            {
+                m_UseHeuristic = value;
+            }
         }
     }
 }
