@@ -57,6 +57,9 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                         )
     def forward(self, x, gumbel=False):
         a = self.net(x)
+        # print(a.shape)
+        # if a.shape[0] < 1:
+        #     print(a)
         if gumbel:
             # print("Network Output (before gumbel):", x, a)
             if len(a.shape) == 3:

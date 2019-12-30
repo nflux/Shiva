@@ -1,6 +1,6 @@
 import numpy as np
 import copy
-
+import time
 from shiva.core.admin import Admin
 from shiva.learners.Learner import Learner
 from shiva.helpers.config_handler import load_class
@@ -29,6 +29,8 @@ class SingleAgentDDPGLearner(Learner):
         observation = self.env.get_observation()
 
         action = self.alg.get_action(self.agent, observation, self.step_count)
+        # if self.step_count % 50 == 0:
+        #     print(action)
 
         next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.action_selection_method)
 
@@ -43,10 +45,9 @@ class SingleAgentDDPGLearner(Learner):
         # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
         # print('to buffer:', observation, more_data['action'], reward, next_observation, [done])
 
-        experience = [observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)]
-        experience = copy.deepcopy(experience)
+        t = [observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)]
+        experience = copy.deepcopy(t)
         self.buffer.append(experience)
-        
         if self.step_count > self.alg.exploration_steps: #and self.step_count % 16 == 0:
             self.alg.update(self.agent, self.buffer.sample(), self.step_count)
             # pass
@@ -55,6 +56,7 @@ class SingleAgentDDPGLearner(Learner):
         if done:
             Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
             print("Episode {} complete. Total Reward: {}".format(self.ep_count, self.totalReward))
+            time.sleep(0.1)
             self.alg.ou_noise.reset()
 
             if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
