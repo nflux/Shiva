@@ -3,6 +3,12 @@
 # sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'modules'))
 # sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'utils'))
 
+import torch.multiprocessing as mp
+try:
+    mp.set_start_method('spawn')
+except RuntimeError:
+    pass
+
 import argparse
 import os
 import copy

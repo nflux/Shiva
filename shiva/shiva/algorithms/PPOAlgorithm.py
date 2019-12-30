@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.functional as F
 import utils.Noise as noise
-from torch.nn import Softmax as Softmax
+from torch.nn.functional import softmax
 from agents.PPOAgent import PPOAgent
 from .Algorithm import Algorithm
 from torch.distributions import Categorical
@@ -25,7 +25,7 @@ class PPOAlgorithm(Algorithm):
         self.obs_space = obs_space
         self.acs_discrete = action_space_discrete
         self.acs_continuous = action_space_continuous
-        self.softmax = Softmax(dim=-1)
+        # self.softmax = Softmax(dim=-1)
 
 
     def update(self, agent,old_agent,buffer, step_count):
@@ -78,7 +78,8 @@ class PPOAlgorithm(Algorithm):
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
 
             #Calculate log probabilites of the new policy for the policy objective
-            current_action_probs = agent.actor(states.float())
+            current_action_probs = softmax(agent.actor(states.float()))
+            # print(current_action_probs)
             dist2 = Categorical(current_action_probs)
             log_probs = dist2.log_prob(actions)
             #Use entropy to encourage further exploration by limiting how sure

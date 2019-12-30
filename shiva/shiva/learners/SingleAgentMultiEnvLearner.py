@@ -25,7 +25,7 @@ class SingleAgentMultiEnvLearner(Learner):
         self.queue = mp.Queue(maxsize=self.queue_size)
         self.ep_count = torch.zeros(1).share_memory_()
         self.updates = 1
-        self.agent_dir = os.getcwd() + '/experts/GymMulti'
+        self.agent_dir = os.getcwd() + self.agent_path
 
 
     def run(self):
@@ -41,14 +41,14 @@ class SingleAgentMultiEnvLearner(Learner):
             if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
                 print(self.ep_count)
                 self.alg.update(self.agent,self.old_agent,self.buffer,self.step_count)
-                self.agent.save(self.agent_dir,self.step_count)
+                self.agent.save_agent(self.agent_dir,self.step_count)
                 self.updates += 1
                 print('Copied')
                 #Add save policy function here
 
-        self.p.join()
+        # self.p.join()
         print('Hello')
-        del(self.p)
+        # del(self.p)
         del(self.queue)
 
 
@@ -113,8 +113,8 @@ class SingleAgentMultiEnvLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
-        self.p = mp.Process(target = self.env.launch_envs)
-        self.p.start()
+        # self.p = mp.Process(target = self.env.launch_envs)
+        # self.p.start()
 
 
         # if buffer set to true in config
