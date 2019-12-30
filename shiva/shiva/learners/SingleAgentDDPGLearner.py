@@ -12,20 +12,17 @@ class SingleAgentDDPGLearner(Learner):
 
     def run(self):
         self.step_count = 0
-        for self.ep_count in range(self.episodes):
+        while not self.env.finished(self.episodes):
             self.env.reset()
-            self.totalReward = 0
-            self.steps_per_episode = 0
-            done = False
-            while not done:
-                done = self.step()
-                self.step_count +=1
-                self.steps_per_episode +=1
-
+            while not self.env.is_done():
+                self.step()
+                self.collect_metrics()  # metrics per episode
+            self.collect_metrics(True)  # metrics per episode
+            self.alg.ou_noise.reset()
+            self.checkpoint()
         self.env.close()
 
     def step(self):
-
         observation = self.env.get_observation()
 
         action = self.alg.get_action(self.agent, observation, self.step_count)
@@ -63,7 +60,27 @@ class SingleAgentDDPGLearner(Learner):
                 print("Checkpoint!")
                 Admin.update_agents_profile(self)
 
-        return done
+
+        """Temporary fix for Unity as it receives multiple observations"""
+        """
+        if len(observation.shape) > 1:
+            action = [self.alg.get_action(self.agent, obs, self.env.step_count) for obs in observation]
+            next_observation, reward, done, more_data = self.env.step(action)
+            z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
+            for obs, act, rew, next_obs, don in z:
+                exp = [obs, act, rew, next_obs, int(don)]
+                # print(act, rew, don)
+                self.buffer.append(exp)
+        else:
+            action = self.alg.get_action(self.agent, observation, self.env.step_count)
+            next_observation, reward, done, more_data = self.env.step(action)
+            t = [observation, action, reward, next_observation, int(done)]
+            exp = copy.deepcopy(t)
+            self.buffer.append(exp)
+        """
+
+        if self.env.step_count > self.alg.exploration_steps:# and self.step_count % 16 == 0:
+            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
 
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
@@ -98,13 +115,13 @@ class SingleAgentDDPGLearner(Learner):
         # Create the agent
         if self.load_agents:
             self.agent = self.load_agent(self.load_agents)
-            # self.buffer = self._load_buffer(self.load_agents)
+            self.buffer = self._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent(self.get_id())
-        # if buffer set to true in config
-        if self.using_buffer:
-            # Basic replay buffer at the moment
-            self.buffer = self.create_buffer()
+            self.agent = self.alg.create_agent()
+            # if buffer set to true in config
+            if self.using_buffer:
+                # Basic replay buffer at the moment
+                self.buffer = self.create_buffer()
 
         print('Launch Successful.')
 

@@ -214,8 +214,15 @@ class DDPGAlgorithm(Algorithm):
             else:    
                 return action
 
+<<<<<<< HEAD:shiva/shiva/algorithms/DDPGAlgorithm.py
     def create_agent(self, id):
         self.agent = DDPGAgent(id, self.obs_space, self.discrete+self.param, self.discrete, self.configs[1], self.configs[2])
+=======
+    def create_agent(self):
+        # print(self.obs_space)
+        # input()
+        self.agent = ParametrizedDDPGAgent(self.obs_space, self.acs_space['discrete']+self.acs_space['param'], self.acs_space['discrete'], self.configs[1], self.configs[2])
+>>>>>>> master:shiva/shiva/algorithms/ParametrizedDDPGAlgorithm.py
         return self.agent
 
     def get_actor_loss(self):

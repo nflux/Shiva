@@ -101,8 +101,8 @@ class DQNAlgorithm(Algorithm):
     def get_loss(self):
         return self.loss
 
-    def create_agent(self, id):
-        self.agent = DQNAgent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self):
+        self.agent = DQNAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):

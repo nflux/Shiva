@@ -20,6 +20,7 @@ class SingleAgentTD3Learner(Learner):
                 self.collect_metrics()
             # self.alg.update(self.agent, self.buffer, self.env.step_count)
             self.collect_metrics(episodic=True)
+            self.checkpoint()
             print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))
         self.env.close()
 
@@ -69,7 +70,7 @@ class SingleAgentTD3Learner(Learner):
             self.agent = self.load_agent(self.load_agents)
             self.alg.agent = self.agent
         else:
-            self.agent = self.alg.create_agent(self.get_id())
+            self.agent = self.alg.create_agent()
 
         if self.using_buffer:
             self.buffer = self.create_buffer()

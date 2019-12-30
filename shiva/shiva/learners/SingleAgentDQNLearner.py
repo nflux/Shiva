@@ -11,22 +11,32 @@ class SingleAgentDQNLearner(Learner):
         super(SingleAgentDQNLearner,self).__init__(learner_id, config)
 
     def run(self):
-        self.step_count = 0
-        # for self.ep_count in range(self.episodes):
+        step_count_per_run = 0
         while not self.env.finished(self.episodes):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.step_count += 1
                 self.collect_metrics() # metrics per step
-            self.ep_count += 1
+                # print('LEARNER {}\tStep {}\tSessionSteps: {}\tDones: {}\tReward: {}'.format(self.id, self.env.steps_per_episode, self.env.step_count, self.env.done_count, self.env.reward_per_step))
+
+                ''' FOR MULTIPROCESS PBT PURPOSES '''
+                self.step_count = self.env.step_count
+                self.ep_count = self.env.done_count
+                try:
+                    if self.multi and step_count_per_run >= self.updates_per_iteration:
+                        return None
+                except:
+                    pass
+                step_count_per_run += 1
+                ''''''
+            self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
             self.collect_metrics(True) # metrics per episode
-            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.get_total_reward()))
+            self.checkpoint()
+            # print('Learner {}\tEpisode {} complete on {} steps!\tEpisodic reward: {} '.format(self.id, self.ep_count, self.env.steps_per_episode, self.env.reward_per_episode))
+
         self.env.close()
 
     def step(self):
-
         observation = self.env.get_observation()
 
         """Temporary fix for Unity as it receives multiple observations"""
@@ -46,10 +56,6 @@ class SingleAgentDQNLearner(Learner):
             self.buffer.append(exp)
         """"""
 
-    def create_environment(self):
-        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs['Environment'])
-
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         try:
@@ -62,12 +68,6 @@ class SingleAgentDQNLearner(Learner):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
         return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
-    def get_agents(self):
-        return self.agent
-
-    def get_algorithm(self):
-        return self.alg
-
     def launch(self):
         self.env = self.create_environment()
 
@@ -77,9 +77,8 @@ class SingleAgentDQNLearner(Learner):
             self.agent = Admin._load_agents(self.load_agents)[0]
             self.buffer = Admin._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent(self.get_id())
-
-        if self.using_buffer:
-            self.buffer = self.create_buffer()
+            self.agent = self.alg.create_agent()
+            if self.using_buffer:
+                self.buffer = self.create_buffer()
 
         print('Launch Successful.')

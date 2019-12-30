@@ -4,6 +4,8 @@ from scipy import stats
 import copy
 import numpy as np
 
+from torch.optim.lr_scheduler import LambdaLR
+
 from shiva.core.admin import Admin
 from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_class
@@ -19,7 +21,6 @@ class MultipleAgentMetaLearner(MetaLearner):
         self.episode_rewards = list()
         self.process_list = list()
         #self.multiprocessing_learners()
-        print (configs)
         self.run()
 
     def run(self):
@@ -58,41 +59,44 @@ class MultipleAgentMetaLearner(MetaLearner):
             # Runs the learner for a number of episodes given by the config
             self.learner.run()'''
 
-            self.populate_learners()
+            # self.populate_learners()
+            # self.eval = eval_env(self.configs['Evaluation'], self.learners)
+            # self.redeployment()
+            # # self.sample()
 
+            # self.multiprocessing_learners()
+            self.populate_learners()
+            self.eval = eval_env(self.configs['Evaluation'], self.learners)
+            self.redeployment()
+                # self.sample()
 
             self.multiprocessing_learners()
-
-        self.eval = eval_env(self.configs['Evaluation'], self.learners)
-        self.eval.evaluate_agents()
-        # print(self.eval.eval_scores)
+        
         for i in range(len(self.eval.eval_scores)):
             print('Average Reward for agent: ', i, '\n', np.average(self.eval.eval_scores[i]))
-
-            # save
-            # if self.start_mode == self.PROD_MODE:
-            #     self.save()
-        self.redeployment()
+        self.save()
         print('bye')
 
     def redeployment (self):
-        
-        while True:
-            
-            self.learners, self.episode_rewards =  self.eval.rank_agents()
-            self.exploitation(self.learners, self.episode_rewards)
-            self.exploration(self.learners)
-            self.populate_learners()
-            self.multiprocessing_learners()
+        for i in self.learners:
+            i.eval = self.eval
+        # while True:
+        #     self.learners, self.episode_rewards =  self.eval.rank_agents()
+        #     self.exploitation(self.learners, self.episode_rewards)
+        #     self.exploration(self.learners)
+        #     self.multiprocessing_learners()
 
 
 
     def create_learner(self):
+        self.configs['Learner']['eval'] = list()
+        self.configs['Evaluation']['sample'] = False
+        self.configs['Learner']['updates_per_iteration'] = self.updates_per_iteration
         learner_class = load_class('shiva.learners', self.configs['Learner']['type'])
         return learner_class(self.get_id(), self.configs)
 
     '''#threading learners
-    def multiprocessing_learners(self):
+    def multiprocessing_learners(sLearnerelf):
         for rank in range(self.learnerList):
             p = torch.multiprocessing.Process(target=self.run)
             p.start()
@@ -100,35 +104,95 @@ class MultipleAgentMetaLearner(MetaLearner):
         for p in self.process_list:
             p.join()'''
 
+    def check_condition (self):
+        k = True
+        for i in self.learners:
+            if item.ep_count == item.episodes:
+                k = False
+            elif item.ep_count >= item.episodes:
+                k = True
+            else:
+                k = False
+        return k
 
     #Run each Learner in a separate process and join the processes when they are all finished running
     def multiprocessing_learners(self):
-        for learner in range(len(self.learners)):
-            p = torch.multiprocessing.Process(target=self.run_learner(learner))
-            p.start()
-            self.process_list.append(p)
-        for p in self.process_list:
-            p.join()
+        event = torch.multiprocessing.Event()
+        self.eval.event = event
+
+        while not all(item.ep_count >= item.episodes for item in self.learners):
+            self.process_list = []
+            for learner in self.learners:
+                print ('id:', learner.id, 'ep_count:', learner.ep_count,'ep:', learner.episodes, 'learning rate:', learner.agent.learning_rate)
+            # for learner in range(len(self.learners)):
+                if learner.ep_count < learner.episodes:
+                    s = "learner" + "_" + str(learner)
+                    p = torch.multiprocessing.Process(name=s, target=self.run_learner(learner.id))
+                    p.start()
+                    self.process_list.append(p)
+
+            for p in self.process_list:
+                p.join()
+                # print(p)
+
+            print("start evaluating...---------------------------------------")
+            
+            self.eval.evaluate_agents()
+            
+            print("start ranking Agents...-----------------------------------")
+
+            self.learners, self.episode_rewards = self.eval.rank_agents()
+            
+            for i in range(len(self.eval.eval_scores)):
+                print('Average Reward for agent: ', i, '\n', np.average(self.eval.eval_scores[i]))
+            # for i in self.learners:
+            #     print ('id:', i.id, 'ep_count:', i.ep_count,'ep:', i.episodes, 'learning rate:', i.agent.learning_rate)
+
+            print ("start PBT process...---------------------------------------")
+            self.exploitation(self.learners, self.episode_rewards)
+
+            self.exploration(self.learners)
+
+            # for p in self.process_list:
+            #     p.join()
+            #     print(p)
+
+            for i in self.learners:
+                print ('id:', i.id, 'ep_count:', i.ep_count,'ep:', i.episodes, 'learning rate:', i.agent.learning_rate)
+            print ('pbt done - ready for other session: ', all(item.ep_count != item.episodes for item in self.learners))
+
+        print ("finish training")
+            
+        # p = torch.multiprocessing.Pool()
+        # p.map(self.run_learner, range(len(self.learners)))
+        # p.close()
+        # p.join()
+        
 
     #Run inidivdual learners. Used as the target function for multiprocessing
-    def run_learner(self,learner_idx):
-        shiva.add_learner_profile(self.learners[learner_idx])
-        self.learners[learner_idx].launch()
-        shiva.update_agents_profile(self.learners[learner_idx])
+    def run_learner(self, learner_idx):
+        # Admin.add_learner_profile(self.learners[learner_idx])
+        #
+        # # print ("learning rate", learner_idx, self.learners[learner_idx].agent.learning_rate)
+        # Admin.update_agents_profile(self.learners[learner_idx])
         self.learners[learner_idx].run()
+        # print("episode",self.learners[learner_idx].ep_count)
 
     #fill the list of learners
     def populate_learners(self):
-        for learner in range(self.learner_list_size):
-            self.learners[learner] = self.create_learner()
+        for learner_id in range(self.learner_list_size):
+            self.learners[learner_id] = self.create_learner()
+            Admin.add_learner_profile(self.learners[learner_id])
+            self.learners[learner_id].launch()
+            Admin.update_agents_profile(self.learners[learner_id])
+            self.sample(self.learners[learner_id])
 
     #Conduct Welch's T-test between two agents episode rewards and return whether we reject the null hypothesis
     def welch_T_Test(self,episodes_1, episodes_2):
-        t,p = stats.ttest_ind(episodes_1, episodes_2, equal_var=False)
-
+        t, p = stats.ttest_ind(episodes_1, episodes_2, equal_var=False)
         return p < self.configs['MetaLearner']['p_value']
 
-    def truncation(self,learners):
+    def truncation(self, learners):
         truncate_size = int(self.learner_list_size* .2)
         bottom_20 = learners[self.learner_list_size - truncate_size:]
         top_20 = learners[:truncate_size]
@@ -137,6 +201,7 @@ class MultipleAgentMetaLearner(MetaLearner):
             random_top_20 = random.choice(learners)
             learner.agent.policy = copy.deepcopy(random_top_20.agent.policy)
             learner.agent.optimizer = copy.deepcopy(random_top_20.agent.optimizer)
+            learner.agent.learning_rate = copy.deepcopy(random_top_20.agent.learning_rate)
 
     def t_Test(self,learners,episode_rewards):
         for i in range(len(learners)):
@@ -146,19 +211,30 @@ class MultipleAgentMetaLearner(MetaLearner):
             if(self.welch_T_Test(episode_rewards[i],episode_rewards[sampled_idx])):
                 learners[i].agent.policy = copy.deepcopy(learners[sampled_idx].agent.policy)
                 learners[i].agent.optimizer = copy.deepcopy(learners[sampled_idx].agent.optimizer)
+                learners[i].agent.learning_rate = copy.deepcopy(learners[sampled_idx].agent.learning_rate)
 
+    #randomly sample hyperparameter
+    def sample (self, learner):
+        new_lr = random.uniform(self.learning_rate_range[0], self.learning_rate_range[1])
+        learner.agent.learning_rate = new_lr
 
     #Resample hyperparameters from the original range dictated in the configuration file
     def resample(self, learners):
         for learner in learners:
             new_lr = random.uniform(self.learning_rate_range[0],self.learning_rate_range[1])
-            learner.agent.optimizer = getattr(torch.optim,self.configs['Agent']['optimizer_function'])(params=learner.agent.policy.parameters(), lr=new_lr)
+            # lmbda = lambda epoch: new_lr
+            # scheduler = LambdaLR(learner.agent.optimizer, lr_lambda=lmbda)
+            # scheduler.step()
+            learner.agent.optimizer = getattr(torch.optim, self.configs['Agent']['optimizer_function'])(params=learner.agent.policy.parameters(), lr=new_lr)
             learner.agent.learning_rate = new_lr
 
     #Perturbate hyperparameters by a random factor randomly selected from predefined factor lists in the configuration file
     def perturbation(self,learners):
         for learner in learners:
             perturbation_factor = random.choice(self.configs['MetaLearner']['perturbation_factors'])
+            # lmbda = lambda epoch: perturbation_factor
+            # scheduler = LambdaLR(learner.agent.optimizer, lr_lambda=lmbda)
+            # scheduler.step()
             new_lr = perturbation_factor * learner.agent.learning_rate
             learner.agent.optimizer = getattr(torch.optim,self.configs['Agent']['optimizer_function'])(params=learner.agent.policy.parameters(), lr=new_lr)
             learner.agent.learning_rate = new_lr

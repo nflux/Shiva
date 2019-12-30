@@ -105,7 +105,7 @@ class UnityWrapperEnvironment(Environment):
         self.steps_per_episode += self.num_instances
         self.step_count += self.num_instances
         self.temp_done_counter += sum([ 1 if val else 0 for val in self.dones ])
-        self.done_count += self.temp_done_counter
+        self.done_count += sum([ 1 if val else 0 for val in self.dones ])
         self.reward_per_step = sum(self.rewards) / self.num_instances
         self.reward_per_episode += self.reward_per_step
         self.reward_total += self.reward_per_episode

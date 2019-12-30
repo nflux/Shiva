@@ -9,3 +9,9 @@ __pycache__/
 nohup.out
 
 .idea/*
+Shiva/__pycache__/
+Shiva/*.py[cod]
+
+.idea/
+
+shiva/shiva/envs/unitybuilds/
