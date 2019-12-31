@@ -198,7 +198,7 @@ class MultipleAgentMetaLearner(MetaLearner):
         top_20 = learners[:truncate_size]
 
         for learner in bottom_20:
-            random_top_20 = random.choice(learners)
+            random_top_20 = random.choice(top_20)
             learner.agent.policy = copy.deepcopy(random_top_20.agent.policy)
             learner.agent.optimizer = copy.deepcopy(random_top_20.agent.optimizer)
             learner.agent.learning_rate = copy.deepcopy(random_top_20.agent.learning_rate)
@@ -220,7 +220,9 @@ class MultipleAgentMetaLearner(MetaLearner):
 
     #Resample hyperparameters from the original range dictated in the configuration file
     def resample(self, learners):
-        for learner in learners:
+        resample_size = int(self.learner_list_size* .2)
+        bottom_20 = learners[self.learner_list_size - resample_size:]
+        for learner in bottom_20:
             new_lr = random.uniform(self.learning_rate_range[0],self.learning_rate_range[1])
             # lmbda = lambda epoch: new_lr
             # scheduler = LambdaLR(learner.agent.optimizer, lr_lambda=lmbda)
@@ -230,7 +232,9 @@ class MultipleAgentMetaLearner(MetaLearner):
 
     #Perturbate hyperparameters by a random factor randomly selected from predefined factor lists in the configuration file
     def perturbation(self,learners):
-        for learner in learners:
+        perturbation_size = int(self.learner_list_size* .2)
+        bottom_20 = learners[self.learner_list_size - perturbation_size:]
+        for learner in bottom_20:
             perturbation_factor = random.choice(self.configs['MetaLearner']['perturbation_factors'])
             # lmbda = lambda epoch: perturbation_factor
             # scheduler = LambdaLR(learner.agent.optimizer, lr_lambda=lmbda)
