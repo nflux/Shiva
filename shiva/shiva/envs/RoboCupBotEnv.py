@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-import configparser, ast
-import os, subprocess, time, signal
-from HFO import hfo
-import socket
-from HFO.bin import Communicator
+import os, subprocess, time, signal, argparse, configparser, ast
+
+import robocup.HFO.hfo as hfo
 
 def load_config_file_2_dict(_FILENAME: str) -> dict:
     '''
@@ -32,10 +30,11 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
     r['_filename_'] = _FILENAME
     return r
 
-class Bots:
-    def __init__(self, config):
+class RoboCupBotEnv:
+    def __init__(self, config, port):
         {setattr(self, k, v) for k,v in config.items()}
         self.viewer = None
+        self.port = port
 
     # found from https://github.com/openai/gym-soccer/blob/master/gym_soccer/envs/soccer_env.py
     def _start_hfo_server(self):
@@ -95,15 +94,14 @@ class Bots:
             self._start_viewer()
         
         while True:
-            # self._comm.sendMsg('(think)')
             pass
 
-
 if __name__ == "__main__":
-    config_file = os.getcwd() + '/shiva/envs/robocup/bot.ini'
-    # config_file = 'bot.ini'
-    config = load_config_file_2_dict(config_file)
-    bots = Bots(config['BotEnv'])
-    bots.run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port", required=True, type=int, help='Port for RoboCup Server')
+    args = parser.parse_args()
 
-
+    bot_config_file = os.getcwd() + '/configs/DDPG-Robocup-Imitation.ini'
+    config = load_config_file_2_dict(bot_config_file)
+    bot_env = RoboCupBotEnv(config['BotEnv'], args.port)
+    bot_env.run()

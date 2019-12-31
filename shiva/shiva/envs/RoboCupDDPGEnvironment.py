@@ -6,13 +6,14 @@ from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
 
 class RoboCupDDPGEnvironment(Environment):
-    def __init__(self, config):
+    def __init__(self, config, port=None):
         super(RoboCupDDPGEnvironment, self).__init__(config)
         np.random.seed(5)
         torch.manual_seed(5)
 
-        self.env = rc_env(config)
+        self.env = rc_env(config, port)
         self.env.launch()
+        self.port = port
 
         self.left_actions = self.env.left_actions
         self.left_params = self.env.left_action_params
