@@ -24,45 +24,9 @@ class SingleAgentDDPGLearner(Learner):
 
     def step(self):
         observation = self.env.get_observation()
-
-        action = self.alg.get_action(self.agent, observation, self.step_count)
-        # if self.step_count % 50 == 0:
-        #     print(action)
-
-        next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.action_selection_method)
-
-        # TensorBoard Step Metrics
-        Admin.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
-        # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
-
-        self.totalReward += more_data['raw_reward']
-
-        # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
-        # print('to buffer:', observation, more_data['action'], reward, next_observation, [done])
-
-        t = [observation, more_data['action'].reshape(1,-1), reward, next_observation, int(done)]
-        experience = copy.deepcopy(t)
-        self.buffer.append(experience)
-        if self.step_count > self.alg.exploration_steps: #and self.step_count % 16 == 0:
-            self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-            # pass
-
-        # TensorBoard Episodic Metrics
-        if done:
-            Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
-            print("Episode {} complete. Total Reward: {}".format(self.ep_count, self.totalReward))
-            time.sleep(0.1)
-            self.alg.ou_noise.reset()
-
-            if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
-                print("Checkpoint!")
-                Admin.update_agents_profile(self)
-
-
+        
         """Temporary fix for Unity as it receives multiple observations"""
-        """
+
         if len(observation.shape) > 1:
             action = [self.alg.get_action(self.agent, obs, self.env.step_count) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
@@ -73,14 +37,21 @@ class SingleAgentDDPGLearner(Learner):
                 self.buffer.append(exp)
         else:
             action = self.alg.get_action(self.agent, observation, self.env.step_count)
-            next_observation, reward, done, more_data = self.env.step(action)
+            next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.action_selection_method)
             t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)
             self.buffer.append(exp)
-        """
+
+        if done:
+            # print("Episode {} complete. Total Reward: {}".format(self.ep_count, self.totalReward))
+            # time.sleep(0.1)
+            self.alg.ou_noise.reset()
+            # if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
+            #     print("Checkpoint!")
+            #     Admin.update_agents_profile(self)
 
         if self.env.step_count > self.alg.exploration_steps:# and self.step_count % 16 == 0:
-            self.agent = self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
+            self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
 
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
@@ -117,7 +88,7 @@ class SingleAgentDDPGLearner(Learner):
             self.agent = self.load_agent(self.load_agents)
             self.buffer = self._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent()
+            self.agent = self.alg.create_agent(self.get_id())
             # if buffer set to true in config
             if self.using_buffer:
                 # Basic replay buffer at the moment

@@ -35,13 +35,3 @@ class DDPGAgent(Agent):
         action = np.clip(action, -1,1)
         # print('actor action shape', action.shape)
         return action[0]
-
-
-
-        # Uncomment to check the networks
-
-        # print(self.actor)
-
-        # print(self.critic)
-
-        # input()

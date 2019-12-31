@@ -50,30 +50,30 @@ class DDPGAlgorithm(Algorithm):
         # The actions that target actor would do in the next state.
         next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
 
-        dimensions = len(next_state_actions_target.shape)
+        dims = len(next_state_actions_target.shape)
 
         if self.a_space == "discrete" or self.a_space == "parameterized":
 
             # Grab the discrete actions in the batch
-            if dimensions == 3:
+            if dims == 3:
                 discrete_actions = next_state_actions_target[:,:,:self.discrete].squeeze(dim=1)
-            elif dimensions == 2:
+            elif dims == 2:
                 discrete_actions = next_state_actions_target[:,:self.discrete].squeeze(dim=0)
             else:
                 discrete_actions = next_state_actions_target[:self.discrete]
 
             # generate a tensor of one hot encodings of the argmax of each discrete action tensors
-            if dimensions == 3:
+            if dims == 3:
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions).unsqueeze(dim=1)
-            elif dimensions == 2:
+            elif dims == 2:
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
             else:
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
             
             # concat the discrete and parameterized actions back together
-            if dimensions == 3:
+            if dims == 3:
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,self.discrete:]], dim=2)
-            elif dimensions == 2:
+            elif dims == 2:
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,self.discrete:]], dim=1)
             else:
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[self.discrete:]], dim=0)
@@ -81,12 +81,7 @@ class DDPGAlgorithm(Algorithm):
         # print(next_state_actions_target.shape, '\n')
 
         # The Q-value the target critic estimates for taking those actions in the next state.
-        if dimensions == 3:
-            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )
-        elif dimensions == 2:
-            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 1) )
-        else:
-            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
+        Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], dims-1) )
 
 
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
@@ -96,12 +91,7 @@ class DDPGAlgorithm(Algorithm):
         # Get Q values of the batch from states and actions.
 
         # Grab the discrete actions in the batch
-        if dimensions == 3:
-            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 2) )
-        elif dimensions == 2:
-            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float().squeeze(dim=1)], 1) )
-        else:
-            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 0) )
+        Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], dims-1) )
 
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
@@ -125,9 +115,9 @@ class DDPGAlgorithm(Algorithm):
             current_state_actor_actions = agent.actor(states.float())
 
         # Calculate Q value for taking those actions in those states'
-        if dimensions == 3:
+        if dims == 3:
             actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
-        elif dimensions == 2:
+        elif dims == 2:
             actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 1) )
         else:
             actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 0) )
@@ -185,9 +175,9 @@ class DDPGAlgorithm(Algorithm):
             action = np.array([np.random.uniform(0,1) for _ in range(self.discrete+self.param)])
             action += self.ou_noise.noise()
             action = np.concatenate([ np_softmax(action[:self.discrete]), action[self.discrete:] ])
-            action = np.clip(action, -1, 1)
+            self.action = np.clip(action, -1, 1)
             # print('random action shape', action[:self.acs_space['discrete']].sum(), action.shape)
-            return action
+            return self.action
 
         else:
 
@@ -214,15 +204,8 @@ class DDPGAlgorithm(Algorithm):
             else:    
                 return action
 
-<<<<<<< HEAD:shiva/shiva/algorithms/DDPGAlgorithm.py
-    def create_agent(self, id):
+    def create_agent(self, id=0):
         self.agent = DDPGAgent(id, self.obs_space, self.discrete+self.param, self.discrete, self.configs[1], self.configs[2])
-=======
-    def create_agent(self):
-        # print(self.obs_space)
-        # input()
-        self.agent = ParametrizedDDPGAgent(self.obs_space, self.acs_space['discrete']+self.acs_space['param'], self.acs_space['discrete'], self.configs[1], self.configs[2])
->>>>>>> master:shiva/shiva/algorithms/ParametrizedDDPGAlgorithm.py
         return self.agent
 
     def get_actor_loss(self):
@@ -230,3 +213,15 @@ class DDPGAlgorithm(Algorithm):
 
     def get_critic_loss(self):
         return self.critic_loss
+
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                ('Algorithm/Actor_Loss', self.actor_loss),
+                ('Algorithm/Critic_Loss', self.critic_loss)
+            ]
+            for i, ac in enumerate(self.action):
+                metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
+        else:
+            metrics = []
+        return metrics

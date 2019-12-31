@@ -11,6 +11,7 @@ class Learner(object):
         self.ep_count = 0
         self.step_count = 0
         self.checkpoints_made = 0
+        self.totalReward = 0
 
     def __getstate__(self):
         d = dict(self.__dict__)

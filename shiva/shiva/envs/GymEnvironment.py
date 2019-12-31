@@ -99,6 +99,9 @@ class GymEnvironment(Environment):
                 ('Reward/Per_Episode', self.reward_per_episode),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
+
+            print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
+
         return metrics
 
     def is_done(self):
