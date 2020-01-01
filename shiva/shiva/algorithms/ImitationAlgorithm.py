@@ -3,7 +3,7 @@ import torch
 import random
 
 from shiva.agents.ImitationAgent import ImitationAgent
-from shiva.agents.ParametrizedDDPGAgent import ParametrizedDDPGAgent
+from shiva.agents.DDPGAgent import DDPGAgent
 from shiva.helpers import misc
 from shiva.algorithms.Algorithm import Algorithm
 
@@ -241,7 +241,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
         imitation_agent.actor_optimizer.step()
 
     def create_agent(self):
-        new_agent = ParametrizedDDPGAgent(self.id_generator(),self.obs_space,self.acs_space['discrete']+self.acs_space['param'],self.acs_space['discrete'],self.configs[1],self.configs[2])
+        new_agent = DDPGAgent(self.id_generator(),self.obs_space,self.acs_space['discrete']+self.acs_space['param'],self.acs_space['discrete'],self.configs[1],self.configs[2])
         return new_agent
     
     def get_loss(self):

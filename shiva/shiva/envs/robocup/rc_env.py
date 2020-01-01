@@ -37,6 +37,7 @@ class rc_env:
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
             self.action_list = [hfo_env.DASH, hfo_env.TURN, hfo_env.KICK]
             self.kick_actions = [hfo_env.KICK] # actions that require the ball to be kickable
+            self.acs_dim = len(self.action_list)
             self.acs_param_dim = 5
 
         elif self.action_level == 'low' and self.discretized:
