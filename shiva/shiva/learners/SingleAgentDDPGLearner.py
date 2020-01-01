@@ -27,7 +27,7 @@ class SingleAgentDDPGLearner(Learner):
         
         """Temporary fix for Unity as it receives multiple observations"""
 
-        if len(observation.shape) > 1:
+        if len(observation.shape) > 1 and self.env.env_name != 'RoboCup':
             action = [self.alg.get_action(self.agent, obs, self.env.step_count) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
@@ -41,14 +41,6 @@ class SingleAgentDDPGLearner(Learner):
             t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)
             self.buffer.append(exp)
-
-        if done:
-            # print("Episode {} complete. Total Reward: {}".format(self.ep_count, self.totalReward))
-            # time.sleep(0.1)
-            self.alg.ou_noise.reset()
-            # if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
-            #     print("Checkpoint!")
-            #     Admin.update_agents_profile(self)
 
         if self.env.step_count > self.alg.exploration_steps:# and self.step_count % 16 == 0:
             self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)

@@ -5,9 +5,9 @@ from shiva.envs.robocup.rc_env import rc_env
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
 
-class RoboCupDDPGEnvironment(Environment):
+class RoboCupEnvironment(Environment):
     def __init__(self, config):
-        super(RoboCupDDPGEnvironment, self).__init__(config)
+        super(RoboCupEnvironment, self).__init__(config)
         np.random.seed(5)
         torch.manual_seed(5)
 
@@ -29,6 +29,14 @@ class RoboCupDDPGEnvironment(Environment):
         self.done = self.env.d
 
         self.load_viewer()
+
+
+        self.totalReward = 0
+        self.kicks = 0
+        self.kicked = 0
+        self.turns = 0
+        self.dashes = 0
+        self.steps_per_episode = 0
     
     def isImit(self):
         return self.run_imit
@@ -58,6 +66,19 @@ class RoboCupDDPGEnvironment(Environment):
             act_choice = np.argmax(actions[:self.action_space['discrete']])
         elif discrete_select == 'sample':
             act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
+
+        # Robocup actions
+        if act_choice == 0:
+            self.dashes += 1
+        elif act_choice == 1:
+            self.turns += 1
+        elif act_choice == 2:
+            self.kicks += 1
+
+        # need to figure out what is going on with this
+        # Admin.add_summary_writer(self, self.agent, ('Action_per_Step', action), self.step_count)
+
+
         self.left_actions = torch.tensor([act_choice]).float()
         # print(self.action_space['discrete'])
         params = actions[self.action_space['discrete']:]
@@ -66,7 +87,7 @@ class RoboCupDDPGEnvironment(Environment):
 
         # I think that i might have to make so that it only gets
         if self.discretized:
-
+            
             if 0 <= self.left_actions <= 188:
                 self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[0], left_params=self.left_actions)
             elif 189 <= self.left_actions <= 197:
@@ -74,13 +95,26 @@ class RoboCupDDPGEnvironment(Environment):
             else:
                 self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[2], left_params=self.left_actions)
 
+            actions_v = action2one_hot(self.action_space['discrete'], act_choice)
+
         else:
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
-        
-        if self.discretized:
-            actions_v = action2one_hot(self.action_space['discrete'], act_choice)
-        else:
+
             actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
+
+        self.totalReward += self.rews
+        self.step_count += 1
+
+        '''
+        
+        Maybe put all of this in a reset function or something
+
+        definitely will help keep things more organized
+        '''
+
+        # Robocup Metrics
+        # if self.done:
+            # self.reset()
         
         # print('\nreward:', self.rews, '\n')
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
@@ -103,6 +137,38 @@ class RoboCupDDPGEnvironment(Environment):
 
     def close(self):
         pass
+
+    def is_done(self):
+        return self.done
+
+    def reset(self):
+        self.kicks = 0
+        self.turns = 0
+        self.dashes = 0
+        self.kicked = 0
+        self.totalReward = 0
+
+
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                ('Reward/Per_Step', self.rews)
+            ]
+        else:
+            metrics = [
+                ('Reward/Per_Episode', self.totalReward),
+                ('Kicks_per_Episode', self.kicks),
+                ('Turns_per_Episode', self.turns),
+                ('Dashes_per_Episode', self.dashes),
+                ('Ball_Kicks_per_Episode', self.kicked),
+                ('Agent/Steps_Per_Episode', self.steps_per_episode)
+            ]
+
+            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
+
+        return metrics
+
+
 
 
 #from pynput.keyboard import Key, KeyCode, Listener
@@ -144,7 +210,6 @@ class HumanPlayerInterface():
             ' - 45 degree turn right
 
     '''
-
 
     def robocup_action(self, action, obs):
 

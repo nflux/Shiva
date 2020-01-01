@@ -10,22 +10,28 @@ class SingleAgentRoboDDPGLearner(Learner):
         super(SingleAgentRoboDDPGLearner,self).__init__(learner_id, config)
         np.random.seed(5)
 
+    # def run(self):
+    #     self.step_count = 0
+    #     for self.ep_count in range(self.episodes):
+    #         self.env.reset()
+    #         done = False
+    #         while not done:
+    #             done = self.step()
+    #             # self.step_count +=1
+    #             # self.steps_per_episode +=1
+    #     self.env.close()
+
+
     def run(self):
         self.step_count = 0
-        for self.ep_count in range(self.episodes):
+        while not self.env.finished(self.episodes):
             self.env.reset()
-            self.totalReward = 0
-            self.kicks = 0
-            self.kicked = 0
-            self.turns = 0
-            self.dashes = 0
-            self.steps_per_episode = 0
-            done = False
-            while not done:
-                done = self.step()
-                self.step_count +=1
-                self.steps_per_episode +=1
-
+            while not self.env.is_done():
+                self.step()
+                self.collect_metrics()  # metrics per episode
+            self.collect_metrics(True)  # metrics per episode
+            self.alg.ou_noise.reset()
+            self.checkpoint()
         self.env.close()
 
     def step(self):
@@ -46,17 +52,28 @@ class SingleAgentRoboDDPGLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action) #, discrete_select='argmax')
 
         # TensorBoard Step Metrics
-        Admin.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
+
+
+        # these will now come from the algorithm
+        # Admin.add_summary_writer(self, self.agent, 'Actor_Loss_per_Step', self.alg.get_actor_loss(), self.step_count)
+        # Admin.add_summary_writer(self, self.agent, 'Critic_Loss_per_Step', self.alg.get_critic_loss(), self.step_count)
+
+
+
+        # these will now come from the environment
+        # porque no los dos?
         # shiva.add_summary_writer(self, self.agent, 'Normalized_Reward_per_Step', reward, self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
+        # Admin.add_summary_writer(self, self.agent, 'Raw_Reward_per_Step', more_data['raw_reward'], self.step_count)
 
+        '''
+        Kinda invalid because I have to check the interval by which the reward indicates that the ball was kicked
+        '''
         # If ball was kicked
-        if 150 < reward < 250:
-            self.kicked += 1
+        # if 150 < reward < 250:
+        #     self.kicked += 1
 
 
-        self.totalReward += more_data['raw_reward']
+        # self.totalReward += more_data['raw_reward']
 
         # print('to buffer:', observation.shape, more_data['action'].shape, reward.shape, next_observation.shape, [done])
         # print('to buffer:', observation, more_data['action'], reward, next_observation, [done])
@@ -65,48 +82,22 @@ class SingleAgentRoboDDPGLearner(Learner):
         deep = copy.deepcopy(t)
         self.buffer.append(deep)
         
-        print(more_data['action'])
+        # print(more_data['action'])
 
         if self.step_count > self.alg.exploration_steps:# and self.step_count % 16 == 0:
             self.alg.update(self.agent, self.buffer.sample(), self.step_count)
-            # pass
-
-        # Robocup actions
-        if self.env.env_name == 'RoboCup':
-            action = np.argmax(more_data['action'][:3])
-            if action == 0:
-                self.dashes += 1
-            elif action == 1:
-                self.turns += 1
-            elif action == 2:
-                self.kicks += 1
-            Admin.add_summary_writer(self, self.agent, 'Action_per_Step', action, self.step_count)
-
-            
-
-        # Robocup Metrics
-        if done and self.env.env_name == 'RoboCup':
-            Admin.add_summary_writer(self, self.agent, 'Kicks_per_Episode', self.kicks, self.ep_count)
-            Admin.add_summary_writer(self, self.agent, 'Turns_per_Episode', self.turns, self.ep_count)
-            Admin.add_summary_writer(self, self.agent, 'Dashes_per_Episode', self.dashes, self.ep_count)
-            Admin.add_summary_writer(self, self.agent, 'Steps_per_Episode', self.steps_per_episode, self.ep_count)
-            Admin.add_summary_writer(self, self.agent, 'Ball_Kicks_per_Episode', self.kicked, self.ep_count)
-
-            self.kicks = 0
-            self.turns = 0
-            self.dashes = 0
-            self.kicked = 0
 
         # TensorBoard Episodic Metrics
-        if done:
-            Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
-            self.alg.ou_noise.reset()
+        # if done:
+            # Admin.add_summary_writer(self, self.agent, 'Total_Reward_per_Episode', self.totalReward, self.ep_count)
+            # just need to reset the noise at the end but need access to the algorithm in order to do so
+            # self.alg.ou_noise.reset()
 
-            if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
-                print("Checkpoint!")
-                Admin.update_agents_profile(self)
+            # if self.ep_count % self.configs['Learner']['save_checkpoint_episodes'] == 0:
+            #     print("Checkpoint!")
+            #     Admin.update_agents_profile(self)
 
-        return done
+        # return done
 
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
