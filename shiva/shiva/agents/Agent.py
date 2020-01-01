@@ -25,7 +25,8 @@ class Agent(object):
         return "<{}:id={}>".format(self.__class__, self.id)
 
     def save(self, save_path, step):
-        torch.save(self.policy, save_path + '/policy.pth')
+        if self.policy:
+            torch.save({'state_dict':self.policy.state_dict()}, save_path + '/policy.pth')
 
     def load_net(self, load_path):
         self.policy = torch.load(load_path)
@@ -58,3 +59,9 @@ class Agent(object):
         """Copies model parameters from from_model to to_model"""
         for to_model, from_model in zip(to_model.parameters(), from_model.parameters()):
             to_model.data.copy_(from_model.data.clone())
+    
+    @staticmethod
+    def mod_lr(optim, lr):
+        for g in optim.param_groups:
+            # print(g['lr'])
+            g['lr'] = lr

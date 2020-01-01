@@ -15,10 +15,17 @@ def parse_configs(url: str) -> list:
                 _return.append(load_config_file_2_dict(subf))
     return _return
 
-def load_class(module_path, class_name) -> object:
-    module_name = module_path + '.' + class_name
-    module = import_module(module_name)
-    cls = getattr(module, class_name)
+def load_class(module_path, file_name) -> object:
+    if '.' in file_name:
+        # if file contains multiple classes
+        file, class_name = file_name.split('.')
+        module_path = module_path + '.' + file
+        module = import_module(module_path)
+        cls = getattr(module, class_name)
+    else:
+        module_name = module_path + '.' + file_name
+        module = import_module(module_name)
+        cls = getattr(module, file_name)
     return cls
 
 def load_config_file_2_dict(_FILENAME: str) -> dict:

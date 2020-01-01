@@ -4,7 +4,7 @@ class Evaluation(object):
     ):
         {setattr(self, k, v) for k,v in configs.items()}
         self.config = configs
-        self._create_eval_envs()
+        # self._create_eval_envs()
 
     def evaluate_agents(self):
         '''
