@@ -30,16 +30,25 @@ class SingleAgentMetaLearner(MetaLearner):
 
             Admin.add_learner_profile(self.learner)
 
-            self.learner.launch()
-            
-            Admin.update_agents_profile(self.learner)
+            try:
+                self.learner.launch()
+                
+                Admin.update_agents_profile(self.learner)
 
-            self.learner.run()
+                self.learner.run()
 
-            self.save()
+                self.save()
+            except KeyboardInterrupt:
+                print('Exiting for CTRL-C')
+            finally:
+                print('Cleaning up possible extra learner processes')
+                self.learner.close()
 
         print('bye')
 
     def create_learner(self):
         learner = load_class('shiva.learners', self.configs['Learner']['type'])
-        return learner(self.get_id(), self.configs)
+        if self.start_port:
+            return learner(self.get_id(), self.configs, self.start_port)
+        else:
+            return learner(self.get_id(), self.configs)

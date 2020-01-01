@@ -11,8 +11,9 @@ class RoboCupEnvironment(Environment):
         np.random.seed(5)
         torch.manual_seed(5)
 
-        self.env = rc_env(config)
+        self.env = rc_env(config, port)
         self.env.launch()
+        self.port = port
 
         self.left_actions = self.env.left_actions
         self.left_params = self.env.left_action_params
@@ -40,6 +41,12 @@ class RoboCupEnvironment(Environment):
     
     def isImit(self):
         return self.run_imit
+    
+    def isAnyKickable(self):
+        return self.env.checkKickable('left')
+    
+    def isGoal(self):
+        return self.env.checkGoal()
 
     def step(self, actions, discrete_select='sample'):
         '''
