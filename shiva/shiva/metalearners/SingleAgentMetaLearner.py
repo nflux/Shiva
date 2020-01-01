@@ -39,7 +39,7 @@ class SingleAgentMetaLearner(MetaLearner):
 
                 self.save()
             except KeyboardInterrupt:
-                print('[start.py] Exiting for CTRL-C')
+                print('Exiting for CTRL-C')
             finally:
                 print('Cleaning up possible extra learner processes')
                 self.learner.close()
