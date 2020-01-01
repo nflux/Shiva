@@ -1,19 +1,28 @@
 import csv
+import datetime
+import time
 # import os.path
 from shiva.core.admin import Admin
 from shiva.helpers.config_handler import load_class
 
 class Learner(object):
     
+    firstRun = False
     def __init__(self, learner_id, config):
         {setattr(self, k, v) for k,v in config['Learner'].items()}
         self.configs = config
+        self.environmentName = str(self.configs['Environment']['env_name'])
+        self.algType = str(self.configs['Algorithm']['Type'])
+        # print('Hello World' + self.env)
         self.id = learner_id
         self.agentCount = 0
         self.ep_count = 0
         self.step_count = 0
         self.checkpoints_made = 0
-
+        self.firstRun = False
+        ts = time.time()
+        tS = str(datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S'))
+        self.timeStamp = tS
         
     def __getstate__(self):
         d = dict(self.__dict__)
@@ -41,13 +50,17 @@ class Learner(object):
                 for metric_name, y_val in metrics:
                     Admin.add_summary_writer(self, self.agent, metric_name, y_val, self.env.step_count)
                     try:
-                        f = open("Benchmark/"+str(metric_name)+'.csv')
+                        if (self.firstRun == False):
+                            file = open("Benchmark/"+str(metric_name)+" " +self.algType+" "+ self.environmentName +" "+ self.timeStamp+'.csv', 'w+')
+                            file.close()
+                            self.firstRun = True
+                        f = open("Benchmark/"+str(metric_name)+" " +self.algType+" "+ self.environmentName +" "+ self.timeStamp+'.csv')
                         f.close()
                     except FileNotFoundError:
-                        file = open("Benchmark/"+str(metric_name)+'.csv', 'w+')
+                        file = open("Benchmark/"+str(metric_name)+" " +self.algType+" "+ self.environmentName +" "+ self.timeStamp+'.csv', 'w+')
                         file.close()
                     
-                    with open("Benchmark/"+str(metric_name)+'.csv', 'a', newline='') as csvfile:
+                    with open("Benchmark/"+str(metric_name)+" " +self.algType+" "+ self.environmentName +" "+ self.timeStamp+'.csv', 'a', newline='') as csvfile:
                         fieldnames = ['steps','rewards']
                         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                         writer.writerow({'steps': self.env.step_count, 'rewards': str(y_val)})
@@ -56,12 +69,16 @@ class Learner(object):
                     Admin.add_summary_writer(self, self.agent, metric_name, y_val, self.env.done_count)
 
                     try:
-                        f = open("Benchmark/"+str(metric_name)+'.csv')
+                        if (self.firstRun == False):
+                            file = open("Benchmark/"+str(metric_name)+" " +self.algType+" "+ self.environmentName +" "+ self.timeStamp+'.csv', 'w+')
+                            file.close()
+                            self.firstRun = True
+                        f = open("Benchmark/"+str(metric_name)+" " +self.algType+" "+ self.environmentName +" "+ self.timeStamp+'.csv')
                         f.close()
                     except FileNotFoundError:
-                        file = open("Benchmark/"+str(metric_name)+'.csv', 'w+')
+                        file = open("Benchmark/"+str(metric_name)+" " +self.algType+" "+ self.environmentName +" "+ self.timeStamp+'.csv', 'w+')
                         file.close()
-                    with open("Benchmark/"+str(metric_name)+'.csv', 'a', newline='') as csvfile:
+                    with open("Benchmark/"+str(metric_name)+" " +self.algType+" "+ self.environmentName +" "+ self.timeStamp+'.csv', 'a', newline='') as csvfile:
                         fieldnames = ['steps','rewards']
                         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                         writer.writerow({'steps': self.env.step_count, 'rewards': str(y_val)})
