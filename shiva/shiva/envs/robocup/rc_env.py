@@ -586,6 +586,7 @@ class rc_env:
                     reward+= goal_points
                 elif s=='Goal_By_Left':
                     reward+= goal_points # teammates get 10% of pointsssss
+                    print("GOAL!")
                 elif s=='Goal_By_Right':
                     reward+=-goal_points
                 elif s=='OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
@@ -623,6 +624,7 @@ class rc_env:
             opp_obs_previous = self.right_obs_previous
             num_ag = self.num_left
             env = self.left_envs[agentID]
+            print(agentID)
             kickable = self.left_kickable[agentID]
             self.left_kickable[agentID] = self.get_kickable_status(agentID,env)
         else:
@@ -636,19 +638,16 @@ class rc_env:
             kickable = self.right_kickable[agentID]
             self.right_kickable[agentID] = self.get_kickable_status(agentID,env)# update kickable status (it refers to previous timestep, e.g., it WAS kickable )
 
-        # Low stamina - seems that needs to be implemented (Ezequiel)
-
+        # so this appears to be working, maybe just because the agent doesn't really have to run to it
+        # will verify after I fix HPI
         if team_obs[agentID][self.stamina] < 0.0 : # LOW STAMINA
             reward -= 1
             team_reward -= 1
-            # print ('low stamina')
-            pass
-        
-        # print('sin:', team_obs[agentID][49], '\ncos:', team_obs[agentID][50], '\nprox:', team_obs[agentID][51])
+            print("agent is getting penalized for having low stamina")
 
         ############ Kicked Ball #################
 
-        # print(kickable)
+        # print("kickable is {} ".format(kickable))
         # print(self.action_list[team_actions[agentID]] in self.kick_actions)
         # print(self.num_right > 0)
         self.right_agent_possesion = 'N'
@@ -657,16 +656,33 @@ class rc_env:
         # print("team_actions agent", team_actions[agentID])
 
         # So the changes i made to action list broke this for discretized, i think this should still work for nondiscretized
-        if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
+
+        # print(team_obs[agentID][self.stamina])
+        # input()
+
+        # this won't work because of the changes I made, I'd have to get the action inside of action_list somehow
+        # i dont think i should murder myself trying to get this perfect, as long as it gets rewards for the current possible actions
+        # just check for the value inside of action list
+        # if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
+        if self.action_list[team_actions[agentID]] == 3 and not kickable:
+
             reward -= 1
             print("agent is getting penalized for kicking when not kickable")
 
         
         # it looks like this is broken for discretized as well
         # so its not getting any rewards for kicking 
-        if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:    
+        # print(self.action_list)
+        # print(self.kick_actions)
+        # input()
+        # if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:    
+        if self.action_list[team_actions[agentID]] == 3 and kickable:    
+
+            print("hello world!")
+
             if True:        
             # if self.num_right > 0:
+                print(self.left_agent_possesion)
                 if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
                     print("First Kick")
                     reward += 10
@@ -774,6 +790,7 @@ class rc_env:
             if True:
                 team_reward += delta
                 reward+= delta * 1
+                # print("distance to ball reward")
                 # print(distance_cur, delta)
                 pass
             
@@ -791,6 +808,7 @@ class rc_env:
                 # if delta > 0:
                     reward += delta * 2
                     team_reward += delta
+                    print("ball distance to goal reward.")
                     pass
 
         # base right kicks

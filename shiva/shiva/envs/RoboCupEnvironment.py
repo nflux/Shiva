@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-
 from shiva.envs.robocup.rc_env import rc_env
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
@@ -87,21 +86,21 @@ class RoboCupEnvironment(Environment):
             
             # indicates whether its a dash, turn, or kick action from the action matrix
             if 0 <= self.left_actions <= 188:
-                table_index = 0
+                action_matrix_index = 0
             elif 189 <= self.left_actions <= 197:
-                table_index = 1
+                action_matrix_index = 1
             else:
-                table_index = 2
+                action_matrix_index = 2
 
             # Robocup actions
-            if table_index == 0:
+            if action_matrix_index == 0:
                 self.dashes += 1
-            elif table_index == 1:
+            elif action_matrix_index == 1:
                 self.turns += 1
-            elif table_index == 2:
+            elif action_matrix_index == 2:
                 self.kicks += 1
 
-            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[table_index], left_params=self.left_actions)
+            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[action_matrix_index], left_params=self.left_actions)
             actions_v = action2one_hot(self.action_space['discrete'], act_choice)
 
         else:
