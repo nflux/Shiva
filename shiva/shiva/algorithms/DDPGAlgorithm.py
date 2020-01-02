@@ -91,7 +91,7 @@ class DDPGAlgorithm(Algorithm):
         # Get Q values of the batch from states and actions.
 
         # Grab the discrete actions in the batch
-        Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], dims-1) )
+        Q_these_states_main = agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], dims-1) )
 
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
@@ -198,10 +198,13 @@ class DDPGAlgorithm(Algorithm):
 
             size = len(action.shape)
             if size == 3:
+                self.action = action[0, 0]
                 return action[0, 0]
             elif size == 2:
+                self.action = action[0]
                 return action[0]
             else:    
+                self.action = action
                 return action
 
     def create_agent(self, id=0):

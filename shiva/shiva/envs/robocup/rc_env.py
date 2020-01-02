@@ -489,7 +489,7 @@ class rc_env:
                         t = self.left_action_params[agent_ID][0]
                         # print("t right before .act():",t)
                         
-                        if 0 <= t < 189:
+                        if 0 <= t <= 188:
                             envs[agent_ID].act(0, *self.get_valid_scaled_param(agent_ID, a, base))
                         elif 189 <= t <= 197:
                             envs[agent_ID].act(1, *self.get_valid_scaled_param(agent_ID, a, base))

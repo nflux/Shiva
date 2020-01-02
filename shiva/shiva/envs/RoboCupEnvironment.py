@@ -10,10 +10,10 @@ class RoboCupEnvironment(Environment):
         super(RoboCupEnvironment, self).__init__(config)
         np.random.seed(5)
         torch.manual_seed(5)
+        # self.port = port             
 
-        self.env = rc_env(config, port)
+        self.env = rc_env(config, self.port)
         self.env.launch()
-        self.port = port
 
         self.left_actions = self.env.left_actions
         self.left_params = self.env.left_action_params
@@ -82,17 +82,14 @@ class RoboCupEnvironment(Environment):
         elif act_choice == 2:
             self.kicks += 1
 
-        # need to figure out what is going on with this
-        # Admin.add_summary_writer(self, self.agent, ('Action_per_Step', action), self.step_count)
-
-
         self.left_actions = torch.tensor([act_choice]).float()
         # print(self.action_space['discrete'])
         params = actions[self.action_space['discrete']:]
         # print(params)
         self.left_params = torch.tensor([params]).float()
 
-        # I think that i might have to make so that it only gets
+
+
         if self.discretized:
             
             if 0 <= self.left_actions <= 188:
@@ -111,17 +108,7 @@ class RoboCupEnvironment(Environment):
 
         self.totalReward += self.rews
         self.step_count += 1
-
-        '''
-        
-        Maybe put all of this in a reset function or something
-
-        definitely will help keep things more organized
-        '''
-
-        # Robocup Metrics
-        # if self.done:
-            # self.reset()
+        self.steps_per_episode +=1
         
         # print('\nreward:', self.rews, '\n')
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
@@ -154,6 +141,8 @@ class RoboCupEnvironment(Environment):
         self.dashes = 0
         self.kicked = 0
         self.totalReward = 0
+        self.steps_per_episode = 0
+        self.done = False
 
 
     def get_metrics(self, episodic=False):
@@ -170,8 +159,6 @@ class RoboCupEnvironment(Environment):
                 ('Ball_Kicks_per_Episode', self.kicked),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
-
-            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
 
         return metrics
 
