@@ -12,7 +12,8 @@ class Learner(object):
         {setattr(self, k, v) for k,v in config['Learner'].items()}
         self.configs = config
         self.environmentName = str(self.configs['Environment']['env_name'])
-        self.algType = str(self.configs['Algorithm']['Type'])
+        self.algType = str(self.configs['Algorithm']['type'])
+        # self.algType =""
         # print('Hello World' + self.env)
         self.id = learner_id
         self.agentCount = 0
@@ -22,8 +23,8 @@ class Learner(object):
         self.firstRun = False
         ts = time.time()
         tS = str(datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S'))
-        self.timeStamp = tS
-        
+        # self.timeStamp = tS
+        self.timeStamp = ""
     def __getstate__(self):
         d = dict(self.__dict__)
         try:
