@@ -2,6 +2,8 @@ class Environment:
     def __init__(self, configs):
         {setattr(self, k, v) for k,v in configs.items()}
         self.configs = configs
+        self.steps_per_episode = 0
+        self.step_count = 0
         self.done_count = 0
         self.total_episodes_to_play = None
 
@@ -42,6 +44,9 @@ class Environment:
 
     def get_current_step(self):
         return self.step_count
+    
+    def collect_metrics(self):
+        pass
 
     def get_metrics(self):
         '''

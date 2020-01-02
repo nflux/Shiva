@@ -13,16 +13,12 @@ class GymEnvironment(Environment):
         self.action_space_continuous = None
         self.action_space_discrete = None
         self.observation_space = self.set_observation_space()
-        # self.action_space = self.set_action_space()
 
         if self.action_space == "discrete":
             self.action_space = {'discrete': self.set_action_space() , 'param': 0, 'acs_space': self.set_action_space()}
         elif self.action_space == "continuous":
             self.action_space = {'discrete': 0 , 'param': self.set_action_space(), 'acs_space': self.set_action_space()}
 
-        self.steps_per_episode = 0
-        self.step_count = 0
-        self.done_count = 0
         self.reward_per_step = 0
         self.reward_per_episode = 0
         self.reward_total = 0
@@ -37,32 +33,10 @@ class GymEnvironment(Environment):
         elif discrete_select == 'sample':
             action4Gym = np.random.choice(len(action), p=action)
 
-
-
-        # print(action4Gym)
         self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         self.load_viewer()
-        '''
-            Metrics collection
-                Episodic # of steps             self.steps_per_episode --> is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
-                Cumulative # of steps           self.step_count
-                Cumulative # of episodes        self.done_count
-                Step Reward                     self.reward_per_step
-                Episodic Reward                 self.reward_per_episode
-                Cumulative Reward               self.reward_total
-        '''
-        self.steps_per_episode += 1
 
-
-
-        self.step_count += 1
-        self.done_count += 1 if self.done else 0
-        self.reward_per_episode += self.reward_per_step
-        self.reward_total += self.reward_per_step
-
-        # if self.done:
-        #     print(self.steps_per_episode)
-
+        self.collect_metrics()
 
         '''
             You can specify the max steps in the gym environment by changing the max_steps
@@ -88,6 +62,22 @@ class GymEnvironment(Environment):
         self.reward_per_episode = 0
         self.done = False
         self.obs = self.env.reset()
+    
+    def collect_metrics(self):
+        '''
+            Metrics collection
+                Episodic # of steps             self.steps_per_episode --> is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
+                Cumulative # of steps           self.step_count
+                Cumulative # of episodes        self.done_count
+                Step Reward                     self.reward_per_step
+                Episodic Reward                 self.reward_per_episode
+                Cumulative Reward               self.reward_total
+        '''
+        self.steps_per_episode += 1
+        self.step_count += 1
+        self.done_count += 1 if self.done else 0
+        self.reward_per_episode += self.reward_per_step
+        self.reward_total += self.reward_per_step
 
     def get_metrics(self, episodic=False):
         if not episodic:

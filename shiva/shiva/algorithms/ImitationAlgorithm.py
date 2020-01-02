@@ -224,15 +224,11 @@ class ImitationRoboCupAlgorithm(Algorithm):
         imitation_agent.actor_optimizer.zero_grad()
 
         action_prob_dist = imitation_agent.actor(states)
-        # print('before', action_prob_dist)
 
         if (len(actions.shape) > 1):
             action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[len(actions.shape)-1])
         else:
             action_prob_dist = action_prob_dist.view(actions.shape[0])
-        
-        # print('after', action_prob_dist)
-        # print('exper', expert_actions)
 
         #calculate loss based on loss functions dictated in the configs
         self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
@@ -246,3 +242,10 @@ class ImitationRoboCupAlgorithm(Algorithm):
     
     def get_loss(self):
         return self.loss
+    
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [('Algorithm/Loss_per_Step', self.loss),]
+        else:
+            metrics = [('Agent/learning_rate_per_episode', self.agent.actor_learning_rate),]
+        return metrics

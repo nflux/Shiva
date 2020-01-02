@@ -160,7 +160,6 @@ class SingleAgentImitationLearner(Learner):
 class SingleAgentRoboCupImitationLearner(Learner):
     def __init__(self,learner_id,config,port=None):
         super(SingleAgentRoboCupImitationLearner, self).__init__(learner_id,config)
-        self.totalGoals = 0
         self.supervised_episodes = self.episodes*self.percent_ep_super
         self.imitation_episodes = self.episodes-self.supervised_episodes
         self.port = port
@@ -189,7 +188,6 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.step_count = 0
         for self.ep_count in range(self.supervised_episodes):
             self.env.reset()
-            self.totalReward = 0
             done = False
             while not done:
                 done = self.supervised_step()
@@ -199,7 +197,6 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.step_count=0
         for self.ep_count in range(self.imitation_episodes):
             self.env.reset()
-            self.totalReward = 0
             done = False
             while not done:
                 done = self.imitation_step()
@@ -217,8 +214,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action, discrete_select='argmax')
 
         # Write to tensorboard
-        Admin.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(),self.step_count)
+        # Admin.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
+        # Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(),self.step_count)
 
         # Cumulate the reward
         self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
@@ -229,9 +226,9 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.imitation_alg.supervised_update(self.agent,self.super_buffer.sample(self.imitation_alg.device), self.step_count)
 
         # when the episode ends
-        if done:
-            # add values to the tensorboard
-            Admin.add_summary_writer(self, self.agent, 'Total_Reward', self.totalReward, self.ep_count)
+        # if done:
+        #     # add values to the tensorboard
+        #     Admin.add_summary_writer(self, self.agent, 'Total_Reward', self.totalReward, self.ep_count)
 
         return done
 
@@ -245,10 +242,10 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         next_observation, reward, done, more_data = self.env.step(action)
 
-        Admin.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
-        Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(), self.step_count)
+        # Admin.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
+        # Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(), self.step_count)
 
-        self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
+        # self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         self.buffer.push(copy.deepcopy([torch.from_numpy(observation),torch.from_numpy(more_data['action'].reshape(1,-1)),
                                                 torch.from_numpy(reward),torch.from_numpy(next_observation),torch.from_numpy(np.array([done])).float(),
@@ -256,18 +253,18 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.imitation_alg.dagger_update(self.agent, self.buffer.sample(self.imitation_alg.device), self.step_count)
 
         # when the episode ends
-        if done:
-            # add values to the tensorboard
-            Admin.add_summary_writer(self, self.agent, 'Total_Reward', self.totalReward, self.ep_count)
-            self.totalGoals += self.env.isGoal()
-            Admin.add_summary_writer(self, self.agent, 'Goal_Percentage', (self.totalGoals/(self.ep_count+1))*100.0, self.ep_count)
-            # if self.configs['Admin']['save'] and (self.ep_count % self.configs['Learner']['save_frequency'] == 0):
-            #     Admin._save_agent(self, self.agent)
+        # if done:
+            # # add values to the tensorboard
+            # Admin.add_summary_writer(self, self.agent, 'Total_Reward', self.totalReward, self.ep_count)
+            # self.totalGoals += self.env.isGoal()
+            # Admin.add_summary_writer(self, self.agent, 'Goal_Percentage', (self.totalGoals/(self.ep_count+1))*100.0, self.ep_count)
+            # # if self.configs['Admin']['save'] and (self.ep_count % self.configs['Learner']['save_frequency'] == 0):
+            # #     Admin._save_agent(self, self.agent)
             
-            # if self.ep_count % self.configs['Agent']['lr_change_every'] == 0:
-            #     self.agent.learning_rate = self.configs['Agent']['learning_rate'] - (self.ep_count * self.lr_decay)
-            #     print('lr', str(self.agent.learning_rate))
-            #     self.agent.mod_lr(self.agent.actor_optimizer, self.agent.learning_rate)
+            # # if self.ep_count % self.configs['Agent']['lr_change_every'] == 0:
+            # #     self.agent.learning_rate = self.configs['Agent']['learning_rate'] - (self.ep_count * self.lr_decay)
+            # #     print('lr', str(self.agent.learning_rate))
+            # #     self.agent.mod_lr(self.agent.actor_optimizer, self.agent.learning_rate)
 
         return done
 

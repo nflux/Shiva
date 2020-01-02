@@ -68,3 +68,6 @@ class Algorithm():
 
     def get_agents(self):
         return self.agents
+    
+    def get_metrics(self):
+        pass

@@ -18,16 +18,18 @@ class RoboCupDDPGEnvironment(Environment):
         self.left_actions = self.env.left_actions
         self.left_params = self.env.left_action_params
 
-        # print("this many actions",self.left_actions)
-
         self.obs = self.env.left_obs
         self.rews = self.env.left_rewards
         self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
         self.action_space = {'discrete': self.env.acs_dim, 'param': self.env.acs_param_dim}
-        self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
+
+        # RoboCup Specific metrics
+        self.reward_per_episode = 0
+        self.reward_total = 0
+        self.goal_ctr = 0
 
         self.load_viewer()
     
@@ -73,23 +75,22 @@ class RoboCupDDPGEnvironment(Environment):
 
         # I think that i might have to make so that it only gets
         if self.discretized:
-
             if 0 <= self.left_actions <= 188:
                 self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[0], left_params=self.left_actions)
             elif 189 <= self.left_actions <= 197:
                 self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[1], left_params=self.left_actions)
             else:
                 self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[2], left_params=self.left_actions)
-
         else:
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
+        
+        self.collect_metrics()
         
         if self.discretized:
             actions_v = action2one_hot(self.action_space['discrete'], act_choice)
         else:
             actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
         
-        # print('\nreward:', self.rews, '\n')
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
@@ -107,6 +108,43 @@ class RoboCupDDPGEnvironment(Environment):
     def load_viewer(self):
         if self.render:
             self.env._start_viewer()
+
+    def reset(self):
+        self.steps_per_episode = 0
+        self.reward_per_episode = 0
+    
+    def collect_metrics(self):
+        '''
+            Metrics collection
+                Episodic # of steps             self.steps_per_episode --> is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
+                Cumulative # of steps           self.step_count
+                Cumulative # of episodes        self.done_count
+                Step Reward                     self.reward_per_step
+                Episodic Reward                 self.reward_per_episode
+                Cumulative Reward               self.reward_total
+        '''
+        self.steps_per_episode += 1
+        self.step_count += 1
+        self.done_count += 1 if self.done else 0
+        self.reward_per_episode += self.rews[0]
+        self.reward_total += self.rews[0]
+        self.goal_ctr += 1 if self.isGoal else 0
+    
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                ('Reward/Per_Step', self.rews[0])
+            ]
+        else:
+            metrics = [
+                ('Reward/Per_Episode', self.reward_per_episode),
+                ('Agent/Steps_Per_Episode', self.steps_per_episode)
+                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/self.done_count)*100.0)
+            ]
+
+            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
+
+        return metrics
 
     def close(self):
         pass
