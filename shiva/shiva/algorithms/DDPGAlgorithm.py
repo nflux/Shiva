@@ -217,14 +217,8 @@ class DDPGAlgorithm(Algorithm):
                 return action
 
     def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.obs_space, self.discrete+self.param, self.discrete, self.configs[1], self.configs[2])
+        self.agent = DDPGAgent(id, self.obs_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
         return self.agent
-
-    def get_actor_loss(self):
-        return self.actor_loss
-
-    def get_critic_loss(self):
-        return self.critic_loss
 
     def get_metrics(self, episodic=False):
         if not episodic:
@@ -232,6 +226,7 @@ class DDPGAlgorithm(Algorithm):
                 ('Algorithm/Actor_Loss', self.actor_loss),
                 ('Algorithm/Critic_Loss', self.critic_loss)
             ]
+            # not sure if I want this all of the time
             for i, ac in enumerate(self.action):
                 metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
         else:

@@ -71,7 +71,6 @@ class SingleAgentDDPGLearner(Learner):
         if self.manual_play:
             self.HPI = envs.HumanPlayerInterface()
 
-
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
 
