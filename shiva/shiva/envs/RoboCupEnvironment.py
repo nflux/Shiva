@@ -28,11 +28,12 @@ class RoboCupEnvironment(Environment):
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
+        self.done_count = 0
 
         self.load_viewer()
 
 
-        self.totalReward = 0
+        self.reward_per_episode = 0
         self.kicks = 0
         self.kicked = 0
         self.turns = 0
@@ -74,14 +75,6 @@ class RoboCupEnvironment(Environment):
         elif discrete_select == 'sample':
             act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
 
-        # Robocup actions
-        if act_choice == 0:
-            self.dashes += 1
-        elif act_choice == 1:
-            self.turns += 1
-        elif act_choice == 2:
-            self.kicks += 1
-
         self.left_actions = torch.tensor([act_choice]).float()
         # print(self.action_space['discrete'])
         params = actions[self.action_space['discrete']:]
@@ -92,21 +85,31 @@ class RoboCupEnvironment(Environment):
 
         if self.discretized:
             
+            # indicates whether its a dash, turn, or kick action from the action matrix
             if 0 <= self.left_actions <= 188:
-                self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[0], left_params=self.left_actions)
+                table_index = 0
             elif 189 <= self.left_actions <= 197:
-                self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[1], left_params=self.left_actions)
+                table_index = 1
             else:
-                self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[2], left_params=self.left_actions)
+                table_index = 2
 
+            # Robocup actions
+            if table_index == 0:
+                self.dashes += 1
+            elif table_index == 1:
+                self.turns += 1
+            elif table_index == 2:
+                self.kicks += 1
+
+            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[table_index], left_params=self.left_actions)
             actions_v = action2one_hot(self.action_space['discrete'], act_choice)
 
         else:
-            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
 
+            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
             actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
 
-        self.totalReward += self.rews
+        self.reward_per_episode += self.rews
         self.step_count += 1
         self.steps_per_episode +=1
         
@@ -140,8 +143,9 @@ class RoboCupEnvironment(Environment):
         self.turns = 0
         self.dashes = 0
         self.kicked = 0
-        self.totalReward = 0
+        self.reward_per_episode = 0
         self.steps_per_episode = 0
+        self.done_count -=-1
         self.done = False
 
 
@@ -152,13 +156,16 @@ class RoboCupEnvironment(Environment):
             ]
         else:
             metrics = [
-                ('Reward/Per_Episode', self.totalReward),
+                ('Reward/Per_Episode', self.reward_per_episode),
                 ('Kicks_per_Episode', self.kicks),
                 ('Turns_per_Episode', self.turns),
                 ('Dashes_per_Episode', self.dashes),
                 ('Ball_Kicks_per_Episode', self.kicked),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
+
+            print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
+
 
         return metrics
 

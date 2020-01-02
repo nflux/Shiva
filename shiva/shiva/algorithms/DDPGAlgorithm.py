@@ -81,8 +81,12 @@ class DDPGAlgorithm(Algorithm):
         # print(next_state_actions_target.shape, '\n')
 
         # The Q-value the target critic estimates for taking those actions in the next state.
-        Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], dims-1) )
-
+        if dims == 3:
+            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )
+        elif dims == 2:
+            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 1) )
+        else:
+            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
 
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones_mask] = 0.0
@@ -91,7 +95,12 @@ class DDPGAlgorithm(Algorithm):
         # Get Q values of the batch from states and actions.
 
         # Grab the discrete actions in the batch
-        Q_these_states_main = agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], dims-1) )
+        if dims == 3:
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], 2) )
+        elif dims == 2:
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 1) )
+        else:
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 0) )
 
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)

@@ -61,13 +61,6 @@ class rc_env:
 
             self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
             self.acs_param_dim = 0
-            # for item in self.ACTION_MATRIX:
-            #     print(item)
-            # print(len(self.DASH_TABLE)) #+ len(self.TURN_TABLE) + len(self.KICK_TABLE))
-            # print(len(self.DASH_TABLE) + len(self.TURN_TABLE))
-            # print(len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE))
-            # print(DASH_TABLE + TURN_TABLE + KICK_TABLE)
-
 
         elif config['action_level'] == 'high':
             self.action_list = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.REORIENT, hfo_env.GO_TO_BALL, hfo_env.MOVE]
@@ -389,26 +382,6 @@ class rc_env:
                 kick_degree = action_params[agentID][4].clip(-1,1)*180
                 return (kick_power, kick_degree)
 
-
-
-    def discretize_power(self, power):
-
-        for i, p in enumerate(self.power_discretization):
-            if power <= p:
-                return i
-
-        # print(power)
-
-        assert False, "power was not discretized"
-
-    def discretize_degree(self, angle):
-
-        for i, d in enumerate(self.degree_discretization):
-            if angle <= d:
-                return i
-
-        assert False, "degree was not discretized"
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     def connect(self,port,feat_lvl, base, goalie, agent_ID,ep_length,act_lvl,envs):
@@ -683,10 +656,14 @@ class rc_env:
 
         # print("team_actions agent", team_actions[agentID])
 
+        # So the changes i made to action list broke this for discretized, i think this should still work for nondiscretized
         if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
             reward -= 1
+            print("agent is getting penalized for kicking when not kickable")
 
         
+        # it looks like this is broken for discretized as well
+        # so its not getting any rewards for kicking 
         if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:    
             if True:        
             # if self.num_right > 0:
