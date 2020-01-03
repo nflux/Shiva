@@ -16,7 +16,7 @@ class DQNAlgorithm(Algorithm):
         super(DQNAlgorithm, self).__init__(obs_space, acs_space, configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
-        self.acs_space = acs_space
+        self.acs_space = acs_space['acs_space']
         self.obs_space = obs_space
         self.loss = 0
 

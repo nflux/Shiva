@@ -64,7 +64,7 @@ class PPOAgent(Agent):
 
     def get_discrete_action(self, observation):
         #retrieve the action given an observation
-        action = self.actor(torch.tensor(observation).float()).detach()
+        action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
         '''if(len(full_action.shape) > 1):
             full_action = full_action.reshape(len(full_action[0]))'''
         dist = Categorical(action)
@@ -75,9 +75,9 @@ class PPOAgent(Agent):
     def get_continuous_action(self,observation):
         observation = torch.tensor(observation).float().detach().to(self.device)
         base_output = self.policy_base(observation)
-        mu = self.mu(base_output).detach().to(self.device).numpy()
+        mu = self.mu(base_output).detach().cpu().numpy()
         var = torch.abs(self.var(base_output)).to(self.device)
-        sigma = torch.sqrt(var).detach().to(self.device).numpy()
+        sigma = torch.sqrt(var).detach().cpu().numpy()
 
         actions = np.random.normal(mu,sigma)
         #self.ou_noise.set_scale(0.8)

@@ -63,7 +63,7 @@ class ContinuousPPOAlgorithm(Algorithm):
                 advantage.insert(0,gae)
             #Format discounted rewards and advantages for torch use
             new_rewards = torch.tensor(new_rewards).float().to(self.device)
-            advantage = torch.tensor(advantage).float()
+            advantage = torch.tensor(advantage).to(self.device).float()
             #Normalize the advantages
             advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
             agent.optimizer.zero_grad()

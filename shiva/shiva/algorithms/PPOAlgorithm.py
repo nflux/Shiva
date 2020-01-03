@@ -43,9 +43,9 @@ class PPOAlgorithm(Algorithm):
 
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float())
-        next_values = agent.critic(next_states.float()).to(self.device)
+        next_values = agent.critic(next_states.float())
 
-        actions = torch.tensor(np.argmax(actions).numpy()).float()
+        actions = torch.tensor(np.argmax(actions.cpu().numpy())).to(self.device).float()
         target_actor_actions = old_agent.actor(states.float())
         dist2 = Categorical(target_actor_actions)
         old_log_probs = dist2.log_prob(actions)

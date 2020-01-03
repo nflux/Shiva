@@ -15,7 +15,7 @@ class TD3Algorithm(Algorithm):
         np.random.seed(self.manual_seed)
 
         self.obs_space = observation_space
-        self.acs_space = action_space
+        self.acs_space = action_space['acs_space']
         # self.exploration_strategy = OU_Noise_Exploration(action_space, self.configs[0])
         # self.exploration_strategy_critic = Gaussian_Exploration(self.configs[0])
         self.ou_noise = noise.OUNoise(action_space['acs_space'], self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
@@ -118,7 +118,7 @@ class TD3Algorithm(Algorithm):
             """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
             self.agent.actor.eval()
             with torch.no_grad():
-                obs = torch.tensor(observation, dtype=torch.float)
+                obs = torch.tensor(observation, dtype=torch.float).to(self.device)
                 self.action = self.agent.actor(obs).cpu().data.numpy()
             self.agent.actor.train()
             # action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
