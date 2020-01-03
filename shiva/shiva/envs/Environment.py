@@ -1,5 +1,6 @@
 class Environment:
     def __init__(self, configs):
+        print("look:",configs)
         {setattr(self, k, v) for k,v in configs['Environment'].items()}
         self.configs = configs
         self.done_count = 0

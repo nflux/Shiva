@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 import copy
-=======
 from .Agent import Agent
 from .Agent import Agent
 import networks.DynamicLinearNetwork as DLN
@@ -11,7 +9,6 @@ import utils.Noise as noise
 import copy
 import torch
 import torch.nn as nn
->>>>>>> gymMultiEnv
 import numpy as np
 import torch
 from torch.distributions import Categorical

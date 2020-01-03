@@ -1,13 +1,10 @@
 import numpy as np
 import torch
 import torch.functional as F
-<<<<<<< HEAD
-=======
 import utils.Noise as noise
 from torch.nn.functional import softmax
 from agents.PPOAgent import PPOAgent
 from .Algorithm import Algorithm
->>>>>>> gymMultiEnv
 from torch.distributions import Categorical
 
 from shiva.utils import Noise as noise
@@ -18,12 +15,8 @@ class PPOAlgorithm(Algorithm):
     def __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
 
         super(PPOAlgorithm, self).__init__(obs_space,acs_space,configs)
-<<<<<<< HEAD
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
-=======
-        torch.manual_seed(self.configs[0]['manual_seed'])
->>>>>>> gymMultiEnv
         self.epsilon_clip = configs[0]['epsilon_clip']
         self.gamma = configs[0]['gamma']
         self.gae_lambda = configs[0]['lambda']
