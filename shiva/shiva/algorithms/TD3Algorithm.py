@@ -18,8 +18,8 @@ class TD3Algorithm(Algorithm):
         self.acs_space = action_space['acs_space']
         # self.exploration_strategy = OU_Noise_Exploration(action_space, self.configs[0])
         # self.exploration_strategy_critic = Gaussian_Exploration(self.configs[0])
-        self.ou_noise = noise.OUNoise(action_space['acs_space'], self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
-        self.ou_noise_critic = noise.OUNoise(action_space['acs_space'], self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        self.ou_noise = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        self.ou_noise_critic = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
 
         self.actor_loss = 0
         self.critic_loss_1 = 0

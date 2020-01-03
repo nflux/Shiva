@@ -16,7 +16,7 @@ class SingleAgentTD3Learner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.alg.update(self.agent, self.buffer, self.env.step_count)
+                # self.alg.update(self.agent, self.buffer, self.env.step_count)
                 self.collect_metrics()
             # self.alg.update(self.agent, self.buffer, self.env.step_count)
             self.collect_metrics(episodic=True)
@@ -43,6 +43,9 @@ class SingleAgentTD3Learner(Learner):
             t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)
             self.buffer.append(exp)
+
+        if self.step_count % 16 == 0:
+            self.alg.update(self.agent, self.buffer, self.env.step_count)
         """"""
 
     def create_environment(self):

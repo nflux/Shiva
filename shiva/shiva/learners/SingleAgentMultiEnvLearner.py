@@ -1,5 +1,8 @@
 # from shiva.core.admin import Admin
-from .Learner import Learner
+
+from shiva.learners.Learner import Learner
+# from shiva.algorithms.
+
 import helpers.misc as misc
 import torch.multiprocessing as mp
 import os
@@ -97,7 +100,7 @@ class SingleAgentMultiEnvLearner(Learner):
 
     def launch(self):
         environment = getattr(envs, self.configs['Environment']['sub_type'])
-        self.env = environment(self.configs['Environment'])
+        self.env = environment(self.configs)
 
 
         # Launch the algorithm which will handle the

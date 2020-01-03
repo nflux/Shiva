@@ -46,11 +46,19 @@ class UnityWrapperEnvironment(Environment):
         self.reward_per_episode = 0
 
     def set_initial_values(self):
-        self.action_space = self.get_action_space()
+
+        if self.action_space == "discrete":
+            self.action_space = {'discrete': self._get_action_space() , 'param': 0, 'acs_space': self._get_action_space()}
+        elif self.action_space == "continuous":
+            self.action_space = {'discrete': 0 , 'param': self._get_action_space(), 'acs_space': self._get_action_space()}
+
         self.observation_space = self.get_observation_space()
 
-        self.action_space_discrete = self.action_space if self.GroupSpec.is_action_discrete() else None
-        self.action_space_continuous = self.action_space if self.GroupSpec.is_action_continuous() else None
+        '''
+            is this used for anything? doesn't crash without it
+        '''
+        # self.action_space_discrete = self.action_space if self.GroupSpec.is_action_discrete() else None
+        # self.action_space_continuous = self.action_space if self.GroupSpec.is_action_continuous() else None
 
         self.batched_step_results = self.Unity.get_step_result(self.group_id)
 
@@ -127,13 +135,16 @@ class UnityWrapperEnvironment(Environment):
             actions = np.array(actions)
         return actions
 
-    def get_action_space(self):
+    def _get_action_space(self):
         if self.GroupSpec.is_action_discrete():
             self.num_branches = self.GroupSpec.action_size # this is the number of independent actions
             # we currently only deal with 1 independent action
             return self.GroupSpec.discrete_action_branches[0] # grab the first branch only
         elif self.GroupSpec.is_action_continuous():
             return self.GroupSpec.action_size
+
+    def get_action_space(self):
+        return self.action_space
 
     def get_observation_space(self):
         '''
