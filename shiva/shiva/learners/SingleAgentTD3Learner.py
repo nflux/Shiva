@@ -11,7 +11,7 @@ class SingleAgentTD3Learner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentTD3Learner ,self).__init__(learner_id, config)
 
-    def run(self):
+    def run(self, train=True):
         while not self.env.finished(self.episodes):
             self.env.reset()
             while not self.env.is_done():
@@ -47,7 +47,7 @@ class SingleAgentTD3Learner(Learner):
 
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs['Environment'])
+        return env_class(self.configs)
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])

@@ -10,7 +10,7 @@ class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentDQNLearner,self).__init__(learner_id, config)
 
-    def run(self):
+    def run(self, train=True):
         step_count_per_run = 0
         while not self.env.finished(self.episodes):
             self.env.reset()
@@ -38,7 +38,6 @@ class SingleAgentDQNLearner(Learner):
 
     def step(self):
         observation = self.env.get_observation()
-
         """Temporary fix for Unity as it receives multiple observations"""
         if len(observation.shape) > 1:
             action = [self.alg.get_action(self.agent, obs, self.step_count) for obs in observation]
@@ -60,9 +59,9 @@ class SingleAgentDQNLearner(Learner):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         try:
             self.configs['Agent']['learning_rate'] = random.uniform(self.learning_rate[0],self.learning_rate[1])
-            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         except:
-            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
