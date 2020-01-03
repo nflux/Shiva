@@ -78,7 +78,7 @@ class PPOAlgorithm(Algorithm):
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
 
             #Calculate log probabilites of the new policy for the policy objective
-            current_action_probs = softmax(agent.actor(states.float()))
+            current_action_probs = agent.actor(states.float())
             # print(current_action_probs)
             dist2 = Categorical(current_action_probs)
             log_probs = dist2.log_prob(actions)

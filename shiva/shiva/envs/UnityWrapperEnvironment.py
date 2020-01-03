@@ -24,7 +24,7 @@ class UnityWrapperEnvironment(Environment):
         self.dones = np.array(self.BrainInfo.local_done)
         self.done_count = 0
         self.temp_done_counter = 0 # since we have @self.num_instances, a partial done will be when all instances finished at least once
-        
+
 
         self.step_count = 0
         self.load_viewer()
@@ -100,7 +100,8 @@ class UnityWrapperEnvironment(Environment):
         '''
             One Shiva episode will be playing the number of instances in Unity
         '''
-        return self.temp_done_counter >= self.num_instances
+        #return self.temp_done_counter >= self.num_instances
+        return self.temp_done_counter >= self.update_episodes
 
     def _clean_actions(self, actions):
         '''

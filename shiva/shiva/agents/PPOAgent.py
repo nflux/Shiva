@@ -82,7 +82,6 @@ class PPOAgent(Agent):
     def get_discrete_action(self, observation):
         #retrieve the action given an observation
         action = self.actor(torch.tensor(observation).float()).detach()
-        action = self.softmax(action)
         '''if(len(full_action.shape) > 1):
             full_action = full_action.reshape(len(full_action[0]))'''
         dist = Categorical(action)
@@ -154,7 +153,7 @@ class PPOAgent(Agent):
     def load(self,save_path):
         # print(save_path)
         model = torch.load(save_path + '/agent.pth')
-        self.actor.load_state_dict( model['actor'])            
+        self.actor.load_state_dict( model['actor'])
         self.critic.load_state_dict(model['critic'])
 
         # self.actor.load_state_dict(torch.load(save_path+'/actor.pth'))

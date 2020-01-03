@@ -2,7 +2,6 @@ from settings import shiva
 from .Learner import Learner
 import helpers.misc as misc
 import torch.multiprocessing as mp
-from queue import *
 import envs
 import algorithms
 import buffers
@@ -13,8 +12,6 @@ import numpy as np
 class SingleAgentPPOLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentPPOLearner,self).__init__(learner_id, config)
-        self.queues = [Queue(1000)] * 12
-        self.rewards = np.zeros(12)
 
     def run(self):
         self.step_count = 0
@@ -29,14 +26,13 @@ class SingleAgentPPOLearner(Learner):
                 self.step()
                 self.step_count += 1
                 self.collect_metrics() # metrics per step
-            #self.ep_count += 1
+            self.ep_count += 1
             self.collect_metrics(True) # metrics per episode
-            #print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
+            print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
             if self.ep_count % self.configs['Algorithm']['update_episodes'] == 0:
-                self.ep_count += 1
-                self.alg.update(self.agent, self.old_agent, self.buffer.full_buffer(), self.step_count)
-                self.buffer.clear_buffer()
+                self.alg.update(self.agent, self.old_agent, self.buffer, self.step_count)
                 self.old_agent = copy.deepcopy(self.agent)
+        del(self.queues)
         self.env.close()
 
     def step(self):
@@ -51,24 +47,21 @@ class SingleAgentPPOLearner(Learner):
             for obs, act, rew, next_obs, don in z:
                 exp = [obs, act, rew, next_obs, int(don)]
                 self.buffer.append(exp)'''
+
         if len(observation.shape) > 1:
             action = [self.old_agent.get_action(obs) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             for i in range(len(action)):
-                if done[i] == True:
-                    print('Episode Reward {}: ', self.ep_count,self.rewards[i])
                 z = copy.deepcopy(zip([observation[i]], [action[i]], [reward[i]], [next_observation[i]], [done[i]]))
                 for obs, act, rew, next_obs, don in z:
                     self.rewards[i] += rew
                     exp = [obs, act, rew, next_obs, int(don)]
-                    print(exp)
-                    input()
                     self.queues[i].put(exp)
                     if don == True:
+                        print('Episode rewards: ', self.rewards[i])
+                        self.rewards[i].fill(0)
                         while not self.queues[i].empty():
                             self.buffer.append(self.queues[i].get())
-                        self.rewards[i] = 0
-                        self.ep_count +=1
         else:
             action = self.old_agent.get_action(observation)
             next_observation, reward, done, more_data = self.env.step(action)
@@ -126,6 +119,8 @@ class SingleAgentPPOLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
+        self.queues = [mp.Queue(self.max_length)] * self.env.num_instances
+        self.rewards = np.zeros((self.env.num_instances))
 
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
