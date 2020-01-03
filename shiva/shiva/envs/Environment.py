@@ -6,6 +6,9 @@ class Environment:
         self.step_count = 0
         self.done_count = 0
         self.total_episodes_to_play = None
+    
+    def launch(self):
+        pass
 
     def step(self,actions):
         pass

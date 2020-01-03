@@ -163,6 +163,9 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.supervised_episodes = self.episodes*self.percent_ep_super
         self.imitation_episodes = self.episodes-self.supervised_episodes
         self.port = port
+        self.step_count = 0
+        self.ep_count = 0
+        # self.train = torch.BoolTensor([True]).share_memory_()
         # self.lr_decay = (self.configs['Agent']['learning_rate']-self.configs['Agent']['lr_end'])/self.configs['Learner']['imitation_episodes']
         
 
@@ -185,8 +188,10 @@ class SingleAgentRoboCupImitationLearner(Learner):
         return np.array(list(map(lambda x: float(x), acs_msg)))
 
     def supervised_update(self):
-        self.step_count = 0
-        for self.ep_count in range(self.supervised_episodes):
+        # while self.ep_count < self.supervised_episodes:
+
+        for _ in range(self.supervised_episodes):
+            self.ep_count += 1
             self.env.reset()
             done = False
             while not done:
@@ -194,8 +199,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
                 self.step_count +=1
 
     def imitation_update(self):
-        self.step_count=0
-        for self.ep_count in range(self.imitation_episodes):
+        for _ in range(self.imitation_episodes):
+            self.ep_count += 1
             self.env.reset()
             done = False
             while not done:
@@ -279,8 +284,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
     def create_buffers(self, obs_dim, ac_dim):
         buffer1 = load_class('shiva.buffers', self.configs['Buffer']['type1'])
         buffer2 = load_class('shiva.buffers', self.configs['Buffer']['type2'])
-        return (buffer1(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim),
-                buffer2(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim))
+        return (buffer1(self.configs['Buffer']['super_capacity'], self.configs['Buffer']['super_batch_size'], 1, obs_dim, ac_dim),
+                buffer2(self.configs['Buffer']['dagger_capacity'], self.configs['Buffer']['dagger_batch_size'], 1, obs_dim, ac_dim))
 
     def get_agent(self):
         return self.agent
@@ -293,6 +298,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
+        self.env.launch()
 
         # Launch the algorithm which will handle the
         self.imitation_alg = self.create_algorithm()

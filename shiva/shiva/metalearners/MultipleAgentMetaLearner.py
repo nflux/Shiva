@@ -13,11 +13,9 @@ from shiva.helpers.config_handler import load_class
 class MultipleAgentMetaLearner(MetaLearner):
     def __init__(self, configs):
         super(MultipleAgentMetaLearner,self).__init__(configs)
-        self.configs = configs
-        self.learnerCount = 0
-        self.learner_list_size = configs["MetaLearner"]["learner_list"]
-        self.learners = [None] * configs['MetaLearner']['learner_list']
-        self.learning_rate_range = configs["MetaLearner"]["learning_rate"]
+        self.learner_list_size = self.configs["MetaLearner"]["learner_list"]
+        self.learners = [None] * self.configs['MetaLearner']['learner_list']
+        self.learning_rate_range = self.configs["MetaLearner"]["learning_rate"]
         self.episode_rewards = list()
         self.process_list = list()
         #self.multiprocessing_learners()

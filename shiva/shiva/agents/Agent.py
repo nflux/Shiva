@@ -63,5 +63,4 @@ class Agent(object):
     @staticmethod
     def mod_lr(optim, lr):
         for g in optim.param_groups:
-            # print(g['lr'])
             g['lr'] = lr

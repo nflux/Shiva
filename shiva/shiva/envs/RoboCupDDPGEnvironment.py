@@ -12,7 +12,6 @@ class RoboCupDDPGEnvironment(Environment):
         torch.manual_seed(5)
 
         self.env = rc_env(config, port)
-        self.env.launch()
         self.port = port
 
         self.left_actions = self.env.left_actions
@@ -30,9 +29,11 @@ class RoboCupDDPGEnvironment(Environment):
         self.reward_per_episode = 0
         self.reward_total = 0
         self.goal_ctr = 0
-
-        self.load_viewer()
     
+    def launch(self):
+        self.env.launch()
+        self.load_viewer()
+
     def isImit(self):
         return self.run_imit
     

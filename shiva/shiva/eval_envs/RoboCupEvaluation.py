@@ -7,18 +7,20 @@ class RoboCupEvaluation(Evaluation):
         self.port = port
         self.agent = agent
         self.env = RoboCupDDPGEnvironment(configs, port)
-        self.goal_ctr = 0
+        self.score = 0.0
+
+    def launch(self):
+        self.env.launch()
+        self.evaluate_agent()
 
     def evaluate_agent(self):
-        self.goal_ctr = 0
         for e in range(self.config['episodes']):
             done = False
             while not done:
                 done = self.step()
-            if self.env.isGoal():
-                self.goal_ctr += 1
         
-        return (self.goal_ctr/self.config['episodes'])*100.0
+        # Only get goal percentage for now
+        self.score = self.env.get_metrics(episodic=True)[2][1]
 
     def step(self):
         observation = self.env.get_observation()

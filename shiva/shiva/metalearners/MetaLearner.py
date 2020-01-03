@@ -1,16 +1,16 @@
 from shiva.core.admin import Admin
 
 class MetaLearner(object):
-    def __init__(self, config):
-        {setattr(self, k, v) for k,v in config['MetaLearner'].items()}
-        self.config = config
-        self.episodes = config['Learner']['episodes']
+    def __init__(self, configs):
+        {setattr(self, k, v) for k,v in configs['MetaLearner'].items()}
+        self.configs = configs
+        self.episodes = configs['Learner']['episodes']
         self.learnerCount = 0
         self.PROD_MODE, self.EVAL_MODE = 'production', 'evaluation'
         try:
-            folder_name = '-'.join([config['Algorithm']['type'], config['Environment']['env_name']])
+            folder_name = '-'.join([configs['Algorithm']['type'], configs['Environment']['env_name']])
         except:
-            folder_name = '-'.join([config['Algorithm']['type1'], config['Environment']['env_name']])
+            folder_name = '-'.join([configs['Algorithm']['type1'], configs['Environment']['env_name']])
         Admin.add_meta_profile(self, folder_name)
 
     # this would play with different hyperparameters until it found the optimal ones
@@ -23,7 +23,7 @@ class MetaLearner(object):
     def evolve(self, new_agents, new_hp):
         pass
 
-    def evaluate(self, learners: list):
+    def evaluate(self):
         pass
 
     def record_metrics(self):
