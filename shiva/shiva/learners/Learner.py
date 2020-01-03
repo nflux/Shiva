@@ -15,11 +15,13 @@ class Learner(object):
 
     def __getstate__(self):
         d = dict(self.__dict__)
+        # get rid of Env processe object
         try:
             del d['env']
         except KeyError:
             del d['envs']
         return d
+        # get rid of Evaluation processe object
         try:
             del d['eval']
         except KeyError:
@@ -29,18 +31,31 @@ class Learner(object):
     def collect_metrics(self, episodic=False):
         '''
             This works for Single Agent Learner
-            For Multi Agent Learner we need to implemenet the else statement
+            For Multi Agent Learner we need to implement the else statement
         '''
-        if hasattr(self, 'agent') and type(self.agent) is not list:
-            metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
-            if not episodic:
-                for metric_name, y_val in metrics:
-                    Admin.add_summary_writer(self, self.agent, metric_name, y_val, self.env.step_count)
+        if hasattr(self, 'agent'):
+            if type(self.agent) == list:
+                print("MultiAgents metrics are not yet implemented! 1")
+                return
             else:
-                for metric_name, y_val in metrics:
-                    Admin.add_summary_writer(self, self.agent, metric_name, y_val, self.env.done_count)
+                self._collect_metrics('agent', episodic)
+        elif hasattr(self, 'agents'):
+            if type(self.agents) == list:
+                print("MultiAgents metrics are not yet implemented! 2")
+                return
+            else:
+                self._collect_metrics('agents', episodic)
         else:
-            assert False, "The Learner attribute 'agent' was not found. Either name the attribute 'agent' or could be that MultiAgent Metrics are not yet supported."
+            assert False, "Learner attribute 'agent' or 'agents' was not found..."
+
+    def _collect_metrics(self, attr, episodic):
+        metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
+        if not episodic:
+            for metric_name, y_val in metrics:
+                Admin.add_summary_writer(self, getattr(self, attr), metric_name, y_val, self.env.step_count)
+        else:
+            for metric_name, y_val in metrics:
+                Admin.add_summary_writer(self, getattr(self, attr), metric_name, y_val, self.env.done_count)
 
     def checkpoint(self):
         assert hasattr(self, 'save_checkpoint_episodes'), "Learner needs 'save_checkpoint_episodes' attribute in config - put 0 if don't want to save checkpoints"
@@ -48,7 +63,7 @@ class Learner(object):
             t = self.save_checkpoint_episodes * self.checkpoints_made
             if self.env.done_count > t:
                 print("%% Saving checkpoint at episode {} %%".format(self.env.done_count))
-                Admin.update_agents_profile(self)
+                Admin.checkpoint(self)
                 self.checkpoints_made += 1
 
     def update(self):

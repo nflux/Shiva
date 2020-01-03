@@ -73,7 +73,7 @@ class SingleAgentDQNLearner(Learner):
         self.alg = self.create_algorithm()
 
         if self.load_agents:
-            self.agent = Admin._load_agents(self.load_agents)[0]
+            self.agent = Admin._load_agent(self.load_agents)
             self.buffer = Admin._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent()
