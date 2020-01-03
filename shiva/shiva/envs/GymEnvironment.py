@@ -130,6 +130,9 @@ class GymEnvironment(Environment):
         '''
         return self.reward_per_episode
 
+    def get_reward_episode(self):
+        return self.reward_episode
+
     def load_viewer(self):
         if self.render:
             self.env.render()

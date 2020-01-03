@@ -97,7 +97,7 @@ class UnityWrapperEnvironment(Environment):
         # self.debug()
         return self.observations, self.rewards, self.dones, {}
 
-    def get_metrics(self, episodic=False):
+    def get_metrics(self, episodic=True):
         if not episodic:
             metrics = [
                 ('Reward/Per_Step', self.reward_per_step)

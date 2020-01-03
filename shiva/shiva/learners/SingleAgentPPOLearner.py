@@ -1,6 +1,11 @@
 import torch
 import torch.multiprocessing as mp
-import copy, random
+from queue import *
+import envs
+import algorithms
+import buffers
+import copy
+import random
 import numpy as np
 
 from shiva.core.admin import Admin
@@ -10,8 +15,8 @@ from shiva.helpers.config_handler import load_class
 class SingleAgentPPOLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentPPOLearner,self).__init__(learner_id, config)
-        np.random.seed(self.configs['Algorithm']['manual_seed'])
-        torch.manual_seed(self.configs['Algorithm']['manual_seed'])
+        self.queues = [Queue(1000)] * 12
+        self.rewards = np.zeros(12)
 
     def run(self):
         self.step_count = 0
@@ -26,10 +31,11 @@ class SingleAgentPPOLearner(Learner):
                 self.step()
                 self.step_count += 1
                 self.collect_metrics() # metrics per step
-            self.ep_count += 1
+            #self.ep_count += 1
             self.collect_metrics(True) # metrics per episode
-            print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.ep_count, self.env.steps_per_episode, self.env.get_total_reward()))
+            #print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
             if self.ep_count % self.configs['Algorithm']['update_episodes'] == 0:
+                self.ep_count += 1
                 self.alg.update(self.agent, self.old_agent, self.buffer.full_buffer(), self.step_count)
                 self.buffer.clear_buffer()
                 self.old_agent = copy.deepcopy(self.agent)
@@ -41,14 +47,31 @@ class SingleAgentPPOLearner(Learner):
         observation = self.env.get_observation()
 
         """Temporary fix for Unity as it receives multiple observations"""
-        if len(observation.shape) > 1:
+        '''if len(observation.shape) > 1:
             action = [self.old_agent.get_action(obs) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
                 exp = [obs, act, rew, next_obs, int(don)]
-                # print(act, rew, don)
-                self.buffer.append(exp)
+                self.buffer.append(exp)'''
+        if len(observation.shape) > 1:
+            action = [self.old_agent.get_action(obs) for obs in observation]
+            next_observation, reward, done, more_data = self.env.step(action)
+            for i in range(len(action)):
+                if done[i] == True:
+                    print('Episode Reward {}: ', self.ep_count,self.rewards[i])
+                z = copy.deepcopy(zip([observation[i]], [action[i]], [reward[i]], [next_observation[i]], [done[i]]))
+                for obs, act, rew, next_obs, don in z:
+                    self.rewards[i] += rew
+                    exp = [obs, act, rew, next_obs, int(don)]
+                    print(exp)
+                    input()
+                    self.queues[i].put(exp)
+                    if don == True:
+                        while not self.queues[i].empty():
+                            self.buffer.append(self.queues[i].get())
+                        self.rewards[i] = 0
+                        self.ep_count +=1
         else:
             action = self.old_agent.get_action(observation)
             next_observation, reward, done, more_data = self.env.step(action)
