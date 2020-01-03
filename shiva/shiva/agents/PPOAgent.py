@@ -97,3 +97,6 @@ class PPOAgent(Agent):
     def save(self, save_path, step):
         torch.save(self.actor, save_path + '/actor.pth')
         torch.save(self.critic, save_path +'/critic.pth')
+
+    def __str__(self):
+        return 'PPOAgent'

@@ -43,3 +43,6 @@ class DDPGAgent(Agent):
         torch.save(self.target_actor, save_path + '/target_actor.pth')
         torch.save(self.critic, save_path + '/critic.pth')
         torch.save(self.target_critic, save_path + '/target_critic.pth')
+        
+    def __str__(self):
+        return 'DDPGAgent'

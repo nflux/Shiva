@@ -60,3 +60,6 @@ class ImitationAgent(Agent):
 
     def save(self, save_path, step):
         torch.save(self.policy, save_path + '/policy.pth')
+        
+    def __str__(self):
+        return 'ImitationAgent'

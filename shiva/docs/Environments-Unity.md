@@ -16,7 +16,7 @@ For additional documentation, [Unity API](https://github.com/Unity-Technologies/
 * The file for the **Scene_name.x86_64** extension should be placed in the **shiva/envs/unitybuilds/** and declared in the **exec** attribute for the config.
 
 **Config Templates**
-  - The attribute setted in the config will be accessible as a class attribute for the [UnityWrapperEnvironment class](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/UnityWrapperEnvironment.py).
+  - The attribute setted in the config will be accessible as a class attribute for the [UnityWrapperEnvironment class](../shiva/envs/UnityWrapperEnvironment.py).
 Here's the template
 
 ```

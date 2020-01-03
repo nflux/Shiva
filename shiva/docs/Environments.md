@@ -5,25 +5,25 @@ ___
 *   init
     * [Go to code]()
 *   Environment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/Environment.py)
+    * [Go to code](../shiva/envs/Environment.py)
 *   GymContinuousEnvironment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/GymContinuousEnvironment.py)
+    * [Go to code](../shiva/envs/GymContinuousEnvironment.py)
 *   GymDiscreteEnvironment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/GymDiscreteEnvironment.py)
+    * [Go to code](../shiva/envs/GymDiscreteEnvironment.py)
 *   RobocupDDPGEnvironment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/RoboCupDDPGEnvironment.py)
+    * [Go to code](../shiva/envs/RoboCupDDPGEnvironment.py)
 *   UnityWrapperEnvironment
-    * [Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/UnityWrapperEnvironment.py)
+    * [Go to code](../shiva/envs/UnityWrapperEnvironment.py)
 
 
 ## init
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/__init__.py)
+[Go to code](../shiva/envs/__init__.py)
 If you add environments, add them to this file as well.
 
 ##  Environment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/Environment.py)
+[Go to code](../shiva/envs/Environment.py)
 *   **DESCRIPTION**: This is the abstract class that the other environments will inherit from.
 *   step(self,actions)
     -   **self**
@@ -75,7 +75,7 @@ ___
 
 ## UnityEnvironment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/UnityWrapperEnvironment.py)
+[Go to code](../shiva/envs/UnityWrapperEnvironment.py)
 ### Config Setup
 ```
 [Environment]
@@ -90,7 +90,7 @@ ___
 Shiva supports both Gym Continuous Environments (e.g. MountainCarContinuous-v0) and Gym Discrete Environments (e.g. MountainCar-v0). The Discrete action space allows a fixed range of non-negative numbers while the Box action space represents an n-dimensional box.
 ###  GymContinuousEnvironment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/GymContinuousEnvironment.py)
+[Go to code](../shiva/envs/GymContinuousEnvironment.py)
 GymDiscreteEnvironment and GymContinuousEnvironment both inherit from the Environment class. The only difference between the two is that GymDiscreteEnvironment takes the argmax() of the action output from the network before passing it to the environment while GymContinuousEnvironment simply passes the action output.
 #### Config Setup
 ```
@@ -106,7 +106,7 @@ num_agents=1
 
 ###  GymDiscreteEnvironment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/GymDiscreteEnvironment.py)
+[Go to code](../shiva/envs/GymDiscreteEnvironment.py)
 GymDiscreteEnvironment and GymContinuousEnvironment both inherit from the Environment class. The only difference between the two is that GymDiscreteEnvironment takes the argmax() of the action output from the network before passing it to the environment while GymContinuousEnvironment simply passes the action output.
 #### Config Setup
 ```
@@ -121,7 +121,7 @@ num_agents=1
 
 ##  RobocupDDPGEnvironment
 ___
-[Go to code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/envs/RoboCupDDPGEnvironment.py)
+[Go to code](../shiva/envs/RoboCupDDPGEnvironment.py)
 ### Config Setup
 ```
 [Environment]

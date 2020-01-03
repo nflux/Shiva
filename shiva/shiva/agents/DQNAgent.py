@@ -56,3 +56,6 @@ class DQNAgent(Agent):
     def save(self, save_path, step):
         torch.save(self.policy, save_path + '/policy.pth')
         torch.save(self.target_policy, save_path + '/target_policy.pth')
+        
+    def __str__(self):
+        return 'DQNAgent'

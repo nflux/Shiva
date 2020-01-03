@@ -237,3 +237,6 @@ class DDPGAlgorithm(Algorithm):
         else:
             metrics = []
         return metrics
+
+    def __str__(self):
+        return 'DDPGAlgorithm'
