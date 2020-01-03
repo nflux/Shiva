@@ -68,7 +68,7 @@ class MultiGymWrapper(Environment):
         #list of the environments to be used for episode collection
         self.envs = [environment(self.configs)] * self.num_instances
         #Shared tensor will be used for communication between environment wrapper process and individual environment processes
-        self.observations = torch.zeros(self.num_instances, max(self.envs[0].observation_space,self.envs[0].action_space)).share_memory_()
+        self.observations = torch.zeros(self.num_instances, max(self.envs[0].observation_space,self.envs[0].action_space['acs_space'])).share_memory_()
         #Shared tensor will let control data flow through the tensor
         # 0 signals env to process, 1 signals multi wrapper to process
         self.step_control = torch.zeros(self.num_instances).share_memory_()
@@ -83,7 +83,7 @@ def process_target(env,observations,step_control,stop_collecting, id, queue,max_
     #tensor for storing episodes per process/env
     step_count = 1
     ep_observations,ob_idx = np.zeros((max_ep_length,env.observation_space)), 0
-    ep_actions, acs_idx = np.zeros((max_ep_length,env.action_space)), 0
+    ep_actions, acs_idx = np.zeros((max_ep_length,env.action_space['acs_space'])), 0
     ep_rewards, rew_idx = np.zeros((max_ep_length,1)), 0
     ep_next_observations,nob_idx = np.zeros((max_ep_length,env.observation_space)),0
     ep_dones, done_idx = np.zeros((max_ep_length,1)),0

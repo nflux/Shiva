@@ -1,7 +1,12 @@
 class Environment:
     def __init__(self, configs):
         print("look:",configs)
-        {setattr(self, k, v) for k,v in configs['Environment'].items()}
+        # print()
+        # print(configs['environment'])
+        if 'MetaLearner' in configs:
+            {setattr(self, k, v) for k,v in configs['Environment'].items()}
+        else:
+            {setattr(self, k, v) for k,v in configs.items()}
         self.configs = configs
         self.done_count = 0
         self.total_episodes_to_play = None

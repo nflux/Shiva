@@ -2,10 +2,6 @@
 
 from shiva.learners.Learner import Learner
 from shiva.helpers.config_handler import load_class
-
-import shiva.algorithms
-import shiva.envs
-
 import helpers.misc as misc
 import torch.multiprocessing as mp
 import os
@@ -81,7 +77,6 @@ class SingleAgentMultiEnvLearner(Learner):
 
     def create_environment(self):
         # create the environment and get the action and observation spaces
-
         environment = load_class('shiva.envs', self.configs['Environment']['type'])
         return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count,self.agent_dir,self.episodes)
 
@@ -92,7 +87,7 @@ class SingleAgentMultiEnvLearner(Learner):
         return algorithm(self.env.get_observation_space(), self.env.get_action_space(), acs_discrete, acs_continuous, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
-        buffer = getattr(buffers,self.configs['Buffer']['type'])
+        buffer = load_class('shiva.buffers',self.configs['Buffer']['type'])
         return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
 
     def get_agents(self):
