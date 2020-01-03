@@ -48,7 +48,7 @@ class SingleAgentMetaLearner(MetaLearner):
 
     def create_learner(self):
         learner = load_class('shiva.learners', self.configs['Learner']['type'])
-        if self.start_port:
+        if hasattr(self, 'start_port'):
             return learner(self.get_id(), self.configs, self.start_port)
         else:
             return learner(self.get_id(), self.configs)
