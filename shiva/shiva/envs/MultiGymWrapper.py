@@ -47,7 +47,7 @@ class MultiGymWrapper(Environment):
             if self.step_control.sum().item() == self.num_instances:
                 observations = self.observations.numpy()
                 actions = torch.tensor([self.agent.get_action(obs) for obs in observations])
-                self.observations[:,0:self.envs[0].action_space] = actions
+                self.observations[:,0:self.envs[0].action_space['acs_space']] = actions
                 self.step_control.fill_(0)
 
             if self.episode_count == self.total_episodes:
@@ -95,15 +95,15 @@ def process_target(env,observations,step_control,stop_collecting, id, queue,max_
         #print('Hello')
         #print('Process: ', step_control[id])
         if(step_control[id] == 0):
-            action = observations[id][:env.action_space].numpy()
+            action = observations[id][:env.action_space['acs_space']].numpy()
             next_observation, reward, done, more_data = env.step(action)
             ep_observations[ob_idx:ob_idx+env.observation_space] = observation
-            ep_actions[acs_idx:acs_idx+env.action_space] = action
+            ep_actions[acs_idx:acs_idx+env.action_space['acs_space']] = action
             ep_rewards[rew_idx] = reward
             ep_next_observations[nob_idx:nob_idx+env.observation_space] = next_observation
             ep_dones[done_idx] = int(done)
             ob_idx += env.observation_space
-            acs_idx += env.action_space
+            acs_idx += env.action_space['acs_space']
             rew_idx += 1
             nob_idx += env.observation_space
             done_idx += 1

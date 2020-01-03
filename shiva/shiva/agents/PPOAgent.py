@@ -92,7 +92,7 @@ class PPOAgent(Agent):
 
     def get_discrete_action(self, observation):
         #retrieve the action given an observation
-        action = self.actor(torch.tensor(observation).float()).detach()
+        action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
         action = self.softmax(action)
         '''if(len(full_action.shape) > 1):
             full_action = full_action.reshape(len(full_action[0]))'''

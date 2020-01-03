@@ -15,17 +15,12 @@ class Learner(object):
 
     def __getstate__(self):
         d = dict(self.__dict__)
-        # get rid of Env processe object
-        try:
-            del d['env']
-        except KeyError:
-            del d['envs']
-        return d
-        # get rid of Evaluation processe object
-        try:
-            del d['eval']
-        except KeyError:
-            pass
+        attributes_to_ignore = ['env', 'envs', 'eval', 'queue']
+        for a in attributes_to_ignore:
+            try:
+                del d[a]
+            except:
+                pass
         return d
 
     def collect_metrics(self, episodic=False):
