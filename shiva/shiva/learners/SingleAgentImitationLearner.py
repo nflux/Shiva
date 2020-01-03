@@ -165,7 +165,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.port = port
         self.step_count = 0
         self.ep_count = 0
-        # self.train = torch.BoolTensor([True]).share_memory_()
+        self.dummy_action = np.array([0,1,0,0,0,1,0,0]) # turn
+        self.train = torch.tensor([True]).share_memory_()
         # self.lr_decay = (self.configs['Agent']['learning_rate']-self.configs['Agent']['lr_end'])/self.configs['Learner']['imitation_episodes']
         
 
@@ -188,25 +189,38 @@ class SingleAgentRoboCupImitationLearner(Learner):
         return np.array(list(map(lambda x: float(x), acs_msg)))
 
     def supervised_update(self):
-        # while self.ep_count < self.supervised_episodes:
-
-        for _ in range(self.supervised_episodes):
-            self.ep_count += 1
-            self.env.reset()
-            done = False
-            while not done:
-                done = self.supervised_step()
-                self.step_count +=1
+        while self.ep_count < self.supervised_episodes:
+            if self.train[0]:
+                self.ep_count += 1
+                self.env.reset()
+                done = False
+                while not done:
+                    done = self.supervised_step()
+                    self.step_count +=1
+            else:
+                done = False
+                while not done:
+                    done = self.dummy_step()
 
     def imitation_update(self):
-        for _ in range(self.imitation_episodes):
-            self.ep_count += 1
-            self.env.reset()
-            done = False
-            while not done:
-                done = self.imitation_step()
-                self.step_count+=1
-            self.env.close()
+        while self.ep_count < self.imitation_episodes:
+            if self.train[0]:
+                self.ep_count += 1
+                self.env.reset()
+                done = False
+                while not done:
+                    done = self.imitation_step()
+                    self.step_count+=1
+                self.env.close()
+            else:
+                done = False
+                while not done:
+                    done = self.dummy_step()
+
+    def dummy_step(self):
+        observation = self.env.get_observation()
+        _, _, done, _ = self.env.step(self.dummy_action, discrete_select='argmax', collect=False)
+        return done
 
     # Function to step throught the environment
     def supervised_step(self):

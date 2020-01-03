@@ -43,7 +43,7 @@ class RoboCupDDPGEnvironment(Environment):
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, actions, discrete_select='sample'):
+    def step(self, actions, discrete_select='sample', collect=True):
         '''
             Input
                 @actions
@@ -84,8 +84,9 @@ class RoboCupDDPGEnvironment(Environment):
                 self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[2], left_params=self.left_actions)
         else:
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
-        
-        self.collect_metrics()
+
+        if collect:
+            self.collect_metrics()
         
         if self.discretized:
             actions_v = action2one_hot(self.action_space['discrete'], act_choice)

@@ -6,7 +6,7 @@ class RoboCupEvaluation(Evaluation):
         super(RoboCupEvaluation, self).__init__(configs)
         self.port = port
         self.agent = agent
-        self.env = RoboCupDDPGEnvironment(configs, port)
+        self.env = RoboCupDDPGEnvironment(configs['Evaluation'], port)
         self.score = 0.0
 
     def launch(self):
@@ -14,7 +14,7 @@ class RoboCupEvaluation(Evaluation):
         self.evaluate_agent()
 
     def evaluate_agent(self):
-        for e in range(self.config['episodes']):
+        for e in range(self.episodes):
             done = False
             while not done:
                 done = self.step()

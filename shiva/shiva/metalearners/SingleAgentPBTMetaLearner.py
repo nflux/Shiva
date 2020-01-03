@@ -1,5 +1,5 @@
 import torch
-import random
+import random, dill
 from scipy import stats
 import copy
 import numpy as np
@@ -10,20 +10,23 @@ from shiva.helpers.config_handler import load_class
 
 class SingleAgentPBTMetaLearner(MetaLearner):
     def __init__(self, configs):
-        super(SingleAgentPBTMetaLearner, self).__init__(configs):
+        super(SingleAgentPBTMetaLearner, self).__init__(configs)
         self.learners = [None] * self.num_learners
         self.evals = [None] * self.num_learners
         self.process_list = []
-        if self.start_port and self.is_imit:
-            # 6 denotes the number of ports needed per imitation learner
-            self.learner_ports = [(self.start_port + (6*i)) for i in range(self.num_learners)]
+        if hasattr(self, 'start_port'):
+            # 7 denotes the number of ports needed per imitation learner
+            # 4 per bot env and 3 per learner env
+            self.learner_ports = [(self.start_port + (7*i)) for i in range(self.num_learners)]
             # 3 denotes the number of ports needed per eval_env
-            self.eval_ports = [((self.learner_ports[-1] + 6) + (3*i)) for i in range(self.num_learners)]
-        elif self.start_port:
-            self.learner_ports = [(self.start_port + (3*i)) for i in range(self.num_learners)]
-            self.eval_ports = [((self.learner_ports[-1] + 3) + (3*i)) for i in range(self.num_learners)]
+            self.eval_ports = [((self.learner_ports[-1] + 7) + (3*i)) for i in range(self.num_learners)]
+
+        self.learner_processes = []
+        self.eval_processes = []
+        self.run()
     
     def run(self):
+        torch.multiprocessing.set_start_method('spawn')
         if self.start_mode == self.EVAL_MODE:
             # self.eval_envs = []
             # Load Learners to be passed to the Evaluation
@@ -42,8 +45,17 @@ class SingleAgentPBTMetaLearner(MetaLearner):
             pass
 
         elif self.start_mode == self.PROD_MODE:
-            self.populate_objs()
-            self.process_learners()
+            try:
+                self.populate_objs()
+                print('Populated Objects')
+                self.process_learners()
+            except KeyboardInterrupt:
+                print('Exiting for CTRL-C')
+            finally:
+                print('Cleaning up possible extra learner processes')
+                [l.close() for l in self.learners]
+                [p.join() for p in self.learner_processes]
+                
         
         # for i in range(len(self.eval.eval_scores)):
         #     print('Average Reward for agent: ', i, '\n', np.average(self.eval.eval_scores[i]))
@@ -51,13 +63,42 @@ class SingleAgentPBTMetaLearner(MetaLearner):
         print('bye')
     
     def process_learners(self):
+        for l in self.learners:
+            s = "learner_" + str(l)
+            pick_run = dill.dumps(l.run)
+            p = torch.multiprocessing.Process(name=s, target=dill.loads(pick_run))
+            p.start()
+            print('Passssed hereerereer')
+            self.learner_processes.append(p)
 
-        while all(item.ep_count < item.episodes for item in self.learners):
+        eval_check = [False] * self.num_learners
+        not_finished = lambda x: any([i.ep_count < i.episodes for i in x])
+        while not_finished(self.learners):
+            for l in self.learners:
+                if (l.ep_count % self.eps_per_eval) == 0:
+                    l.train[0] = False
+                    eval_check[l.id] = True
+            if all(eval_check):
+                self.eval_processes = []
+                for e in self.evals:
+                    s = "eval_" + str(e)
+                    p = torch.multiprocessing.Process(name=s, target=e.launch)
+                    p.start()
+                    self.eval_processes.append(p)
+                
+                for i,p in enumerate(self.eval_processes):
+                    p.join()
+                    eval_check[i] = False
+                    self.learners[i].train[0] = True
 
+                print([e.score for e in self.evals])
 
     #Run inidivdual learners. Used as the target function for multiprocessing
-    def run_learner(self, learner_idx):
-        self.learners[learner_idx].run()
+    # def run_learner(self, learner_idx):
+    #     self.learners[learner_idx].run()
+    
+    # def run_eval(self, eval_idx):
+    #     self.evals[eval_idx].launch()
     
     def create_learner(self, idx):
         learner_class = load_class('shiva.learners', self.configs['Learner']['type'])

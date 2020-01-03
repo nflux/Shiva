@@ -2,7 +2,7 @@ class Evaluation(object):
     def __init__(self,
                 configs: 'whole config passed'
     ):
-        {setattr(self, k, v) for k,v in configs.items()}
+        {setattr(self, k, v) for k,v in configs['Evaluation'].items()}
         self.config = configs
     
     def launch(self):

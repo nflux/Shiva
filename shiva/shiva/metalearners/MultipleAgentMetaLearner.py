@@ -127,6 +127,7 @@ class MultipleAgentMetaLearner(MetaLearner):
                     s = "learner" + "_" + str(learner)
                     p = torch.multiprocessing.Process(name=s, target=self.run_learner(learner.id))
                     p.start()
+                    print('This passes hereeeeeeeeeeeeeeeeeeeeeeeeee')
                     self.process_list.append(p)
 
             for p in self.process_list:

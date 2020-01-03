@@ -28,7 +28,7 @@ class rc_env:
         {setattr(self, k, v) for k,v in config.items()}
         self.port = port
         self.hfo_path = hfo.get_hfo_path()
-        self.seed = np.random.randint(1000)
+        # self.seed = np.random.randint(1000)
         self.viewer = None
 
 
@@ -531,6 +531,7 @@ class rc_env:
                     Runs the HFO command to pass parameters to the server. 
                     Refer to `HFO/bin/HFO` to see how these params are added.
             '''
+            print('This is the seeeeeeeeeeeeeeeeeeeeeeeeeeeed', self.seed)
             cmd = self.hfo_path + \
                   " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
