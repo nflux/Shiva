@@ -32,7 +32,7 @@ class SingleAgentMetaLearner(MetaLearner):
 
             self.learner.launch()
             
-            Admin.update_agents_profile(self.learner)
+            Admin.checkpoint(self.learner)
 
             self.learner.run()
 

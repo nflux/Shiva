@@ -10,7 +10,7 @@ args = parser.parse_args()
 config_dir = os.getcwd() + '/configs/'
 main_dict = load_config_file_2_dict(config_dir + args.config)
 
-Admin.init(main_dict['Admin']) # Admin is instantiated at shiva.core.admin for global access
+Admin.init(main_dict['Admin']) # Admin is instantiated at shiva.core.admin for project global access
 
 metalearner_class = load_class("shiva.metalearners", main_dict['MetaLearner']['type'])
 meta = metalearner_class(main_dict)

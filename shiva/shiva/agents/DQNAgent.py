@@ -52,3 +52,7 @@ class DQNAgent(Agent):
                 best_act_v = act_v
         best_act = best_act_v
         return np.argmax(best_act).numpy()
+
+    def save(self, save_path, step):
+        torch.save(self.policy, save_path + '/policy.pth')
+        torch.save(self.target_policy, save_path + '/target_policy.pth')

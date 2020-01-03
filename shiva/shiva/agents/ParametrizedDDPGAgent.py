@@ -43,3 +43,9 @@ class ParametrizedDDPGAgent(Agent):
         action = np.clip(action, -1,1)
         # print('actor action shape', action.shape)
         return action[0]
+
+    def save(self, save_path, step):
+        torch.save(self.actor, save_path + '/actor.pth')
+        torch.save(self.target_actor, save_path + '/target_actor.pth')
+        torch.save(self.critic, save_path + '/critic.pth')
+        torch.save(self.target_critic, save_path + '/target_critic.pth')

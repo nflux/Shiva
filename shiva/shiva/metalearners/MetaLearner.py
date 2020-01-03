@@ -7,11 +7,7 @@ class MetaLearner(object):
         self.episodes = config['Learner']['episodes']
         self.learnerCount = 0
         self.PROD_MODE, self.EVAL_MODE = 'production', 'evaluation'
-        try:
-            folder_name = '-'.join([config['Algorithm']['type'], config['Environment']['env_name']])
-        except:
-            folder_name = '-'.join([config['Algorithm']['type1'], config['Environment']['env_name']])
-        Admin.add_meta_profile(self, folder_name)
+        Admin.add_meta_profile(self, self.get_folder_name())
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):
@@ -34,8 +30,15 @@ class MetaLearner(object):
 
     def get_id(self):
         id = self.learnerCount
-        self.learnerCount +=1
+        self.learnerCount += 1
         return id
+
+    def get_folder_name(self):
+        try:
+            folder_name = '-'.join([self.config['Algorithm']['type'], self.config['Environment']['env_name']])
+        except:
+            folder_name = '-'.join([self.config['Algorithm']['type1'], self.config['Environment']['env_name']])
+        return folder_name
 
     def save(self):
         Admin.save(self)
