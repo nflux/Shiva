@@ -12,12 +12,6 @@
 *   SingleAgentMetaLearner
     *   [Link to Code](../shiva/metalearners/SingleAgentMetaLearner.py)
 
-## __init__
-___
-[Go to Code](../shiva/metalearners/__init__.py)
-
-Add any metalearner modules you add to Shiva to this file so Shiva can see it.
-
 ## MetaLearner
 ___
 [Go to Code](../shiva/metalearners/MetaLearner.py)

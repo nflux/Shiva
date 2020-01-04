@@ -60,11 +60,6 @@ optimizer_function='Adam'
 learning_rate=0.03
 action_policy='argmax'
 ```
-##  init_agent
-___
-[Link to Code](../shiva/agents/init_agent.py)
-
-* You have to add your modules here so that Shiva will see them.
 
 ##  ParameterizedDDPGAgent
 ___
