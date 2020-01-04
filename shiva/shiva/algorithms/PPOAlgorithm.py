@@ -36,7 +36,7 @@ class PPOAlgorithm(Algorithm):
         minibatch = buffer.full_buffer()
 
         # Batch of Experiences
-        states, actions, rewards, next_states, dones = minibatch
+        states, actions, rewards,logprobs, next_states, dones = minibatch
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
@@ -71,6 +71,7 @@ class PPOAlgorithm(Algorithm):
         old_action_probs = old_agent.actor(states.float())
         dist = Categorical(old_action_probs)
         old_log_probs = dist.log_prob(actions)
+        old_log_probs = torch.from_numpy(logprobs).float().detach().mean(dim=-1)
 
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
@@ -86,7 +87,7 @@ class PPOAlgorithm(Algorithm):
             #the policy is of a particular action
             entropy = dist2.entropy()
             #Find the ratio (pi_new / pi_old)
-            ratios = torch.exp(log_probs - old_log_probs.detach())
+            ratios = torch.exp(log_probs - old_log_probs)
             #Calculate objective functions
             surr1 = ratios * advantage
             surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage

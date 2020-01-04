@@ -79,6 +79,13 @@ class PPOAgent(Agent):
         elif self.action_space == 'Continuous':
             return self.get_continuous_action(observation)
 
+
+    def evaluate(self,observation):
+        if self.action_space == 'Discrete':
+            return self.evaluate_discrete(observation)
+        elif self.action_space == 'Continuous':
+            return self.get_continuous_action(observation)
+
     def get_discrete_action(self, observation):
         #retrieve the action given an observation
         action = self.actor(torch.tensor(observation).float()).detach()
@@ -88,6 +95,15 @@ class PPOAgent(Agent):
         action = dist.sample()
         action = misc.action2one_hot(self.acs_discrete, action.item())
         return action.tolist()
+
+
+    def evaluate_discrete(self,observation):
+        action = self.actor(torch.tensor(observation).float()).detach()
+        dist = Categorical(action)
+        action = dist.sample()
+        logprobs = dist.log_prob(action)
+        action = misc.action2one_hot(self.acs_discrete, action.item())
+        return action.tolist(), logprobs.tolist()
 
     '''def get_continuous_action(self,observation):
         observation = torch.tensor(observation).float().detach().to(self.device)
@@ -124,13 +140,13 @@ class PPOAgent(Agent):
         actions = np.clip(actions,-1,1)
         return actions.tolist()
 
-    def evaluate(self,observation):
+    '''def evaluate(self,observation):
         observation = torch.tensor(observation).float().detach()
         base_output = self.policy_base(observation)
         mu = self.mu(base_output)
         var = self.var(base_output)
         value = self.critic(base_output)
-        return my, var, value
+        return my, var, value'''
 
 
     def save_agent(self, save_path,step):

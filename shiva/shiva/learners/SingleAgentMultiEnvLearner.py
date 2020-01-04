@@ -33,21 +33,27 @@ class SingleAgentMultiEnvLearner(Learner):
         while self.ep_count < self.episodes:
             while not self.queue.empty():
                 exp = self.queue.get()
-                observations, actions, rewards, next_observations, dones = zip(*exp)
-                print(np.array(rewards).sum())
-                for i in range(len(observations)):
-                    self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
+                if self.configs['Algorithm']['algorithm'] == 'PPO':
+                    observations, actions, rewards, logprobs, next_observations, dones = zip(*exp)
+                    print(np.array(rewards).sum())
+                    for i in range(len(observations)):
+                        self.buffer.append([observations[i], actions[i], rewards[i][0],logprobs[i], next_observations[i], dones[i][0]])
+                else:
+                    observations, actions, rewards, next_observations, dones = zip(*exp)
+                    print(np.array(rewards).sum())
+                    for i in range(len(observations)):
+                        self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
                 self.ep_count += 1
             if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
                 print(self.ep_count)
                 self.alg.update(self.agent,self.old_agent,self.buffer,self.step_count)
                 self.agent.save_agent(self.agent_dir,self.step_count)
                 self.updates += 1
-                print('Copied')
+                #print('Copied')
                 #Add save policy function here
 
         # self.p.join()
-        print('Hello')
+        #print('Hello')
         # del(self.p)
         del(self.queue)
 
