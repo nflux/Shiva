@@ -48,8 +48,3 @@ capacity=100_000
 batch_size = 128
 num_agents=1
 ```
-
-## init
-[Go to Code](../shiva/buffers/__init__.py)
-___
-Any modules you add need to be added to this file.

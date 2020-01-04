@@ -18,15 +18,14 @@ Are specified in detail below.
     *   [Link to Code](../shiva/algorithms/PPOAlgorithm.py)
 *   SupervisedAlgorithm
     *   [Link to Code](../shiva/algorithms/SupervisedAlgorithm.py)
-*   init
-    *   [Link to Code](../shiva/algorithms/__init__.py)
 
 ##  Algorithm (Abstract)
 [Link to Code](../shiva/algorithms/Algorithm.py)
 
 All the algorithms inherit from this abstract class. Learn more about Shiva's abstract classes [here](../docs/Abstract-Classes.md).
+
 ##  ContinuousDDPGAlgorithm
-[Link to Code](../shiva/algorithms/ContinuousDDPGAlgorithm.py)
+[Link to Code](../shiva/algorithms/DDPGAlgorithm.py)
 ### Config Set Up     
 ```
 [Algorithm]
@@ -45,6 +44,7 @@ epsilon_decay=0.00005
 c=200
 tau=0.99
 ```
+
 ##  DQNAlgorithm
 [Link to Code](../shiva/algorithms/DQNAlgorithm.py)
 ### Config Set Up     
@@ -62,6 +62,7 @@ epsilon_end=0.02
 epsilon_decay=0.00005
 c=200
 ```
+
 ##  DaggerAlgorithm
 [Link to Code](../shiva/algorithms/DaggerAlgorithm.py)
 *   Supports Discrete and Continuous Action Space. 
@@ -159,6 +160,7 @@ epsilon_decay=0.00005
 c=200
 tau=0.999
 ```
+
 ## ParameterizedDDPGAlgorithm
 [Link to Code](../shiva/algorithms/ParametrizedDDPGAlgorithm.py)
 ### Config Set Up     
@@ -179,6 +181,7 @@ epsilon_decay=0.00005
 c=200
 tau=0.0001
 ```
+
 ## PPO
 [Link to Code](../shiva/algorithms/PPOAlgorithm.py)
 ### Config Set Up     
@@ -274,6 +277,3 @@ epsilon_end=0.02
 epsilon_decay=0.00005
 c=200
 ```
-
-## init
-[Link to Code](../shiva/algorithms/__init__.py)
