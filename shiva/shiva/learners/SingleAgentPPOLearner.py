@@ -2,6 +2,8 @@ from settings import shiva
 from .Learner import Learner
 import helpers.misc as misc
 import torch.multiprocessing as mp
+from torch.distributions import Categorical
+import torch
 import envs
 import algorithms
 import buffers
@@ -30,8 +32,7 @@ class SingleAgentPPOLearner(Learner):
             self.collect_metrics(True) # metrics per episode
             print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
             if self.ep_count % self.configs['Algorithm']['update_episodes'] == 0:
-                self.alg.update(self.agent, self.old_agent, self.buffer, self.step_count)
-                self.old_agent = copy.deepcopy(self.agent)
+                self.alg.update(self.agent, self.agent, self.buffer, self.step_count)
         del(self.queues)
         self.env.close()
 
@@ -63,9 +64,11 @@ class SingleAgentPPOLearner(Learner):
                         while not self.queues[i].empty():
                             self.buffer.append(self.queues[i].get())
         else:
-            action = self.old_agent.get_action(observation)
+            action = self.agent.get_action(observation)
             next_observation, reward, done, more_data = self.env.step(action)
-            t = [observation, action, reward, next_observation, int(done)]
+            action_probs = self.agent.actor(torch.from_numpy(observation).float())
+            log_probs = Categorical(action_probs).log_prob(torch.argmax(torch.tensor(action), dim=-1)).tolist()
+            t = [observation, action, reward, log_probs, next_observation, int(done)]
             exp = copy.deepcopy(t)
             self.buffer.append(exp)
         """"""

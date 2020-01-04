@@ -68,10 +68,10 @@ class PPOAlgorithm(Algorithm):
         #Normalize the advantages
         advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
         #Calculate log probabilites of the old policy for the policy objective
-        old_action_probs = old_agent.actor(states.float())
+        '''old_action_probs = old_agent.actor(states.float())
         dist = Categorical(old_action_probs)
-        old_log_probs = dist.log_prob(actions)
-        old_log_probs = torch.from_numpy(logprobs).float().detach().mean(dim=-1)
+        old_log_probs = dist.log_prob(actions)'''
+        old_log_probs = torch.from_numpy(logprobs).float().detach()
 
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
