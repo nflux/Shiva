@@ -96,6 +96,9 @@ class Learner(object):
         pass
 
     def get_id(self):
+        return self.get_new_agent_id()
+
+    def get_new_agent_id(self):
         id = self.agentCount
         self.agentCount +=1
         return id

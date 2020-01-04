@@ -29,7 +29,7 @@ class SingleAgentDQNLearner(Learner):
                     pass
                 step_count_per_run += 1
                 ''''''
-            self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
+            self.alg.update(self.agent, self.buffer, self.env.step_count)
             self.collect_metrics(True) # metrics per episode
             self.checkpoint()
             # print('Learner {}\tEpisode {} complete on {} steps!\tEpisodic reward: {} '.format(self.id, self.ep_count, self.env.steps_per_episode, self.env.reward_per_episode))
@@ -76,7 +76,7 @@ class SingleAgentDQNLearner(Learner):
             self.agent = Admin._load_agent(self.load_agents)
             self.buffer = Admin._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent()
+            self.agent = self.alg.create_agent(self.get_new_agent_id())
             if self.using_buffer:
                 self.buffer = self.create_buffer()
 

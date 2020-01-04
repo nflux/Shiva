@@ -20,7 +20,7 @@ class DQNAlgorithm(Algorithm):
         self.obs_space = obs_space
         self.loss = 0
 
-    def update(self, agent, minibatch, step_n):
+    def update(self, agent, buffer, step_n, episodic=False):
         '''
             Implementation
                 1) Calculate what the current expected Q val from each sample on the replay buffer would be
@@ -29,14 +29,19 @@ class DQNAlgorithm(Algorithm):
                 4) If agent steps reached C, update agent.target network
 
             Input
-                agent       Agent who we are updating
-                minibatch   Batch from the experience replay buffer
-
-            Returns
-                None
+                agent       Agent reference who we are updating
+                buffer      Buffer reference to sample from
+                step_n      Current step number
+                episodic    Flag indicating if update is episodic
         '''
+        if episodic:
+            '''
+                DQN updates at every timestep, here we avoid doing an extra update after the episode terminates
+            '''
+            return
 
-        states, actions, rewards, next_states, dones = minibatch
+        states, actions, rewards, next_states, dones = buffer.sample()
+
         # make tensors as needed
         states_v = torch.tensor(states).float().to(self.device)
         next_states_v = torch.tensor(next_states).float().to(self.device)
@@ -102,8 +107,8 @@ class DQNAlgorithm(Algorithm):
     def get_loss(self):
         return self.loss
 
-    def create_agent(self):
-        self.agent = DQNAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self, agent_id):
+        self.agent = DQNAgent(agent_id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):

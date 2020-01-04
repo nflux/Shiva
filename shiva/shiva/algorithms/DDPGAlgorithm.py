@@ -20,20 +20,37 @@ class DDPGAlgorithm(Algorithm):
         self.param = action_space['param']
         self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
 
-    def update(self, agent, minibatch, step_count):
+    def update(self, agent, buffer, step_count, episodic=False):
+        '''
+            @buffer         buffer is a reference
+        '''
+
+        if episodic:
+            '''
+                DDPG updates at every step. This avoids doing an extra update at the end of an episode
+                But it does reset the noise after an episode
+            '''
+            self.ou_noise.reset()
+            return
+
+        if step_count < self.exploration_steps:
+            '''
+                Don't update during exploration!
+            '''
+            return
 
         '''
-            Getting a Batch from the Replay Buffer
+            Updates starts here
         '''
 
-        states, actions, rewards, next_states, dones = minibatch
+        states, actions, rewards, next_states, dones = buffer.sample()
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
         actions = torch.tensor(actions).to(self.device)
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        dones_mask = torch.tensor(dones, dtype=np.bool).view(-1,1).to(self.device)
+        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
         # print(actions)
         # input()
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')

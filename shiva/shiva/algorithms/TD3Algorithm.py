@@ -25,9 +25,19 @@ class TD3Algorithm(Algorithm):
         self.critic_loss_1 = 0
         self.critic_loss_2 = 0
 
-    def update(self, agent, buffer, step_count):
+    def update(self, agent, buffer, step_count, episodic=False):
+        if episodic:
+            self.ou_noise.reset()
+            self.ou_noise_critic.reset()
+            return
+
         if step_count < self.exploration_steps:
             return
+
+        '''
+            Update starts here
+        '''
+
         self.agent = agent
         for _ in range(self.update_iterations):
             states, actions, rewards, next_states, dones = buffer.sample()
