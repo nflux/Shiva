@@ -49,7 +49,7 @@ class PPOAlgorithm(Algorithm):
         done_masks = torch.ByteTensor(dones).to(self.device)
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float()).to(self.device)
-        next_values = agent.critic(states.float()).to(self.device)
+        next_values = agent.critic(next_states.float()).to(self.device)
 
 
         new_rewards = []
@@ -115,12 +115,6 @@ class PPOAlgorithm(Algorithm):
         else:
             metrics = []
         return metrics
-
-
-    def get_loss(self):
-        return self.loss
-
-
 
     def create_agent(self):
         self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])

@@ -1,6 +1,5 @@
 import copy
 from .Agent import Agent
-from .Agent import Agent
 import networks.DynamicLinearNetwork as DLN
 from torch.distributions import Categorical
 from torch.distributions.normal import Normal
@@ -10,7 +9,6 @@ import copy
 import torch
 import torch.nn as nn
 import numpy as np
-import torch
 from torch.distributions import Categorical
 from torch.nn import functional as F
 
@@ -49,6 +47,7 @@ class PPOAgent(Agent):
         else:
             self.network_output = self.acs_discrete
             self.ou_noise = noise.OUNoise(acs_discrete, self.scale)
+            
         self.id = id
         self.network_input = obs_dim
 

@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch.nn.functional import softmax
 from shiva.utils import Noise as noise
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.DDPGAgent import DDPGAgent
@@ -18,7 +19,7 @@ class DDPGAlgorithm(Algorithm):
         self.critic_loss = 0
         self.discrete = action_space['discrete']
         self.param = action_space['param']
-        self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
+        # self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
 
     def update(self, agent, minibatch, step_count):
 
@@ -175,47 +176,6 @@ class DDPGAlgorithm(Algorithm):
         #     for target_param,param in zip(agent.target_actor.parameters(), agent.actor.parameters()):
         #         target_param.data.copy_(param.data)
 
-
-    # Gets actions with a linearly decreasing e greedy strat
-    def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
-        # print('get action')
-        if step_count < self.exploration_steps:
-            self.ou_noise.set_scale(self.exploration_noise)
-            action = np.array([np.random.uniform(0,1) for _ in range(self.discrete+self.param)])
-            action += self.ou_noise.noise()
-            action = np.concatenate([ np_softmax(action[:self.discrete]), action[self.discrete:] ])
-            self.action = np.clip(action, -1, 1)
-            # print('random action shape', action[:self.acs_space['discrete']].sum(), action.shape)
-            return self.action
-
-        else:
-
-            self.ou_noise.set_scale(self.training_noise)
-            observation = torch.tensor([observation]).to(self.device)
-            action = agent.get_action(observation.float()).cpu().data.numpy()
-
-            # print("Network Output (after softmax):", action)
-            # input()
-
-            # useful for debugging
-            # if step_count % 100 == 0:
-                # print(action)
-
-            # action += self.ou_noise.noise()
-            # action = np.clip(action, -1,1)
-            # print('actor action shape', action.shape)
-
-            size = len(action.shape)
-            if size == 3:
-                self.action = action[0, 0]
-                return action[0, 0]
-            elif size == 2:
-                self.action = action[0]
-                return action[0]
-            else:    
-                self.action = action
-                return action
-
     def create_agent(self, id=0):
         self.agent = DDPGAgent(id, self.obs_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
         return self.agent
@@ -226,9 +186,9 @@ class DDPGAlgorithm(Algorithm):
                 ('Algorithm/Actor_Loss', self.actor_loss),
                 ('Algorithm/Critic_Loss', self.critic_loss)
             ]
-            # not sure if I want this all of the time
-            for i, ac in enumerate(self.action):
-                metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
+            # # not sure if I want this all of the time
+            # for i, ac in enumerate(self.action_space['acs_space']):
+            #     metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
         else:
             metrics = []
         return metrics

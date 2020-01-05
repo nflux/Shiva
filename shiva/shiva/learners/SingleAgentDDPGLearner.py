@@ -18,7 +18,7 @@ class SingleAgentDDPGLearner(Learner):
                 self.step()
                 self.collect_metrics()  # metrics per episode
             self.collect_metrics(True)  # metrics per episode
-            self.alg.ou_noise.reset()
+            self.alg.agent.ou_noise.reset()
             self.checkpoint()
         self.env.close()
 
@@ -28,7 +28,7 @@ class SingleAgentDDPGLearner(Learner):
         """Temporary fix for Unity as it receives multiple observations"""
 
         if len(observation.shape) > 1 and self.env.env_name != 'RoboCup':
-            action = [self.alg.get_action(self.agent, obs, self.env.step_count) for obs in observation]
+            action = [self.alg.agent.get_action(obs) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
@@ -36,7 +36,8 @@ class SingleAgentDDPGLearner(Learner):
                 # print(act, rew, don)
                 self.buffer.append(exp)
         else:
-            action = self.alg.get_action(self.agent, observation, self.env.step_count)
+            # action = self.alg.get_action(self.agent, observation, self.env.step_count)
+            action = self.alg.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.action_selection_method)
             t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)

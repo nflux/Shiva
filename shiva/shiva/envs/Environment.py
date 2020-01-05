@@ -1,6 +1,8 @@
+import torch
+
 class Environment:
     def __init__(self, configs):
-        print("look:",configs)
+        # print("look:",configs)
         # print()
         # print(configs['environment'])
         if 'MetaLearner' in configs:
@@ -10,6 +12,8 @@ class Environment:
         self.configs = configs
         self.done_count = 0
         self.total_episodes_to_play = None
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
     def step(self,actions):
         pass

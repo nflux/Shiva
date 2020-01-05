@@ -25,8 +25,9 @@ class SingleAgentMultiEnvLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentMultiEnvLearner,self).__init__(learner_id, config)
         self.queue = mp.Queue(maxsize=self.queue_size)
+        self.saveLoadFlag = torch.zeros(1).share_memory_()
         self.ep_count = torch.zeros(1).share_memory_()
-        self.updates = 1
+        self.updates = 5
         self.agent_dir = os.getcwd() + self.agent_path
 
 
@@ -39,13 +40,23 @@ class SingleAgentMultiEnvLearner(Learner):
                 print(np.array(rewards).sum())
                 for i in range(len(observations)):
                     self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
+                    if self.configs['Algorithm']['algorithm'] != 'PPO':
+                        self.alg.update(self.agent,self.buffer.sample(),self.step_count)
                 self.ep_count += 1
             if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
                 print(self.ep_count)
-                self.alg.update(self.agent,self.old_agent,self.buffer,self.step_count)
-                self.agent.save_agent(self.agent_dir,self.step_count)
+                if self.configs['Algorithm']['algorithm'] == 'PPO':
+                    self.alg.update(self.agent,self.old_agent,self.buffer,self.step_count)
+                else:
+                    self.alg.update(self.agent,self.buffer.sample(),self.step_count)
+
+                if self.saveLoadFlag.item() == 1:
+                    self.agent.save_agent(self.agent_dir,self.step_count)
+                    print("Agent was saved")
+                    self.saveLoadFlag[0] = 0
+
                 self.updates += 1
-                print('Copied')
+                # print('Copied')
                 #Add save policy function here
 
         # self.p.join()
@@ -78,13 +89,16 @@ class SingleAgentMultiEnvLearner(Learner):
     def create_environment(self):
         # create the environment and get the action and observation spaces
         environment = load_class('shiva.envs', self.configs['Environment']['type'])
-        return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count,self.agent_dir,self.episodes)
+        return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count,self.agent_dir,self.episodes, self.saveLoadFlag)
 
     def create_algorithm(self):
         algorithm = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         acs_continuous = self.env.action_space_continuous
         acs_discrete= self.env.action_space_discrete
-        return algorithm(self.env.get_observation_space(), self.env.get_action_space(), acs_discrete, acs_continuous, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        if self.configs['Algorithm']['algorithm'] == 'PPO':
+            return algorithm(self.env.get_observation_space(), self.env.get_action_space(), acs_discrete, acs_continuous, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        else:
+            return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
         buffer = load_class('shiva.buffers',self.configs['Buffer']['type'])
@@ -110,6 +124,8 @@ class SingleAgentMultiEnvLearner(Learner):
             self.agent= self.alg.create_agent()
             self.old_agent = self.alg.create_agent()
             self.old_agent = copy.deepcopy(self.agent)
+            self.agent.save_agent(self.agent_dir,self.step_count)
+
 
 
         # Launch the environment

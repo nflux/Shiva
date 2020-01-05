@@ -25,7 +25,7 @@ class rc_env:
     '''
 
     def __init__(self, config, port=None):
-        {setattr(self, k, v) for k,v in config.items()}
+        {setattr(self, k, v) for k,v in config['Environment'].items()}
         self.port = port
         self.hfo_path = hfo.get_hfo_path()
         self.seed = np.random.randint(1000)
@@ -73,7 +73,7 @@ class rc_env:
 
         self.set_observation_indexes(self.feature_level)
 
-        if config['feature_level'] == 'low':
+        if self.feature_level == 'low':
             #For new obs reorganization without vailds, changed hfo obs from 59 to 56
             # self.left_features = 56 + 13*(self.num_left-1) + 12*self.num_right + 4 + 1 + 2 + 1
             # self.right_features = 56 + 13*(self.num_right-1) + 12*self.num_left + 4 + 1 + 2 + 1
