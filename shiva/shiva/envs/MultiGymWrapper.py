@@ -225,7 +225,7 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
             episode_trajectory[episode_index:episode_index + len(exp)] = torch.tensor(exp)
             episode_index += len(exp)'''
             if done:
-                exp = copy.deepcopy(zip(ep_observations[:ob_idx],ep_actions[:acs_idx],ep_rewards[:rew_idx].tolist(),ep_logprobs[:lp_idx],ep_next_observations[:nob_idx],ep_dones[:done_idx].tolist()))
+                exp = copy.deepcopy(zip(ep_observations[:ob_idx],ep_actions[:acs_idx],ep_rewards[:rew_idx].tolist(),ep_logprobs[:lp_idx,0],ep_next_observations[:nob_idx],ep_dones[:done_idx].tolist()))
                 queue.put(exp)
                 env.reset()
                 observation = env.get_observation()

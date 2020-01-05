@@ -28,7 +28,7 @@ class PPOAlgorithm(Algorithm):
         # self.softmax = Softmax(dim=-1)
 
 
-    def update(self, agent,old_agent,buffer, step_count):
+    def update(self, agent,buffer, step_count):
         '''
             Getting a Batch from the Replay Buffer
         '''
@@ -46,7 +46,7 @@ class PPOAlgorithm(Algorithm):
         done_masks = torch.ByteTensor(dones).to(self.device)
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float()).to(self.device)
-        next_values = agent.critic(states.float()).to(self.device)
+        next_values = agent.critic(next_states.float()).to(self.device)
 
 
         new_rewards = []
@@ -75,7 +75,7 @@ class PPOAlgorithm(Algorithm):
 
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
-
+            values = agent.critic(states.float()).to(self.device)
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
 
             #Calculate log probabilites of the new policy for the policy objective
@@ -97,7 +97,7 @@ class PPOAlgorithm(Algorithm):
             self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
             self.value_loss = self.loss_calc(values, new_rewards.unsqueeze(dim=-1))
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
-            self.loss.backward(retain_graph = True)
+            self.loss.backward()
             agent.optimizer.step()
         print('Done updating')
         buffer.clear_buffer()

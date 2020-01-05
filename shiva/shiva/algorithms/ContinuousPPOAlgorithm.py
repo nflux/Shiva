@@ -28,7 +28,7 @@ class ContinuousPPOAlgorithm(Algorithm):
         self.acs_continuous = action_space_continuous
 
 
-    def update(self, agent,old_agent,buffer, step_count):
+    def update(self, agent,buffer, step_count):
         '''
             Getting a Batch from the Replay Buffer
         '''
@@ -44,7 +44,7 @@ class ContinuousPPOAlgorithm(Algorithm):
         # done_masks = torch.tensor(dones, dtype=np.bool).to(self.device)
         done_masks = torch.ByteTensor(dones).to(self.device)
         #Calculate approximated state values and next state values using the critic
-        values = agent.critic(agent.policy_base(states.float()))
+        values = agent.critic(agent.policy_base(states.float())).to(self.device)
         next_values = agent.critic(agent.policy_base(next_states.float())).to(self.device)
 
 
@@ -69,33 +69,36 @@ class ContinuousPPOAlgorithm(Algorithm):
         advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
 
         old_log_probs = torch.from_numpy(logprobs)
-        print('Algorithm logprobs: ', old_log_probs)
 
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
+            agent.critic_optimizer.zero_grad()
+            values = agent.critic(agent.policy_base(states.float()))
+            self.value_loss = self.loss_calc(values,new_rewards.unsqueeze(dim=-1))
+            self.value_loss.backward()
+            agent.critic_optimizer.step()
 
-            agent.optimizer.zero_grad()
+
+            agent.actor_optimizer.zero_grad()
             mu_new = agent.mu(agent.policy_base(states.float()))
             sigma_new = torch.sqrt(agent.var(agent.policy_base(states.float())))
+            #log_std = agent.log_std.expand_as(mu_new)
             #cov_mat = torch.diag(agent.var)
             dist2 = Normal(mu_new,sigma_new)
             new_log_probs = dist2.log_prob(actions)
-            entropy = dist2.entropy()
+            entropy = dist2.entropy().sum(-1).mean()
 
+            penalty = (dist2.cdf(-1) + 1 - dist2.cdf(1)).mean().requires_grad_(True)
             #new_log_probs = self.log_probs(mu_new,var_new,actions).float()
-            ratios = torch.exp(new_log_probs - old_log_probs).float()
+            ratios = torch.exp(new_log_probs.double() - old_log_probs.double()).float()
             surr1 = ratios * advantage.unsqueeze(dim=-1)
             surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage.unsqueeze(dim=-1)
-            #Set the policy loss
-            self.policy_loss = -torch.min(surr1,surr2).mean()
             #entropy = (torch.log(2*math.pi*var_new) +1)/2
-            self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
-            self.value_loss = self.loss_calc(values,new_rewards.unsqueeze(dim=-1))
-
-            self.loss = self.policy_loss + self.value_loss + self.entropy_loss
-            self.loss.backward(retain_graph=True)
+            self.entropy_loss = -(self.configs[0]['beta']*entropy)
+            self.policy_loss =  -torch.min(surr1,surr2).mean() + penalty + self.entropy_loss
+            self.policy_loss.backward()
             #torch.nn.utils.clip_grad_norm(agent.optimizer.parameters(), self.grad_clip)
-            agent.optimizer.step()
+            agent.actor_optimizer.step()
 
     def get_metrics(self, episodic=False):
         if not episodic:
@@ -108,11 +111,6 @@ class ContinuousPPOAlgorithm(Algorithm):
         else:
             metrics = []
         return metrics
-
-    def log_probs(self, mu, var, actions):
-        eq1 = -((mu.double() - actions.double()**2) / (2*var.double().clamp(min=1e-3)))
-        eq2 = - torch.log(torch.sqrt((2 * math.pi * var))).double()
-        return eq1 + eq2
 
     def get_actor_loss(self):
         return self.actor_loss
