@@ -202,6 +202,7 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
     ep_logprobs = np.zeros((max_ep_length, action_space))
     ep_next_observations = np.zeros((max_ep_length,observation_space))
     ep_dones = np.zeros((max_ep_length,1))
+    idx = 0
     env.reset()
     observation = env.get_observation()
     observations[id] = torch.tensor(observation).float()
