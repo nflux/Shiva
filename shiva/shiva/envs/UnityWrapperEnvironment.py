@@ -121,7 +121,8 @@ class UnityWrapperEnvironment(Environment):
         '''
             One Shiva episode will be playing the number of instances in Unity
         '''
-        return self.temp_done_counter >= self.num_instances
+        #return self.temp_done_counter >= self.num_instances
+        return self.temp_done_counter >= self.update_episodes
 
     def _clean_actions(self, actions):
         '''

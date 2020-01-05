@@ -11,6 +11,7 @@ import algorithms
 import buffers
 import copy
 import random
+import time
 import numpy as np
 
 
@@ -29,6 +30,7 @@ class SingleAgentMultiEnvLearner(Learner):
         self.ep_count = torch.zeros(1).share_memory_()
         self.updates = 5
         self.agent_dir = os.getcwd() + self.agent_path
+        self.agent_file_flag = torch.zeros(1).share_memory_()
 
 
     def run(self):
@@ -36,17 +38,28 @@ class SingleAgentMultiEnvLearner(Learner):
         while self.ep_count < self.episodes:
             while not self.queue.empty():
                 exp = self.queue.get()
-                observations, actions, rewards, next_observations, dones = zip(*exp)
-                print(np.array(rewards).sum())
-                for i in range(len(observations)):
-                    self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
+                # observations, actions, rewards, next_observations, dones = zip(*exp)
+                # print(np.array(rewards).sum())
+
+                if self.configs['Algorithm']['algorithm'] == 'PPO':
+                    observations, actions, rewards, logprobs, next_observations, dones = zip(*exp)
+                    print('Episode Rewards: ', np.array(rewards).sum())
+                    for i in range(len(observations)):
+                        self.buffer.append([observations[i], actions[i], rewards[i][0],logprobs[i], next_observations[i], dones[i][0]])
+                else:
+                    observations, actions, rewards, next_observations, dones = zip(*exp)
+                    print(np.array(rewards).sum())
+                    for i in range(len(observations)):
+                        self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
+
                     if self.configs['Algorithm']['algorithm'] != 'PPO':
                         self.alg.update(self.agent,self.buffer.sample(),self.step_count)
                 self.ep_count += 1
+
             if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
                 print(self.ep_count)
                 if self.configs['Algorithm']['algorithm'] == 'PPO':
-                    self.alg.update(self.agent,self.old_agent,self.buffer,self.step_count)
+                    self.alg.update(self.agent,self.buffer,self.step_count)
                 else:
                     self.alg.update(self.agent,self.buffer.sample(),self.step_count)
 
@@ -60,7 +73,7 @@ class SingleAgentMultiEnvLearner(Learner):
                 # Add save policy function here
 
         # self.p.join()
-        print('Hello')
+        #print('Hello')
         # del(self.p)
         del(self.queue)
 

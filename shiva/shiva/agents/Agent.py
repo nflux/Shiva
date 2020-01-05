@@ -1,4 +1,5 @@
 import torch
+import torch.nn
 import numpy as np
 import shiva.helpers.misc as misc
 

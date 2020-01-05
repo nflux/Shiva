@@ -31,7 +31,7 @@ class PPOAlgorithm(Algorithm):
         # self.softmax = Softmax(dim=-1)
 
 
-    def update(self, agent,old_agent,buffer, step_count):
+    def update(self, agent,buffer, step_count):
         '''
             Getting a Batch from the Replay Buffer
         '''
@@ -39,7 +39,7 @@ class PPOAlgorithm(Algorithm):
         minibatch = buffer.full_buffer()
 
         # Batch of Experiences
-        states, actions, rewards, next_states, dones = minibatch
+        states, actions, rewards,logprobs, next_states, dones = minibatch
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
@@ -71,25 +71,27 @@ class PPOAlgorithm(Algorithm):
         #Normalize the advantages
         advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
         #Calculate log probabilites of the old policy for the policy objective
-        old_action_probs = old_agent.actor(states.float())
+        '''old_action_probs = old_agent.actor(states.float())
         dist = Categorical(old_action_probs)
-        old_log_probs = dist.log_prob(actions)
+        old_log_probs = dist.log_prob(actions)'''
+        old_log_probs = torch.from_numpy(logprobs).float().detach()
 
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
-
+            values = agent.critic(states.float()).to(self.device)
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
 
             #Calculate log probabilites of the new policy for the policy objective
-            current_action_probs = softmax(agent.actor(states.float()))
+            current_action_probs = agent.actor(states.float())
             # print(current_action_probs)
             dist2 = Categorical(current_action_probs)
-            log_probs = dist2.log_prob(actions)
+            print(actions[:,0])
+            log_probs = dist2.log_prob(actions[:,0])
             #Use entropy to encourage further exploration by limiting how sure
             #the policy is of a particular action
             entropy = dist2.entropy()
             #Find the ratio (pi_new / pi_old)
-            ratios = torch.exp(log_probs - old_log_probs.detach())
+            ratios = torch.exp(log_probs - old_log_probs)
             #Calculate objective functions
             surr1 = ratios * advantage
             surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage
@@ -99,7 +101,7 @@ class PPOAlgorithm(Algorithm):
             self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
             self.value_loss = self.loss_calc(values, new_rewards.unsqueeze(dim=-1))
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
-            self.loss.backward(retain_graph = True)
+            self.loss.backward()
             agent.optimizer.step()
         print('Done updating')
         buffer.clear_buffer()
