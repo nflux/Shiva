@@ -55,7 +55,7 @@ class MultiGymWrapper(Environment):
 
             if self.step_control.sum().item() == self.num_instances:
                 observations = self.observations.numpy()
-                actions = torch.tensor([ self.agent.get_action(torch.tensor(obs).to(self.device)) for obs in observations ] )
+                actions = torch.tensor([ self.agent.get_action(torch.tensor(obs).to(self.device), self.step_count) for obs in observations ] )
                 # print(actions)
                 self.observations[:,0:self.envs[0].action_space['acs_space']] = actions
                 self.step_control.fill_(0)

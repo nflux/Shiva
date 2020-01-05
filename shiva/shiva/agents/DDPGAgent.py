@@ -119,8 +119,6 @@ class DDPGAgent(Agent):
     #     self.critic.load_state_dict(model['critic'])
     #     self.actor.load_state_dict( model['actor'])     
 
-
-
     # # Gets actions with a linearly decreasing e greedy strat
     # def get_action(self, observation) -> np.ndarray: # maybe a torch.tensor
     #     # print('get action')
