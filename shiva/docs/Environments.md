@@ -2,24 +2,14 @@
 ___
 ## Contents
 ___
-*   init
-    * [Go to code]()
 *   Environment
     * [Go to code](../shiva/envs/Environment.py)
-*   GymContinuousEnvironment
-    * [Go to code](../shiva/envs/GymContinuousEnvironment.py)
-*   GymDiscreteEnvironment
-    * [Go to code](../shiva/envs/GymDiscreteEnvironment.py)
-*   RobocupDDPGEnvironment
-    * [Go to code](../shiva/envs/RoboCupDDPGEnvironment.py)
+*   GymEnvironment
+    * [Go to code](../shiva/envs/GymEnvironment.py)
+*   RoboCupEnvironment
+    * [Go to code](../shiva/envs/RoboCupEnvironment.py)
 *   UnityWrapperEnvironment
     * [Go to code](../shiva/envs/UnityWrapperEnvironment.py)
-
-
-## init
-___
-[Go to code](../shiva/envs/__init__.py)
-If you add environments, add them to this file as well.
 
 ##  Environment
 ___
@@ -43,9 +33,6 @@ ___
         +   Refers to the Current Instance
     -   **agent**
         +   
-*   get_actions(self)
-    -   **self**
-        +   Refers to the Current Instance 
 *   get_reward(self, agent)
     -   **self**
         +   Refers to the Current Instance
@@ -85,13 +72,13 @@ env_name='Scene_name'
 train_mode = True
 ```
 
-## Gym
+## GymEnvironment
 ___
+[Go to code](../shiva/envs/GymEnvironment.py)
+
 Shiva supports both Gym Continuous Environments (e.g. MountainCarContinuous-v0) and Gym Discrete Environments (e.g. MountainCar-v0). The Discrete action space allows a fixed range of non-negative numbers while the Box action space represents an n-dimensional box.
-###  GymContinuousEnvironment
-___
-[Go to code](../shiva/envs/GymContinuousEnvironment.py)
-GymDiscreteEnvironment and GymContinuousEnvironment both inherit from the Environment class. The only difference between the two is that GymDiscreteEnvironment takes the argmax() of the action output from the network before passing it to the environment while GymContinuousEnvironment simply passes the action output.
+
+The only difference between the two is that GymDiscreteEnvironment takes the argmax() of the action output from the network before passing it to the environment while GymContinuousEnvironment simply passes the network output.
 #### Config Setup
 ```
 [Environment]
@@ -104,24 +91,9 @@ num_agents=1
 
 ```
 
-###  GymDiscreteEnvironment
+##  RobocupEnvironment
 ___
-[Go to code](../shiva/envs/GymDiscreteEnvironment.py)
-GymDiscreteEnvironment and GymContinuousEnvironment both inherit from the Environment class. The only difference between the two is that GymDiscreteEnvironment takes the argmax() of the action output from the network before passing it to the environment while GymContinuousEnvironment simply passes the action output.
-#### Config Setup
-```
-[Environment]
-type='GymDiscreteEnvironment'
-env_name='MountainCar-v0'
-action_space='discrete'
-observation_space="continuous"
-render=True
-num_agents=1
-```
-
-##  RobocupDDPGEnvironment
-___
-[Go to code](../shiva/envs/RoboCupDDPGEnvironment.py)
+[Go to code](../shiva/envs/RoboCupEnvironment.py)
 ### Config Setup
 ```
 [Environment]

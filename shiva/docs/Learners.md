@@ -7,8 +7,6 @@ Are specified in detail below.
 
 ## Contents
 ___
-* __init__
-    * [Go to code](../shiva/learners/__init__.py)
 * DDPGLearner
     * [Go to code](../shiva/learners/DDPGLearner.py)
 * Learner
@@ -21,12 +19,6 @@ ___
     * [Go to code](../shiva/learners/SingleAgentImitationLearner.py)
 * SingleAgentPPOLearner
     * [Go to code](../shiva/learners/SingleAgentPPOLearner.py)
-
-
-## __init__
-___
-[Go to Code](../shiva/learners/__init__.py)
-
 
 ##  DDPGLearner
 ___
