@@ -10,7 +10,7 @@ import copy
 import time
 
 class MultiGymWrapper(Environment):
-    def __init__(self,configs,queue,agent,episode_count,agent_dir,total_episodes):
+    def __init__(self,configs,queue,agent,episode_count,agent_dir,total_episodes,agent_file_flag):
         super(MultiGymWrapper,self).__init__(configs)
         self.queue = queue
         self.master_agent = agent
@@ -21,6 +21,7 @@ class MultiGymWrapper(Environment):
         self.step_count = 0
         self.configs = configs
         self.agent_dir = agent_dir
+        self.agent_file_flag = agent_file_flag
 
         self.p = mp.Process(target = self.launch_envs)
         self.p.start()
@@ -39,7 +40,11 @@ class MultiGymWrapper(Environment):
                     loaded = True
                     print(self.agent_dir)
                     print("hello there")
+                    while self.agent_file_flag:
+                        time.sleep(0.0003)
+                    self.agent_file_flag = 1
                     self.agent.load(self.agent_dir)
+                    self.agent_file_flag = 0
                     print("oh hi there")
                     time.sleep(0.3)
 

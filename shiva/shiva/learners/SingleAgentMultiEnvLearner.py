@@ -9,6 +9,7 @@ import algorithms
 import buffers
 import copy
 import random
+import time
 import numpy as np
 
 
@@ -26,6 +27,7 @@ class SingleAgentMultiEnvLearner(Learner):
         self.ep_count = torch.zeros(1).share_memory_()
         self.updates = 1
         self.agent_dir = os.getcwd() + self.agent_path
+        self.agent_file_flag = torch.zeros(1).share_memory_()
 
 
     def run(self):
@@ -47,7 +49,11 @@ class SingleAgentMultiEnvLearner(Learner):
             if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
                 print(self.ep_count)
                 self.alg.update(self.agent,self.buffer,self.step_count)
+                while self.agent_file_flag:
+                    time.sleep(0.0003)
+                self.agent_file_flag = 1
                 self.agent.save_agent(self.agent_dir,self.step_count)
+                self.agent_file_flag = 0
                 self.updates += 1
                 #print('Copied')
                 #Add save policy function here
@@ -83,7 +89,7 @@ class SingleAgentMultiEnvLearner(Learner):
         # create the environment and get the action and observation spaces
 
         environment = getattr(envs, self.configs['Environment']['type'])
-        return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count,self.agent_dir,self.episodes)
+        return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count,self.agent_dir,self.episodes,self.agent_file_flag)
 
     def create_algorithm(self):
         algorithm = getattr(algorithms, self.configs['Algorithm']['type'])

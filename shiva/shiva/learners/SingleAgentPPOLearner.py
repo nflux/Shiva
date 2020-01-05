@@ -14,6 +14,7 @@ import numpy as np
 class SingleAgentPPOLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentPPOLearner,self).__init__(learner_id, config)
+        self.update = False
 
     def run(self):
         self.step_count = 0
@@ -28,10 +29,11 @@ class SingleAgentPPOLearner(Learner):
                 self.step()
                 self.step_count += 1
                 self.collect_metrics() # metrics per step
-            self.ep_count += 1
+            #self.ep_count += 1
             self.collect_metrics(True) # metrics per episode
-            print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
+            #print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
             if self.ep_count % self.configs['Algorithm']['update_episodes'] == 0:
+                self.ep_count += 1
                 self.alg.update(self.agent,self.buffer, self.step_count)
         del(self.queues)
         self.env.close()
@@ -60,10 +62,11 @@ class SingleAgentPPOLearner(Learner):
                     exp = [obs, act, rew, logprob, next_obs, int(don)]
                     self.queues[i].put(exp)
                     if don == True:
-                        print('Episode rewards: ', self.rewards[i])
-                        self.rewards[i].fill(0)
+                        print('Episode: ', self.ep_count + 1, ' reward: ', self.rewards[i])
+                        self.rewards[i] = 0
                         while not self.queues[i].empty():
                             self.buffer.append(self.queues[i].get())
+                        self.ep_count +=1
         else:
             action = self.agent.get_action(observation)
             next_observation, reward, done, more_data = self.env.step(action)

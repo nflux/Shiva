@@ -175,16 +175,14 @@ class PPOAgent(Agent):
 
     def save_agent(self, save_path,step):
 
-        torch.save({
+        '''torch.save({
             'actor': self.actor.state_dict(),
             'critic': self.critic.state_dict(),
             'agent' : self
-        }, save_path + '/agent.pth')
-
-
-        # torch.save(self.actor.state_dict(), save_path + '/actor.pth')
-        # torch.save(self.critic.state_dict(), save_path +'/critic.pth')
-        # torch.save(self,save_path + '/agent.pth')
+        }, save_path + '/agent.pth')'''
+        torch.save(self.actor.state_dict(), save_path + '/actor.pth')
+        torch.save(self.critic.state_dict(), save_path +'/critic.pth')
+        torch.save(self,save_path + '/agent.pth')
 
     def save(self,save_path,step):
         torch.save(self.actor, save_path + '/actor.pth')
@@ -192,9 +190,9 @@ class PPOAgent(Agent):
 
     def load(self,save_path):
         # print(save_path)
-        model = torch.load(save_path + '/agent.pth')
+        '''model = torch.load(save_path + '/agent.pth')
         self.actor.load_state_dict( model['actor'])
-        self.critic.load_state_dict(model['critic'])
-
-        # self.actor.load_state_dict(torch.load(save_path+'/actor.pth'))
-        # self.critic.load_state_dict(torch.load(save_path+'/critic.pth'))
+        self.critic.load_state_dict(model['critic'])'''
+        self = torch.load(save_path+'/agent.pth')
+        self.actor.load_state_dict(torch.load(save_path+'/actor.pth'))
+        self.critic.load_state_dict(torch.load(save_path+'/critic.pth'))
