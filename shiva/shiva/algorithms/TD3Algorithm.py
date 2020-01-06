@@ -25,9 +25,19 @@ class TD3Algorithm(Algorithm):
         self.critic_loss_1 = 0
         self.critic_loss_2 = 0
 
-    def update(self, agent, buffer, step_count):
+    def update(self, agent, buffer, step_count, episodic=False):
+        if episodic:
+            self.ou_noise.reset()
+            self.ou_noise_critic.reset()
+            return
+
         if step_count < self.exploration_steps:
             return
+
+        '''
+            Update starts here
+        '''
+
         self.agent = agent
         for _ in range(self.update_iterations):
             states, actions, rewards, next_states, dones = buffer.sample()
@@ -125,8 +135,8 @@ class TD3Algorithm(Algorithm):
             self.action += self.ou_noise.noise()
             return self.action
 
-    def create_agent(self):
-        self.agent = TD3Agent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self, id):
+        self.agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):
