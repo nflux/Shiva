@@ -1,20 +1,20 @@
 from .Environment import Environment
-from shiva.envs.GymEnvironment import GymEnvironment
+# from shiva.envs.GymEnvironment import GymEnvironment
+from shiva.helpers.config_handler import load_class
 import numpy as np
-import envs
 import torch
 import torch.multiprocessing as mp
 from torch.distributions import Categorical
 from torch.distributions.normal import Normal
 import copy
 import time
+import os
 
 class MultiGymWrapper(Environment):
     def __init__(self,configs,queue,agent,episode_count,agent_dir,total_episodes, saveLoadFlag):
         super(MultiGymWrapper,self).__init__(configs)
         self.queue = queue
-        self.master_agent = agent
-        self.agent = copy.deepcopy(self.master_agent)
+        self.agent = agent
         self.process_list = list()
         self.episode_count = episode_count
         self.total_episodes = total_episodes
@@ -41,8 +41,11 @@ class MultiGymWrapper(Environment):
             if self.saveLoadFlag.item() == 0:
                 # if self.episode_count % 5 == 0:
                     # start_time = time.time()
+
+                # print("Gym Wrapper:",self.agent_dir)
                 self.agent.load(self.agent_dir)
-                    # print("--- %s seconds ---" % (time.time() - start_time))
+                # os.system("rm -rf {}".format(self.agent_dir + '/actor.pth'))
+                # print("--- %s seconds ---" % (time.time() - start_time))
                 print("Agent Loaded")
                 self.saveLoadFlag[0] = 1
 
@@ -116,7 +119,7 @@ class MultiGymWrapper(Environment):
 
 
     def launch_envs(self):
-        environment = getattr(envs, self.configs['sub_type'])
+        environment = load_class('shiva.envs', self.configs['sub_type'])
         #list of the environments to be used for episode collection
         self.envs = [environment(self.configs)] * self.num_instances
         #Shared tensor will be used for communication between environment wrapper process and individual environment processes
@@ -156,6 +159,7 @@ def process_target(env,observations,step_control,stop_collecting, id, queue,max_
             action = observations[id][:action_space].numpy()
             next_observation, reward, done, more_data = env.step(action)
             ep_observations[idx] = observation
+            print(env, observation)
             ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
             ep_next_observations[idx] = next_observation
@@ -255,7 +259,6 @@ def launch_processes(envs, observations, step_control, stop_collecting,queue, ma
             p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
         else:
             p = mp.Process(target = process_target, args=(envs[i],observations,step_control,stop_collecting,i,queue,max_episode_length,) )
-        # p = mp.Process(target = some )
         p.start()
         process_list.append(p)
 

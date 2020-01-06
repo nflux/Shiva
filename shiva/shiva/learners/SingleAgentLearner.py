@@ -43,6 +43,8 @@ class SingleAgentLearner(Learner):
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action)
             t = [observation, action, reward, next_observation, int(done)]
+            # print(action)
+            # input()
             exp = copy.deepcopy(t)
             self.buffer.append(exp)
         """"""

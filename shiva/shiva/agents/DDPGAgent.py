@@ -55,10 +55,9 @@ class DDPGAgent(Agent):
                 action = np.concatenate([ np_softmax(action[:self.acs_discrete]), action[self.acs_discrete:] ])
             else:
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-                action = Categorical(action).sample()
-                action = action2one_hot(self.acs_discrete, action.item())
-                print(action)
-                input()
+                # action = Categorical(action).sample()
+                # action = action2one_hot(self.acs_discrete, action.item())
+
 
         return action.tolist()
             
@@ -90,26 +89,30 @@ class DDPGAgent(Agent):
         return action[0]
 
     def save(self, save_path, step):
-        torch.save(self.actor, save_path + '/actor.pth')
-        torch.save(self.target_actor, save_path + '/target_actor.pth')
-        torch.save(self.critic, save_path + '/critic.pth')
-        torch.save(self.target_critic, save_path + '/target_critic.pth')
+        torch.save(self.actor, save_path + 'actor.pth')
+        torch.save(self.target_actor, save_path + 'target_actor.pth')
+        torch.save(self.critic, save_path + 'critic.pth')
+        torch.save(self.target_critic, save_path + 'target_critic.pth')
 
     def save_agent(self, save_path, step):
-        torch.save(self.actor.state_dict(), save_path + '/actor.pth')
-        torch.save(self.target_actor.state_dict(), save_path + '/target_actor.pth')
-        torch.save(self.critic.state_dict(), save_path + '/critic.pth')
-        torch.save(self.target_critic.state_dict(), save_path + '/target_critic.pth')
+        torch.save(self.actor.state_dict(), save_path + 'actor.pth')
+        torch.save(self.target_actor.state_dict(), save_path + 'target_actor.pth')
+        torch.save(self.critic.state_dict(), save_path + 'critic.pth')
+        torch.save(self.target_critic.state_dict(), save_path + 'target_critic.pth')
+        torch.save(self.actor_optimizer.state_dict(), save_path + 'actor_optimizer.pth')
+        torch.save(self.critic_optimizer.state_dict(), save_path + 'critic_optimizer.pth')
 
     def load(self, save_path):
-        self.actor.load_state_dict(torch.load(save_path + '/actor.pth'))
+        self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
         self.actor.train()
-        self.target_actor.load_state_dict(torch.load(save_path + '/target_actor.pth'))
+        self.target_actor.load_state_dict(torch.load(save_path + 'target_actor.pth'))
         self.target_actor.train()
-        self.critic.load_state_dict(torch.load(save_path + '/critic.pth'))
+        self.critic.load_state_dict(torch.load(save_path + 'critic.pth'))
         self.critic.train()
-        self.target_critic.load_state_dict(torch.load(save_path + '/target_critic.pth'))
+        self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
         self.target_critic.train()
+        self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
+        self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
         
     def __str__(self):
         return 'DDPGAgent'
