@@ -1,7 +1,9 @@
 import numpy as np
 import torch
 import copy
+import pickle
 from torch.distributions import Categorical
+from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.Agent import Agent
 from shiva.utils import Noise as noise
 from shiva.helpers.misc import action2one_hot
@@ -46,9 +48,18 @@ class DDPGAgent(Agent):
             action = torch.argmax(action)
             action = action2one_hot(self.acs_discrete, action.item())
         else:
-            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            action = Categorical(action).sample()
-            action = action2one_hot(self.acs_discrete, action.item())
+            if step_count < self.exploration_steps:
+                self.ou_noise.set_scale(self.exploration_noise)
+                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
+                action += self.ou_noise.noise()
+                action = np.concatenate([ np_softmax(action[:self.acs_discrete]), action[self.acs_discrete:] ])
+            else:
+                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+                action = Categorical(action).sample()
+                action = action2one_hot(self.acs_discrete, action.item())
+                print(action)
+                input()
+
         return action.tolist()
             
     def get_continuous_action(self,observation, step_count, evaluate):
@@ -92,9 +103,13 @@ class DDPGAgent(Agent):
 
     def load(self, save_path):
         self.actor.load_state_dict(torch.load(save_path + '/actor.pth'))
+        self.actor.train()
         self.target_actor.load_state_dict(torch.load(save_path + '/target_actor.pth'))
+        self.target_actor.train()
         self.critic.load_state_dict(torch.load(save_path + '/critic.pth'))
-        self.target_critic.load_state_dict(torch.load(save_path + '/target_critic.pth'))   
+        self.critic.train()
+        self.target_critic.load_state_dict(torch.load(save_path + '/target_critic.pth'))
+        self.target_critic.train()
         
     def __str__(self):
         return 'DDPGAgent'

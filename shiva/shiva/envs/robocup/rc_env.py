@@ -32,7 +32,7 @@ class rc_env:
         self.viewer = None
 
 
-        if self.action_level == 'low' and not self.discretized:
+        if self.action_level == 'low':
             #                   pow,deg   deg       deg         pow,deg    
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
             self.action_list = [hfo_env.DASH, hfo_env.TURN, hfo_env.KICK]
@@ -40,7 +40,7 @@ class rc_env:
             self.acs_dim = len(self.action_list)
             self.acs_param_dim = 5
 
-        elif self.action_level == 'low' and self.discretized:
+        elif self.action_level == 'discretized':
 
             self.power_discretization = np.linspace(0,100,21).tolist()
             self.degree_discretization = np.linspace(-180,180,9).tolist()
@@ -56,20 +56,17 @@ class rc_env:
                     self.KICK_TABLE.append((dash_power,dash_degree))
 
             self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
+
             self.ACTION_MATRIX = self.DASH_TABLE + self.TURN_TABLE + self.KICK_TABLE
             self.kick_actions = self.KICK_TABLE
 
             self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
             self.acs_param_dim = 0
 
-        elif config['action_level'] == 'high':
+        elif self.action_level == 'high':
             self.action_list = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.REORIENT, hfo_env.GO_TO_BALL, hfo_env.MOVE]
             self.kick_actions = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.PASS] # actions that require the ball to be kickable
             # self.acs_param_dim = ????
-
-
-        self.act_lvl = self.action_level
-        self.feat_lvl = self.feature_level
 
         self.set_observation_indexes(self.feature_level)
 
@@ -188,22 +185,22 @@ class rc_env:
         for i in range(self.num_left):
             print("Connecting player %i" % i , "on left %s to the server" % self.left_base)
             if i == 0:
-                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.left_base,
-                                                self.goalie,i,self.ep_length,self.act_lvl,self.left_envs,))
+                t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.left_base,
+                                                self.goalie,i,self.ep_length,self.action_level,self.left_envs,))
             else:
-                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.left_base,
-                                                False,i,self.ep_length,self.act_lvl,self.left_envs,))
+                t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.left_base,
+                                                False,i,self.ep_length,self.action_level,self.left_envs,))
             t.start()
             time.sleep(1.5)
         
         for i in range(self.num_right):
             print("Connecting player %i" % i , "on rightonent %s to the server" % self.right_base)
             if i == 0:
-                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.right_base,
-                                                self.goalie,i,self.ep_length,self.act_lvl,self.right_envs,))
+                t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.right_base,
+                                                self.goalie,i,self.ep_length,self.action_level,self.right_envs,))
             else:
-                t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.right_base,
-                                                False,i,self.ep_length,self.act_lvl,self.right_envs,))
+                t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.right_base,
+                                                False,i,self.ep_length,self.action_level,self.right_envs,))
             t.start()
             time.sleep(1.5)
 
@@ -320,19 +317,19 @@ class rc_env:
 
         if self.left_base == base:
             self.left_actions[agent_id] = action
-            if self.act_lvl == 'low' and not self.discretized:
+            if self.action_level == 'low':
                 for p in range(params.shape[1]):
                     self.left_action_params[agent_id][p] = params[agent_id][p]
 
             # i was thinking that maybe I could choose the action here        
-            elif self.act_lvl == 'low' and self.discretized:
+            elif self.action_level == 'discretized':
                 # print("this ran")
                 for p in range(params.shape[0]):
                     # print(params)
                     self.left_action_params[agent_id][p] = params.item()#params[agent_id][p]
         else:
             self.right_actions[agent_id] = action
-            if self.act_lvl == 'low':
+            if self.action_level == 'low':
                 for p in range(params.shape[1]):
                     self.right_action_params[agent_id][p] = params[agent_id][p]
     
@@ -354,7 +351,7 @@ class rc_env:
         
         '''
 
-        if self.discretized:
+        if self.action_level == 'discretized':
 
             if 0 <= int(action_params[agentID][0]) <= 188:
                 return self.ACTION_MATRIX[int(action_params[agentID][0])]
@@ -450,11 +447,11 @@ class rc_env:
 
                     if act_lvl == 'high':
                         envs[agent_ID].act(self.action_list[a]) # take the action
-                    elif act_lvl == 'low' and not self.discretized:
+                    elif act_lvl == 'low':
                         # without tackle
                         # print('action:', a)
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID,a,base))
-                    elif act_lvl == 'low' and self.discretized:
+                    elif act_lvl == 'discretized':
                         # print(self.action_list[0])
                         # print("look here", a)
                         # envs[agent_ID].act(a, *self.get_valid_scaled_param(agent_ID, a, base))
@@ -515,9 +512,9 @@ class rc_env:
                      self.offense_ball, self.seed, self.ball_x_min, self.ball_x_max,
                      self.ball_y_min, self.ball_y_max, self.log, self.seed)
             #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
-            if self.num_l_bot > 0:   cmd += " --offense-left %s" \
+            if self.num_l_bot > 0:   cmd += " --offense-team %s" \
                 % (self.left_bin)
-            if self.num_r_bot > 0:   cmd += " --defense-left %s" \
+            if self.num_r_bot > 0:   cmd += " --defense-team %s" \
                 % (self.right_bin)
             if not self.sync_mode:      cmd += " --no-sync"
             if self.fullstate:          cmd += " --fullstate"
@@ -624,7 +621,6 @@ class rc_env:
             opp_obs_previous = self.right_obs_previous
             num_ag = self.num_left
             env = self.left_envs[agentID]
-            print(agentID)
             kickable = self.left_kickable[agentID]
             self.left_kickable[agentID] = self.get_kickable_status(agentID,env)
         else:
@@ -643,7 +639,7 @@ class rc_env:
         if team_obs[agentID][self.stamina] < 0.0 : # LOW STAMINA
             reward -= 1
             team_reward -= 1
-            print("agent is getting penalized for having low stamina")
+            # print("agent is getting penalized for having low stamina")
 
         ############ Kicked Ball #################
 
@@ -664,10 +660,11 @@ class rc_env:
         # i dont think i should murder myself trying to get this perfect, as long as it gets rewards for the current possible actions
         # just check for the value inside of action list
         # if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
+
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
 
             reward -= 1
-            print("agent is getting penalized for kicking when not kickable")
+            # print("agent is getting penalized for kicking when not kickable")
 
         
         # it looks like this is broken for discretized as well
@@ -678,23 +675,22 @@ class rc_env:
         # if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:    
         if self.action_list[team_actions[agentID]] == 3 and kickable:    
 
-            print("hello world!")
-
-            if True:        
+            # if True:        
             # if self.num_right > 0:
-                print(self.left_agent_possesion)
-                if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
-                    print("First Kick")
-                    reward += 10
-                    team_reward += 1.5
-                # set initial ball position after kick
-                    if self.left_base == base:
-                        self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
-                        self.BL_ball_pos_y = team_obs[agentID][self.ball_y]
-                    else:
-                        self.BR_ball_pos_x = team_obs[agentID][self.ball_x]
-                        self.BR_ball_pos_y = team_obs[agentID][self.ball_y]
-                        
+            print(self.left_agent_possesion)
+            if (np.array(self.left_agent_possesion) == 'N').all() or (np.array(self.right_agent_possesion) == 'N').all():
+                print("First Kick")
+                reward += 10
+                team_reward += 1.5
+
+            # set initial ball position after kick
+            if self.left_base == base:
+                self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
+                self.BL_ball_pos_y = team_obs[agentID][self.ball_y]
+            else:
+                self.BR_ball_pos_x = team_obs[agentID][self.ball_x]
+                self.BR_ball_pos_y = team_obs[agentID][self.ball_y]
+                    
 
             # track ball delta in between kicks
             if self.left_base == base:
@@ -808,8 +804,8 @@ class rc_env:
                 # if delta > 0:
                     reward += delta * 2
                     team_reward += delta
-                    print("ball distance to goal reward.")
-                    pass
+                    # print("ball distance to goal reward.")
+                    # pass
 
         # base right kicks
         elif self.right_base == base and possession_side == 'R':

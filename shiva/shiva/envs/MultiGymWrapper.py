@@ -29,7 +29,7 @@ class MultiGymWrapper(Environment):
 
 
 
-    def step(self):
+    def step_without_log_probs(self):
 
         loaded = False
 
@@ -39,18 +39,20 @@ class MultiGymWrapper(Environment):
             time.sleep(0.06)
 
             if self.saveLoadFlag.item() == 0:
+                # if self.episode_count % 5 == 0:
+                    # start_time = time.time()
                 self.agent.load(self.agent_dir)
-                print("Updated Agent Loaded In")
+                    # print("--- %s seconds ---" % (time.time() - start_time))
+                print("Agent Loaded")
                 self.saveLoadFlag[0] = 1
 
             # if not loaded:
             #     if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
             #         loaded = True
-                    # if self.saveLoadFlag.item() == 0:
-                    #     self.agent.load(self.agent_dir)
-                    #     print("Updated Agent Loaded In")
-                    #     self.saveLoadFlag[0] = 1
-                    # time.sleep(0.1)
+            #         if self.saveLoadFlag.item() == 0:
+            #             self.agent.load(self.agent_dir)
+            #             self.saveLoadFlag[0] = 1
+            #         time.sleep(0.1)
 
             # if self.episode_count % self.agent_update_episodes != 0:
             #     loaded = False
@@ -83,10 +85,7 @@ class MultiGymWrapper(Environment):
             if not loaded:
                 if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
                     loaded = True
-                    #print(self.agent_dir)
-                    #print("hello there")
                     self.agent.load(self.agent_dir)
-                    #print("oh hi there")
                     time.sleep(0.3)
 
             if self.episode_count % self.agent_update_episodes != 0:
@@ -95,7 +94,6 @@ class MultiGymWrapper(Environment):
             if self.step_control.sum().item() == self.num_instances:
                 observations = self.observations
                 action_probs = self.agent.actor(observations.to(self.device))
-                #observations = self.observations.numpy()
                 actions = torch.tensor([self.agent.get_action(obs) for obs in observations.numpy()])
                 if self.action_space == 'discrete':
                     actions = torch.argmax(actions, dim=-1).long()
@@ -135,7 +133,7 @@ class MultiGymWrapper(Environment):
             self.step_with_logprobs()
         else:
             self.process_list = launch_processes(self.envs, self.observations, self.step_control, self.stop_collecting,self.queue, self.max_episode_length,num_instances=self.num_instances)
-            self.step()
+            self.step_without_log_probs()
 
 def process_target(env,observations,step_control,stop_collecting, id, queue,max_ep_length):
     step_count = 1
@@ -150,7 +148,7 @@ def process_target(env,observations,step_control,stop_collecting, id, queue,max_
     env.reset()
     observation = env.get_observation()
     observations[id] = torch.tensor(observation).float()
-    step_control[id] = 1
+    step_control[id] = 0
     while(stop_collecting.item() == 0):
         #print('Hello')
         #print('Process: ', step_control[id])
@@ -158,7 +156,7 @@ def process_target(env,observations,step_control,stop_collecting, id, queue,max_
             action = observations[id][:action_space].numpy()
             next_observation, reward, done, more_data = env.step(action)
             ep_observations[idx] = observation
-            ep_actions[idx] = action
+            ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
             ep_next_observations[idx] = next_observation
             ep_dones[idx] = int(done)
@@ -206,7 +204,8 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
     env.reset()
     observation = env.get_observation()
     observations[id] = torch.tensor(observation).float()
-    step_control[id] = 1
+    step_control[id] = 0
+
     while(stop_collecting.item() == 0):
         #print('Hello')
         #print('Process: ', step_control[id])

@@ -37,34 +37,38 @@ class SingleAgentMultiEnvLearner(Learner):
         self.step_count = 0
         while self.ep_count < self.episodes:
             while not self.queue.empty():
+                # exp = None
+                # if not exp:
+                    # exp = self.queue.get()
                 exp = self.queue.get()
-                # observations, actions, rewards, next_observations, dones = zip(*exp)
-                # print(np.array(rewards).sum())
-
                 if self.configs['Algorithm']['algorithm'] == 'PPO':
                     observations, actions, rewards, logprobs, next_observations, dones = zip(*exp)
-                    print('Episode Rewards: ', np.array(rewards).sum())
+                    print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     for i in range(len(observations)):
                         self.buffer.append([observations[i], actions[i], rewards[i][0],logprobs[i], next_observations[i], dones[i][0]])
                 else:
                     observations, actions, rewards, next_observations, dones = zip(*exp)
-                    print(np.array(rewards).sum())
+                    print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     for i in range(len(observations)):
                         self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
-
-                    if self.configs['Algorithm']['algorithm'] != 'PPO':
-                        self.alg.update(self.agent,self.buffer.sample(),self.step_count)
+                        if self.configs['Algorithm']['algorithm'] != 'PPO':
+                            # if self.step_count % 16 == 0:
+                            self.alg.update(self.agent,self.buffer.sample(),self.step_count)
+                            # print("bang")
                 self.ep_count += 1
 
             if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
-                print(self.ep_count)
+                # print(self.ep_count)
                 if self.configs['Algorithm']['algorithm'] == 'PPO':
                     self.alg.update(self.agent,self.buffer,self.step_count)
                 else:
                     self.alg.update(self.agent,self.buffer.sample(),self.step_count)
+                    # print("bang")
 
                 if self.saveLoadFlag.item() == 1:
+                    # start_time = time.time()
                     self.agent.save_agent(self.agent_dir,self.step_count)
+                    # print("--- %s seconds ---" % (time.time() - start_time))
                     print("Agent was saved")
                     self.saveLoadFlag[0] = 0
 

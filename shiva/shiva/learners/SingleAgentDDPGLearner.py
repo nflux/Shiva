@@ -43,7 +43,7 @@ class SingleAgentDDPGLearner(Learner):
             exp = copy.deepcopy(t)
             self.buffer.append(exp)
 
-        if self.env.step_count > self.alg.exploration_steps:# and self.step_count % 16 == 0:
+        if self.step_count % 16 == 0:
             self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
 
     def create_environment(self):
