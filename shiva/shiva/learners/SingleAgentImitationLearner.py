@@ -171,9 +171,20 @@ class SingleAgentRoboCupImitationLearner(Learner):
         
 
     def run(self):
+        self.env_launch()
+        time.sleep(3)
         self.supervised_update()
         self.imitation_update()
         self.env.close()
+
+    def connect_imit_socket(self):
+        while True:
+            try:
+                self.comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.comm.connect(('127.0.0.1', self.port+3))
+                break
+            except:
+                time.sleep(0.1)
 
     def send_imit_obs_msgs(self):
         self.comm.send(self.env.get_imit_obs_msg())
@@ -237,7 +248,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
         # Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(),self.step_count)
 
         # Cumulate the reward
-        self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
+        # self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
 
         self.super_buffer.push(copy.deepcopy([torch.from_numpy(observation), torch.from_numpy(action), torch.from_numpy(reward),
                                                 torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).float()]))
@@ -306,13 +317,18 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
     def get_algorithm(self):
         return self.algorithm
+    
+    def env_launch(self):
+        self.env.launch()
+        cmd = [os.getcwd() + '/shiva/envs/RoboCupBotEnv.py', '-p', str(self.port)]
+        self.bot_process = subprocess.Popen(cmd, shell=False)
+        self.connect_imit_socket()
 
     # Initialize the model
     def launch(self):
 
         # Launch the environment
         self.env = self.create_environment()
-        self.env.launch()
 
         # Launch the algorithm which will handle the
         self.imitation_alg = self.create_algorithm()
@@ -323,16 +339,9 @@ class SingleAgentRoboCupImitationLearner(Learner):
         if self.using_buffer:
             self.super_buffer, self.buffer = self.create_buffers(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
         
-        cmd = [os.getcwd() + '/shiva/envs/RoboCupBotEnv.py', '-p', str(self.port)]
-        self.bot_process = subprocess.Popen(cmd, shell=False)
-
-        while True:
-            try:
-                self.comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.comm.connect(('127.0.0.1', self.port+3))
-                break
-            except:
-                time.sleep(0.1)
+        # cmd = [os.getcwd() + '/shiva/envs/RoboCupBotEnv.py', '-p', str(self.port)]
+        # self.bot_process = subprocess.Popen(cmd, shell=False)
+        # self.connect_imit_socket()
 
     def close(self):
         try:

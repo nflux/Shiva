@@ -13,25 +13,25 @@ class Learner(object):
         self.checkpoints_made = 0
         self.totalReward = 0
 
-    def __getstate__(self):
-        d = dict(self.__dict__)
-        try:
-            del d['env']
-        except KeyError:
-            del d['envs']
-        return d
-        try:
-            del d['eval']
-        except KeyError:
-            pass
-        try:
-            # Imitation Learner for RoboCup
-            del d['bot_process']
-            del d['super_buffer']
-            del d['comm']
-        except KeyError:
-            pass
-        return d
+    # def __getstate__(self):
+    #     d = dict(self.__dict__)
+    #     # try:
+    #     #     del d['env']
+    #     # except KeyError:
+    #     #     del d['envs']
+    #     # return d
+    #     # try:
+    #     #     del d['eval']
+    #     # except KeyError:
+    #     #     pass
+    #     # try:
+    #     #     # Imitation Learner for RoboCup
+    #     #     del d['bot_process']
+    #     #     del d['super_buffer']
+    #     #     del d['comm']
+    #     # except KeyError:
+    #     #     pass
+    #     return d
 
     def collect_metrics(self, episodic=False):
         '''

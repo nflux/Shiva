@@ -1,12 +1,23 @@
 import torch
-import random, dill
+import random
 from scipy import stats
-import copy
+import copy, time
 import numpy as np
+import dill
+import torch.multiprocessing as mp
+mp.set_start_method('spawn', force=True)
+mp.allow_connection_pickling()
 
 from shiva.core.admin import Admin
 from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_class
+
+def run(pick_learner, new_learner):
+    learner = dill.loads(pick_learner)
+    print(learner)
+    learner.run()
+    new_learner.append(learner)
+    print('this is cool', new_learner)
 
 class SingleAgentPBTMetaLearner(MetaLearner):
     def __init__(self, configs):
@@ -23,10 +34,13 @@ class SingleAgentPBTMetaLearner(MetaLearner):
 
         self.learner_processes = []
         self.eval_processes = []
+        self.ep_count = torch.tensor([0]).share_memory_()
+        self.new_learner = []
         self.run()
     
     def run(self):
-        torch.multiprocessing.set_start_method('spawn')
+        # torch.multiprocessing.set_start_method('spawn', force=True)
+        # torch.multiprocessing.allow_connection_pickling()
         if self.start_mode == self.EVAL_MODE:
             # self.eval_envs = []
             # Load Learners to be passed to the Evaluation
@@ -49,40 +63,70 @@ class SingleAgentPBTMetaLearner(MetaLearner):
                 self.populate_objs()
                 print('Populated Objects')
                 self.process_learners()
+                [p.join() for p in self.learner_processes]
             except KeyboardInterrupt:
                 print('Exiting for CTRL-C')
             finally:
                 print('Cleaning up possible extra learner processes')
                 [l.close() for l in self.learners]
-                [p.join() for p in self.learner_processes]
-                
-        
+                for p in self.learner_processes:
+                    try:
+                        p.terminate()
+                        time.sleep(0.1)
+                        p.kill()
+                    except:
+                        pass
+                for p in self.eval_processes:
+                    try:
+                        p.terminate()
+                        time.sleep(0.1)
+                        p.kill()
+                    except:
+                        pass
+            
         # for i in range(len(self.eval.eval_scores)):
         #     print('Average Reward for agent: ', i, '\n', np.average(self.eval.eval_scores[i]))
-        self.save()
+        try:
+            self.save()
+        except:
+            pass
         print('bye')
+
+
+    def run_single_learner(self, i):
+        # print(learner)
+        self.learners[i].run()
+        # new_learner.append(learner)
+        # print('this is cool', new_learner)
     
     def process_learners(self):
-        for l in self.learners:
+        for i, l in enumerate(self.learners):
             s = "learner_" + str(l)
-            pick_run = dill.dumps(l.run)
-            p = torch.multiprocessing.Process(name=s, target=dill.loads(pick_run))
+            pick_l = dill.dumps(l)
+            p = mp.Process(name=s, target=self.run_single_learner(i))
             p.start()
-            print('Passssed hereerereer')
+            print('Does NOT PRINT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             self.learner_processes.append(p)
-
+        
+        time.sleep(5)
+        print('new learner', self.new_learner)
         eval_check = [False] * self.num_learners
-        not_finished = lambda x: any([i.ep_count < i.episodes for i in x])
+        not_finished = lambda x: any([self.ep_count[0] < i.episodes for i in x])
+        # print("finished status", not_finished(self.learners))
         while not_finished(self.learners):
+            time.sleep(1)
             for l in self.learners:
-                if (l.ep_count % self.eps_per_eval) == 0:
+                print(self.ep_count[0])
+                if ((self.ep_count[0]+1) % self.eps_per_eval) == 0:
                     l.train[0] = False
                     eval_check[l.id] = True
+
             if all(eval_check):
+                print('Evaluating!!!!!')
                 self.eval_processes = []
                 for e in self.evals:
                     s = "eval_" + str(e)
-                    p = torch.multiprocessing.Process(name=s, target=e.launch)
+                    p = mp.Process(name=s, target=e.launch)
                     p.start()
                     self.eval_processes.append(p)
                 
@@ -92,10 +136,14 @@ class SingleAgentPBTMetaLearner(MetaLearner):
                     self.learners[i].train[0] = True
 
                 print([e.score for e in self.evals])
+            # print('Finished status', not_finished(self.learners))
 
     #Run inidivdual learners. Used as the target function for multiprocessing
-    # def run_learner(self, learner_idx):
-    #     self.learners[learner_idx].run()
+    # def run_learner(self, idx, pick_l):
+    #     learner = dill.loads(pick_learner)
+    #     print(learner)
+    #     learner.run()
+    #     self.learners[idx] = learner
     
     # def run_eval(self, eval_idx):
     #     self.evals[eval_idx].launch()

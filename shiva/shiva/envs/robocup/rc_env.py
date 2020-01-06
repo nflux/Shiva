@@ -204,7 +204,7 @@ class rc_env:
             time.sleep(1.5)
         
         for i in range(self.num_right):
-            print("Connecting player %i" % i , "on rightonent %s to the server" % self.right_base)
+            print("Connecting player %i" % i , "on right %s to the server" % self.right_base)
             if i == 0:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feat_lvl, self.right_base,
                                                 self.goalie,i,self.ep_length,self.act_lvl,self.right_envs,))
