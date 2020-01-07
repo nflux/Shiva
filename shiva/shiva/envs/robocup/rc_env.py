@@ -324,6 +324,7 @@ class rc_env:
             # i was thinking that maybe I could choose the action here        
             elif self.action_level == 'discretized':
                 # print("this ran")
+                # print(params)
                 for p in range(params.shape[0]):
                     # print(params)
                     self.left_action_params[agent_id][p] = params.item()#params[agent_id][p]

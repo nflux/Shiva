@@ -31,7 +31,7 @@ class SingleAgentLearner(Learner):
         observation = self.env.get_observation()
 
         """Temporary fix for Unity as it receives multiple observations"""
-        if len(observation.shape) > 1:
+        if len(observation.shape) > 1 and self.env.env_name != 'RoboCup':
             action = [self.agent.get_action(obs, self.env.step_count) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
@@ -42,7 +42,7 @@ class SingleAgentLearner(Learner):
         else:
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action)
-            t = [observation, action, reward, next_observation, int(done)]
+            t = [observation, more_data['action'], reward, next_observation, int(done)]
             # print(action)
             # input()
             exp = copy.deepcopy(t)

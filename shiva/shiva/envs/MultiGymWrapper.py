@@ -36,7 +36,7 @@ class MultiGymWrapper(Environment):
         while(self.stop_collecting.item() == 0):
 
             # print("Wrapper Flag:",self.saveLoadFlag.item())
-            time.sleep(0.06)
+            time.sleep(0.1)
 
             if self.saveLoadFlag.item() == 0:
                 # if self.episode_count % 5 == 0:
@@ -47,7 +47,19 @@ class MultiGymWrapper(Environment):
                 # os.system("rm -rf {}".format(self.agent_dir + '/actor.pth'))
                 # print("--- %s seconds ---" % (time.time() - start_time))
                 print("Agent Loaded")
+
+
+                # if self.step_control.sum().item() == self.num_instances:
+                #     observations = self.observations.numpy()
+                #     actions = torch.tensor([ self.agent.get_action(torch.tensor(obs).to(self.device), self.step_count) for obs in observations ] )
+                #     # print(actions)
+                #     self.observations[:,0:self.envs[0].action_space['acs_space']] = actions
+                #     self.step_control.fill_(0)
+
+                
                 self.saveLoadFlag[0] = 1
+                # time.sleep(0.3)
+                # self.stop_collecting 
 
             # if not loaded:
             #     if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
@@ -159,12 +171,11 @@ def process_target(env,observations,step_control,stop_collecting, id, queue,max_
             action = observations[id][:action_space].numpy()
             next_observation, reward, done, more_data = env.step(action)
             ep_observations[idx] = observation
-            print(env, observation)
             ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
             ep_next_observations[idx] = next_observation
             ep_dones[idx] = int(done)
-            idx -=- 1
+            idx += 1
 
 
             '''t = [observation, action, reward, next_observation, int(done)]
@@ -224,6 +235,8 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
             ep_next_observations[idx] = next_observation
             ep_dones[idx] = int(done)
             idx += 1
+
+            print("Hello")
 
             '''t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)

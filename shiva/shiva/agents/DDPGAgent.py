@@ -53,13 +53,29 @@ class DDPGAgent(Agent):
                 action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
                 action += self.ou_noise.noise()
                 action = np.concatenate([ np_softmax(action[:self.acs_discrete]), action[self.acs_discrete:] ])
+                # print(action)
+                # input()
             else:
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 # action = Categorical(action).sample()
                 # action = action2one_hot(self.acs_discrete, action.item())
 
 
+        # if action.shape[0] == 387:
+        #     print("this happened")
+        #     return torch.tensor(action)
+        # size = len(action.shape)
+        # if size == 3:
+        #     return action[0, 0]
+        # elif size == 2:
+        #     return action[0]
+        # else:    
+        #     return action
+        # print(action)
+        # input()
         return action.tolist()
+
+        # return action
             
     def get_continuous_action(self,observation, step_count, evaluate):
         if evaluate:

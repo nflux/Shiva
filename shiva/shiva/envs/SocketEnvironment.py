@@ -136,7 +136,7 @@ class SocketEnvironment(Environment):
 '''
 
 This is the modified C# script used where a client was added that allowed communication
-between the MLAgents and Shiva
+between the Unity and Shiva
 
 
 using UnityEngine;

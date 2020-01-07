@@ -38,14 +38,18 @@ class SingleAgentMultiEnvLearner(Learner):
                     observations, actions, rewards, logprobs, next_observations, dones = zip(*exp)
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     for i in range(len(observations)):
+                        self.step_count += 1
                         self.buffer.append([observations[i], actions[i], rewards[i][0],logprobs[i], next_observations[i], dones[i][0]])
                 else:
                     observations, actions, rewards, next_observations, dones = zip(*exp)
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     for i in range(len(observations)):
                         self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
+                        self.step_count += 1
                         if self.configs['Algorithm']['algorithm'] != 'PPO':
-                            self.alg.update(self.agent,self.buffer,self.step_count)
+                            if self.step_count % 64 == 0:
+                                self.alg.update(self.agent,self.buffer,self.step_count)
+                                self.updates +=1 
                 self.ep_count += 1
 
             if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
