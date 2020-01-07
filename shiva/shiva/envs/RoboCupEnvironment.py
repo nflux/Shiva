@@ -3,6 +3,8 @@ import numpy as np
 from shiva.envs.robocup.rc_env import rc_env
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
+from torch.distributions import Categorical
+
 
 class RoboCupEnvironment(Environment):
     def __init__(self, config):
@@ -72,17 +74,14 @@ class RoboCupEnvironment(Environment):
         if discrete_select == 'argmax':
             act_choice = np.argmax(actions[:self.action_space['discrete']])
         elif discrete_select == 'sample':
-            act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
+            act_choice = Categorical(actions).sample()
+            # action = action2one_hot(self.acs_discrete, action.item())
+            # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
 
-        self.left_actions = torch.tensor([act_choice]).float()
-        # print(self.action_space['discrete'])
-        params = actions[self.action_space['discrete']:]
-        # print(params)
-        self.left_params = torch.tensor([params]).float()
+        self.left_actions = act_choice
+        print(act_choice)
 
-
-
-        if self.discretized:
+        if self.action_level == 'discretized':
             
             # indicates whether its a dash, turn, or kick action from the action matrix
             if 0 <= self.left_actions <= 188:
@@ -103,7 +102,12 @@ class RoboCupEnvironment(Environment):
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[action_matrix_index], left_params=self.left_actions)
             actions_v = action2one_hot(self.action_space['discrete'], act_choice)
 
+            # print(actions_v)
+
         else:
+
+            params = actions[self.action_space['discrete']:]
+            self.left_params = torch.tensor([params]).float()
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
             actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
@@ -113,7 +117,8 @@ class RoboCupEnvironment(Environment):
         self.steps_per_episode +=1
         
         # print('\nreward:', self.rews, '\n')
-        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
+        print(actions)
+        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions[0].tolist()}
 
     def get_observation(self):
         return self.obs

@@ -6,9 +6,6 @@ import helpers.misc as misc
 import torch.multiprocessing as mp
 import os
 import torch
-import envs
-import algorithms
-import buffers
 import copy
 import random
 import time
@@ -30,41 +27,40 @@ class SingleAgentMultiEnvLearner(Learner):
         self.ep_count = torch.zeros(1).share_memory_()
         self.updates = 5
         self.agent_dir = os.getcwd() + self.agent_path
-        self.agent_file_flag = torch.zeros(1).share_memory_()
-
 
     def run(self):
         self.step_count = 0
         while self.ep_count < self.episodes:
             while not self.queue.empty():
-                exp = self.queue.get()
-                # observations, actions, rewards, next_observations, dones = zip(*exp)
-                # print(np.array(rewards).sum())
 
+                exp = self.queue.get()
                 if self.configs['Algorithm']['algorithm'] == 'PPO':
                     observations, actions, rewards, logprobs, next_observations, dones = zip(*exp)
-                    print('Episode Rewards: ', np.array(rewards).sum())
+                    print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     for i in range(len(observations)):
+                        self.step_count += 1
                         self.buffer.append([observations[i], actions[i], rewards[i][0],logprobs[i], next_observations[i], dones[i][0]])
                 else:
                     observations, actions, rewards, next_observations, dones = zip(*exp)
-                    print(np.array(rewards).sum())
+                    print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     for i in range(len(observations)):
                         self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
-
-                    if self.configs['Algorithm']['algorithm'] != 'PPO':
-                        self.alg.update(self.agent,self.buffer.sample(),self.step_count)
+                        self.step_count += 1
+                        if self.configs['Algorithm']['algorithm'] != 'PPO':
+                            if self.step_count % 64 == 0:
+                                self.alg.update(self.agent,self.buffer,self.step_count)
+                                self.updates +=1 
                 self.ep_count += 1
 
             if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
-                print(self.ep_count)
-                if self.configs['Algorithm']['algorithm'] == 'PPO':
-                    self.alg.update(self.agent,self.buffer,self.step_count)
-                else:
-                    self.alg.update(self.agent,self.buffer.sample(),self.step_count)
+                
+                self.alg.update(self.agent,self.buffer,self.step_count)
 
                 if self.saveLoadFlag.item() == 1:
+                    # start_time = time.time()
+                    # print("Multi Learner:",self.agent_dir)
                     self.agent.save_agent(self.agent_dir,self.step_count)
+                    # print("--- %s seconds ---" % (time.time() - start_time))
                     print("Agent was saved")
                     self.saveLoadFlag[0] = 0
 
@@ -124,7 +120,7 @@ class SingleAgentMultiEnvLearner(Learner):
         return self.alg
 
     def launch(self):
-        environment = getattr(envs, self.configs['Environment']['sub_type'])
+        environment = load_class('shiva.envs', self.configs['Environment']['sub_type'])
         self.env = environment(self.configs)
 
 
@@ -135,24 +131,16 @@ class SingleAgentMultiEnvLearner(Learner):
             self.agent= self.load_agent(self.load_agents)
         else:
             self.agent= self.alg.create_agent()
-            self.old_agent = self.alg.create_agent()
-            self.old_agent = copy.deepcopy(self.agent)
             self.agent.save_agent(self.agent_dir,self.step_count)
-
-
 
         # Launch the environment
         self.env = self.create_environment()
-        # self.p = mp.Process(target = self.env.launch_envs)
-        # self.p.start()
 
 
         # if buffer set to true in config
         if self.using_buffer:
             # Basic replay buffer at the moment
             self.buffer = self.create_buffer()
-
-
 
         print('Launch Successful.')
 

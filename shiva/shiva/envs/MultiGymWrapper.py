@@ -1,20 +1,20 @@
 from .Environment import Environment
-from shiva.envs.GymEnvironment import GymEnvironment
+# from shiva.envs.GymEnvironment import GymEnvironment
+from shiva.helpers.config_handler import load_class
 import numpy as np
-import envs
 import torch
 import torch.multiprocessing as mp
 from torch.distributions import Categorical
 from torch.distributions.normal import Normal
 import copy
 import time
+import os
 
 class MultiGymWrapper(Environment):
     def __init__(self,configs,queue,agent,episode_count,agent_dir,total_episodes, saveLoadFlag):
         super(MultiGymWrapper,self).__init__(configs)
         self.queue = queue
-        self.master_agent = agent
-        self.agent = copy.deepcopy(self.master_agent)
+        self.agent = agent
         self.process_list = list()
         self.episode_count = episode_count
         self.total_episodes = total_episodes
@@ -29,28 +29,45 @@ class MultiGymWrapper(Environment):
 
 
 
-    def step(self):
+    def step_without_log_probs(self):
 
         loaded = False
 
         while(self.stop_collecting.item() == 0):
 
             # print("Wrapper Flag:",self.saveLoadFlag.item())
-            time.sleep(0.06)
+            time.sleep(0.1)
 
             if self.saveLoadFlag.item() == 0:
+                # if self.episode_count % 5 == 0:
+                    # start_time = time.time()
+
+                # print("Gym Wrapper:",self.agent_dir)
                 self.agent.load(self.agent_dir)
-                print("Updated Agent Loaded In")
+                # os.system("rm -rf {}".format(self.agent_dir + '/actor.pth'))
+                # print("--- %s seconds ---" % (time.time() - start_time))
+                print("Agent Loaded")
+
+
+                # if self.step_control.sum().item() == self.num_instances:
+                #     observations = self.observations.numpy()
+                #     actions = torch.tensor([ self.agent.get_action(torch.tensor(obs).to(self.device), self.step_count) for obs in observations ] )
+                #     # print(actions)
+                #     self.observations[:,0:self.envs[0].action_space['acs_space']] = actions
+                #     self.step_control.fill_(0)
+
+                
                 self.saveLoadFlag[0] = 1
+                # time.sleep(0.3)
+                # self.stop_collecting 
 
             # if not loaded:
             #     if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
             #         loaded = True
-                    # if self.saveLoadFlag.item() == 0:
-                    #     self.agent.load(self.agent_dir)
-                    #     print("Updated Agent Loaded In")
-                    #     self.saveLoadFlag[0] = 1
-                    # time.sleep(0.1)
+            #         if self.saveLoadFlag.item() == 0:
+            #             self.agent.load(self.agent_dir)
+            #             self.saveLoadFlag[0] = 1
+            #         time.sleep(0.1)
 
             # if self.episode_count % self.agent_update_episodes != 0:
             #     loaded = False
@@ -83,10 +100,7 @@ class MultiGymWrapper(Environment):
             if not loaded:
                 if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
                     loaded = True
-                    #print(self.agent_dir)
-                    #print("hello there")
                     self.agent.load(self.agent_dir)
-                    #print("oh hi there")
                     time.sleep(0.3)
 
             if self.episode_count % self.agent_update_episodes != 0:
@@ -95,7 +109,6 @@ class MultiGymWrapper(Environment):
             if self.step_control.sum().item() == self.num_instances:
                 observations = self.observations
                 action_probs = self.agent.actor(observations.to(self.device))
-                #observations = self.observations.numpy()
                 actions = torch.tensor([self.agent.get_action(obs) for obs in observations.numpy()])
                 if self.action_space == 'discrete':
                     actions = torch.argmax(actions, dim=-1).long()
@@ -118,7 +131,7 @@ class MultiGymWrapper(Environment):
 
 
     def launch_envs(self):
-        environment = getattr(envs, self.configs['sub_type'])
+        environment = load_class('shiva.envs', self.configs['sub_type'])
         #list of the environments to be used for episode collection
         self.envs = [environment(self.configs)] * self.num_instances
         #Shared tensor will be used for communication between environment wrapper process and individual environment processes
@@ -135,7 +148,7 @@ class MultiGymWrapper(Environment):
             self.step_with_logprobs()
         else:
             self.process_list = launch_processes(self.envs, self.observations, self.step_control, self.stop_collecting,self.queue, self.max_episode_length,num_instances=self.num_instances)
-            self.step()
+            self.step_without_log_probs()
 
 def process_target(env,observations,step_control,stop_collecting, id, queue,max_ep_length):
     step_count = 1
@@ -150,7 +163,7 @@ def process_target(env,observations,step_control,stop_collecting, id, queue,max_
     env.reset()
     observation = env.get_observation()
     observations[id] = torch.tensor(observation).float()
-    step_control[id] = 1
+    step_control[id] = 0
     while(stop_collecting.item() == 0):
         #print('Hello')
         #print('Process: ', step_control[id])
@@ -158,11 +171,11 @@ def process_target(env,observations,step_control,stop_collecting, id, queue,max_
             action = observations[id][:action_space].numpy()
             next_observation, reward, done, more_data = env.step(action)
             ep_observations[idx] = observation
-            ep_actions[idx] = action
+            ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
             ep_next_observations[idx] = next_observation
             ep_dones[idx] = int(done)
-            idx -=- 1
+            idx += 1
 
 
             '''t = [observation, action, reward, next_observation, int(done)]
@@ -206,7 +219,8 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
     env.reset()
     observation = env.get_observation()
     observations[id] = torch.tensor(observation).float()
-    step_control[id] = 1
+    step_control[id] = 0
+
     while(stop_collecting.item() == 0):
         #print('Hello')
         #print('Process: ', step_control[id])
@@ -221,6 +235,8 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
             ep_next_observations[idx] = next_observation
             ep_dones[idx] = int(done)
             idx += 1
+
+            print("Hello")
 
             '''t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)
@@ -256,7 +272,6 @@ def launch_processes(envs, observations, step_control, stop_collecting,queue, ma
             p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
         else:
             p = mp.Process(target = process_target, args=(envs[i],observations,step_control,stop_collecting,i,queue,max_episode_length,) )
-        # p = mp.Process(target = some )
         p.start()
         process_list.append(p)
 

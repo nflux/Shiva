@@ -44,6 +44,8 @@ class DDPGAlgorithm(Algorithm):
             Updates starts here
         '''
 
+        print("updating!")
+
         states, actions, rewards, next_states, dones = buffer.sample()
 
         # Make everything a tensor and send to gpu if available
@@ -73,28 +75,23 @@ class DDPGAlgorithm(Algorithm):
         if self.a_space == "discrete" or self.a_space == "parameterized":
 
             # Grab the discrete actions in the batch
+            # generate a tensor of one hot encodings of the argmax of each discrete action tensors
+            # concat the discrete and parameterized actions back together
+
             if dims == 3:
                 discrete_actions = next_state_actions_target[:,:,:self.discrete].squeeze(dim=1)
+                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions).unsqueeze(dim=1)
+                next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,self.discrete:]], dim=2)
+
             elif dims == 2:
                 discrete_actions = next_state_actions_target[:,:self.discrete].squeeze(dim=0)
-            else:
-                discrete_actions = next_state_actions_target[:self.discrete]
-
-            # generate a tensor of one hot encodings of the argmax of each discrete action tensors
-            if dims == 3:
-                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions).unsqueeze(dim=1)
-            elif dims == 2:
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
-            else:
-                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
-            
-            # concat the discrete and parameterized actions back together
-            if dims == 3:
-                next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,self.discrete:]], dim=2)
-            elif dims == 2:
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,self.discrete:]], dim=1)
             else:
+                discrete_actions = next_state_actions_target[:self.discrete]
+                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[self.discrete:]], dim=0)
+
        
         # print(next_state_actions_target.shape, '\n')
 
@@ -114,6 +111,7 @@ class DDPGAlgorithm(Algorithm):
 
         # Grab the discrete actions in the batch
         if dims == 3:
+            print(states.shape, actions.shape)
             Q_these_states_main = agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], 2) )
         elif dims == 2:
             Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 1) )
