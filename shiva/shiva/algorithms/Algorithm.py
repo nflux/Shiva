@@ -16,7 +16,7 @@ class Algorithm():
                 beta                Hyperparameter
         '''
         self.configs = configs
-        {setattr(self, k, v) for k,v in self.configs[0].items()}
+        {setattr(self, k, v) for k, v in self.configs[0].items()}
         self.agentCount = 0
         self.agents = []
         self.obs_space = obs_space
@@ -24,18 +24,19 @@ class Algorithm():
         self.loss_calc = getattr(torch.nn, configs[0]['loss_function'])()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
-    def update(self, agent, data):
+    def update(self, agent, data, episodic=False):
         '''
             Updates the agents network using the data
 
             Input
-                agent:  the agent who we want to update it's network
-                data:   data used to train the network
+                agent:      the agent who we want to update it's network
+                data:       data used to train the network
+                episodic:   flag indicating if the update is episodic or per timestep
 
             Return
                 None
         '''
-        pass
+        assert "Method Not Implemented"
 
     def get_action(self, agent, observation):
         '''
@@ -48,7 +49,7 @@ class Algorithm():
             Return
                 Action
         '''
-        pass
+        assert "Method Not Implemented"
 
     def create_agent(self):
         '''
@@ -59,11 +60,11 @@ class Algorithm():
             Return
                 Agent
         '''
-        pass
+        assert "Method Not Implemented"
 
     def id_generator(self):
         agent_id = self.agentCount
-        self.agentCount +=1
+        self.agentCount += 1
         return agent_id
 
     def get_agents(self):
