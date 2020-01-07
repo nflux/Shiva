@@ -12,6 +12,7 @@ class UnityWrapperEnvironment11(Environment):
     def __init__(self, config):
         assert UnityEnvironment.API_VERSION == 'API-11', 'This environment version supports only v11 builds'
 
+
         super(UnityWrapperEnvironment11, self).__init__(config)
         self.worker_id = 0
         self._connect()

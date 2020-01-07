@@ -20,7 +20,9 @@ Ball scale of 0.5          |  Ball scale of 4
 
 ## Introducing Generalization Using Reset Parameters
 
-To enable variations in the environments, we implemented `Reset Parameters`. We
+To enable variations in the environments, we implemented `Reset Parameters`.
+`Reset Parameters` are `Academy.FloatProperties` that are used only when
+resetting the environment. We
 also included different sampling methods and the ability to create new kinds of
 sampling methods for each `Reset Parameter`. In the 3D ball environment example displayed
 in the figure above, the reset parameters are `gravity`, `ball_mass` and `ball_scale`.
@@ -118,7 +120,7 @@ Below is a list of included `sampler-type` as part of the toolkit.
 
     * **sub-arguments** - `intervals`
 
-The implementation of the samplers can be found at `ml-agents-envs/mlagents/envs/sampler_class.py`.
+The implementation of the samplers can be found at `ml-agents-envs/mlagents_envs/sampler_class.py`.
 
 ### Defining a New Sampler Type
 

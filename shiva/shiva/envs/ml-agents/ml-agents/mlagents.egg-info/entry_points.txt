@@ -1,3 +1,0 @@
-[console_scripts]
-mlagents-learn = mlagents.trainers.learn:main
-

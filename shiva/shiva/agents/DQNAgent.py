@@ -28,7 +28,7 @@ class DQNAgent(Agent):
         self.target_policy = copy.deepcopy(self.policy)
         self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.policy.parameters(), lr=self.learning_rate)
 
-    def get_action(self, obs):
+    def get_action(self, obs, step_n):
         '''
             This method iterates over all the possible actions to find the one with the highest Q value
         '''
