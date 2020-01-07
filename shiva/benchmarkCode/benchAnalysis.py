@@ -6,34 +6,197 @@ import datetime
 import time
 
 metrics = ["Reward/Per_Step", "Reward/Per_Episode"]
-env = ["CartPole-v0"]
-algType = ["DQNAlgorithm",]
+env = ["CartPole-v0","3DBall", "Basic", "MountainCarContinuous-v0"]
+algType = ["DQNAlgorithm","PPOAlgorithm", "ContinuousDDPGAlgorithm"]
 output = []
-def openCSVFile():
+rate = 5
+
+
+#====================================DQN Cartpole Benchmak=======================
+# For use in DQN.ini 
+def testRoutineDQN():
+    output = []
+
+    os.chdir("..")
+    try: 
+        pd.read_csv("Benchmark/"+str(metrics[1])+" " +algType[0]+" "+env[0] +" "+ ""+'.csv', sep=',',header=None)
+    except: 
+        print("PPO FAILED")
+        os.chdir("benchmarkCode")
+        openReadmeFile("       |Cartpole v0|N/A|       **DQN**     |       FAILED     |")
+        return
+    df=pd.read_csv("Benchmark/"+str(metrics[1])+" " +algType[0]+" "+env[0] +" "+ ""+'.csv', sep=',',header=None)
+    
+    print(df.values)
+    res = [[ i for i, j in df.values ], [ j for i, j in df.values ]] 
+    length = len(res[1])
+    checkRate = (length/rate)
+    # print(res[1][999])
+    i = 0
+    while (i < length):
+        i =  int(i+ round(checkRate,10))
+        output.append(np.average(res[1][0:i]))
+ 
+    os.chdir("benchmarkCode")
+    k = 0
+    write = ""
+    for string in output:
+        k = k+ round(checkRate,10)
+        write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
+    openReadmeFile("       |Cartpole v0|"+str(length)+"|       **DQN**     |       "+  write+"   |")
+  
+#====================================DQN Unity Basic Benchmak=======================
+# For use in DQN-Unity-Basic.ini
+def testRoutineDQNUnityBasic():
+    output = []
+
+    os.chdir("..")
+    try: 
+        pd.read_csv("Benchmark/"+str(metrics[1])+" " +algType[0]+" "+env[2] +" "+ ""+'.csv', sep=',',header=None)
+    except: 
+        print("PPO FAILED")
+        os.chdir("benchmarkCode")
+        openReadmeFile("       |Unity Basic|N/A|       **DQN**     |       FAILED     |")
+        return
+    df=pd.read_csv("Benchmark/"+str(metrics[1])+" " +algType[0]+" "+env[2] +" "+ ""+'.csv', sep=',',header=None)
+    
+    print(df.values)
+    res = [[ i for i, j in df.values ], [ j for i, j in df.values ]] 
+    length = len(res[1])
+    checkRate = (length/rate)
+    # print(res[1][999])
+    i = 0
+    while (i < length):
+        i =  int(i+ round(checkRate,10))
+        output.append(np.average(res[1][0:i]))
+ 
+    os.chdir("benchmarkCode")
+    k = 0
+    write = ""
+    for string in output:
+        k = k+ round(checkRate,10)
+        write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
+    openReadmeFile("       |Unity Basic|"+str(length)+"|       **DQN**     |       "+  write+"   |")
+  
+
+
+#====================================PPO Cartpole Benchmak=======================
+# For use in PPO.ini
+def testRoutinePPO():
+    output = []
     # file = open("Benchmark/"+str(metrics[1])+" " +env[0]+" "+algType[0] +" "+ ""+'.csv', 'w+')
     # return file
     os.chdir("..")
     print (os.path.abspath(os.curdir))
-    df=pd.read_csv("Benchmark/"+str(metrics[1])+" " +algType[0]+" "+env[0] +" "+ ""+'.csv', sep=',',header=None)
+    try: 
+        pd.read_csv("Benchmark/"+str(metrics[1])+" " +algType[1]+" "+env[0] +" "+ ""+'.csv', sep=',',header=None)
+    except: 
+        print("DQN FAILED")
+        os.chdir("benchmarkCode")
+        openReadmeFile("       |Cartpole v0| N/A |       **PPO**     |       FAILED     |")
+        return
+    df=pd.read_csv("Benchmark/"+str(metrics[1])+" " +algType[1]+" "+env[0] +" "+ ""+'.csv', sep=',',header=None)
+    
     print(df.values)
     res = [[ i for i, j in df.values ], [ j for i, j in df.values ]] 
-    output.append(np.average(res[1][0:199]))
-    output.append(np.average(res[1][0:399]))
-    output.append(np.average(res[1][0:599]))
-    output.append(np.average(res[1][0:799]))
-    output.append(np.average(res[1][0:999]))
-    print ("Modified list is : " + str(len(res[1])))
-    print ("Modified list2 is : " + str(output))
+    length = len(res[1])
+    checkRate = length/rate
+    i = 0
+    
+    while (i < length):
+        i =  int(i+ round(checkRate,10))
+        output.append(np.average(res[1][0:i]))
+ 
     os.chdir("benchmarkCode")
-    openReadmeFile("       |Cartpole v0|1000 Steps|       **DQN**     |       "+ str(output[0])+": 0-200 Steps, "+ str(output[1])+" : 0-200 Steps, "+ str( output[2])+" : 0-400 Steps, "+ str(output[3])+" : 0-800 Steps, "+ str(output[4])+" : 0-1000 Steps"+"       |")
-    # print ("Modified list2 is : " + str(res[1][0:399]))
-    # print ("Modified list2 is : " + str(res[1][0:599]))
-    # print ("Modified list2 is : " + str(res[1][0:799]))
-    # print ("Modified list 2is : " + str(res[1][0:999]))
+    k = 0
+    write = ""
+    for string in output:
+        k = k+ round(checkRate,10)
+        write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
+    openReadmeFile("       |Cartpole v0|"+str(length)+"|       **PPO**     |       "+  write+"   |")
+
+
+
+
+#====================================DDPG-3DBALL Benchmark=======================
+#For Use in DDPG-3DBall.ini
+def testRoutineDDPG3DBALL():
+    output = []
+    # file = open("Benchmark/"+str(metrics[1])+" " +env[0]+" "+algType[0] +" "+ ""+'.csv', 'w+')
+    # return file
+    os.chdir("..")
+    print (os.path.abspath(os.curdir))
+    try: 
+        pd.read_csv("Benchmark/"+str(metrics[0])+" " +algType[2]+" "+env[1] +" "+ ""+'.csv', sep=',',header=None)
+    except: 
+        print("DDPG FAILED")
+        os.chdir("benchmarkCode")
+        openReadmeFile("       |Unity 3D-BALL|N/A|       **DDPG**     |       FAILED     |")
+        return
+    df=pd.read_csv("Benchmark/"+str(metrics[0])+" " +algType[2]+" "+env[1] +" "+ ""+'.csv', sep=',',header=None)
+    
+    print(df.values)
+    res = [[ i for i, j in df.values ], [ j for i, j in df.values ]] 
+    length = len(res[1])
+    checkRate = length/rate
+    i = 0
+    
+    while (i < length):
+        i =  int(i+ round(checkRate,10))
+        output.append(np.average(res[1][0:i]))
+ 
+    os.chdir("benchmarkCode")
+    k = 0
+    write = ""
+    for string in output:
+        k = k+ round(checkRate,10)
+        write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
+    openReadmeFile("       |Unity 3D-BALL|"+str(length)+"|       **DDPG**     |       "+  write+"   |")
+
+
+#====================================DDPG-Mountain Car Benchmark=======================
+#For Use in DDPG-3DBall.ini
+def testRoutineDDPGMountainCar():
+    output = []
+    # file = open("Benchmark/"+str(metrics[1])+" " +env[0]+" "+algType[0] +" "+ ""+'.csv', 'w+')
+    # return file
+    os.chdir("..")
+    print (os.path.abspath(os.curdir))
+    try: 
+        pd.read_csv("Benchmark/"+str(metrics[0])+" " +algType[2]+" "+env[3] +" "+ ""+'.csv', sep=',',header=None)
+    except: 
+        print("DDPG FAILED")
+        os.chdir("benchmarkCode")
+        openReadmeFile("       |MountainCarContinuous-v0|N/A|       **DDPG**     |       FAILED     |")
+        return
+    df=pd.read_csv("Benchmark/"+str(metrics[0])+" " +algType[2]+" "+env[3] +" "+ ""+'.csv', sep=',',header=None)
+    
+    print(df.values)
+    res = [[ i for i, j in df.values ], [ j for i, j in df.values ]] 
+    length = len(res[1])
+    checkRate = length/rate
+    i = 0
+    
+    while (i < length):
+        i =  int(i+ round(checkRate,10))
+        output.append(np.average(res[1][0:i]))
+ 
+    os.chdir("benchmarkCode")
+    k = 0
+    write = ""
+    for string in output:
+        k = k+ round(checkRate,10)
+        write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
+    openReadmeFile("       |MountainCarContinuous-v0|"+str(length)+"|       **DDPG**     |       "+  write+"   |")
+
+
+
 def openReadmeFile(string):
     markDown = open("Readme.md",'a', newline='')
     markDown.write("\n" + str(string))
     markDown.close()
+
+
 if __name__ =="__main__":
     ts = time.time()
     tS = str(datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S'))
@@ -42,5 +205,8 @@ if __name__ =="__main__":
     markDown = open("Readme.md",'a', newline='')
     markDown.write("\n* "+tS+"\n     - | ENVIRONMENT |Episodes / Steps|   ALGORITHM   |   REWARDS   |\n       |---|---|       ---     |       ---       |")
     markDown.close()
-    # openReadmeFile()
-    openCSVFile()
+    testRoutineDQN()
+    testRoutineDQNUnityBasic
+    testRoutinePPO()
+    testRoutineDDPG3DBALL()
+    testRoutineDDPGMountainCar
