@@ -1,0 +1,9 @@
+syntax = "proto3";
+package shiva.core.communication_objects;
+
+message EnvironmentSpecsProto {
+    float observation_space = 1;
+    float action_space = 2;
+    int32 num_instances = 3;
+    int32 num_agents_per_instance = 4;
+}

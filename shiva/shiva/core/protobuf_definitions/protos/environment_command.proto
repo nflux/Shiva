@@ -1,0 +1,8 @@
+syntax = "proto3";
+package shiva.core.communication_objects;
+
+enum EnvironmentCommandProto {
+    STEP = 0;
+    RESET = 1;
+    CLOSE = 2;
+}

@@ -1,0 +1,6 @@
+syntax = "proto3";
+package shiva.core.communication_objects;
+
+message AgentActionProto {
+    repeated float actions = 1;
+}
