@@ -1,27 +1,26 @@
 using System;
-using System.Threading;
-using MLAgents.InferenceBrain;
 using UnityEngine;
 
 namespace MLAgents.Sensor
 {
-    class RenderTextureSensor : ISensor
+    public class RenderTextureSensor : ISensor
     {
-        private RenderTexture m_RenderTexture;
-        private int m_Width;
-        private int m_Height;
-        private bool m_Grayscale;
-        private string m_Name;
-        private int[] m_Shape;
+        RenderTexture m_RenderTexture;
+        bool m_Grayscale;
+        string m_Name;
+        int[] m_Shape;
+        SensorCompressionType m_CompressionType;
 
-        public RenderTextureSensor(RenderTexture renderTexture, int width, int height, bool grayscale, string name)
+        public RenderTextureSensor(RenderTexture renderTexture, bool grayscale, string name,
+            SensorCompressionType compressionType)
         {
             m_RenderTexture = renderTexture;
-            m_Width = width;
-            m_Height = height;
+            var width = renderTexture != null ? renderTexture.width : 0;
+            var height = renderTexture != null ? renderTexture.height : 0;
             m_Grayscale = grayscale;
             m_Name = name;
-            m_Shape = new[] { width, height, grayscale ? 1 : 3 };
+            m_Shape = new[] { height, width, grayscale ? 1 : 3 };
+            m_CompressionType = compressionType;
         }
 
         public string GetName()
@@ -29,7 +28,7 @@ namespace MLAgents.Sensor
             return m_Name;
         }
 
-        public int[] GetFloatObservationShape()
+        public int[] GetObservationShape()
         {
             return m_Shape;
         }
@@ -38,7 +37,7 @@ namespace MLAgents.Sensor
         {
             using(TimerStack.Instance.Scoped("RenderTexSensor.GetCompressedObservation"))
             {
-                var texture = ObservationToTexture(m_RenderTexture, m_Width, m_Height);
+                var texture = ObservationToTexture(m_RenderTexture);
                 // TODO support more types here, e.g. JPG
                 var compressed = texture.EncodeToPNG();
                 UnityEngine.Object.Destroy(texture);
@@ -46,44 +45,35 @@ namespace MLAgents.Sensor
             }
         }
 
-        public void WriteToTensor(TensorProxy tensorProxy, int index)
+        public int Write(WriteAdapter adapter)
         {
             using (TimerStack.Instance.Scoped("RenderTexSensor.GetCompressedObservation"))
             {
-                var texture = ObservationToTexture(m_RenderTexture, m_Width, m_Height);
-                Utilities.TextureToTensorProxy(texture, tensorProxy, m_Grayscale, index);
+                var texture = ObservationToTexture(m_RenderTexture);
+                var numWritten = Utilities.TextureToTensorProxy(texture, adapter, m_Grayscale);
                 UnityEngine.Object.Destroy(texture);
+                return numWritten;
             }
         }
+
+        public void Update() { }
 
         public SensorCompressionType GetCompressionType()
         {
-            return SensorCompressionType.PNG;
+            return m_CompressionType;
         }
 
         /// <summary>
-        /// Converts a RenderTexture and correspinding resolution to a 2D texture.
+        /// Converts a RenderTexture to a 2D texture.
         /// </summary>
         /// <returns>The 2D texture.</returns>
         /// <param name="obsTexture">RenderTexture.</param>
-        /// <param name="width">Width of resulting 2D texture.</param>
-        /// <param name="height">Height of resulting 2D texture.</param>
         /// <returns name="texture2D">Texture2D to render to.</returns>
-        public static Texture2D ObservationToTexture(RenderTexture obsTexture, int width, int height)
+        public static Texture2D ObservationToTexture(RenderTexture obsTexture)
         {
+            var height = obsTexture.height;
+            var width = obsTexture.width;
             var texture2D = new Texture2D(width, height, TextureFormat.RGB24, false);
-
-            if (width != texture2D.width || height != texture2D.height)
-            {
-                texture2D.Resize(width, height);
-            }
-
-            if (width != obsTexture.width || height != obsTexture.height)
-            {
-                throw new UnityAgentsException(string.Format(
-                    "RenderTexture {0} : width/height is {1}/{2} brain is expecting {3}/{4}.",
-                    obsTexture.name, obsTexture.width, obsTexture.height, width, height));
-            }
 
             var prevActiveRt = RenderTexture.active;
             RenderTexture.active = obsTexture;

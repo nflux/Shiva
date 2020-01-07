@@ -10,7 +10,7 @@ from shiva.helpers.misc import action2one_hot
 
 class UnityWrapperEnvironment(Environment):
     def __init__(self, config):
-        assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents api v11 or v12'
+        assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
 
         super(UnityWrapperEnvironment, self).__init__(config)
         self.worker_id = 0
@@ -46,19 +46,8 @@ class UnityWrapperEnvironment(Environment):
         self.reward_per_episode = 0
 
     def set_initial_values(self):
-
-        if self.action_space == "discrete":
-            self.action_space = {'discrete': self._get_action_space() , 'param': 0, 'acs_space': self._get_action_space()}
-        elif self.action_space == "continuous":
-            self.action_space = {'discrete': 0 , 'param': self._get_action_space(), 'acs_space': self._get_action_space()}
-
+        self.action_space = self.get_action_space()
         self.observation_space = self.get_observation_space()
-
-        '''
-            is this used for anything? doesn't crash without it
-        '''
-        # self.action_space_discrete = self.action_space if self.GroupSpec.is_action_discrete() else None
-        # self.action_space_continuous = self.action_space if self.GroupSpec.is_action_continuous() else None
 
         self.batched_step_results = self.Unity.get_step_result(self.group_id)
 
@@ -136,16 +125,23 @@ class UnityWrapperEnvironment(Environment):
             actions = np.array(actions)
         return actions
 
-    def _get_action_space(self):
+    def get_action_space(self):
         if self.GroupSpec.is_action_discrete():
             self.num_branches = self.GroupSpec.action_size # this is the number of independent actions
             # we currently only deal with 1 independent action
-            return self.GroupSpec.discrete_action_branches[0] # grab the first branch only
+            # return self.GroupSpec.discrete_action_branches[0] # grab the first branch only
+            return {
+                'discrete': self.GroupSpec.discrete_action_branches[0],
+                'param': 0,
+                'acs_space': self.GroupSpec.discrete_action_branches[0]
+            }
         elif self.GroupSpec.is_action_continuous():
-            return self.GroupSpec.action_size
-
-    def get_action_space(self):
-        return self.action_space
+            # return self.GroupSpec.action_size
+            return {
+                'discrete': 0,
+                'param': self.GroupSpec.action_size,
+                'acs_space': self.GroupSpec.action_size
+            }
 
     def get_observation_space(self):
         '''

@@ -1,9 +1,10 @@
 import os
 import sys
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.command.install import install
+import mlagents_envs
 
-VERSION = "0.11.0"
+VERSION = mlagents_envs.__version__
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -40,7 +41,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
     ],
-    packages=["mlagents.envs", "mlagents.envs.communicator_objects"],  # Required
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     zip_safe=False,
     install_requires=[
         "cloudpickle",
