@@ -7,9 +7,9 @@ from shiva.core.admin import Admin
 from shiva.learners.Learner import Learner
 from shiva.helpers.config_handler import load_class
 
-class SingleAgentTD3Learner(Learner):
+class SingleAgentLearner(Learner):
     def __init__(self, learner_id, config):
-        super(SingleAgentTD3Learner ,self).__init__(learner_id, config)
+        super(SingleAgentLearner ,self).__init__(learner_id, config)
 
     def run(self, train=True):
         self.step_count_per_run = 0
@@ -17,10 +17,11 @@ class SingleAgentTD3Learner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.alg.update(self.agent, self.buffer, self.env.step_count) if train
+                self.alg.update(self.agent, self.buffer, self.env.step_count)
                 self.collect_metrics()
-                return None if self.multi_process_cutoff() # PBT Cutoff
-            self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True) if train
+                if self.is_multi_process_cutoff(): return None # PBT Cutoff
+                else: continue
+            self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
             self.collect_metrics(episodic=True)
             self.checkpoint()
             print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))
@@ -68,10 +69,10 @@ class SingleAgentTD3Learner(Learner):
 
     def launch(self):
         self.env = self.create_environment()
-        if self.manual_play:
+        if hasattr(self, 'manual_play') and self.manual_play:
             '''
                 Only for RoboCup!
-                Maybe for Unity?????
+                Maybe for Unity at some point?????
             '''
             from shiva.envs.RoboCupEnvironment import HumanPlayerInterface
             self.HPI = HumanPlayerInterface()

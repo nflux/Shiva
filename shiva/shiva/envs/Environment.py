@@ -1,6 +1,6 @@
 class Environment:
     def __init__(self, configs):
-        print("look:",configs)
+        # print("look:",configs)
         # print()
         # print(configs['environment'])
         if 'MetaLearner' in configs:

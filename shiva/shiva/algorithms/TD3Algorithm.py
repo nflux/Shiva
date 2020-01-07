@@ -135,8 +135,8 @@ class TD3Algorithm(Algorithm):
             self.action += self.ou_noise.noise()
             return self.action
 
-    def create_agent(self):
-        self.agent = TD3Agent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self, id):
+        self.agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):

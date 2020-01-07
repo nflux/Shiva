@@ -29,7 +29,7 @@ class SingleAgentDDPGLearner(Learner):
         
         """Temporary fix for Unity as it receives multiple observations"""
 
-        if len(observation.shape) > 1 and self.env.env_name != 'RoboCup': # wonder why this extra condition?
+        if len(observation.shape) > 1 and self.env.env_name != 'RoboCup': # wonder why this extra condition???
             action = [self.alg.get_action(self.agent, obs, self.env.step_count) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
@@ -41,7 +41,7 @@ class SingleAgentDDPGLearner(Learner):
             action = self.alg.get_action(self.agent, observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.action_selection_method)
             '''
-                @discrete_action argument could be an attribute for the Environment in the config
+                @discrete_action argument could be an attribute for the Environment in the config?
                 Then, we got to be careful which action was actually performed on the environment!
                 For example, when @action_selection_method is sample, could be a problem when updating the network
             '''
