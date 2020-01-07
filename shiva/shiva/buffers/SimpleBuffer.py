@@ -34,11 +34,11 @@ class SimpleBuffer():
         states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in indices])
         return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32),\
                np.array(next_states), np.array(dones, dtype=np.bool)
-    
+
     def full_buffer(self):
-        states, actions, rewards, next_states, dones = zip(*[self.buffer[idx] for idx in range(len(self.buffer))])
+        states, actions, rewards,logprobs, next_states, dones = zip(*[self.buffer[idx] for idx in range(len(self.buffer))])
         return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32), \
-             np.array(next_states), np.array(dones, dtype=np.bool)
+            np.array(logprobs), np.array(next_states), np.array(dones, dtype=np.bool)
 
 class SimpleRoboCupBuffer():
 

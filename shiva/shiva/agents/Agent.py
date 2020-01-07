@@ -1,4 +1,5 @@
 import torch
+import torch.nn
 import numpy as np
 import shiva.helpers.misc as misc
 
@@ -25,10 +26,36 @@ class Agent(object):
         return "<{}:id={}>".format(self.__class__, self.id)
 
     def save(self, save_path, step):
-        torch.save(self.policy, save_path + '/policy.pth')
+        '''
+            Do something like
+                torch.save(self.policy, save_path + '/policy.pth')
+                torch.save(self.critic, save_path + '/critic.pth')
+            Or as many policies the Agent has
 
-    def load_net(self, load_path):
-        self.policy = torch.load(load_path)
+            Important:
+                Maintain the .pth file name to have the same name as the Agent attribute
+        '''
+        assert False, "Method Not Implemented"
+
+    def load_net(self, policy_name, policy_file):
+        '''
+            TBD
+            Load as many policies the Agent needs (actor, critic, target, etc...) on the agents folder @load_path
+
+            Do something like
+                self.policy = torch.load(load_path)
+            OR maybe even better:
+                setattr(self, policy_name, torch.load(policy_file))
+
+            Possible approach:
+            - ShivaAdmin finds the policies saved for the Agent and calls this method that many times
+
+        '''
+        # assert False, "Method Not Implemented"
+        setattr(self, policy_name, torch.load(policy_file))
+
+    def get_action(self, obs):
+        assert False, "Method Not Implemented"
 
     def find_best_action(self, network, observation) -> np.ndarray:
         '''
@@ -43,9 +70,8 @@ class Agent(object):
         '''
         obs_v = torch.tensor(observation).float().to(self.device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
-        # print(self.acs_space)
         for i in range(self.acs_space):
-            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device) 
+            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device)
             q_val = network(torch.cat([obs_v, act_v]))
             if q_val > best_q:
                 best_q = q_val
@@ -55,6 +81,14 @@ class Agent(object):
 
     @staticmethod
     def copy_model_over(from_model, to_model):
-        """Copies model parameters from from_model to to_model"""
+        """
+            Copies model parameters from @from_model to @to_model
+        """
         for to_model, from_model in zip(to_model.parameters(), from_model.parameters()):
             to_model.data.copy_(from_model.data.clone())
+    
+    @staticmethod
+    def mod_lr(optim, lr):
+        for g in optim.param_groups:
+            # print(g['lr'])
+            g['lr'] = lr

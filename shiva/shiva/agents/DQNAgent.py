@@ -28,7 +28,7 @@ class DQNAgent(Agent):
         self.target_policy = copy.deepcopy(self.policy)
         self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.policy.parameters(), lr=self.learning_rate)
 
-    def get_action(self, obs):
+    def get_action(self, obs, step_n):
         '''
             This method iterates over all the possible actions to find the one with the highest Q value
         '''
@@ -45,10 +45,17 @@ class DQNAgent(Agent):
         obs_v = torch.tensor(observation).float().to(self.device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
         for i in range(self.acs_space):
-            act_v = misc.action2one_hot_v(self.acs_space,i)
+            act_v = action2one_hot_v(self.acs_space,i)
             q_val = self.policy(torch.cat([obs_v, act_v.to(self.device)]))
             if q_val > best_q:
                 best_q = q_val
                 best_act_v = act_v
         best_act = best_act_v
         return np.argmax(best_act).numpy()
+
+    def save(self, save_path, step):
+        torch.save(self.policy, save_path + '/policy.pth')
+        torch.save(self.target_policy, save_path + '/target_policy.pth')
+        
+    def __str__(self):
+        return 'DQNAgent'

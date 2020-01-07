@@ -65,7 +65,7 @@ executable, you can pass the name of the executable with the argument
 'file_name' of the `UnityEnvironment`. For instance:
 
 ```python
-from mlagents.envs.environment import UnityEnvironment
+from mlagents_envs.environment import UnityEnvironment
 env = UnityEnvironment(file_name=<env_name>)
 ```
 
@@ -112,23 +112,6 @@ ml-agents$ mlagents-learn config/trainer_config.yaml --env=3DBall --run-id=first
                    `▀█▓▓▓▓▓▓▓▓▓▌
                         ¬`▀▀▀█▓
 
-
-INFO:mlagents.learn:{'--curriculum': 'None',
- '--docker-target-name': 'Empty',
- '--env': '3DBall',
- '--help': False,
- '--keep-checkpoints': '5',
- '--lesson': '0',
- '--load': False,
- '--no-graphics': False,
- '--num-runs': '1',
- '--run-id': 'firstRun',
- '--save-freq': '50000',
- '--seed': '-1',
- '--slow': False,
- '--train': True,
- '--worker-id': '0',
- '<trainer-config-path>': 'config/trainer_config.yaml'}
 ```
 
 **Note**: If you're using Anaconda, don't forget to activate the ml-agents
@@ -141,15 +124,11 @@ like this:
 CrashReporter: initialized
 Mono path[0] = '/Users/dericp/workspace/ml-agents/3DBall.app/Contents/Resources/Data/Managed'
 Mono config path = '/Users/dericp/workspace/ml-agents/3DBall.app/Contents/MonoBleedingEdge/etc'
-INFO:mlagents.envs:
-'Ball3DAcademy' started successfully!
-INFO:mlagents.envs:
+INFO:mlagents_envs:
 'Ball3DAcademy' started successfully!
 Unity Academy name: Ball3DAcademy
-        Number of Brains: 1
-        Number of Training Brains : 1
-        Reset Parameters :
 
+INFO:mlagents_envs:Connected new brain:
 Unity brain name: Ball3DLearning
         Number of Visual Observations (per agent): 0
         Vector Observation space size (per agent): 8
@@ -157,7 +136,7 @@ Unity brain name: Ball3DLearning
         Vector Action space type: continuous
         Vector Action space size (per agent): [2]
         Vector Action descriptions: ,
-INFO:mlagents.envs:Hyperparameters for the PPO Trainer of brain Ball3DLearning:
+INFO:mlagents_envs:Hyperparameters for the PPO Trainer of brain Ball3DLearning:
         batch_size:          64
         beta:                0.001
         buffer_size:         12000

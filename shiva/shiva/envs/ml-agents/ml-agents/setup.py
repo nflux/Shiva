@@ -2,10 +2,11 @@ from io import open
 import os
 import sys
 
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 from setuptools.command.install import install
+import mlagents.trainers
 
-VERSION = "0.11.0"
+VERSION = mlagents.trainers.__version__
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -49,9 +50,7 @@ setup(
         "Programming Language :: Python :: 3.7",
     ],
     # find_namespace_packages will recurse through the directories and find all the packages
-    packages=find_namespace_packages(
-        exclude=["*.tests", "*.tests.*", "tests.*", "tests"]
-    ),
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     zip_safe=False,
     install_requires=[
         # Test-only dependencies should go in test_requirements.txt, not here.
@@ -64,7 +63,7 @@ setup(
         "Pillow>=4.2.1",
         "protobuf>=3.6",
         "pyyaml",
-        "tensorflow>=1.7,<2.0",
+        "tensorflow>=1.7,<2.1",
         'pypiwin32==223;platform_system=="Windows"',
     ],
     python_requires=">=3.6.1",

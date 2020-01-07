@@ -16,11 +16,11 @@ class DQNAlgorithm(Algorithm):
         super(DQNAlgorithm, self).__init__(obs_space, acs_space, configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
-        self.acs_space = acs_space
+        self.acs_space = acs_space['acs_space']
         self.obs_space = obs_space
         self.loss = 0
 
-    def update(self, agent, minibatch, step_n):
+    def update(self, agent, buffer, step_n, episodic=False):
         '''
             Implementation
                 1) Calculate what the current expected Q val from each sample on the replay buffer would be
@@ -29,14 +29,19 @@ class DQNAlgorithm(Algorithm):
                 4) If agent steps reached C, update agent.target network
 
             Input
-                agent       Agent who we are updating
-                minibatch   Batch from the experience replay buffer
-
-            Returns
-                None
+                agent       Agent reference who we are updating
+                buffer      Buffer reference to sample from
+                step_n      Current step number
+                episodic    Flag indicating if update is episodic
         '''
+        if episodic:
+            '''
+                DQN updates at every timestep, here we avoid doing an extra update after the episode terminates
+            '''
+            return
 
-        states, actions, rewards, next_states, dones = minibatch
+        states, actions, rewards, next_states, dones = buffer.sample()
+
         # make tensors as needed
         states_v = torch.tensor(states).float().to(self.device)
         next_states_v = torch.tensor(next_states).float().to(self.device)
@@ -90,10 +95,12 @@ class DQNAlgorithm(Algorithm):
             action = action2one_hot(self.acs_space, action_idx, numpy=False)
         elif random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
             # this might not be correct implementation of e greedy
-            # print('greedy')
             action_idx = random.sample(range(self.acs_space), 1)[0]
             action = action2one_hot(self.acs_space, action_idx)
         else:
+            if len(observation.shape) > 1:
+                # print('here')
+                pass
             # Iterate over all the actions to find the highest Q value
             action = agent.get_action(observation)
         return action # replay buffer store lists and env does np.argmax(action)
@@ -101,8 +108,8 @@ class DQNAlgorithm(Algorithm):
     def get_loss(self):
         return self.loss
 
-    def create_agent(self):
-        self.agent = DQNAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self, agent_id):
+        self.agent = DQNAgent(agent_id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):
@@ -114,3 +121,6 @@ class DQNAlgorithm(Algorithm):
         else:
             metrics = []
         return metrics
+
+    def __str__(self):
+        return 'DQNAlgorithm'

@@ -3,30 +3,29 @@
 Are specified in detail below.
 ## Contents
 *   Algorithm (Abstract)
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/Algorithm.py)
+    *   [Link to Code](../shiva/algorithms/Algorithm.py)
 *   ContinousDDPGAlgorithm
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/ContinuousDDPGAlgorithm.py)
+    *   [Link to Code](../shiva/algorithms/ContinuousDDPGAlgorithm.py)
 *   DQNAlgorithm
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/DQNAlgorithm.py)
+    *   [Link to Code](../shiva/algorithms/DQNAlgorithm.py)
 *   DaggerAlgorithm
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/DaggerAlgorithm.py)
+    *   [Link to Code](../shiva/algorithms/DaggerAlgorithm.py)
 *   DiscreteDDPGAlgorithm
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/DiscreteDDPGAlgorithm.py)
+    *   [Link to Code](../shiva/algorithms/DiscreteDDPGAlgorithm.py)
 *   ParameterizedDDPGAlgorithm
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/ParametrizedDDPGAlgorithm.py)
+    *   [Link to Code](../shiva/algorithms/ParametrizedDDPGAlgorithm.py)
 *   PPOAlgorithm
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/PPOAlgorithm.py)
+    *   [Link to Code](../shiva/algorithms/PPOAlgorithm.py)
 *   SupervisedAlgorithm
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/SupervisedAlgorithm.py)
-*   init
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/__init__.py)
+    *   [Link to Code](../shiva/algorithms/SupervisedAlgorithm.py)
 
 ##  Algorithm (Abstract)
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/Algorithm.py)
+[Link to Code](../shiva/algorithms/Algorithm.py)
 
-All the algorithms inherit from this abstract class. Learn more about Shiva's abstract classes [here](https://github.com/nflux/Control-Tasks/blob/master/shiva/docs/Abstract-Classes.md).
+All the algorithms inherit from this abstract class. Learn more about Shiva's abstract classes [here](../docs/Abstract-Classes.md).
+
 ##  ContinuousDDPGAlgorithm
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/ContinuousDDPGAlgorithm.py)
+[Link to Code](../shiva/algorithms/DDPGAlgorithm.py)
 ### Config Set Up     
 ```
 [Algorithm]
@@ -45,8 +44,9 @@ epsilon_decay=0.00005
 c=200
 tau=0.99
 ```
+
 ##  DQNAlgorithm
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/DQNAlgorithm.py)
+[Link to Code](../shiva/algorithms/DQNAlgorithm.py)
 ### Config Set Up     
 ```
 [Algorithm]
@@ -62,8 +62,9 @@ epsilon_end=0.02
 epsilon_decay=0.00005
 c=200
 ```
+
 ##  DaggerAlgorithm
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/DaggerAlgorithm.py)
+[Link to Code](../shiva/algorithms/DaggerAlgorithm.py)
 *   Supports Discrete and Continuous Action Space. 
 *   init(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
     -   ***DESCRIPTION***
@@ -140,7 +141,7 @@ c=200
 ```
 
 ##  DiscreteDDPGAlgorithm
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/DiscreteDDPGAlgorithm.py)
+[Link to Code](../shiva/algorithms/DiscreteDDPGAlgorithm.py)
 ### Config Set Up     
 ```
 [Algorithm]
@@ -159,8 +160,9 @@ epsilon_decay=0.00005
 c=200
 tau=0.999
 ```
+
 ## ParameterizedDDPGAlgorithm
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/ParametrizedDDPGAlgorithm.py)
+[Link to Code](../shiva/algorithms/ParametrizedDDPGAlgorithm.py)
 ### Config Set Up     
 ```
 [Algorithm]
@@ -179,8 +181,9 @@ epsilon_decay=0.00005
 c=200
 tau=0.0001
 ```
+
 ## PPO
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/PPOAlgorithm.py)
+[Link to Code](../shiva/algorithms/PPOAlgorithm.py)
 ### Config Set Up     
 ```
 [Algorithm]
@@ -204,7 +207,7 @@ c=200
 tau=0.99
 ```
 ##  SupervisedAlgorithm.py
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/SupervisedAlgorithm.py)
+[Link to Code](../shiva/algorithms/SupervisedAlgorithm.py)
 *   Supports Discrete and Continuous Action Space. 
     -   ***DESCRIPTION***
         +   Initializes the Dagger Algorithm.
@@ -274,6 +277,3 @@ epsilon_end=0.02
 epsilon_decay=0.00005
 c=200
 ```
-
-## init
-[Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/algorithms/__init__.py)

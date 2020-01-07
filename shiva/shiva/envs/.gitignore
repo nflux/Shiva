@@ -1,1 +1,6 @@
-unitybuilds/*
+# Unity
+unitybuilds/
+
+# RoboCup
+librcsc/
+rcssserver/

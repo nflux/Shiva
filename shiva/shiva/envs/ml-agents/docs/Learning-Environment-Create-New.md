@@ -26,8 +26,7 @@ steps:
     calculate the rewards used for reinforcement training. You can also implement
     optional methods to reset the Agent when it has finished or failed its task.
 4. Add your Agent subclasses to appropriate GameObjects, typically, the object
-    in the scene that represents the Agent in the simulation. Each Agent object
-    must be assigned a Brain object.
+    in the scene that represents the Agent in the simulation.
 
 **Note:** If you are unfamiliar with Unity, refer to
 [Learning the interface](https://docs.unity3d.com/Manual/LearningtheInterface.html)
@@ -48,7 +47,10 @@ importing the ML-Agents assets into it:
 3. In a file system window, navigate to the folder containing your cloned
     ML-Agents repository.
 4. Drag the `ML-Agents` folder from `UnitySDK/Assets` to the Unity
-    Editor Project window.
+    Editor Project window. If you see console errors about Barracuda, make sure
+    you've installed Barracuda from the Unity Package Manager. More information
+    can be found in the [installation instructions](Installation.md) under
+    **Package Installation**.
 
 Your Unity **Project** window should contain the following assets:
 
@@ -367,7 +369,7 @@ With the action and reward logic outlined above, the final version of the
 
 ```csharp
 public float speed = 10;
-public override void AgentAction(float[] vectorAction, string textAction)
+public override void AgentAction(float[] vectorAction)
 {
     // Actions, size = 2
     Vector3 controlSignal = Vector3.zero;
@@ -411,7 +413,8 @@ with our Agent code.
 2. Change **Decision Interval** from `1` to `10`.
 3. Drag the Target GameObject from the Hierarchy window to the RollerAgent
     Target field.
-4. Modify the Behavior Parameters of the Agent :
+4. Add the Behavior Parameters script with the Add Component button from the RollerAgent Inspector.
+5. Modify the Behavior Parameters of the Agent :
   * `Behavior Name` to *RollerBallBrain*
   * `Vector Observation` `Space Size` = 8
   * `Vector Action` `Space Type` = **Continuous**

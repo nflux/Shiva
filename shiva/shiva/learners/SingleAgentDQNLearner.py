@@ -10,7 +10,7 @@ class SingleAgentDQNLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentDQNLearner,self).__init__(learner_id, config)
 
-    def run(self):
+    def run(self, train=True):
         step_count_per_run = 0
         while not self.env.finished(self.episodes):
             self.env.reset()
@@ -29,7 +29,7 @@ class SingleAgentDQNLearner(Learner):
                     pass
                 step_count_per_run += 1
                 ''''''
-            self.alg.update(self.agent, self.buffer.sample(), self.env.step_count)
+            self.alg.update(self.agent, self.buffer, self.env.step_count)
             self.collect_metrics(True) # metrics per episode
             self.checkpoint()
             # print('Learner {}\tEpisode {} complete on {} steps!\tEpisodic reward: {} '.format(self.id, self.ep_count, self.env.steps_per_episode, self.env.reward_per_episode))
@@ -38,7 +38,6 @@ class SingleAgentDQNLearner(Learner):
 
     def step(self):
         observation = self.env.get_observation()
-
         """Temporary fix for Unity as it receives multiple observations"""
         if len(observation.shape) > 1:
             action = [self.alg.get_action(self.agent, obs, self.step_count) for obs in observation]
@@ -60,9 +59,9 @@ class SingleAgentDQNLearner(Learner):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         try:
             self.configs['Agent']['learning_rate'] = random.uniform(self.learning_rate[0],self.learning_rate[1])
-            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         except:
-            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
@@ -74,10 +73,10 @@ class SingleAgentDQNLearner(Learner):
         self.alg = self.create_algorithm()
 
         if self.load_agents:
-            self.agent = Admin._load_agents(self.load_agents)[0]
+            self.agent = Admin._load_agent(self.load_agents)
             self.buffer = Admin._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent()
+            self.agent = self.alg.create_agent(self.get_new_agent_id())
             if self.using_buffer:
                 self.buffer = self.create_buffer()
 

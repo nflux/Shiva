@@ -13,7 +13,7 @@ namespace MLAgents
     [ScriptedImporter(1, new[] {"demo"})]
     public class DemonstrationImporter : ScriptedImporter
     {
-        private const string k_IconPath = "Assets/ML-Agents/Resources/DemoIcon.png";
+        const string k_IconPath = "Assets/ML-Agents/Resources/DemoIcon.png";
 
         public override void OnImportAsset(AssetImportContext ctx)
         {
@@ -44,12 +44,8 @@ namespace MLAgents
                 var texture = (Texture2D)
                     AssetDatabase.LoadAssetAtPath(k_IconPath, typeof(Texture2D));
 
-#if UNITY_2017_3_OR_NEWER
                 ctx.AddObjectToAsset(ctx.assetPath, demonstration, texture);
                 ctx.SetMainObject(demonstration);
-#else
-                ctx.SetMainAsset(ctx.assetPath, demonstration);
-#endif
             }
             catch
             {

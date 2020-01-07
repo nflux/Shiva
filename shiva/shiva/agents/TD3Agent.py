@@ -48,3 +48,7 @@ class TD3Agent(Agent):
         network = torch.load(load_path)
         attr = os.path.split('/')[-1].replace('.pth', '')
         setattr(self, attr, network)
+
+
+    def __str__(self):
+        return 'TD3Agent'

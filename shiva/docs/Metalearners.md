@@ -4,29 +4,23 @@
 
 # Contents
 *   __init__ 
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/metalearners/__init__.py)
+    *   [Link to Code](../shiva/metalearners/__init__.py)
 *   MetaLearner
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/metalearners/MetaLearner.py)
+    *   [Link to Code](../shiva/metalearners/MetaLearner.py)
 *   MultipleAgentMetaLearner
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/metalearners/MultipleAgentMetaLearner.py)
+    *   [Link to Code](../shiva/metalearners/MultipleAgentMetaLearner.py)
 *   SingleAgentMetaLearner
-    *   [Link to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/metalearners/SingleAgentMetaLearner.py)
-
-## __init__
-___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/metalearners/__init__.py)
-
-Add any metalearner modules you add to Shiva to this file so Shiva can see it.
+    *   [Link to Code](../shiva/metalearners/SingleAgentMetaLearner.py)
 
 ## MetaLearner
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/metalearners/MetaLearner.py)
+[Go to Code](../shiva/metalearners/MetaLearner.py)
 
 Abstract class all MetaLearners inherit from.
 
 ## MultipleAgentMetaLearner
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/metalearners/MultipleAgentMetaLearner.py)
+[Go to Code](../shiva/metalearners/MultipleAgentMetaLearner.py)
 ### Config Set Up     
 ```
 [MetaLearner]
@@ -47,7 +41,7 @@ perturbation_factors = [0.8,1.2]
 
 ## SingleAgentMetaLearner
 ___
-[Go to Code](https://github.com/nflux/Control-Tasks/blob/master/shiva/shiva/metalearners/SingleAgentMetaLearner.py)
+[Go to Code](../shiva/metalearners/SingleAgentMetaLearner.py)
 ### Config Set Up     
 ```
 [MetaLearner]

@@ -18,7 +18,7 @@ The network constructor requires the following attributes in the Network section
     * gumbel            only if SoftMaxHeadDynamicLinearNetwork class is used, default False
 
 
-## [DynamicLinearNetwork class](https://github.com/nflux/Control-Tasks/blob/merging/shiva/shiva/networks/DynamicLinearNetwork.py)
+## [DynamicLinearNetwork class](../shiva/networks/DynamicLinearNetwork.py)
 
 We currently have two available types of constructors who dynamically build the network using PyTorch framework. These are:
 * DynamicLinearSequential: creates a [torch.nn.Sequential](https://pytorch.org/docs/stable/nn.html#sequential) with [linear transformations](https://pytorch.org/docs/stable/nn.html#linear) on the incoming data

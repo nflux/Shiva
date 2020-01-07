@@ -31,13 +31,10 @@ class GymEnvironment(Environment):
         self.acs = action
         # print(self.action_space_continuous)
 
-
         if discrete_select == 'argmax':
             action4Gym = np.argmax(action) if self.action_space_continuous is None else action
         elif discrete_select == 'sample':
             action4Gym = np.random.choice(len(action), p=action)
-
-
 
         # print(action4Gym)
         self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
@@ -52,30 +49,13 @@ class GymEnvironment(Environment):
                 Cumulative Reward               self.reward_total
         '''
         self.steps_per_episode += 1
-
-
-
         self.step_count += 1
         self.done_count += 1 if self.done else 0
         self.reward_per_episode += self.reward_per_step
         self.reward_total += self.reward_per_step
 
-        # if self.done:
-        #     print(self.steps_per_episode)
-
-
-        '''
-            You can specify the max steps in the gym environment by changing the max_steps
-            config in your .ini file.
-        '''
-
-        if self.action_space['discrete'] != 0:
-            action = action2one_hot(self.action_space['discrete'], action4Gym)
-
-        # if self.steps_per_episode % self.max_steps == 0 or (self.done and self.steps_per_episode % 200 != 0):
-        #     self.done = True
-        # else:
-        #     self.done = False
+        # if self.action_space['discrete'] != 0:
+        #     action = action2one_hot(self.action_space['discrete'], action4Gym)
 
         if self.normalize:
             return self.obs, self.normalize_reward(self.reward_per_step), self.done, {'raw_reward': self.reward_per_step, 'action': action}
@@ -99,6 +79,9 @@ class GymEnvironment(Environment):
                 ('Reward/Per_Episode', self.reward_per_episode),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
+
+            print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
+
         return metrics
 
     def is_done(self):
@@ -146,6 +129,9 @@ class GymEnvironment(Environment):
             Returns episodic reward
         '''
         return self.reward_per_episode
+
+    def get_reward_episode(self):
+        return self.reward_episode
 
     def load_viewer(self):
         if self.render:

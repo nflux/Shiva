@@ -15,19 +15,29 @@ class TD3Algorithm(Algorithm):
         np.random.seed(self.manual_seed)
 
         self.obs_space = observation_space
-        self.acs_space = action_space
+        self.acs_space = action_space['acs_space']
         # self.exploration_strategy = OU_Noise_Exploration(action_space, self.configs[0])
         # self.exploration_strategy_critic = Gaussian_Exploration(self.configs[0])
-        self.ou_noise = noise.OUNoise(action_space['acs_space'], self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
-        self.ou_noise_critic = noise.OUNoise(action_space['acs_space'], self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        self.ou_noise = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        self.ou_noise_critic = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
 
         self.actor_loss = 0
         self.critic_loss_1 = 0
         self.critic_loss_2 = 0
 
-    def update(self, agent, buffer, step_count):
+    def update(self, agent, buffer, step_count, episodic=False):
+        if episodic:
+            self.ou_noise.reset()
+            self.ou_noise_critic.reset()
+            return
+
         if step_count < self.exploration_steps:
             return
+
+        '''
+            Update starts here
+        '''
+
         self.agent = agent
         for _ in range(self.update_iterations):
             states, actions, rewards, next_states, dones = buffer.sample()
@@ -118,15 +128,15 @@ class TD3Algorithm(Algorithm):
             """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
             self.agent.actor.eval()
             with torch.no_grad():
-                obs = torch.tensor(observation, dtype=torch.float)
+                obs = torch.tensor(observation, dtype=torch.float).to(self.device)
                 self.action = self.agent.actor(obs).cpu().data.numpy()
             self.agent.actor.train()
             # action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
             self.action += self.ou_noise.noise()
             return self.action
 
-    def create_agent(self):
-        self.agent = TD3Agent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self, id):
+        self.agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):
@@ -141,3 +151,6 @@ class TD3Algorithm(Algorithm):
         else:
             metrics = []
         return metrics
+
+    def __str__(self):
+        return 'TD3Algorithm'

@@ -1,46 +1,50 @@
 import os
 import configparser
 import inspect
+from tensorboardX import SummaryWriter
+
 import shiva.helpers.dir_handler as dh
 import shiva.helpers.file_handler as fh
 import shiva.helpers.config_handler as ch
 import shiva.helpers.misc as misc
-from tensorboardX import SummaryWriter
 
 ###################################################################################
 # 
 #   ShivaAdmin
 #       This administrator class is a filing helper for the Shiva framework
 #
-#       Part of it's tasks are:
-#       
+#       Part of it's current tasks are:
 #           - Track and create directories for the MetaLearners, Learners, Agents
 #           - Perform the mechanics of saving and loading of MetaLearners, Learners, Agents which include
-#                   - The config files used
-#                   - The Agent class pickle
-#                   - The Agent networks (implemented at the Agent level due to the different Agents specifications)
+#                   - The config file used for the Learner session
+#                   - The class pickles (Learner, Agent, Buffer)
+#                   - The Agent networks (implemented at the Agent level due to the different Agents specifications, like having actor, critic, target, etc..)
 #           - Add a SummaryWriter for the Agents and the metrics for a given agent
 #
-#       The folders structure being used are given by the input @init_dir on ShivaAdmin instantiation
-#       Requirements of the .INI file
+#       Config Requirements:
 #
 #            [SHIVA]
-#            save =              True           Saving option
-#            traceback =         True           Debugging traceback option
-#
-#            [DIRECTORY]
-#            runs =              "/runs"        Folder where the runs will be saved
-#            inits =             "/inits"       Config files that will be passed to the MetaLearner
-#            modules =           "/modules"     Folder where the MetaLearner, Learner, Agents, Environment, etc..
-#            utils =             "/utils"       Utilities/helpers folder
-#            data =              "/data"        Some other data?
-#
+#            save =              True                   Saving option
+#            traceback =         True                   Debugging traceback option
+#            directory =         { 'runs': '/runs' }    Dictionary of folders where data will be stored
 #         
 ###################################################################################
 
 class ShivaAdmin():
-    def __init__(self):
-        pass
+
+    __folder_name__ = {
+        'config':       'configs',
+        'metalearner':  '{algorithm}-{env}',
+        'learner':      'L{id}',
+        'summary':      'Tensorboards',
+        'checkpoint':   'Ep{ep_num}',
+        'learner_data': 'Learner_Data',
+        'agent':        'A{id}',
+    }
+
+    def __init__(self, config=None):
+        if config is not None:
+            self.init(config)
 
     def init(self, config):
         '''
@@ -57,13 +61,13 @@ class ShivaAdmin():
         if self.traceback:
             misc.warnings.showwarning = misc.warn_with_traceback
 
-        self._curr_meta_learner_dir = ''
-        self._curr_learner_dir = {}
-        self._curr_agent_dir = {}
+        self._meta_learner_dir = ''
+        self._learner_dir = {}
+        self._agent_dir = {}
         self.writer = {}
 
     def __str__(self):
-        return "ShivaAdmin"
+        return "<ShivaAdmin>"
     
     def _set_dirs_attrs(self) -> None:
         '''
@@ -76,19 +80,10 @@ class ShivaAdmin():
         for key, folder_name in self.dirs.items():
             directory = self.base_url + folder_name
             setattr(self, key+'_url', directory)
+            if not self.need_to_save: continue
             dh.make_dir(os.path.join(self.base_url, directory), overwrite=True)
 
-    # def get_inits(self) -> list:
-    #     '''
-    #         This procedure reads the *.ini files in path given by user at the init.ini file, section [DIRECTORY], attribute INITS
-    #
-    #         Returns
-    #             A list of config dictionaries
-    #     '''
-    #     self.meta_learner_config = ch.parse_configs(self.inits_url)
-    #     return self.meta_learner_config
-    
-    def add_meta_profile(self, meta_learner, env_name: str='') -> None:
+    def add_meta_profile(self, meta_learner, folder_name: str=None) -> None:
         '''
             This method would be called by a Meta Learner in order to add himself
             Is needed in order to keep track of the Meta Learner directory.
@@ -96,12 +91,14 @@ class ShivaAdmin():
 
             Input
                 @meta_learner       Meta Learner instance to be filed
-                @env_name           Environment name to append to the Meta Learner folder
+                @folder_name              String to use as the folder name
         '''
-        if self.need_to_save:
-            ml_folder_name = env_name
-            self._curr_meta_learner_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, ml_folder_name))
-            print("New MetaLearner @ {}".format(self._curr_meta_learner_dir))
+        if not self.need_to_save: return
+        if folder_name is None:
+            folder_name = self.__folder_name__['metalearner'].format(algorithm=meta_learner.config['Algorithm']['type'], env=meta_learner.config['Environment']['env_name'])
+        new_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, folder_name))
+        self._meta_learner_dir = new_dir
+        print("New MetaLearner @ {}".format(self._meta_learner_dir))
 
     def add_learner_profile(self, learner) -> None:
         '''
@@ -109,49 +106,63 @@ class ShivaAdmin():
             Creates a folder for it if save flag is True.
 
             Input
-                @learner            Learner instance to be filed
+                @learner            Learner instance to be saved
         '''
         if not self.need_to_save: return
-        if learner.id not in self._curr_learner_dir:
-            self._curr_learner_dir[learner.id] = dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'L-'+str(learner.id)))
-            self._curr_agent_dir[learner.id] = {}
-            self.writer[learner.id] = {}
+        if learner.id not in self._learner_dir:
+            self._learner_dir[learner.id] = {}
+            new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
+            self._learner_dir[learner.id]['base'] = new_dir
+            self._learner_dir[learner.id]['checkpoint'] = [] # keep track of each checkpoint directory
+            new_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['summary']) )
+            self._learner_dir[learner.id]['summary'] = new_dir
+            self._agent_dir[learner.id] = {}
+            self.writer[learner.id] = {} # this will be a dictionary whos key is an agent.id that maps to a unique tensorboard file for that agent
 
-    def update_agents_profile(self, learner):
+    def checkpoint(self, learner):
         '''
-            This procedure adds all the agents profile inside the learner
+            This procedure:
+                1. Adds Learner profile if not existing
+                2. Creates a directory for the new checkpoint
+                3. Saves current state of agents, learner and config in checkpoint folder
 
             Input
                 @learner            Learner instance
         '''
         if not self.need_to_save: return
         self.add_learner_profile(learner) # will only add if was not profiled before
-        self._save_learner_agents_mechanics(learner)
+        # create checkpoint folder
+        new_checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(learner.env.done_count)) ))
+        self._learner_dir[learner.id]['checkpoint'].append(new_checkpoint_dir)
+        self._save_learner(learner)
+        self._save_learner_agents(learner)
 
-    def _add_agent_profile(self, learner, agent):
+    def _add_agent_checkpoint(self, learner, agent):
         '''
-            Needed to keep track of the agents and it's directory.
-            Creates a folder for it if save flag is True.
+            Creates the corresponding folder for the agent checkpoint
+            Instantiates the Tensorboard SummaryWriter if doesn't exists
 
             Input
-                @learner            Learner instance owner of the Agent
-                @agent              Agent instance to be filed
+                @learner            Learner instance ref owner of the Agent
+                @agent              Agent instance ref to be saved
         '''
         if not self.need_to_save: return
-        if agent.id not in self._curr_agent_dir[learner.id]:
-            self._curr_agent_dir[learner.id][agent.id] = dh.make_dir(os.path.join(self._curr_learner_dir[learner.id], 'Agents', str(agent.id)))
-            self.init_summary_writer(learner, agent)
+        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id)) ) )
+        if agent.id not in self._agent_dir[learner.id]:
+            self._agent_dir[learner.id][agent.id] = []
+        self._agent_dir[learner.id][agent.id].append(new_dir)
+        self.init_summary_writer(learner, agent) # just in case it's a new agent?
 
-    def get_agent_dir(self, learner, agent) -> str:
+    def get_new_agent_dir(self, learner, agent) -> str:
         '''
-            Returns the absolute address location of the given agent
-            
+            Creates a new checkpoint directory for the agent and returns it
+
             Input
                 @learner            Learner instance owner of the Agent
                 @agent              Agent instance
         '''
-        self._add_agent_profile(learner, agent)
-        return self._curr_agent_dir[learner.id][agent.id]
+        self._add_agent_checkpoint(learner, agent)
+        return self._agent_dir[learner.id][agent.id][-1]
 
     def init_summary_writer(self, learner, agent) -> None:
         '''
@@ -162,7 +173,12 @@ class ShivaAdmin():
                 @agent              Agent who we want to records the metrics
         '''
         if not self.need_to_save: return
-        self.writer[learner.id][agent.id] =  SummaryWriter(self.get_agent_dir(learner, agent))
+        if agent.id not in self.writer[learner.id]:
+            new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['summary'], self.__folder_name__['agent'].format(id=str(agent.id)) ) )
+            self.writer[learner.id][agent.id] = SummaryWriter(
+                logdir = new_dir,
+                # filename_suffix = '-' + self.__folder_name__['agent'].format(id=str(agent.id))
+            )
 
     def add_summary_writer(self, learner, agent, scalar_name, value_y, value_x) -> None:
         '''
@@ -176,9 +192,7 @@ class ShivaAdmin():
                 @value_x            Usually time
         '''
         if not self.need_to_save: return
-        # print('before writing learner_id {}\tagent_id {}\tscalar {}\tvalue_y {}\tvalue_x {}'.format(learner.id, agent.id, scalar_name, value_y, value_x))
         self.writer[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
-        # print('after writing!')
 
     def save(self, caller) -> None:
         '''
@@ -194,59 +208,71 @@ class ShivaAdmin():
         if not self.need_to_save: return
         self.caller = caller
         if 'metalearner' in inspect.getfile(self.caller.__class__).lower():
-            self._save_meta_learner()
+            # self._save_meta_learner()
+            pass
         elif 'learner' in inspect.getfile(self.caller.__class__).lower():
-            self._save_learner()
+            # self._save_learner()
+            self.checkpoint(self.caller)
         else:
-            assert False, "{} couldn't identify who is trying to save. Only valid for a MetaLearner or Learner subclasses. Got {}".format(self, self.caller)
+            assert False, "{} couldn't identify who is trying to save. Only valid for a MetaLearner or Learner subclasses, but got {}".format(self, self.caller)
 
     def _save_meta_learner(self) -> None:
         '''
             Mechanics of saving a MetaLearner
-                1-  Saves each of the config files used
-                2-  Then iterates over all it's Learners to save them
-
-            No input because we are only handling only ONE MetaLearner
+            Not sure what do we want to save here
         '''
-        print("Saving Meta Learner @ {}".format(self._curr_meta_learner_dir))
-        # create the meta learner configs folder
-        dh.make_dir(os.path.join(self._curr_meta_learner_dir, 'configs'))
+        assert False, "Not implemented"
+        # print("Saving Meta Learner @ {}".format(self._meta_learner_dir))
+        # # create the meta learner configs folder
+        # dh.make_dir(os.path.join(self._meta_learner_dir, self.__folder_name__['config']))
+
         # save each config file
-        if type(self.caller.config) == dict:
-            cf = self.caller.config
-            _filename_ = os.path.split(cf['_filename_'])[-1]
-            ch.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
-        elif type(self.caller.config) == list:
-            for cf in self.caller.config:
-                _filename_ = os.path.split(cf['_filename_'])[-1]
-                ch.save_dict_2_config_file(cf, os.path.join(self._curr_meta_learner_dir, 'configs', _filename_))
-        else:
-            assert False, "MetaLearner.config must be a list or a dictionary"
+        # if type(self.caller.config) == dict:
+        #     cf = self.caller.config
+        #     filename = os.path.split(cf['_filename_'])[-1]
+        #     ch.save_dict_2_config_file(cf, os.path.join(self._meta_learner_dir, self.__folder_name__['config'], filename))
+        # elif type(self.caller.config) == list:
+        #     for cf in self.caller.config:
+        #         filename = os.path.split(cf['_filename_'])[-1]
+        #         ch.save_dict_2_config_file(cf, os.path.join(self._meta_learner_dir, self.__folder_name__['config'], filename))
+        # else:
+        #     assert False, "MetaLearner.config must be a list or a dictionary"
         # save each learner
-        try:
-            for learner in self.caller.learners:
-                self._save_learner(learner)
-        except AttributeError:
-            self._save_learner(self.caller.learner)
+
+        # try:
+        #     for learner in self.caller.learners:
+        #         self._save_learner(learner)
+        # except AttributeError:
+        #     self._save_learner(self.caller.learner)
 
     def _save_learner(self, learner=None) -> None:
         '''
             Mechanics of saving a Learner
-                1-  Pickles the Learner class and save attributes
-                2-  Save all the agents inside
+                1.  Pickles the Learner class
+                2.  Pickles the Buffer
+                3.  Saves the Learners config
 
             Input
                 @learner        Learner instance we want to save
         '''
         learner = self.caller if learner is None else learner
         self.add_learner_profile(learner) # will only add if was not profiled before
-        # save learner pickle and attributes
-        learner_path = self._curr_learner_dir[learner.id]
-        fh.save_pickle_obj(learner, os.path.join(learner_path, 'learner_cls.pickle'))
-        # save agents
-        self._save_learner_agents_mechanics(learner)
+        # save learner pickle
+        learner_data_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['learner_data']) )
+        fh.save_pickle_obj(learner, os.path.join(learner_data_dir, 'learner_cls.pickle'))
+        # save buffer
+        fh.save_pickle_obj(learner.buffer, os.path.join(learner_data_dir, 'buffer_cls.pickle'))
+        # save learner current config status
+        if type(learner.configs) == dict:
+            cf = learner.configs
+            filename = os.path.split(cf['_filename_'])[-1]
+            ch.save_dict_2_config_file(cf, os.path.join(learner_data_dir, filename))
+        elif type(learner.configs) == list:
+            for cf in learner.config:
+                filename = os.path.split(cf['_filename_'])[-1]
+                ch.save_dict_2_config_file(cf, os.path.join(learner_data_dir, filename))
 
-    def _save_learner_agents_mechanics(self, learner):
+    def _save_learner_agents(self, learner):
         '''
             This procedure is it's own function because is used in other parts of the code
             If attribute learner.agents is a valid attribute, saves them (if iterable) or assumes is 1 agent
@@ -259,17 +285,21 @@ class ShivaAdmin():
             if type(learner.agents) == list:
                 for agent in learner.agents:
                     self._save_agent(learner, agent)
-                    self._save_buffer(learner,agent)
             else:
                 self._save_agent(learner, learner.agents)
-                self._save_buffer(learner, learner.agents)
         except AttributeError: # when learner has only 1 agent
-            self._save_agent(learner, learner.agent)
-            self._save_buffer(learner, learner.agent)
+            try:
+                if type(learner.agent) == list:
+                    for agent in learner.agent:
+                        self._save_agent(learner, agent)
+                else:
+                    self._save_agent(learner, learner.agent)
+            except AttributeError:
+                assert False, "Couldn't find the Learners agent/s..."
 
     def _save_agent(self, learner, agent):
         '''
-            Mechanics of saving a Agent
+            Mechanics of saving an individual Agent
                 1-  Pickles the agent object and save attributes
                 2-  Uses the save() method from the Agent class because Agents could have diff network structures
 
@@ -278,20 +308,13 @@ class ShivaAdmin():
                 @agent          Agent we want to save
         '''
         if not self.need_to_save: return
-        self._add_agent_profile(learner, agent)
-        agent_path = os.path.join(self._curr_agent_dir[learner.id][agent.id], 'Ep'+str(learner.env.done_count))
-        agent_path = dh.make_dir(agent_path)
+        agent_path = self.get_new_agent_dir(learner, agent)
         fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
         agent.save(agent_path, learner.env.get_current_step())
 
-    def _save_buffer(self,learner, agent):
-        ''' 
-            Mechanics of saving a Replay Buffer
-
-            1 - pickles the buffer object and saves it in the corresponding agent's folder
-        '''
-        buffer_path = self._curr_agent_dir[learner.id][agent.id]
-        fh.save_pickle_obj(learner.buffer, os.path.join(buffer_path, 'buffer.pickle'))
+    '''
+        LOAD METHODS
+    '''
 
     def load(self, caller, id=None):
         '''
@@ -317,33 +340,36 @@ class ShivaAdmin():
             Returns
                 MetaLearner instance
         '''
+        assert False, "Not implemented"
         print("Loading MetaLearner")
 
-    def _load_learner(self, path: str) -> object:
+    def _load_learner(self, path: str, includeAgents: bool=True) -> object:
         '''
-            The procedure will load only one single Learner if found in the given path
+            DO WE REALLY NEED THIS?
 
             Input
-                @path       Path where the learner files will be located
+                @path               Path to the Learner episode
+                @includeAgents      Boolean if want to include the agents in the returned Learner
 
             Returns
-                Learner
+                Learner instance
         '''
-        learner_pickle = dh.find_pattern_in_path(path, 'learner_cls.pickle')
-        assert len(learner_pickle) > 0, "No learners found in {}".format(path)
-        assert len(learner_pickle) == 1, "{} learner classes were found in {}".format(str(len(learner_pickle)), path)
-        learner_pickle = learner_pickle[0]
-        print('Loading Learner\n\t{}\n'.format(learner_pickle))
-        learner_path, _ = os.path.split(learner_pickle)
-        _new_learner = fh.load_pickle_obj(learner_pickle)
-        _new_learner.agents = self._load_agents(learner_path)
-        _new_learner.buffer = self._load_buffer(learner_path)
-        return _new_learner
+        assert False, 'Not implemented - Do we really need this method??????'
+        # learner_pickle = dh.find_pattern_in_path(path, 'learner_cls.pickle')
+        # assert len(learner_pickle) == 1, "{} learner pickles were found in {}".format(str(len(learner_pickle)), path)
+        # learner_pickle = learner_pickle[0]
+        # print('Loading Learner\n\t{}\n'.format(learner_pickle))
+        # learner_path, _ = os.path.split(learner_pickle)
+        # _new_learner = fh.load_pickle_obj(learner_pickle)
+        # if includeAgents:
+        #     _new_learner.agents = self._load_agents(learner_path)
+        #     _new_learner.buffer = self._load_buffer(learner_path)
+        # return _new_learner
 
     def _load_agents(self, path) -> list:
         '''
             For a given @path, the procedure will walk recursively over all the folders inside the @path
-            And find all the agent_cls.pickle and policy.pth files to load all those agents
+            And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
 
             Input
                 @path       Path where the agents files will be located
@@ -352,20 +378,25 @@ class ShivaAdmin():
         agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
         agents_policies = dh.find_pattern_in_path(path, '.pth')
         assert len(agents_pickles) > 0, "No agents found in {}".format(path)
-        print("Loading multiple agents is not yet so friendly. Try using shiva._load_agent()")
         print("Loading Agents..")
-        for agent_pickle, agent_policy in zip(agents_pickles, agents_policies):
-            print("\t{}\n\t{}\n".format(agent_pickle, agent_policy))
+        for agent_pickle in agents_pickles:
             _new_agent = fh.load_pickle_obj(agent_pickle)
-            _new_agent.load_net(agent_policy)
+            this_agent_folder = agent_pickle.replace('agent_cls.pickle', '')
+            this_agent_policies = []
+            # find this agents corresponding policies
+            for pols in agents_policies:
+                if this_agent_folder in pols:
+                    this_agent_policies.append(pols)
+                    policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
+                    _new_agent.load_net(policy_name, pols)
+            print("\t{} with {} networks".format(agent_pickle, len(this_agent_policies)))
             agents.append(_new_agent)
         return agents
-
 
     def _load_agent(self, path) -> list:
         '''
             For a given @path, the procedure will walk recursively over all the folders inside the @path
-            And find all the agent_cls.pickle and policy.pth files to load a single agent
+            And find all the agent_cls.pickle and policy.pth files to load a SINGLE AGENT
 
             InputW
                 @path       Path where the agents files will be located
@@ -374,27 +405,31 @@ class ShivaAdmin():
         agent_policy = dh.find_pattern_in_path(path, '.pth')
         assert len(agent_pickle) > 0, "No agent found in {}".format(path)
         assert len(agent_pickle) == 1, "Multiple agent_cls.pickles found. Try using shiva._load_agents()"
+        agent_pickle = agent_pickle[0]
         print("Loading Agent..")
-        print("\t{}\n\twith {} networks\n".format(agent_pickle, len(agent_policy)))
-        _new_agent = fh.load_pickle_obj(agent_pickle[0])
-        for policy_file in agent_policy:
-            _new_agent.load_net(policy_file)
+        print("\t{} with {} networks\n".format(agent_pickle, len(agent_policy)))
+        _new_agent = fh.load_pickle_obj(agent_pickle)
+        this_agent_folder = agent_pickle.replace('agent_cls.pickle', '')
+        for pols in agent_policy:
+            if this_agent_folder in pols:
+                # this_agent_policies.append(pols)
+                policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
+                _new_agent.load_net(policy_name, pols)
         return _new_agent
-
 
     def _load_buffer(self, path) -> list:
         '''
             For now, we have only 1 buffer per learner
-            
+
             Input
                 @path       Learner path
         '''
 
-        buffer_pickle = dh.find_pattern_in_path(path, 'buffer.pickle')[0]
+        buffer_pickle = dh.find_pattern_in_path(path, 'buffer_cls.pickle')
         assert len(buffer_pickle) > 0, "No buffer found in {}".format(path)
         print("Loading Buffer..")
-        print("\t{}\n".format(buffer_pickle))
-        return fh.load_pickle_obj(buffer_pickle)
+        print("\t{}\n".format(buffer_pickle[0]))
+        return fh.load_pickle_obj(buffer_pickle[0])
 
     
 
