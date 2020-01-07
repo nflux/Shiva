@@ -31,7 +31,7 @@ class DDPGAlgorithm(Algorithm):
                 DDPG updates at every step. This avoids doing an extra update at the end of an episode
                 But it does reset the noise after an episode
             '''
-            self.ou_noise.reset()
+            agent.ou_noise.reset()
             return
 
         if step_count < self.exploration_steps:

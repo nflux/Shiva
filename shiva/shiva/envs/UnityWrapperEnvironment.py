@@ -119,10 +119,10 @@ class UnityWrapperEnvironment(Environment):
 
     def is_done(self):
         '''
-            One Shiva episode will be playing the number of instances in Unity
+            One Shiva episode is when all instances in the Environment terminate at least once
         '''
-        #return self.temp_done_counter >= self.num_instances
-        return self.temp_done_counter >= self.update_episodes
+        return self.temp_done_counter >= self.num_instances
+        # return self.temp_done_counter >= self.update_episodes
 
     def _clean_actions(self, actions):
         '''

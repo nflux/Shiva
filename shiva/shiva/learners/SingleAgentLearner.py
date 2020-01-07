@@ -32,7 +32,7 @@ class SingleAgentLearner(Learner):
 
         """Temporary fix for Unity as it receives multiple observations"""
         if len(observation.shape) > 1:
-            action = [self.alg.get_action(self.agent, obs, self.env.step_count) for obs in observation]
+            action = [self.agent.get_action(obs, self.env.step_count) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
@@ -40,7 +40,7 @@ class SingleAgentLearner(Learner):
                 # print(act, rew, don)
                 self.buffer.append(exp)
         else:
-            action = self.alg.get_action(self.agent, observation, self.env.step_count)
+            action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action)
             t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)
