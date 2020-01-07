@@ -44,7 +44,7 @@ class DDPGAlgorithm(Algorithm):
             Updates starts here
         '''
 
-        print("updating!")
+        # print("updating!")
 
         states, actions, rewards, next_states, dones = buffer.sample()
 
@@ -111,7 +111,7 @@ class DDPGAlgorithm(Algorithm):
 
         # Grab the discrete actions in the batch
         if dims == 3:
-            print(states.shape, actions.shape)
+            # print(states.shape, actions.shape)
             Q_these_states_main = agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], 2) )
         elif dims == 2:
             Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 1) )
