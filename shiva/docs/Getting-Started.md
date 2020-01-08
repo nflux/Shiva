@@ -24,6 +24,12 @@ It's highly recommended that you create a new virtual environment for the projec
 python -m venv shiva_env
 ```
 
+Activate the virtual environment,
+
+```bash
+source shiva_env/bin/activate
+```
+
 Then we can go into the project structure and start setting up components and dependencies. 
 
 Run the below command in order to install the requirements.
