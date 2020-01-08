@@ -27,11 +27,18 @@ class SingleAgentMultiEnvLearner(Learner):
         self.ep_count = torch.zeros(1).share_memory_()
         self.updates = 5
         self.agent_dir = os.getcwd() + self.agent_path
+        self.waitForLearner = torch.zeros(1).share_memory_()
+        self.MULTI_ENV_FLAG = True
 
     def run(self):
         self.step_count = 0
         while self.ep_count < self.episodes:
             while not self.queue.empty():
+
+                # this should prevent the GymWrapper from getting to far ahead of the learner
+                # Makes the gym wrapper stop collecting momentarily
+                if self.queue.qsize() >= 5:
+                    self.waitForLearner[0] = 1
 
                 exp = self.queue.get()
                 if self.configs['Algorithm']['algorithm'] == 'PPO':
@@ -39,22 +46,29 @@ class SingleAgentMultiEnvLearner(Learner):
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     for i in range(len(observations)):
                         self.step_count += 1
-                        self.buffer.append([observations[i], actions[i], rewards[i][0],logprobs[i], next_observations[i], dones[i][0]])
+                        self.buffer.append(copy.deepcopy([observations[i], actions[i], rewards[i][0],logprobs[i], next_observations[i], dones[i][0]]))
                 else:
                     observations, actions, rewards, next_observations, dones = zip(*exp)
+                    self.reward_per_episode = np.array(rewards).sum()
+                    self.steps_per_episode = len(rewards)
+                    self.collect_metrics(episodic=True)
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     for i in range(len(observations)):
-                        self.buffer.append([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]])
+                        self.reward_per_step = rewards[i][0]
+                        self.buffer.append(copy.deepcopy([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]]))
+                        self.alg.update(self.agent,self.buffer,self.step_count)
+                        self.collect_metrics(episodic=False)
+                        self.updates += 1
                         self.step_count += 1
-                        if self.configs['Algorithm']['algorithm'] != 'PPO':
-                            if self.step_count % 64 == 0:
-                                self.alg.update(self.agent,self.buffer,self.step_count)
-                                self.updates +=1 
-                self.ep_count += 1
+                    # print(self.ep_count)
+                        # print(self.saveLoadFlag.item())
 
-            if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
-                
-                self.alg.update(self.agent,self.buffer,self.step_count)
+                    # start_time = time.time()
+                    # print("--- %s seconds ---" % (time.time() - start_time))
+                self.ep_count += 1
+                if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
+                    # self.alg.update(self.agent,self.buffer,self.step_count)
+                    print("hello")
 
                 if self.saveLoadFlag.item() == 1:
                     # start_time = time.time()
@@ -64,10 +78,11 @@ class SingleAgentMultiEnvLearner(Learner):
                     print("Agent was saved")
                     self.saveLoadFlag[0] = 0
 
-                self.updates += 1
-                # print('Copied')
-                # Add save policy function here
-
+                    # self.updates += 1
+                    # print('Copied')
+                    # Add save policy function here
+            else:
+                self.waitForLearner[0] = 0
         # self.p.join()
         #print('Hello')
         # del(self.p)
@@ -98,7 +113,7 @@ class SingleAgentMultiEnvLearner(Learner):
     def create_environment(self):
         # create the environment and get the action and observation spaces
         environment = load_class('shiva.envs', self.configs['Environment']['type'])
-        return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count,self.agent_dir,self.episodes, self.saveLoadFlag)
+        return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count,self.agent_dir,self.episodes, self.saveLoadFlag, self.waitForLearner)
 
     def create_algorithm(self):
         algorithm = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
@@ -127,11 +142,12 @@ class SingleAgentMultiEnvLearner(Learner):
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
         # Create the agent
-        if self.load_agents:
-            self.agent= self.load_agent(self.load_agents)
+        if self.load_agent:
+            self.agent= self.load_agent(self.load_agent)
         else:
             self.agent= self.alg.create_agent()
             self.agent.save_agent(self.agent_dir,self.step_count)
+            print("first agent saved to directory")
 
         # Launch the environment
         self.env = self.create_environment()
@@ -150,3 +166,18 @@ class SingleAgentMultiEnvLearner(Learner):
 
     def load_agent(self, path):
         return shiva._load_agents(path)[0]
+
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                ('Reward/Per_Step', self.reward_per_step)
+            ]
+        else:
+            metrics = [
+                ('Reward/Per_Episode', self.reward_per_episode),
+                ('Agent/Steps_Per_Episode', self.steps_per_episode)
+            ]
+
+            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
+
+        return metrics

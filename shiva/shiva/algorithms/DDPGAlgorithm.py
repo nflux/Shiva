@@ -34,7 +34,7 @@ class DDPGAlgorithm(Algorithm):
             agent.ou_noise.reset()
             return
 
-        if step_count < self.exploration_steps:
+        if step_count < self.agent.exploration_steps:
             '''
                 Don't update during exploration!
             '''
@@ -44,7 +44,7 @@ class DDPGAlgorithm(Algorithm):
             Updates starts here
         '''
 
-        print("updating!")
+        # print("updating!")
 
         states, actions, rewards, next_states, dones = buffer.sample()
 
@@ -57,6 +57,7 @@ class DDPGAlgorithm(Algorithm):
         # print(actions)
         # input()
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
+        # input()
 
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
             "acs_space config must be set to either discrete, continuous, or parameterized."
@@ -111,7 +112,7 @@ class DDPGAlgorithm(Algorithm):
 
         # Grab the discrete actions in the batch
         if dims == 3:
-            print(states.shape, actions.shape)
+            # print(states.shape, actions.shape)
             Q_these_states_main = agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], 2) )
         elif dims == 2:
             Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 1) )
