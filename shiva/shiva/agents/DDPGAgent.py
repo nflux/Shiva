@@ -56,7 +56,9 @@ class DDPGAgent(Agent):
                 # print(action)
                 # input()
             else:
+                self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+                action = action.cpu().numpy() + self.ou_noise.noise()
                 # action = Categorical(action).sample()
                 # action = action2one_hot(self.acs_discrete, action.item())
 
