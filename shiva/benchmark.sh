@@ -36,8 +36,8 @@ cd benchmarkCode
 python benchAnalysis.py
 # Pushes to gitHub with new BenchMark Results
 
-# cd ..
-# cd ..
-# git add -A
-# git commit -m "New Benchmark Results"
-# git push 
+cd ..
+cd ..
+git add -A
+git commit -m "New Benchmark Results"
+git push 
