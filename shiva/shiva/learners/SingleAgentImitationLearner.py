@@ -161,12 +161,11 @@ class SingleAgentRoboCupImitationLearner(Learner):
     def __init__(self,learner_id,config,port=None):
         super(SingleAgentRoboCupImitationLearner, self).__init__(learner_id,config)
         self.totalGoals = 0
-        self.supervised_episodes = self.episodes*self.percent_ep_super
-        self.imitation_episodes = self.episodes-self.supervised_episodes
+        self.supervised_episodes = self.super_ep
+        self.imitation_episodes = self.episodes-self.super_ep
         self.port = port
         # self.lr_decay = (self.configs['Agent']['learning_rate']-self.configs['Agent']['lr_end'])/self.configs['Learner']['imitation_episodes']
         
-
     def run(self):
         self.supervised_update()
         self.imitation_update()
@@ -273,7 +272,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs)
+        return env_class(self.configs, self.port+4)
 
     def create_algorithm(self):
         algorithm = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
@@ -282,8 +281,8 @@ class SingleAgentRoboCupImitationLearner(Learner):
     def create_buffers(self, obs_dim, ac_dim):
         buffer1 = load_class('shiva.buffers', self.configs['Buffer']['type1'])
         buffer2 = load_class('shiva.buffers', self.configs['Buffer']['type2'])
-        return (buffer1(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim),
-                buffer2(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim))
+        return (buffer1(self.configs['Buffer']['super_capacity'], self.configs['Buffer']['super_batch_size'], 1, obs_dim, ac_dim),
+                buffer2(self.configs['Buffer']['dagger_capacity'], self.configs['Buffer']['dagger_batch_size'], 1, obs_dim, ac_dim))
 
     def get_agent(self):
         return self.agent

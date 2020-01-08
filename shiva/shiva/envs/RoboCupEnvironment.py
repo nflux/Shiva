@@ -7,39 +7,34 @@ from torch.distributions import Categorical
 
 
 class RoboCupEnvironment(Environment):
-    def __init__(self, config):
+    def __init__(self, config, port):
         super(RoboCupEnvironment, self).__init__(config)
         np.random.seed(5)
         torch.manual_seed(5)
-        # self.port = port             
-
+        self.port = port            
         self.env = rc_env(config, self.port)
         self.env.launch()
 
         self.left_actions = self.env.left_actions
         self.left_params = self.env.left_action_params
 
-        # print("this many actions",self.left_actions)
-
         self.obs = self.env.left_obs
         self.rews = self.env.left_rewards
         self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
         self.action_space = {'discrete': self.env.acs_dim, 'param': self.env.acs_param_dim}
-        self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
-        self.done_count = 0
 
         self.load_viewer()
 
-
+        # RoboCup specific metrics
         self.reward_per_episode = 0
         self.kicks = 0
-        self.kicked = 0
+        # self.kicked = 0
         self.turns = 0
         self.dashes = 0
-        self.steps_per_episode = 0
+        self.goal_ctr = 0
     
     def isImit(self):
         return self.run_imit
@@ -50,7 +45,7 @@ class RoboCupEnvironment(Environment):
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, actions, discrete_select='sample'):
+    def step(self, actions, discrete_select='sample', collect=True):
         '''
             Input
                 @actions
@@ -69,7 +64,6 @@ class RoboCupEnvironment(Environment):
                                         ]
 
         '''
-        # print('given actions', actions)
 
         if discrete_select == 'argmax':
             act_choice = np.argmax(actions[:self.action_space['discrete']])
@@ -79,10 +73,8 @@ class RoboCupEnvironment(Environment):
             # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
 
         self.left_actions = act_choice
-        print(act_choice)
 
         if self.action_level == 'discretized':
-            
             # indicates whether its a dash, turn, or kick action from the action matrix
             if 0 <= self.left_actions <= 188:
                 action_matrix_index = 0
@@ -101,23 +93,16 @@ class RoboCupEnvironment(Environment):
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[action_matrix_index], left_params=self.left_actions)
             actions_v = action2one_hot(self.action_space['discrete'], act_choice)
-
-            # print(actions_v)
-
         else:
-
             params = actions[self.action_space['discrete']:]
             self.left_params = torch.tensor([params]).float()
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
             actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
 
-        self.reward_per_episode += self.rews
-        self.step_count += 1
-        self.steps_per_episode +=1
+        if collect:
+            self.collect_metrics()
         
-        # print('\nreward:', self.rews, '\n')
-        print(actions)
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions[0].tolist()}
 
     def get_observation(self):
@@ -149,9 +134,22 @@ class RoboCupEnvironment(Environment):
         self.kicked = 0
         self.reward_per_episode = 0
         self.steps_per_episode = 0
-        self.done_count -=-1
         self.done = False
-
+    
+    def collect_metrics(self):
+        '''
+        Metrics collection
+            Episodic # of steps             self.steps_per_episode --> is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
+            Cumulative # of steps           self.step_count
+            Cumulative # of episodes        self.done_count
+            Episodic Reward                 self.reward_per_episode
+            Goal Total                      self.goal_ctr
+        '''
+        self.steps_per_episode += 1
+        self.step_count += 1
+        self.done_count += 1 if self.done else 0
+        self.reward_per_episode += self.rews[0]
+        self.goal_ctr += 1 if self.isGoal() else 0
 
     def get_metrics(self, episodic=False):
         if not episodic:
@@ -166,6 +164,7 @@ class RoboCupEnvironment(Environment):
                 ('Dashes_per_Episode', self.dashes),
                 ('Ball_Kicks_per_Episode', self.kicked),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
+                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/self.done_count)*100.0)
             ]
 
             print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))

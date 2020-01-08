@@ -24,11 +24,11 @@ class rc_env:
             @port       Required for the robocup server
     '''
 
-    def __init__(self, config, port=None):
+    def __init__(self, config, port):
         {setattr(self, k, v) for k,v in config['Environment'].items()}
         self.port = port
         self.hfo_path = hfo.get_hfo_path()
-        self.seed = np.random.randint(1000)
+        # self.seed = np.random.randint(1000)
         self.viewer = None
 
 
