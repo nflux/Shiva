@@ -4,7 +4,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 ## Requirements
 * Ubuntu 16.04 or Mac OS
-* Python 3.5+
+* Python 3.7
 * Git
 * pip (Python Package Installer)
 
