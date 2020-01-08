@@ -18,7 +18,7 @@ Start by cloning the repo,
 git clone https://github.com/nflux/Control-Tasks/
 ```
 
-It's highly recommended that you install a Virtual Environment,
+It's highly recommended that you create a new virtual environment for the project,
 
 ```bash
 python -m venv shiva_env
