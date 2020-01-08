@@ -7,9 +7,6 @@
 # ​Go to robocup folder
 cd ../shiva/shiva/envs/robocup/
 
-install git
-sudo apt-get install git
-
 # clone the robocup files
 git clone https://github.com/nflux/rcssserver.git
 git clone https://github.com/nflux/librcsc.git
