@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/env_step.proto";
+
+package communication_objects;
+
+service Environment {
+    rpc Step (EnvStepInput) returns (EnvStepOutput) {}
+}

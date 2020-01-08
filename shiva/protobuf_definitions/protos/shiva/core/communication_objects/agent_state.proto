@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/helpers.proto";
+
+package communication_objects;
+
+message AgentState {
+    int32 id = 1;
+    ListOfFloats next_observation = 2;
+    float reward = 3;
+    bool done = 4;
+}

@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
+
 from concurrent import futures
 import time
 import math
@@ -5,12 +9,12 @@ import logging
 
 import grpc
 
-from communication_objects.all_pb2 import (
-    EnvStepInput,
-    EnvironmentSpecs, AgentMetrics,
-    AgentState, EnvStepOutput
-)
-from communication_objects.all_pb2_grpc import EnvironmentServicer, add_EnvironmentServicer_to_server
+from shiva.core.communication_objects.env_command_pb2 import EnvironmentCommand
+from shiva.core.communication_objects.env_step_pb2 import ( EnvStepInput, EnvStepOutput )
+from shiva.core.communication_objects.env_specs_pb2 import EnvironmentSpecs
+from shiva.core.communication_objects.env_metrics_pb2 import AgentMetrics
+from shiva.core.communication_objects.agent_state_pb2 import AgentState
+from shiva.core.communication_objects.service_env_pb2_grpc import EnvironmentServicer, add_EnvironmentServicer_to_server
 
 import random
 import numpy as np

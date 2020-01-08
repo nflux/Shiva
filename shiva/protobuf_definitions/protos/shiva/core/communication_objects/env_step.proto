@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/helpers.proto";
+import "shiva/core/communication_objects/env_command.proto";
+import "shiva/core/communication_objects/agent_state.proto";
+import "shiva/core/communication_objects/env_metrics.proto";
+
+package communication_objects;
+
+message EnvStepInput {
+    message ListAgentsActions {
+        repeated ListOfFloats data = 2;
+    }
+    map<string, ListAgentsActions> agent_actions = 1;
+    EnvironmentCommand command = 2;
+}
+
+message EnvStepOutput {
+    message ListAgentsStates {
+        repeated AgentState data = 1;
+    }
+    message ListAgentsMetrics {
+        repeated AgentMetrics data = 1;
+    }
+    map<string, ListAgentsStates> agent_states = 1;
+    map<string, ListAgentsMetrics> agent_metrics = 2;
+}
