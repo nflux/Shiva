@@ -101,9 +101,9 @@ class DDPGAgent(Agent):
 
     def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
         observation = torch.tensor(observation).to(self.device)
-        action = self.actor(observation.float()).cpu().data.numpy()
-        action = np.clip(action, -1,1)
-        # print('actor action shape', action.shape)
+        action = self.actor(observation.float())
+        # action = np.clip(action, -1, 1)
+        print('find', action)
         return action[0]
 
     def save(self, save_path, step):

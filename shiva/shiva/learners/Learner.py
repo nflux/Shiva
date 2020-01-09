@@ -1,3 +1,5 @@
+import torch
+
 from shiva.core.admin import Admin
 from shiva.helpers.config_handler import load_class
 
@@ -12,6 +14,7 @@ class Learner(object):
         self.step_count = 0
         self.checkpoints_made = 0
         self.totalReward = 0
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def __getstate__(self):
         d = dict(self.__dict__)

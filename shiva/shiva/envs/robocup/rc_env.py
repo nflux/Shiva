@@ -240,15 +240,15 @@ class rc_env:
             obsMsg += str(env.getSelfVelY()) + " "
             obsMsg += str(env.getStamina()) + " "
         
-        for env in self.right_envs:
-            obsMsg += str(env.side()) + " "
-            obsMsg += str(env.getUnum()) + " "
-            obsMsg += str(env.getSelfX()) + " "
-            obsMsg += str(env.getSelfY()) + " "
-            obsMsg += str(env.getSelfAng()) + " "
-            obsMsg += str(env.getSelfVelX()) + " "
-            obsMsg += str(env.getSelfVelY()) + " "
-            obsMsg += str(env.getStamina()) + " "
+        # for env in self.right_envs:
+        #     obsMsg += str(env.side()) + " "
+        #     obsMsg += str(env.getUnum()) + " "
+        #     obsMsg += str(env.getSelfX()) + " "
+        #     obsMsg += str(env.getSelfY()) + " "
+        #     obsMsg += str(env.getSelfAng()) + " "
+        #     obsMsg += str(env.getSelfVelX()) + " "
+        #     obsMsg += str(env.getSelfVelY()) + " "
+        #     obsMsg += str(env.getStamina()) + " "
 
         return str(obsMsg).encode("utf-8")
 
@@ -320,7 +320,6 @@ class rc_env:
             if self.action_level == 'low':
                 for p in range(params.shape[1]):
                     self.left_action_params[agent_id][p] = params[agent_id][p]
-
             # i was thinking that maybe I could choose the action here        
             elif self.action_level == 'discretized':
                 # print("this ran")

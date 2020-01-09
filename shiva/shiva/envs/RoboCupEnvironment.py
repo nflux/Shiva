@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from shiva.envs.robocup.rc_env import rc_env
 from shiva.envs.Environment import Environment
-from shiva.helpers.misc import action2one_hot
+from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from torch.distributions import Categorical
 
 
@@ -45,7 +45,7 @@ class RoboCupEnvironment(Environment):
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, actions, discrete_select='sample', collect=True):
+    def step(self, actions, discrete_select='sample', collect=True, device='cpu'):
         '''
             Input
                 @actions
@@ -66,13 +66,13 @@ class RoboCupEnvironment(Environment):
         '''
 
         if discrete_select == 'argmax':
-            act_choice = np.argmax(actions[:self.action_space['discrete']])
+            act_choice = torch.argmax(actions[:self.action_space['discrete']])
         elif discrete_select == 'sample':
-            act_choice = Categorical(actions).sample()
+            act_choice = Categorical(actions[:self.action_space['discrete']]).sample()
             # action = action2one_hot(self.acs_discrete, action.item())
             # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
 
-        self.left_actions = act_choice
+        self.left_actions = act_choice.unsqueeze(dim=-1)
 
         if self.action_level == 'discretized':
             # indicates whether its a dash, turn, or kick action from the action matrix
@@ -94,16 +94,16 @@ class RoboCupEnvironment(Environment):
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[action_matrix_index], left_params=self.left_actions)
             actions_v = action2one_hot(self.action_space['discrete'], act_choice)
         else:
-            params = actions[self.action_space['discrete']:]
-            self.left_params = torch.tensor([params]).float()
+            self.left_params = actions[self.action_space['discrete']:].unsqueeze(dim=0)
+            # self.left_params = torch.tensor([params]).float()
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
-            actions_v = np.concatenate([action2one_hot(self.action_space['discrete'], act_choice), self.left_params[0]])
+            actions_v = torch.cat([action2one_hot_v(self.action_space['discrete'], act_choice.item()).to(device), self.left_params[0]])
 
         if collect:
             self.collect_metrics()
         
-        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions[0].tolist()}
+        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
         return self.obs

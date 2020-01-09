@@ -12,7 +12,7 @@ class ImitationAlgorithm(Algorithm):
         super(ImitationAlgorithm, self).__init__(obs_space, acs_space, configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
-        self.action_policy = configs[1]['action_policy']
+        # self.action_policy = configs[1]['action_policy']
         self.loss = 0
     
     def supervised_update(self, agent, minibatch, step_n):
@@ -195,7 +195,6 @@ class ImitationRoboCupAlgorithm(Algorithm):
     def __init__(self,obs_space,acs_space,configs):
         super(ImitationRoboCupAlgorithm, self).__init__(obs_space, acs_space, configs)
         self.acs_dim = self.acs_space['discrete'] + self.acs_space['param']
-        self.action_policy = configs[1]['action_policy']
         self.loss = 0
     
     def supervised_update(self, agent, minibatch, step_n):
