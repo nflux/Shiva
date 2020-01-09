@@ -9,7 +9,7 @@ package communication_objects;
 
 message EnvStepInput {
     message ListAgentsActions {
-        repeated ListOfFloats data = 2;
+        repeated ListOfFloats data = 1;
     }
     map<string, ListAgentsActions> agent_actions = 1;
     EnvironmentCommand command = 2;

@@ -2,9 +2,6 @@ import torch
 
 class Environment:
     def __init__(self, configs):
-        # print("look:",configs)
-        # print()
-        # print(configs['environment'])
         if 'MetaLearner' in configs:
             {setattr(self, k, v) for k,v in configs['Environment'].items()}
         else:

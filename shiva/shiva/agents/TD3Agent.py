@@ -33,8 +33,8 @@ class TD3Agent(Agent):
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_lr, eps=self.eps)
         self.critic_optimizer_2 = self.optimizer_function(params=self.critic_2.parameters(), lr=self.critic_2_lr, eps=self.eps)
 
-    def get_action(self, observation):
-        return self.actor(observation)
+    def get_action(self, observation, step_count):
+        return self.actor(torch.tensor(observation))
 
     def save(self, save_path, step):
         torch.save(self.actor, save_path + '/actor.pth')

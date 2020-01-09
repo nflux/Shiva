@@ -19,7 +19,7 @@ def flatten(l):
         else:
             yield el
 
-def prep_session(session_path="",hist_dir="history",eval_hist_dir= "eval_history",eval_log_dir = "eval_log",load_path = "models/",ensemble_path = "ensemble_models/",log_dir="log",num_TA=1):
+def prep_session(session_path="",hist_dir="history",eval_hist_dir= "eval_history",eval_log_dir = "eval_log",load_path = "models/",ensemble_path = "ensemble_models/",log_dir="logs",num_TA=1):
     hist_dir = hist_dir
     eval_hist_dir = eval_hist_dir
     eval_log_dir =  eval_log_dir
@@ -475,7 +475,7 @@ def gumbel_softmax_sample(logits, temperature,device="cuda",LSTM=False):
 def gumbel_softmax(logits, temperature=1.0, hard=False,device="cuda",LSTM=False):
     """Sample from the Gumbel-Softmax distribution and optionally discretize.
     Args:
-      logits: [batch_size, n_class] unnormalized log-probs
+      logits: [batch_size, n_class] unnormalized logs-probs
       temperature: non-negative scalar
       hard: if True, take argmax, but differentiate w.r.t. soft sample y
     Returns:

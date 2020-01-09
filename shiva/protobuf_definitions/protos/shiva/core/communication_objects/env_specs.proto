@@ -2,8 +2,13 @@ syntax = "proto3";
 package communication_objects;
 
 message EnvironmentSpecs {
+    message ActionSpace {
+        int32 discrete = 1;
+        int32 param = 2;
+        int32 acs_space = 3;
+    }
     int32 observation_space = 1;
-    int32 action_space = 2;
+    ActionSpace action_space = 2;
     int32 num_instances = 3;
     int32 num_agents_per_instance = 4;
 }

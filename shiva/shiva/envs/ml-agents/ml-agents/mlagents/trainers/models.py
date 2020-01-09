@@ -458,7 +458,7 @@ class LearningModel:
         :param action_size: A list containing the number of possible actions for each branch
         :return: The action output dimension [batch_size, num_branches], the concatenated
             normalized probs (after softmax)
-        and the concatenated normalized log probs
+        and the concatenated normalized logs probs
         """
         action_idx = [0] + list(np.cumsum(action_size))
         branches_logits = [

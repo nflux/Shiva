@@ -507,7 +507,7 @@ class rc_env:
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --seed %i --message-size 256"\
+                  " --logs-dir %s --seed %i --message-size 256"\
                   % (self.ep_length, self.untouched, self.num_left,
                      self.num_right, self.num_l_bot, self.num_r_bot, self.port,
                      self.offense_ball, self.seed, self.ball_x_min, self.ball_x_max,
@@ -524,7 +524,7 @@ class rc_env:
             if not self.rcss_log:  cmd += " --no-logging"
             if self.hfo_log:       cmd += " --hfo-logging"
             if self.record_lib:             cmd += " --record"
-            if self.record_serv:      cmd += " --log-gen-pt"
+            if self.record_serv:      cmd += " --logs-gen-pt"
             if self.run_imit:         cmd += " --run-bots"
             if self.init_env:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\

@@ -20,11 +20,55 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='communication_objects',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n0shiva/core/communication_objects/env_specs.proto\x12\x15\x63ommunication_objects\"{\n\x10\x45nvironmentSpecs\x12\x19\n\x11observation_space\x18\x01 \x01(\x05\x12\x14\n\x0c\x61\x63tion_space\x18\x02 \x01(\x05\x12\x15\n\rnum_instances\x18\x03 \x01(\x05\x12\x1f\n\x17num_agents_per_instance\x18\x04 \x01(\x05\x62\x06proto3')
+  serialized_pb=_b('\n0shiva/core/communication_objects/env_specs.proto\x12\x15\x63ommunication_objects\"\xf3\x01\n\x10\x45nvironmentSpecs\x12\x19\n\x11observation_space\x18\x01 \x01(\x05\x12I\n\x0c\x61\x63tion_space\x18\x02 \x01(\x0b\x32\x33.communication_objects.EnvironmentSpecs.ActionSpace\x12\x15\n\rnum_instances\x18\x03 \x01(\x05\x12\x1f\n\x17num_agents_per_instance\x18\x04 \x01(\x05\x1a\x41\n\x0b\x41\x63tionSpace\x12\x10\n\x08\x64iscrete\x18\x01 \x01(\x05\x12\r\n\x05param\x18\x02 \x01(\x05\x12\x11\n\tacs_space\x18\x03 \x01(\x05\x62\x06proto3')
 )
 
 
 
+
+_ENVIRONMENTSPECS_ACTIONSPACE = _descriptor.Descriptor(
+  name='ActionSpace',
+  full_name='communication_objects.EnvironmentSpecs.ActionSpace',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='discrete', full_name='communication_objects.EnvironmentSpecs.ActionSpace.discrete', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='param', full_name='communication_objects.EnvironmentSpecs.ActionSpace.param', index=1,
+      number=2, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='acs_space', full_name='communication_objects.EnvironmentSpecs.ActionSpace.acs_space', index=2,
+      number=3, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=254,
+  serialized_end=319,
+)
 
 _ENVIRONMENTSPECS = _descriptor.Descriptor(
   name='EnvironmentSpecs',
@@ -42,8 +86,8 @@ _ENVIRONMENTSPECS = _descriptor.Descriptor(
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
       name='action_space', full_name='communication_objects.EnvironmentSpecs.action_space', index=1,
-      number=2, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -64,7 +108,7 @@ _ENVIRONMENTSPECS = _descriptor.Descriptor(
   ],
   extensions=[
   ],
-  nested_types=[],
+  nested_types=[_ENVIRONMENTSPECS_ACTIONSPACE, ],
   enum_types=[
   ],
   serialized_options=None,
@@ -73,19 +117,29 @@ _ENVIRONMENTSPECS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=75,
-  serialized_end=198,
+  serialized_start=76,
+  serialized_end=319,
 )
 
+_ENVIRONMENTSPECS_ACTIONSPACE.containing_type = _ENVIRONMENTSPECS
+_ENVIRONMENTSPECS.fields_by_name['action_space'].message_type = _ENVIRONMENTSPECS_ACTIONSPACE
 DESCRIPTOR.message_types_by_name['EnvironmentSpecs'] = _ENVIRONMENTSPECS
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 EnvironmentSpecs = _reflection.GeneratedProtocolMessageType('EnvironmentSpecs', (_message.Message,), {
+
+  'ActionSpace' : _reflection.GeneratedProtocolMessageType('ActionSpace', (_message.Message,), {
+    'DESCRIPTOR' : _ENVIRONMENTSPECS_ACTIONSPACE,
+    '__module__' : 'shiva.core.communication_objects.env_specs_pb2'
+    # @@protoc_insertion_point(class_scope:communication_objects.EnvironmentSpecs.ActionSpace)
+    })
+  ,
   'DESCRIPTOR' : _ENVIRONMENTSPECS,
   '__module__' : 'shiva.core.communication_objects.env_specs_pb2'
   # @@protoc_insertion_point(class_scope:communication_objects.EnvironmentSpecs)
   })
 _sym_db.RegisterMessage(EnvironmentSpecs)
+_sym_db.RegisterMessage(EnvironmentSpecs.ActionSpace)
 
 
 # @@protoc_insertion_point(module_scope)

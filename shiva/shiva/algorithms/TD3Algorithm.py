@@ -64,9 +64,6 @@ class TD3Algorithm(Algorithm):
             self.take_optimisation_step(self.agent.critic_optimizer, self.agent.critic, self.critic_loss_1, self.critic_grad_clip_norm)
             self.take_optimisation_step(self.agent.critic_optimizer_2, self.agent.critic_2, self.critic_loss_2, self.critic_grad_clip_norm)
 
-            if step_count % self.c == 0:
-                self.soft_update_of_target_network(self.agent.critic, self.agent.target_critic, self.critic_soft_update)
-                self.soft_update_of_target_network(self.agent.critic_2, self.agent.target_critic_2, self.critic_soft_update)
             '''
                 Train the Actor
             '''
@@ -74,8 +71,13 @@ class TD3Algorithm(Algorithm):
             #     self.update_learning_rate(self.hyperparameters["Actor"]["learning_rate"], self.actor_optimizer)
             self.actor_loss = self.calculate_actor_loss(states)
             self.take_optimisation_step(self.agent.actor_optimizer, self.agent.actor, self.actor_loss, self.actor_grad_clip_norm)
-            
+
+            '''
+                Target updates
+            '''
             if step_count % self.c == 0:
+                self.soft_update_of_target_network(self.agent.critic, self.agent.target_critic, self.critic_soft_update)
+                self.soft_update_of_target_network(self.agent.critic_2, self.agent.target_critic_2, self.critic_soft_update)
                 self.soft_update_of_target_network(self.agent.actor, self.agent.target_actor, self.actor_soft_update)
 
     def calculate_actor_loss(self, states):
@@ -121,6 +123,7 @@ class TD3Algorithm(Algorithm):
 
     # Gets actions with a linearly decreasing e greedy strat
     def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
+        print('User agent.get_action!')
         if step_count < self.exploration_steps:
             self.action = np.array([np.random.uniform(-1, 1) for _ in range(self.acs_space)])
             return self.action

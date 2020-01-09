@@ -295,6 +295,7 @@ class ShivaAdmin():
                 else:
                     self._save_agent(learner, learner.agent)
             except AttributeError:
+                print(learner)
                 assert False, "Couldn't find the Learners agent/s..."
 
     def _save_agent(self, learner, agent):

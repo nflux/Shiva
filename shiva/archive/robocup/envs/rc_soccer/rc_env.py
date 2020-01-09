@@ -46,7 +46,7 @@ class rc_env:
     #              act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 6000,
     #              offense_on_ball=0, fullstate = False, seed = 123,
     #              ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-    #              verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
+    #              verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="logs",team_rew_anneal_ep=1000,
     #              agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
     #              change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
     #              change_balls_y=0.1, control_rand_init=False,record=False,record_server=False,
@@ -854,7 +854,7 @@ class rc_env:
             feat_lvl = hfo.SIMPLE_LEVEL_FEATURE_SET
 
         config_dir=get_config_path() 
-        recorder_dir = 'log/'
+        recorder_dir = 'logs/'
         if self.team_base == base:
             self.team_envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                 server_port=port, server_addr='localhost', team_name=base,
@@ -1028,7 +1028,7 @@ class rc_env:
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --message-size 256"\
+                  " --logs-dir %s --message-size 256"\
                   % (self.fpt, self.untouched, self.num_TA,
                      self.num_OA, self.num_TNPC, self.num_ONPC, self.port,
                      self.offense_on_ball, self.seed, self.config.ball_x_min, self.config.ball_x_max,
@@ -1045,7 +1045,7 @@ class rc_env:
             if not self.config.rcss_log:  cmd += " --no-logging"
             if self.config.hfo_log:       cmd += " --hfo-logging"
             if self.config.record_lib:             cmd += " --record"
-            if self.config.record_serv:      cmd += " --log-gen-pt"
+            if self.config.record_serv:      cmd += " --logs-gen-pt"
             if self.config.init_env:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

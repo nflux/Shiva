@@ -70,7 +70,7 @@ class PPOAlgorithm(Algorithm):
         advantage = torch.tensor(advantage).float().to(self.device)
         #Normalize the advantages
         advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
-        #Calculate log probabilites of the old policy for the policy objective
+        #Calculate logs probabilites of the old policy for the policy objective
         '''old_action_probs = old_agent.actor(states.float())
         dist = Categorical(old_action_probs)
         old_log_probs = dist.log_prob(actions)'''
@@ -81,7 +81,7 @@ class PPOAlgorithm(Algorithm):
             values = agent.critic(states.float()).to(self.device)
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
 
-            #Calculate log probabilites of the new policy for the policy objective
+            #Calculate logs probabilites of the new policy for the policy objective
             current_action_probs = agent.actor(states.float())
             # print(current_action_probs)
             dist2 = Categorical(current_action_probs)

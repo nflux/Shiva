@@ -13,7 +13,9 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
+from shiva.core.communication_objects import env_specs_pb2 as shiva_dot_core_dot_communication__objects_dot_env__specs__pb2
 from shiva.core.communication_objects import env_step_pb2 as shiva_dot_core_dot_communication__objects_dot_env__step__pb2
+from shiva.core.communication_objects import helpers_pb2 as shiva_dot_core_dot_communication__objects_dot_helpers__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -21,9 +23,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='communication_objects',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n2shiva/core/communication_objects/service_env.proto\x12\x15\x63ommunication_objects\x1a/shiva/core/communication_objects/env_step.proto2b\n\x0b\x45nvironment\x12S\n\x04Step\x12#.communication_objects.EnvStepInput\x1a$.communication_objects.EnvStepOutput\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n2shiva/core/communication_objects/service_env.proto\x12\x15\x63ommunication_objects\x1a\x30shiva/core/communication_objects/env_specs.proto\x1a/shiva/core/communication_objects/env_step.proto\x1a.shiva/core/communication_objects/helpers.proto2\x86\x02\n\x0b\x45nvironment\x12S\n\x08GetSpecs\x12\x1c.communication_objects.Empty\x1a\'.communication_objects.EnvironmentSpecs\"\x00\x12S\n\x04Step\x12#.communication_objects.EnvStepInput\x1a$.communication_objects.EnvStepOutput\"\x00\x12M\n\x05Reset\x12\x1c.communication_objects.Empty\x1a$.communication_objects.EnvStepOutput\"\x00\x62\x06proto3')
   ,
-  dependencies=[shiva_dot_core_dot_communication__objects_dot_env__step__pb2.DESCRIPTOR,])
+  dependencies=[shiva_dot_core_dot_communication__objects_dot_env__specs__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_env__step__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_helpers__pb2.DESCRIPTOR,])
 
 
 
@@ -37,15 +39,33 @@ _ENVIRONMENT = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=126,
-  serialized_end=224,
+  serialized_start=225,
+  serialized_end=487,
   methods=[
+  _descriptor.MethodDescriptor(
+    name='GetSpecs',
+    full_name='communication_objects.Environment.GetSpecs',
+    index=0,
+    containing_service=None,
+    input_type=shiva_dot_core_dot_communication__objects_dot_helpers__pb2._EMPTY,
+    output_type=shiva_dot_core_dot_communication__objects_dot_env__specs__pb2._ENVIRONMENTSPECS,
+    serialized_options=None,
+  ),
   _descriptor.MethodDescriptor(
     name='Step',
     full_name='communication_objects.Environment.Step',
-    index=0,
+    index=1,
     containing_service=None,
     input_type=shiva_dot_core_dot_communication__objects_dot_env__step__pb2._ENVSTEPINPUT,
+    output_type=shiva_dot_core_dot_communication__objects_dot_env__step__pb2._ENVSTEPOUTPUT,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='Reset',
+    full_name='communication_objects.Environment.Reset',
+    index=2,
+    containing_service=None,
+    input_type=shiva_dot_core_dot_communication__objects_dot_helpers__pb2._EMPTY,
     output_type=shiva_dot_core_dot_communication__objects_dot_env__step__pb2._ENVSTEPOUTPUT,
     serialized_options=None,
   ),

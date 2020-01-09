@@ -1174,7 +1174,7 @@ class BASE_MADDPG(object):
         else:
             reg_param = 1.0
 
-        entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
+        entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/reg_param # regularize using logs probabilities
 
         pol_loss = action_loss + param_loss + entropy_reg # Weighted MSE based on how off Q was.
         pol_loss.backward()
@@ -1569,7 +1569,7 @@ class RMADDPG(BASE_MADDPG):
                 reg_param = 10.0
             
             param_reg = torch.clamp((curr_pol_out_stacked[:,:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,:,curr_agent.action_dim:]),min=0.0).sum(dim=2).mean() # How much parameters exceed (-1,1) bound
-            entropy_reg = (-torch.log_softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+            entropy_reg = (-torch.log_softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using logs probabilities
             pol_loss += param_reg
             pol_loss += entropy_reg
             if self.I2A:
@@ -1869,7 +1869,7 @@ class RMADDPG(BASE_MADDPG):
         pol_loss = F.mse_loss(pol_out_params,actual_out_params) + F.mse_loss(pol_out_actions,actual_out_actions)
         
         reg_param = 5.0
-        #entropy_reg = (-torch.log(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+        #entropy_reg = (-torch.logs(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using logs probabilities
         pol_loss.backward(retain_graph=False)
 
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
@@ -2296,7 +2296,7 @@ class RCMADDPG(BASE_MADDPG):
                 reg_param = 10.0
             
             param_reg = torch.clamp((curr_pol_out_stacked[:,:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,:,curr_agent.action_dim:]),min=0.0).sum(dim=2).mean() # How much parameters exceed (-1,1) bound
-            entropy_reg = (-torch.log_softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+            entropy_reg = (-torch.log_softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using logs probabilities
             pol_loss += param_reg
             pol_loss += entropy_reg
             if self.I2A:
@@ -2596,7 +2596,7 @@ class RCMADDPG(BASE_MADDPG):
         pol_loss = F.mse_loss(pol_out_params,actual_out_params) + F.mse_loss(pol_out_actions,actual_out_actions)
         
         reg_param = 5.0
-        #entropy_reg = (-torch.log(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+        #entropy_reg = (-torch.logs(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using logs probabilities
         pol_loss.backward(retain_graph=False)
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
         curr_agent.policy_optimizer.step()
@@ -3029,7 +3029,7 @@ class RAMADDPG(BASE_MADDPG):
                 reg_param = 10.0
             
             param_reg = torch.clamp((curr_pol_out_stacked[:,:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,:,curr_agent.action_dim:]),min=0.0).sum(dim=2).mean() # How much parameters exceed (-1,1) bound
-            entropy_reg = (-torch.log_softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+            entropy_reg = (-torch.log_softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using logs probabilities
             pol_loss += param_reg
             pol_loss += entropy_reg
             if self.I2A:
@@ -3330,7 +3330,7 @@ class RAMADDPG(BASE_MADDPG):
         pol_loss = F.mse_loss(pol_out_params,actual_out_params) + F.mse_loss(pol_out_actions,actual_out_actions)
         
         reg_param = 5.0
-        #entropy_reg = (-torch.log(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+        #entropy_reg = (-torch.logs(pol_out_actions).sum(dim=2).mean() * 1e-3)/reg_param # regularize using logs probabilities
         pol_loss.backward(retain_graph=False)
 
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
@@ -3662,7 +3662,7 @@ class VanillaMADDPG(BASE_MADDPG):
                 reg_param = 5.0
             
             param_reg = torch.clamp((curr_pol_out_stacked[:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,curr_agent.action_dim:]),min=0.0).sum(dim=1).mean()
-            entropy_reg = (-torch.log_softmax(curr_pol_out_stacked[:,:curr_agent.action_dim],dim=1).sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
+            entropy_reg = (-torch.log_softmax(curr_pol_out_stacked[:,:curr_agent.action_dim],dim=1).sum(dim=1).mean() * 1e-3)/reg_param # regularize using logs probabilities
             pol_loss += param_reg
             pol_loss += entropy_reg
             if self.I2A:
@@ -3984,7 +3984,7 @@ class VanillaMADDPG(BASE_MADDPG):
         pol_loss = MSE + F.mse_loss(pol_out_actions,actual_out_actions)
         
         reg_param = 5.0
-        entropy_reg = (-torch.log(pol_out_actions).sum(dim=1).mean() * 1e-3)/reg_param # regularize using log probabilities
+        entropy_reg = (-torch.log(pol_out_actions).sum(dim=1).mean() * 1e-3)/reg_param # regularize using logs probabilities
         pol_loss.backward(retain_graph=True)
 
         torch.nn.utils.clip_grad_norm_(curr_agent.policy.parameters(), 1) # do we want to clip the gradients?
@@ -4188,7 +4188,7 @@ class VanillaMADDPG(BASE_MADDPG):
       
 
     #         param_reg = torch.clamp((curr_pol_out[:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out[:,curr_agent.action_dim:]),min=0.0).sum(dim=1).mean()
-    #         entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/5.0 # regularize using log probabilities
+    #         entropy_reg = (-torch.log_softmax(curr_pol_out,dim=1)[:,:curr_agent.action_dim].sum(dim=1).mean() * 1e-3)/5.0 # regularize using logs probabilities
     #         #pol_loss += ((curr_pol_out**2)[:,:curr_agent.action_dim].mean() * 1e-3)/3.0 #Shariq-style regularizer on size of linear outputs
     #         pol_loss += param_reg
     #         pol_loss += entropy_reg
@@ -4526,7 +4526,7 @@ class VanillaMADDPG(BASE_MADDPG):
     #             reg_param = 5.0
 
     #         param_reg = torch.clamp((curr_pol_out_stacked[:,:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,:,curr_agent.action_dim:]),min=0.0).sum(dim=2).mean() # How much parameters exceed (-1,1) bound
-    #         entropy_reg = (-torch.log_softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+    #         entropy_reg = (-torch.log_softmax(curr_pol_out[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using logs probabilities
     #         pol_loss += param_reg
     #         pol_loss += entropy_reg
     #         if self.I2A:
@@ -4884,7 +4884,7 @@ class VanillaMADDPG(BASE_MADDPG):
     #             reg_param = 2.5
             
     #         param_reg = torch.clamp((curr_pol_out_stacked[:,:,curr_agent.action_dim:]**2)-torch.ones_like(curr_pol_out_stacked[:,:,curr_agent.action_dim:]),min=0.0).sum(dim=2).mean()
-    #         entropy_reg = (-torch.log_softmax(curr_pol_out_stacked[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using log probabilities
+    #         entropy_reg = (-torch.log_softmax(curr_pol_out_stacked[:,:,:curr_agent.action_dim],dim=2).sum(dim=2).mean() * 1e-3)/reg_param # regularize using logs probabilities
     #         pol_loss += param_reg
     #         pol_loss += entropy_reg
     #         if self.I2A:

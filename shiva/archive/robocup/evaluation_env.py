@@ -45,7 +45,7 @@ class evaluation_env():
                  act_lvl = 'low',untouched_time = 100, sync_mode = True, port = 63000,
                  offense_on_ball=0, fullstate = False, seed = 123,
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-                 verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",team_rew_anneal_ep=1000,
+                 verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="logs",team_rew_anneal_ep=1000,
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,change_every_x=5000,
                  change_agents_x=0.1,change_balls_x=0.1, change_agents_y=0.1,change_balls_y=0.1, control_rand_init=False,record=True,
                  defense_team_bin='base', offense_team_bin='base', run_server=False, deterministic=True,
@@ -707,7 +707,7 @@ class evaluation_env():
 
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl,recorder_dir='log/'):
+    def connect(self,port,feat_lvl, base, goalie, agent_ID,fpt,act_lvl,recorder_dir='logs/'):
         """ Connect threaded agent to server
 
         Args:
@@ -932,7 +932,7 @@ class evaluation_env():
                               ball_x_min=-0.8, ball_x_max=0.8,
                               ball_y_min=-0.8, ball_y_max=0.8,
                               verbose=False, rcss_log_game=False,
-                              log_dir="log",
+                              log_dir="logs",
                               hfo_log_game=False,
                               agents_x_min=0.0, agents_x_max=0.0,
                               agents_y_min=0.0, agents_y_max=0.0,
@@ -965,7 +965,7 @@ class evaluation_env():
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --message-size 256"\
+                  " --logs-dir %s --message-size 256"\
                   % (frames_per_trial, untouched_time, offense_agents,
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,
@@ -979,7 +979,7 @@ class evaluation_env():
             if not rcss_log_game:  cmd += " --no-logging"
             if hfo_log_game:       cmd += " --hfo-logging"
             if record:        cmd += " --record"
-            if record_server:      cmd += " --log-gen-pt"      
+            if record_server:      cmd += " --logs-gen-pt"
             if control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

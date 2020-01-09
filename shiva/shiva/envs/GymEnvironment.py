@@ -22,6 +22,7 @@ class GymEnvironment(Environment):
 
         self.steps_per_episode = 0
         self.step_count = 0
+        self.temp_done_counter = 0
         self.done_count = 0
         self.reward_per_step = 0
         self.reward_per_episode = 0

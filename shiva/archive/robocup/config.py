@@ -41,7 +41,7 @@ class RoboConfig(Config):
         self.load_path = self.session_path +"models/"
         self.ensemble_path = self.session_path +"ensemble_models/"
         misc.prep_session(self.session_path,self.hist_dir,self.eval_hist_dir,self.eval_log_dir,
-                            self.load_path,self.ensemble_path,self.conf_dict['log'],num_TA)
+                            self.load_path,self.ensemble_path,self.conf_dict['logs'],num_TA)
 
         super().__init__(self.conf_dict)
 

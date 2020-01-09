@@ -147,7 +147,7 @@ class DDPGAlgorithm(Algorithm):
         else:
             actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 0) )
 
-        # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using log probabilities
+        # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using logs probabilities
         # penalty for going beyond the bounded interval
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
         # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration

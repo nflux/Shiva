@@ -92,7 +92,7 @@ class ContinuousPPOAlgorithm(Algorithm):
             ratios = torch.exp(new_log_probs.double() - old_log_probs.double()).float()
             surr1 = ratios * advantage.unsqueeze(dim=-1)
             surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage.unsqueeze(dim=-1)
-            #entropy = (torch.log(2*math.pi*var_new) +1)/2
+            #entropy = (torch.logs(2*math.pi*var_new) +1)/2
             self.entropy_loss = -(self.configs[0]['beta']*entropy)
             self.policy_loss =  -torch.min(surr1,surr2).mean() + penalty + self.entropy_loss
             self.policy_loss.backward()
