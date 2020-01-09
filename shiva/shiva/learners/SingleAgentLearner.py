@@ -86,4 +86,6 @@ class SingleAgentLearner(Learner):
             self.agent = self.alg.create_agent(self.get_new_agent_id())
             if self.using_buffer:
                 self.buffer = self.create_buffer()
+                self.buffer = self.create_buffers(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
+
         print('Launch Successful.')

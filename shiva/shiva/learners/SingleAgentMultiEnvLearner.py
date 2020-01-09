@@ -47,6 +47,8 @@ class SingleAgentMultiEnvLearner(Learner):
                     for i in range(len(observations)):
                         self.step_count += 1
                         self.buffer.append(copy.deepcopy([observations[i], actions[i], rewards[i][0],logprobs[i], next_observations[i], dones[i][0]]))
+                        self.collect_metrics(episodic=False)
+
                 else:
                     observations, actions, rewards, next_observations, dones = zip(*exp)
                     self.reward_per_episode = np.array(rewards).sum()
@@ -54,22 +56,35 @@ class SingleAgentMultiEnvLearner(Learner):
                     self.collect_metrics(episodic=True)
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     for i in range(len(observations)):
+                        self.step_count += 1
                         self.reward_per_step = rewards[i][0]
                         self.buffer.append(copy.deepcopy([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]]))
-                        self.alg.update(self.agent,self.buffer,self.step_count)
                         self.collect_metrics(episodic=False)
                         self.updates += 1
-                        self.step_count += 1
+                        self.alg.update(self.agent,self.buffer,self.step_count)
                     # print(self.ep_count)
                         # print(self.saveLoadFlag.item())
 
                     # start_time = time.time()
                     # print("--- %s seconds ---" % (time.time() - start_time))
+                self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
                 self.ep_count += 1
                 if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
                     # self.alg.update(self.agent,self.buffer,self.step_count)
                     print("hello")
 
+                # if self.saveLoadFlag.item() == 1:
+                #     # start_time = time.time()
+                #     # print("Multi Learner:",self.agent_dir)
+                #     self.agent.save_agent(self.agent_dir,self.step_count)
+                #     # print("--- %s seconds ---" % (time.time() - start_time))
+                #     print("Agent was saved")
+                #     self.saveLoadFlag[0] = 0
+
+                    # self.updates += 1
+                    # print('Copied')
+                    # Add save policy function here
+            else:
                 if self.saveLoadFlag.item() == 1:
                     # start_time = time.time()
                     # print("Multi Learner:",self.agent_dir)
@@ -77,12 +92,8 @@ class SingleAgentMultiEnvLearner(Learner):
                     # print("--- %s seconds ---" % (time.time() - start_time))
                     print("Agent was saved")
                     self.saveLoadFlag[0] = 0
-
-                    # self.updates += 1
-                    # print('Copied')
-                    # Add save policy function here
-            else:
                 self.waitForLearner[0] = 0
+
         # self.p.join()
         #print('Hello')
         # del(self.p)
@@ -142,7 +153,7 @@ class SingleAgentMultiEnvLearner(Learner):
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
         # Create the agent
-        if self.load_agent:
+        if self.load_agents:
             self.agent= self.load_agent(self.load_agent)
         else:
             self.agent= self.alg.create_agent()
