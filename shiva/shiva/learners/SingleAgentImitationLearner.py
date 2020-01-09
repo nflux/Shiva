@@ -30,8 +30,6 @@ class SingleAgentImitationLearner(Learner):
         self.env.close()
         self.agent = self.agents[0]
 
-        #self.supervised_train()
-
     def imitation_update(self):
         self.step_count=0
         for self.ep_count in range(self.configs['Learner']['imitation_episodes']):
@@ -239,7 +237,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         self.send_imit_obs_msgs()
         bot_action = self.recv_imit_acs_msgs()
-        action = self.agent.find_best_imitation_action(observation)
+        action = self.agent.get_imitation_action(observation)
 
         next_observation, reward, done, more_data = self.env.step(action, device=self.device)
 

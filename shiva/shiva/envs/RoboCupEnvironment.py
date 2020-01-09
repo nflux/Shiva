@@ -78,17 +78,12 @@ class RoboCupEnvironment(Environment):
             # indicates whether its a dash, turn, or kick action from the action matrix
             if 0 <= self.left_actions <= 188:
                 action_matrix_index = 0
+                self.dashes += 1
             elif 189 <= self.left_actions <= 197:
                 action_matrix_index = 1
+                self.turns += 1
             else:
                 action_matrix_index = 2
-
-            # Robocup actions
-            if action_matrix_index == 0:
-                self.dashes += 1
-            elif action_matrix_index == 1:
-                self.turns += 1
-            elif action_matrix_index == 2:
                 self.kicks += 1
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[action_matrix_index], left_params=self.left_actions)

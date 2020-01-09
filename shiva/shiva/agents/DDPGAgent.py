@@ -99,18 +99,17 @@ class DDPGAgent(Agent):
         pass
         return action.tolist()
 
-    def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
+    def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
         observation = torch.tensor(observation).to(self.device)
         action = self.actor(observation.float())
-        # action = np.clip(action, -1, 1)
-        print('find', action)
+        print(action)
         return action[0]
 
     def save(self, save_path, step):
-        torch.save(self.actor, save_path + 'actor.pth')
-        torch.save(self.target_actor, save_path + 'target_actor.pth')
-        torch.save(self.critic, save_path + 'critic.pth')
-        torch.save(self.target_critic, save_path + 'target_critic.pth')
+        torch.save(self.actor.state_dict(), save_path + 'actor.pth')
+        torch.save(self.target_actor.state_dict(), save_path + 'target_actor.pth')
+        torch.save(self.critic.state_dict(), save_path + 'critic.pth')
+        torch.save(self.target_critic.state_dict(), save_path + 'target_critic.pth')
 
     def save_agent(self, save_path, step):
         torch.save(self.actor.state_dict(), save_path + 'actor.pth')
