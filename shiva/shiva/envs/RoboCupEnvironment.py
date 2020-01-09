@@ -64,7 +64,6 @@ class RoboCupEnvironment(Environment):
         if discrete_select == 'argmax':
             act_choice = torch.argmax(actions[:self.action_space['discrete']])
         elif discrete_select == 'sample':
-            print(actions)
             act_choice = Categorical(actions[:self.action_space['discrete']]).sample()
             # action = action2one_hot(self.acs_discrete, action.item())
             # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
@@ -95,7 +94,7 @@ class RoboCupEnvironment(Environment):
         if collect:
             self.collect_metrics()
         
-        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
+        return self.obs, self.rews, [self.done]*self.env.num_left, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
         return self.obs
