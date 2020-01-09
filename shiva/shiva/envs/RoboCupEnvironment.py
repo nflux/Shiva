@@ -20,7 +20,7 @@ class RoboCupEnvironment(Environment):
 
         self.obs = self.env.left_obs
         self.rews = self.env.left_rewards
-        self.world_status = self.env.world_status
+        # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
         self.action_space = {'discrete': self.env.acs_dim, 'param': self.env.acs_param_dim}
         self.render = self.env.env_render
@@ -31,16 +31,12 @@ class RoboCupEnvironment(Environment):
         # RoboCup specific metrics
         self.reward_per_episode = 0
         self.kicks = 0
-        # self.kicked = 0
         self.turns = 0
         self.dashes = 0
         self.goal_ctr = 0
     
     def isImit(self):
         return self.run_imit
-    
-    def isAnyKickable(self):
-        return self.env.checkKickable('left')
     
     def isGoal(self):
         return self.env.checkGoal()
@@ -68,6 +64,7 @@ class RoboCupEnvironment(Environment):
         if discrete_select == 'argmax':
             act_choice = torch.argmax(actions[:self.action_space['discrete']])
         elif discrete_select == 'sample':
+            print(actions)
             act_choice = Categorical(actions[:self.action_space['discrete']]).sample()
             # action = action2one_hot(self.acs_discrete, action.item())
             # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
@@ -126,7 +123,6 @@ class RoboCupEnvironment(Environment):
         self.kicks = 0
         self.turns = 0
         self.dashes = 0
-        self.kicked = 0
         self.reward_per_episode = 0
         self.steps_per_episode = 0
         self.done = False
@@ -157,8 +153,7 @@ class RoboCupEnvironment(Environment):
                 ('Kicks_per_Episode', self.kicks),
                 ('Turns_per_Episode', self.turns),
                 ('Dashes_per_Episode', self.dashes),
-                ('Ball_Kicks_per_Episode', self.kicked),
-                ('Agent/Steps_Per_Episode', self.steps_per_episode)
+                ('Agent/Steps_Per_Episode', self.steps_per_episode),
                 ('Goal_Percentage/Per_Episodes', (self.goal_ctr/self.done_count)*100.0)
             ]
 
@@ -166,9 +161,6 @@ class RoboCupEnvironment(Environment):
 
 
         return metrics
-
-
-
 
 #from pynput.keyboard import Key, KeyCode, Listener
 #from math import atan2, pi, acos

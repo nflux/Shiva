@@ -165,7 +165,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
     def run(self):
         self.supervised_update()
         self.imitation_update()
-        self.env.close()
+        # self.env.close()
 
     def send_imit_obs_msgs(self):
         self.comm.send(self.env.get_imit_obs_msg())
@@ -199,7 +199,6 @@ class SingleAgentRoboCupImitationLearner(Learner):
             while not done:
                 done = self.imitation_step()
                 self.step_count+=1
-            self.env.close()
 
     # Function to step throught the environment
     def supervised_step(self):
@@ -212,22 +211,12 @@ class SingleAgentRoboCupImitationLearner(Learner):
         next_observation, reward, done, more_data = self.env.step(action, discrete_select='argmax')
 
         # Write to tensorboard
-        # Admin.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
         Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(),self.step_count)
 
-        # Cumulate the reward
-        # self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
+        self.super_buffer.push(list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
+                                                torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).float()))))
 
-        self.super_buffer.push(list(map(torch.clone, (torch.from_numpy(observation).clone(), action.clone(), torch.from_numpy(reward).clone(),
-                                                torch.from_numpy(next_observation).clone(), torch.from_numpy(np.array([done])).clone().float()))))
-
-        self.imitation_alg.supervised_update(self.agent,self.super_buffer.sample(self.imitation_alg.device), self.step_count)
-
-        # when the episode ends
-        if done:
-            pass
-            # add values to the tensorboard
-            # Admin.add_summary_writer(self, self.agent, 'Total_Reward', self.totalReward, self.ep_count)
+        self.imitation_alg.supervised_update(self.agent,self.super_buffer.sample(self.device), self.step_count)
 
         return done
 
@@ -241,16 +230,13 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         next_observation, reward, done, more_data = self.env.step(action, device=self.device)
 
-        # Admin.add_summary_writer(self, self.agent, 'Reward', reward, self.step_count)
         Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(), self.step_count)
-
-        # self.totalReward += more_data['raw_reward'][0] if type(more_data['raw_reward']) == list else more_data['raw_reward']
         
         self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), more_data['action'],
                         torch.from_numpy(reward),torch.from_numpy(next_observation),torch.from_numpy(np.array([done])).float(),
                         bot_action))))
 
-        self.imitation_alg.dagger_update(self.agent, self.buffer.sample(self.imitation_alg.device), self.step_count)
+        self.imitation_alg.dagger_update(self.agent, self.buffer.sample(self.device), self.step_count)
 
         # when the episode ends
         if done:

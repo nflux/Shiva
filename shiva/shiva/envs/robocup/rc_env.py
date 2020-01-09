@@ -61,14 +61,13 @@ class rc_env:
             self.kick_actions = self.KICK_TABLE
 
             self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
-            self.acs_param_dim = 0
+            # self.acs_param_dim = 0
 
         elif self.action_level == 'high':
             self.action_list = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.REORIENT, hfo_env.GO_TO_BALL, hfo_env.MOVE]
             self.kick_actions = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.PASS] # actions that require the ball to be kickable
-            # self.acs_param_dim = ????
 
-        self.set_observation_indexes(self.feature_level)
+        self.set_observation_indexes()
 
         if self.feature_level == 'low':
             #For new obs reorganization without vailds, changed hfo obs from 59 to 56
@@ -133,9 +132,9 @@ class rc_env:
 
         self.left_agent_possesion = ['N'] * self.num_left
 
-    def set_observation_indexes(self, feature_level):
+    def set_observation_indexes(self):
 
-        if feature_level == 'low':
+        if self.feature_level == 'low':
 
             self.ball_x = 0
             self.ball_y = 1
@@ -146,7 +145,7 @@ class rc_env:
             self.stamina = 6
             self.kickable = 7
 
-        elif feature_level == 'simple':
+        elif self.feature_level == 'simple':
             self.stamina = 26
             self.ball_x = 16
             self.ball_y = 17
@@ -549,12 +548,6 @@ class rc_env:
         cmd = hfo.get_viewer_path() +\
               " --connect --port %d" % (self.port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
-
-    def checkKickable(self, side):
-        if side == 'left':
-            return any([e.isKickable() for e in self.left_envs])
-        else:
-            return any([e.isKickable() for e in self.right_envs])
     
     def checkGoal(self):
         return self.left_envs[0].statusToString(self.world_status) == 'Goal_By_Left'
@@ -677,9 +670,9 @@ class rc_env:
 
             # if True:        
             # if self.num_right > 0:
-            print(self.left_agent_possesion)
+            # print(self.left_agent_possesion)
             if (np.array(self.left_agent_possesion) == 'N').all() or (np.array(self.right_agent_possesion) == 'N').all():
-                print("First Kick")
+                # print("First Kick")
                 reward += 10
                 team_reward += 1.5
 
