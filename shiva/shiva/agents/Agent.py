@@ -27,17 +27,17 @@ class Agent(torch.nn.Module):
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)
 
-    def save(self, save_path, step):
-        '''
-            Do something like
-                torch.save(self.policy, save_path + '/policy.pth')
-                torch.save(self.critic, save_path + '/critic.pth')
-            Or as many policies the Agent has
+    # def save(self, save_path, step):
+    #     '''
+    #         Do something like
+    #             torch.save(self.policy, save_path + '/policy.pth')
+    #             torch.save(self.critic, save_path + '/critic.pth')
+    #         Or as many policies the Agent has
 
-            Important:
-                Maintain the .pth file name to have the same name as the Agent attribute
-        '''
-        assert False, "Method Not Implemented"
+    #         Important:
+    #             Maintain the .pth file name to have the same name as the Agent attribute
+    #     '''
+    #     assert False, "Method Not Implemented"
 
     def load_net(self, policy_name, policy_file):
         '''
@@ -95,8 +95,8 @@ class Agent(torch.nn.Module):
             # print(g['lr'])
             g['lr'] = lr
 
-    def save(self, save_path, step_count):
-        torch.save(self, save_path + 'agent.pth')
+    # def save(self, save_path, step_count):
+    #     torch.save(self, save_path + 'agent.pth')
 
-    def load(self, save_path):
-        self = torch.load(save_path + 'agent.pth')
+    # def load(self, save_path):
+    #     self = torch.load(save_path + 'agent.pth')

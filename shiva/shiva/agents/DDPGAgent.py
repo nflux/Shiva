@@ -53,9 +53,7 @@ class DDPGAgent(Agent):
                 action = [np.random.uniform(0,1) for _ in range(self.acs_discrete)] 
                 action += self.ou_noise.noise()
                 action = softmax(torch.from_numpy(action))
-                # action = np.concatenate([ np_softmax(action[:self.acs_discrete]), action[self.acs_discrete:] ])
-                # print(action)
-                # input()
+
             else:
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
@@ -118,8 +116,8 @@ class DDPGAgent(Agent):
     #     torch.save(self.critic, save_path + '/critic.pth')
     #     torch.save(self.target_critic, save_path + '/target_critic.pth')
 
-    # def save_agent(self, save_path, step):
-    #     # torch.save(self, save_path + 'model.pth')
+    def save(self, save_path, step):
+        # torch.save(self, save_path + 'model.pth')
 
         torch.save({
             'actor' : self.actor,
@@ -143,18 +141,18 @@ class DDPGAgent(Agent):
         # torch.save(self.critic_optimizer.state_dict(), save_path + 'critic_optimizer.pth')
 
 
-    # def load(self,save_path):
-    #     model = torch.load(save_path + 'model.pth')
-    #     self.actor = model['actor']
-    #     self.critic = model['critic']
-    #     # self.target_actor = model['target_actor']
-    #     # self.target_critic = model['target_critic']
-    #     # self.target_critic.load_state_dict(model['target_critic_state'])
-    #     # self.target_actor.load_state_dict(model['target_actor_state'])
-    #     self.critic.load_state_dict(model['critic_state'])
-    #     self.actor.load_state_dict( model['actor_state'])
-    #     self.actor_optimizer.load_state_dict(model['actor_optimizer'])
-    #     self.critic_optimizer.load_state_dict(model['critic_optimizer'])   
+    def load(self,save_path):
+        model = torch.load(save_path + 'model.pth')
+        self.actor = model['actor']
+        self.critic = model['critic']
+        self.target_actor = model['target_actor']
+        self.target_critic = model['target_critic']
+        self.target_critic.load_state_dict(model['target_critic_state'])
+        self.target_actor.load_state_dict(model['target_actor_state'])
+        self.critic.load_state_dict(model['critic_state'])
+        self.actor.load_state_dict( model['actor_state'])
+        self.actor_optimizer.load_state_dict(model['actor_optimizer'])
+        self.critic_optimizer.load_state_dict(model['critic_optimizer'])   
 
         # self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
         # self.actor.train()

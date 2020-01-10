@@ -71,14 +71,14 @@ class SingleAgentMultiEnvLearner(Learner):
                             torch.tensor(next_observations), 
                             torch.tensor(dones)
                     ]
-                    self.buffer.push(exp)
+                    self.buffer.push(copy.deepcopy(exp))
                     self.step_count += len(observations)
                     self.reward_per_episode = np.array(rewards).sum()
                     self.steps_per_episode = len(observations)
                     for i in range(len(observations)):
                         self.reward_per_step = rewards[i][0]
                         self.collect_metrics(episodic=False)
-                    for _ in range(5):
+                    for _ in range(3):
                         self.alg.update(self.agent,self.buffer,self.step_count)
                         self.collect_metrics(episodic=True)
                     # self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
