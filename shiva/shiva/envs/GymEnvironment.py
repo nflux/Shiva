@@ -1,5 +1,6 @@
 import gym
 import numpy as np
+from torch.distributions import Categorical
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
 import torch
@@ -35,7 +36,8 @@ class GymEnvironment(Environment):
         if discrete_select == 'argmax':
             action4Gym = np.argmax(action) if self.action_space_continuous is None else action
         elif discrete_select == 'sample':
-            action4Gym = np.random.choice(len(action), p=action)
+            # print(action)
+            action4Gym = Categorical(torch.tensor(action)).sample()
 
         if self.action_space['discrete'] != 0:
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
@@ -58,8 +60,8 @@ class GymEnvironment(Environment):
         self.reward_per_episode += self.reward_per_step
         self.reward_total += self.reward_per_step
 
-        # if self.action_space['discrete'] != 0:
-        #     action = action2one_hot(self.action_space['discrete'], action4Gym)
+        if self.action_space['discrete'] != 0:
+            action = action2one_hot(self.action_space['discrete'], action4Gym)
 
         if self.normalize:
             return self.obs, self.normalize_reward(self.reward_per_step), self.done, {'raw_reward': self.reward_per_step, 'action': action}

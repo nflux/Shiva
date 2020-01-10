@@ -58,6 +58,7 @@ class DDPGAgent(Agent):
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.tensor(action.cpu().numpy() + self.ou_noise.noise())
+                action = softmax(action)
 
                 # lets test when we dont softmax here, so far it seems okay, maybe a little less stable than without it
                 # action = softmax(action)
@@ -119,51 +120,47 @@ class DDPGAgent(Agent):
     def save(self, save_path, step):
         # torch.save(self, save_path + 'model.pth')
 
-        torch.save({
-            # 'actor' : self.actor,
-            # 'critic': self.critic,
-            # 'target_actor' : self.target_actor,
-            # 'target_critic' : self.target_critic,
-            'actor_state' : self.actor.state_dict(),
-            'target_actor_state' : self.target_actor.state_dict(),
-            'critic_state' : self.critic.state_dict(),
-            'target_critic_state' : self.target_critic.state_dict(), 
-            'actor_optimizer' : self.actor_optimizer.state_dict(),
-            'critic_optimizer' : self.critic_optimizer.state_dict()
-        }, save_path + 'model.pth')
+        # torch.save({
+        #     # 'actor' : self.actor,
+        #     # 'critic': self.critic,
+        #     # 'target_actor' : self.target_actor,
+        #     # 'target_critic' : self.target_critic,
+        #     'actor_state' : self.actor.state_dict(),
+        #     'target_actor_state' : self.target_actor.state_dict(),
+        #     'critic_state' : self.critic.state_dict(),
+        #     'target_critic_state' : self.target_critic.state_dict(), 
+        #     'actor_optimizer' : self.actor_optimizer.state_dict(),
+        #     'critic_optimizer' : self.critic_optimizer.state_dict()
+        # }, save_path + 'model.pth')
 
 
-        # torch.save(self.actor.state_dict(), save_path + 'actor.pth')
-        # torch.save(self.target_actor.state_dict(), save_path + 'target_actor.pth')
-        # torch.save(self.critic.state_dict(), save_path + 'critic.pth')
-        # torch.save(self.target_critic.state_dict(), save_path + 'target_critic.pth')
-        # torch.save(self.actor_optimizer.state_dict(), save_path + 'actor_optimizer.pth')
-        # torch.save(self.critic_optimizer.state_dict(), save_path + 'critic_optimizer.pth')
+        torch.save(self.actor.state_dict(), save_path + 'actor.pth')
+        torch.save(self.target_actor.state_dict(), save_path + 'target_actor.pth')
+        torch.save(self.critic.state_dict(), save_path + 'critic.pth')
+        torch.save(self.target_critic.state_dict(), save_path + 'target_critic.pth')
+        torch.save(self.actor_optimizer.state_dict(), save_path + 'actor_optimizer.pth')
+        torch.save(self.critic_optimizer.state_dict(), save_path + 'critic_optimizer.pth')
 
 
     def load(self,save_path):
-        model = torch.load(save_path + 'model.pth')
-        # self.actor = model['actor']
-        # self.critic = model['critic']
-        # self.target_actor = model['target_actor']
-        # self.target_critic = model['target_critic']
-        self.target_critic.load_state_dict(model['target_critic_state'])
-        self.target_actor.load_state_dict(model['target_actor_state'])
-        self.critic.load_state_dict(model['critic_state'])
-        self.actor.load_state_dict( model['actor_state'])
-        self.actor_optimizer.load_state_dict(model['actor_optimizer'])
-        self.critic_optimizer.load_state_dict(model['critic_optimizer'])   
+        # model = torch.load(save_path + 'model.pth')
+        # # self.actor = model['actor']
+        # # self.critic = model['critic']
+        # # self.target_actor = model['target_actor']
+        # # self.target_critic = model['target_critic']
+        # self.target_critic.load_state_dict(model['target_critic_state'])
+        # self.target_actor.load_state_dict(model['target_actor_state'])
+        # self.critic.load_state_dict(model['critic_state'])
+        # self.actor.load_state_dict( model['actor_state'])
+        # self.actor_optimizer.load_state_dict(model['actor_optimizer'])
+        # self.critic_optimizer.load_state_dict(model['critic_optimizer'])   
 
-        # self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
-        # self.actor.train()
-        # self.target_actor.load_state_dict(torch.load(save_path + 'target_actor.pth'))
-        # self.target_actor.train()
-        # self.critic.load_state_dict(torch.load(save_path + 'critic.pth'))
-        # self.critic.train()
-        # self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
-        # self.target_critic.train()
-        # self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
-        # self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
+        self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
+        self.target_actor.load_state_dict(torch.load(save_path + 'target_actor.pth'))
+        self.critic.load_state_dict(torch.load(save_path + 'critic.pth'))
+        self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
+        self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
+        self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
         
     def __str__(self):
         return 'DDPGAgent'

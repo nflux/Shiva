@@ -111,8 +111,8 @@ class DDPGAlgorithm(Algorithm):
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
 
         # Get Q values of the batch from states and actions.
-        if self.a_space == 'discrete':
-            actions = one_hot_from_logits(actions)
+        # if self.a_space == 'discrete':
+        #     actions = one_hot_from_logits(actions)
             # print(actions)
 
         # Grab the discrete actions in the batch

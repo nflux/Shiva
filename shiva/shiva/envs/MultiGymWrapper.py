@@ -10,17 +10,18 @@ import time
 import os
 
 class MultiGymWrapper(Environment):
-    def __init__(self,configs,queue,agent,episode_count,agent_dir,total_episodes, saveLoadFlag, waitForLearner):
+    def __init__(self,configs,queue,agent,episode_count,agent_dir,total_episodes, saveLoadFlag, waitForLearner, step_count):
         super(MultiGymWrapper,self).__init__(configs)
         self.queue = queue
         self.agent = agent
         self.process_list = list()
         self.episode_count = episode_count
         self.total_episodes = total_episodes
-        self.step_count = 0
+        self.step_count = step_count
         self.configs = configs
         self.agent_dir = agent_dir
         self.saveLoadFlag = saveLoadFlag
+        self.action_available = torch.zeros(1).share_memory_()
         self.waitForLearner = waitForLearner
         self.envs = []
         self.p = mp.Process(target = self.launch_envs)
@@ -32,11 +33,14 @@ class MultiGymWrapper(Environment):
     def step_without_log_probs(self):
 
         loaded = False
+        last_load = 0
 
         while(self.stop_collecting.item() == 0):
 
+            # print(self.step_count)
+
             # print("Wrapper Flag:",self.saveLoadFlag.item())
-            # time.sleep(0.06)
+            # time.sleep(0.03)
 
             # if self.saveLoadFlag.item() == 0:
                 # if self.episode_count % 5 == 0:
@@ -52,23 +56,40 @@ class MultiGymWrapper(Environment):
                 # time.sleep(0.3)
                 # self.stop_collecting 
 
+            # start_time = time.time()
+            # i = 0
+            # while i < 10_000:
+                
+            #     action = self.agent.get_action(self.observations, 10_000)
+            #     i+=1
+
+            # print("--- {} seconds ---".format( (time.time() - start_time)/10_000 ))
+
+            # input()
+
             if not loaded:
                 # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
                 if self.episode_count % 1 == 0 and self.episode_count != 0: 
                     loaded = True
                     if self.saveLoadFlag.item() == 0:
+                        self.agent.get_action(self.observations, self.step_count)
                         self.agent.load(self.agent_dir)
+                        self.agent.actor.eval()
+                        self.agent.get_action(self.observations, self.step_count)
                         print("Agent Loaded")
                         self.saveLoadFlag[0] = 1
-                    # time.sleep(0.1)
+                    last_load = self.episode_count.item()
 
-            if self.episode_count % self.agent_update_episodes != 0:
+            # if self.episode_count % self.agent_update_episodes != 0:
+            if self.episode_count > last_load:
                 loaded = False
 
             if self.step_control.sum().item() == self.num_instances:
-                actions = self.agent.get_action(self.observations, self.step_count)
+                actions = self.agent.get_action(copy.deepcopy(self.observations), self.step_count.item())
+                # if self.action_available.item() == 1:
                 self.observations[:,0:self.envs[0].action_space['acs_space']] = actions
                 self.step_control.fill_(0)
+                # self.action_available[0] = 0
 
             if self.episode_count == self.total_episodes:
                 self.stop_collecting[0] = 1
@@ -136,14 +157,14 @@ class MultiGymWrapper(Environment):
         self.done_count = 0
         if self.logprobs:
             self.log_probs = torch.zeros(self.num_instances, 1).share_memory_()
-            self.process_list = launch_processes(self.envs, self.observations, self.step_control, self.stop_collecting, self.waitForLearner, self.queue, self.max_episode_length, logprobs=self.log_probs, num_instances=self.num_instances)
+            self.process_list = launch_processes(self.envs, self.observations, self.step_count, self.step_control, self.stop_collecting, self.waitForLearner, self.queue, self.max_episode_length, logprobs=self.log_probs, num_instances=self.num_instances)
             self.step_with_logprobs()
         else:
-            self.process_list = launch_processes(self.envs, self.observations, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length,num_instances=self.num_instances)
+            self.process_list = launch_processes(self.envs, self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length,num_instances=self.num_instances)
             self.step_without_log_probs()
 
-def process_target(env,observations,step_control,stop_collecting, waitForLearner, id, queue,max_ep_length):
-    step_count = 1
+def process_target(env,observations,action_available,step_count,step_control,stop_collecting, waitForLearner, id, queue,max_ep_length):
+    
     observation_space = env.observation_space
     action_space = env.action_space['acs_space']
     ep_observations = np.zeros((max_ep_length,observation_space))
@@ -160,16 +181,20 @@ def process_target(env,observations,step_control,stop_collecting, waitForLearner
         #print('Hello')
         #print('Process: ', step_control[id])
         if step_control[id] == 0 and waitForLearner.item() == 0:
-            # time.sleep(0.06)
+            time.sleep(0.06)
+
+            # while action_available.item() == 0:
+
             action = observations[id][:action_space].numpy()
-            next_observation, reward, done, more_data = env.step(action)
+            action_available[0] = 1
+            next_observation, reward, done, more_data = env.step(action, discrete_select='sample')
             ep_observations[idx] = observation
-            ep_actions[idx] = action
+            ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
             ep_next_observations[idx] = next_observation
             ep_dones[idx] = int(done)
             idx += 1
-
+            step_count +=1
 
             '''t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)
@@ -178,7 +203,16 @@ def process_target(env,observations,step_control,stop_collecting, waitForLearner
             episode_trajectory[episode_index:episode_index + len(exp)] = torch.tensor(exp)
             episode_index += len(exp)'''
             if done:
-                exp = copy.deepcopy(zip(ep_observations[:idx],ep_actions[:idx],ep_rewards[:idx],ep_next_observations[:idx],ep_dones[:idx]))
+                exp = copy.deepcopy(
+                            zip(
+                                ep_observations[:idx],
+                                ep_actions[:idx],
+                                ep_rewards[:idx],
+                                ep_next_observations[:idx],
+                                ep_dones[:idx]
+                            )
+                        )
+                print(ep_actions)
                 queue.put(exp)
                 env.reset()
                 observation = env.get_observation()
@@ -196,10 +230,9 @@ def process_target(env,observations,step_control,stop_collecting, waitForLearner
                 step_control[id] = 1
 
 
-def process_target_with_log_probs(env,observations,step_control,stop_collecting, id, queue,logprobs, max_ep_length):
+def process_target_with_log_probs(env,observations,step_count,step_control,stop_collecting, id, queue,logprobs, max_ep_length):
 # def process_target(self):
     #tensor for storing episodes per process/env
-    step_count = 1
     observation_space = env.observation_space
     action_space = env.action_space['acs_space']
     ep_observations = np.zeros((max_ep_length,observation_space))
@@ -228,6 +261,7 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
             ep_next_observations[idx] = next_observation
             ep_dones[idx] = int(done)
             idx += 1
+            step_count +=1
 
             # print("Hello")
 
@@ -238,7 +272,16 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
             episode_trajectory[episode_index:episode_index + len(exp)] = torch.tensor(exp)
             episode_index += len(exp)'''
             if done:
-                exp = copy.deepcopy(zip(ep_observations[:idx],ep_actions[:idx],ep_rewards[:idx].tolist(),ep_logprobs[:idx,0],ep_next_observations[:idx],ep_dones[:idx]))
+                exp = copy.deepcopy(
+                            zip(
+                                ep_observations[:idx],
+                                ep_actions[:idx],
+                                ep_rewards[:idx].tolist(),
+                                ep_logprobs[:idx,0],
+                                ep_next_observations[:idx],
+                                ep_dones[:idx]
+                                )
+                            )
                 queue.put(exp)
                 env.reset()
                 observation = env.get_observation()
@@ -256,7 +299,7 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
                 observation = next_observation
                 step_control[id] = 1
 
-def launch_processes(envs, observations, step_control, stop_collecting,waitForLearner,queue, max_episode_length,logprobs = None,num_instances=1):
+def launch_processes(envs, observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, max_episode_length,logprobs = None,num_instances=1):
 
     process_list = []
 
@@ -264,7 +307,7 @@ def launch_processes(envs, observations, step_control, stop_collecting,waitForLe
         if logprobs is not None:
             p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
         else:
-            p = mp.Process(target = process_target, args=(envs[i],observations,step_control,stop_collecting,waitForLearner,i,queue,max_episode_length,) )
+            p = mp.Process(target = process_target, args=(envs[i],observations, action_available,step_count,step_control,stop_collecting,waitForLearner,i,queue,max_episode_length,) )
         p.start()
         process_list.append(p)
 
