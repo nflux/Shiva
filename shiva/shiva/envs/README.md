@@ -169,6 +169,7 @@ ___
 ```
 [Environment]
 type='UnityEnvironment'
+execu='shiva/envs/unitybuilds/3DBall/3DBall.x86_64'
 env_name='3DBall'
 action_space='continuous'
 observation_space="continuous"
