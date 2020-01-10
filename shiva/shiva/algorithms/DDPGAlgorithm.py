@@ -84,7 +84,7 @@ class DDPGAlgorithm(Algorithm):
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,self.discrete:]], dim=2)
 
             elif dims == 2:
-                discrete_actions = next_state_actions_target[:,:self.discrete].squeeze(dim=0)
+                discrete_actions = next_state_actions_target[:,:self.discrete]
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,self.discrete:]], dim=1)
             else:
@@ -109,6 +109,7 @@ class DDPGAlgorithm(Algorithm):
         Q_next_states_target[dones_mask] = 0.0
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
+
         # Get Q values of the batch from states and actions.
         if self.a_space == 'discrete':
             actions = one_hot_from_logits(actions)

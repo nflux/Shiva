@@ -89,7 +89,7 @@ class TensorBuffer(ReplayBuffer):
         self.next_obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = next_obs
 
         if self.size < self.max_size:
-            self.size += 1
+            self.size += nentries
         self.current_index += 1
 
     def sample(self, device='cpu'):
@@ -146,7 +146,7 @@ class TensorBufferLogProbs(ReplayBuffer):
         self.log_probs_buffer[self.current_index:self.current_index+nentries] = log_probs
 
         if self.size < self.max_size:
-            self.size += 1
+            self.size += nentries
         self.current_index += 1
 
     def sample(self, device='cpu'):

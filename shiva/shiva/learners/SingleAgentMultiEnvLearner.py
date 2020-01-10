@@ -78,9 +78,9 @@ class SingleAgentMultiEnvLearner(Learner):
                     for i in range(len(observations)):
                         self.reward_per_step = rewards[i][0]
                         self.collect_metrics(episodic=False)
-                    for _ in range(3):
-                        self.alg.update(self.agent,self.buffer,self.step_count)
-                        self.collect_metrics(episodic=True)
+                    # for _ in range(3):
+                    self.alg.update(self.agent,self.buffer,self.step_count)
+                        # self.collect_metrics(episodic=True)
                     # self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
                     self.collect_metrics(episodic=True)
 
@@ -97,7 +97,7 @@ class SingleAgentMultiEnvLearner(Learner):
                     # start_time = time.time()
                     # print("Multi Learner:",self.agent_dir)
                     # self.agent.save_agent(self.agent_dir,self.step_count)
-                    self.agent.save(self.agent_dir,self.step_count)
+                    self.agent.save(self.agent_dir, self.step_count)
                     # print("--- %s seconds ---" % (time.time() - start_time))
                     print("Agent was saved")
                     self.saveLoadFlag[0] = 0

@@ -22,7 +22,6 @@ class MultiGymWrapper(Environment):
         self.agent_dir = agent_dir
         self.saveLoadFlag = saveLoadFlag
         self.waitForLearner = waitForLearner
-        self.process_list = []
         self.envs = []
         self.p = mp.Process(target = self.launch_envs)
         self.p.start()
@@ -55,7 +54,7 @@ class MultiGymWrapper(Environment):
 
             if not loaded:
                 # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
-                if self.episode_count % 3 == 0 and self.episode_count != 0: 
+                if self.episode_count % 1 == 0 and self.episode_count != 0: 
                     loaded = True
                     if self.saveLoadFlag.item() == 0:
                         self.agent.load(self.agent_dir)
@@ -165,7 +164,7 @@ def process_target(env,observations,step_control,stop_collecting, waitForLearner
             action = observations[id][:action_space].numpy()
             next_observation, reward, done, more_data = env.step(action)
             ep_observations[idx] = observation
-            ep_actions[idx] = more_data['action']
+            ep_actions[idx] = action
             ep_rewards[idx] = reward
             ep_next_observations[idx] = next_observation
             ep_dones[idx] = int(done)
