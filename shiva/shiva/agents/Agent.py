@@ -3,7 +3,7 @@ import torch.nn
 import numpy as np
 import shiva.helpers.misc as misc
 
-class Agent(torch.nn.Module):
+class Agent(object):
     
     def __init__(self, id, obs_space, acs_space, agent_config, network_config):
         super(Agent, self).__init__()

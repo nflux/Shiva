@@ -120,10 +120,10 @@ class DDPGAgent(Agent):
         # torch.save(self, save_path + 'model.pth')
 
         torch.save({
-            'actor' : self.actor,
-            'critic': self.critic,
-            'target_actor' : self.target_actor,
-            'target_critic' : self.target_critic,
+            # 'actor' : self.actor,
+            # 'critic': self.critic,
+            # 'target_actor' : self.target_actor,
+            # 'target_critic' : self.target_critic,
             'actor_state' : self.actor.state_dict(),
             'target_actor_state' : self.target_actor.state_dict(),
             'critic_state' : self.critic.state_dict(),
@@ -143,10 +143,10 @@ class DDPGAgent(Agent):
 
     def load(self,save_path):
         model = torch.load(save_path + 'model.pth')
-        self.actor = model['actor']
-        self.critic = model['critic']
-        self.target_actor = model['target_actor']
-        self.target_critic = model['target_critic']
+        # self.actor = model['actor']
+        # self.critic = model['critic']
+        # self.target_actor = model['target_actor']
+        # self.target_critic = model['target_critic']
         self.target_critic.load_state_dict(model['target_critic_state'])
         self.target_actor.load_state_dict(model['target_actor_state'])
         self.critic.load_state_dict(model['critic_state'])
