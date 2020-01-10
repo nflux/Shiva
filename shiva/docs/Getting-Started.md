@@ -12,9 +12,12 @@ These instructions will get you a copy of the project up and running on your loc
 
 In order to install Shiva, you have to get all parts of Shiva functional. 
 
-Start by cloning the repo,
+Start by cloning the repo (either thru HTTP or SSH),
 
 ```bash
+# SSH
+git clone git@github.com:nflux/Control-Tasks.git
+# HTTP
 git clone https://github.com/nflux/Control-Tasks/
 ```
 
