@@ -93,7 +93,7 @@ class Learner(object):
             setattr(self, key, attrs[key])
     
     def close(self):
-        pass
+        self.env.close()
 
     def get_id(self):
         return self.get_new_agent_id()
