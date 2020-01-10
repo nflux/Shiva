@@ -1,5 +1,5 @@
-pip install -r requirements.txt
-cd ../shiva/shiva/envs/ml-agents/ml-agents-envs/
+pip install -r Control-Tasks/setup/requirements.txt
+cd Control-Tasks/shiva/shiva/envs/ml-agents/ml-agents/
 pip install -e ./
-cd ../ml-agents/
+cd ../ml-agents-envs/
 pip install -e ./
