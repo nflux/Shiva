@@ -44,47 +44,52 @@ class SingleAgentMultiEnvLearner(Learner):
                 if self.configs['Algorithm']['algorithm'] == 'PPO':
                     observations, actions, rewards, logprobs, next_observations, dones = zip(*exp)
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
+                    exp = [
+                            torch.tensor(observations), 
+                            torch.tensor(actions), 
+                            torch.tensor(rewards), 
+                            torch.tensor(next_observations), 
+                            torch.tensor(dones), 
+                            torch.tensor(logprobs)
+                    ]
+                    self.step_count += len(observations)
                     for i in range(len(observations)):
-                        self.step_count += 1
-                        self.buffer.append(copy.deepcopy([observations[i], actions[i], rewards[i][0],logprobs[i], next_observations[i], dones[i][0]]))
+                        self.reward_per_step = rewards[i][0]
                         self.collect_metrics(episodic=False)
+                        self.step_count += 1
+                    self.buffer.push(exp)
+                    self.collect_metrics(episodic=False)
 
                 else:
+
                     observations, actions, rewards, next_observations, dones = zip(*exp)
-                    self.reward_per_episode = np.array(rewards).sum()
-                    self.steps_per_episode = len(rewards)
-                    self.collect_metrics(episodic=True)
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
+                    exp = [
+                            torch.tensor(observations), 
+                            torch.tensor(actions), 
+                            torch.tensor(rewards), 
+                            torch.tensor(next_observations), 
+                            torch.tensor(dones)
+                    ]
+                    self.buffer.push(exp)
+                    self.step_count += len(observations)
                     for i in range(len(observations)):
-                        self.step_count += 1
                         self.reward_per_step = rewards[i][0]
-                        self.buffer.append(copy.deepcopy([observations[i], actions[i], rewards[i][0], next_observations[i], dones[i][0]]))
                         self.collect_metrics(episodic=False)
-                        self.updates += 1
-                        self.alg.update(self.agent,self.buffer,self.step_count)
-                    # print(self.ep_count)
-                        # print(self.saveLoadFlag.item())
+                    self.alg.update(self.agent,self.buffer,self.step_count)
+                    self.reward_per_episode = np.array(rewards).sum()
+                    self.steps_per_episode = len(observations)
+                    self.collect_metrics(episodic=True)
 
                     # start_time = time.time()
                     # print("--- %s seconds ---" % (time.time() - start_time))
-                self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
+                # self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
                 self.ep_count += 1
+
                 if self.ep_count.item() / self.configs['Algorithm']['update_episodes'] >= self.updates:
-                    # self.alg.update(self.agent,self.buffer,self.step_count)
-                    print("hello")
+                    self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
+                    # print("hello")
 
-                # if self.saveLoadFlag.item() == 1:
-                #     # start_time = time.time()
-                #     # print("Multi Learner:",self.agent_dir)
-                #     self.agent.save_agent(self.agent_dir,self.step_count)
-                #     # print("--- %s seconds ---" % (time.time() - start_time))
-                #     print("Agent was saved")
-                #     self.saveLoadFlag[0] = 0
-
-                    # self.updates += 1
-                    # print('Copied')
-                    # Add save policy function here
-            else:
                 if self.saveLoadFlag.item() == 1:
                     # start_time = time.time()
                     # print("Multi Learner:",self.agent_dir)
@@ -92,6 +97,18 @@ class SingleAgentMultiEnvLearner(Learner):
                     # print("--- %s seconds ---" % (time.time() - start_time))
                     print("Agent was saved")
                     self.saveLoadFlag[0] = 0
+
+                    self.updates += 1
+                    # print('Copied')
+                    # Add save policy function here
+            else:
+            #     if self.saveLoadFlag.item() == 1:
+            #         # start_time = time.time()
+            #         # print("Multi Learner:",self.agent_dir)
+            #         self.agent.save_agent(self.agent_dir,self.step_count)
+            #         # print("--- %s seconds ---" % (time.time() - start_time))
+            #         print("Agent was saved")
+            #         self.saveLoadFlag[0] = 0
                 self.waitForLearner[0] = 0
 
         # self.p.join()
@@ -135,9 +152,9 @@ class SingleAgentMultiEnvLearner(Learner):
         else:
             return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
-    def create_buffer(self):
+    def create_buffer(self, obs_dim, ac_dim):
         buffer = load_class('shiva.buffers',self.configs['Buffer']['type'])
-        return buffer(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        return buffer(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_instances, obs_dim, ac_dim)
 
     def get_agents(self):
         return self.agents
@@ -149,6 +166,10 @@ class SingleAgentMultiEnvLearner(Learner):
         environment = load_class('shiva.envs', self.configs['Environment']['sub_type'])
         self.env = environment(self.configs)
 
+        # if buffer set to true in config
+        if self.using_buffer:
+            # Tensor replay buffer at the moment
+            self.buffer = self.create_buffer(self.env.get_observation_space(), self.env.get_action_space()['acs_space'])
 
         # Launch the algorithm which will handle the
         self.alg = self.create_algorithm()
@@ -163,11 +184,6 @@ class SingleAgentMultiEnvLearner(Learner):
         # Launch the environment
         self.env = self.create_environment()
 
-
-        # if buffer set to true in config
-        if self.using_buffer:
-            # Basic replay buffer at the moment
-            self.buffer = self.create_buffer()
 
         print('Launch Successful.')
 
@@ -192,3 +208,12 @@ class SingleAgentMultiEnvLearner(Learner):
             # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
 
         return metrics
+
+
+    # def close(self):
+
+        # for env in self.env.envs:
+            # env.close()
+
+        # for p in self.env.process_list:
+        #     p.close()

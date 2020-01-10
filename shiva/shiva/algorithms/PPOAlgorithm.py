@@ -31,24 +31,30 @@ class PPOAlgorithm(Algorithm):
         # self.softmax = Softmax(dim=-1)
 
 
-    def update(self, agent,buffer, step_count):
+    def update(self, agent,buffer, step_count, episodic=False):
         '''
             Getting a Batch from the Replay Buffer
         '''
+
+        if episodic == False:
+            return
+
         self.step_count = step_count
         minibatch = buffer.full_buffer()
 
         # Batch of Experiences
-        states, actions, rewards,logprobs, next_states, dones = minibatch
+        states, actions, rewards, next_states, dones, logprobs = minibatch
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
         actions = torch.tensor(actions).to(self.device)
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        done_masks = torch.ByteTensor(dones).to(self.device)
+        done_masks = torch.tensor(dones).to(self.device)
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float()).to(self.device)
+        # print("Hey",next_states)
+        # input()
         next_values = agent.critic(next_states.float()).to(self.device)
 
 
@@ -56,7 +62,11 @@ class PPOAlgorithm(Algorithm):
         advantage = []
         delta= 0
         gae = 0
-        for i in reversed(range(len(rewards))):
+        # print(rewards.shape[0])
+        # input()
+        # print(done_masks)
+        # input()
+        for i in reversed(range(buffer.current_index)):
             if done_masks[i]:
                 delta = rewards[i]-values[i]
                 gae = delta
@@ -74,7 +84,7 @@ class PPOAlgorithm(Algorithm):
         '''old_action_probs = old_agent.actor(states.float())
         dist = Categorical(old_action_probs)
         old_log_probs = dist.log_prob(actions)'''
-        old_log_probs = torch.from_numpy(logprobs).float().detach()
+        old_log_probs = logprobs.float().detach()
 
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):

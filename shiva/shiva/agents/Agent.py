@@ -3,8 +3,10 @@ import torch.nn
 import numpy as np
 import shiva.helpers.misc as misc
 
-class Agent(object):
+class Agent(torch.nn.Module):
+    
     def __init__(self, id, obs_space, acs_space, agent_config, network_config):
+        super(Agent, self).__init__()
         '''
         Base Attributes of Agent
             agent_id = given by the learner
@@ -92,3 +94,9 @@ class Agent(object):
         for g in optim.param_groups:
             # print(g['lr'])
             g['lr'] = lr
+
+    def save(self, save_path, step_count):
+        torch.save(self, save_path + 'agent.pth')
+
+    def load(self, save_path):
+        self = torch.load(save_path + 'agent.pth')

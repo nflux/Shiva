@@ -17,10 +17,12 @@ class SingleAgentLearner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.alg.update(self.agent, self.buffer, self.env.step_count)
+                # self.alg.update(self.agent, self.buffer, self.env.step_count)
                 self.collect_metrics()
                 if self.is_multi_process_cutoff(): return None # PBT Cutoff
                 else: continue
+            self.alg.update(self.agent, self.buffer, self.env.step_count)
+            self.collect_metrics()
             self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
             self.collect_metrics(episodic=True)
             self.checkpoint()
@@ -42,11 +44,8 @@ class SingleAgentLearner(Learner):
         else:
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action)
-            t = [observation, more_data['action'], reward, next_observation, int(done)]
-            # print(action)
-            # input()
-            exp = copy.deepcopy(t)
-            self.buffer.append(exp)
+            exp = [torch.tensor(observation), torch.tensor(more_data['action']), torch.tensor(reward), torch.tensor(next_observation), torch.tensor(int(done))]
+            self.buffer.push(copy.deepcopy(exp))
         """"""
 
     def is_multi_process_cutoff(self):
@@ -65,9 +64,9 @@ class SingleAgentLearner(Learner):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
-    def create_buffer(self):
-        buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+    def create_buffer(self, obs_dim, ac_dim):
+        buffer = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        return buffer(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim)
 
     def launch(self):
         self.env = self.create_environment()
@@ -85,7 +84,7 @@ class SingleAgentLearner(Learner):
         else:
             self.agent = self.alg.create_agent(self.get_new_agent_id())
             if self.using_buffer:
-                self.buffer = self.create_buffer()
-                self.buffer = self.create_buffers(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
+                # self.buffer = self.create_buffer()
+                self.buffer = self.create_buffer(self.env.get_observation_space(), self.env.get_action_space()['acs_space'])
 
         print('Launch Successful.')

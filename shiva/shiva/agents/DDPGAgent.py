@@ -3,7 +3,7 @@ import torch
 import copy
 import pickle
 from torch.distributions import Categorical
-from shiva.helpers.calc_helper import np_softmax
+from torch.nn.functional import softmax
 from shiva.agents.Agent import Agent
 from shiva.utils import Noise as noise
 from shiva.helpers.misc import action2one_hot
@@ -50,15 +50,21 @@ class DDPGAgent(Agent):
         else:
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.exploration_noise)
-                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
+                action = [np.random.uniform(0,1) for _ in range(self.acs_discrete)] 
                 action += self.ou_noise.noise()
-                action = np.concatenate([ np_softmax(action[:self.acs_discrete]), action[self.acs_discrete:] ])
+                action = softmax(torch.from_numpy(action))
+                # action = np.concatenate([ np_softmax(action[:self.acs_discrete]), action[self.acs_discrete:] ])
                 # print(action)
                 # input()
             else:
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-                action = action.cpu().numpy() + self.ou_noise.noise()                
+                action = torch.tensor(action.cpu().numpy() + self.ou_noise.noise())
+
+                # lets test when we dont softmax here, so far it seems okay, maybe a little less stable than without it
+                # action = softmax(action)
+
+
                 # action = Categorical(action).sample()
                 # action = action2one_hot(self.acs_discrete, action.item())
 
@@ -75,7 +81,7 @@ class DDPGAgent(Agent):
         #     return action
         # print(action)
         # input()
-        return action.tolist()
+        return action
 
         # return action
             
@@ -107,10 +113,10 @@ class DDPGAgent(Agent):
         return action[0]
 
     def save(self, save_path, step):
-        torch.save(self.actor, save_path + 'actor.pth')
-        torch.save(self.target_actor, save_path + 'target_actor.pth')
-        torch.save(self.critic, save_path + 'critic.pth')
-        torch.save(self.target_critic, save_path + 'target_critic.pth')
+        torch.save(self.actor, save_path + '/actor.pth')
+        torch.save(self.target_actor, save_path + '/target_actor.pth')
+        torch.save(self.critic, save_path + '/critic.pth')
+        torch.save(self.target_critic, save_path + '/target_critic.pth')
 
     def save_agent(self, save_path, step):
         # torch.save(self, save_path + 'model.pth')
@@ -138,7 +144,6 @@ class DDPGAgent(Agent):
 
 
     def load(self,save_path):
-        # print(save_path)
         model = torch.load(save_path + 'model.pth')
         self.actor = model['actor']
         self.critic = model['critic']

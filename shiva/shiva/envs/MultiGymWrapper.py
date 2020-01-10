@@ -1,5 +1,4 @@
 from .Environment import Environment
-# from shiva.envs.GymEnvironment import GymEnvironment
 from shiva.helpers.config_handler import load_class
 import numpy as np
 import torch
@@ -23,7 +22,8 @@ class MultiGymWrapper(Environment):
         self.agent_dir = agent_dir
         self.saveLoadFlag = saveLoadFlag
         self.waitForLearner = waitForLearner
-
+        self.process_list = []
+        self.envs = []
         self.p = mp.Process(target = self.launch_envs)
         self.p.start()
 
@@ -39,35 +39,35 @@ class MultiGymWrapper(Environment):
             # print("Wrapper Flag:",self.saveLoadFlag.item())
             # time.sleep(0.06)
 
-            if self.saveLoadFlag.item() == 0:
+            # if self.saveLoadFlag.item() == 0:
                 # if self.episode_count % 5 == 0:
                     # start_time = time.time()
 
                 # print("Gym Wrapper:",self.agent_dir)
-                self.agent.load(self.agent_dir)
+                # self.agent.load(self.agent_dir)
                 # os.system("rm -rf {}".format(self.agent_dir + '/actor.pth'))
                 # print("--- %s seconds ---" % (time.time() - start_time))
-                print("Agent Loaded")
+                # print("Agent Loaded")
 
-                self.saveLoadFlag[0] = 1
+                # self.saveLoadFlag[0] = 1
                 # time.sleep(0.3)
                 # self.stop_collecting 
 
-            # if not loaded:
-            #     if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
-            #         loaded = True
-            #         if self.saveLoadFlag.item() == 0:
-            #             self.agent.load(self.agent_dir)
-            #             print("Agent Loaded")
-            #             self.saveLoadFlag[0] = 1
-            #         time.sleep(0.1)
+            if not loaded:
+                # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
+                if self.episode_count % 5 == 0 and self.episode_count != 0: 
+                    loaded = True
+                    if self.saveLoadFlag.item() == 0:
+                        self.agent.load(self.agent_dir)
+                        print("Agent Loaded")
+                        self.saveLoadFlag[0] = 1
+                    # time.sleep(0.1)
 
             if self.episode_count % self.agent_update_episodes != 0:
                 loaded = False
 
             if self.step_control.sum().item() == self.num_instances:
-                observations = self.observations.numpy()
-                actions = torch.tensor([ self.agent.get_action(torch.tensor(obs).to(self.device), self.step_count) for obs in observations ] )
+                actions = self.agent.get_action(self.observations, self.step_count)
                 self.observations[:,0:self.envs[0].action_space['acs_space']] = actions
                 self.step_control.fill_(0)
 
@@ -103,9 +103,10 @@ class MultiGymWrapper(Environment):
                 action_probs = self.agent.actor(observations.to(self.device))
                 actions = torch.tensor([self.agent.get_action(obs) for obs in observations.numpy()])
                 if self.action_space == 'discrete':
-                    actions = torch.argmax(actions, dim=-1).long()
-                    logprobs = Categorical(action_probs).log_prob(actions.to(self.device))
+                    actions_temp = torch.argmax(actions, dim=-1).long().to(self.device)
+                    logprobs = Categorical(action_probs).log_prob(actions_temp).to(self.device)
                 self.observations[:,0:self.envs[0].action_space['acs_space']] = actions
+
                 self.log_probs[:,0] = logprobs
                 self.step_control.fill_(0)
 
@@ -136,7 +137,7 @@ class MultiGymWrapper(Environment):
         self.done_count = 0
         if self.logprobs:
             self.log_probs = torch.zeros(self.num_instances, 1).share_memory_()
-            self.process_list = launch_processes(self.envs, self.observations, self.step_control, self.stop_collecting, self.queue, self.max_episode_length, logprobs=self.log_probs, num_instances=self.num_instances)
+            self.process_list = launch_processes(self.envs, self.observations, self.step_control, self.stop_collecting, self.waitForLearner, self.queue, self.max_episode_length, logprobs=self.log_probs, num_instances=self.num_instances)
             self.step_with_logprobs()
         else:
             self.process_list = launch_processes(self.envs, self.observations, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length,num_instances=self.num_instances)
@@ -182,7 +183,7 @@ def process_target(env,observations,step_control,stop_collecting, waitForLearner
                 queue.put(exp)
                 env.reset()
                 observation = env.get_observation()
-                observations[id] = torch.from_numpy(observation)
+                observations[id] = observation
                 ep_observations.fill(0)
                 ep_actions.fill(0)
                 ep_rewards.fill(0)
@@ -229,7 +230,7 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
             ep_dones[idx] = int(done)
             idx += 1
 
-            print("Hello")
+            # print("Hello")
 
             '''t = [observation, action, reward, next_observation, int(done)]
             exp = copy.deepcopy(t)
@@ -242,7 +243,7 @@ def process_target_with_log_probs(env,observations,step_control,stop_collecting,
                 queue.put(exp)
                 env.reset()
                 observation = env.get_observation()
-                observations[id] = torch.from_numpy(observation)
+                observations[id] = observation
                 ep_observations.fill(0)
                 ep_actions.fill(0)
                 ep_rewards.fill(0)

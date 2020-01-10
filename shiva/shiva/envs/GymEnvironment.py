@@ -2,6 +2,7 @@ import gym
 import numpy as np
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
+import torch
 
 class GymEnvironment(Environment):
     def __init__(self, configs):
@@ -36,8 +37,11 @@ class GymEnvironment(Environment):
         elif discrete_select == 'sample':
             action4Gym = np.random.choice(len(action), p=action)
 
-        # print(action4Gym)
-        self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
+        if self.action_space['discrete'] != 0:
+            self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
+        else:
+            self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
+            
         self.load_viewer()
         '''
             Metrics collection
@@ -116,13 +120,13 @@ class GymEnvironment(Environment):
         return action_space
 
     def get_observation(self):
-        return self.obs
+        return torch.tensor(self.obs)
 
     def get_action(self):
         return self.acs
 
     def get_reward(self):
-        return self.reward_per_step
+        return torch.tensor(self.reward_per_step)
 
     def get_total_reward(self):
         '''
