@@ -19,19 +19,19 @@ class SingleAgentMetaLearner(MetaLearner):
 
             Admin.add_learner_profile(self.learner)
 
-            try:
-                self.learner.launch()
-                
-                Admin.checkpoint(self.learner)
+            # try:
+            self.learner.launch()
+            
+            Admin.checkpoint(self.learner)
 
-                self.learner.run()
+            self.learner.run()
 
-                self.save()
-            except KeyboardInterrupt:
-                print('Exiting for CTRL-C')
-            finally:
-                print('Cleaning up possible extra learner processes')
-                self.learner.close()
+            self.save()
+            # except KeyboardInterrupt:
+                # print('Exiting for CTRL-C')
+            # finally:
+                # print('Cleaning up possible extra learner processes')
+                # self.learner.close()
 
         print('bye')
 
