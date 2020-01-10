@@ -203,14 +203,17 @@ class DDPGAlgorithm(Algorithm):
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
-                ('Algorithm/Actor_Loss', self.actor_loss),
-                ('Algorithm/Critic_Loss', self.critic_loss)
+                # ('Algorithm/Actor_Loss', self.actor_loss),
+                # ('Algorithm/Critic_Loss', self.critic_loss)
             ]
             # # not sure if I want this all of the time
             # for i, ac in enumerate(self.action_space['acs_space']):
             #     metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
         else:
-            metrics = []
+            metrics = [
+                ('Algorithm/Actor_Loss', self.actor_loss),
+                ('Algorithm/Critic_Loss', self.critic_loss)                
+            ]
         return metrics
 
     def __str__(self):

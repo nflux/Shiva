@@ -55,7 +55,7 @@ class MultiGymWrapper(Environment):
 
             if not loaded:
                 # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
-                if self.episode_count % 5 == 0 and self.episode_count != 0: 
+                if self.episode_count % 3 == 0 and self.episode_count != 0: 
                     loaded = True
                     if self.saveLoadFlag.item() == 0:
                         self.agent.load(self.agent_dir)

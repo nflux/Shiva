@@ -50,7 +50,7 @@ class PPOAlgorithm(Algorithm):
         actions = torch.tensor(actions).to(self.device)
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        done_masks = torch.tensor(dones).to(self.device)
+        done_masks = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float()).to(self.device)
         # print("Hey",next_states)
