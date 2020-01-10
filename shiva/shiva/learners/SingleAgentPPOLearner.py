@@ -38,7 +38,7 @@ class SingleAgentPPOLearner(Learner):
                 self.ep_count += 1
                 self.alg.update(self.agent,self.buffer, self.step_count)
             self.checkpoint()
-        del(self.queues)
+        # del(self.queues)
         self.env.close()
 
     def step(self):
@@ -69,7 +69,7 @@ class SingleAgentPPOLearner(Learner):
                         self.rewards[i] = 0
                         while not self.queues[i].empty():
                             self.buffer.append(self.queues[i].get())
-                        self.ep_count +=1
+                        self.ep_count += 1
         else:
             action = self.agent.get_action(observation)
             next_observation, reward, done, more_data = self.env.step(action)
@@ -111,7 +111,7 @@ class SingleAgentPPOLearner(Learner):
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
-        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), self.env.action_space_discrete, self.env.action_space_continuous, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])

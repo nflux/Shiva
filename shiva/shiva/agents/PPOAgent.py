@@ -25,28 +25,30 @@ def init_layer(layer):
     return layer
 
 class PPOAgent(Agent):
-    def __init__(self, id, obs_dim, acs_discrete, acs_continuous, agent_config, net_config):
-        super(PPOAgent, self).__init__(id, obs_dim, (0 if acs_discrete is None else acs_discrete)+(0 if acs_continuous is None else acs_continuous), agent_config, net_config)
+    def __init__(self, id, obs_dim, acs_space, agent_config, net_config):
+        super(PPOAgent, self).__init__(id, obs_dim, acs_space['acs_space'], agent_config, net_config)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         torch.manual_seed(agent_config['manual_seed'])
         np.random.seed(agent_config['manual_seed'])
 
-        self.acs_discrete = acs_discrete
-        self.acs_continuous = acs_continuous
+        self.acs_discrete = acs_space['discrete']
+        self.acs_continuous = acs_space['param']
         self.scale = 0.9
         self.softmax = Softmax(dim=-1)
 
-
-        if (acs_discrete != None) and (acs_continuous != None):
+        if (self.acs_discrete != 0) and (self.acs_continuous != 0):
             # parametrized PPO?
+            self.action_space = 'Param'
             self.network_output = self.acs_discrete + self.acs_continuous
-            self.ou_noise = noise.OUNoise(acs_discrete+acs_continuous, self.scale)
-        elif (self.acs_discrete == None):
+            self.ou_noise = noise.OUNoise(self.acs_discrete+self.acs_continuous, self.scale)
+        elif (self.acs_discrete == 0):
+            self.action_space = 'Continuous'
             self.network_output = self.acs_continuous
-            self.ou_noise = noise.OUNoise(acs_continuous, self.scale)
+            self.ou_noise = noise.OUNoise(self.acs_continuous, self.scale)
         else:
+            self.action_space = 'Discrete'
             self.network_output = self.acs_discrete
-            self.ou_noise = noise.OUNoise(acs_discrete, self.scale)
+            self.ou_noise = noise.OUNoise(self.acs_discrete, self.scale)
             
         self.id = id
         self.network_input = obs_dim
@@ -60,27 +62,27 @@ class PPOAgent(Agent):
             self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
 
         elif self.action_space == 'Continuous':
-                '''self.policy_base = torch.nn.Sequential(
-                    init_layer(torch.nn.Linear(self.network_input, net_config['policy_base_output'])),
-                    torch.nn.ReLU())
-                self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
-                self.actor = self.mu
-                self.log_std = nn.Parameter(torch.zeros(1,self.network_output))
-                #self.var = torch.full((self.network_output,),self.std**2,requires_grad=True).to(self.device)
-                self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'], 1, net_config['critic'])
-                self.actor_params = list(self.mu.parameters())  + list(self.critic.parameters())+ list(self.log_std.parameters())
-                self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.params, lr=agent_config['learning_rate'])'''
-                self.policy_base = torch.nn.Sequential(
-                    init_layer(torch.nn.Linear(self.network_input, net_config['policy_base_output'])),
-                    torch.nn.ReLU())
-                self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
-                self.actor = self.mu
-                self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['var'])
-                self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'],1,net_config['critic'])
-                self.actor_params = list(self.mu.parameters()) + list(self.var.parameters())+ list(self.policy_base.parameters())+ list(self.critic.parameters())
-                self.critic_params = list(self.critic.parameters())
-                self.actor_optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.actor_params, lr=agent_config['learning_rate'])
-                self.critic_optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.critic_params, lr=agent_config['learning_rate'])
+            '''self.policy_base = torch.nn.Sequential(
+                init_layer(torch.nn.Linear(self.network_input, net_config['policy_base_output'])),
+                torch.nn.ReLU())
+            self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
+            self.actor = self.mu
+            self.log_std = nn.Parameter(torch.zeros(1,self.network_output))
+            #self.var = torch.full((self.network_output,),self.std**2,requires_grad=True).to(self.device)
+            self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'], 1, net_config['critic'])
+            self.actor_params = list(self.mu.parameters())  + list(self.critic.parameters())+ list(self.log_std.parameters())
+            self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.params, lr=agent_config['learning_rate'])'''
+            self.policy_base = torch.nn.Sequential(
+                init_layer(torch.nn.Linear(self.network_input, net_config['policy_base_output'])),
+                torch.nn.ReLU())
+            self.mu = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['mu'])
+            self.actor = self.mu
+            self.var = DLN.DynamicLinearNetwork(net_config['policy_base_output'],self.network_output,net_config['var'])
+            self.critic = DLN.DynamicLinearNetwork(net_config['policy_base_output'],1,net_config['critic'])
+            self.critic_params = list(self.critic.parameters())
+            self.actor_params = list(self.mu.parameters()) + list(self.var.parameters()) + list(self.policy_base.parameters())
+            self.actor_optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.actor_params, lr=agent_config['learning_rate'])
+            self.critic_optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.critic_params, lr=agent_config['learning_rate'])
 
 
     def get_action(self, observation):
