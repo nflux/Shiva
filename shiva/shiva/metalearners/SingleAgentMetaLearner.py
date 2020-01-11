@@ -21,12 +21,8 @@ class SingleAgentMetaLearner(MetaLearner):
 
             # try:
             self.learner.launch()
-<<<<<<< HEAD
             
-            # Admin.checkpoint(self.learner)
-=======
             Admin.checkpoint(self.learner)
->>>>>>> dev
 
             self.learner.run()
 

@@ -36,7 +36,6 @@ class SingleAgentLearner(Learner):
         if len(observation.shape) > 1 and self.env.env_name != 'RoboCup':
             action = [self.agent.get_action(obs, self.env.step_count) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
-            # print(reward)
             z = copy.deepcopy([
                 torch.tensor(observation), 
                 torch.tensor(action), 
@@ -93,6 +92,6 @@ class SingleAgentLearner(Learner):
             self.agent = self.alg.create_agent(self.get_new_agent_id())
             if self.using_buffer:
                 # self.buffer = self.create_buffer()
-                self.buffer = self.create_buffer(self.env.get_observation_space(), self.env.get_action_space()['discrete'])
+                self.buffer = self.create_buffer(self.env.get_observation_space(), self.env.get_action_space()['acs_space'])
 
         print('Launch Successful.')
