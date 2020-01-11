@@ -12,7 +12,7 @@ from shiva.agents.PPOAgent import PPOAgent
 from shiva.algorithms.Algorithm import Algorithm
 
 class PPOAlgorithm(Algorithm):
-    def __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
+    def __init__(self,obs_space, acs_space,configs):
 
         super(PPOAlgorithm, self).__init__(obs_space,acs_space,configs)
         torch.manual_seed(self.manual_seed)
@@ -26,8 +26,6 @@ class PPOAlgorithm(Algorithm):
         self.loss = 0
         self.acs_space = acs_space
         self.obs_space = obs_space
-        self.acs_discrete = action_space_discrete
-        self.acs_continuous = action_space_continuous
         # self.softmax = Softmax(dim=-1)
 
 
@@ -129,7 +127,7 @@ class PPOAlgorithm(Algorithm):
         return metrics
 
     def create_agent(self):
-        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])
+        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1],self.configs[2])
         return self.agent
 
     def __str__(self):
