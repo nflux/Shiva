@@ -10,7 +10,7 @@ from shiva.agents.PPOAgent import PPOAgent
 from shiva.algorithms.Algorithm import Algorithm
 
 class ContinuousPPOAlgorithm(Algorithm):
-    def __init__(self,obs_space, acs_space, action_space_discrete, action_space_continuous, configs):
+    def __init__(self,obs_space, acs_space, configs):
         super(ContinuousPPOAlgorithm, self).__init__(obs_space,acs_space,configs)
         torch.manual_seed(self.configs[0]['manual_seed'])
         self.epsilon_clip = configs[0]['epsilon_clip']
@@ -23,8 +23,6 @@ class ContinuousPPOAlgorithm(Algorithm):
         self.loss = 0
         self.acs_space = acs_space
         self.obs_space = obs_space
-        self.acs_discrete = action_space_discrete
-        self.acs_continuous = action_space_continuous
 
 
     def update(self, agent,buffer, step_count):
@@ -121,7 +119,7 @@ class ContinuousPPOAlgorithm(Algorithm):
         return self.critic_loss
 
     def create_agent(self):
-        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete, self.acs_continuous, self.configs[1], self.configs[2])
+        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
 
     def __str__(self):

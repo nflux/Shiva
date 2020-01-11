@@ -99,7 +99,8 @@ class DQNAlgorithm(Algorithm):
             action = action2one_hot(self.acs_space, action_idx)
         else:
             if len(observation.shape) > 1:
-                print('here')
+                # print('here')
+                pass
             # Iterate over all the actions to find the highest Q value
             action = agent.get_action(observation)
         return action # replay buffer store lists and env does np.argmax(action)
