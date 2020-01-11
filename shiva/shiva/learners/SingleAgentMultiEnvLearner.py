@@ -38,19 +38,19 @@ class SingleAgentMultiEnvLearner(Learner):
 
                 # this should prevent the GymWrapper from getting to far ahead of the learner
                 # Makes the gym wrapper stop collecting momentarily
-                if self.queue.qsize() >= 1:
-                    self.waitForLearner[0] = 1
+                #if self.queue.qsize() >= 1:
+                    #self.waitForLearner[0] = 1
 
                 exp = self.queue.get()
                 if self.configs['Algorithm']['algorithm'] == 'PPO':
                     observations, actions, rewards, logprobs, next_observations, dones = zip(*exp)
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     exp = [
-                            torch.tensor(observations), 
-                            torch.tensor(actions), 
-                            torch.tensor(rewards), 
-                            torch.tensor(next_observations), 
-                            torch.tensor(dones), 
+                            torch.tensor(observations),
+                            torch.tensor(actions),
+                            torch.tensor(rewards),
+                            torch.tensor(next_observations),
+                            torch.tensor(dones),
                             torch.tensor(logprobs)
                     ]
                     self.step_count += len(observations)
@@ -66,10 +66,10 @@ class SingleAgentMultiEnvLearner(Learner):
                     observations, actions, rewards, next_observations, dones = zip(*exp)
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                     exp = [
-                            torch.tensor(observations), 
-                            torch.tensor(actions), 
-                            torch.tensor(rewards), 
-                            torch.tensor(next_observations), 
+                            torch.tensor(observations),
+                            torch.tensor(actions),
+                            torch.tensor(rewards),
+                            torch.tensor(next_observations),
                             torch.tensor(dones)
                     ]
                     self.agent.actor.train()
@@ -87,7 +87,7 @@ class SingleAgentMultiEnvLearner(Learner):
                     self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
                     self.collect_metrics(episodic=True)
 
- 
+
                 # self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
                 self.ep_count += 1
 
@@ -153,10 +153,7 @@ class SingleAgentMultiEnvLearner(Learner):
         algorithm = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         acs_continuous = self.env.action_space_continuous
         acs_discrete= self.env.action_space_discrete
-        if self.configs['Algorithm']['algorithm'] == 'PPO':
-            return algorithm(self.env.get_observation_space(), self.env.get_action_space(), acs_discrete, acs_continuous, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
-        else:
-            return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self, obs_dim, ac_dim):
         buffer = load_class('shiva.buffers',self.configs['Buffer']['type'])

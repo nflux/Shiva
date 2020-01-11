@@ -54,12 +54,12 @@ class MultiGymWrapper(Environment):
 
                 # self.saveLoadFlag[0] = 1
                 # time.sleep(0.3)
-                # self.stop_collecting 
+                # self.stop_collecting
 
             # start_time = time.time()
             # i = 0
             # while i < 10_000:
-                
+
             #     action = self.agent.get_action(self.observations, 10_000)
             #     i+=1
 
@@ -69,7 +69,7 @@ class MultiGymWrapper(Environment):
 
             if not loaded:
                 # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
-                if self.episode_count % 1 == 0 and self.episode_count != 0: 
+                if self.episode_count % 1 == 0 and self.episode_count != 0:
                     loaded = True
                     if self.saveLoadFlag.item() == 0:
                         self.agent.get_action(self.observations, self.step_count)
@@ -157,14 +157,14 @@ class MultiGymWrapper(Environment):
         self.done_count = 0
         if self.logprobs:
             self.log_probs = torch.zeros(self.num_instances, 1).share_memory_()
-            self.process_list = launch_processes(self.envs, self.observations, self.step_count, self.step_control, self.stop_collecting, self.waitForLearner, self.queue, self.max_episode_length, logprobs=self.log_probs, num_instances=self.num_instances)
+            self.process_list = launch_processes(self.envs, self.observations, self.action_available, self.step_count, self.step_control, self.stop_collecting, self.waitForLearner, self.queue, self.max_episode_length, logprobs=self.log_probs, num_instances=self.num_instances)
             self.step_with_logprobs()
         else:
             self.process_list = launch_processes(self.envs, self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length,num_instances=self.num_instances)
             self.step_without_log_probs()
 
 def process_target(env,observations,action_available,step_count,step_control,stop_collecting, waitForLearner, id, queue,max_ep_length):
-    
+
     observation_space = env.observation_space
     action_space = env.action_space['acs_space']
     ep_observations = np.zeros((max_ep_length,observation_space))
@@ -305,7 +305,7 @@ def launch_processes(envs, observations, action_available, step_count, step_cont
 
     for i in range(num_instances):
         if logprobs is not None:
-            p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
+            p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_count,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
         else:
             p = mp.Process(target = process_target, args=(envs[i],observations, action_available,step_count,step_control,stop_collecting,waitForLearner,i,queue,max_episode_length,) )
         p.start()
