@@ -39,7 +39,7 @@ class SingleAgentPPOLearner(Learner):
             print(self.ep_count)
             if int(self.ep_count / self.configs['Algorithm']['update_episodes']) > self.update_count:
                 self.update_count += 1
-                self.ep_count += 1
+                #self.ep_count += 1
                 self.alg.update(self.agent,self.buffer, self.step_count)
             self.checkpoint()
         # del(self.queues)
