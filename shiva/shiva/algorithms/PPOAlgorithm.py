@@ -37,14 +37,14 @@ class PPOAlgorithm(Algorithm):
         minibatch = buffer.full_buffer()
 
         # Batch of Experiences
-        states, actions, rewards,logprobs, next_states, dones = minibatch
+        states, actions, rewards, next_states, dones,logprobs = minibatch
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
         actions = torch.tensor(np.argmax(actions, axis=-1)).to(self.device).long()
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        done_masks = torch.ByteTensor(dones).to(self.device)
+        done_masks = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float()).to(self.device)
         next_values = agent.critic(next_states.float()).to(self.device)
@@ -69,10 +69,10 @@ class PPOAlgorithm(Algorithm):
         #Normalize the advantages
         advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
         #Calculate log probabilites of the old policy for the policy objective
-        '''old_action_probs = old_agent.actor(states.float())
-        dist = Categorical(old_action_probs)
-        old_log_probs = dist.log_prob(actions)'''
-        old_log_probs = torch.from_numpy(logprobs).float().detach()
+        if type(logprobs) == np.ndarray:
+            old_log_probs = torch.from_numpy(logprobs).float().detach()
+        else:
+            old_log_probs = logprobs.clone().detach()
 
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):

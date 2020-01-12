@@ -59,6 +59,8 @@ class SingleAgentMultiEnvLearner(Learner):
                         self.collect_metrics(episodic=False)
                         # self.step_count += 1
                     self.buffer.push(exp)
+                    if self.buffer.current_index - 1 >= self.update_episodes:
+                        self.alg.update(self.agent,self.buffer,self.step_count)
                     self.collect_metrics(episodic=False)
 
                 else:

@@ -67,7 +67,7 @@ class TensorBuffer(ReplayBuffer):
         self.done_buffer = torch.zeros((self.max_size, 1),requires_grad=False)
 
     def push(self, exps):
-         
+
 
         obs, ac, rew, next_obs, done = exps
         nentries = len(obs)
@@ -117,7 +117,7 @@ class TensorBufferLogProbs(ReplayBuffer):
         self.log_probs_buffer = torch.zeros( (self.max_size), requires_grad=False)
 
     def push(self, exps):
-         
+
 
         obs, ac, rew, next_obs, done, log_probs = exps
         nentries = len(obs)
@@ -169,21 +169,21 @@ class TensorBufferLogProbs(ReplayBuffer):
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
         return   (
-                    cast_obs(self.obs_buffer[:, :self.current_index]),
-                    cast(self.acs_buffer[:, :self.current_index]),
-                    cast(self.rew_buffer[:, :self.current_index]).squeeze(),
-                    cast_obs(self.next_obs_buffer[:, :self.current_index]),
-                    cast(self.done_buffer[:, :self.current_index]).squeeze(),
+                    cast_obs(self.obs_buffer[:self.current_index,:]),
+                    cast(self.acs_buffer[:self.current_index,:]),
+                    cast(self.rew_buffer[:self.current_index,:]).squeeze(),
+                    cast_obs(self.next_obs_buffer[:self.current_index,:]),
+                    cast(self.done_buffer[:self.current_index,:]).squeeze(),
                     cast(self.log_probs_buffer[:self.current_index])
         )
 
     def clear_buffer(self):
-        self.obs_buffer.fill(0)
-        self.acs_buffer.fill(0)
-        self.rew_buffer.fill(0)
-        self.next_obs_buffer.fill(0)
-        self.done_buffer.fill(0)
-        self.log_probs_buffer.fill(0)
+        self.obs_buffer.fill_(0)
+        self.acs_buffer.fill_(0)
+        self.rew_buffer.fill_(0)
+        self.next_obs_buffer.fill_(0)
+        self.done_buffer.fill_(0)
+        self.log_probs_buffer.fill_(0)
         self.current_index = 0
 
 class TensorSingleDaggerRoboCupBuffer(ReplayBuffer):

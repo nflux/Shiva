@@ -1,10 +1,8 @@
-import numpy as np
+imimport numpy as np
 import torch
 import torch.functional as F
 from torch.distributions import Categorical
 from torch.distributions.normal import Normal
-import math
-
 from shiva.utils import Noise as noise
 from shiva.agents.PPOAgent import PPOAgent
 from shiva.algorithms.Algorithm import Algorithm
@@ -63,7 +61,7 @@ class ContinuousPPOAlgorithm(Algorithm):
         new_rewards = torch.tensor(new_rewards).float().to(self.device)
         advantage = torch.tensor(advantage).float()
         #Normalize the advantages
-        advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
+        advantage = (advantage - torch.mean(advantage)) / (torch.std(advantage) + 1e-8)
 
         old_log_probs = torch.from_numpy(logprobs)
 
@@ -71,23 +69,20 @@ class ContinuousPPOAlgorithm(Algorithm):
         for epoch in range(self.configs[0]['update_epochs']):
             agent.optimizer.zero_grad()
             values = agent.critic(states.float())
-            self.value_loss = self.loss_calc(values,new_rewards.unsqueeze(dim=-1))
             mu = agent.mu(states.float()).squeeze(0)
-            sigma = agent.var(states.float()).squeeze(0)
+            sigma = agent.sigma(states.float()).squeeze(0)
             if len(mu.shape) == 2: mu = mu.squeeze(-1)
             if len(sigma.shape) == 2: sigma = sigma.squeeze(-1)
-            #log_std = agent.log_std.expand_as(mu_new)
-            #cov_mat = torch.diag(agent.var)
+
             dist= Normal(mu.squeeze(0),torch.abs(sigma))
             new_log_probs = dist.log_prob(actions)
             entropy = dist.entropy().sum(-1).mean()
 
-            #penalty = (dist2.cdf(-1) + 1 - dist2.cdf(1)).mean().requires_grad_(True)
-            #new_log_probs = self.log_probs(mu_new,var_new,actions).float()
             ratios = torch.exp(new_log_probs.double() - old_log_probs.double()).float()
             surr1 = ratios * advantage.unsqueeze(dim=-1)
             surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage.unsqueeze(dim=-1)
-            #entropy = (torch.log(2*math.pi*var_new) +1)/2
+
+            self.value_loss = self.loss_calc(values,new_rewards.unsqueeze(dim=-1))
             self.entropy_loss = -(self.configs[0]['beta']*entropy)
             self.policy_loss =  -torch.min(surr1,surr2).mean() + self.entropy_loss
             self.loss = self.value_loss + self.policy_loss + self.entropy_loss

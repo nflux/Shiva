@@ -35,11 +35,10 @@ class SingleAgentPPOLearner(Learner):
             #self.ep_count += 1
             self.collect_metrics(True) # metrics per episode
             #print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
-            print('Hello')
             print(self.ep_count)
             if int(self.ep_count / self.configs['Algorithm']['update_episodes']) > self.update_count:
                 self.update_count += 1
-                self.ep_count += 1
+                #self.ep_count += 1
                 self.alg.update(self.agent,self.buffer, self.step_count)
             self.checkpoint()
         del(self.queues)
@@ -63,10 +62,10 @@ class SingleAgentPPOLearner(Learner):
             logprobs = [self.agent.get_logprobs(obs,act) for obs,act in zip(observation,action)]
             next_observation, reward, done, more_data = self.env.step(action)
             for i in range(len(action)):
-                z = copy.deepcopy(zip([observation[i]], [action[i]], [reward[i]], [logprobs[i]], [next_observation[i]], [done[i]]))
-                for obs, act, rew, logprob, next_obs, don in z:
+                z = copy.deepcopy(zip([observation[i]], [action[i]], [reward[i]], [next_observation[i]], [done[i]], [logprobs[i]]))
+                for obs, act, rew, next_obs, don, logprob in z:
                     self.rewards[i] += rew
-                    exp = [obs, act, rew, logprob, next_obs, int(don)]
+                    exp = [obs, act, rew, next_obs, int(don), logprob]
                     self.queues[i].put(exp)
                     if don == True:
                         print('Episode: ', self.ep_count + 1, ' reward: ', self.rewards[i])
@@ -78,10 +77,8 @@ class SingleAgentPPOLearner(Learner):
             action = self.agent.get_action(observation)
             next_observation, reward, done, more_data = self.env.step(action)
             self.rewards[0] += reward
-            #action_probs = self.agent.actor(torch.from_numpy(observation).float())
-            #log_probs = Categorical(action_probs).log_prob(torch.argmax(torch.tensor(action), dim=-1)).tolist()
             log_probs = self.agent.get_logprobs(observation,action)
-            t = [observation, action, reward, log_probs, next_observation, int(done)]
+            t = [observation.numpy(), action, reward, next_observation, int(done), log_probs]
             exp = copy.deepcopy(t)
             if done:
                 self.ep_count += 1

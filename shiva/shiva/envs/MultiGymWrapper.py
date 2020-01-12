@@ -121,7 +121,7 @@ class MultiGymWrapper(Environment):
             if self.step_control.sum().item() == self.num_instances:
                 observations = self.observations
                 action_probs = self.agent.actor(observations.to(self.device))
-                actions = torch.tensor([self.agent.get_action(obs) for obs in observations.numpy()])
+                actions = torch.tensor([self.agent.get_action(obs) for obs in observations])
                 if self.action_space == 'discrete':
                     actions_temp = torch.argmax(actions, dim=-1).long().to(self.device)
                     logprobs = Categorical(action_probs).log_prob(actions_temp).to(self.device)
