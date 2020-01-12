@@ -38,8 +38,8 @@ class SingleAgentMultiEnvLearner(Learner):
 
                 # this should prevent the GymWrapper from getting to far ahead of the learner
                 # Makes the gym wrapper stop collecting momentarily
-                #if self.queue.qsize() >= 1:
-                    #self.waitForLearner[0] = 1
+                if self.queue.qsize() >= 1:
+                    self.waitForLearner[0] = 1
 
                 exp = self.queue.get()
                 if self.configs['Algorithm']['algorithm'] == 'PPO':
