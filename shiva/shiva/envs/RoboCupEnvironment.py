@@ -16,7 +16,7 @@ class RoboCupEnvironment(Environment):
         self.env.launch()
 
         self.left_actions = self.env.left_actions
-        self.left_params = self.env.left_action_params
+        self.left_action_option = self.env.left_action_option
 
         self.obs = self.env.left_obs
         self.rews = self.env.left_rewards
@@ -37,6 +37,12 @@ class RoboCupEnvironment(Environment):
     
     def isImit(self):
         return self.run_imit
+    
+    def isDescritized(self):
+        return self.action_level == 'discretized'
+    
+    def descritize_action(self, action):
+        return self.env.descritize_action(action)
     
     def isGoal(self):
         return self.env.checkGoal()
@@ -65,36 +71,40 @@ class RoboCupEnvironment(Environment):
             act_choice = torch.argmax(actions[:self.action_space['discrete']])
         elif discrete_select == 'sample':
             act_choice = Categorical(actions[:self.action_space['discrete']]).sample()
+        elif discrete_select == 'imit_discrete':
+            act_choice = actions[0].item()
             # action = action2one_hot(self.acs_discrete, action.item())
             # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
 
-        self.left_actions = act_choice.unsqueeze(dim=-1)
+        # self.left_actions = act_choice.unsqueeze(dim=-1)
 
         if self.action_level == 'discretized':
+            self.left_action_option[0] = act_choice
             # indicates whether its a dash, turn, or kick action from the action matrix
-            if 0 <= self.left_actions <= 188:
-                action_matrix_index = 0
+            if 0 <= self.left_action_option[0] <= 188:
+                self.left_actions[0] = 0
                 self.dashes += 1
-            elif 189 <= self.left_actions <= 197:
-                action_matrix_index = 1
+            elif 189 <= self.left_action_option[0] <= 197:
+                self.left_actions[0] = 1
                 self.turns += 1
             else:
-                action_matrix_index = 2
+                self.left_actions[0] = 2
                 self.kicks += 1
 
-            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=[action_matrix_index], left_params=self.left_actions)
+            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
             actions_v = action2one_hot(self.action_space['discrete'], act_choice)
         else:
-            self.left_params = actions[self.action_space['discrete']:].unsqueeze(dim=0)
+            self.left_actions = act_choice.unsqueeze(dim=0)
+            self.left_action_option = actions[self.action_space['discrete']:].unsqueeze(dim=0)
             # self.left_params = torch.tensor([params]).float()
 
-            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_params=self.left_params)
-            actions_v = torch.cat([action2one_hot_v(self.action_space['discrete'], act_choice.item()).to(device), self.left_params[0]])
+            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
+            actions_v = torch.cat([action2one_hot_v(self.action_space['discrete'], act_choice.item()).to(device), self.left_action_option[0]])
 
         if collect:
             self.collect_metrics()
         
-        return self.obs, self.rews, [self.done]*self.env.num_left, {'raw_reward': self.rews, 'action': actions_v}
+        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
         return self.obs
@@ -103,7 +113,7 @@ class RoboCupEnvironment(Environment):
         return self.env.getImitObsMsg()
 
     def get_actions(self):
-        return self.left_actions, self.left_params
+        return self.left_actions, self.left_action_option
 
     def get_reward(self):
         return self.rews

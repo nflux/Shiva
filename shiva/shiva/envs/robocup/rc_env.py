@@ -31,6 +31,8 @@ class rc_env:
         # self.seed = np.random.randint(1000)
         self.viewer = None
 
+        self.left_action_option = None
+        self.right_action_option = None
 
         if self.action_level == 'low':
             #                   pow,deg   deg       deg         pow,deg    
@@ -38,35 +40,79 @@ class rc_env:
             self.action_list = [hfo_env.DASH, hfo_env.TURN, hfo_env.KICK]
             self.kick_actions = [hfo_env.KICK] # actions that require the ball to be kickable
             self.acs_dim = len(self.action_list)
-            self.acs_param_dim = 5
-
+            self.acs_param_dim = 5 # 2 for dash and kick 1 for turn and tackle
+            self.left_action_option = np.asarray([[0.0]*self.acs_param_dim for i in range(self.num_left)])
+            # self.left_actions_OH = np.empty([self.num_left, 8],dtype=float)
+            self.right_action_option = np.asarray([[0.0]*self.acs_param_dim for i in range(self.num_right)])
+            # self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
         elif self.action_level == 'discretized':
-
-            self.power_discretization = np.linspace(0,100,21).tolist()
-            self.degree_discretization = np.linspace(-180,180,9).tolist()
+            
+            self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
+            power_discretization = np.linspace(0,100,21).tolist()
+            degree_discretization = np.linspace(-180,180,9).tolist()
+            print(degree_discretization)
+            self.pow_step = power_discretization[1]-power_discretization[0]
+            self.degree_step = degree_discretization[1]-degree_discretization[0]
 
             # Reference Tables
-            self.DASH_TABLE = []
-            self.KICK_TABLE = []
-            self.TURN_TABLE = self.degree_discretization
+            # self.DASH_TABLE = []
+            # self.KICK_TABLE = []
+            # self.TURN_TABLE = self.degree_discretization
+            self.ACTION_DICT = {}
+            self.REVERSE_ACTION_DICT = {}
+            dis_ctr = 0
+            rev_ctr = 0
+            turn_dict = kick_dict = {}
+            for dash_power in power_discretization:
+                for dash_degree in degree_discretization:
+                    self.ACTION_DICT[dis_ctr] = (dash_power, dash_degree)
+                    dis_ctr += 1
+            
+            self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(self.ACTION_DICT.values(), self.ACTION_DICT.keys()))
+            rev_ctr += 1
+            for turn_degree in degree_discretization:
+                turn_dict[dis_ctr] = (turn_degree,)
+                self.ACTION_DICT[dis_ctr] = (turn_degree,)
+                dis_ctr += 1
+            
+            self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(turn_dict.values(), turn_dict.keys()))
+            rev_ctr += 1
+            for kick_power in power_discretization:
+                for kick_degree in degree_discretization:
+                    kick_dict[dis_ctr] = (kick_power, kick_degree)
+                    self.ACTION_DICT[dis_ctr] = (kick_power, kick_degree)
+                    dis_ctr += 1
 
-            for dash_power in self.power_discretization:
-                for dash_degree in self.degree_discretization:
-                    self.DASH_TABLE.append((dash_power,dash_degree))
-                    self.KICK_TABLE.append((dash_power,dash_degree))
+            self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(kick_dict.values(), kick_dict.keys()))
+            # for a in range(len(self.action_list)):
+            #     if a == 0:
+            #         self.ACTION_DICT[a] = dash_dict
+            #     elif a == 1:
+            #         self.ACTION_DICT[a] = turn_dict
+            #     else:
+            #         self.ACTION_DICT[a] = kick_dict
 
-            self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
+            # for dash_power in self.power_discretization:
+            #     for dash_degree in self.degree_discretization:
+            #         self.DASH_TABLE.append((dash_power,dash_degree))
+            #         self.KICK_TABLE.append((dash_power,dash_degree))
 
-            self.ACTION_MATRIX = self.DASH_TABLE + self.TURN_TABLE + self.KICK_TABLE
-            self.kick_actions = self.KICK_TABLE
+            
+            self.left_action_option = [0]*self.num_left
+            self.right_action_option = [0]*self.num_right
 
-            self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
-            # self.acs_param_dim = 0
+            # self.ACTION_MATRIX = self.DASH_TABLE + self.TURN_TABLE + self.KICK_TABLE
+            # self.kick_actions = self.KICK_TABLE
+
+            # self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
+            self.acs_dim =  dis_ctr
+            self.acs_param_dim = 0
 
         elif self.action_level == 'high':
             self.action_list = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.REORIENT, hfo_env.GO_TO_BALL, hfo_env.MOVE]
             self.kick_actions = [hfo_env.DRIBBLE, hfo_env.SHOOT, hfo_env.PASS] # actions that require the ball to be kickable
 
+        self.num_actions = len(self.action_list)
         self.set_observation_indexes()
 
         if self.feature_level == 'low':
@@ -98,13 +144,8 @@ class rc_env:
         self.sync_at_status = threading.Barrier(self.num_left+self.num_right)
         self.sync_at_reward = threading.Barrier(self.num_left+self.num_right)
 
-        # params for low level actions
-        num_action_params = 5 # 2 for dash and kick 1 for turn and tackle
-
         # Left side actions, obs, rewards
-        self.left_actions = np.array([2]*self.num_left)
-        self.left_action_params = np.asarray([[0.0]*num_action_params for i in range(self.num_left)])
-        # self.left_actions_OH = np.empty([self.num_left, 8],dtype=float)
+        self.left_actions = np.array([0]*self.num_left)
         self.left_obs = np.empty([self.num_left,self.left_features],dtype=float)
         self.left_obs_previous = np.empty([self.num_left,self.left_features],dtype=float)
         self.left_rewards = np.zeros(self.num_left)
@@ -114,9 +155,7 @@ class rc_env:
         self.left_lost_possession = [0]*self.num_left
 
         # Right side actions, obs, rewards
-        self.right_actions = np.array([2]*self.num_right)
-        self.right_action_params = np.asarray([[0.0]*num_action_params for i in range(self.num_right)])
-        # self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
+        self.right_actions = np.array([0]*self.num_right)
         self.right_obs = np.empty([self.num_right,self.right_features],dtype=float)
         self.right_obs_previous = np.empty([self.num_right,self.right_features],dtype=float)
         self.right_rewards = np.zeros(self.num_right)
@@ -128,7 +167,6 @@ class rc_env:
         self.world_status = 0
         self.left_base = 'base_left'
         self.right_base = 'base_right'
-
 
         self.left_agent_possesion = ['N'] * self.num_left
 
@@ -268,8 +306,8 @@ class rc_env:
             return self.right_rewards[agent_id]
 
 
-    def Step(self, left_actions=[], right_actions=[], left_params=[], 
-            right_params=[], left_actions_OH = [], right_actions_OH = []):
+    def Step(self, left_actions=[], right_actions=[], left_options=[], 
+            right_options=[], left_actions_OH = [], right_actions_OH = []):
         '''
             Description
                 Method for the agents to take a single step in the environment.
@@ -299,15 +337,15 @@ class rc_env:
         # for i in range(self.num_right):
         #     self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
 
-        [self.Queue_action(i,self.left_base,left_actions[i],left_params) for i in range(len(left_actions))]
-        [self.Queue_action(j,self.right_base,right_actions[j],right_params) for j in range(len(right_actions))]
+        [self.Queue_action(i,self.left_base,left_actions[i],left_options) for i in range(len(left_actions))]
+        [self.Queue_action(j,self.right_base,right_actions[j],right_options) for j in range(len(right_actions))]
 
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
         
         return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
-    def Queue_action(self,agent_id,base,action,params=[]):
+    def Queue_action(self,agent_id,base,action,options=[]):
         '''
             Description
                 Queue up the actions and params for the agents before 
@@ -317,21 +355,59 @@ class rc_env:
         if self.left_base == base:
             self.left_actions[agent_id] = action
             if self.action_level == 'low':
-                for p in range(params.shape[1]):
-                    self.left_action_params[agent_id][p] = params[agent_id][p]
+                for p in range(options.shape[1]):
+                    self.left_action_option[agent_id][p] = options[agent_id][p]
             # i was thinking that maybe I could choose the action here        
             elif self.action_level == 'discretized':
-                # print("this ran")
-                # print(params)
-                for p in range(params.shape[0]):
-                    # print(params)
-                    self.left_action_params[agent_id][p] = params.item()#params[agent_id][p]
+                for op in options:
+                    self.left_action_option[agent_id] = op
         else:
             self.right_actions[agent_id] = action
             if self.action_level == 'low':
-                for p in range(params.shape[1]):
-                    self.right_action_params[agent_id][p] = params[agent_id][p]
+                for p in range(options.shape[1]):
+                    self.right_action_option[agent_id][p] = options[agent_id][p]
     
+    def descritize_action(self, action):
+        '''
+        Descritize a parameterized action
+        '''
+        act_choice = torch.argmax(action[:self.num_actions])
+        params = action[self.num_actions:]
+
+        if act_choice == 0: # Dash
+            power = params[0].clamp(-1,1)*100
+            degree = params[1].clamp(-1,1)*180
+            return self.REVERSE_ACTION_DICT[act_choice.item()][((self.pow_step*torch.round(power/self.pow_step)).item(), (self.degree_step*torch.round(degree/self.degree_step)).item())]
+        elif act_choice == 1: # Turn
+            degree = params[2].clamp(-1,1)*180
+            return self.REVERSE_ACTION_DICT[act_choice.item()][((self.degree_step*torch.round(degree/self.degree_step)).item(),)]
+        else: # Kick
+            power = ((params[3].clamp(-1,1) + 1)/2)*100
+            degree = params[4].clamp(-1,1)*180
+            return self.REVERSE_ACTION_DICT[act_choice.item()][((self.pow_step*torch.round(power/self.pow_step)).item(), (self.degree_step*torch.round(degree/self.degree_step)).item())]
+
+    def get_valid_discrete_value(self, agentID, base):
+        if self.left_base == base:
+            discrete_action = self.left_action_option[agentID]
+        else:
+            discrete_action = self.right_action_option[agentID]
+
+        # if 0 <= int(action_params[agentID][0]) <= 188:
+        #     return self.ACTION_MATRIX[int(action_params[agentID][0])]
+        # elif 189 <= int(action_params[agentID][0]) <= 197:
+        #     return (self.ACTION_MATRIX[int(action_params[agentID][0])],)
+        # else:
+        #     return self.ACTION_MATRIX[int(action_params[agentID][0])]
+        # print('action', self.ACTION_DICT[discrete_action])
+        return self.ACTION_DICT[discrete_action]
+        # if 189 <= discrete_action <= 197:
+        #     # Turn
+        #     return (self.ACTION_MATRIX[discrete_action],)
+        # else:
+        #     # Dash and Kick
+        #     return self.ACTION_MATRIX[discrete_action]
+
+
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,ac_index,base):
         '''
@@ -340,43 +416,26 @@ class rc_env:
         '''
 
         if self.left_base == base:
-            action_params = self.left_action_params
+            action_params = self.left_action_option
         else:
-            action_params = self.right_action_params
+            action_params = self.right_action_option
 
-        '''
-        
-            So it looks like I need to map the intervals to the discrete values we have in place. And that will be the index.
-        
-        '''
+        if ac_index == 0: # dash power, degree
 
-        if self.action_level == 'discretized':
+            dash_power =  action_params[agentID][0].clip(-1,1)*100
+            dash_degree = action_params[agentID][1].clip(-1,1)*180
+            return (dash_power, dash_degree)
 
-            if 0 <= int(action_params[agentID][0]) <= 188:
-                return self.ACTION_MATRIX[int(action_params[agentID][0])]
-            elif 189 <= int(action_params[agentID][0]) <= 197:
-                return (self.ACTION_MATRIX[int(action_params[agentID][0])],)
-            else:
-                return self.ACTION_MATRIX[int(action_params[agentID][0])]
+        elif ac_index == 1: # turn degree
 
-        else:
+            turn_degree = action_params[agentID][2].clip(-1,1)*180
+            return (turn_degree,)
 
-            if ac_index == 0: # dash power, degree
+        elif ac_index == 2: # kick power, degree
 
-                dash_power =  action_params[agentID][0].clip(-1,1)*100
-                dash_degree = action_params[agentID][1].clip(-1,1)*180
-                return (dash_power, dash_degree)
-
-            elif ac_index == 1: # turn degree
-
-                turn_degree = action_params[agentID][2].clip(-1,1)*180
-                return (turn_degree,)
-
-            elif ac_index == 2: # kick power, degree
-
-                kick_power = ((action_params[agentID][3].clip(-1,1) + 1)/2)*100
-                kick_degree = action_params[agentID][4].clip(-1,1)*180
-                return (kick_power, kick_degree)
+            kick_power = ((action_params[agentID][3].clip(-1,1) + 1)/2)*100
+            kick_degree = action_params[agentID][4].clip(-1,1)*180
+            return (kick_power, kick_degree)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -448,22 +507,18 @@ class rc_env:
                         envs[agent_ID].act(self.action_list[a]) # take the action
                     elif act_lvl == 'low':
                         # without tackle
-                        # print('action:', a)
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID,a,base))
                     elif act_lvl == 'discretized':
-                        # print(self.action_list[0])
-                        # print("look here", a)
-                        # envs[agent_ID].act(a, *self.get_valid_scaled_param(agent_ID, a, base))
+                        envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID,base))
+                        # t = self.left_action_option[agent_ID][0]
+                        # # print("t right before .act():",t)
                         
-                        t = self.left_action_params[agent_ID][0]
-                        # print("t right before .act():",t)
-                        
-                        if 0 <= t <= 188:
-                            envs[agent_ID].act(0, *self.get_valid_scaled_param(agent_ID, a, base))
-                        elif 189 <= t <= 197:
-                            envs[agent_ID].act(1, *self.get_valid_scaled_param(agent_ID, a, base))
-                        else:
-                            envs[agent_ID].act(3, *self.get_valid_scaled_param(agent_ID, a, base))
+                        # if 0 <= t <= 188:
+                        #     envs[agent_ID].act(0, *self.get_valid_scaled_param(agent_ID, a, base))
+                        # elif 189 <= t <= 197:
+                        #     envs[agent_ID].act(1, *self.get_valid_scaled_param(agent_ID, a, base))
+                        # else:
+                        #     envs[agent_ID].act(3, *self.get_valid_scaled_param(agent_ID, a, base))
 
                     self.sync_at_status.wait()
                     

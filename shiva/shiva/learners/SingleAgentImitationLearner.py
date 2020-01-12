@@ -166,6 +166,9 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.supervised_update()
         self.imitation_update()
         # self.env.close()
+    
+    def descritize_action(self, action):
+        return self.env.descritize_action(action)
 
     def send_imit_obs_msgs(self):
         self.comm.send(self.env.get_imit_obs_msg())
@@ -177,8 +180,13 @@ class SingleAgentRoboCupImitationLearner(Learner):
                 break
 
         acs_msg = str(acs_msg).split(' ')[1:-1]
+        action = torch.tensor(list(map(lambda x: float(x), acs_msg)))
 
-        return torch.tensor(list(map(lambda x: float(x), acs_msg)))
+        if self.agent.action_space == 'discrete':
+            # print('desc action', self.descritize_action(action))
+            return torch.tensor([self.descritize_action(action)])
+        else:
+            return action
 
     def supervised_update(self):
         self.step_count = 0
@@ -208,11 +216,12 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.send_imit_obs_msgs()
         action = self.recv_imit_acs_msgs()
 
-        next_observation, reward, done, more_data = self.env.step(action, discrete_select='argmax')
+        next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.select_option)
 
         # Write to tensorboard
         Admin.add_summary_writer(self, self.agent, 'Loss_per_step', self.imitation_alg.get_loss(),self.step_count)
 
+        
         self.super_buffer.push(list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
                                                 torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).float()))))
 
@@ -279,13 +288,13 @@ class SingleAgentRoboCupImitationLearner(Learner):
 
         # Launch the environment
         self.env = self.create_environment()
+        self.select_option = 'imit_discrete' if self.env.isDescritized() else 'argmax'
 
         # Launch the algorithm which will handle the
         self.imitation_alg = self.create_algorithm()
 
         self.agent = self.imitation_alg.create_agent()
 
-        # Basic replay buffer at the moment
         if self.using_buffer:
             self.super_buffer, self.buffer = self.create_buffers(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
         
