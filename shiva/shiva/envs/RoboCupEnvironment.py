@@ -81,10 +81,10 @@ class RoboCupEnvironment(Environment):
         if self.action_level == 'discretized':
             self.left_action_option[0] = act_choice
             # indicates whether its a dash, turn, or kick action from the action matrix
-            if 0 <= self.left_action_option[0] <= 188:
+            if 0 <= self.left_action_option[0] < self.env.dash_idx:
                 self.left_actions[0] = 0
                 self.dashes += 1
-            elif 189 <= self.left_action_option[0] <= 197:
+            elif self.env.dash_idx <= self.left_action_option[0] < self.env.turn_idx:
                 self.left_actions[0] = 1
                 self.turns += 1
             else:

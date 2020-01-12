@@ -49,8 +49,8 @@ class rc_env:
             
             self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
             power_discretization = np.linspace(0,100,21).tolist()
-            degree_discretization = np.linspace(-180,180,9).tolist()
-            print(degree_discretization)
+            degree_discretization = np.linspace(-180,180,17).tolist()
+
             self.pow_step = power_discretization[1]-power_discretization[0]
             self.degree_step = degree_discretization[1]-degree_discretization[0]
 
@@ -68,6 +68,8 @@ class rc_env:
                     self.ACTION_DICT[dis_ctr] = (dash_power, dash_degree)
                     dis_ctr += 1
             
+            self.dash_idx = dis_ctr
+            
             self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(self.ACTION_DICT.values(), self.ACTION_DICT.keys()))
             rev_ctr += 1
             for turn_degree in degree_discretization:
@@ -75,6 +77,8 @@ class rc_env:
                 self.ACTION_DICT[dis_ctr] = (turn_degree,)
                 dis_ctr += 1
             
+            self.turn_idx = dis_ctr
+
             self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(turn_dict.values(), turn_dict.keys()))
             rev_ctr += 1
             for kick_power in power_discretization:
