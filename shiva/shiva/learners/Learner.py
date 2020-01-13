@@ -15,7 +15,11 @@ class Learner(object):
 
     def __getstate__(self):
         d = dict(self.__dict__)
-        attributes_to_ignore = ['env', 'envs', 'eval', 'queue', 'queues']
+        attributes_to_ignore = ['env', 'envs', 'eval', 'queue', 'queues','miniBuffer']
+        return []
+        for t in d:
+            if t not in attributes_to_ignore:
+                print(t)
         for a in attributes_to_ignore:
             try:
                 del d[a]

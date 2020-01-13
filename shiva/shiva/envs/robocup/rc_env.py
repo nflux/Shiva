@@ -25,7 +25,12 @@ class rc_env:
     '''
 
     def __init__(self, config, port=None):
-        {setattr(self, k, v) for k,v in config['Environment'].items()}
+
+        if 'MetaLearner' in config:
+            {setattr(self, k, v) for k,v in config['Environment'].items()}
+        else:
+            {setattr(self, k, v) for k,v in config.items()}
+
         self.port = port
         self.hfo_path = hfo.get_hfo_path()
         self.seed = np.random.randint(1000)

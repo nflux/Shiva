@@ -17,7 +17,7 @@ class DDPGAlgorithm(Algorithm):
         super(DDPGAlgorithm, self).__init__(observation_space, action_space, configs)
         self.actor_loss = 0
         self.critic_loss = 0
-        self.discrete = action_space['discrete']
+        self.discrete = action_space['acs_space']
         self.param = action_space['param']
         # self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
 
@@ -34,11 +34,11 @@ class DDPGAlgorithm(Algorithm):
             agent.ou_noise.reset()
             # return
 
-        if step_count < self.agent.exploration_steps:
-            '''
-                Don't update during exploration!
-            '''
-            return
+        # if step_count < self.agent.exploration_steps:
+        #     '''
+        #         Don't update during exploration!
+        #     '''
+        #     return
 
         '''
             Updates starts here
@@ -47,6 +47,8 @@ class DDPGAlgorithm(Algorithm):
         # print("updating!")
 
         states, actions, rewards, next_states, dones = buffer.sample()
+
+        # print("sampled",states)
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
