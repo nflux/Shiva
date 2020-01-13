@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.functional as F
 import utils.Noise as noise
-from torch.nn.functional import softmax
+from torch.nn import Softmax as Softmax
 from agents.PPOAgent import PPOAgent
 from .Algorithm import Algorithm
 from torch.distributions import Categorical
@@ -26,7 +26,7 @@ class PPOAlgorithm(Algorithm):
         self.loss = 0
         self.acs_space = acs_space
         self.obs_space = obs_space
-        # self.softmax = Softmax(dim=-1)
+        self.softmax = Softmax(dim=-1)
 
 
     def update(self, agent,buffer, step_count, episodic=False):
@@ -45,7 +45,7 @@ class PPOAlgorithm(Algorithm):
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
-        actions = torch.tensor(actions).to(self.device)
+        actions = torch.tensor(np.argmax(actions, axis=-1)).to(self.device).long()
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
         done_masks = torch.tensor(dones).to(self.device)
@@ -90,11 +90,10 @@ class PPOAlgorithm(Algorithm):
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
 
             #Calculate log probabilites of the new policy for the policy objective
-            current_action_probs = agent.actor(states.float())
+            current_action_probs = self.softmax(agent.actor(states.float()))
             # print(current_action_probs)
             dist2 = Categorical(current_action_probs)
-            print(actions[:,0])
-            log_probs = dist2.log_prob(actions[:,0])
+            log_probs = dist2.log_prob(actions)
             #Use entropy to encourage further exploration by limiting how sure
             #the policy is of a particular action
             entropy = dist2.entropy()
