@@ -38,8 +38,8 @@ class SingleAgentMultiEnvLearner(Learner):
 
                 # this should prevent the GymWrapper from getting to far ahead of the learner
                 # Makes the gym wrapper stop collecting momentarily
-                if self.queue.qsize() >= 1:
-                    self.waitForLearner[0] = 1
+                # if self.queue.qsize() >= 5:
+                    # self.waitForLearner[0] = 1
 
                 exp = self.queue.get()
                 if self.configs['Algorithm']['algorithm'] == 'PPO':
@@ -110,7 +110,7 @@ class SingleAgentMultiEnvLearner(Learner):
                     self.updates += 1
                     # print('Copied')
                     # Add save policy function here
-            else:
+            # else:
             #     if self.saveLoadFlag.item() == 1:
             #         # start_time = time.time()
             #         # print("Multi Learner:",self.agent_dir)
@@ -118,7 +118,7 @@ class SingleAgentMultiEnvLearner(Learner):
             #         # print("--- %s seconds ---" % (time.time() - start_time))
             #         print("Agent was saved")
             #         self.saveLoadFlag[0] = 0
-                self.waitForLearner[0] = 0
+                # self.waitForLearner[0] = 0
 
         # self.p.join()
         #print('Hello')

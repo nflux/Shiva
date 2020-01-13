@@ -72,13 +72,12 @@ class TensorBuffer(ReplayBuffer):
         obs, ac, rew, next_obs, done = exps
         nentries = len(obs)
         if self.current_index + nentries > self.max_size:
-            rollover = self.max_size - self.current_index
+            rollover = self.max_size - self.current_index + nentries
             self.obs_buffer = bh.roll(self.obs_buffer, rollover)
             self.acs_buffer = bh.roll(self.acs_buffer, rollover)
             self.rew_buffer = bh.roll(self.rew_buffer, rollover)
             self.done_buffer = bh.roll(self.done_buffer, rollover)
             self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
-
             self.current_index = 0
             # self.size = self.max_size
 
@@ -93,7 +92,7 @@ class TensorBuffer(ReplayBuffer):
         self.current_index += nentries
 
     def sample(self, device='cpu'):
-        inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
+        inds = np.random.choice(np.arange(len(self)-1), size=self.batch_size, replace=True)
         cast = lambda x: Variable(x, requires_grad=False).to(device)
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 

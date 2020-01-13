@@ -41,11 +41,10 @@ class MultiGymWrapper(Environment):
             if self.episode_count.item() > last_ep:
                 self.agent.ou_noise.reset()
                 last_ep = self.episode_count.item()
-                print("This Happened")
 
             if not loaded:
                 # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
-                if self.episode_count % 1 == 0 and self.episode_count != 0:
+                if self.episode_count % 5 == 0 and self.episode_count != 0:
                     loaded = True
                     if self.saveLoadFlag.item() == 0:
                         # self.agent.get_action(self.observations, self.step_count)
@@ -124,7 +123,10 @@ class MultiGymWrapper(Environment):
     def launch_envs(self):
         environment = load_class('shiva.envs', self.configs['sub_type'])
         #list of the environments to be used for episode collection
-        self.envs = [environment(self.configs)] * self.num_instances
+        for i in range(self.num_instances):
+            self.configs['seed'] = i
+            self.envs.append(environment(self.configs))
+            print(self.configs['seed'])
         #Shared tensor will be used for communication between environment wrapper process and individual environment processes
         self.observations = torch.zeros(self.num_instances, max(self.envs[0].observation_space,self.envs[0].action_space['acs_space'])).share_memory_()
         #Shared tensor will let control data flow through the tensor
@@ -143,8 +145,6 @@ class MultiGymWrapper(Environment):
 
 def process_target(env,observations,action_available,step_count,step_control,stop_collecting, waitForLearner, id, queue,max_ep_length):
 
-    last_action = None
-
     observation_space = env.observation_space
     action_space = env.action_space['acs_space']
     ep_observations = np.zeros((max_ep_length,observation_space))
@@ -157,16 +157,9 @@ def process_target(env,observations,action_available,step_count,step_control,sto
     observation = env.get_observation()
     observations[id] = torch.tensor(observation).float()
     step_control[id] = 1
+
     while(stop_collecting.item() == 0):
-        #print('Hello')
-        #print('Process: ', step_control[id])
         if step_control[id] == 0 and waitForLearner.item() == 0:
-            # time.sleep(0.06)
-            # print("outside")
-            # if action_available.item() == 1:
-
-            #     print("inside")
-
             action = observations[id][:action_space].numpy()
             action_available[0] = 0
             next_observation, reward, done, more_data = env.step(action)#, discrete_select='sample')
@@ -178,12 +171,6 @@ def process_target(env,observations,action_available,step_count,step_control,sto
             idx += 1
             step_count +=1
 
-            '''t = [observation, action, reward, next_observation, int(done)]
-            exp = copy.deepcopy(t)
-            print('List: ',exp)
-            print('Tensor: ', torch.tensor(exp))
-            episode_trajectory[episode_index:episode_index + len(exp)] = torch.tensor(exp)
-            episode_index += len(exp)'''
             if done:
                 exp = copy.deepcopy(
                             zip(
@@ -194,7 +181,6 @@ def process_target(env,observations,action_available,step_count,step_control,sto
                                 ep_dones[:idx]
                             )
                         )
-                # print(ep_actions)
                 queue.put(exp)
                 env.reset()
                 observation = env.get_observation()
@@ -227,7 +213,7 @@ def process_target_with_log_probs(env,observations,step_count,step_control,stop_
     env.reset()
     observation = env.get_observation()
     observations[id] = torch.tensor(observation).float()
-    step_control[id] = 0
+    step_control[id] = 1
 
     while(stop_collecting.item() == 0):
         #print('Hello')

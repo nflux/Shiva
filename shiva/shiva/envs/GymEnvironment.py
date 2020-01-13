@@ -10,6 +10,7 @@ class GymEnvironment(Environment):
         super(GymEnvironment,self).__init__(configs)
         # self.env = gym.make(self.env_name).env
         self.env = gym.make(self.env_name)
+        np.random.seed(self.seed)
         self.obs = self.env.reset()
         self.done = False
         self.action_space_continuous = None
@@ -43,7 +44,6 @@ class GymEnvironment(Environment):
 
         if self.action_space['discrete'] != 0:
 
-            print(action)
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
         else:
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
