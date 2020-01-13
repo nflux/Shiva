@@ -32,7 +32,7 @@ class DDPGAlgorithm(Algorithm):
                 But it does reset the noise after an episode
             '''
             agent.ou_noise.reset()
-            return
+            # return
 
         if step_count < self.agent.exploration_steps:
             '''

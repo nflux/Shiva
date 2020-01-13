@@ -34,48 +34,23 @@ class MultiGymWrapper(Environment):
 
         loaded = False
         last_load = 0
+        last_ep = 0
 
         while(self.stop_collecting.item() == 0):
 
-            # print(self.step_count)
-
-            # print("Wrapper Flag:",self.saveLoadFlag.item())
-            # time.sleep(0.03)
-
-            # if self.saveLoadFlag.item() == 0:
-                # if self.episode_count % 5 == 0:
-                    # start_time = time.time()
-
-                # print("Gym Wrapper:",self.agent_dir)
-                # self.agent.load(self.agent_dir)
-                # os.system("rm -rf {}".format(self.agent_dir + '/actor.pth'))
-                # print("--- %s seconds ---" % (time.time() - start_time))
-                # print("Agent Loaded")
-
-                # self.saveLoadFlag[0] = 1
-                # time.sleep(0.3)
-                # self.stop_collecting
-
-            # start_time = time.time()
-            # i = 0
-            # while i < 10_000:
-
-            #     action = self.agent.get_action(self.observations, 10_000)
-            #     i+=1
-
-            # print("--- {} seconds ---".format( (time.time() - start_time)/10_000 ))
-
-            # input()
+            if self.episode_count.item() > last_ep:
+                self.agent.ou_noise.reset()
+                last_ep = self.episode_count.item()
+                print("This Happened")
 
             if not loaded:
                 # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
                 if self.episode_count % 1 == 0 and self.episode_count != 0:
                     loaded = True
                     if self.saveLoadFlag.item() == 0:
-                        self.agent.get_action(self.observations, self.step_count)
+                        # self.agent.get_action(self.observations, self.step_count)
                         self.agent.load(self.agent_dir)
                         self.agent.actor.eval()
-                        self.agent.get_action(self.observations, self.step_count)
                         print("Agent Loaded")
                         self.saveLoadFlag[0] = 1
                     last_load = self.episode_count.item()
@@ -84,11 +59,14 @@ class MultiGymWrapper(Environment):
             if self.episode_count > last_load:
                 loaded = False
 
-            if self.step_control.sum().item() == self.num_instances:
-                actions = self.agent.get_action(copy.deepcopy(self.observations), self.step_count.item())
-                # if self.action_available.item() == 1:
-                self.observations[:,0:self.envs[0].action_space['acs_space']] = actions
-                self.step_control.fill_(0)
+            # if (self.step_control.sum().item() == self.num_instances and self.action_available.item() == 0) or self.step_count.item() == 0:
+            if self.step_control.sum().item() == self.num_instances or self.step_count.item() == 0:
+                self.actions = self.agent.get_action(copy.deepcopy(self.observations), self.step_count.item())
+                # self.action_available[0] = 1
+
+            # if self.action_available.item() == 1:
+                self.observations[:,0:self.envs[0].action_space['acs_space']] = copy.deepcopy(self.actions)
+                self.control = self.step_control.fill_(0)
                 # self.action_available[0] = 0
 
             if self.episode_count == self.total_episodes:
@@ -121,7 +99,7 @@ class MultiGymWrapper(Environment):
             if self.step_control.sum().item() == self.num_instances:
                 observations = self.observations
                 action_probs = self.agent.actor(observations.to(self.device))
-                actions = torch.tensor([self.agent.get_action(obs) for obs in observations])
+                actions = torch.tensor([self.agent.get_action(obs.to(self.device)) for obs in observations])
                 if self.action_space == 'discrete':
                     actions_temp = torch.argmax(actions, dim=-1).long().to(self.device)
                     logprobs = Categorical(action_probs).log_prob(actions_temp).to(self.device)
@@ -165,6 +143,8 @@ class MultiGymWrapper(Environment):
 
 def process_target(env,observations,action_available,step_count,step_control,stop_collecting, waitForLearner, id, queue,max_ep_length):
 
+    last_action = None
+
     observation_space = env.observation_space
     action_space = env.action_space['acs_space']
     ep_observations = np.zeros((max_ep_length,observation_space))
@@ -176,18 +156,20 @@ def process_target(env,observations,action_available,step_count,step_control,sto
     env.reset()
     observation = env.get_observation()
     observations[id] = torch.tensor(observation).float()
-    step_control[id] = 0
+    step_control[id] = 1
     while(stop_collecting.item() == 0):
         #print('Hello')
         #print('Process: ', step_control[id])
         if step_control[id] == 0 and waitForLearner.item() == 0:
-            time.sleep(0.06)
+            # time.sleep(0.06)
+            # print("outside")
+            # if action_available.item() == 1:
 
-            # while action_available.item() == 0:
+            #     print("inside")
 
             action = observations[id][:action_space].numpy()
-            action_available[0] = 1
-            next_observation, reward, done, more_data = env.step(action, discrete_select='sample')
+            action_available[0] = 0
+            next_observation, reward, done, more_data = env.step(action)#, discrete_select='sample')
             ep_observations[idx] = observation
             ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
@@ -212,7 +194,7 @@ def process_target(env,observations,action_available,step_count,step_control,sto
                                 ep_dones[:idx]
                             )
                         )
-                print(ep_actions)
+                # print(ep_actions)
                 queue.put(exp)
                 env.reset()
                 observation = env.get_observation()

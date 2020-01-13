@@ -29,6 +29,8 @@ class GymEnvironment(Environment):
         self.reward_per_episode = 0
         self.reward_total = 0
 
+        self.last_action = None
+
     def step(self, action, discrete_select='argmax'):
         self.acs = action
         # print(self.action_space_continuous)
@@ -40,6 +42,8 @@ class GymEnvironment(Environment):
             action4Gym = Categorical(torch.tensor(action)).sample()
 
         if self.action_space['discrete'] != 0:
+
+            print(action)
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
         else:
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)

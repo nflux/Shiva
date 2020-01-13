@@ -39,21 +39,23 @@ class SingleAgentLearner(Learner):
             z = copy.deepcopy([
                 torch.tensor(observation), 
                 torch.tensor(action), 
-                torch.tensor(reward).reshape(12,1), 
+                torch.tensor(reward).reshape(self.env.num_instance,1), 
                 torch.tensor(next_observation), 
-                torch.tensor(done).reshape(12,1)
+                torch.tensor(done).reshape(self.env.num_instance,1)
             ])
             self.buffer.push(z)
-            # for obs, act, rew, next_obs, don in z:
-            #     exp = [obs, act, rew, next_obs, int(don)]
-                # print(act, rew, don)
-                # self.buffer.push(exp)
         else:
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action)
-            exp = [torch.tensor(observation), torch.tensor(more_data['action']), torch.tensor(reward), torch.tensor(next_observation), torch.tensor(int(done))]
+            exp = copy.deepcopy([
+                torch.tensor(observation), 
+                torch.tensor(more_data['action']), 
+                torch.tensor(reward), 
+                torch.tensor(next_observation), 
+                torch.tensor(int(done))
+            ])
             self.buffer.push(copy.deepcopy(exp))
-        """"""
+
 
     def is_multi_process_cutoff(self):
         ''' FOR MULTIPROCESS PBT PURPOSES '''

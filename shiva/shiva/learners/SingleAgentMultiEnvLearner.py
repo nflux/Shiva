@@ -67,6 +67,7 @@ class SingleAgentMultiEnvLearner(Learner):
 
                     observations, actions, rewards, next_observations, dones = zip(*exp)
                     print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
+                    # print(len(actions))
                     exp = [
                             torch.tensor(observations),
                             torch.tensor(actions),
@@ -83,9 +84,9 @@ class SingleAgentMultiEnvLearner(Learner):
                     for i in range(len(observations)):
                         self.reward_per_step = rewards[i][0]
                         self.collect_metrics(episodic=False)
-                    for _ in range(3):
-                        self.alg.update(self.agent,self.buffer,self.step_count.item())
-                        self.collect_metrics(episodic=True)
+                    # for _ in range(3):
+                    #     self.alg.update(self.agent,self.buffer,self.step_count.item())
+                    #     self.collect_metrics(episodic=True)
                     self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
                     self.collect_metrics(episodic=True)
 

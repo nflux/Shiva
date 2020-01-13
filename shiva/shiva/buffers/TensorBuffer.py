@@ -90,7 +90,7 @@ class TensorBuffer(ReplayBuffer):
 
         if self.size < self.max_size:
             self.size += nentries
-        self.current_index += 1
+        self.current_index += nentries
 
     def sample(self, device='cpu'):
         inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)

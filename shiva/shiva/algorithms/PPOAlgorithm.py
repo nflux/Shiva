@@ -70,9 +70,9 @@ class PPOAlgorithm(Algorithm):
         advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
         #Calculate log probabilites of the old policy for the policy objective
         if type(logprobs) == np.ndarray:
-            old_log_probs = torch.from_numpy(logprobs).float().detach()
+            old_log_probs = torch.from_numpy(logprobs).float().detach().to(self.device)
         else:
-            old_log_probs = logprobs.clone().detach()
+            old_log_probs = logprobs.clone().detach().to(self.device)
 
         #Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
