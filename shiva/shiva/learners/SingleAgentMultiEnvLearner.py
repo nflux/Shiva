@@ -57,8 +57,14 @@ class SingleAgentMultiEnvLearner(Learner):
                         self.done_buffer[:idx]
                     ]
                 )
+                self.reward_per_episode = self.rew_buffer[:idx].sum().item()
+                self.steps_per_episode = idx
+                if len(self.buffer) <= self.buffer.batch_size:
+                    self.collect_metrics(episodic=True)
                 self.aggregator_index[0] = 0
                 self.buffer.push(exp)
+
+
 
             if self.configs['Algorithm']['algorithm'] == 'PPO':
                 observations, actions, rewards, logprobs, next_observations, dones = zip(*exp)
@@ -86,13 +92,7 @@ class SingleAgentMultiEnvLearner(Learner):
                 # observations, actions, rewards, next_observations, dones = zip(*exp)
                 # print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
                 # # print(len(actions))
-                # exp = [
-                #         torch.tensor(observations),
-                #         torch.tensor(actions),
-                #         torch.tensor(rewards),
-                #         torch.tensor(next_observations),
-                #         torch.tensor(dones)
-                # ]
+
                 # self.agent.actor.train()
                 # self.agent.critic.train()
                 # self.buffer.push(copy.deepcopy(exp))
@@ -187,24 +187,24 @@ class SingleAgentMultiEnvLearner(Learner):
         return buffer(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_instances, obs_dim, ac_dim)
 
     def create_aggregator(self, obs_dim, acs_dim):
+
         self.aggregator = mp.Process(
+                                        target = data_aggregator, 
 
-            target = data_aggregator, 
-
-            args = (
-                self.obs_buffer,
-                self.acs_buffer,
-                self.rew_buffer,
-                self.next_obs_buffer,
-                self.done_buffer,
-                self.queue, 
-                self.aggregator_index,
-                self.ep_count, 
-                self.configs['Buffer']['batch_size'], 
-                obs_dim, 
-                acs_dim,
-            )
-        )
+                                        args = (
+                                            self.obs_buffer,
+                                            self.acs_buffer,
+                                            self.rew_buffer,
+                                            self.next_obs_buffer,
+                                            self.done_buffer,
+                                            self.queue, 
+                                            self.aggregator_index,
+                                            self.ep_count, 
+                                            self.buffer.batch_size, 
+                                            obs_dim, 
+                                            acs_dim,
+                                        )
+                                    )
 
         self.aggregator.start()
 
@@ -268,8 +268,8 @@ class SingleAgentMultiEnvLearner(Learner):
             ]
         else:
             metrics = [
-                # ('Reward/Per_Episode', self.reward_per_episode),
-                # ('Agent/Steps_Per_Episode', self.steps_per_episode)
+                ('Reward/Per_Episode', self.reward_per_episode),
+                ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
 
             # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
@@ -281,7 +281,7 @@ def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buf
 
     while True:
 
-        time.sleep(0.001)
+        time.sleep(0.01)
 
         while not queue.empty():
 
@@ -308,7 +308,7 @@ def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buf
             avg_rew = rew.mean()
             tot_rew = rew.sum()
 
-            print("Episode {} Episodic Reward {} ".format(ep_count, tot_rew))
+            print("Episode {} Episodic Reward {} ".format(int(ep_count.item()), tot_rew))
 
             idx = int(current_index.item())
 
