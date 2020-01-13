@@ -42,7 +42,7 @@ class SingleAgentMultiEnvLearner(Learner):
                 # this should prevent the GymWrapper from getting to far ahead of the learner
                 # Makes the gym wrapper stop collecting momentarily
                 # if self.queue.qsize() >= 5:
-                    # self.waitForLearner[0] = 
+                #     self.waitForLearner[0] = 
                     
             # time.sleep(0.06)
 
@@ -58,10 +58,7 @@ class SingleAgentMultiEnvLearner(Learner):
                     ]
                 )
                 self.aggregator_index[0] = 0
-                # start_time = time.time()
-                # print("from the queue",exp)
                 self.buffer.push(exp)
-                # print("getting data--- %s seconds ---" % (time.time() - start_time))
 
             if self.configs['Algorithm']['algorithm'] == 'PPO':
                 observations, actions, rewards, logprobs, next_observations, dones = zip(*exp)
@@ -191,22 +188,22 @@ class SingleAgentMultiEnvLearner(Learner):
 
     def create_aggregator(self, obs_dim, acs_dim):
         self.aggregator = mp.Process(
-        
-                    target = data_aggregator, 
 
-                    args = (
-                        self.obs_buffer,
-                        self.acs_buffer,
-                        self.rew_buffer,
-                        self.next_obs_buffer,
-                        self.done_buffer,
-                        self.queue, 
-                        self.aggregator_index,
-                        self.ep_count, 
-                        self.configs['Buffer']['batch_size'], 
-                        obs_dim, 
-                        acs_dim,
-                    )
+            target = data_aggregator, 
+
+            args = (
+                self.obs_buffer,
+                self.acs_buffer,
+                self.rew_buffer,
+                self.next_obs_buffer,
+                self.done_buffer,
+                self.queue, 
+                self.aggregator_index,
+                self.ep_count, 
+                self.configs['Buffer']['batch_size'], 
+                obs_dim, 
+                acs_dim,
+            )
         )
 
         self.aggregator.start()
@@ -313,9 +310,6 @@ def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buf
 
             print("Episode {} Episodic Reward {} ".format(ep_count, tot_rew))
 
-
-
-            print("AHHHH",current_index)
             idx = int(current_index.item())
 
             obs_buffer[idx:idx+nentries] = obs

@@ -359,7 +359,7 @@ def robo_process_target(observations, action_available,step_count,step_control,s
                 queue.put(exp)
                 env.reset()
                 observation = env.get_observation()
-                observations[id] = observation
+                observations[id][:observation_space] = observation
                 ep_observations.fill(0)
                 ep_actions.fill(0)
                 ep_rewards.fill(0)
@@ -368,6 +368,6 @@ def robo_process_target(observations, action_available,step_count,step_control,s
                 idx = 0
                 step_control[id] = 1
             else:
-                observations[id] = torch.from_numpy(next_observation)
+                observations[id][:observation_space] = torch.from_numpy(next_observation)
                 observation = next_observation
                 step_control[id] = 1
