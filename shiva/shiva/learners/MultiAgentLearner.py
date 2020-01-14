@@ -94,5 +94,5 @@ class MultiAgentLearner(Learner):
         else:
             self.agent = self.alg.create_agent(self.get_new_agent_id())
             if self.using_buffer:
-                self.buffer = self.create_buffer(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
+                self.buffer = self.create_buffer(self.env.observation_space, self.env.action_space['acs_space'] + self.env.action_space['param'])
         print('Launch Successful.')

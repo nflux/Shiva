@@ -45,7 +45,7 @@ class SingleAgentLearner(Learner):
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action, device=self.device)
             self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
-                                                torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).float()))))
+                                                torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).bool()))))
         else:
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action, device=self.device)
@@ -79,7 +79,7 @@ class SingleAgentLearner(Learner):
 
     def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'], self.env.num_left, obs_dim, ac_dim)
+        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
 
     def launch(self):
         self.env = self.create_environment()
@@ -98,5 +98,5 @@ class SingleAgentLearner(Learner):
         else:
             self.agent = self.alg.create_agent(self.get_new_agent_id())
             if self.using_buffer:
-                self.buffer = self.create_buffer(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
+                self.buffer = self.create_buffer(self.env.observation_space, self.env.action_space['acs_space'] + self.env.action_space['param'])
         print('Launch Successful.')
