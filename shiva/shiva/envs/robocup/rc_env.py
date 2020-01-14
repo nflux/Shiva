@@ -24,8 +24,13 @@ class rc_env:
             @port       Required for the robocup server
     '''
 
-    def __init__(self, config, port):
-        {setattr(self, k, v) for k,v in config['Environment'].items()}
+    def __init__(self, config, port=None):
+
+        if 'MetaLearner' in config:
+            {setattr(self, k, v) for k,v in config['Environment'].items()}
+        else:
+            {setattr(self, k, v) for k,v in config.items()}
+
         self.port = port
         self.hfo_path = hfo.get_hfo_path()
         # self.seed = np.random.randint(1000)
@@ -551,6 +556,8 @@ class rc_env:
                     # Break if episode done
                     if self.d == True:
                         break
+            if not self.start:
+                break
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def _start_hfo_server(self):
@@ -593,7 +600,7 @@ class rc_env:
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-            time.sleep(3) # Wait for server to startup before connecting a player
+            time.sleep(10) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         '''
@@ -624,7 +631,7 @@ class rc_env:
         '''
         reward=0.0
         team_reward = 0.0
-        goal_points = 20.0
+        goal_points = 10.0
         #---------------------------
         global possession_side
         if self.d:
@@ -715,7 +722,7 @@ class rc_env:
 
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
 
-            reward -= 1
+            reward -= 0.1
             # print("agent is getting penalized for kicking when not kickable")
 
         
@@ -730,9 +737,9 @@ class rc_env:
             # if True:        
             # if self.num_right > 0:
             # print(self.left_agent_possesion)
-            if (np.array(self.left_agent_possesion) == 'N').all() or (np.array(self.right_agent_possesion) == 'N').all():
-                # print("First Kick")
-                reward += 10
+            if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
+                print("First Kick")
+                reward += 1
                 team_reward += 1.5
 
             # set initial ball position after kick
@@ -851,7 +858,7 @@ class rc_env:
         if ((self.left_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
-                delta = (2*self.num_left)*(r_prev - r)
+                delta = (2*self.num_left)*(r_prev - r)* 2.0
                 if True:
                 # if delta > 0:
                     reward += delta * 2

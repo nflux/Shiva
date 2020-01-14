@@ -22,7 +22,9 @@ class RoboCupEnvironment(Environment):
         self.rews = self.env.left_rewards
         # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
-        self.action_space = {'discrete': self.env.acs_dim, 'param': self.env.acs_param_dim}
+        # self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
+        self.action_space = {'acs_space': 387, 'param': self.env.acs_param_dim}
+        self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
 
@@ -108,6 +110,12 @@ class RoboCupEnvironment(Environment):
 
     def get_observation(self):
         return self.obs
+
+    def get_observation_space(self):
+        return self.observation_space
+
+    def get_action_space(self):
+        return self.action_space
     
     def get_imit_obs_msg(self):
         return self.env.getImitObsMsg()
@@ -123,7 +131,8 @@ class RoboCupEnvironment(Environment):
             self.env._start_viewer()
 
     def close(self):
-        pass
+        self.env.start = False
+        self.env.d = True
 
     def is_done(self):
         return self.done
