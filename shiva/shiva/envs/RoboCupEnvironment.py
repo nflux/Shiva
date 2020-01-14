@@ -22,8 +22,7 @@ class RoboCupEnvironment(Environment):
         self.rews = self.env.left_rewards
         # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
-        # self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
-        self.action_space = {'acs_space': 387, 'param': self.env.acs_param_dim}
+        self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
@@ -70,11 +69,11 @@ class RoboCupEnvironment(Environment):
         '''
 
         if discrete_select == 'argmax':
-            act_choice = torch.argmax(actions[:self.action_space['discrete']])
+            act_choice = torch.argmax(actions[:self.action_space['acs_space']])
         elif discrete_select == 'sample':
-            act_choice = Categorical(actions[:self.action_space['discrete']]).sample()
+            act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
         elif discrete_select == 'imit_discrete':
-            act_choice = actions[0].item()
+            act_choice = actions[0]
             # action = action2one_hot(self.acs_discrete, action.item())
             # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
 
@@ -94,14 +93,14 @@ class RoboCupEnvironment(Environment):
                 self.kicks += 1
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
-            actions_v = action2one_hot(self.action_space['discrete'], act_choice)
+            actions_v = action2one_hot_v(self.action_space['acs_space'], act_choice)
         else:
             self.left_actions = act_choice.unsqueeze(dim=0)
-            self.left_action_option = actions[self.action_space['discrete']:].unsqueeze(dim=0)
+            self.left_action_option = actions[self.action_space['acs_space']:].unsqueeze(dim=0)
             # self.left_params = torch.tensor([params]).float()
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
-            actions_v = torch.cat([action2one_hot_v(self.action_space['discrete'], act_choice.item()).to(device), self.left_action_option[0]])
+            actions_v = torch.cat([action2one_hot_v(self.action_space['acs_space'], act_choice.item()).to(device), self.left_action_option[0]])
 
         if collect:
             self.collect_metrics()

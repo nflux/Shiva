@@ -194,7 +194,7 @@ class ImitationAlgorithm(Algorithm):
 class ImitationRoboCupAlgorithm(Algorithm):
     def __init__(self, observation_space, action_space, configs):
         super(ImitationRoboCupAlgorithm, self).__init__(observation_space, action_space, configs)
-        self.discrete = action_space['discrete']
+        self.discrete = action_space['acs_space']
         self.param = action_space['param']
         self.loss = 0
     

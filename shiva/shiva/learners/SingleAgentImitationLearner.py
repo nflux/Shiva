@@ -296,7 +296,7 @@ class SingleAgentRoboCupImitationLearner(Learner):
         self.agent = self.imitation_alg.create_agent()
 
         if self.using_buffer:
-            self.super_buffer, self.buffer = self.create_buffers(self.env.observation_space, self.env.action_space['discrete'] + self.env.action_space['param'])
+            self.super_buffer, self.buffer = self.create_buffers(self.env.observation_space, self.env.action_space['acs_space'] + self.env.action_space['param'])
         
         cmd = [os.getcwd() + '/shiva/envs/RoboCupBotEnv.py', '-p', str(self.port)]
         self.bot_process = subprocess.Popen(cmd, shell=False)
