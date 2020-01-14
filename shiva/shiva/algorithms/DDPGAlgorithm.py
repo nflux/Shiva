@@ -46,7 +46,7 @@ class DDPGAlgorithm(Algorithm):
 
         # print("updating!")
 
-        states, actions, rewards, next_states, dones = buffer.sample()
+        states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
 
         # print("sampled",states)
 
@@ -69,6 +69,7 @@ class DDPGAlgorithm(Algorithm):
     
         # Zero the gradient
         agent.critic_optimizer.zero_grad()
+
         # The actions that target actor would do in the next state.
         next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
 
@@ -107,8 +108,9 @@ class DDPGAlgorithm(Algorithm):
         else:
             Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
 
+        print('dones', dones.size())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
-        Q_next_states_target[dones_mask] = 0.0
+        Q_next_states_target[dones] = 0.0
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
 

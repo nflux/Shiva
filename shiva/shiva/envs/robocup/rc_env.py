@@ -408,7 +408,6 @@ class rc_env:
         # else:
         #     return self.ACTION_MATRIX[int(action_params[agentID][0])]
         # print('action', self.ACTION_DICT[discrete_action])
-        print('discrete action', discrete_action)
         return self.ACTION_DICT[discrete_action.item()]
         # if 189 <= discrete_action <= 197:
         #     # Turn

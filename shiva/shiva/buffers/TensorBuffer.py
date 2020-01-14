@@ -64,10 +64,9 @@ class TensorBuffer(ReplayBuffer):
         self.acs_buffer = torch.zeros( (self.max_size, acs_dim) ,requires_grad=False)
         self.rew_buffer = torch.zeros((self.max_size, 1),requires_grad=False)
         self.next_obs_buffer = torch.zeros((self.max_size, obs_dim),requires_grad=False)
-        self.done_buffer = torch.zeros((self.max_size, 1),requires_grad=False)
+        self.done_buffer = torch.zeros((self.max_size, 1), dtype=torch.bool, requires_grad=False)
 
     def push(self, exps):
-
 
         obs, ac, rew, next_obs, done = exps
         nentries = len(obs)
