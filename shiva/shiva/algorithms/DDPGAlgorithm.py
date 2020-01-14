@@ -51,11 +51,11 @@ class DDPGAlgorithm(Algorithm):
         # print("sampled",states)
 
         # Make everything a tensor and send to gpu if available
-        states = torch.tensor(states).to(self.device)
-        actions = torch.tensor(actions).to(self.device)
-        rewards = torch.tensor(rewards).to(self.device)
-        next_states = torch.tensor(next_states).to(self.device)
-        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
+        # states = torch.tensor(states).to(self.device)
+        # actions = torch.tensor(actions).to(self.device)
+        # rewards = torch.tensor(rewards).to(self.device)
+        # next_states = torch.tensor(next_states).to(self.device)
+        # dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
         # print(actions)
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
         # input()
@@ -200,7 +200,7 @@ class DDPGAlgorithm(Algorithm):
         #         target_param.data.copy_(param.data)
 
     def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.obs_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
+        self.agent = DDPGAgent(id, self.observation_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):

@@ -42,8 +42,7 @@ class DDPGAgent(Agent):
         elif self.action_space == 'continuous':
             return self.get_continuous_action(observation, step_count, evaluate)
         elif self.action_space == 'parameterized':
-            pass
-            return self.get_parameterized_action(observation, evaluate)
+            return self.get_parameterized_action(observation, step_count, evaluate)
 
     def get_discrete_action(self, observation, step_count, evaluate):
         if evaluate:
@@ -100,18 +99,20 @@ class DDPGAgent(Agent):
         return action.tolist()
 
     def get_parameterized_action(self, observation, step_count, evaluate):
-        if evaluate or step_count > self.exploration_steps:
-            pass
-        else:
-            pass
-        pass
-        return action.tolist()
-
-    def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
+        # if evaluate or step_count > self.exploration_steps:
+        #     pass
+        # else:
+        #     pass
+        # pass
+        # return action.tolist()
         observation = torch.tensor(observation).to(self.device)
-        action = self.actor(observation.float()).cpu().data.numpy()
-        action = np.clip(action, -1,1)
-        # print('actor action shape', action.shape)
+        action = self.actor(observation.float())
+        return action[0]
+
+
+    def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
+        observation = torch.tensor(observation).to(self.device)
+        action = self.actor(observation.float())
         return action[0]
 
     # def save(self, save_path, step):

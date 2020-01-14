@@ -7,9 +7,9 @@ from shiva.core.admin import Admin
 from shiva.learners.Learner import Learner
 from shiva.helpers.config_handler import load_class
 
-class SingleAgentLearner(Learner):
+class MultiAgentLearner(Learner):
     def __init__(self, learner_id, config, port=None):
-        super(SingleAgentLearner ,self).__init__(learner_id, config, port)
+        super(MultiAgentLearner ,self).__init__(learner_id, config, port)
 
     def run(self, train=True):
         self.step_count_per_run = 0
@@ -17,12 +17,10 @@ class SingleAgentLearner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                # self.alg.update(self.agent, self.buffer, self.env.step_count)
+                self.alg.update(self.agent, self.buffer, self.env.step_count)
                 self.collect_metrics()
                 if self.is_multi_process_cutoff(): return None # PBT Cutoff
                 else: continue
-            self.alg.update(self.agent, self.buffer, self.env.step_count)
-            self.collect_metrics()
             self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
             self.collect_metrics(episodic=True)
             self.checkpoint()
@@ -54,8 +52,6 @@ class SingleAgentLearner(Learner):
             # input()
             exp = copy.deepcopy(t)
             self.buffer.append(exp)
-        """"""
-
 
     def is_multi_process_cutoff(self):
         ''' FOR MULTIPROCESS PBT PURPOSES '''

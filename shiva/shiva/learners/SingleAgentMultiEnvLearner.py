@@ -205,8 +205,8 @@ class SingleAgentMultiEnvLearner(Learner):
 
     def launch(self):
         environment = load_class('shiva.envs', self.configs['Environment']['sub_type'])
-        self.configs['Environment']['port'] = 20000
-        self.env = environment(self.configs)
+        # self.configs['Environment']['port'] = 20000
+        self.env = environment(self.configs,20_000)
         obs_dim = self.env.get_observation_space()
         acs_dim = self.env.get_action_space()['acs_space']
         time.sleep(5)

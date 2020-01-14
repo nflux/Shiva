@@ -128,25 +128,22 @@ class MultiGymWrapper(Environment):
 
 
     def launch_envs(self):
+
         environment = load_class('shiva.envs', self.configs['sub_type'])
-        #list of the environments to be used for episode collection
-        # configs = []
+
         if self.configs['sub_type'] == 'RoboCupEnvironment':
-            # for i in range(self.num_instances):
-            self.configs['port'] = 9853 
-            self.envs.append(environment(self.configs))
+            self.envs.append(environment(self.configs, 9853))
             self.acs_dim = self.envs[0].action_space['acs_space']
             self.obs_dim = self.envs[0].observation_space
             self.envs[0].close()
-            # configs.append(copy.deepcopy(self.configs))
-                # print(self.configs['seed'])
+
         else:
             for i in range(self.num_instances):
                 self.configs['seed'] = i
                 self.envs.append(environment(self.configs))
             self.acs_dim = self.envs[0].action_space['acs_space']
             self.obs_dim = self.envs[0].observation_space
-                # print(self.configs['seed'])
+            
         #Shared tensor will be used for communication between environment wrapper process and individual environment processes
 
         # print(self.discrete)
@@ -325,11 +322,10 @@ def process_target_with_log_probs(env,observations,step_count,step_control,stop_
 
 
 def robo_process_target(observations,action_available,step_count,step_control,stop_collecting,waitForLearner,config,id,queue,max_ep_length):
+    
     config['seed'] = id
-    config['port'] = (id+45) * 1000
-    # print(environment)
     env = load_class('shiva.envs', config['sub_type'])
-    env = env(config)
+    env = env(config, (id+45) * 1000)
 
     observation_space = env.observation_space
     action_space = env.action_space['acs_space']
