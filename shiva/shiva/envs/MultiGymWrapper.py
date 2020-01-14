@@ -24,7 +24,6 @@ class MultiGymWrapper(Environment):
         self.action_available = torch.zeros(1).share_memory_()
         self.waitForLearner = waitForLearner
         self.envs = []
-        self.discrete = 0
         self.p = mp.Process(target = self.launch_envs)
         self.p.start()
 
@@ -48,7 +47,6 @@ class MultiGymWrapper(Environment):
                 if self.episode_count % 5 == 0 and self.episode_count != 0:
                     loaded = True
                     if self.saveLoadFlag.item() == 0:
-                        # self.agent.get_action(self.observations, self.step_count)
                         self.agent.load(self.agent_dir)
                         self.agent.actor.eval()
                         print("Agent Loaded")
@@ -61,11 +59,11 @@ class MultiGymWrapper(Environment):
 
             # if (self.step_control.sum().item() == self.num_instances and self.action_available.item() == 0) or self.step_count.item() == 0:
             if self.step_control.sum().item() == self.num_instances or self.step_count.item() == 0:
-                self.actions = self.agent.get_action(copy.deepcopy(self.observations), self.step_count.item())
+                self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item())
                 # self.action_available[0] = 1
 
             # if self.action_available.item() == 1:
-                self.observations[:,0:self.discrete] = copy.deepcopy(self.actions)
+                self.observations[:,0:self.acs_dim] = copy.deepcopy(self.actions)
                 self.control = self.step_control.fill_(0)
                 # self.action_available[0] = 0
 
@@ -103,7 +101,7 @@ class MultiGymWrapper(Environment):
                 if self.action_space == 'discrete':
                     actions_temp = torch.argmax(actions, dim=-1).long().to(self.device)
                     logprobs = Categorical(action_probs).log_prob(actions_temp).to(self.device)
-                self.observations[:,0:self.envs[0].action_space['acs_space']] = actions
+                self.observations[:,0:self.acs_dim] = actions
 
                 self.log_probs[:,0] = logprobs
                 self.step_control.fill_(0)
@@ -124,21 +122,27 @@ class MultiGymWrapper(Environment):
     def launch_envs(self):
         environment = load_class('shiva.envs', self.configs['sub_type'])
         #list of the environments to be used for episode collection
+        # configs = []
         if self.configs['sub_type'] == 'RoboCupEnvironment':
-            for i in range(self.num_instances):
-                self.configs['seed'] = i
-                self.configs['port'] = 9853
-                self.envs.append(environment(self.configs))
+            # for i in range(self.num_instances):
+            self.configs['port'] = 9853 
+            self.envs.append(environment(self.configs))
+            self.acs_dim = self.envs[0].action_space['acs_space']
+            self.obs_dim = self.envs[0].observation_space
+            self.envs[0].close()
+            # configs.append(copy.deepcopy(self.configs))
                 # print(self.configs['seed'])
         else:
             for i in range(self.num_instances):
                 self.configs['seed'] = i
                 self.envs.append(environment(self.configs))
+            self.acs_dim = self.envs[0].action_space['acs_space']
+            self.obs_dim = self.envs[0].observation_space
                 # print(self.configs['seed'])
         #Shared tensor will be used for communication between environment wrapper process and individual environment processes
-        self.discrete = self.envs[0].action_space['acs_space']
-        print(self.discrete)
-        self.observations = torch.zeros(self.num_instances, max(self.envs[0].observation_space, self.envs[0].action_space['acs_space'])).share_memory_()
+
+        # print(self.discrete)
+        self.observations = torch.zeros(self.num_instances, max(self.obs_dim, self.acs_dim)).share_memory_()
         #Shared tensor will let control data flow through the tensor
         # 0 signals env to process, 1 signals multi wrapper to process
         self.step_control = torch.zeros(self.num_instances).share_memory_()
@@ -151,7 +155,7 @@ class MultiGymWrapper(Environment):
             self.step_with_logprobs()
         else:
             if self.configs['sub_type'] == 'RoboCupEnvironment':
-                self.process_list = launch_robo_process(self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length, self.configs,num_instances=self.num_instances)
+                self.process_list = launch_robo_process(self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length, self.configs ,num_instances=self.num_instances)
                 self.step_without_log_probs()
             else:
                 self.process_list = launch_processes(self.envs, self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length,num_instances=self.num_instances)
@@ -174,7 +178,7 @@ def process_target(env,observations,action_available,step_count,step_control,sto
 
     while(stop_collecting.item() == 0):
         if step_control[id] == 0 and waitForLearner.item() == 0:
-            time.sleep(0.001)
+            time.sleep(0.06)
             action = observations[id][:action_space].numpy()
             action_available[0] = 0
             next_observation, reward, done, more_data = env.step(action, discrete_select='sample')
@@ -297,7 +301,7 @@ def launch_processes(envs, observations, action_available, step_count, step_cont
     return process_list
 
 
-def launch_robo_process( observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, max_episode_length,config,logprobs = None,num_instances=1):
+def launch_robo_process( observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, max_episode_length,configs,logprobs = None,num_instances=1):
 
     process_list = []
 
@@ -305,8 +309,7 @@ def launch_robo_process( observations, action_available, step_count, step_contro
         if logprobs is not None:
             p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_count,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
         else:
-
-            p = mp.Process(target = robo_process_target, args=(observations, action_available,step_count,step_control,stop_collecting,waitForLearner, config,i,queue,max_episode_length,) )
+            p = mp.Process(target = robo_process_target, args=(observations, action_available,step_count,step_control,stop_collecting,waitForLearner, configs,i,queue,max_episode_length,) )
         p.start()
         process_list.append(p)
 
@@ -337,7 +340,7 @@ def robo_process_target(observations, action_available,step_count,step_control,s
             time.sleep(0.001)
             action = observations[id][:action_space].numpy()
             action_available[0] = 0
-            next_observation, reward, done, more_data = env.step(action, discrete_select='sample')
+            next_observation, reward, done, more_data = env.step(torch.tensor(action), discrete_select='sample')
             ep_observations[idx] = observation
             ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
@@ -359,7 +362,7 @@ def robo_process_target(observations, action_available,step_count,step_control,s
                 queue.put(exp)
                 env.reset()
                 observation = env.get_observation()
-                observations[id][:observation_space] = observation
+                observations[id][:observation_space] = torch.tensor(observation)
                 ep_observations.fill(0)
                 ep_actions.fill(0)
                 ep_rewards.fill(0)

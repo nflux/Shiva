@@ -25,7 +25,8 @@ class RoboCupEnvironment(Environment):
         self.rews = self.env.left_rewards
         self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
-        self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
+        # self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
+        self.action_space = {'acs_space': 387, 'param': self.env.acs_param_dim}
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
@@ -75,6 +76,7 @@ class RoboCupEnvironment(Environment):
             act_choice = np.argmax(actions[:self.action_space['acs_space']])
         elif discrete_select == 'sample':
             act_choice = Categorical(actions).sample()
+            # print(act_choice)
             # action = action2one_hot(self.acs_discrete, action.item())
             # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
 
@@ -117,7 +119,7 @@ class RoboCupEnvironment(Environment):
         self.steps_per_episode +=1
         
         # print('\nreward:', self.rews, '\n')
-        print(actions)
+        # print(actions)
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions[0].tolist()}
 
     def get_observation(self):
@@ -143,7 +145,8 @@ class RoboCupEnvironment(Environment):
             self.env._start_viewer()
 
     def close(self):
-        pass
+        self.env.start = False
+        self.env.d = True
 
     def is_done(self):
         return self.done

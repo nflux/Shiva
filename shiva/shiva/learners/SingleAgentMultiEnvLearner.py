@@ -23,12 +23,12 @@ class SingleAgentMultiEnvLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentMultiEnvLearner,self).__init__(learner_id, config)
         self.queue = mp.Queue(maxsize=self.queue_size)
-        # self.miniBuffer = torch.zeros(5,)
         self.aggregator_index = torch.zeros(1).share_memory_()
+        self.tot_rew_idx = torch.zeros(1).share_memory_()
         self.saveLoadFlag = torch.zeros(1).share_memory_()
         self.ep_count = torch.zeros(1).share_memory_()
         self.step_count = torch.zeros(1).share_memory_()
-        self.updates = 5
+        self.updates = 0
         self.agent_dir = os.getcwd() + self.agent_path
         self.waitForLearner = torch.zeros(1).share_memory_()
         self.MULTI_ENV_FLAG = True
@@ -36,7 +36,6 @@ class SingleAgentMultiEnvLearner(Learner):
     def run(self):
 
         while self.ep_count < self.episodes:
-            # start_time = time.time()
             # while not self.queue.empty():
 
                 # this should prevent the GymWrapper from getting to far ahead of the learner
@@ -46,8 +45,15 @@ class SingleAgentMultiEnvLearner(Learner):
                     
             # time.sleep(0.06)
 
-            idx = int(self.aggregator_index.item())
+            temp = self.ep_count
+
+
+
             if self.aggregator_index.item():
+
+                idx = int(self.aggregator_index.item())
+                t = int(self.tot_rew_idx.item())
+
                 exp = copy.deepcopy(
                     [
                         self.obs_buffer[:idx],
@@ -57,11 +63,17 @@ class SingleAgentMultiEnvLearner(Learner):
                         self.done_buffer[:idx]
                     ]
                 )
-                self.reward_per_episode = self.rew_buffer[:idx].sum().item()
-                self.steps_per_episode = idx
+
+                for i in range(t):
+                    self.reward_per_episode = int(self.ep_metrics_buffer[t,0].item())
+                    self.steps_per_episode = int(self.ep_metrics_buffer[t,1].item())
+                    self.collect_metrics(episodic=True)
+
                 if len(self.buffer) <= self.buffer.batch_size:
                     self.collect_metrics(episodic=True)
+
                 self.aggregator_index[0] = 0
+                self.tot_rew_idx[0] = 0
                 self.buffer.push(exp)
 
 
@@ -87,28 +99,11 @@ class SingleAgentMultiEnvLearner(Learner):
                     self.alg.update(self.agent,self.buffer,self.step_count)
                 self.collect_metrics(episodic=False)
 
-            # else:
-
-                # observations, actions, rewards, next_observations, dones = zip(*exp)
-                # print("Episode {} Episodic Reward {} ".format(self.ep_count.item(), np.array(rewards).sum()))
-                # # print(len(actions))
-
-                # self.agent.actor.train()
-                # self.agent.critic.train()
-                # self.buffer.push(copy.deepcopy(exp))
-                # # self.step_count += len(observations)
-                # self.reward_per_episode = np.array(rewards).sum()
-                # self.steps_per_episode = len(observations)
-                # for i in range(len(observations)):
-                #     self.reward_per_step = rewards[i][0]
-                #     self.collect_metrics(episodic=False)
-                # for _ in range(3):
-                #     self.alg.update(self.agent,self.buffer,self.step_count.item())
-                #     self.collect_metrics(episodic=True)
             if len(self.buffer) > self.buffer.batch_size:
+                # start_time = time.time()
                 self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
-                self.collect_metrics(episodic=True)
                 # print("Update--- %s seconds ---" % (time.time() - start_time))
+                self.collect_metrics(episodic=True)
 
 
                 # self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
@@ -119,26 +114,14 @@ class SingleAgentMultiEnvLearner(Learner):
                     # print("hello")
 
             if self.saveLoadFlag.item() == 1:
-                # start_time = time.time()
                 # print("Multi Learner:",self.agent_dir)
                 # self.agent.save_agent(self.agent_dir,self.step_count)
                 self.agent.save(self.agent_dir, self.step_count.item())
                 print("Agent was saved")
                 self.saveLoadFlag[0] = 0
 
-                self.updates += 1
-                        # print('Copied')
-                    # Add save policy function here
-            # else:
-            #     if self.saveLoadFlag.item() == 1:
-            #         # start_time = time.time()
-            #         # print("Multi Learner:",self.agent_dir)
-            #         self.agent.save_agent(self.agent_dir,self.step_count.item())
-            #         # print("--- %s seconds ---" % (time.time() - start_time))
-            #         print("Agent was saved")
-            #         self.saveLoadFlag[0] = 0
-                # self.waitForLearner[0] = 0
-            # print("--- %s seconds ---" % (time.time() - start_time))
+                # self.updates += 1
+
 
         # self.p.join()
         #print('Hello')
@@ -189,7 +172,7 @@ class SingleAgentMultiEnvLearner(Learner):
     def create_aggregator(self, obs_dim, acs_dim):
 
         self.aggregator = mp.Process(
-                                        target = data_aggregator, 
+                                        target = data_aggregator,
 
                                         args = (
                                             self.obs_buffer,
@@ -197,11 +180,13 @@ class SingleAgentMultiEnvLearner(Learner):
                                             self.rew_buffer,
                                             self.next_obs_buffer,
                                             self.done_buffer,
-                                            self.queue, 
+                                            self.ep_metrics_buffer,
+                                            self.queue,
                                             self.aggregator_index,
-                                            self.ep_count, 
-                                            self.buffer.batch_size, 
-                                            obs_dim, 
+                                            self.tot_rew_idx,
+                                            self.ep_count,
+                                            self.aggregator_size,
+                                            obs_dim,
                                             acs_dim,
                                         )
                                     )
@@ -218,25 +203,27 @@ class SingleAgentMultiEnvLearner(Learner):
         environment = load_class('shiva.envs', self.configs['Environment']['sub_type'])
         self.configs['Environment']['port'] = 20000
         self.env = environment(self.configs)
-
-
         obs_dim = self.env.get_observation_space()
         acs_dim = self.env.get_action_space()['acs_space']
+        time.sleep(5)
+        self.env.close()
 
 
 
         # if buffer set to true in config
         if self.using_buffer:
             # Tensor replay buffer at the moment
-            self.buffer = self.create_buffer(self.env.get_observation_space(), self.env.get_action_space()['acs_space'])
+            self.buffer = self.create_buffer(obs_dim, acs_dim)
 
         self.obs_buffer = torch.zeros((10_000, obs_dim), requires_grad=False).share_memory_()
         self.acs_buffer = torch.zeros( (10_000, acs_dim) ,requires_grad=False).share_memory_()
         self.rew_buffer = torch.zeros((10_000, 1),requires_grad=False).share_memory_()
         self.next_obs_buffer = torch.zeros((10_000, obs_dim),requires_grad=False).share_memory_()
         self.done_buffer = torch.zeros((10_000, 1),requires_grad=False).share_memory_()
+        self.ep_metrics_buffer = torch.zeros((10_000, 2),requires_grad=False).share_memory_()
 
-        self.create_aggregator(self.env.get_observation_space(), self.env.get_action_space()['acs_space'])
+
+        self.create_aggregator(obs_dim, acs_dim)
 
 
         # Launch the algorithm which will handle the
@@ -277,11 +264,11 @@ class SingleAgentMultiEnvLearner(Learner):
         return metrics
 
 
-def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buffer, queue, current_index, ep_count, max_size, obs_dim, acs_dim):
+def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buffer, ep_metrics_buffer, queue, current_index, tot_rew_idx, ep_count, max_size, obs_dim, acs_dim):
 
     while True:
 
-        time.sleep(0.01)
+        time.sleep(0.5)
 
         while not queue.empty():
 
@@ -311,13 +298,16 @@ def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buf
             print("Episode {} Episodic Reward {} ".format(int(ep_count.item()), tot_rew))
 
             idx = int(current_index.item())
+            t = int(tot_rew_idx.item())
 
             obs_buffer[idx:idx+nentries] = obs
             acs_buffer[idx:idx+nentries] = ac
             rew_buffer[idx:idx+nentries] = rew
             next_obs_buffer[idx:idx+nentries] = next_obs
             done_buffer[idx:idx+nentries] = done
-
+            ep_metrics_buffer[t:t+1, 0] = tot_rew
+            ep_metrics_buffer[t:t+1, 1] = nentries
+            tot_rew_idx += 1
             current_index += nentries
 
 

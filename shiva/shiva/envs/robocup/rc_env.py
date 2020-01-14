@@ -330,9 +330,9 @@ class rc_env:
             elif self.action_level == 'discretized':
                 # print("this ran")
                 # print(params)
-                for p in range(params.shape[0]):
-                    # print(params)
-                    self.left_action_params[agent_id][p] = params.item()#params[agent_id][p]
+                # for p in range(params.shape[0]):
+                #     print("look here",params)
+                self.left_action_params[agent_id][0] = params.item()#params[agent_id][p]
         else:
             self.right_actions[agent_id] = action
             if self.action_level == 'low':
@@ -499,6 +499,8 @@ class rc_env:
                     # Break if episode done
                     if self.d == True:
                         break
+            if not self.start:
+                break
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def _start_hfo_server(self):
@@ -541,7 +543,7 @@ class rc_env:
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-            time.sleep(3) # Wait for server to startup before connecting a player
+            time.sleep(10) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         '''
@@ -578,7 +580,7 @@ class rc_env:
         '''
         reward=0.0
         team_reward = 0.0
-        goal_points = 20.0
+        goal_points = 10.0
         #---------------------------
         global possession_side
         if self.d:
@@ -669,7 +671,7 @@ class rc_env:
 
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
 
-            reward -= 1
+            reward -= 0.1
             # print("agent is getting penalized for kicking when not kickable")
 
         
@@ -683,10 +685,10 @@ class rc_env:
 
             # if True:        
             # if self.num_right > 0:
-            print(self.left_agent_possesion)
-            if (np.array(self.left_agent_possesion) == 'N').all() or (np.array(self.right_agent_possesion) == 'N').all():
+            # print(self.left_agent_possesion)
+            if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
-                reward += 10
+                reward += 1
                 team_reward += 1.5
 
             # set initial ball position after kick
@@ -805,7 +807,7 @@ class rc_env:
         if ((self.left_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
-                delta = (2*self.num_left)*(r_prev - r)
+                delta = (2*self.num_left)*(r_prev - r)* 2.0
                 if True:
                 # if delta > 0:
                     reward += delta * 2
