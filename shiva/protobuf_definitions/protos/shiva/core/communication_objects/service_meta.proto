@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 import "shiva/core/communication_objects/configs.proto";
-import "shiva/core/communication_objects/env_specs.proto";
+import "shiva/core/communication_objects/specs.proto";
 import "shiva/core/communication_objects/metrics.proto";
 import "shiva/core/communication_objects/helpers.proto";
 

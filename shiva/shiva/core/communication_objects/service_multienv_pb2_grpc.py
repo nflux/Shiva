@@ -23,7 +23,7 @@ class MultiEnvironmentStub(object):
         )
     self.SendNewAgents = channel.unary_unary(
         '/communication_objects.MultiEnvironment/SendNewAgents',
-        request_serializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.NewAgentsConfigProto.SerializeToString,
+        request_serializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.ConfigProto.SerializeToString,
         response_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.FromString,
         )
 
@@ -56,7 +56,7 @@ def add_MultiEnvironmentServicer_to_server(servicer, server):
       ),
       'SendNewAgents': grpc.unary_unary_rpc_method_handler(
           servicer.SendNewAgents,
-          request_deserializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.NewAgentsConfigProto.FromString,
+          request_deserializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.ConfigProto.FromString,
           response_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.SerializeToString,
       ),
   }

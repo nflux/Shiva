@@ -8,5 +8,5 @@ package communication_objects;
 
 service MultiEnvironment {
     rpc SendObservations(ObservationsProto) returns (ActionsProto);
-    rpc SendNewAgents(NewAgentsConfigProto) returns (Empty);
+    rpc SendNewAgents(ConfigProto) returns (Empty);
 }

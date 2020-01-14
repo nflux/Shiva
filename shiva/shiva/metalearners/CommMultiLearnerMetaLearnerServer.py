@@ -1,17 +1,17 @@
 import time
-import futures
+from concurrent import futures
 import datetime
-import grpc
+import grpc, os, sys
 
-from shiva.core.communication_objects.env_specs_pb2 import MultiEnvSpecsProto
-from shiva.core.communication_objects.helpers_pb2 import Empty, StringMessage
+from shiva.core.communication_objects.specs_pb2 import MultiEnvSpecsProto
+from shiva.core.communication_objects.helpers_pb2 import Empty, SimpleMessage
 from shiva.core.communication_objects.metrics_pb2 import TrainingMetricsProto, EvaluationMetricsProto
 from shiva.core.communication_objects.configs_pb2 import StatusProto, ComponentType
 
-from shiva.core.communicator_objects.service_meta_pb2_grpc import MetaLearnerServicer, add_MetaLearnerServicer_to_server, MetaLearnerStub
+from shiva.core.communication_objects.service_meta_pb2_grpc import MetaLearnerServicer, add_MetaLearnerServicer_to_server, MetaLearnerStub
 
 from shiva.helpers.grpc_utils import (
-    from_dict_2_StatusProto, from_StatusProto_2_dict
+    from_dict_2_StatusProto, from_StatusProto_2_dict,
     from_dict_2_MultiEnvSpecsProto, from_MultiEnvSpecsProto_2_dict,
     from_dict_2_TrainingMetricsProto, from_TrainingMetricsProto_2_dict,
     from_dict_2_EvolutionMetricProto, from_EvolutionMetricProto_2_dict
@@ -27,9 +27,9 @@ class CommMultiLearnerMetaLearnerServer(MetaLearnerServicer):
     def SendStatus(self, status_proto: StatusProto, context) -> Empty:
         status = from_StatusProto_2_dict(status_proto)
         if status['type'] == ComponentType.LEARNER:
-            self.shared_dict['learners_info'][status.id] = status
+            self.shared_dict['learners_spec'][status['id']] = status
         elif status['type'] == ComponentType.MULTIENV:
-            self.shared_dict['menvs_info'][status.id] = status
+            self.shared_dict['menvs_spec'][status['id']] = status
         elif status['type'] == ComponentType.EVAL:
             pass
 
@@ -45,10 +45,13 @@ class CommMultiLearnerMetaLearnerServer(MetaLearnerServicer):
         self.shared_dict['eval_config'] = from_EvolutionMetricProto_2_dict(eval_metrics_proto)
         return Empty()
 
-def start_meta_server(address, shared_dict, max_workers=5):
+def serve(address, max_workers=5):
+    '''
+        Start gRPC server
+    '''
     options = (('grpc.so_reuseport', 1),)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers,), options=options)
-    add_MetaLearnerServicer_to_server(CommMultiLearnerMetaLearnerServer(shared_dict), server)
+    add_MetaLearnerServicer_to_server(CommMultiLearnerMetaLearnerServer({}), server)
     server.add_insecure_port(address)
     server.start()
     _wait_forever(server)

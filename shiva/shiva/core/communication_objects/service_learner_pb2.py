@@ -15,7 +15,7 @@ _sym_db = _symbol_database.Default()
 
 from shiva.core.communication_objects import helpers_pb2 as shiva_dot_core_dot_communication__objects_dot_helpers__pb2
 from shiva.core.communication_objects import configs_pb2 as shiva_dot_core_dot_communication__objects_dot_configs__pb2
-from shiva.core.communication_objects import env_specs_pb2 as shiva_dot_core_dot_communication__objects_dot_env__specs__pb2
+from shiva.core.communication_objects import specs_pb2 as shiva_dot_core_dot_communication__objects_dot_specs__pb2
 from shiva.core.communication_objects import env_step_pb2 as shiva_dot_core_dot_communication__objects_dot_env__step__pb2
 
 
@@ -24,9 +24,9 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='communication_objects',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n6shiva/core/communication_objects/service_learner.proto\x12\x15\x63ommunication_objects\x1a.shiva/core/communication_objects/helpers.proto\x1a.shiva/core/communication_objects/configs.proto\x1a\x30shiva/core/communication_objects/env_specs.proto\x1a/shiva/core/communication_objects/env_step.proto2\x9b\x02\n\x07Learner\x12R\n\x0cSendEnvSpecs\x12$.communication_objects.EnvSpecsProto\x1a\x1c.communication_objects.Empty\x12`\n\x13SendEvolutionConfig\x12+.communication_objects.EvolutionConfigProto\x1a\x1c.communication_objects.Empty\x12Z\n\x10SendTrajectories\x12(.communication_objects.TrajectoriesProto\x1a\x1c.communication_objects.Emptyb\x06proto3')
+  serialized_pb=_b('\n6shiva/core/communication_objects/service_learner.proto\x12\x15\x63ommunication_objects\x1a.shiva/core/communication_objects/helpers.proto\x1a.shiva/core/communication_objects/configs.proto\x1a,shiva/core/communication_objects/specs.proto\x1a/shiva/core/communication_objects/env_step.proto2\x97\x02\n\x07Learner\x12W\n\x11SendMultiEnvSpecs\x12$.communication_objects.EnvSpecsProto\x1a\x1c.communication_objects.Empty\x12W\n\x13SendEvolutionConfig\x12\".communication_objects.ConfigProto\x1a\x1c.communication_objects.Empty\x12Z\n\x10SendTrajectories\x12(.communication_objects.TrajectoriesProto\x1a\x1c.communication_objects.Emptyb\x06proto3')
   ,
-  dependencies=[shiva_dot_core_dot_communication__objects_dot_helpers__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_configs__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_env__specs__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_env__step__pb2.DESCRIPTOR,])
+  dependencies=[shiva_dot_core_dot_communication__objects_dot_helpers__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_configs__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_specs__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_env__step__pb2.DESCRIPTOR,])
 
 
 
@@ -40,15 +40,15 @@ _LEARNER = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=277,
-  serialized_end=560,
+  serialized_start=273,
+  serialized_end=552,
   methods=[
   _descriptor.MethodDescriptor(
-    name='SendEnvSpecs',
-    full_name='communication_objects.Learner.SendEnvSpecs',
+    name='SendMultiEnvSpecs',
+    full_name='communication_objects.Learner.SendMultiEnvSpecs',
     index=0,
     containing_service=None,
-    input_type=shiva_dot_core_dot_communication__objects_dot_env__specs__pb2._ENVSPECSPROTO,
+    input_type=shiva_dot_core_dot_communication__objects_dot_specs__pb2._ENVSPECSPROTO,
     output_type=shiva_dot_core_dot_communication__objects_dot_helpers__pb2._EMPTY,
     serialized_options=None,
   ),
@@ -57,7 +57,7 @@ _LEARNER = _descriptor.ServiceDescriptor(
     full_name='communication_objects.Learner.SendEvolutionConfig',
     index=1,
     containing_service=None,
-    input_type=shiva_dot_core_dot_communication__objects_dot_configs__pb2._EVOLUTIONCONFIGPROTO,
+    input_type=shiva_dot_core_dot_communication__objects_dot_configs__pb2._CONFIGPROTO,
     output_type=shiva_dot_core_dot_communication__objects_dot_helpers__pb2._EMPTY,
     serialized_options=None,
   ),

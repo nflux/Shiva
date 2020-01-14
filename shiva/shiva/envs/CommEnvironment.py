@@ -33,20 +33,25 @@ def create_comm_env(env_id, cls, configs, menv_stub, send_specs_to_menv):
             if send_specs_to_menv: # a one-time message to send the env specs
                 self.menv_stub.send_env_specs(self._get_env_specs())
 
-            learners_address = self.menv_stub.get_learners_address(self.id) # this might take a little to respond as the menv needs a response from meta
+            learners_info = self.menv_stub.get_learners_info(self.id) # this might take a little to respond as the menv needs a response from meta
 
             # once we got the learners addresses, create the stubs
             self.learners_stub = {}
-            for learner_id, learner_address in learners_address.items():
-                self.learners_stub[learner_id] = get_learner_stub(learner_address)
+            for learner_id, info in learners_info.items():
+                self.learners_stub[learner_id] = get_learner_stub(info['address'])
+
+            # we have the learners stub so we are ready to start running
+            self.run()
 
         def run(self):
             while True:
                 observations = self.get_observations()
                 actions = self.menv_stub.SendObservations(from_observations_2_ObservationsProto(observations))
                 next_observations, rewards, dones, _ = self.env.step(from_ActionsProto_2_actions(actions))
+
                 #
-                #   Collect trajectories
+                #   Collect trajectories in an unstructured buffer of dim
+                #   num_agents * timesteps * (obs_dim | acs_dim | next_obs_dim | reward | done)
                 #
 
                 if self.env.is_done():

@@ -67,5 +67,5 @@ def collect_forever(minibuffer, queue, ix, num_agents, acs_dim, obs_dim, metrics
     while True: # maybe a lock here
         trajectory = from_TrajectoryProto_2_trajectory( queue.pop() )
         # collect metrics
-        metrics['rewards'] =
+        # metrics['rewards'] =
         # push to minibuffer

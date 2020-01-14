@@ -2,9 +2,9 @@
 import grpc
 
 from shiva.core.communication_objects import configs_pb2 as shiva_dot_core_dot_communication__objects_dot_configs__pb2
-from shiva.core.communication_objects import env_specs_pb2 as shiva_dot_core_dot_communication__objects_dot_env__specs__pb2
 from shiva.core.communication_objects import env_step_pb2 as shiva_dot_core_dot_communication__objects_dot_env__step__pb2
 from shiva.core.communication_objects import helpers_pb2 as shiva_dot_core_dot_communication__objects_dot_helpers__pb2
+from shiva.core.communication_objects import specs_pb2 as shiva_dot_core_dot_communication__objects_dot_specs__pb2
 
 
 class LearnerStub(object):
@@ -17,14 +17,14 @@ class LearnerStub(object):
     Args:
       channel: A grpc.Channel.
     """
-    self.SendEnvSpecs = channel.unary_unary(
-        '/communication_objects.Learner/SendEnvSpecs',
-        request_serializer=shiva_dot_core_dot_communication__objects_dot_env__specs__pb2.EnvSpecsProto.SerializeToString,
+    self.SendMultiEnvSpecs = channel.unary_unary(
+        '/communication_objects.Learner/SendMultiEnvSpecs',
+        request_serializer=shiva_dot_core_dot_communication__objects_dot_specs__pb2.EnvSpecsProto.SerializeToString,
         response_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.FromString,
         )
     self.SendEvolutionConfig = channel.unary_unary(
         '/communication_objects.Learner/SendEvolutionConfig',
-        request_serializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.EvolutionConfigProto.SerializeToString,
+        request_serializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.ConfigProto.SerializeToString,
         response_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.FromString,
         )
     self.SendTrajectories = channel.unary_unary(
@@ -38,7 +38,7 @@ class LearnerServicer(object):
   # missing associated documentation comment in .proto file
   pass
 
-  def SendEnvSpecs(self, request, context):
+  def SendMultiEnvSpecs(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -62,14 +62,14 @@ class LearnerServicer(object):
 
 def add_LearnerServicer_to_server(servicer, server):
   rpc_method_handlers = {
-      'SendEnvSpecs': grpc.unary_unary_rpc_method_handler(
-          servicer.SendEnvSpecs,
-          request_deserializer=shiva_dot_core_dot_communication__objects_dot_env__specs__pb2.EnvSpecsProto.FromString,
+      'SendMultiEnvSpecs': grpc.unary_unary_rpc_method_handler(
+          servicer.SendMultiEnvSpecs,
+          request_deserializer=shiva_dot_core_dot_communication__objects_dot_specs__pb2.EnvSpecsProto.FromString,
           response_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.SerializeToString,
       ),
       'SendEvolutionConfig': grpc.unary_unary_rpc_method_handler(
           servicer.SendEvolutionConfig,
-          request_deserializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.EvolutionConfigProto.FromString,
+          request_deserializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.ConfigProto.FromString,
           response_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.SerializeToString,
       ),
       'SendTrajectories': grpc.unary_unary_rpc_method_handler(

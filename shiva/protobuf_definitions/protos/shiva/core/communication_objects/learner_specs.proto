@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package communication_objects;
-
-message LearnerSpecsProto {
-    int32 learner_id = 1;
-    string extra = 2;
-}

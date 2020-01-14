@@ -23,7 +23,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='communication_objects',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n7shiva/core/communication_objects/service_multienv.proto\x12\x15\x63ommunication_objects\x1a.shiva/core/communication_objects/configs.proto\x1a/shiva/core/communication_objects/env_step.proto\x1a.shiva/core/communication_objects/helpers.proto2\xd1\x01\n\x10MultiEnvironment\x12\x61\n\x10SendObservations\x12(.communication_objects.ObservationsProto\x1a#.communication_objects.ActionsProto\x12Z\n\rSendNewAgents\x12+.communication_objects.NewAgentsConfigProto\x1a\x1c.communication_objects.Emptyb\x06proto3')
+  serialized_pb=_b('\n7shiva/core/communication_objects/service_multienv.proto\x12\x15\x63ommunication_objects\x1a.shiva/core/communication_objects/configs.proto\x1a/shiva/core/communication_objects/env_step.proto\x1a.shiva/core/communication_objects/helpers.proto2\xc8\x01\n\x10MultiEnvironment\x12\x61\n\x10SendObservations\x12(.communication_objects.ObservationsProto\x1a#.communication_objects.ActionsProto\x12Q\n\rSendNewAgents\x12\".communication_objects.ConfigProto\x1a\x1c.communication_objects.Emptyb\x06proto3')
   ,
   dependencies=[shiva_dot_core_dot_communication__objects_dot_configs__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_env__step__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_helpers__pb2.DESCRIPTOR,])
 
@@ -40,7 +40,7 @@ _MULTIENVIRONMENT = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   serialized_start=228,
-  serialized_end=437,
+  serialized_end=428,
   methods=[
   _descriptor.MethodDescriptor(
     name='SendObservations',
@@ -56,7 +56,7 @@ _MULTIENVIRONMENT = _descriptor.ServiceDescriptor(
     full_name='communication_objects.MultiEnvironment.SendNewAgents',
     index=1,
     containing_service=None,
-    input_type=shiva_dot_core_dot_communication__objects_dot_configs__pb2._NEWAGENTSCONFIGPROTO,
+    input_type=shiva_dot_core_dot_communication__objects_dot_configs__pb2._CONFIGPROTO,
     output_type=shiva_dot_core_dot_communication__objects_dot_helpers__pb2._EMPTY,
     serialized_options=None,
   ),

@@ -1,19 +1,18 @@
 import time
-import torch.multiprocessing as mp
+# import torch.multiprocessing as mp
 
 from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_class
 
 from shiva.metalearners.CommMultiLearnerMetaLearnerServer import start_meta_server
-from shiva.learners.CommMultiAgentLearner import CommMultiAgentLearner
-from shiva.learners.CommMultiAgentLearnerServer import get_learner_stub
-from shiva.envs.CommMultiEnvironmentServer import get_menv_stub
-from shiva.envs.CommMultiEnvironment import CommMultiEnvironment
+# from shiva.learners.CommMultiAgentLearner import CommMultiAgentLearner
+# from shiva.learners.CommMultiAgentLearnerServer import get_learner_stub
+# from shiva.envs.CommMultiEnvironmentServer import get_menv_stub
+# from shiva.envs.CommMultiEnvironment import CommMultiEnvironment
 
-from shiva.core.communication_objects.configs_pb2 import StatusType # only thing being used for gRPC specific
+# from shiva.core.communication_objects.configs_pb2 import StatusType # only thing being used for gRPC specific
 
 class CommMultiLearnerMetaLearner(MetaLearner):
-    _ADDRESS = "localhost:50155"
     learners_stub = None
 
     def __init__(self, configs):
@@ -21,16 +20,20 @@ class CommMultiLearnerMetaLearner(MetaLearner):
         self.configs = configs
 
         # setup shared memory with the local server
-        manager = mp.Manager()
-        self.shared_dict = manager.dict()
-        self.shared_dict['learners_info'] = None
-        self.shared_dict['menvs_info'] = None
-        self.shared_dict['train_metrics'] = None
-        self.shared_dict['eval_config'] = None
+        # manager = mp.Manager()
+        # self.shared_dict = manager.dict()
+        # self.shared_dict['learners_spec'] = manager.dict()
+        # self.shared_dict['menvs_spec'] = manager.dict()
+        # self.shared_dict['train_metrics'] = None
+        # self.shared_dict['eval_config'] = None
 
         # initiate server
-        self.meta_server_p = mp.Process(target=start_meta_server, args=(self._ADDRESS, self.shared_dict))
-        self.meta_server_p.start()
+        self.comm_meta_server = start_meta_server()
+        print('meta', self.comm_meta_server)
+        input()
+
+        # self.meta_server_p = mp.Process(target=start_meta_server, args=(self._ADDRESS, self.shared_dict))
+        # self.meta_server_p.start()
         # time.sleep(1) # wait for the server to start!
 
         '''
@@ -76,6 +79,7 @@ class CommMultiLearnerMetaLearner(MetaLearner):
 
     def run(self):
         while True:
+            pass
             # do something with TrainingMetrics from learners?
 
             # check evaluation metrics and distribute evolution configs to learners

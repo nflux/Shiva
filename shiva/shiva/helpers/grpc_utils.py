@@ -1,10 +1,10 @@
 from shiva.helpers.timers import timed
 
 from shiva.core.communication_objects.env_step_pb2 import EnvironmentCommand, ObservationsProto, ActionsProto, TrajectoriesProto
-from shiva.core.communication_objects.configs_pb2 import NewAgentsConfigProto, EvolutionConfigProto, StatusProto
-from shiva.core.communication_objects.env_specs_pb2 import EnvSpecsProto, MultiEnvSpecsProto
-from shiva.core.communication_objects.metrics import TrainingMetricsProto
-from shiva.core.communication_objects.helpers import SimpleMessage
+from shiva.core.communication_objects.configs_pb2 import ConfigProto, StatusProto
+# from shiva.core.communication_objects.specs_pb2 import EnvSpecsProto, MultiEnvSpecsProto
+from shiva.core.communication_objects.metrics_pb2 import TrainingMetricsProto
+from shiva.core.communication_objects.helpers_pb2 import SimpleMessage
 
 @timed
 def from_dict_2_ObservationsProto(observations: dict) -> ObservationsProto:
@@ -49,14 +49,14 @@ def from_TrajectoriesProto_2_dict(trajectory: dict) -> dict:
     return trajectories
 
 @timed
-def from_dict_2_NewAgentsConfigProto(agents: dict) -> NewAgentsConfigProto:
+def from_dict_2_NewAgentsConfigProto(agents: dict) -> ConfigProto:
     assert "NotImplemented"
-    new_agents_config_proto = NewAgentsConfigProto()
+    new_agents_config_proto = ConfigProto()
 
     return new_agents_config_proto
 
 @timed
-def from_NewAgentsConfigProto_2_dict(agents_proto: NewAgentsConfigProto) -> dict:
+def from_NewAgentsConfigProto_2_dict(agents_proto: ConfigProto) -> dict:
     assert "NotImplemented"
     new_agents_config = {}
 
@@ -70,6 +70,20 @@ def from_dict_2_TrainingMetricsProto(metrics: dict) -> TrainingMetricsProto:
     return training_metrics_proto
 
 @timed
+def from_EvolutionMetricProto_2_dict(metrics_proto: TrainingMetricsProto) -> dict:
+    assert "NotImplemented"
+    training_metrics = {}
+
+    return training_metrics
+
+@timed
+def from_dict_2_EvolutionMetricProto(metrics: dict) -> TrainingMetricsProto:
+    assert "NotImplemented"
+    training_metrics_proto = TrainingMetricsProto()
+
+    return training_metrics_proto
+
+@timed
 def from_TrainingMetricsProto_2_dict(metrics_proto: TrainingMetricsProto) -> dict:
     assert "NotImplemented"
     training_metrics = {}
@@ -77,42 +91,42 @@ def from_TrainingMetricsProto_2_dict(metrics_proto: TrainingMetricsProto) -> dic
     return training_metrics
 
 @timed
-def from_dict_2_EvolutionConfigProto(evol_config: dict) -> EvolutionConfigProto:
+def from_dict_2_EvolutionConfigProto(evol_config: dict) -> ConfigProto:
     assert "NotImplemented"
-    evol_config_proto = EvolutionConfigProto()
+    evol_config_proto = ConfigProto()
 
     return evol_config_proto
 
 @timed
-def from_EvolutionConfigProto_2_dict(evol_config_proto: EvolutionConfigProto) -> dict:
+def from_EvolutionConfigProto_2_dict(evol_config_proto: ConfigProto) -> dict:
     assert "NotImplemented"
     evol_config = {}
 
     return evol_config
 
 @timed
-def from_dict_2_MultiEnvSpecsProto(menv_specs: dict) -> MultiEnvSpecsProto:
+def from_dict_2_MultiEnvSpecsProto(menv_specs: dict) -> StatusProto:
     assert "NotImplemented"
-    menv_specs_proto = MultiEnvSpecsProto()
+    menv_specs_proto = StatusProto()
 
     return menv_specs_proto
 
 @timed
-def from_MultiEnvSpecsProto_2_dict(menv_specs_proto_proto: MultiEnvSpecsProto) -> dict:
+def from_MultiEnvSpecsProto_2_dict(menv_specs_proto_proto: StatusProto) -> dict:
     assert "NotImplemented"
     menv_specs = {}
 
     return menv_specs
 
 @timed
-def from_dict_2_EnvSpecsProto(env_specs: dict) -> EnvSpecsProto:
+def from_dict_2_EnvSpecsProto(env_specs: dict) -> StatusProto:
     assert "NotImplemented"
-    env_specs_proto = EnvSpecsProto()
+    env_specs_proto = StatusProto()
 
     return env_specs_proto
 
 @timed
-def from_EnvSpecsProto_to_dict(env_specs_proto: EnvSpecsProto) -> dict:
+def from_EnvSpecsProto_to_dict(env_specs_proto: StatusProto) -> dict:
     assert "NotImplemented"
     env_specs = {}
 
@@ -135,19 +149,19 @@ def from_SimpleMessage_2_string(simple_msg_proto: SimpleMessage) -> str:
     assert "Implementation not checked"
     return str(simple_msg_proto.data)
 
-@timed
-def from_dict_2_LearnersInfoProto(learners_info: dict) -> LearnersInfoProto:
-    assert "NotImplemented"
-    learners_info_proto = LearnersInfoProto()
-
-    return learners_info_proto
-
-@timed
-def from_LearnersInfoProto_2_dict(learners_info_proto: LearnersInfoProto) -> dict:
-    assert "NotImplemented"
-    learners_info = {}
-
-    return learners_info
+# @timed
+# def from_dict_2_LearnersInfoProto(learners_info: dict) -> LearnersInfoProto:
+#     assert "NotImplemented"
+#     learners_info_proto = LearnersInfoProto()
+#
+#     return learners_info_proto
+#
+# @timed
+# def from_LearnersInfoProto_2_dict(learners_info_proto: LearnersInfoProto) -> dict:
+#     assert "NotImplemented"
+#     learners_info = {}
+#
+#     return learners_info
 
 @timed
 def from_dict_2_StatusProto(status_dict: dict) -> StatusProto:
