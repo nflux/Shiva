@@ -26,12 +26,12 @@ class DDPGAlgorithm(Algorithm):
             @buffer         buffer is a reference
         '''
 
-        if episodic:
-            '''
-                DDPG updates at every step. This avoids doing an extra update at the end of an episode
-                But it does reset the noise after an episode
-            '''
-            agent.ou_noise.reset()
+        '''
+            DDPG updates at every step. This avoids doing an extra update at the end of an episode
+            But it does reset the noise after an episode
+        '''
+        # if episodic:
+            # agent.ou_noise.reset()
             # return
 
         # if step_count < self.agent.exploration_steps:

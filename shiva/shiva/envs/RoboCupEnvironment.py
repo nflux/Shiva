@@ -9,8 +9,8 @@ from torch.distributions import Categorical
 class RoboCupEnvironment(Environment):
     def __init__(self, config):
         super(RoboCupEnvironment, self).__init__(config)
-        np.random.seed(5)
-        torch.manual_seed(5)
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
         # self.port = port             
 
         self.env = rc_env(config, self.port)

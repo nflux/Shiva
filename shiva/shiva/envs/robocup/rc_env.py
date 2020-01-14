@@ -793,7 +793,7 @@ class rc_env:
             #if delta > 0:    
             if True:
                 team_reward += delta
-                reward+= delta * 1
+                reward+= delta * 5
                 # print("distance to ball reward")
                 # print(distance_cur, delta)
                 pass
@@ -807,10 +807,10 @@ class rc_env:
         if ((self.left_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
-                delta = (2*self.num_left)*(r_prev - r)* 2.0
+                delta = (2*self.num_left)*(r_prev - r)* 1.0
                 if True:
                 # if delta > 0:
-                    reward += delta * 2
+                    reward += delta * 10
                     team_reward += delta
                     # print("ball distance to goal reward.")
                     # pass

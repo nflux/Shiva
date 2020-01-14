@@ -46,11 +46,12 @@ class MultiGymWrapper(Environment):
                 # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
                 if self.episode_count % 5 == 0 and self.episode_count != 0:
                     loaded = True
-                    if self.saveLoadFlag.item() == 0:
+                    if self.saveLoadFlag.item() == 1:
                         self.agent.load(self.agent_dir)
                         self.agent.actor.eval()
+                        self.agent.ou_noise.reset()
                         print("Agent Loaded")
-                        self.saveLoadFlag[0] = 1
+                        self.saveLoadFlag[0] = 0
                     last_load = self.episode_count.item()
 
             # if self.episode_count % self.agent_update_episodes != 0:
@@ -60,6 +61,13 @@ class MultiGymWrapper(Environment):
             # if (self.step_control.sum().item() == self.num_instances and self.action_available.item() == 0) or self.step_count.item() == 0:
             if self.step_control.sum().item() == self.num_instances or self.step_count.item() == 0:
                 self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item())
+
+
+                '''
+                for action in action
+                    add noise to each action from the corresponding noise object in the agent?
+                
+                '''
                 # self.action_available[0] = 1
 
             # if self.action_available.item() == 1:
@@ -160,6 +168,35 @@ class MultiGymWrapper(Environment):
             else:
                 self.process_list = launch_processes(self.envs, self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length,num_instances=self.num_instances)
                 self.step_without_log_probs()
+
+def launch_processes(envs, observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, max_episode_length,logprobs = None,num_instances=1):
+
+    process_list = []
+
+    for i in range(num_instances):
+        if logprobs is not None:
+            p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_count,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
+        else:
+            p = mp.Process(target = process_target, args=(envs[i],observations, action_available,step_count,step_control,stop_collecting,waitForLearner,i,queue,max_episode_length,) )
+        p.start()
+        process_list.append(p)
+
+    return process_list
+
+
+def launch_robo_process( observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, max_episode_length,configs,logprobs = None,num_instances=1):
+
+    process_list = []
+
+    for i in range(num_instances):
+        if logprobs is not None:
+            p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_count,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
+        else:
+            p = mp.Process(target = robo_process_target, args=(observations, action_available,step_count,step_control,stop_collecting,waitForLearner, configs,i,queue,max_episode_length,) )
+        p.start()
+        process_list.append(p)
+
+    return process_list
 
 def process_target(env,observations,action_available,step_count,step_control,stop_collecting, waitForLearner, id, queue,max_ep_length):
 
@@ -286,36 +323,8 @@ def process_target_with_log_probs(env,observations,step_count,step_control,stop_
                 observation = next_observation
                 step_control[id] = 1
 
-def launch_processes(envs, observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, max_episode_length,logprobs = None,num_instances=1):
 
-    process_list = []
-
-    for i in range(num_instances):
-        if logprobs is not None:
-            p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_count,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
-        else:
-            p = mp.Process(target = process_target, args=(envs[i],observations, action_available,step_count,step_control,stop_collecting,waitForLearner,i,queue,max_episode_length,) )
-        p.start()
-        process_list.append(p)
-
-    return process_list
-
-
-def launch_robo_process( observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, max_episode_length,configs,logprobs = None,num_instances=1):
-
-    process_list = []
-
-    for i in range(num_instances):
-        if logprobs is not None:
-            p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_count,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
-        else:
-            p = mp.Process(target = robo_process_target, args=(observations, action_available,step_count,step_control,stop_collecting,waitForLearner, configs,i,queue,max_episode_length,) )
-        p.start()
-        process_list.append(p)
-
-    return process_list
-
-def robo_process_target(observations, action_available,step_count,step_control,stop_collecting,waitForLearner,config,id,queue,max_ep_length):
+def robo_process_target(observations,action_available,step_count,step_control,stop_collecting,waitForLearner,config,id,queue,max_ep_length):
     config['seed'] = id
     config['port'] = (id+45) * 1000
     # print(environment)

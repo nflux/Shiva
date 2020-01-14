@@ -45,9 +45,12 @@ class SingleAgentMultiEnvLearner(Learner):
                     
             # time.sleep(0.06)
 
-            temp = self.ep_count
+            # temp = self.ep_count
 
-
+            '''
+            
+            Collect From Aggregator and
+            '''
 
             if self.aggregator_index.item():
 
@@ -65,7 +68,7 @@ class SingleAgentMultiEnvLearner(Learner):
                 )
 
                 for i in range(t):
-                    self.reward_per_episode = int(self.ep_metrics_buffer[t,0].item())
+                    self.reward_per_episode = self.ep_metrics_buffer[t,0].item()
                     self.steps_per_episode = int(self.ep_metrics_buffer[t,1].item())
                     self.collect_metrics(episodic=True)
 
@@ -103,6 +106,7 @@ class SingleAgentMultiEnvLearner(Learner):
                 # start_time = time.time()
                 self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
                 # print("Update--- %s seconds ---" % (time.time() - start_time))
+                # print("this happened")
                 self.collect_metrics(episodic=True)
 
 
@@ -113,12 +117,12 @@ class SingleAgentMultiEnvLearner(Learner):
                     # self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
                     # print("hello")
 
-            if self.saveLoadFlag.item() == 1:
+            if self.saveLoadFlag.item() == 0:
                 # print("Multi Learner:",self.agent_dir)
                 # self.agent.save_agent(self.agent_dir,self.step_count)
                 self.agent.save(self.agent_dir, self.step_count.item())
                 print("Agent was saved")
-                self.saveLoadFlag[0] = 0
+                self.saveLoadFlag[0] = 1
 
                 # self.updates += 1
 
