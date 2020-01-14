@@ -71,6 +71,7 @@ class SingleAgentLearner(Learner):
     
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        
         return env_class(self.configs, self.port)
 
     def create_algorithm(self):

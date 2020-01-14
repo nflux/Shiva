@@ -24,7 +24,7 @@ class SingleAgentMultiEnvLearner(Learner):
         super(SingleAgentMultiEnvLearner,self).__init__(learner_id, config)
         self.queue = mp.Queue(maxsize=self.queue_size)
         self.aggregator_index = torch.zeros(1).share_memory_()
-        self.tot_rew_idx = torch.zeros(1).share_memory_()
+        self.metrics_idx = torch.zeros(1).share_memory_()
         self.saveLoadFlag = torch.zeros(1).share_memory_()
         self.ep_count = torch.zeros(1).share_memory_()
         self.step_count = torch.zeros(1).share_memory_()
@@ -55,7 +55,7 @@ class SingleAgentMultiEnvLearner(Learner):
             if self.aggregator_index.item():
 
                 idx = int(self.aggregator_index.item())
-                t = int(self.tot_rew_idx.item())
+                t = int(self.metrics_idx.item())
 
                 exp = copy.deepcopy(
                     [
@@ -76,7 +76,7 @@ class SingleAgentMultiEnvLearner(Learner):
                     self.collect_metrics(episodic=True)
 
                 self.aggregator_index[0] = 0
-                self.tot_rew_idx[0] = 0
+                self.metrics_idx[0] = 0
                 self.buffer.push(exp)
 
 
@@ -96,7 +96,6 @@ class SingleAgentMultiEnvLearner(Learner):
                 for i in range(len(observations)):
                     self.reward_per_step = rewards[i][0]
                     self.collect_metrics(episodic=False)
-                    # self.step_count += 1
                 self.buffer.push(exp)
                 if self.buffer.current_index - 1 >= self.update_episodes:
                     self.alg.update(self.agent,self.buffer,self.step_count)
@@ -118,13 +117,9 @@ class SingleAgentMultiEnvLearner(Learner):
                     # print("hello")
 
             if self.saveLoadFlag.item() == 0:
-                # print("Multi Learner:",self.agent_dir)
-                # self.agent.save_agent(self.agent_dir,self.step_count)
                 self.agent.save(self.agent_dir, self.step_count.item())
                 print("Agent was saved")
                 self.saveLoadFlag[0] = 1
-
-                # self.updates += 1
 
 
         # self.p.join()
@@ -187,7 +182,7 @@ class SingleAgentMultiEnvLearner(Learner):
                                             self.ep_metrics_buffer,
                                             self.queue,
                                             self.aggregator_index,
-                                            self.tot_rew_idx,
+                                            self.metrics_idx,
                                             self.ep_count,
                                             self.aggregator_size,
                                             obs_dim,
@@ -205,8 +200,7 @@ class SingleAgentMultiEnvLearner(Learner):
 
     def launch(self):
         environment = load_class('shiva.envs', self.configs['Environment']['sub_type'])
-        # self.configs['Environment']['port'] = 20000
-        self.env = environment(self.configs,20_000)
+        self.env = environment(self.configs, 20_000)
         obs_dim = self.env.get_observation_space()
         acs_dim = self.env.get_action_space()['acs_space']
         time.sleep(5)
@@ -263,12 +257,10 @@ class SingleAgentMultiEnvLearner(Learner):
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
 
-            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
-
         return metrics
 
 
-def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buffer, ep_metrics_buffer, queue, current_index, tot_rew_idx, ep_count, max_size, obs_dim, acs_dim):
+def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buffer, ep_metrics_buffer, queue, current_index, metrics_idx, ep_count, max_size, obs_dim, acs_dim):
 
     while True:
 
@@ -296,22 +288,19 @@ def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buf
             '''
             nentries = len(obs)
 
-            avg_rew = rew.mean()
-            tot_rew = rew.sum()
-
-            print("Episode {} Episodic Reward {} ".format(int(ep_count.item()), tot_rew))
+            print("Episode {} Episodic Reward {} ".format(int(ep_count.item()), rew.sum().item()))
 
             idx = int(current_index.item())
-            t = int(tot_rew_idx.item())
+            t = int(metrics_idx.item())
 
             obs_buffer[idx:idx+nentries] = obs
             acs_buffer[idx:idx+nentries] = ac
             rew_buffer[idx:idx+nentries] = rew
             next_obs_buffer[idx:idx+nentries] = next_obs
             done_buffer[idx:idx+nentries] = done
-            ep_metrics_buffer[t:t+1, 0] = tot_rew
+            ep_metrics_buffer[t:t+1, 0] = rew.sum()
             ep_metrics_buffer[t:t+1, 1] = nentries
-            tot_rew_idx += 1
+            metrics_idx += 1
             current_index += nentries
 
 

@@ -60,7 +60,15 @@ class MultiGymWrapper(Environment):
 
             # if (self.step_control.sum().item() == self.num_instances and self.action_available.item() == 0) or self.step_count.item() == 0:
             if self.step_control.sum().item() == self.num_instances or self.step_count.item() == 0:
+                # print("observations", self.observations[:,:self.obs_dim])
                 self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item())
+
+                for i,d in enumerate(self.actions):
+                    if d > 0.2:
+                        print(i,d)
+
+                # print(self.actions.shape)
+                # print(self.actions)
 
 
                 '''
@@ -207,7 +215,7 @@ def process_target(env,observations,action_available,step_count,step_control,sto
     idx = 0
     env.reset()
     observation = env.get_observation()
-    observations[id] = torch.tensor(observation).float()
+    observations[id,:observation_space] = torch.tensor(observation).float()
     step_control[id] = 1
 
     while(stop_collecting.item() == 0):
@@ -324,6 +332,7 @@ def process_target_with_log_probs(env,observations,step_count,step_control,stop_
 def robo_process_target(observations,action_available,step_count,step_control,stop_collecting,waitForLearner,config,id,queue,max_ep_length):
     
     config['seed'] = id
+    config['init_env'] = True
     env = load_class('shiva.envs', config['sub_type'])
     env = env(config, (id+45) * 1000)
 
@@ -345,7 +354,7 @@ def robo_process_target(observations,action_available,step_count,step_control,st
             time.sleep(0.001)
             action = observations[id][:action_space].numpy()
             action_available[0] = 0
-            next_observation, reward, done, more_data = env.step(torch.tensor(action), discrete_select='sample')
+            next_observation, reward, done, more_data = env.step(torch.tensor(action), discrete_select='sample', collect=False, device='cuda:0')
             ep_observations[idx] = observation
             ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
