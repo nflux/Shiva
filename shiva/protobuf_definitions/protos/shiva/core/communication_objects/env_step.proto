@@ -1,27 +1,42 @@
 syntax = "proto3";
 
 import "shiva/core/communication_objects/helpers.proto";
-import "shiva/core/communication_objects/env_command.proto";
-import "shiva/core/communication_objects/agent_state.proto";
-import "shiva/core/communication_objects/env_metrics.proto";
 
 package communication_objects;
 
-message EnvStepInput {
-    message ListAgentsActions {
-        repeated ListOfFloats data = 1;
-    }
-    map<string, ListAgentsActions> agent_actions = 1;
-    EnvironmentCommand command = 2;
+enum EnvironmentCommand {
+    STEP = 0;
+    RESET = 1;
+    CLOSE = 2;
 }
 
-message EnvStepOutput {
-    message ListAgentsStates {
-        repeated AgentState data = 1;
-    }
-    message ListAgentsMetrics {
-        repeated AgentMetrics data = 1;
-    }
-    map<string, ListAgentsStates> agent_states = 1;
-    map<string, ListAgentsMetrics> agent_metrics = 2;
+message ObservationsProto {
+    string str = 1;
+    map <string, ListOfFloats> data = 2; // obs for each agent
+    int32 step_count = 3;
+}
+
+message ActionsProto {
+    string str = 1;
+    map <string, ListOfFloats> data = 2; // action for each agent
+}
+
+message AgentStateProto {
+    int32 id = 1;
+    ListOfFloats observation = 2;
+    ListOfFloats action = 3;
+    ListOfFloats next_observation = 4;
+    float reward = 5;
+    bool done = 6;
+}
+
+message AgentTrajectoryProto {
+    string str = 1;
+    repeated AgentStateProto data = 2; //
+    int32 length = 3;
+}
+
+message TrajectoriesProto {
+    string str = 1;
+    map <string, AgentTrajectoryProto> data = 2; // trajectory for each agent
 }

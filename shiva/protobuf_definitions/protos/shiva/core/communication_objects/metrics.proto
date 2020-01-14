@@ -1,7 +1,8 @@
 syntax = "proto3";
+
 package communication_objects;
 
-message AgentMetrics {
+message AgentMetricProto {
     float steps_per_episode = 1;
     float step_count = 2;
     float temp_done_counter = 3;
@@ -9,4 +10,12 @@ message AgentMetrics {
     float reward_per_step = 5;
     float reward_per_episode = 6;
     float reward_total = 7;
+}
+
+message TrainingMetricsProto {
+    map <string, AgentMetricProto> data = 1;
+}
+
+message EvaluationMetricsProto {
+    map <string, AgentMetricProto> data = 1;
 }

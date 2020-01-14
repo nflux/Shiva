@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/env_specs.proto";
+import "shiva/core/communication_objects/learner_specs.proto";
+
+package communication_objects;
+
+enum ComponentType {
+    META = 0;
+    LEARNER = 1;
+    MULTIENV = 2;
+    ENV = 3;
+    EVAL = 4;
+}
+
+enum StatusType {
+    WAITING = 0;
+    ERROR = 1;
+    RUN = 2;
+}
+
+// Message used for Checkin and send initial parameters in between modules
+message StatusProto {
+    int32 id = 1;
+    ComponentType type = 2;
+    StatusType status = 3;
+    string address = 4;
+    oneof specs {
+        EnvSpecsProto env = 5;
+        MultiEnvSpecsProto menv = 6;
+        LearnerSpecsProto learner = 7;
+    }
+    string extra = 8;
+}
+
+enum LoadType {
+    LocalPickle = 0;
+    AWS = 2;
+}
+
+message NewAgentsConfigProto {
+    // Sent from Learner to MultiEnv
+    LoadType load_type = 1;
+    string load_path = 2;
+}
+
+message EvolutionConfigProto {
+    string data = 1;
+}
+
+message EvaluationConfigProto {
+    // Sent from Evaluation to Meta
+    string data = 1;
+}

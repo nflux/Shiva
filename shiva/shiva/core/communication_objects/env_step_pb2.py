@@ -4,6 +4,7 @@
 
 import sys
 _b=sys.version_info[0]<3 and (lambda x:x) or (lambda x:x.encode('latin1'))
+from google.protobuf.internal import enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from google.protobuf import reflection as _reflection
@@ -14,9 +15,6 @@ _sym_db = _symbol_database.Default()
 
 
 from shiva.core.communication_objects import helpers_pb2 as shiva_dot_core_dot_communication__objects_dot_helpers__pb2
-from shiva.core.communication_objects import env_command_pb2 as shiva_dot_core_dot_communication__objects_dot_env__command__pb2
-from shiva.core.communication_objects import agent_state_pb2 as shiva_dot_core_dot_communication__objects_dot_agent__state__pb2
-from shiva.core.communication_objects import env_metrics_pb2 as shiva_dot_core_dot_communication__objects_dot_env__metrics__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -24,59 +22,59 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='communication_objects',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n/shiva/core/communication_objects/env_step.proto\x12\x15\x63ommunication_objects\x1a.shiva/core/communication_objects/helpers.proto\x1a\x32shiva/core/communication_objects/env_command.proto\x1a\x32shiva/core/communication_objects/agent_state.proto\x1a\x32shiva/core/communication_objects/env_metrics.proto\"\xcc\x02\n\x0c\x45nvStepInput\x12L\n\ragent_actions\x18\x01 \x03(\x0b\x32\x35.communication_objects.EnvStepInput.AgentActionsEntry\x12:\n\x07\x63ommand\x18\x02 \x01(\x0e\x32).communication_objects.EnvironmentCommand\x1a\x46\n\x11ListAgentsActions\x12\x31\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32#.communication_objects.ListOfFloats\x1aj\n\x11\x41gentActionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x44\n\x05value\x18\x02 \x01(\x0b\x32\x35.communication_objects.EnvStepInput.ListAgentsActions:\x02\x38\x01\"\x90\x04\n\rEnvStepOutput\x12K\n\x0c\x61gent_states\x18\x01 \x03(\x0b\x32\x35.communication_objects.EnvStepOutput.AgentStatesEntry\x12M\n\ragent_metrics\x18\x02 \x03(\x0b\x32\x36.communication_objects.EnvStepOutput.AgentMetricsEntry\x1a\x43\n\x10ListAgentsStates\x12/\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32!.communication_objects.AgentState\x1a\x46\n\x11ListAgentsMetrics\x12\x31\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32#.communication_objects.AgentMetrics\x1ai\n\x10\x41gentStatesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x44\n\x05value\x18\x02 \x01(\x0b\x32\x35.communication_objects.EnvStepOutput.ListAgentsStates:\x02\x38\x01\x1ak\n\x11\x41gentMetricsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x45\n\x05value\x18\x02 \x01(\x0b\x32\x36.communication_objects.EnvStepOutput.ListAgentsMetrics:\x02\x38\x01\x62\x06proto3')
+  serialized_pb=_b('\n/shiva/core/communication_objects/env_step.proto\x12\x15\x63ommunication_objects\x1a.shiva/core/communication_objects/helpers.proto\"\xc8\x01\n\x11ObservationsProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12@\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x32.communication_objects.ObservationsProto.DataEntry\x12\x12\n\nstep_count\x18\x03 \x01(\x05\x1aP\n\tDataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x32\n\x05value\x18\x02 \x01(\x0b\x32#.communication_objects.ListOfFloats:\x02\x38\x01\"\xaa\x01\n\x0c\x41\x63tionsProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12;\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32-.communication_objects.ActionsProto.DataEntry\x1aP\n\tDataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x32\n\x05value\x18\x02 \x01(\x0b\x32#.communication_objects.ListOfFloats:\x02\x38\x01\"\xe9\x01\n\x0f\x41gentStateProto\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x38\n\x0bobservation\x18\x02 \x01(\x0b\x32#.communication_objects.ListOfFloats\x12\x33\n\x06\x61\x63tion\x18\x03 \x01(\x0b\x32#.communication_objects.ListOfFloats\x12=\n\x10next_observation\x18\x04 \x01(\x0b\x32#.communication_objects.ListOfFloats\x12\x0e\n\x06reward\x18\x05 \x01(\x02\x12\x0c\n\x04\x64one\x18\x06 \x01(\x08\"i\n\x14\x41gentTrajectoryProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12\x34\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32&.communication_objects.AgentStateProto\x12\x0e\n\x06length\x18\x03 \x01(\x05\"\xbc\x01\n\x11TrajectoriesProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12@\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x32.communication_objects.TrajectoriesProto.DataEntry\x1aX\n\tDataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12:\n\x05value\x18\x02 \x01(\x0b\x32+.communication_objects.AgentTrajectoryProto:\x02\x38\x01*4\n\x12\x45nvironmentCommand\x12\x08\n\x04STEP\x10\x00\x12\t\n\x05RESET\x10\x01\x12\t\n\x05\x43LOSE\x10\x02\x62\x06proto3')
   ,
-  dependencies=[shiva_dot_core_dot_communication__objects_dot_helpers__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_env__command__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_agent__state__pb2.DESCRIPTOR,shiva_dot_core_dot_communication__objects_dot_env__metrics__pb2.DESCRIPTOR,])
+  dependencies=[shiva_dot_core_dot_communication__objects_dot_helpers__pb2.DESCRIPTOR,])
 
-
-
-
-_ENVSTEPINPUT_LISTAGENTSACTIONS = _descriptor.Descriptor(
-  name='ListAgentsActions',
-  full_name='communication_objects.EnvStepInput.ListAgentsActions',
+_ENVIRONMENTCOMMAND = _descriptor.EnumDescriptor(
+  name='EnvironmentCommand',
+  full_name='communication_objects.EnvironmentCommand',
   filename=None,
   file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='STEP', index=0, number=0,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='RESET', index=1, number=1,
+      serialized_options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='CLOSE', index=2, number=2,
+      serialized_options=None,
+      type=None),
+  ],
   containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='data', full_name='communication_objects.EnvStepInput.ListAgentsActions.data', index=0,
-      number=1, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
   serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=433,
-  serialized_end=503,
+  serialized_start=1032,
+  serialized_end=1084,
 )
+_sym_db.RegisterEnumDescriptor(_ENVIRONMENTCOMMAND)
 
-_ENVSTEPINPUT_AGENTACTIONSENTRY = _descriptor.Descriptor(
-  name='AgentActionsEntry',
-  full_name='communication_objects.EnvStepInput.AgentActionsEntry',
+EnvironmentCommand = enum_type_wrapper.EnumTypeWrapper(_ENVIRONMENTCOMMAND)
+STEP = 0
+RESET = 1
+CLOSE = 2
+
+
+
+_OBSERVATIONSPROTO_DATAENTRY = _descriptor.Descriptor(
+  name='DataEntry',
+  full_name='communication_objects.ObservationsProto.DataEntry',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='key', full_name='communication_objects.EnvStepInput.AgentActionsEntry.key', index=0,
+      name='key', full_name='communication_objects.ObservationsProto.DataEntry.key', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='value', full_name='communication_objects.EnvStepInput.AgentActionsEntry.value', index=1,
+      name='value', full_name='communication_objects.ObservationsProto.DataEntry.value', index=1,
       number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -94,27 +92,34 @@ _ENVSTEPINPUT_AGENTACTIONSENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=505,
-  serialized_end=611,
+  serialized_start=243,
+  serialized_end=323,
 )
 
-_ENVSTEPINPUT = _descriptor.Descriptor(
-  name='EnvStepInput',
-  full_name='communication_objects.EnvStepInput',
+_OBSERVATIONSPROTO = _descriptor.Descriptor(
+  name='ObservationsProto',
+  full_name='communication_objects.ObservationsProto',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='agent_actions', full_name='communication_objects.EnvStepInput.agent_actions', index=0,
-      number=1, type=11, cpp_type=10, label=3,
+      name='str', full_name='communication_objects.ObservationsProto.str', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='data', full_name='communication_objects.ObservationsProto.data', index=1,
+      number=2, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='command', full_name='communication_objects.EnvStepInput.command', index=1,
-      number=2, type=14, cpp_type=8, label=1,
+      name='step_count', full_name='communication_objects.ObservationsProto.step_count', index=2,
+      number=3, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -122,7 +127,7 @@ _ENVSTEPINPUT = _descriptor.Descriptor(
   ],
   extensions=[
   ],
-  nested_types=[_ENVSTEPINPUT_LISTAGENTSACTIONS, _ENVSTEPINPUT_AGENTACTIONSENTRY, ],
+  nested_types=[_OBSERVATIONSPROTO_DATAENTRY, ],
   enum_types=[
   ],
   serialized_options=None,
@@ -131,87 +136,27 @@ _ENVSTEPINPUT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=279,
-  serialized_end=611,
+  serialized_start=123,
+  serialized_end=323,
 )
 
 
-_ENVSTEPOUTPUT_LISTAGENTSSTATES = _descriptor.Descriptor(
-  name='ListAgentsStates',
-  full_name='communication_objects.EnvStepOutput.ListAgentsStates',
+_ACTIONSPROTO_DATAENTRY = _descriptor.Descriptor(
+  name='DataEntry',
+  full_name='communication_objects.ActionsProto.DataEntry',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='data', full_name='communication_objects.EnvStepOutput.ListAgentsStates.data', index=0,
-      number=1, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=787,
-  serialized_end=854,
-)
-
-_ENVSTEPOUTPUT_LISTAGENTSMETRICS = _descriptor.Descriptor(
-  name='ListAgentsMetrics',
-  full_name='communication_objects.EnvStepOutput.ListAgentsMetrics',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='data', full_name='communication_objects.EnvStepOutput.ListAgentsMetrics.data', index=0,
-      number=1, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=856,
-  serialized_end=926,
-)
-
-_ENVSTEPOUTPUT_AGENTSTATESENTRY = _descriptor.Descriptor(
-  name='AgentStatesEntry',
-  full_name='communication_objects.EnvStepOutput.AgentStatesEntry',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='key', full_name='communication_objects.EnvStepOutput.AgentStatesEntry.key', index=0,
+      name='key', full_name='communication_objects.ActionsProto.DataEntry.key', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='value', full_name='communication_objects.EnvStepOutput.AgentStatesEntry.value', index=1,
+      name='value', full_name='communication_objects.ActionsProto.DataEntry.value', index=1,
       number=2, type=11, cpp_type=10, label=1,
       has_default_value=False, default_value=None,
       message_type=None, enum_type=None, containing_type=None,
@@ -229,63 +174,26 @@ _ENVSTEPOUTPUT_AGENTSTATESENTRY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=928,
-  serialized_end=1033,
+  serialized_start=243,
+  serialized_end=323,
 )
 
-_ENVSTEPOUTPUT_AGENTMETRICSENTRY = _descriptor.Descriptor(
-  name='AgentMetricsEntry',
-  full_name='communication_objects.EnvStepOutput.AgentMetricsEntry',
+_ACTIONSPROTO = _descriptor.Descriptor(
+  name='ActionsProto',
+  full_name='communication_objects.ActionsProto',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='key', full_name='communication_objects.EnvStepOutput.AgentMetricsEntry.key', index=0,
+      name='str', full_name='communication_objects.ActionsProto.str', index=0,
       number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='value', full_name='communication_objects.EnvStepOutput.AgentMetricsEntry.value', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=_b('8\001'),
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-  ],
-  serialized_start=1035,
-  serialized_end=1142,
-)
-
-_ENVSTEPOUTPUT = _descriptor.Descriptor(
-  name='EnvStepOutput',
-  full_name='communication_objects.EnvStepOutput',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='agent_states', full_name='communication_objects.EnvStepOutput.agent_states', index=0,
-      number=1, type=11, cpp_type=10, label=3,
-      has_default_value=False, default_value=[],
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='agent_metrics', full_name='communication_objects.EnvStepOutput.agent_metrics', index=1,
+      name='data', full_name='communication_objects.ActionsProto.data', index=1,
       number=2, type=11, cpp_type=10, label=3,
       has_default_value=False, default_value=[],
       message_type=None, enum_type=None, containing_type=None,
@@ -294,7 +202,7 @@ _ENVSTEPOUTPUT = _descriptor.Descriptor(
   ],
   extensions=[
   ],
-  nested_types=[_ENVSTEPOUTPUT_LISTAGENTSSTATES, _ENVSTEPOUTPUT_LISTAGENTSMETRICS, _ENVSTEPOUTPUT_AGENTSTATESENTRY, _ENVSTEPOUTPUT_AGENTMETRICSENTRY, ],
+  nested_types=[_ACTIONSPROTO_DATAENTRY, ],
   enum_types=[
   ],
   serialized_options=None,
@@ -303,94 +211,278 @@ _ENVSTEPOUTPUT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=614,
-  serialized_end=1142,
+  serialized_start=326,
+  serialized_end=496,
 )
 
-_ENVSTEPINPUT_LISTAGENTSACTIONS.fields_by_name['data'].message_type = shiva_dot_core_dot_communication__objects_dot_helpers__pb2._LISTOFFLOATS
-_ENVSTEPINPUT_LISTAGENTSACTIONS.containing_type = _ENVSTEPINPUT
-_ENVSTEPINPUT_AGENTACTIONSENTRY.fields_by_name['value'].message_type = _ENVSTEPINPUT_LISTAGENTSACTIONS
-_ENVSTEPINPUT_AGENTACTIONSENTRY.containing_type = _ENVSTEPINPUT
-_ENVSTEPINPUT.fields_by_name['agent_actions'].message_type = _ENVSTEPINPUT_AGENTACTIONSENTRY
-_ENVSTEPINPUT.fields_by_name['command'].enum_type = shiva_dot_core_dot_communication__objects_dot_env__command__pb2._ENVIRONMENTCOMMAND
-_ENVSTEPOUTPUT_LISTAGENTSSTATES.fields_by_name['data'].message_type = shiva_dot_core_dot_communication__objects_dot_agent__state__pb2._AGENTSTATE
-_ENVSTEPOUTPUT_LISTAGENTSSTATES.containing_type = _ENVSTEPOUTPUT
-_ENVSTEPOUTPUT_LISTAGENTSMETRICS.fields_by_name['data'].message_type = shiva_dot_core_dot_communication__objects_dot_env__metrics__pb2._AGENTMETRICS
-_ENVSTEPOUTPUT_LISTAGENTSMETRICS.containing_type = _ENVSTEPOUTPUT
-_ENVSTEPOUTPUT_AGENTSTATESENTRY.fields_by_name['value'].message_type = _ENVSTEPOUTPUT_LISTAGENTSSTATES
-_ENVSTEPOUTPUT_AGENTSTATESENTRY.containing_type = _ENVSTEPOUTPUT
-_ENVSTEPOUTPUT_AGENTMETRICSENTRY.fields_by_name['value'].message_type = _ENVSTEPOUTPUT_LISTAGENTSMETRICS
-_ENVSTEPOUTPUT_AGENTMETRICSENTRY.containing_type = _ENVSTEPOUTPUT
-_ENVSTEPOUTPUT.fields_by_name['agent_states'].message_type = _ENVSTEPOUTPUT_AGENTSTATESENTRY
-_ENVSTEPOUTPUT.fields_by_name['agent_metrics'].message_type = _ENVSTEPOUTPUT_AGENTMETRICSENTRY
-DESCRIPTOR.message_types_by_name['EnvStepInput'] = _ENVSTEPINPUT
-DESCRIPTOR.message_types_by_name['EnvStepOutput'] = _ENVSTEPOUTPUT
+
+_AGENTSTATEPROTO = _descriptor.Descriptor(
+  name='AgentStateProto',
+  full_name='communication_objects.AgentStateProto',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='id', full_name='communication_objects.AgentStateProto.id', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='observation', full_name='communication_objects.AgentStateProto.observation', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='action', full_name='communication_objects.AgentStateProto.action', index=2,
+      number=3, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='next_observation', full_name='communication_objects.AgentStateProto.next_observation', index=3,
+      number=4, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='reward', full_name='communication_objects.AgentStateProto.reward', index=4,
+      number=5, type=2, cpp_type=6, label=1,
+      has_default_value=False, default_value=float(0),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='done', full_name='communication_objects.AgentStateProto.done', index=5,
+      number=6, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=499,
+  serialized_end=732,
+)
+
+
+_AGENTTRAJECTORYPROTO = _descriptor.Descriptor(
+  name='AgentTrajectoryProto',
+  full_name='communication_objects.AgentTrajectoryProto',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='str', full_name='communication_objects.AgentTrajectoryProto.str', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='data', full_name='communication_objects.AgentTrajectoryProto.data', index=1,
+      number=2, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='length', full_name='communication_objects.AgentTrajectoryProto.length', index=2,
+      number=3, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=734,
+  serialized_end=839,
+)
+
+
+_TRAJECTORIESPROTO_DATAENTRY = _descriptor.Descriptor(
+  name='DataEntry',
+  full_name='communication_objects.TrajectoriesProto.DataEntry',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='key', full_name='communication_objects.TrajectoriesProto.DataEntry.key', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='value', full_name='communication_objects.TrajectoriesProto.DataEntry.value', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=_b('8\001'),
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=942,
+  serialized_end=1030,
+)
+
+_TRAJECTORIESPROTO = _descriptor.Descriptor(
+  name='TrajectoriesProto',
+  full_name='communication_objects.TrajectoriesProto',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='str', full_name='communication_objects.TrajectoriesProto.str', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='data', full_name='communication_objects.TrajectoriesProto.data', index=1,
+      number=2, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[_TRAJECTORIESPROTO_DATAENTRY, ],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=842,
+  serialized_end=1030,
+)
+
+_OBSERVATIONSPROTO_DATAENTRY.fields_by_name['value'].message_type = shiva_dot_core_dot_communication__objects_dot_helpers__pb2._LISTOFFLOATS
+_OBSERVATIONSPROTO_DATAENTRY.containing_type = _OBSERVATIONSPROTO
+_OBSERVATIONSPROTO.fields_by_name['data'].message_type = _OBSERVATIONSPROTO_DATAENTRY
+_ACTIONSPROTO_DATAENTRY.fields_by_name['value'].message_type = shiva_dot_core_dot_communication__objects_dot_helpers__pb2._LISTOFFLOATS
+_ACTIONSPROTO_DATAENTRY.containing_type = _ACTIONSPROTO
+_ACTIONSPROTO.fields_by_name['data'].message_type = _ACTIONSPROTO_DATAENTRY
+_AGENTSTATEPROTO.fields_by_name['observation'].message_type = shiva_dot_core_dot_communication__objects_dot_helpers__pb2._LISTOFFLOATS
+_AGENTSTATEPROTO.fields_by_name['action'].message_type = shiva_dot_core_dot_communication__objects_dot_helpers__pb2._LISTOFFLOATS
+_AGENTSTATEPROTO.fields_by_name['next_observation'].message_type = shiva_dot_core_dot_communication__objects_dot_helpers__pb2._LISTOFFLOATS
+_AGENTTRAJECTORYPROTO.fields_by_name['data'].message_type = _AGENTSTATEPROTO
+_TRAJECTORIESPROTO_DATAENTRY.fields_by_name['value'].message_type = _AGENTTRAJECTORYPROTO
+_TRAJECTORIESPROTO_DATAENTRY.containing_type = _TRAJECTORIESPROTO
+_TRAJECTORIESPROTO.fields_by_name['data'].message_type = _TRAJECTORIESPROTO_DATAENTRY
+DESCRIPTOR.message_types_by_name['ObservationsProto'] = _OBSERVATIONSPROTO
+DESCRIPTOR.message_types_by_name['ActionsProto'] = _ACTIONSPROTO
+DESCRIPTOR.message_types_by_name['AgentStateProto'] = _AGENTSTATEPROTO
+DESCRIPTOR.message_types_by_name['AgentTrajectoryProto'] = _AGENTTRAJECTORYPROTO
+DESCRIPTOR.message_types_by_name['TrajectoriesProto'] = _TRAJECTORIESPROTO
+DESCRIPTOR.enum_types_by_name['EnvironmentCommand'] = _ENVIRONMENTCOMMAND
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-EnvStepInput = _reflection.GeneratedProtocolMessageType('EnvStepInput', (_message.Message,), {
+ObservationsProto = _reflection.GeneratedProtocolMessageType('ObservationsProto', (_message.Message,), {
 
-  'ListAgentsActions' : _reflection.GeneratedProtocolMessageType('ListAgentsActions', (_message.Message,), {
-    'DESCRIPTOR' : _ENVSTEPINPUT_LISTAGENTSACTIONS,
+  'DataEntry' : _reflection.GeneratedProtocolMessageType('DataEntry', (_message.Message,), {
+    'DESCRIPTOR' : _OBSERVATIONSPROTO_DATAENTRY,
     '__module__' : 'shiva.core.communication_objects.env_step_pb2'
-    # @@protoc_insertion_point(class_scope:communication_objects.EnvStepInput.ListAgentsActions)
+    # @@protoc_insertion_point(class_scope:communication_objects.ObservationsProto.DataEntry)
     })
   ,
-
-  'AgentActionsEntry' : _reflection.GeneratedProtocolMessageType('AgentActionsEntry', (_message.Message,), {
-    'DESCRIPTOR' : _ENVSTEPINPUT_AGENTACTIONSENTRY,
-    '__module__' : 'shiva.core.communication_objects.env_step_pb2'
-    # @@protoc_insertion_point(class_scope:communication_objects.EnvStepInput.AgentActionsEntry)
-    })
-  ,
-  'DESCRIPTOR' : _ENVSTEPINPUT,
+  'DESCRIPTOR' : _OBSERVATIONSPROTO,
   '__module__' : 'shiva.core.communication_objects.env_step_pb2'
-  # @@protoc_insertion_point(class_scope:communication_objects.EnvStepInput)
+  # @@protoc_insertion_point(class_scope:communication_objects.ObservationsProto)
   })
-_sym_db.RegisterMessage(EnvStepInput)
-_sym_db.RegisterMessage(EnvStepInput.ListAgentsActions)
-_sym_db.RegisterMessage(EnvStepInput.AgentActionsEntry)
+_sym_db.RegisterMessage(ObservationsProto)
+_sym_db.RegisterMessage(ObservationsProto.DataEntry)
 
-EnvStepOutput = _reflection.GeneratedProtocolMessageType('EnvStepOutput', (_message.Message,), {
+ActionsProto = _reflection.GeneratedProtocolMessageType('ActionsProto', (_message.Message,), {
 
-  'ListAgentsStates' : _reflection.GeneratedProtocolMessageType('ListAgentsStates', (_message.Message,), {
-    'DESCRIPTOR' : _ENVSTEPOUTPUT_LISTAGENTSSTATES,
+  'DataEntry' : _reflection.GeneratedProtocolMessageType('DataEntry', (_message.Message,), {
+    'DESCRIPTOR' : _ACTIONSPROTO_DATAENTRY,
     '__module__' : 'shiva.core.communication_objects.env_step_pb2'
-    # @@protoc_insertion_point(class_scope:communication_objects.EnvStepOutput.ListAgentsStates)
+    # @@protoc_insertion_point(class_scope:communication_objects.ActionsProto.DataEntry)
     })
   ,
-
-  'ListAgentsMetrics' : _reflection.GeneratedProtocolMessageType('ListAgentsMetrics', (_message.Message,), {
-    'DESCRIPTOR' : _ENVSTEPOUTPUT_LISTAGENTSMETRICS,
-    '__module__' : 'shiva.core.communication_objects.env_step_pb2'
-    # @@protoc_insertion_point(class_scope:communication_objects.EnvStepOutput.ListAgentsMetrics)
-    })
-  ,
-
-  'AgentStatesEntry' : _reflection.GeneratedProtocolMessageType('AgentStatesEntry', (_message.Message,), {
-    'DESCRIPTOR' : _ENVSTEPOUTPUT_AGENTSTATESENTRY,
-    '__module__' : 'shiva.core.communication_objects.env_step_pb2'
-    # @@protoc_insertion_point(class_scope:communication_objects.EnvStepOutput.AgentStatesEntry)
-    })
-  ,
-
-  'AgentMetricsEntry' : _reflection.GeneratedProtocolMessageType('AgentMetricsEntry', (_message.Message,), {
-    'DESCRIPTOR' : _ENVSTEPOUTPUT_AGENTMETRICSENTRY,
-    '__module__' : 'shiva.core.communication_objects.env_step_pb2'
-    # @@protoc_insertion_point(class_scope:communication_objects.EnvStepOutput.AgentMetricsEntry)
-    })
-  ,
-  'DESCRIPTOR' : _ENVSTEPOUTPUT,
+  'DESCRIPTOR' : _ACTIONSPROTO,
   '__module__' : 'shiva.core.communication_objects.env_step_pb2'
-  # @@protoc_insertion_point(class_scope:communication_objects.EnvStepOutput)
+  # @@protoc_insertion_point(class_scope:communication_objects.ActionsProto)
   })
-_sym_db.RegisterMessage(EnvStepOutput)
-_sym_db.RegisterMessage(EnvStepOutput.ListAgentsStates)
-_sym_db.RegisterMessage(EnvStepOutput.ListAgentsMetrics)
-_sym_db.RegisterMessage(EnvStepOutput.AgentStatesEntry)
-_sym_db.RegisterMessage(EnvStepOutput.AgentMetricsEntry)
+_sym_db.RegisterMessage(ActionsProto)
+_sym_db.RegisterMessage(ActionsProto.DataEntry)
+
+AgentStateProto = _reflection.GeneratedProtocolMessageType('AgentStateProto', (_message.Message,), {
+  'DESCRIPTOR' : _AGENTSTATEPROTO,
+  '__module__' : 'shiva.core.communication_objects.env_step_pb2'
+  # @@protoc_insertion_point(class_scope:communication_objects.AgentStateProto)
+  })
+_sym_db.RegisterMessage(AgentStateProto)
+
+AgentTrajectoryProto = _reflection.GeneratedProtocolMessageType('AgentTrajectoryProto', (_message.Message,), {
+  'DESCRIPTOR' : _AGENTTRAJECTORYPROTO,
+  '__module__' : 'shiva.core.communication_objects.env_step_pb2'
+  # @@protoc_insertion_point(class_scope:communication_objects.AgentTrajectoryProto)
+  })
+_sym_db.RegisterMessage(AgentTrajectoryProto)
+
+TrajectoriesProto = _reflection.GeneratedProtocolMessageType('TrajectoriesProto', (_message.Message,), {
+
+  'DataEntry' : _reflection.GeneratedProtocolMessageType('DataEntry', (_message.Message,), {
+    'DESCRIPTOR' : _TRAJECTORIESPROTO_DATAENTRY,
+    '__module__' : 'shiva.core.communication_objects.env_step_pb2'
+    # @@protoc_insertion_point(class_scope:communication_objects.TrajectoriesProto.DataEntry)
+    })
+  ,
+  'DESCRIPTOR' : _TRAJECTORIESPROTO,
+  '__module__' : 'shiva.core.communication_objects.env_step_pb2'
+  # @@protoc_insertion_point(class_scope:communication_objects.TrajectoriesProto)
+  })
+_sym_db.RegisterMessage(TrajectoriesProto)
+_sym_db.RegisterMessage(TrajectoriesProto.DataEntry)
 
 
-_ENVSTEPINPUT_AGENTACTIONSENTRY._options = None
-_ENVSTEPOUTPUT_AGENTSTATESENTRY._options = None
-_ENVSTEPOUTPUT_AGENTMETRICSENTRY._options = None
+_OBSERVATIONSPROTO_DATAENTRY._options = None
+_ACTIONSPROTO_DATAENTRY._options = None
+_TRAJECTORIESPROTO_DATAENTRY._options = None
 # @@protoc_insertion_point(module_scope)

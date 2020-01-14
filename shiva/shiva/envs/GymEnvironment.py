@@ -20,6 +20,9 @@ class GymEnvironment(Environment):
         elif self.action_space == "continuous":
             self.action_space = {'discrete': 0 , 'param': self.set_action_space(), 'acs_space': self.set_action_space()}
 
+        self.num_agents = 1 # all Gym environments contain 1 agent
+        self.agent_ids = [0]
+
         self.steps_per_episode = 0
         self.step_count = 0
         self.temp_done_counter = 0

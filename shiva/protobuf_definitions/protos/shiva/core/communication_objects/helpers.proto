@@ -3,7 +3,7 @@ syntax = "proto3";
 package communication_objects;
 
 message Empty {
-    int32 data = 1;
+    string data = 1;
 }
 
 message ListOfInts {
@@ -16,4 +16,8 @@ message ListOfFloats {
 
 message ListOfStrings {
     repeated string data = 1;
+}
+
+message SimpleMessage {
+    string data = 1;
 }

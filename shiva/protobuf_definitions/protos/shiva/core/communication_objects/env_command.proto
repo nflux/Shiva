@@ -1,8 +1,0 @@
-syntax = "proto3";
-package communication_objects;
-
-enum EnvironmentCommand {
-    STEP = 0;
-    RESET = 1;
-    CLOSE = 2;
-}

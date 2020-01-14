@@ -29,6 +29,9 @@ class MetaLearner(object):
         pass
 
     def get_id(self):
+        return self.get_new_learner_id()
+
+    def get_new_learner_id(self):
         id = self.learnerCount
         self.learnerCount += 1
         return id

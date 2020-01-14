@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/configs.proto";
+import "shiva/core/communication_objects/env_specs.proto";
+import "shiva/core/communication_objects/metrics.proto";
+import "shiva/core/communication_objects/helpers.proto";
+
+package communication_objects;
+
+service MetaLearner {
+    rpc SendStatus(StatusProto) returns (Empty);
+    rpc SendMultiEnvSpecs(MultiEnvSpecsProto) returns (Empty);
+    rpc SendTrainingMetrics(TrainingMetricsProto) returns (Empty);
+    rpc SendEvaluationMetrics(EvaluationMetricsProto) returns (Empty);
+}

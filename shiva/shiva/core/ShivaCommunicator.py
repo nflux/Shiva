@@ -25,22 +25,51 @@ class ShivaCommunicator():
             grpc_trace = ['connectivity_state'] # 'all', 'http', 'api', 'tcp', 'client_channel_routing', 'cares_resolver']
             os.environ['GRPC_TRACE'] = ','.join(grpc_trace)
 
-    def start_env_server(self, address, configs):
-        # serve(address, configs)
-        p = multiprocessing.Process(target=serve, args=(address, configs))
+    def start_meta_server(self, meta_id, configs):
+
+    def start_learner_server(self, meta_id, learner_id, configs):
+
+    def start_multienv_server(self, meta_id, multienv_id, configs):
+        p = self.start_process(serve_multienv, (address, configs))
+        self.open_multienv_process.append(p)
+
+    def start_env(self, multienv_id, address, configs, need_EnvSpecs=False):
+        env = SingleEnvironment()
+        env.multienv_client = self.create_env2multienv_client(multienv_id, address, )
+        env.learner_client = self.create_env2learner_client()
+
+        if need_EnvSpecs:
+            env.launch()
+            EnvSpecs = env.get_specs()
+
+        p = self._start_process(env.launch, args=(address, configs))
+        self.open_envs_process.append(p)
+
+        if need_EnvSpecs:
+            return EnvSpecs
+
+    def _start_process(self, target_f, args):
+        p = multiprocessing.Process(target=target_f, args=args)
         p.start()
-        time.sleep(2)
-        self.open_processes.append(p)
+        time.sleep(1)
+        # self.open_processes.append(p)
+        return p
 
-    def get_learner2env_client(self, learner_id, address, configs):
-        '''
-            Creates and returns a EnvironmentRPCClient thru the @address
+    def create_learner2meta_client(self, meta_id, address, configs):
+        return self._create_cls_client(MetaRPCClient, address, configs)
 
-            @learner_id     who owns this connection with the environment
-            @address        IP:port such as 'localhost:50051'
-        '''
+    def create_multienv2learner_client(self, learner_id, address, configs):
+        return self._create_cls_client(LearnerRPCClient, address, configs)
+
+    def create_env2multienv_client(self, multienv_id, address, configs):
+        return self._create_cls_client(MultiEnvironmentRPCClient, address, configs)
+
+    def create_env2learner_client(self, learner_id, address, configs):
+        return self._create_cls_client()
+
+    def _create_cls_client(self, cls, address, configs):
         channel = self._open_new_channel(address)
-        client_env = EnvironmentRPCClient(channel, configs)
+        client_env = cls(channel, configs)
         return client_env
 
     def _open_new_channel(self, address):
@@ -51,19 +80,3 @@ class ShivaCommunicator():
     def close_connections(self):
         for channel in self.open_channels:
             channel.close()
-
-    # @contextlib.contextmanager
-    # def reserve_port(self):
-    #     '''
-    #         Note: I think that this only verifies in localhost
-    #     '''
-    #     """Find and reserve a port for all subprocesses to use."""
-    #     sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-    #     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-    #     if sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 0:
-    #         raise RuntimeError("Failed to set SO_REUSEPORT.")
-    #     sock.bind(('', 0))
-    #     try:
-    #         yield sock.getsockname()[1]
-    #     finally:
-    #         sock.close()

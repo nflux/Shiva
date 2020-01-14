@@ -20,35 +20,35 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='communication_objects',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n0shiva/core/communication_objects/env_specs.proto\x12\x15\x63ommunication_objects\"\xf3\x01\n\x10\x45nvironmentSpecs\x12\x19\n\x11observation_space\x18\x01 \x01(\x05\x12I\n\x0c\x61\x63tion_space\x18\x02 \x01(\x0b\x32\x33.communication_objects.EnvironmentSpecs.ActionSpace\x12\x15\n\rnum_instances\x18\x03 \x01(\x05\x12\x1f\n\x17num_agents_per_instance\x18\x04 \x01(\x05\x1a\x41\n\x0b\x41\x63tionSpace\x12\x10\n\x08\x64iscrete\x18\x01 \x01(\x05\x12\r\n\x05param\x18\x02 \x01(\x05\x12\x11\n\tacs_space\x18\x03 \x01(\x05\x62\x06proto3')
+  serialized_pb=_b('\n0shiva/core/communication_objects/env_specs.proto\x12\x15\x63ommunication_objects\"F\n\x10\x41\x63tionSpaceProto\x12\x10\n\x08\x64iscrete\x18\x01 \x01(\x05\x12\r\n\x05param\x18\x02 \x01(\x05\x12\x11\n\tacs_space\x18\x03 \x01(\x05\"\x8d\x01\n\rEnvSpecsProto\x12\x0e\n\x06\x65nv_id\x18\x01 \x01(\x05\x12\x19\n\x11observation_space\x18\x02 \x01(\x05\x12=\n\x0c\x61\x63tion_space\x18\x03 \x01(\x0b\x32\'.communication_objects.ActionSpaceProto\x12\x12\n\nnum_agents\x18\x04 \x01(\x05\"\x81\x01\n\x12MultiEnvSpecsProto\x12\x0f\n\x07menv_id\x18\x01 \x01(\x05\x12\x37\n\tenv_specs\x18\x02 \x01(\x0b\x32$.communication_objects.EnvSpecsProto\x12\x10\n\x08num_envs\x18\x03 \x01(\x05\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\x05\"R\n\x10LearnerInfoProto\x12\x12\n\nlearner_id\x18\x01 \x01(\x05\x12\x17\n\x0flearner_address\x18\x02 \x01(\x05\x12\x11\n\tagents_id\x18\x03 \x03(\x05\"J\n\x11LearnersInfoProto\x12\x35\n\x04\x64\x61ta\x18\x01 \x03(\x0b\x32\'.communication_objects.LearnerInfoProtob\x06proto3')
 )
 
 
 
 
-_ENVIRONMENTSPECS_ACTIONSPACE = _descriptor.Descriptor(
-  name='ActionSpace',
-  full_name='communication_objects.EnvironmentSpecs.ActionSpace',
+_ACTIONSPACEPROTO = _descriptor.Descriptor(
+  name='ActionSpaceProto',
+  full_name='communication_objects.ActionSpaceProto',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='discrete', full_name='communication_objects.EnvironmentSpecs.ActionSpace.discrete', index=0,
+      name='discrete', full_name='communication_objects.ActionSpaceProto.discrete', index=0,
       number=1, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='param', full_name='communication_objects.EnvironmentSpecs.ActionSpace.param', index=1,
+      name='param', full_name='communication_objects.ActionSpaceProto.param', index=1,
       number=2, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='acs_space', full_name='communication_objects.EnvironmentSpecs.ActionSpace.acs_space', index=2,
+      name='acs_space', full_name='communication_objects.ActionSpaceProto.acs_space', index=2,
       number=3, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -66,40 +66,41 @@ _ENVIRONMENTSPECS_ACTIONSPACE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=254,
-  serialized_end=319,
+  serialized_start=75,
+  serialized_end=145,
 )
 
-_ENVIRONMENTSPECS = _descriptor.Descriptor(
-  name='EnvironmentSpecs',
-  full_name='communication_objects.EnvironmentSpecs',
+
+_ENVSPECSPROTO = _descriptor.Descriptor(
+  name='EnvSpecsProto',
+  full_name='communication_objects.EnvSpecsProto',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='observation_space', full_name='communication_objects.EnvironmentSpecs.observation_space', index=0,
+      name='env_id', full_name='communication_objects.EnvSpecsProto.env_id', index=0,
       number=1, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='action_space', full_name='communication_objects.EnvironmentSpecs.action_space', index=1,
-      number=2, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='num_instances', full_name='communication_objects.EnvironmentSpecs.num_instances', index=2,
-      number=3, type=5, cpp_type=1, label=1,
+      name='observation_space', full_name='communication_objects.EnvSpecsProto.observation_space', index=1,
+      number=2, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='num_agents_per_instance', full_name='communication_objects.EnvironmentSpecs.num_agents_per_instance', index=3,
+      name='action_space', full_name='communication_objects.EnvSpecsProto.action_space', index=2,
+      number=3, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='num_agents', full_name='communication_objects.EnvSpecsProto.num_agents', index=3,
       number=4, type=5, cpp_type=1, label=1,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
@@ -108,7 +109,7 @@ _ENVIRONMENTSPECS = _descriptor.Descriptor(
   ],
   extensions=[
   ],
-  nested_types=[_ENVIRONMENTSPECS_ACTIONSPACE, ],
+  nested_types=[],
   enum_types=[
   ],
   serialized_options=None,
@@ -117,29 +118,182 @@ _ENVIRONMENTSPECS = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=76,
-  serialized_end=319,
+  serialized_start=148,
+  serialized_end=289,
 )
 
-_ENVIRONMENTSPECS_ACTIONSPACE.containing_type = _ENVIRONMENTSPECS
-_ENVIRONMENTSPECS.fields_by_name['action_space'].message_type = _ENVIRONMENTSPECS_ACTIONSPACE
-DESCRIPTOR.message_types_by_name['EnvironmentSpecs'] = _ENVIRONMENTSPECS
+
+_MULTIENVSPECSPROTO = _descriptor.Descriptor(
+  name='MultiEnvSpecsProto',
+  full_name='communication_objects.MultiEnvSpecsProto',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='menv_id', full_name='communication_objects.MultiEnvSpecsProto.menv_id', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='env_specs', full_name='communication_objects.MultiEnvSpecsProto.env_specs', index=1,
+      number=2, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='num_envs', full_name='communication_objects.MultiEnvSpecsProto.num_envs', index=2,
+      number=3, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='address', full_name='communication_objects.MultiEnvSpecsProto.address', index=3,
+      number=4, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=292,
+  serialized_end=421,
+)
+
+
+_LEARNERINFOPROTO = _descriptor.Descriptor(
+  name='LearnerInfoProto',
+  full_name='communication_objects.LearnerInfoProto',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='learner_id', full_name='communication_objects.LearnerInfoProto.learner_id', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='learner_address', full_name='communication_objects.LearnerInfoProto.learner_address', index=1,
+      number=2, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='agents_id', full_name='communication_objects.LearnerInfoProto.agents_id', index=2,
+      number=3, type=5, cpp_type=1, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=423,
+  serialized_end=505,
+)
+
+
+_LEARNERSINFOPROTO = _descriptor.Descriptor(
+  name='LearnersInfoProto',
+  full_name='communication_objects.LearnersInfoProto',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='data', full_name='communication_objects.LearnersInfoProto.data', index=0,
+      number=1, type=11, cpp_type=10, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=507,
+  serialized_end=581,
+)
+
+_ENVSPECSPROTO.fields_by_name['action_space'].message_type = _ACTIONSPACEPROTO
+_MULTIENVSPECSPROTO.fields_by_name['env_specs'].message_type = _ENVSPECSPROTO
+_LEARNERSINFOPROTO.fields_by_name['data'].message_type = _LEARNERINFOPROTO
+DESCRIPTOR.message_types_by_name['ActionSpaceProto'] = _ACTIONSPACEPROTO
+DESCRIPTOR.message_types_by_name['EnvSpecsProto'] = _ENVSPECSPROTO
+DESCRIPTOR.message_types_by_name['MultiEnvSpecsProto'] = _MULTIENVSPECSPROTO
+DESCRIPTOR.message_types_by_name['LearnerInfoProto'] = _LEARNERINFOPROTO
+DESCRIPTOR.message_types_by_name['LearnersInfoProto'] = _LEARNERSINFOPROTO
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-EnvironmentSpecs = _reflection.GeneratedProtocolMessageType('EnvironmentSpecs', (_message.Message,), {
-
-  'ActionSpace' : _reflection.GeneratedProtocolMessageType('ActionSpace', (_message.Message,), {
-    'DESCRIPTOR' : _ENVIRONMENTSPECS_ACTIONSPACE,
-    '__module__' : 'shiva.core.communication_objects.env_specs_pb2'
-    # @@protoc_insertion_point(class_scope:communication_objects.EnvironmentSpecs.ActionSpace)
-    })
-  ,
-  'DESCRIPTOR' : _ENVIRONMENTSPECS,
+ActionSpaceProto = _reflection.GeneratedProtocolMessageType('ActionSpaceProto', (_message.Message,), {
+  'DESCRIPTOR' : _ACTIONSPACEPROTO,
   '__module__' : 'shiva.core.communication_objects.env_specs_pb2'
-  # @@protoc_insertion_point(class_scope:communication_objects.EnvironmentSpecs)
+  # @@protoc_insertion_point(class_scope:communication_objects.ActionSpaceProto)
   })
-_sym_db.RegisterMessage(EnvironmentSpecs)
-_sym_db.RegisterMessage(EnvironmentSpecs.ActionSpace)
+_sym_db.RegisterMessage(ActionSpaceProto)
+
+EnvSpecsProto = _reflection.GeneratedProtocolMessageType('EnvSpecsProto', (_message.Message,), {
+  'DESCRIPTOR' : _ENVSPECSPROTO,
+  '__module__' : 'shiva.core.communication_objects.env_specs_pb2'
+  # @@protoc_insertion_point(class_scope:communication_objects.EnvSpecsProto)
+  })
+_sym_db.RegisterMessage(EnvSpecsProto)
+
+MultiEnvSpecsProto = _reflection.GeneratedProtocolMessageType('MultiEnvSpecsProto', (_message.Message,), {
+  'DESCRIPTOR' : _MULTIENVSPECSPROTO,
+  '__module__' : 'shiva.core.communication_objects.env_specs_pb2'
+  # @@protoc_insertion_point(class_scope:communication_objects.MultiEnvSpecsProto)
+  })
+_sym_db.RegisterMessage(MultiEnvSpecsProto)
+
+LearnerInfoProto = _reflection.GeneratedProtocolMessageType('LearnerInfoProto', (_message.Message,), {
+  'DESCRIPTOR' : _LEARNERINFOPROTO,
+  '__module__' : 'shiva.core.communication_objects.env_specs_pb2'
+  # @@protoc_insertion_point(class_scope:communication_objects.LearnerInfoProto)
+  })
+_sym_db.RegisterMessage(LearnerInfoProto)
+
+LearnersInfoProto = _reflection.GeneratedProtocolMessageType('LearnersInfoProto', (_message.Message,), {
+  'DESCRIPTOR' : _LEARNERSINFOPROTO,
+  '__module__' : 'shiva.core.communication_objects.env_specs_pb2'
+  # @@protoc_insertion_point(class_scope:communication_objects.LearnersInfoProto)
+  })
+_sym_db.RegisterMessage(LearnersInfoProto)
 
 
 # @@protoc_insertion_point(module_scope)

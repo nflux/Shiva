@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/helpers.proto";
+import "shiva/core/communication_objects/configs.proto";
+import "shiva/core/communication_objects/env_specs.proto";
+import "shiva/core/communication_objects/env_step.proto";
+
+package communication_objects;
+
+service Learner {
+    rpc SendEnvSpecs(EnvSpecsProto) returns (Empty);
+    rpc SendEvolutionConfig(EvolutionConfigProto) returns (Empty);
+    rpc SendTrajectories(TrajectoriesProto) returns (Empty);
+}

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/configs.proto";
+import "shiva/core/communication_objects/env_step.proto";
+import "shiva/core/communication_objects/helpers.proto";
+
+package communication_objects;
+
+service MultiEnvironment {
+    rpc SendObservations(ObservationsProto) returns (ActionsProto);
+    rpc SendNewAgents(NewAgentsConfigProto) returns (Empty);
+}

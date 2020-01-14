@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='communication_objects',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n.shiva/core/communication_objects/helpers.proto\x12\x15\x63ommunication_objects\"\x15\n\x05\x45mpty\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x05\"\x1a\n\nListOfInts\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x05\"\x1c\n\x0cListOfFloats\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x02\"\x1d\n\rListOfStrings\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\tb\x06proto3')
+  serialized_pb=_b('\n.shiva/core/communication_objects/helpers.proto\x12\x15\x63ommunication_objects\"\x15\n\x05\x45mpty\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\t\"\x1a\n\nListOfInts\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x05\"\x1c\n\x0cListOfFloats\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x02\"\x1d\n\rListOfStrings\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\t\"\x1d\n\rSimpleMessage\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\tb\x06proto3')
 )
 
 
@@ -35,8 +35,8 @@ _EMPTY = _descriptor.Descriptor(
   fields=[
     _descriptor.FieldDescriptor(
       name='data', full_name='communication_objects.Empty.data', index=0,
-      number=1, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
@@ -149,10 +149,42 @@ _LISTOFSTRINGS = _descriptor.Descriptor(
   serialized_end=183,
 )
 
+
+_SIMPLEMESSAGE = _descriptor.Descriptor(
+  name='SimpleMessage',
+  full_name='communication_objects.SimpleMessage',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='data', full_name='communication_objects.SimpleMessage.data', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=185,
+  serialized_end=214,
+)
+
 DESCRIPTOR.message_types_by_name['Empty'] = _EMPTY
 DESCRIPTOR.message_types_by_name['ListOfInts'] = _LISTOFINTS
 DESCRIPTOR.message_types_by_name['ListOfFloats'] = _LISTOFFLOATS
 DESCRIPTOR.message_types_by_name['ListOfStrings'] = _LISTOFSTRINGS
+DESCRIPTOR.message_types_by_name['SimpleMessage'] = _SIMPLEMESSAGE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 Empty = _reflection.GeneratedProtocolMessageType('Empty', (_message.Message,), {
@@ -182,6 +214,13 @@ ListOfStrings = _reflection.GeneratedProtocolMessageType('ListOfStrings', (_mess
   # @@protoc_insertion_point(class_scope:communication_objects.ListOfStrings)
   })
 _sym_db.RegisterMessage(ListOfStrings)
+
+SimpleMessage = _reflection.GeneratedProtocolMessageType('SimpleMessage', (_message.Message,), {
+  'DESCRIPTOR' : _SIMPLEMESSAGE,
+  '__module__' : 'shiva.core.communication_objects.helpers_pb2'
+  # @@protoc_insertion_point(class_scope:communication_objects.SimpleMessage)
+  })
+_sym_db.RegisterMessage(SimpleMessage)
 
 
 # @@protoc_insertion_point(module_scope)
