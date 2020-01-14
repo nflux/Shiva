@@ -3,6 +3,7 @@ import torch
 import copy
 import pickle
 from torch.distributions import Categorical
+from torch.nn.functional import softmax
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.Agent import Agent
 from shiva.utils import Noise as noise
@@ -52,6 +53,8 @@ class DDPGAgent(Agent):
                 self.ou_noise.set_scale(self.exploration_noise)
                 action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
                 action += self.ou_noise.noise()
+                action = softmax(torch.from_numpy(action))
+
             else:
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
