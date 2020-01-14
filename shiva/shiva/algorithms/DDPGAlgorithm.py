@@ -17,7 +17,7 @@ class DDPGAlgorithm(Algorithm):
         super(DDPGAlgorithm, self).__init__(observation_space, action_space, configs)
         self.actor_loss = 0
         self.critic_loss = 0
-        self.discrete = action_space['discrete']
+        self.discrete = action_space['acs_space']
         self.param = action_space['param']
         # self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
 
@@ -26,19 +26,19 @@ class DDPGAlgorithm(Algorithm):
             @buffer         buffer is a reference
         '''
 
-        if episodic:
-            '''
-                DDPG updates at every step. This avoids doing an extra update at the end of an episode
-                But it does reset the noise after an episode
-            '''
-            agent.ou_noise.reset()
-            return
+        '''
+            DDPG updates at every step. This avoids doing an extra update at the end of an episode
+            But it does reset the noise after an episode
+        '''
+        # if episodic:
+            # agent.ou_noise.reset()
+            # return
 
-        if step_count < self.exploration_steps:
-            '''
-                Don't update during exploration!
-            '''
-            return
+        # if step_count < self.agent.exploration_steps:
+        #     '''
+        #         Don't update during exploration!
+        #     '''
+        #     return
 
         '''
             Updates starts here
@@ -46,17 +46,19 @@ class DDPGAlgorithm(Algorithm):
 
         # print("updating!")
 
-        states, actions, rewards, next_states, dones = buffer.sample()
+        states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+
+        # print("sampled",states)
 
         # Make everything a tensor and send to gpu if available
-        states = torch.tensor(states).to(self.device)
-        actions = torch.tensor(actions).to(self.device)
-        rewards = torch.tensor(rewards).to(self.device)
-        next_states = torch.tensor(next_states).to(self.device)
-        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
+        # states = torch.tensor(states).to(self.device)
+        # actions = torch.tensor(actions).to(self.device)
+        # rewards = torch.tensor(rewards).to(self.device)
+        # next_states = torch.tensor(next_states).to(self.device)
+        # dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
         # print(actions)
-        # input()
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
+        # input()
 
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
             "acs_space config must be set to either discrete, continuous, or parameterized."
@@ -67,6 +69,7 @@ class DDPGAlgorithm(Algorithm):
     
         # Zero the gradient
         agent.critic_optimizer.zero_grad()
+
         # The actions that target actor would do in the next state.
         next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
 
@@ -84,13 +87,15 @@ class DDPGAlgorithm(Algorithm):
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,self.discrete:]], dim=2)
 
             elif dims == 2:
-                discrete_actions = next_state_actions_target[:,:self.discrete].squeeze(dim=0)
+                discrete_actions = next_state_actions_target[:,:self.discrete]
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,self.discrete:]], dim=1)
             else:
                 discrete_actions = next_state_actions_target[:self.discrete]
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
                 next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[self.discrete:]], dim=0)
+
+
 
        
         # print(next_state_actions_target.shape, '\n')
@@ -103,11 +108,16 @@ class DDPGAlgorithm(Algorithm):
         else:
             Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
 
+        print('dones', dones.size())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
-        Q_next_states_target[dones_mask] = 0.0
+        Q_next_states_target[dones] = 0.0
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
+
         # Get Q values of the batch from states and actions.
+        # if self.a_space == 'discrete':
+        #     actions = one_hot_from_logits(actions)
+            # print(actions)
 
         # Grab the discrete actions in the batch
         if dims == 3:
@@ -192,20 +202,23 @@ class DDPGAlgorithm(Algorithm):
         #         target_param.data.copy_(param.data)
 
     def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.obs_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
+        self.agent = DDPGAgent(id, self.observation_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
-                ('Algorithm/Actor_Loss', self.actor_loss),
-                ('Algorithm/Critic_Loss', self.critic_loss)
+                # ('Algorithm/Actor_Loss', self.actor_loss),
+                # ('Algorithm/Critic_Loss', self.critic_loss)
             ]
             # # not sure if I want this all of the time
             # for i, ac in enumerate(self.action_space['acs_space']):
             #     metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
         else:
-            metrics = []
+            metrics = [
+                ('Algorithm/Actor_Loss', self.actor_loss),
+                ('Algorithm/Critic_Loss', self.critic_loss)                
+            ]
         return metrics
 
     def __str__(self):

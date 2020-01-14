@@ -1,13 +1,16 @@
 import gym
 import numpy as np
+from torch.distributions import Categorical
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
+import torch
 
 class GymEnvironment(Environment):
     def __init__(self, configs):
         super(GymEnvironment,self).__init__(configs)
         # self.env = gym.make(self.env_name).env
         self.env = gym.make(self.env_name)
+        np.random.seed(self.seed)
         self.obs = self.env.reset()
         self.done = False
         self.action_space_continuous = None
@@ -27,6 +30,8 @@ class GymEnvironment(Environment):
         self.reward_per_episode = 0
         self.reward_total = 0
 
+        self.last_action = None
+
     def step(self, action, discrete_select='argmax'):
         self.acs = action
         # print(self.action_space_continuous)
@@ -34,10 +39,15 @@ class GymEnvironment(Environment):
         if discrete_select == 'argmax':
             action4Gym = np.argmax(action) if self.action_space_continuous is None else action
         elif discrete_select == 'sample':
-            action4Gym = np.random.choice(len(action), p=action)
+            # print(action)
+            action4Gym = Categorical(torch.tensor(action)).sample()
 
-        # print(action4Gym)
-        self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
+        if self.action_space['discrete'] != 0:
+
+            self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
+        else:
+            self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
+            
         self.load_viewer()
         '''
             Metrics collection
@@ -54,8 +64,8 @@ class GymEnvironment(Environment):
         self.reward_per_episode += self.reward_per_step
         self.reward_total += self.reward_per_step
 
-        # if self.action_space['discrete'] != 0:
-        #     action = action2one_hot(self.action_space['discrete'], action4Gym)
+        if self.action_space['discrete'] != 0:
+            action = action2one_hot(self.action_space['discrete'], action4Gym)
 
         if self.normalize:
             return self.obs, self.normalize_reward(self.reward_per_step), self.done, {'raw_reward': self.reward_per_step, 'action': action}
@@ -80,7 +90,7 @@ class GymEnvironment(Environment):
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
 
-            print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
+            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
 
         return metrics
 
@@ -116,13 +126,13 @@ class GymEnvironment(Environment):
         return action_space
 
     def get_observation(self):
-        return self.obs
+        return torch.tensor(self.obs)
 
     def get_action(self):
         return self.acs
 
     def get_reward(self):
-        return self.reward_per_step
+        return torch.tensor(self.reward_per_step)
 
     def get_total_reward(self):
         '''
