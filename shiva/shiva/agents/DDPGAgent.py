@@ -52,43 +52,28 @@ class DDPGAgent(Agent):
                 self.ou_noise.set_scale(self.exploration_noise)
                 action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
                 action += self.ou_noise.noise()
-                action = np.concatenate([ np_softmax(action[:self.acs_discrete]), action[self.acs_discrete:] ])
-                # print(action)
-                # input()
             else:
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = action.cpu().numpy() + self.ou_noise.noise()
-                # action = Categorical(action).sample()
-                # action = action2one_hot(self.acs_discrete, action.item())
 
-
-        # if action.shape[0] == 387:
-        #     print("this happened")
-        #     return torch.tensor(action)
-        # size = len(action.shape)
-        # if size == 3:
-        #     return action[0, 0]
-        # elif size == 2:
-        #     return action[0]
-        # else:    
-        #     return action
-        # print(action)
-        # input()
         return action.tolist()
-
-        # return action
             
     def get_continuous_action(self,observation, step_count, evaluate):
         if evaluate:
             observation = torch.tensor(observation).float().to(self.device)
             action = self.actor(observation)
         else:
-            observation = torch.tensor(observation).float().to(self.device)
-            action = self.actor(observation)
-            self.ou_noise.set_scale(self.exploration_noise)
-            action += torch.tensor(self.ou_noise.noise()).float().to(self.device)
-            action = np.clip(action.cpu().detach().numpy(),-1,1)
+            if step_count < self.exploration_steps:
+                self.ou_noise.set_scale(self.exploration_noise)
+                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
+                action += self.ou_noise.noise()
+            else:
+                observation = torch.tensor(observation).float().to(self.device)
+                action = self.actor(observation)
+                self.ou_noise.set_scale(self.training_noise)
+                action += torch.tensor(self.ou_noise.noise()).float().to(self.device)
+                action = np.clip(action.cpu().detach().numpy(),-1,1)
         return action.tolist()
 
     def get_parameterized_action(self, observation, step_count, evaluate):

@@ -34,7 +34,7 @@ class DDPGAlgorithm(Algorithm):
             agent.ou_noise.reset()
             return
 
-        if step_count < self.exploration_steps:
+        if step_count < self.agent.exploration_steps:
             '''
                 Don't update during exploration!
             '''
