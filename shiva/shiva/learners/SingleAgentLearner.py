@@ -71,7 +71,7 @@ class SingleAgentLearner(Learner):
     
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs, self.port)
+        return env_class(self.configs)
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
@@ -79,7 +79,15 @@ class SingleAgentLearner(Learner):
 
     def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+<<<<<<< HEAD
         return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
+=======
+        if self.env.env_name == 'RoboCupEnvironment':
+            return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
+        else:
+            return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim)
+
+>>>>>>> dev-gymMulti
 
     def launch(self):
         self.env = self.create_environment()

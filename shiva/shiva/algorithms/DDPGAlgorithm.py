@@ -50,12 +50,12 @@ class DDPGAlgorithm(Algorithm):
 
         # print("sampled",states)
 
-        # Make everything a tensor and send to gpu if available
-        # states = torch.tensor(states).to(self.device)
-        # actions = torch.tensor(actions).to(self.device)
-        # rewards = torch.tensor(rewards).to(self.device)
-        # next_states = torch.tensor(next_states).to(self.device)
-        # dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
+        # Send everything to gpu if available
+        states = states.to(self.device)
+        actions = actions.to(self.device)
+        rewards = rewards.to(self.device)
+        next_states = next_states.to(self.device)
+        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
         # print(actions)
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
         # input()

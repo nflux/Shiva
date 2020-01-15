@@ -121,9 +121,14 @@ class UnityWrapperEnvironment(Environment):
             else,
                 make sure it's numpy array
         '''
+
         if self.GroupSpec.is_action_discrete():
-            actions = np.array([[np.argmax(_act)] for _act in actions])
+              actions = np.array([[_act] for _act in actions])
+
+        # if self.GroupSpec.is_action_discrete():
+        #     actions = np.array([[np.argmax(_act)] for _act in actions])
         elif type(actions) != np.ndarray:
+            print(actions)
             actions = np.array(actions)
         return actions
 
