@@ -146,6 +146,8 @@ class rc_env:
         self.d = 0
         # flag to wait for all the agents to load
         self.start = False
+        # flag to help shut down the environment
+        self.close = False
 
         # Various Barriers to keep all agents actions in sync
         self.sync_after_queue = threading.Barrier(self.num_left+self.num_right+1)
@@ -557,7 +559,7 @@ class rc_env:
                     # Break if episode done
                     if self.d == True:
                         break
-            if not self.start:
+            if self.close:
                 break
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

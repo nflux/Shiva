@@ -133,7 +133,7 @@ class RoboCupEnvironment(Environment):
             self.env._start_viewer()
 
     def close(self):
-        self.env.start = False
+        self.env.close = True
         self.env.d = True
 
     def is_done(self):

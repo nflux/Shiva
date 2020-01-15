@@ -12,7 +12,6 @@ from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHea
 class DDPGAgent(Agent):
     def __init__(self, id, obs_dim, action_dim, param_ix, agent_config: dict, networks: dict):
         super(DDPGAgent, self).__init__(id, obs_dim, action_dim, agent_config, networks)
-        print(action_dim)
         try:
             torch.manual_seed(self.manual_seed)
             np.random.seed(self.manual_seed)
@@ -52,15 +51,16 @@ class DDPGAgent(Agent):
             action = action2one_hot(self.acs_discrete, action.item())
         else:
             if step_count < self.exploration_steps:
-                self.ou_noise.set_scale(self.exploration_noise)
+                # self.ou_noise.set_scale(self.exploration_noise)
                 action = [np.random.uniform(0,1) for _ in range(self.acs_discrete)] 
-                action += self.ou_noise.noise()
+                action = np.array(action)
+                # action += self.ou_noise.noise()
                 action = softmax(torch.from_numpy(action))
 
             else:
-                self.ou_noise.set_scale(self.training_noise)
+                # self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-                action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+                # action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
                 action = softmax(action)
 
                 # lets test when we dont softmax here, so far it seems okay, maybe a little less stable than without it

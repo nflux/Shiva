@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torch.multiprocessing as mp
 from torch.distributions import Categorical
+from torch.nn.functional import softmax
 from torch.distributions.normal import Normal
 import copy
 import time
@@ -37,7 +38,7 @@ class MultiGymWrapper(Environment):
         loaded = False
         last_load = 0
 
-        self.ou_noises = [noise.OUNoise(self.acs_dim, self.agent.exploration_noise) for _ in range(self.num_instances)] 
+        self.ou_noises = [noise.OUNoise(self.acs_dim, self.agent.exploration_noise)]*self.num_instances 
 
 
         while(self.stop_collecting.item() == 0):
@@ -68,23 +69,32 @@ class MultiGymWrapper(Environment):
                     for i, flag in enumerate(self.resetNoiseFlags):
                         if flag.item() == 1:
                             self.ou_noises[i].reset()
-                            self.resetNoiseFlags[i][0] == 0
+                            self.resetNoiseFlags[i] == 0
 
                 self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item())
 
-                print(self.actions)
+                # print(self.actions.numpy())
+                # print(self.ou_noises[0].noise())
                 # here I need to add the ou noise to all the actions
-                for i, action in enumerate(self.actions):
-                    self.actions[i] = torch.from_numpy(action.numpy() + self.ou_noises[i].noise()) 
+
+                # self.actions = torch.from_numpy(self.actions.numpy() + self.ou_noises[i].noise()) 
+
+
+
 
                 if len(self.actions.shape) == 1: 
-                    for i,d in enumerate(self.actions):
-                        if d.item() > 0.2:
-                            print(i,d)
+                    self.actions = softmax(torch.from_numpy(self.actions.numpy() + self.ou_noises[0].noise()))
+
+                    # for i,d in enumerate(self.actions):
+                    #     if d.item() > 0.2:
+                    #         print(i,d)
                 else:
-                    for i,d in enumerate(self.actions[0]):
-                        if d.item() > 0.2:
-                            print(i,d)
+                    for i, action in enumerate(self.actions):
+                        self.actions[i] = softmax(torch.from_numpy(action.cpu().numpy() + self.ou_noises[i].noise()))
+
+                    # for i,d in enumerate(self.actions[0]):
+                    #     if d.item() > 0.2:
+                    #         print(i,d)
 
                 # self.action_available[0] = 1
 

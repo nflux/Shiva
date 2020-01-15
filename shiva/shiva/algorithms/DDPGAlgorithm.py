@@ -108,7 +108,7 @@ class DDPGAlgorithm(Algorithm):
         else:
             Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
 
-        print('dones', dones.size())
+        # print('dones', dones.size())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones] = 0.0
         # Use the Bellman equation.
