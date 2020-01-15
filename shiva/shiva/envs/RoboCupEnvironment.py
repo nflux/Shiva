@@ -7,12 +7,15 @@ from torch.distributions import Categorical
 
 
 class RoboCupEnvironment(Environment):
-    def __init__(self, config, port):
+    def __init__(self, config, port=None):
         super(RoboCupEnvironment, self).__init__(config)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-        self.port = port            
-        self.env = rc_env(config, port)
+        if port != None:
+            self.env = rc_env(config, port)
+            self.port = port
+        else:
+            self.env = rc_env(config, self.port)
         self.env.launch()
 
         self.left_actions = self.env.left_actions
@@ -22,7 +25,7 @@ class RoboCupEnvironment(Environment):
         self.rews = self.env.left_rewards
         # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
-        self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
+        self.action_space = {'discrete': self.env.acs_dim,'acs_space': self.env.acs_dim, 'param': 0}
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d

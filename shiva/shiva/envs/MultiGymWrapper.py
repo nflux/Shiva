@@ -22,6 +22,7 @@ class MultiGymWrapper(Environment):
         self.agent_dir = agent_dir
         self.saveLoadFlag = saveLoadFlag
         self.action_available = torch.zeros(1).share_memory_()
+        self.resetNoise = torch.zeros(1).share_memory_()
         self.waitForLearner = waitForLearner
         self.envs = []
         self.p = mp.Process(target = self.launch_envs)
@@ -63,10 +64,16 @@ class MultiGymWrapper(Environment):
                 # print("observations", self.observations[:,:self.obs_dim])
                 self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item())
 
-                for i,d in enumerate(self.actions):
-                    if d > 0.2:
-                        print(i,d)
-
+                # print(self.actions)
+                # print(self.actions.shape)
+                if len(self.actions.shape) == 1: 
+                    for i,d in enumerate(self.actions):
+                        if d.item() > 0.2:
+                            print(i,d)
+                else:
+                    for i,d in enumerate(self.actions[0]):
+                        if d.item() > 0.2:
+                            print(i,d)
                 # print(self.actions.shape)
                 # print(self.actions)
 

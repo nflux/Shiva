@@ -841,7 +841,7 @@ class rc_env:
         distance_cur, closest_agent = self.closest_player_to_ball(team_obs, num_ag)
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
-            delta = (distance_prev - distance_cur)*1.0
+            delta = (distance_prev - distance_cur)*0
             #if delta > 0:    
             if True:
                 team_reward += delta
@@ -859,7 +859,7 @@ class rc_env:
         if ((self.left_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
-                delta = (2*self.num_left)*(r_prev - r)* 1.0
+                delta = (2*self.num_left)*(r_prev - r)* 0
                 if True:
                 # if delta > 0:
                     reward += delta * 10
