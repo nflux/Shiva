@@ -1,5 +1,6 @@
 from .Environment import Environment
 from shiva.helpers.config_handler import load_class
+from shiva.utils import Noise as noise
 import numpy as np
 import torch
 import torch.multiprocessing as mp
@@ -22,7 +23,7 @@ class MultiGymWrapper(Environment):
         self.agent_dir = agent_dir
         self.saveLoadFlag = saveLoadFlag
         self.action_available = torch.zeros(1).share_memory_()
-        self.resetNoise = torch.zeros(1).share_memory_()
+        self.resetNoiseFlags = torch.zeros(self.num_instances).share_memory_()
         self.waitForLearner = waitForLearner
         self.envs = []
         self.p = mp.Process(target = self.launch_envs)
@@ -35,13 +36,15 @@ class MultiGymWrapper(Environment):
 
         loaded = False
         last_load = 0
-        last_ep = 0
+
+        self.ou_noises = [noise.OUNoise(self.acs_dim, self.agent.exploration_noise) for _ in range(self.num_instances)] 
+
 
         while(self.stop_collecting.item() == 0):
 
-            if self.episode_count.item() > last_ep:
-                self.agent.ou_noise.reset()
-                last_ep = self.episode_count.item()
+            if self.step_count == self.agent.exploration_steps + 1:
+                for i in range(self.num_instances):
+                    self.ou_noises[i].set_scale(self.agent.training_noise)
 
             if not loaded:
                 # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
@@ -50,7 +53,6 @@ class MultiGymWrapper(Environment):
                     if self.saveLoadFlag.item() == 1:
                         self.agent.load(self.agent_dir)
                         self.agent.actor.eval()
-                        self.agent.ou_noise.reset()
                         print("Agent Loaded")
                         self.saveLoadFlag[0] = 0
                     last_load = self.episode_count.item()
@@ -62,10 +64,19 @@ class MultiGymWrapper(Environment):
             # if (self.step_control.sum().item() == self.num_instances and self.action_available.item() == 0) or self.step_count.item() == 0:
             if self.step_control.sum().item() == self.num_instances or self.step_count.item() == 0:
                 # print("observations", self.observations[:,:self.obs_dim])
+                if self.resetNoiseFlags.sum() > 0:
+                    for i, flag in enumerate(self.resetNoiseFlags):
+                        if flag.item() == 1:
+                            self.ou_noises[i].reset()
+                            self.resetNoiseFlags[i][0] == 0
+
                 self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item())
 
-                # print(self.actions)
-                # print(self.actions.shape)
+                print(self.actions)
+                # here I need to add the ou noise to all the actions
+                for i, action in enumerate(self.actions):
+                    self.actions[i] = torch.from_numpy(action.numpy() + self.ou_noises[i].noise()) 
+
                 if len(self.actions.shape) == 1: 
                     for i,d in enumerate(self.actions):
                         if d.item() > 0.2:
@@ -74,15 +85,7 @@ class MultiGymWrapper(Environment):
                     for i,d in enumerate(self.actions[0]):
                         if d.item() > 0.2:
                             print(i,d)
-                # print(self.actions.shape)
-                # print(self.actions)
 
-
-                '''
-                for action in action
-                    add noise to each action from the corresponding noise object in the agent?
-                
-                '''
                 # self.action_available[0] = 1
 
             # if self.action_available.item() == 1:
@@ -175,13 +178,13 @@ class MultiGymWrapper(Environment):
             self.step_with_logprobs()
         else:
             if self.configs['sub_type'] == 'RoboCupEnvironment':
-                self.process_list = launch_robo_process(self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length, self.configs ,num_instances=self.num_instances)
+                self.process_list = launch_robo_process(self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.resetNoiseFlags, self.max_episode_length, self.configs ,num_instances=self.num_instances)
                 self.step_without_log_probs()
             else:
-                self.process_list = launch_processes(self.envs, self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.max_episode_length,num_instances=self.num_instances)
+                self.process_list = launch_processes(self.envs, self.observations,self.action_available,self.step_count, self.step_control, self.stop_collecting,self.waitForLearner,self.queue, self.resetNoiseFlags, self.max_episode_length,num_instances=self.num_instances)
                 self.step_without_log_probs()
 
-def launch_processes(envs, observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, max_episode_length,logprobs = None,num_instances=1):
+def launch_processes(envs, observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue,resetNoiseFlags, max_episode_length,logprobs = None,num_instances=1):
 
     process_list = []
 
@@ -189,14 +192,14 @@ def launch_processes(envs, observations, action_available, step_count, step_cont
         if logprobs is not None:
             p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_count,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
         else:
-            p = mp.Process(target = process_target, args=(envs[i],observations, action_available,step_count,step_control,stop_collecting,waitForLearner,i,queue,max_episode_length,) )
+            p = mp.Process(target = process_target, args=(envs[i],observations, action_available,step_count,step_control,stop_collecting,waitForLearner,i,queue,resetNoiseFlags,max_episode_length,) )
         p.start()
         process_list.append(p)
 
     return process_list
 
 
-def launch_robo_process( observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, max_episode_length,configs,logprobs = None,num_instances=1):
+def launch_robo_process( observations, action_available, step_count, step_control, stop_collecting,waitForLearner,queue, resetNoiseFlags,max_episode_length,configs,logprobs = None,num_instances=1):
 
     process_list = []
 
@@ -204,7 +207,7 @@ def launch_robo_process( observations, action_available, step_count, step_contro
         if logprobs is not None:
             p = mp.Process(target = process_target_with_log_probs, args=(envs[i],observations,step_count,step_control,stop_collecting,i,queue,logprobs, max_episode_length,) )
         else:
-            p = mp.Process(target = robo_process_target, args=(observations, action_available,step_count,step_control,stop_collecting,waitForLearner, configs,i,queue,max_episode_length,) )
+            p = mp.Process(target = robo_process_target, args=(observations, action_available,step_count,step_control,stop_collecting,waitForLearner, configs,i,queue,resetNoiseFlags,max_episode_length,) )
         p.start()
         process_list.append(p)
 
@@ -336,7 +339,7 @@ def process_target_with_log_probs(env,observations,step_count,step_control,stop_
                 step_control[id] = 1
 
 
-def robo_process_target(observations,action_available,step_count,step_control,stop_collecting,waitForLearner,config,id,queue,max_ep_length):
+def robo_process_target(observations,action_available,step_count,step_control,stop_collecting,waitForLearner,config,id,queue,resetNoiseFlags,max_ep_length):
     
     config['seed'] = id
     config['init_env'] = True
@@ -371,6 +374,7 @@ def robo_process_target(observations,action_available,step_count,step_control,st
             step_count +=1
 
             if done:
+                resetNoiseFlags[id] = 1
                 exp = copy.deepcopy(
                             zip(
                                 ep_observations[:idx],
