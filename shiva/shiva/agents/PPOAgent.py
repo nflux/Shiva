@@ -8,9 +8,6 @@ import copy
 import torch
 import torch.nn as nn
 import numpy as np
-from torch.distributions import Categorical
-from torch.nn import functional as F
-
 from shiva.agents.Agent import Agent
 from shiva.networks import DynamicLinearNetwork as DLN
 from shiva.utils import Noise as noise
@@ -55,7 +52,6 @@ class PPOAgent(Agent):
         if self.action_space == 'Discrete':
             print('actor:', self.network_input, self.network_output)
             self.actor = DLN.DynamicLinearNetwork(self.network_input, self.network_output, net_config['actor'])
-            #self.target_actor = copy.deepcopy(self.actor)
             self.critic = DLN.DynamicLinearNetwork(self.network_input, 1, net_config['critic'])
             params = list(self.actor.parameters()) +list(self.critic.parameters())
             self.optimizer = getattr(torch.optim,agent_config['optimizer_function'])(params=params, lr=agent_config['learning_rate'])
@@ -89,7 +85,7 @@ class PPOAgent(Agent):
 
     def get_discrete_action(self, observation):
         #retrieve the action given an observation
-        action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+        action = self.actor(observation.float()).to(self.device).float().detach()
         action = self.softmax(action)
         dist = Categorical(action)
         action = dist.sample()
@@ -98,7 +94,7 @@ class PPOAgent(Agent):
 
 
     def evaluate_discrete(self,observation):
-        action = self.actor(torch.tensor(observation).float()).detach()
+        action = self.actor(observation.float()).detach().to(self.device)
         action = self.softmax(action)
         dist = Categorical(action)
         action = dist.sample()
@@ -107,17 +103,15 @@ class PPOAgent(Agent):
         return action.tolist(), logprobs.tolist()
 
     def get_discrete_logprobs(self,observation,action):
-        action_probs = self.actor(torch.tensor(observation).float()).detach()
+        action_probs = self.actor(observation.float()).detach().to(self.device)
         action_probs = self.softmax(action_probs)
         dist = Categorical(action_probs)
         action = torch.tensor(np.argmax(action, axis=-1)).to(self.device).long()
         logprobs = dist.log_prob(action)
         return logprobs.tolist()
 
-
     def get_continuous_action(self,observation):
-        observation = torch.tensor(observation).float().detach().to(self.device)
-        mu = self.mu(observation).squeeze(0).to(self.device)
+        mu = self.mu(observation.float()).squeeze(0).to(self.device)
         sigma = self.sigma(observation).squeeze(0).to(self.device)
         actions = Normal(mu,torch.abs(sigma)).sample()
         #self.ou_noise.set_scale(0.8)
@@ -126,9 +120,8 @@ class PPOAgent(Agent):
         return actions.tolist()
 
     def get_continuous_logprobs(self,observation,action):
-        observation = torch.tensor(observation).float().detach().to(self.device)
         action = torch.tensor(action).float().to(self.device)
-        mu = self.mu(observation).squeeze(0).to(self.device)
+        mu = self.mu(observation.float()).squeeze(0).to(self.device)
         sigma = self.sigma(observation).squeeze(0).to(self.device)
         dist = Normal(mu,torch.abs(sigma))
         logprobs = dist.log_prob(action)
@@ -136,7 +129,6 @@ class PPOAgent(Agent):
 
 
     def save_agent(self, save_path,step):
-
         if self.action_space == 'Discrete':
             torch.save(self.actor.state_dict(), save_path + '/actor.pth')
             torch.save(self.critic.state_dict(), save_path +'/critic.pth')
@@ -169,3 +161,29 @@ class PPOAgent(Agent):
             self.mu.load_state_dict(torch.load(save_path+'/mu.pth'))
             self.sigma.load_state_dict(torch.load(save_path+'/sigma.pth'))
             self.critic.load_state_dict(torch.load(save_path+'/critic.pth'))
+
+
+
+    # def save_agent(self, save_path,step):
+
+    #     '''torch.save({
+    #         'actor': self.actor.state_dict(),
+    #         'critic': self.critic.state_dict(),
+    #         'agent' : self
+    #     }, save_path + '/agent.pth')'''
+    #     torch.save(self.actor.state_dict(), save_path + '/actor.pth')
+    #     torch.save(self.critic.state_dict(), save_path +'/critic.pth')
+    #     torch.save(self,save_path + '/agent.pth')
+
+    # def save(self,save_path,step):
+    #     torch.save(self.actor, save_path + '/actor.pth')
+    #     torch.save(self.critic,save_path + '/critic.pth')
+
+    # def load(self,save_path):
+    #     # print(save_path)
+    #     '''model = torch.load(save_path + '/agent.pth')
+    #     self.actor.load_state_dict( model['actor'])
+    #     self.critic.load_state_dict(model['critic'])'''
+    #     self = torch.load(save_path+'/agent.pth')
+    #     self.actor.load_state_dict(torch.load(save_path+'/actor.pth'))
+    #     self.critic.load_state_dict(torch.load(save_path+'/critic.pth'))

@@ -64,21 +64,19 @@ class TensorBuffer(ReplayBuffer):
         self.acs_buffer = torch.zeros( (self.max_size, acs_dim) ,requires_grad=False)
         self.rew_buffer = torch.zeros((self.max_size, 1),requires_grad=False)
         self.next_obs_buffer = torch.zeros((self.max_size, obs_dim),requires_grad=False)
-        self.done_buffer = torch.zeros((self.max_size, 1),requires_grad=False)
+        self.done_buffer = torch.zeros((self.max_size, 1), dtype=torch.bool, requires_grad=False)
 
     def push(self, exps):
-         
 
         obs, ac, rew, next_obs, done = exps
         nentries = len(obs)
         if self.current_index + nentries > self.max_size:
-            rollover = self.max_size - self.current_index
+            rollover = self.max_size - self.current_index + nentries
             self.obs_buffer = bh.roll(self.obs_buffer, rollover)
             self.acs_buffer = bh.roll(self.acs_buffer, rollover)
             self.rew_buffer = bh.roll(self.rew_buffer, rollover)
             self.done_buffer = bh.roll(self.done_buffer, rollover)
             self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
-
             self.current_index = 0
             # self.size = self.max_size
 
@@ -89,8 +87,8 @@ class TensorBuffer(ReplayBuffer):
         self.next_obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = next_obs
 
         if self.size < self.max_size:
-            self.size += 1
-        self.current_index += 1
+            self.size += nentries
+        self.current_index += nentries
 
     def sample(self, device='cpu'):
         inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
@@ -117,7 +115,7 @@ class TensorBufferLogProbs(ReplayBuffer):
         self.log_probs_buffer = torch.zeros( (self.max_size), requires_grad=False)
 
     def push(self, exps):
-         
+
 
         obs, ac, rew, next_obs, done, log_probs = exps
         nentries = len(obs)
@@ -146,7 +144,7 @@ class TensorBufferLogProbs(ReplayBuffer):
         self.log_probs_buffer[self.current_index:self.current_index+nentries] = log_probs
 
         if self.size < self.max_size:
-            self.size += 1
+            self.size += nentries
         self.current_index += 1
 
     def sample(self, device='cpu'):
@@ -169,21 +167,21 @@ class TensorBufferLogProbs(ReplayBuffer):
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
         return   (
-                    cast_obs(self.obs_buffer[:, :self.current_index]),
-                    cast(self.acs_buffer[:, :self.current_index]),
-                    cast(self.rew_buffer[:, :self.current_index]).squeeze(),
-                    cast_obs(self.next_obs_buffer[:, :self.current_index]),
-                    cast(self.done_buffer[:, :self.current_index]).squeeze(),
+                    cast_obs(self.obs_buffer[:self.current_index,:]),
+                    cast(self.acs_buffer[:self.current_index,:]),
+                    cast(self.rew_buffer[:self.current_index,:]).squeeze(),
+                    cast_obs(self.next_obs_buffer[:self.current_index,:]),
+                    cast(self.done_buffer[:self.current_index,:]).squeeze(),
                     cast(self.log_probs_buffer[:self.current_index])
         )
 
     def clear_buffer(self):
-        self.obs_buffer.fill(0)
-        self.acs_buffer.fill(0)
-        self.rew_buffer.fill(0)
-        self.next_obs_buffer.fill(0)
-        self.done_buffer.fill(0)
-        self.log_probs_buffer.fill(0)
+        self.obs_buffer.fill_(0)
+        self.acs_buffer.fill_(0)
+        self.rew_buffer.fill_(0)
+        self.next_obs_buffer.fill_(0)
+        self.done_buffer.fill_(0)
+        self.log_probs_buffer.fill_(0)
         self.current_index = 0
 
 class TensorSingleDaggerRoboCupBuffer(ReplayBuffer):
@@ -225,7 +223,7 @@ class TensorSingleDaggerRoboCupBuffer(ReplayBuffer):
         self.current_index += 1
 
     def sample(self, device='cpu'):
-        inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
+        inds = np.random.choice(np.arange( min(len(self),self.max_size) ), size=self.batch_size, replace=True)
         cast = lambda x: Variable(x, requires_grad=False).to(device)
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
