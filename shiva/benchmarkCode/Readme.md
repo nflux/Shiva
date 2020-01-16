@@ -258,3 +258,5 @@
        |Cartpole v0|1000|       **DDPG**     |        36.955: 0-200 Steps, <br>             63.2125: 0-400 Steps, <br>             60.555: 0-600 Steps, <br>             69.5775: 0-800 Steps, <br>             75.527: 0-1000 Steps, <br>               |
        |Cartpole v0| N/A |       **PPO**     |       FAILED     |
        |Unity 3D-BALL|N/A|       **DDPG**     |       FAILED     |
+
+s
