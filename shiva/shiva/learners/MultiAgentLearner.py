@@ -7,9 +7,9 @@ from shiva.core.admin import Admin
 from shiva.learners.Learner import Learner
 from shiva.helpers.config_handler import load_class
 
-class SingleAgentLearner(Learner):
+class MultiAgentLearner(Learner):
     def __init__(self, learner_id, config, port=None):
-        super(SingleAgentLearner ,self).__init__(learner_id, config, port)
+        super(MultiAgentLearner ,self).__init__(learner_id, config, port)
 
     def run(self, train=True):
         self.step_count_per_run = 0
@@ -17,12 +17,10 @@ class SingleAgentLearner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                # self.alg.update(self.agent, self.buffer, self.env.step_count)
+                self.alg.update(self.agent, self.buffer, self.env.step_count)
                 self.collect_metrics()
                 if self.is_multi_process_cutoff(): return None # PBT Cutoff
                 else: continue
-            self.alg.update(self.agent, self.buffer, self.env.step_count)
-            self.collect_metrics()
             self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
             self.collect_metrics(episodic=True)
             self.checkpoint()
@@ -45,7 +43,7 @@ class SingleAgentLearner(Learner):
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action, device=self.device)
             self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
-                                                torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).bool()))))
+                                                torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).float()))))
         else:
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action, device=self.device)
@@ -54,8 +52,6 @@ class SingleAgentLearner(Learner):
             # input()
             exp = copy.deepcopy(t)
             self.buffer.append(exp)
-        """"""
-
 
     def is_multi_process_cutoff(self):
         ''' FOR MULTIPROCESS PBT PURPOSES '''
@@ -79,7 +75,7 @@ class SingleAgentLearner(Learner):
 
     def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
+        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'], self.env.num_left, obs_dim, ac_dim)
 
     def launch(self):
         self.env = self.create_environment()

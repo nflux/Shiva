@@ -11,7 +11,7 @@ from shiva.helpers.misc import action2one_hot
 class UnityWrapperEnvironment(Environment):
     def __init__(self, config):
         assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
-
+        self.on_policy = False
         super(UnityWrapperEnvironment, self).__init__(config)
         self.worker_id = 0
         self._connect()
@@ -115,8 +115,10 @@ class UnityWrapperEnvironment(Environment):
         '''
             One Shiva episode is when all instances in the Environment terminate at least once
         '''
-        return self.temp_done_counter >= self.num_instances
-        # return self.temp_done_counter >= self.update_episodes
+        if not self.on_policy:
+            return self.temp_done_counter >= self.num_instances
+        else:
+            return self.temp_done_counter >= self.update_episodes
 
     def _clean_actions(self, actions):
         '''

@@ -101,7 +101,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--port", required=True, type=int, help='Port for RoboCup Server')
     args = parser.parse_args()
 
-    bot_config_file = os.getcwd() + '/configs/DDPG-Robocup-Imitation.ini'
+    bot_config_file = os.getcwd() + '/configs/BotEnv.ini'
     config = load_config_file_2_dict(bot_config_file)
     bot_env = RoboCupBotEnv(config['BotEnv'], args.port)
     bot_env.run()
