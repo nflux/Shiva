@@ -43,7 +43,7 @@ def testRoutineDQN():
     for string in output:
         k = k+ round(checkRate,10)
         write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
-    openReadmeFile("       |Cartpole v0|"+str(length)+"|       **DQN**     |       "+  write+"   |")
+    openReadmeFile("       |Cartpole v0|"+str(length)+"|       **DQN**     |       "+  write+"   |"  + maxVolume(res[1]+"|"))
   
 #====================================DQN Unity Basic Benchmak=======================
 # For use in DQN-Unity-Basic.ini
@@ -76,7 +76,7 @@ def testRoutineDQNUnityBasic():
     for string in output:
         k = k+ round(checkRate,10)
         write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
-    openReadmeFile("       |Unity Basic|"+str(length)+"|       **DQN**     |       "+  write+"   |")
+    openReadmeFile("       |Unity Basic|"+str(length)+"|       **DQN**     |       "+  write+"   |" + maxVolume(res[1]+"|")
   
 
 
@@ -113,7 +113,7 @@ def testRoutinePPO():
     for string in output:
         k = k+ round(checkRate,10)
         write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
-    openReadmeFile("       |Cartpole v0|"+str(length)+"|       **PPO**     |       "+  write+"   |")
+    openReadmeFile("       |Cartpole v0|"+str(length)+"|       **PPO**     |       "+  write+"   |" + maxVolume(res[1]+"|")
 
 
 
@@ -151,7 +151,7 @@ def testRoutineDDPG3DBALL():
     for string in output:
         k = k+ round(checkRate,10)
         write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
-    openReadmeFile("       |Unity 3D-BALL|"+str(length)+"|       **DDPG**     |       "+  write+"   |")
+    openReadmeFile("       |Unity 3D-BALL|"+str(length)+"|       **DDPG**     |       "+  write+"   |" + maxVolume(res[1]+"|")
 
 
 #====================================DDPG-Mountain Car Benchmark=======================
@@ -187,7 +187,7 @@ def testRoutineDDPGMountainCar():
     for string in output:
         k = k+ round(checkRate,10)
         write = write + " " +str(string) +": 0-"+ str(int( k)) +" Steps, <br>            "
-    openReadmeFile("       |MountainCarContinuous-v0|"+str(length)+"|       **DDPG**     |       "+  write+"   |")
+    openReadmeFile("       |MountainCarContinuous-v0|"+str(length)+"|       **DDPG**     |       "+  write+"   |" + maxVolume(res[1]+"|")
 
 
 
@@ -196,6 +196,8 @@ def openReadmeFile(string):
     markDown.write("\n" + str(string))
     markDown.close()
 
+def maxVolume(numpy):
+    return np.max(numpy)
 
 if __name__ =="__main__":
     ts = time.time()
@@ -203,7 +205,7 @@ if __name__ =="__main__":
     timeStamp = tS
     print("HELLO")
     markDown = open("Readme.md",'a', newline='')
-    markDown.write("\n* "+tS+"\n     - | ENVIRONMENT |Episodes / Steps|   ALGORITHM   |   REWARDS   |\n       |---|---|       ---     |       ---       |")
+    markDown.write("\n* "+tS+"\n     - | ENVIRONMENT |Episodes / Steps|   ALGORITHM   |   REWARDS   | MAX REWARDS |\n  |---|---| --- | --- | --- |")
     markDown.close()
     testRoutineDQN()
     testRoutineDQNUnityBasic
