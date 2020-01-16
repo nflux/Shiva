@@ -34,7 +34,7 @@ class DDPGAlgorithm(Algorithm):
             agent.ou_noise.reset()
             return
 
-        if step_count < self.agent.exploration_steps:
+        if step_count < agent.exploration_steps:
             '''
                 Don't update during exploration!
             '''
@@ -108,6 +108,10 @@ class DDPGAlgorithm(Algorithm):
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
         # Get Q values of the batch from states and actions.
+
+        if self.a_space == 'discrete':
+            actions = one_hot_from_logits(actions)
+            # print(actions)
 
         # Grab the discrete actions in the batch
         if dims == 3:

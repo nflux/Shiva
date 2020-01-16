@@ -34,20 +34,20 @@ class DDPGAgent(Agent):
         self.ou_noise = noise.OUNoise(action_dim, self.exploration_noise)
         self.acs_discrete = action_dim
 
-    def get_action(self, observation, step_count, evaluate=False):
+    def get_action(self, observation, step_count):
         if self.action_space == 'discrete':
-            return self.get_discrete_action(observation, step_count, evaluate)
+            return self.get_discrete_action(observation, step_count, self.evaluate)
         elif self.action_space == 'continuous':
-            return self.get_continuous_action(observation, step_count, evaluate)
+            return self.get_continuous_action(observation, step_count, self.evaluate)
         elif self.action_space == 'parameterized':
             pass
-            return self.get_parameterized_action(observation, evaluate)
+            return self.get_parameterized_action(observation, self.evaluate)
 
     def get_discrete_action(self, observation, step_count, evaluate):
         if evaluate:
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            action = torch.argmax(action)
-            action = action2one_hot(self.acs_discrete, action.item())
+            # action = torch.argmax(action)
+            # action = action2one_hot(self.acs_discrete, action.item())
         else:
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.exploration_noise)
@@ -59,6 +59,7 @@ class DDPGAgent(Agent):
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = action.cpu().numpy() + self.ou_noise.noise()
+                action = softmax(torch.from_numpy(action))
 
         return action.tolist()
             
