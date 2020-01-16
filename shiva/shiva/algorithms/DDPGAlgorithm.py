@@ -8,7 +8,7 @@ from shiva.algorithms.Algorithm import Algorithm
 from shiva.helpers.misc import one_hot_from_logits
 
 class DDPGAlgorithm(Algorithm):
-    def __init__(self, observation_space: int, action_space: int, configs: dict):
+    def __init__(self, observation_space: int, action_space: int, evaluate: bool, configs: dict):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
@@ -19,12 +19,15 @@ class DDPGAlgorithm(Algorithm):
         self.critic_loss = 0
         self.discrete = action_space['discrete']
         self.param = action_space['param']
+        self.evaluate = evaluate
         # self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
 
     def update(self, agent, buffer, step_count, episodic=False):
         '''
             @buffer         buffer is a reference
         '''
+
+        print(agent)
 
         if episodic:
             '''
@@ -38,6 +41,9 @@ class DDPGAlgorithm(Algorithm):
             '''
                 Don't update during exploration!
             '''
+            return
+
+        if agent.evaluate:
             return
 
         '''
@@ -196,7 +202,7 @@ class DDPGAlgorithm(Algorithm):
         #         target_param.data.copy_(param.data)
 
     def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.obs_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
+        self.agent = DDPGAgent(id, self.obs_space, self.discrete + self.param, self.discrete, self.evaluate, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):

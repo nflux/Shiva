@@ -17,11 +17,13 @@ class SingleAgentLearner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.alg.update(self.agent, self.buffer, self.env.step_count)
-                self.collect_metrics()
+                if not self.evaluate:
+                    self.alg.update(self.agent, self.buffer, self.env.step_count)
+                    self.collect_metrics()
                 if self.is_multi_process_cutoff(): return None # PBT Cutoff
                 else: continue
-            self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
+            if not self.evaluate:
+                self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
             self.collect_metrics(episodic=True)
             self.checkpoint()
             print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))
@@ -32,7 +34,7 @@ class SingleAgentLearner(Learner):
 
         """Temporary fix for Unity as it receives multiple observations"""
         if len(observation.shape) > 1 and self.env.env_name != 'RoboCup':
-            action = [self.agent.get_action(obs, self.env.step_count) for obs in observation]
+            action = [self.agent.get_action(obs, self.env.step_count, self.evaluate) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
@@ -40,7 +42,7 @@ class SingleAgentLearner(Learner):
                 # print(act, rew, don)
                 self.buffer.append(exp)
         else:
-            action = self.agent.get_action(observation, self.env.step_count)
+            action = self.agent.get_action(observation, self.env.step_count, self.evaluate)
             next_observation, reward, done, more_data = self.env.step(action)
             t = [observation, more_data['action'], reward, next_observation, int(done)]
             # print(action)
@@ -63,7 +65,7 @@ class SingleAgentLearner(Learner):
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
-        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), self.evaluate ,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])

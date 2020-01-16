@@ -34,11 +34,12 @@ class DDPGAgent(Agent):
         self.ou_noise = noise.OUNoise(action_dim, self.exploration_noise)
         self.acs_discrete = action_dim
 
-    def get_action(self, observation, step_count):
+
+    def get_action(self, observation, step_count, evaluate=False):
         if self.action_space == 'discrete':
-            return self.get_discrete_action(observation, step_count, self.evaluate)
+            return self.get_discrete_action(observation, step_count, evaluate)
         elif self.action_space == 'continuous':
-            return self.get_continuous_action(observation, step_count, self.evaluate)
+            return self.get_continuous_action(observation, step_count, evaluate)
         elif self.action_space == 'parameterized':
             pass
             return self.get_parameterized_action(observation, self.evaluate)
