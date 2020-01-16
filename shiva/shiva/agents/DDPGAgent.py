@@ -41,8 +41,9 @@ class DDPGAgent(Agent):
         elif self.action_space == 'continuous':
             return self.get_continuous_action(observation, step_count, evaluate)
         elif self.action_space == 'parameterized':
+            assert "DDPG Parametrized NotImplemented"
             pass
-            return self.get_parameterized_action(observation, self.evaluate)
+            return self.get_parameterized_action(observation, evaluate)
 
     def get_discrete_action(self, observation, step_count, evaluate):
         if evaluate:
@@ -54,13 +55,13 @@ class DDPGAgent(Agent):
                 self.ou_noise.set_scale(self.exploration_noise)
                 action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
                 action += self.ou_noise.noise()
-                action = softmax(torch.from_numpy(action))
+                action = softmax(torch.from_numpy(action), dim=-1)
 
             else:
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = action.cpu().numpy() + self.ou_noise.noise()
-                action = softmax(torch.from_numpy(action))
+                action = softmax(torch.from_numpy(action), dim=-1)
 
         return action.tolist()
             
@@ -82,12 +83,13 @@ class DDPGAgent(Agent):
         return action.tolist()
 
     def get_parameterized_action(self, observation, step_count, evaluate):
+        assert "Parametrized DDPG NotImplemented"
         if evaluate or step_count > self.exploration_steps:
             pass
         else:
             pass
         pass
-        return action.tolist()
+        # return action.tolist()
 
     def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
         observation = torch.tensor(observation).to(self.device)

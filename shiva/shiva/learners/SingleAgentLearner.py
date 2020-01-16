@@ -11,7 +11,9 @@ class SingleAgentLearner(Learner):
     def __init__(self, learner_id, config):
         super(SingleAgentLearner ,self).__init__(learner_id, config)
 
-    def run(self, train=True):
+    def run(self):
+        if self.evaluate:
+            print("** Running Evaluation mode **")
         self.step_count_per_run = 0
         while not self.env.finished(self.episodes):
             self.env.reset()

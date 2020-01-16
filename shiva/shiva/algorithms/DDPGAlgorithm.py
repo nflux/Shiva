@@ -40,9 +40,6 @@ class DDPGAlgorithm(Algorithm):
             '''
             return
 
-        if agent.evaluate:
-            return
-
         '''
             Updates starts here
         '''
@@ -199,7 +196,7 @@ class DDPGAlgorithm(Algorithm):
         #         target_param.data.copy_(param.data)
 
     def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.obs_space, self.discrete + self.param, self.discrete, self.evaluate, self.configs[1], self.configs[2])
+        self.agent = DDPGAgent(id, self.obs_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):
