@@ -83,7 +83,6 @@ class GymEnvironment(Environment):
                 ('Reward/Per_Episode', self.reward_per_episode),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
-
             # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
 
         return metrics
@@ -119,9 +118,13 @@ class GymEnvironment(Environment):
             self.action_space_discrete = action_space
         return action_space
 
+    def get_observations(self):
+        return self.obs
     def get_observation(self):
         return self.obs
 
+    def get_actions(self):
+        return self.acs
     def get_action(self):
         return self.acs
 

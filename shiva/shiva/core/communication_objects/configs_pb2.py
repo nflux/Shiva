@@ -4,7 +4,6 @@
 
 import sys
 _b=sys.version_info[0]<3 and (lambda x:x) or (lambda x:x.encode('latin1'))
-from google.protobuf.internal import enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from google.protobuf import reflection as _reflection
@@ -14,7 +13,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-from shiva.core.communication_objects import specs_pb2 as shiva_dot_core_dot_communication__objects_dot_specs__pb2
+from shiva.core.communication_objects import enums_pb2 as shiva_dot_core_dot_communication__objects_dot_enums__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(
@@ -22,194 +21,11 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='communication_objects',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n.shiva/core/communication_objects/configs.proto\x12\x15\x63ommunication_objects\x1a,shiva/core/communication_objects/specs.proto\"\xd6\x02\n\x0bStatusProto\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x32\n\x04type\x18\x02 \x01(\x0e\x32$.communication_objects.ComponentType\x12\x31\n\x06status\x18\x03 \x01(\x0e\x32!.communication_objects.StatusType\x12\x0f\n\x07\x61\x64\x64ress\x18\x04 \x01(\t\x12\x33\n\x03\x65nv\x18\x05 \x01(\x0b\x32$.communication_objects.EnvSpecsProtoH\x00\x12\x39\n\x04menv\x18\x06 \x01(\x0b\x32).communication_objects.MultiEnvSpecsProtoH\x00\x12;\n\x07learner\x18\x07 \x01(\x0b\x32(.communication_objects.LearnerSpecsProtoH\x00\x12\r\n\x05\x65xtra\x18\x08 \x01(\tB\x07\n\x05specs\"\x88\x01\n\x0b\x43onfigProto\x12\x32\n\x04type\x18\x01 \x01(\x0e\x32$.communication_objects.ComponentType\x12\x32\n\tload_type\x18\x02 \x01(\x0e\x32\x1f.communication_objects.LoadType\x12\x11\n\tload_path\x18\x03 \x01(\t*a\n\rComponentType\x12\x08\n\x04META\x10\x00\x12\x0b\n\x07LEARNER\x10\x01\x12\x0c\n\x08MULTIENV\x10\x02\x12\x0f\n\x0b\x45NVIRONMENT\x10\x03\x12\x0e\n\nEVALUATION\x10\x04\x12\n\n\x06\x41GENTS\x10\x05*/\n\nStatusType\x12\t\n\x05\x45RROR\x10\x00\x12\r\n\tLAUNCHING\x10\x01\x12\x07\n\x03RUN\x10\x02*\x1e\n\x08LoadType\x12\t\n\x05LOCAL\x10\x00\x12\x07\n\x03\x41WS\x10\x01\x62\x06proto3')
+  serialized_pb=_b('\n.shiva/core/communication_objects/configs.proto\x12\x15\x63ommunication_objects\x1a,shiva/core/communication_objects/enums.proto\"\x96\x01\n\x0b\x43onfigProto\x12\x32\n\x04type\x18\x01 \x01(\x0e\x32$.communication_objects.ComponentType\x12\x32\n\tload_type\x18\x02 \x01(\x0e\x32\x1f.communication_objects.LoadType\x12\x11\n\tload_path\x18\x03 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x04 \x01(\tb\x06proto3')
   ,
-  dependencies=[shiva_dot_core_dot_communication__objects_dot_specs__pb2.DESCRIPTOR,])
-
-_COMPONENTTYPE = _descriptor.EnumDescriptor(
-  name='ComponentType',
-  full_name='communication_objects.ComponentType',
-  filename=None,
-  file=DESCRIPTOR,
-  values=[
-    _descriptor.EnumValueDescriptor(
-      name='META', index=0, number=0,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='LEARNER', index=1, number=1,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='MULTIENV', index=2, number=2,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='ENVIRONMENT', index=3, number=3,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='EVALUATION', index=4, number=4,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='AGENTS', index=5, number=5,
-      serialized_options=None,
-      type=None),
-  ],
-  containing_type=None,
-  serialized_options=None,
-  serialized_start=603,
-  serialized_end=700,
-)
-_sym_db.RegisterEnumDescriptor(_COMPONENTTYPE)
-
-ComponentType = enum_type_wrapper.EnumTypeWrapper(_COMPONENTTYPE)
-_STATUSTYPE = _descriptor.EnumDescriptor(
-  name='StatusType',
-  full_name='communication_objects.StatusType',
-  filename=None,
-  file=DESCRIPTOR,
-  values=[
-    _descriptor.EnumValueDescriptor(
-      name='ERROR', index=0, number=0,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='LAUNCHING', index=1, number=1,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='RUN', index=2, number=2,
-      serialized_options=None,
-      type=None),
-  ],
-  containing_type=None,
-  serialized_options=None,
-  serialized_start=702,
-  serialized_end=749,
-)
-_sym_db.RegisterEnumDescriptor(_STATUSTYPE)
-
-StatusType = enum_type_wrapper.EnumTypeWrapper(_STATUSTYPE)
-_LOADTYPE = _descriptor.EnumDescriptor(
-  name='LoadType',
-  full_name='communication_objects.LoadType',
-  filename=None,
-  file=DESCRIPTOR,
-  values=[
-    _descriptor.EnumValueDescriptor(
-      name='LOCAL', index=0, number=0,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='AWS', index=1, number=1,
-      serialized_options=None,
-      type=None),
-  ],
-  containing_type=None,
-  serialized_options=None,
-  serialized_start=751,
-  serialized_end=781,
-)
-_sym_db.RegisterEnumDescriptor(_LOADTYPE)
-
-LoadType = enum_type_wrapper.EnumTypeWrapper(_LOADTYPE)
-META = 0
-LEARNER = 1
-MULTIENV = 2
-ENVIRONMENT = 3
-EVALUATION = 4
-AGENTS = 5
-ERROR = 0
-LAUNCHING = 1
-RUN = 2
-LOCAL = 0
-AWS = 1
+  dependencies=[shiva_dot_core_dot_communication__objects_dot_enums__pb2.DESCRIPTOR,])
 
 
-
-_STATUSPROTO = _descriptor.Descriptor(
-  name='StatusProto',
-  full_name='communication_objects.StatusProto',
-  filename=None,
-  file=DESCRIPTOR,
-  containing_type=None,
-  fields=[
-    _descriptor.FieldDescriptor(
-      name='id', full_name='communication_objects.StatusProto.id', index=0,
-      number=1, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='type', full_name='communication_objects.StatusProto.type', index=1,
-      number=2, type=14, cpp_type=8, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='status', full_name='communication_objects.StatusProto.status', index=2,
-      number=3, type=14, cpp_type=8, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='address', full_name='communication_objects.StatusProto.address', index=3,
-      number=4, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='env', full_name='communication_objects.StatusProto.env', index=4,
-      number=5, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='menv', full_name='communication_objects.StatusProto.menv', index=5,
-      number=6, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='learner', full_name='communication_objects.StatusProto.learner', index=6,
-      number=7, type=11, cpp_type=10, label=1,
-      has_default_value=False, default_value=None,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='extra', full_name='communication_objects.StatusProto.extra', index=7,
-      number=8, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b("").decode('utf-8'),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-  ],
-  extensions=[
-  ],
-  nested_types=[],
-  enum_types=[
-  ],
-  serialized_options=None,
-  is_extendable=False,
-  syntax='proto3',
-  extension_ranges=[],
-  oneofs=[
-    _descriptor.OneofDescriptor(
-      name='specs', full_name='communication_objects.StatusProto.specs',
-      index=0, containing_type=None, fields=[]),
-  ],
-  serialized_start=120,
-  serialized_end=462,
-)
 
 
 _CONFIGPROTO = _descriptor.Descriptor(
@@ -240,6 +56,13 @@ _CONFIGPROTO = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='data', full_name='communication_objects.ConfigProto.data', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -252,39 +75,14 @@ _CONFIGPROTO = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=465,
-  serialized_end=601,
+  serialized_start=120,
+  serialized_end=270,
 )
 
-_STATUSPROTO.fields_by_name['type'].enum_type = _COMPONENTTYPE
-_STATUSPROTO.fields_by_name['status'].enum_type = _STATUSTYPE
-_STATUSPROTO.fields_by_name['env'].message_type = shiva_dot_core_dot_communication__objects_dot_specs__pb2._ENVSPECSPROTO
-_STATUSPROTO.fields_by_name['menv'].message_type = shiva_dot_core_dot_communication__objects_dot_specs__pb2._MULTIENVSPECSPROTO
-_STATUSPROTO.fields_by_name['learner'].message_type = shiva_dot_core_dot_communication__objects_dot_specs__pb2._LEARNERSPECSPROTO
-_STATUSPROTO.oneofs_by_name['specs'].fields.append(
-  _STATUSPROTO.fields_by_name['env'])
-_STATUSPROTO.fields_by_name['env'].containing_oneof = _STATUSPROTO.oneofs_by_name['specs']
-_STATUSPROTO.oneofs_by_name['specs'].fields.append(
-  _STATUSPROTO.fields_by_name['menv'])
-_STATUSPROTO.fields_by_name['menv'].containing_oneof = _STATUSPROTO.oneofs_by_name['specs']
-_STATUSPROTO.oneofs_by_name['specs'].fields.append(
-  _STATUSPROTO.fields_by_name['learner'])
-_STATUSPROTO.fields_by_name['learner'].containing_oneof = _STATUSPROTO.oneofs_by_name['specs']
-_CONFIGPROTO.fields_by_name['type'].enum_type = _COMPONENTTYPE
-_CONFIGPROTO.fields_by_name['load_type'].enum_type = _LOADTYPE
-DESCRIPTOR.message_types_by_name['StatusProto'] = _STATUSPROTO
+_CONFIGPROTO.fields_by_name['type'].enum_type = shiva_dot_core_dot_communication__objects_dot_enums__pb2._COMPONENTTYPE
+_CONFIGPROTO.fields_by_name['load_type'].enum_type = shiva_dot_core_dot_communication__objects_dot_enums__pb2._LOADTYPE
 DESCRIPTOR.message_types_by_name['ConfigProto'] = _CONFIGPROTO
-DESCRIPTOR.enum_types_by_name['ComponentType'] = _COMPONENTTYPE
-DESCRIPTOR.enum_types_by_name['StatusType'] = _STATUSTYPE
-DESCRIPTOR.enum_types_by_name['LoadType'] = _LOADTYPE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
-
-StatusProto = _reflection.GeneratedProtocolMessageType('StatusProto', (_message.Message,), {
-  'DESCRIPTOR' : _STATUSPROTO,
-  '__module__' : 'shiva.core.communication_objects.configs_pb2'
-  # @@protoc_insertion_point(class_scope:communication_objects.StatusProto)
-  })
-_sym_db.RegisterMessage(StatusProto)
 
 ConfigProto = _reflection.GeneratedProtocolMessageType('ConfigProto', (_message.Message,), {
   'DESCRIPTOR' : _CONFIGPROTO,

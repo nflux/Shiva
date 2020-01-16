@@ -154,10 +154,14 @@ class UnityWrapperEnvironment(Environment):
         '''
         return self.GroupSpec.observation_shapes[0][0]
 
+    def get_observations(self):
+        return self.observations
     def get_observation(self):
         return self.observations
 
     def get_actions(self):
+        return self.actions
+    def get_action(self):
         return self.actions
 
     def get_reward(self):

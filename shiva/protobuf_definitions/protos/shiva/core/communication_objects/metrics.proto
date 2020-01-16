@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "shiva/core/communication_objects/enums.proto";
+
 package communication_objects;
 
 message AgentMetricProto {
@@ -18,4 +20,18 @@ message TrainingMetricsProto {
 
 message EvaluationMetricsProto {
     map <string, AgentMetricProto> data = 1;
+}
+
+// Message used for components to Check-In and send initial parameters in between modules
+message MetricsProto {
+    int32 id = 1;
+    ComponentType type = 2;
+    StatusType status = 3;
+    string address = 4;
+    oneof data {
+        AgentMetricProto agent = 5;
+        TrainingMetricsProto train = 6;
+        EvaluationMetricsProto eval = 7;
+    }
+    string extra = 8;
 }

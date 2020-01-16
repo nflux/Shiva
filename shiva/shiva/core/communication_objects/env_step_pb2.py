@@ -4,7 +4,6 @@
 
 import sys
 _b=sys.version_info[0]<3 and (lambda x:x) or (lambda x:x.encode('latin1'))
-from google.protobuf.internal import enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from google.protobuf import reflection as _reflection
@@ -22,40 +21,10 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='communication_objects',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n/shiva/core/communication_objects/env_step.proto\x12\x15\x63ommunication_objects\x1a.shiva/core/communication_objects/helpers.proto\"\xc8\x01\n\x11ObservationsProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12@\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x32.communication_objects.ObservationsProto.DataEntry\x12\x12\n\nstep_count\x18\x03 \x01(\x05\x1aP\n\tDataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x32\n\x05value\x18\x02 \x01(\x0b\x32#.communication_objects.ListOfFloats:\x02\x38\x01\"\xaa\x01\n\x0c\x41\x63tionsProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12;\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32-.communication_objects.ActionsProto.DataEntry\x1aP\n\tDataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x32\n\x05value\x18\x02 \x01(\x0b\x32#.communication_objects.ListOfFloats:\x02\x38\x01\"\xe9\x01\n\x0f\x41gentStateProto\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x38\n\x0bobservation\x18\x02 \x01(\x0b\x32#.communication_objects.ListOfFloats\x12\x33\n\x06\x61\x63tion\x18\x03 \x01(\x0b\x32#.communication_objects.ListOfFloats\x12=\n\x10next_observation\x18\x04 \x01(\x0b\x32#.communication_objects.ListOfFloats\x12\x0e\n\x06reward\x18\x05 \x01(\x02\x12\x0c\n\x04\x64one\x18\x06 \x01(\x08\"i\n\x14\x41gentTrajectoryProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12\x34\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32&.communication_objects.AgentStateProto\x12\x0e\n\x06length\x18\x03 \x01(\x05\"\xbc\x01\n\x11TrajectoriesProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12@\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x32.communication_objects.TrajectoriesProto.DataEntry\x1aX\n\tDataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12:\n\x05value\x18\x02 \x01(\x0b\x32+.communication_objects.AgentTrajectoryProto:\x02\x38\x01*4\n\x12\x45nvironmentCommand\x12\x08\n\x04STEP\x10\x00\x12\t\n\x05RESET\x10\x01\x12\t\n\x05\x43LOSE\x10\x02\x62\x06proto3')
+  serialized_pb=_b('\n/shiva/core/communication_objects/env_step.proto\x12\x15\x63ommunication_objects\x1a.shiva/core/communication_objects/helpers.proto\"\xc8\x01\n\x11ObservationsProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12@\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x32.communication_objects.ObservationsProto.DataEntry\x12\x12\n\nstep_count\x18\x03 \x01(\x05\x1aP\n\tDataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x32\n\x05value\x18\x02 \x01(\x0b\x32#.communication_objects.ListOfFloats:\x02\x38\x01\"\xaa\x01\n\x0c\x41\x63tionsProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12;\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32-.communication_objects.ActionsProto.DataEntry\x1aP\n\tDataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x32\n\x05value\x18\x02 \x01(\x0b\x32#.communication_objects.ListOfFloats:\x02\x38\x01\"\xe9\x01\n\x0f\x41gentStateProto\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x38\n\x0bobservation\x18\x02 \x01(\x0b\x32#.communication_objects.ListOfFloats\x12\x33\n\x06\x61\x63tion\x18\x03 \x01(\x0b\x32#.communication_objects.ListOfFloats\x12=\n\x10next_observation\x18\x04 \x01(\x0b\x32#.communication_objects.ListOfFloats\x12\x0e\n\x06reward\x18\x05 \x01(\x02\x12\x0c\n\x04\x64one\x18\x06 \x01(\x08\"i\n\x14\x41gentTrajectoryProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12\x34\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32&.communication_objects.AgentStateProto\x12\x0e\n\x06length\x18\x03 \x01(\x05\"\xbc\x01\n\x11TrajectoriesProto\x12\x0b\n\x03str\x18\x01 \x01(\t\x12@\n\x04\x64\x61ta\x18\x02 \x03(\x0b\x32\x32.communication_objects.TrajectoriesProto.DataEntry\x1aX\n\tDataEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12:\n\x05value\x18\x02 \x01(\x0b\x32+.communication_objects.AgentTrajectoryProto:\x02\x38\x01\x62\x06proto3')
   ,
   dependencies=[shiva_dot_core_dot_communication__objects_dot_helpers__pb2.DESCRIPTOR,])
 
-_ENVIRONMENTCOMMAND = _descriptor.EnumDescriptor(
-  name='EnvironmentCommand',
-  full_name='communication_objects.EnvironmentCommand',
-  filename=None,
-  file=DESCRIPTOR,
-  values=[
-    _descriptor.EnumValueDescriptor(
-      name='STEP', index=0, number=0,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='RESET', index=1, number=1,
-      serialized_options=None,
-      type=None),
-    _descriptor.EnumValueDescriptor(
-      name='CLOSE', index=2, number=2,
-      serialized_options=None,
-      type=None),
-  ],
-  containing_type=None,
-  serialized_options=None,
-  serialized_start=1032,
-  serialized_end=1084,
-)
-_sym_db.RegisterEnumDescriptor(_ENVIRONMENTCOMMAND)
-
-EnvironmentCommand = enum_type_wrapper.EnumTypeWrapper(_ENVIRONMENTCOMMAND)
-STEP = 0
-RESET = 1
-CLOSE = 2
 
 
 
@@ -419,7 +388,6 @@ DESCRIPTOR.message_types_by_name['ActionsProto'] = _ACTIONSPROTO
 DESCRIPTOR.message_types_by_name['AgentStateProto'] = _AGENTSTATEPROTO
 DESCRIPTOR.message_types_by_name['AgentTrajectoryProto'] = _AGENTTRAJECTORYPROTO
 DESCRIPTOR.message_types_by_name['TrajectoriesProto'] = _TRAJECTORIESPROTO
-DESCRIPTOR.enum_types_by_name['EnvironmentCommand'] = _ENVIRONMENTCOMMAND
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 ObservationsProto = _reflection.GeneratedProtocolMessageType('ObservationsProto', (_message.Message,), {

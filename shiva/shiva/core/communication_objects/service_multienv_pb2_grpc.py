@@ -2,7 +2,6 @@
 import grpc
 
 from shiva.core.communication_objects import configs_pb2 as shiva_dot_core_dot_communication__objects_dot_configs__pb2
-from shiva.core.communication_objects import env_step_pb2 as shiva_dot_core_dot_communication__objects_dot_env__step__pb2
 from shiva.core.communication_objects import helpers_pb2 as shiva_dot_core_dot_communication__objects_dot_helpers__pb2
 
 
@@ -16,13 +15,23 @@ class MultiEnvironmentStub(object):
     Args:
       channel: A grpc.Channel.
     """
-    self.SendObservations = channel.unary_unary(
-        '/communication_objects.MultiEnvironment/SendObservations',
-        request_serializer=shiva_dot_core_dot_communication__objects_dot_env__step__pb2.ObservationsProto.SerializeToString,
-        response_deserializer=shiva_dot_core_dot_communication__objects_dot_env__step__pb2.ActionsProto.FromString,
+    self.SendSpecs = channel.unary_unary(
+        '/communication_objects.MultiEnvironment/SendSpecs',
+        request_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.SerializeToString,
+        response_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.FromString,
         )
-    self.SendNewAgents = channel.unary_unary(
-        '/communication_objects.MultiEnvironment/SendNewAgents',
+    self.GetSpecs = channel.unary_unary(
+        '/communication_objects.MultiEnvironment/GetSpecs',
+        request_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.SerializeToString,
+        response_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.FromString,
+        )
+    self.GetActions = channel.unary_unary(
+        '/communication_objects.MultiEnvironment/GetActions',
+        request_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.SerializeToString,
+        response_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.FromString,
+        )
+    self.SendConfig = channel.unary_unary(
+        '/communication_objects.MultiEnvironment/SendConfig',
         request_serializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.ConfigProto.SerializeToString,
         response_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.FromString,
         )
@@ -32,14 +41,28 @@ class MultiEnvironmentServicer(object):
   # missing associated documentation comment in .proto file
   pass
 
-  def SendObservations(self, request, context):
+  def SendSpecs(self, request, context):
+    """used for the single environments to check-in
+    """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def GetSpecs(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def SendNewAgents(self, request, context):
+  def GetActions(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def SendConfig(self, request, context):
     # missing associated documentation comment in .proto file
     pass
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -49,13 +72,23 @@ class MultiEnvironmentServicer(object):
 
 def add_MultiEnvironmentServicer_to_server(servicer, server):
   rpc_method_handlers = {
-      'SendObservations': grpc.unary_unary_rpc_method_handler(
-          servicer.SendObservations,
-          request_deserializer=shiva_dot_core_dot_communication__objects_dot_env__step__pb2.ObservationsProto.FromString,
-          response_serializer=shiva_dot_core_dot_communication__objects_dot_env__step__pb2.ActionsProto.SerializeToString,
+      'SendSpecs': grpc.unary_unary_rpc_method_handler(
+          servicer.SendSpecs,
+          request_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.FromString,
+          response_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.SerializeToString,
       ),
-      'SendNewAgents': grpc.unary_unary_rpc_method_handler(
-          servicer.SendNewAgents,
+      'GetSpecs': grpc.unary_unary_rpc_method_handler(
+          servicer.GetSpecs,
+          request_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.FromString,
+          response_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.SerializeToString,
+      ),
+      'GetActions': grpc.unary_unary_rpc_method_handler(
+          servicer.GetActions,
+          request_deserializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.FromString,
+          response_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.SimpleMessage.SerializeToString,
+      ),
+      'SendConfig': grpc.unary_unary_rpc_method_handler(
+          servicer.SendConfig,
           request_deserializer=shiva_dot_core_dot_communication__objects_dot_configs__pb2.ConfigProto.FromString,
           response_serializer=shiva_dot_core_dot_communication__objects_dot_helpers__pb2.Empty.SerializeToString,
       ),

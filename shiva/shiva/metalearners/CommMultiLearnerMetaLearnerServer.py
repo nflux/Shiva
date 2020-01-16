@@ -1,57 +1,63 @@
 import time
 from concurrent import futures
 import datetime
-import grpc, os, sys
+import grpc, os, sys, json
+from mpi4py import MPI
 
-from shiva.core.communication_objects.specs_pb2 import MultiEnvSpecsProto
+from shiva.core.communication_objects.specs_pb2 import SpecsProto, MultiEnvSpecsProto
+from shiva.core.communication_objects.configs_pb2 import ConfigProto
 from shiva.core.communication_objects.helpers_pb2 import Empty, SimpleMessage
-from shiva.core.communication_objects.metrics_pb2 import TrainingMetricsProto, EvaluationMetricsProto
-from shiva.core.communication_objects.configs_pb2 import StatusProto, ComponentType
+from shiva.core.communication_objects.enums_pb2 import ComponentType
 
 from shiva.core.communication_objects.service_meta_pb2_grpc import MetaLearnerServicer, add_MetaLearnerServicer_to_server, MetaLearnerStub
-
-from shiva.helpers.grpc_utils import (
-    from_dict_2_StatusProto, from_StatusProto_2_dict,
-    from_dict_2_MultiEnvSpecsProto, from_MultiEnvSpecsProto_2_dict,
-    from_dict_2_TrainingMetricsProto, from_TrainingMetricsProto_2_dict,
-    from_dict_2_EvolutionMetricProto, from_EvolutionMetricProto_2_dict
-)
 
 class CommMultiLearnerMetaLearnerServer(MetaLearnerServicer):
     '''
         gRPC Server
     '''
-    def __init__(self, shared_dict):
-        self.shared_dict = shared_dict
+    def __init__(self, meta_tags):
+        self.meta_tags = meta_tags
+        self.meta = MPI.Comm.Get_parent()
+        self.status = MPI.Status()
+        self.any_src, self.any_tag = MPI.ANY_SOURCE, MPI.ANY_TAG
 
-    def SendStatus(self, status_proto: StatusProto, context) -> Empty:
-        status = from_StatusProto_2_dict(status_proto)
-        if status['type'] == ComponentType.LEARNER:
-            self.shared_dict['learners_spec'][status['id']] = status
-        elif status['type'] == ComponentType.MULTIENV:
-            self.shared_dict['menvs_spec'][status['id']] = status
-        elif status['type'] == ComponentType.EVAL:
-            pass
+        self.configs = None
+        # self.debug("MPI Request for configs")
+        self.configs = self.meta.recv(None, source=0, tag=self.meta_tags.configs)
+        self.debug("Received config with {} keys".format(len(self.configs.keys())))
 
-    def SendMultiEnvSpecs(self, menv_specs_proto: MultiEnvSpecsProto, context) -> Empty:
-        self.shared_dict['menv_specs'] = from_MultiEnvSpecsProto_2_dict(menv_specs_proto)
+        self.menvs_check = []
+        self.learners_data = []
+
+    def GetConfigs(self, request: SimpleMessage, context) -> SimpleMessage:
+        response = SimpleMessage()
+        response.data = json.dumps(self.configs)
+        return response
+
+    def SendSpecs(self, request: SimpleMessage, context):
+        specs = json.loads(request.data)
+        if specs['type'] == ComponentType.MULTIENV:
+            self.menvs_check.append(specs['id'])
+            # self.debug("received gRPC MultiEnvSpecs and sending MPI to Meta")
+            self.meta.send(specs, 0, self.meta_tags.menv_specs)
+        elif specs['type'] == ComponentType.LEARNER:
+            self.learners_data.append(specs)
+            # self.debug("received gRPC LearnerSpecs and sending MPI to Meta")
+            self.meta.send(specs, 0, self.meta_tags.learner_specs)
+        else:
+            self._return_error(SpecsProto, context, "InvalidComponentType")
         return Empty()
 
-    def SendTrainingMetrics(self, train_metrics_proto: TrainingMetricsProto, context) -> Empty:
-        self.shared_dict['train_metrics'] = from_TrainingMetricsProto_2_dict(train_metrics_proto)
-        return Empty()
+    def debug(self, msg):
+        print("PID {} MetaServer\t\t{}".format(os.getpid(), msg))
 
-    def SendEvaluationMetrics(self, eval_metrics_proto: EvaluationMetricsProto, context) -> Empty:
-        self.shared_dict['eval_config'] = from_EvolutionMetricProto_2_dict(eval_metrics_proto)
-        return Empty()
-
-def serve(address, max_workers=5):
+def serve(address, meta_tags, max_workers=5):
     '''
         Start gRPC server
     '''
     options = (('grpc.so_reuseport', 1),)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers,), options=options)
-    add_MetaLearnerServicer_to_server(CommMultiLearnerMetaLearnerServer({}), server)
+    add_MetaLearnerServicer_to_server(CommMultiLearnerMetaLearnerServer(meta_tags), server)
     server.add_insecure_port(address)
     server.start()
     _wait_forever(server)
@@ -70,18 +76,26 @@ def get_meta_stub(address: str):
             gRPC Client
         '''
         def __init__(self, address):
-            super(gRPC_MetaLearnerStub, self).__init__(address)
+            self.channel = grpc.insecure_channel(address)
+            super(gRPC_MetaLearnerStub, self).__init__(self.channel)
+
+        def get_configs(self) -> dict:
+            msg = SimpleMessage()
+            simple_message = self.GetConfigs(msg, wait_for_ready=True)
+            return json.loads(simple_message.data)
 
         def send_menv_specs(self, menv_specs: dict) -> None:
-            response = self.SendMultiEnvSpecs(from_dict_2_MultiEnvSpecsProto(menv_specs))
+            menv_specs['type'] = ComponentType.MULTIENV
+            simple_message = SimpleMessage()
+            simple_message.data = json.dumps(menv_specs)
+            response = self.SendSpecs(simple_message)
             return None
 
-        def send_train_metrics(self, train_metrics: dict):
-            response = self.SendTrainingMetrics(from_dict_2_TrainingMetricsProto(train_metrics))
-            return None
-
-        def send_eval_metrics(self, eval_metrics: dict) -> None:
-            response = self.SendEvaluationMetrics(from_dict_2_EvolutionMetricProto(eval_metrics))
+        def send_learner_specs(self, learner_specs: dict) -> None:
+            learner_specs['type'] = ComponentType.LEARNER
+            simple_message = SimpleMessage()
+            simple_message.data = json.dumps(learner_specs)
+            response = self.SendSpecs(simple_message)
             return None
 
     return gRPC_MetaLearnerStub(address)
