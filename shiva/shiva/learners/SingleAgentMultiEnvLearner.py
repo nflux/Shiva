@@ -155,7 +155,7 @@ class SingleAgentMultiEnvLearner(Learner):
         return environment(self.configs['Environment'],self.queue,self.agent,self.ep_count,self.agent_dir,self.episodes, self.saveLoadFlag, self.waitForLearner, self.step_count)
 
     def create_algorithm(self):
-        if self.configs['Environment']['sub_type'] == 'RoboCupEnvironment':
+        if self.configs['Environment']['sub_type'] == 'RoboCupSingleAgentEnvironment':
             algorithm = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
             return algorithm(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
         else:

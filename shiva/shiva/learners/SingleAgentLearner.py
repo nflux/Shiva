@@ -79,7 +79,7 @@ class SingleAgentLearner(Learner):
 
     def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        if self.env.env_name == 'RoboCupEnvironment':
+        if self.env.env_name == 'RoboCupSingleAgentEnvironment':
             return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
         else:
             return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim)
@@ -92,7 +92,7 @@ class SingleAgentLearner(Learner):
                 Only for RoboCup!
                 Maybe for Unity at some point?????
             '''
-            from shiva.envs.RoboCupEnvironment import HumanPlayerInterface
+            from shiva.envs.RoboCupSingleAgentEnvironment import HumanPlayerInterface
             self.HPI = HumanPlayerInterface()
         self.alg = self.create_algorithm()
         if self.load_agents:
