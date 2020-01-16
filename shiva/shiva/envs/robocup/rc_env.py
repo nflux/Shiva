@@ -113,6 +113,8 @@ class rc_env:
             # self.ACTION_MATRIX = self.DASH_TABLE + self.TURN_TABLE + self.KICK_TABLE
             # self.kick_actions = self.KICK_TABLE
 
+            print(self.dash_idx, self.turn_idx)
+
             # self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
             self.acs_dim =  dis_ctr
             self.acs_param_dim = 0
