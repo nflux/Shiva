@@ -6,27 +6,26 @@ from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from torch.distributions import Categorical
 
 
-class RoboCupTwoSidedEnvironment(Environment):
-    def __init__(self, config, port):
-        super(RoboCupTwoSidedEnvironment, self).__init__(config)
+class RoboCupEnvironment(Environment):
+    def __init__(self, config, port=None):
+        super(RoboCupEnvironment, self).__init__(config)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-        self.port = port            
-        self.env = rc_env(config, port)
+        if port != None:
+            self.env = rc_env(config, port)
+            self.port = port
+        else:
+            self.env = rc_env(config, self.port)
         self.env.launch()
 
         self.left_actions = self.env.left_actions
         self.left_action_option = self.env.left_action_option
-        self.right_actions = self.env.right_actions
-        self.right_action_option = self.env.right_action_option
 
-        self.left_obs = self.env.left_obs
-        self.left_rews = self.env.left_rewards
-        self.right_obs = self.env.right_obs
-        self.right_rews = self.env.right_rewards
+        self.obs = self.env.left_obs
+        self.rews = self.env.left_rewards
         # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
-        self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
+        self.action_space = {'discrete': self.env.acs_dim,'acs_space': self.env.acs_dim, 'param': 0}
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
@@ -52,7 +51,7 @@ class RoboCupTwoSidedEnvironment(Environment):
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, left_actions = [], right_actions = [], discrete_select='sample', collect=True, device='cpu'):
+    def step(self, actions, discrete_select='sample', collect=True, device='cpu'):
         '''
             Input
                 @actions
@@ -73,8 +72,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         '''
 
         if discrete_select == 'argmax':
-            left_act_choice = [torch.argmax(a[:self.action_space['acs_space']]) for a in left_actions]
-            right_act_choice = [torch.argmax(a[:self.action_space['acs_space']]) for a in right_actions]
+            act_choice = torch.argmax(actions[:self.action_space['acs_space']])
         elif discrete_select == 'sample':
             act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
         elif discrete_select == 'imit_discrete':
@@ -85,48 +83,32 @@ class RoboCupTwoSidedEnvironment(Environment):
         # self.left_actions = act_choice.unsqueeze(dim=-1)
 
         if self.action_level == 'discretized':
-            self.left_action_option = left_act_choice
-            self.right_action_option = right_act_choice
+            self.left_action_option[0] = act_choice
             # indicates whether its a dash, turn, or kick action from the action matrix
-            for a in range(self.num_left):
-                if 0 <= self.left_action_option[a] < self.env.dash_idx:
-                    self.left_actions[a] = 0
-                    self.dashes += 1
-                elif self.env.dash_idx <= self.left_action_option[a] < self.env.turn_idx:
-                    self.left_actions[a] = 1
-                    self.turns += 1
-                else:
-                    self.left_actions[a] = 2
-                    self.kicks += 1
-            
-            for a in range(self.num_right):
-                if 0 <= self.right_action_option[a] < self.env.dash_idx:
-                    self.right_actions[a] = 0
-                    self.dashes += 1
-                elif self.env.dash_idx <= self.right_action_option[a] < self.env.turn_idx:
-                    self.right_actions[a] = 1
-                    self.turns += 1
-                else:
-                    self.right_actions[a] = 2
-                    self.kicks += 1
+            if 0 <= self.left_action_option[0] < self.env.dash_idx:
+                self.left_actions[0] = 0
+                self.dashes += 1
+            elif self.env.dash_idx <= self.left_action_option[0] < self.env.turn_idx:
+                self.left_actions[0] = 1
+                self.turns += 1
+            else:
+                self.left_actions[0] = 2
+                self.kicks += 1
 
-            self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
-                                                                    left_options=self.left_action_option, right_options=self.right_action_option)
-            actions_v = [action2one_hot_v(self.action_space['acs_space'], act) for act in left_act_choice]
+            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
+            actions_v = action2one_hot_v(self.action_space['acs_space'], act_choice)
         else:
-            self.left_actions = left_act_choice
-            self.left_action_option = [a[self.action_space['acs_space']:] for a in left_actions]
-            self.right_actions = right_act_choice
-            self.right_action_option = [a[self.action_space['acs_space']:] for a in right_actions]
+            self.left_actions = act_choice.unsqueeze(dim=0)
+            self.left_action_option = actions[self.action_space['acs_space']:].unsqueeze(dim=0)
+            # self.left_params = torch.tensor([params]).float()
 
-            self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
-                                                                                                         left_options=self.left_action_option, right_options=self.right_action_option)
-            actions_v = [torch.cat([action2one_hot_v(self.action_space['acs_space'], act.item()).to(device), op]) for act, op in zip(left_act_choice, self.left_action_option)]
+            self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
+            actions_v = torch.cat([action2one_hot_v(self.action_space['acs_space'], act_choice.item()).to(device), self.left_action_option[0]])
 
         if collect:
             self.collect_metrics()
         
-        return self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, {'raw_reward': self.left_rews, 'action': actions_v}
+        return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
         return self.obs
@@ -141,7 +123,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         return self.env.getImitObsMsg()
 
     def get_actions(self):
-        return self.left_actions, self.left_action_option, self.right_actions, self.right_action_option
+        return self.left_actions, self.left_action_option
 
     def get_reward(self):
         return self.rews
