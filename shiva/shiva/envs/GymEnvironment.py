@@ -6,11 +6,11 @@ from shiva.helpers.misc import action2one_hot
 import torch
 
 class GymEnvironment(Environment):
-    def __init__(self, configs):
+    def __init__(self, configs, *args, **kwargs):
         super(GymEnvironment,self).__init__(configs)
         # self.env = gym.make(self.env_name).env
         self.env = gym.make(self.env_name)
-        np.random.seed(self.seed)
+        np.random.seed(self.configs['Algorithm']['manual_seed'])
         self.obs = self.env.reset()
         self.done = False
         self.action_space_continuous = None

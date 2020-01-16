@@ -37,9 +37,9 @@ class MultiEnvironmentServer(MultiEnvironmentServicer):
             And having Agent locally..
         '''
         # check if we have a new agent to load..
-        actions = self.agents[0].get_action(observations, self.step_count)
+        actions = self.agents[0].get_action(observations, self.step_count).numpy()
         response = SimpleMessage()
-        response.data = json.dumps(actions)
+        response.data = json.dumps(list(actions))
         self.step_count += 1
         return response
 
