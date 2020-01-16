@@ -6,9 +6,9 @@ from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from torch.distributions import Categorical
 
 
-class RoboCupEnvironment(Environment):
+class RoboCupTwoSidedEnvironment(Environment):
     def __init__(self, config, port):
-        super(RoboCupEnvironment, self).__init__(config)
+        super(RoboCupTwoSidedEnvironment, self).__init__(config)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
         self.port = port

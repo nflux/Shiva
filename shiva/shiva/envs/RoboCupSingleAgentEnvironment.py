@@ -6,16 +6,18 @@ from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from torch.distributions import Categorical
 
 
-class RoboCupEnvironment(Environment):
+class RoboCupSingleAgentEnvironment(Environment):
+    '''
+    Description:
+    This is the single agent variant to match environments that only
+    take a single agent.
+    '''
     def __init__(self, config, port=None):
-        super(RoboCupEnvironment, self).__init__(config)
+        self.port = port
+        super(RoboCupSingleAgentEnvironment, self).__init__(config)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-        if port != None:
-            self.env = rc_env(config, port)
-            self.port = port
-        else:
-            self.env = rc_env(config, self.port)
+        self.env = rc_env(config, self.port)
         self.env.launch()
 
         self.left_actions = self.env.left_actions
@@ -40,6 +42,10 @@ class RoboCupEnvironment(Environment):
         self.goal_ctr = 0
     
     def isImit(self):
+        '''
+        Description:
+        Check if Environment is running imitation on RoboCup bot(s)
+        '''
         return self.run_imit
     
     def isDescritized(self):
@@ -53,22 +59,25 @@ class RoboCupEnvironment(Environment):
 
     def step(self, actions, discrete_select='sample', collect=True, device='cpu'):
         '''
-            Input
-                @actions
-                @discrete_select        Specify how to choose the discrete action taken
-                                            argmax      do an argmax on the discrete side
-                                            sample      take the discrete side as a probability distribution to sample from
-
-            Return
-                A set with the following datas in order
-                    next_observation
-                    reward
-                    done
-                    more_data           list of [
-                                            raw_reward,         useful when rewards are normalized
-                                            action_taken        useful if discrete_select == 'sample'
-                                        ]
-
+        Description:
+        If Discretized:
+            Chooses one of the actions for the act method
+            And then chooses a discrete option which returns a tuple
+        If Parameterized:
+            Chooses one of the actions for the act method
+            And then chooses a list of parameterized values 
+            
+        Inputs:
+        @actions list of left actions
+        @discrete_select Specify how to choose the discrete action taken
+        @collect Collect metrics from the environment
+        @device Device available
+        
+        Returns:
+        Observation
+        Reward
+        done
+        Dictionary of reward and tensorized action
         '''
 
         if discrete_select == 'argmax':

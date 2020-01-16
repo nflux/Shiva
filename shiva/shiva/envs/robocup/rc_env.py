@@ -252,7 +252,6 @@ class rc_env:
             time.sleep(1.5)
 
         print("All players connected to server")
-        print('This is getting set to True')
         self.start = True
 
     def Observation(self,agent_id,side):
@@ -272,6 +271,14 @@ class rc_env:
             return self.right_obs[agent_id]
 
     def getImitObsMsg(self):
+        '''
+        Description:
+        Obtains observation from the learning agent to send over to the
+        imitated bot to overide the bot's observations.
+
+        Returns
+        Observation message
+        '''
         obsMsg = ""
         obsMsg += str(self.left_envs[0].getBallX()) + " "
         obsMsg += str(self.left_envs[0].getBallY()) + " "
@@ -348,12 +355,8 @@ class rc_env:
         # for i in range(self.num_right):
         #     self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
 
-        print('left', left_actions)
-        print('right', right_actions)
         [self.Queue_action(i,self.left_base,left_actions[i],left_options) for i in range(len(left_actions))]
         [self.Queue_action(j,self.right_base,right_actions[j],right_options) for j in range(len(right_actions))]
-
-        print('Stuck here')
 
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
@@ -500,7 +503,6 @@ class rc_env:
             actions = self.left_actions
             rews = self.left_rewards
         else:
-            print('Getting in here')
             obs_prev = self.right_obs_previous
             obs = self.right_obs
             actions = self.right_actions
@@ -508,9 +510,7 @@ class rc_env:
 
         ep_num = 0
         while(True):
-            print('Entering the while', self.start)
             while(self.start):
-                print('Entering the start')
                 ep_num += 1
                 j = 0 # j to maximum episode length
 
@@ -533,15 +533,6 @@ class rc_env:
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID,a,base))
                     elif act_lvl == 'discretized':
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID,base))
-                        # t = self.left_action_option[agent_ID][0]
-                        # # print("t right before .act():",t)
-                        
-                        # if 0 <= t <= 188:
-                        #     envs[agent_ID].act(0, *self.get_valid_scaled_param(agent_ID, a, base))
-                        # elif 189 <= t <= 197:
-                        #     envs[agent_ID].act(1, *self.get_valid_scaled_param(agent_ID, a, base))
-                        # else:
-                        #     envs[agent_ID].act(3, *self.get_valid_scaled_param(agent_ID, a, base))
 
                     self.sync_at_status.wait()
                     
