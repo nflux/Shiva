@@ -26,9 +26,6 @@ class DDPGAlgorithm(Algorithm):
         '''
             @buffer         buffer is a reference
         '''
-
-        print(agent)
-
         if episodic:
             '''
                 DDPG updates at every step. This avoids doing an extra update at the end of an episode
