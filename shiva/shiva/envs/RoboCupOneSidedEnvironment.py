@@ -6,16 +6,13 @@ from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from torch.distributions import Categorical
 
 
-class RoboCupEnvironment(Environment):
-    def __init__(self, config, port=None):
-        super(RoboCupEnvironment, self).__init__(config)
+class RoboCupOneSidedEnvironment(Environment):
+    def __init__(self, config, port):
+        super(RoboCupOneSidedEnvironment, self).__init__(config)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-        if port != None:
-            self.env = rc_env(config, port)
-            self.port = port
-        else:
-            self.env = rc_env(config, self.port)
+        self.port = port            
+        self.env = rc_env(config, port)
         self.env.launch()
 
         self.left_actions = self.env.left_actions
@@ -25,7 +22,7 @@ class RoboCupEnvironment(Environment):
         self.rews = self.env.left_rewards
         # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
-        self.action_space = {'discrete': self.env.acs_dim,'acs_space': self.env.acs_dim, 'param': 0}
+        self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
@@ -72,7 +69,7 @@ class RoboCupEnvironment(Environment):
         '''
 
         if discrete_select == 'argmax':
-            act_choice = torch.argmax(actions[:self.action_space['acs_space']])
+            act_choice = [torch.argmax(a[:self.action_space['acs_space']]) for a in actions]
         elif discrete_select == 'sample':
             act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
         elif discrete_select == 'imit_discrete':
@@ -83,27 +80,27 @@ class RoboCupEnvironment(Environment):
         # self.left_actions = act_choice.unsqueeze(dim=-1)
 
         if self.action_level == 'discretized':
-            self.left_action_option[0] = act_choice
+            self.left_action_option = act_choice
             # indicates whether its a dash, turn, or kick action from the action matrix
-            if 0 <= self.left_action_option[0] < self.env.dash_idx:
-                self.left_actions[0] = 0
-                self.dashes += 1
-            elif self.env.dash_idx <= self.left_action_option[0] < self.env.turn_idx:
-                self.left_actions[0] = 1
-                self.turns += 1
-            else:
-                self.left_actions[0] = 2
-                self.kicks += 1
+            for a in range(self.num_left):
+                if 0 <= self.left_action_option[a] < self.env.dash_idx:
+                    self.left_actions[a] = 0
+                    self.dashes += 1
+                elif self.env.dash_idx <= self.left_action_option[a] < self.env.turn_idx:
+                    self.left_actions[a] = 1
+                    self.turns += 1
+                else:
+                    self.left_actions[a] = 2
+                    self.kicks += 1
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
-            actions_v = action2one_hot_v(self.action_space['acs_space'], act_choice)
+            actions_v = [action2one_hot_v(self.action_space['acs_space'], act) for act in act_choice]
         else:
-            self.left_actions = act_choice.unsqueeze(dim=0)
-            self.left_action_option = actions[self.action_space['acs_space']:].unsqueeze(dim=0)
-            # self.left_params = torch.tensor([params]).float()
+            self.left_actions = act_choice
+            self.left_action_option = [a[self.action_space['acs_space']:] for a in actions]
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
-            actions_v = torch.cat([action2one_hot_v(self.action_space['acs_space'], act_choice.item()).to(device), self.left_action_option[0]])
+            actions_v = [torch.cat([action2one_hot_v(self.action_space['acs_space'], act.item()).to(device), op]) for act, op in zip(act_choice, self.left_action_option)]
 
         if collect:
             self.collect_metrics()

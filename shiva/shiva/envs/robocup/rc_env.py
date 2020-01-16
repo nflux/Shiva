@@ -146,6 +146,7 @@ class rc_env:
         self.d = 0
         # flag to wait for all the agents to load
         self.start = False
+        self.close = False
 
         # Various Barriers to keep all agents actions in sync
         self.sync_after_queue = threading.Barrier(self.num_left+self.num_right+1)
@@ -240,7 +241,7 @@ class rc_env:
             time.sleep(1.5)
         
         for i in range(self.num_right):
-            print("Connecting player %i" % i , "on rightonent %s to the server" % self.right_base)
+            print("Connecting player %i" % i , "on right %s to the server" % self.right_base)
             if i == 0:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.right_base,
                                                 self.goalie,i,self.ep_length,self.action_level,self.right_envs,))
@@ -251,6 +252,7 @@ class rc_env:
             time.sleep(1.5)
 
         print("All players connected to server")
+        print('This is getting set to True')
         self.start = True
 
     def Observation(self,agent_id,side):
@@ -346,8 +348,12 @@ class rc_env:
         # for i in range(self.num_right):
         #     self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
 
+        print('left', left_actions)
+        print('right', right_actions)
         [self.Queue_action(i,self.left_base,left_actions[i],left_options) for i in range(len(left_actions))]
         [self.Queue_action(j,self.right_base,right_actions[j],right_options) for j in range(len(right_actions))]
+
+        print('Stuck here')
 
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
@@ -362,19 +368,38 @@ class rc_env:
         '''
 
         if self.left_base == base:
-            self.left_actions[agent_id] = action
-            if self.action_level == 'low':
-                for p in range(options.shape[1]):
-                    self.left_action_option[agent_id][p] = options[agent_id][p]
-            # i was thinking that maybe I could choose the action here        
-            elif self.action_level == 'discretized':
-                for op in options:
-                    self.left_action_option[agent_id] = op
+            acts = self.left_actions
+            ops = self.left_action_option
         else:
-            self.right_actions[agent_id] = action
-            if self.action_level == 'low':
-                for p in range(options.shape[1]):
-                    self.right_action_option[agent_id][p] = options[agent_id][p]
+            acts = self.right_actions
+            ops = self.right_action_option
+
+        acts[agent_id] = action
+        if self.action_level == 'low':
+            for p in range(len(options)):
+                ops[agent_id][p] = options[agent_id][p]
+        # i was thinking that maybe I could choose the action here        
+        elif self.action_level == 'discretized':
+            for op in options:
+                ops[agent_id] = op
+
+        # if self.left_base == base:
+        #     self.left_actions[agent_id] = action
+        #     if self.action_level == 'low':
+        #         for p in range(len(options)):
+        #             self.left_action_option[agent_id][p] = options[agent_id][p]
+        #     # i was thinking that maybe I could choose the action here        
+        #     elif self.action_level == 'discretized':
+        #         for op in options:
+        #             self.left_action_option[agent_id] = op
+        # else:
+        #     self.right_actions[agent_id] = action
+        #     if self.action_level == 'low':
+        #         for p in range(len(options)):
+        #             self.right_action_option[agent_id][p] = options[agent_id][p]
+        #     elif self.action_level == 'discretized':
+        #         for op in options:
+        #             self.right_action_option[agent_id] = op
     
     def descritize_action(self, action):
         '''
@@ -401,22 +426,7 @@ class rc_env:
         else:
             discrete_action = self.right_action_option[agentID]
 
-        # if 0 <= int(action_params[agentID][0]) <= 188:
-        #     return self.ACTION_MATRIX[int(action_params[agentID][0])]
-        # elif 189 <= int(action_params[agentID][0]) <= 197:
-        #     return (self.ACTION_MATRIX[int(action_params[agentID][0])],)
-        # else:
-        #     return self.ACTION_MATRIX[int(action_params[agentID][0])]
-        # print('action', self.ACTION_DICT[discrete_action])
-        # print('discrete action', discrete_action)
         return self.ACTION_DICT[discrete_action.item()]
-        # if 189 <= discrete_action <= 197:
-        #     # Turn
-        #     return (self.ACTION_MATRIX[discrete_action],)
-        # else:
-        #     # Dash and Kick
-        #     return self.ACTION_MATRIX[discrete_action]
-
 
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,ac_index,base):
@@ -490,6 +500,7 @@ class rc_env:
             actions = self.left_actions
             rews = self.left_rewards
         else:
+            print('Getting in here')
             obs_prev = self.right_obs_previous
             obs = self.right_obs
             actions = self.right_actions
@@ -497,7 +508,9 @@ class rc_env:
 
         ep_num = 0
         while(True):
+            print('Entering the while', self.start)
             while(self.start):
+                print('Entering the start')
                 ep_num += 1
                 j = 0 # j to maximum episode length
 
@@ -557,7 +570,7 @@ class rc_env:
                     # Break if episode done
                     if self.d == True:
                         break
-            if not self.start:
+            if self.close:
                 break
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -601,7 +614,7 @@ class rc_env:
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-            time.sleep(10) # Wait for server to startup before connecting a player
+            time.sleep(3) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         '''
