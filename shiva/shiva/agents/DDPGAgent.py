@@ -122,34 +122,41 @@ class DDPGAgent(Agent):
         #     'critic_optimizer' : self.critic_optimizer.state_dict()
         # }, save_path + 'model.pth')
 
+        # torch.save(self.actor.state_dict(), save_path + 'actor.pth')
+        # torch.save(self.target_actor.state_dict(), save_path + 'target_actor.pth')
+        # torch.save(self.critic.state_dict(), save_path + 'critic.pth')
+        # torch.save(self.target_critic.state_dict(), save_path + 'target_critic.pth')
+        # torch.save(self.actor_optimizer.state_dict(), save_path + 'actor_optimizer.pth')
+        # torch.save(self.critic_optimizer.state_dict(), save_path + 'critic_optimizer.pth')
 
-        torch.save(self.actor.state_dict(), save_path + 'actor.pth')
-        torch.save(self.target_actor.state_dict(), save_path + 'target_actor.pth')
-        torch.save(self.critic.state_dict(), save_path + 'critic.pth')
-        torch.save(self.target_critic.state_dict(), save_path + 'target_critic.pth')
-        torch.save(self.actor_optimizer.state_dict(), save_path + 'actor_optimizer.pth')
-        torch.save(self.critic_optimizer.state_dict(), save_path + 'critic_optimizer.pth')
+        # Ezequiel was here :)
+        torch.save(self.actor, save_path + '/actor.pth')
+        torch.save(self.target_actor, save_path + '/target_actor.pth')
+        torch.save(self.critic, save_path + '/critic.pth')
+        torch.save(self.target_critic, save_path + '/target_critic.pth')
+        torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
+        torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
 
 
-    def load(self,save_path):
-        # model = torch.load(save_path + 'model.pth')
-        # # self.actor = model['actor']
-        # # self.critic = model['critic']
-        # # self.target_actor = model['target_actor']
-        # # self.target_critic = model['target_critic']
-        # self.target_critic.load_state_dict(model['target_critic_state'])
-        # self.target_actor.load_state_dict(model['target_actor_state'])
-        # self.critic.load_state_dict(model['critic_state'])
-        # self.actor.load_state_dict( model['actor_state'])
-        # self.actor_optimizer.load_state_dict(model['actor_optimizer'])
-        # self.critic_optimizer.load_state_dict(model['critic_optimizer'])   
-
-        self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
-        self.target_actor.load_state_dict(torch.load(save_path + 'target_actor.pth'))
-        self.critic.load_state_dict(torch.load(save_path + 'critic.pth'))
-        self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
-        self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
-        self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
+    # def load(self,save_path):
+    #     # model = torch.load(save_path + 'model.pth')
+    #     # # self.actor = model['actor']
+    #     # # self.critic = model['critic']
+    #     # # self.target_actor = model['target_actor']
+    #     # # self.target_critic = model['target_critic']
+    #     # self.target_critic.load_state_dict(model['target_critic_state'])
+    #     # self.target_actor.load_state_dict(model['target_actor_state'])
+    #     # self.critic.load_state_dict(model['critic_state'])
+    #     # self.actor.load_state_dict( model['actor_state'])
+    #     # self.actor_optimizer.load_state_dict(model['actor_optimizer'])
+    #     # self.critic_optimizer.load_state_dict(model['critic_optimizer'])
+    #
+    #     self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
+    #     self.target_actor.load_state_dict(torch.load(save_path + 'target_actor.pth'))
+    #     self.critic.load_state_dict(torch.load(save_path + 'critic.pth'))
+    #     self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
+    #     self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
+    #     self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
         
     def __str__(self):
         return 'DDPGAgent'
