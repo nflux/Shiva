@@ -100,16 +100,21 @@ class ShivaAdmin():
         self._meta_learner_dir = new_dir
         print("New MetaLearner @ {}".format(self._meta_learner_dir))
 
-    def add_learner_profile(self, learner) -> None:
+    def add_learner_profile(self, learner, function_only=False) -> None:
         '''
             Needed to keep track of the Learner and it's directory.
             Creates a folder for it if save flag is True.
 
             Input
                 @learner            Learner instance to be saved
+                @function_only      When we only want to use this functionality without profiling, used for distributed processes but running locally
         '''
         if not self.need_to_save: return
         if learner.id not in self._learner_dir:
+            if function_only:
+                # need to create a new fake "meta profile" to create root session folder structures for this learner
+                folder_name = self.__folder_name__['metalearner'].format(algorithm=learner.configs['Algorithm']['type'], env=learner.configs['Environment']['env_name'])
+                self.add_meta_profile(None, folder_name)
             self._learner_dir[learner.id] = {}
             new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
             self._learner_dir[learner.id]['base'] = new_dir
@@ -119,7 +124,7 @@ class ShivaAdmin():
             self._agent_dir[learner.id] = {}
             self.writer[learner.id] = {} # this will be a dictionary whos key is an agent.id that maps to a unique tensorboard file for that agent
 
-    def checkpoint(self, learner):
+    def checkpoint(self, learner, checkpoint_num=None, function_only=False):
         '''
             This procedure:
                 1. Adds Learner profile if not existing
@@ -128,14 +133,25 @@ class ShivaAdmin():
 
             Input
                 @learner            Learner instance
+                @checkpoint_num     Optional checkpoint number given, used for distributed processes scenario and running locally
+                @function_only      When we only want to use this functionality, used for distributed processes and running locally
         '''
         if not self.need_to_save: return
-        self.add_learner_profile(learner) # will only add if was not profiled before
+        self.add_learner_profile(learner, function_only) # will only add if was not profiled before
+        if checkpoint_num is None:
+            checkpoint_num = learner.env.done_count
         # create checkpoint folder
-        new_checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(learner.env.done_count)) ))
+        new_checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ))
         self._learner_dir[learner.id]['checkpoint'].append(new_checkpoint_dir)
-        self._save_learner(learner)
-        self._save_learner_agents(learner)
+        # self._save_learner(learner, checkpoint_num)
+        self._save_learner_agents(learner, checkpoint_num)
+
+    def get_last_checkpoint(self, learner):
+        if len(self._learner_dir[learner.id]['checkpoint']) == 0:
+            # no checkpoint available
+            return False
+        else:
+            return self._learner_dir[learner.id]['checkpoint'][-1]
 
     def _add_agent_checkpoint(self, learner, agent):
         '''
@@ -272,7 +288,7 @@ class ShivaAdmin():
                 filename = os.path.split(cf['_filename_'])[-1]
                 ch.save_dict_2_config_file(cf, os.path.join(learner_data_dir, filename))
 
-    def _save_learner_agents(self, learner):
+    def _save_learner_agents(self, learner, checkpoint_num=None):
         '''
             This procedure is it's own function because is used in other parts of the code
             If attribute learner.agents is a valid attribute, saves them (if iterable) or assumes is 1 agent
@@ -280,24 +296,26 @@ class ShivaAdmin():
 
             Input
                 @learner            Learner instance who contains the agents
+                @checkpoint_num     Checkpoint numbered used, if not given, will try to grab learner.env.get_current_step()
         '''
         try:
             if type(learner.agents) == list:
                 for agent in learner.agents:
-                    self._save_agent(learner, agent)
+                    self._save_agent(learner, agent, checkpoint_num)
             else:
-                self._save_agent(learner, learner.agents)
+                self._save_agent(learner, learner.agents, checkpoint_num)
         except AttributeError: # when learner has only 1 agent
             try:
                 if type(learner.agent) == list:
                     for agent in learner.agent:
-                        self._save_agent(learner, agent)
+                        self._save_agent(learner, agent, checkpoint_num)
                 else:
-                    self._save_agent(learner, learner.agent)
+                    self._save_agent(learner, learner.agent, checkpoint_num)
             except AttributeError:
+                print(learner)
                 assert False, "Couldn't find the Learners agent/s..."
 
-    def _save_agent(self, learner, agent):
+    def _save_agent(self, learner, agent, checkpoint_num=None):
         '''
             Mechanics of saving an individual Agent
                 1-  Pickles the agent object and save attributes
@@ -310,7 +328,9 @@ class ShivaAdmin():
         if not self.need_to_save: return
         agent_path = self.get_new_agent_dir(learner, agent)
         fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
-        agent.save(agent_path, learner.env.get_current_step())
+        if checkpoint_num is None:
+            checkpoint_num = learner.env.get_current_step()
+        agent.save(agent_path, checkpoint_num)
 
     '''
         LOAD METHODS
@@ -378,7 +398,7 @@ class ShivaAdmin():
         agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
         agents_policies = dh.find_pattern_in_path(path, '.pth')
         assert len(agents_pickles) > 0, "No agents found in {}".format(path)
-        print("Loading Agents..")
+        # print("Loading Agents..")
         for agent_pickle in agents_pickles:
             _new_agent = fh.load_pickle_obj(agent_pickle)
             this_agent_folder = agent_pickle.replace('agent_cls.pickle', '')
@@ -389,7 +409,7 @@ class ShivaAdmin():
                     this_agent_policies.append(pols)
                     policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
                     _new_agent.load_net(policy_name, pols)
-            print("\t{} with {} networks".format(agent_pickle, len(this_agent_policies)))
+            print("Loading Agent {} with {} networks".format(agent_pickle.replace(os.getcwd(), ''), len(this_agent_policies)))
             agents.append(_new_agent)
         return agents
 

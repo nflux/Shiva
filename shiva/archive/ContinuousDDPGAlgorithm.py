@@ -171,7 +171,7 @@ class ContinuousDDPGAlgorithm(Algorithm):
             # print("Algorithm Observation:", observation)
             observation = torch.tensor(observation).to(self.device)
             action = agent.actor(observation.float()).cpu().data.numpy()
-            # maybe should change the print to a log
+            # maybe should change the print to a logs
             if step_count % 100 == 0:
                 # print(action)
                 pass

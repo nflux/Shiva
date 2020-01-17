@@ -8,8 +8,8 @@ from shiva.learners.Learner import Learner
 from shiva.helpers.config_handler import load_class
 
 class SingleAgentLearner(Learner):
-    def __init__(self, learner_id, config):
-        super(SingleAgentLearner ,self).__init__(learner_id, config)
+    def __init__(self, learner_id, config, port=None):
+        super(SingleAgentLearner ,self).__init__(learner_id, config, port)
 
     def run(self):
         if self.evaluate:
@@ -43,6 +43,11 @@ class SingleAgentLearner(Learner):
                 exp = [obs, act, rew, next_obs, int(don)]
                 # print(act, rew, don)
                 self.buffer.append(exp)
+        elif self.env.env_name == 'RoboCup':
+            action = self.agent.get_action(observation, self.env.step_count)
+            next_observation, reward, done, more_data = self.env.step(action, device=self.device)
+            self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
+                                                torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).bool()))))
         else:
             action = self.agent.get_action(observation, self.env.step_count, self.evaluate)
             next_observation, reward, done, more_data = self.env.step(action)
@@ -52,6 +57,7 @@ class SingleAgentLearner(Learner):
             exp = copy.deepcopy(t)
             self.buffer.append(exp)
         """"""
+
 
     def is_multi_process_cutoff(self):
         ''' FOR MULTIPROCESS PBT PURPOSES '''
@@ -64,14 +70,18 @@ class SingleAgentLearner(Learner):
             pass
         self.step_count_per_run += 1
         return False
+    
+    def create_environment(self):
+        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        return env_class(self.configs, self.port)
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), self.evaluate ,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
-    def create_buffer(self):
+    def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
 
     def launch(self):
         self.env = self.create_environment()
@@ -85,9 +95,10 @@ class SingleAgentLearner(Learner):
         self.alg = self.create_algorithm()
         if self.load_agents:
             self.agent = Admin._load_agent(self.load_agents)
-            self.buffer = Admin._load_buffer(self.load_agents)
+            if self.using_buffer:
+                self.buffer = Admin._load_buffer(self.load_agents)
         else:
             self.agent = self.alg.create_agent(self.get_new_agent_id())
             if self.using_buffer:
-                self.buffer = self.create_buffer()
+                self.buffer = self.create_buffer(self.env.observation_space, self.env.action_space['acs_space'] + self.env.action_space['param'])
         print('Launch Successful.')

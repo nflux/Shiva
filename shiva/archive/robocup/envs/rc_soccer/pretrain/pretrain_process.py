@@ -101,7 +101,7 @@ class pretrain:
                     right_files = [os.getcwd() + '/' +  self.pt_log_dir + '/pt_logs_%i/' % ((i+1)*1000) + f for f in team_files if '_right_' in f]
                     status_file = os.getcwd() + '/' +  self.pt_log_dir + '/pt_logs_%i/' % ((i+1)*1000) + 'log_status.csv'
                 else:
-                    print('log directory DNE')
+                    print('logs directory DNE')
                     exit(0)
                 self.all_l.append(left_files)
                 self.all_r.append(right_files)

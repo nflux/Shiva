@@ -157,7 +157,7 @@ class DiscreteDDPGAlgorithm(Algorithm):
             action = action2one_hot(self.acs_space, np.argmax(action), True)
 
             # useful for debugging
-            # maybe should change the print to a log
+            # maybe should change the print to a logs
             if step_count % 100 == 0:
                 # print(action)
                 pass

@@ -66,7 +66,7 @@ def main():
                       help="Probability of a random action if has the ball, to adjust difficulty")
   parser.add_argument('--record', action='store_true',
                       help="If doing HFO --record")
-  parser.add_argument('--rdir', type=str, default='log/',
+  parser.add_argument('--rdir', type=str, default='logs/',
                       help="Set directory to use if doing --record")
   args=parser.parse_args()
   if args.seed:

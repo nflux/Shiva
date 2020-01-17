@@ -4,7 +4,9 @@ import numpy as np
 import shiva.helpers.misc as misc
 
 class Agent(object):
+    
     def __init__(self, id, obs_space, acs_space, agent_config, network_config):
+        super(Agent, self).__init__()
         '''
         Base Attributes of Agent
             agent_id = given by the learner
@@ -25,17 +27,17 @@ class Agent(object):
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)
 
-    def save(self, save_path, step):
-        '''
-            Do something like
-                torch.save(self.policy, save_path + '/policy.pth')
-                torch.save(self.critic, save_path + '/critic.pth')
-            Or as many policies the Agent has
+    # def save(self, save_path, step):
+    #     '''
+    #         Do something like
+    #             torch.save(self.policy, save_path + '/policy.pth')
+    #             torch.save(self.critic, save_path + '/critic.pth')
+    #         Or as many policies the Agent has
 
-            Important:
-                Maintain the .pth file name to have the same name as the Agent attribute
-        '''
-        assert False, "Method Not Implemented"
+    #         Important:
+    #             Maintain the .pth file name to have the same name as the Agent attribute
+    #     '''
+    #     assert False, "Method Not Implemented"
 
     def load_net(self, policy_name, policy_file):
         '''
@@ -92,3 +94,9 @@ class Agent(object):
         for g in optim.param_groups:
             # print(g['lr'])
             g['lr'] = lr
+
+    # def save(self, save_path, step_count):
+    #     torch.save(self, save_path + 'agent.pth')
+
+    # def load(self, save_path):
+    #     self = torch.load(save_path + 'agent.pth')

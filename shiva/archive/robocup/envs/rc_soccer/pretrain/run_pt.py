@@ -28,14 +28,14 @@ def pretrain(maddpg, env, team_replay_buffer, opp_replay_buffer, num_TA = 3, num
     if Imitation_exploration:
         left_files = []
         right_files = []
-        # team_files = ['Pretrain_Files/3v3_CentQ/base_left-11.log','Pretrain_Files/3v3_CentQ/base_left-7.log','Pretrain_Files/3v3_CentQ/base_left-8.log','Pretrain_Files/3v3_CentQ/base_right-2.log','Pretrain_Files/3v3_CentQ/base_right-3.log','Pretrain_Files/3v3_CentQ/base_right-4.log']
-        # opp_files = ['Pretrain_Files/base_left-1.log','Pretrain_Files/base_left-2.log']
+        # team_files = ['Pretrain_Files/3v3_CentQ/base_left-11.logs','Pretrain_Files/3v3_CentQ/base_left-7.logs','Pretrain_Files/3v3_CentQ/base_left-8.logs','Pretrain_Files/3v3_CentQ/base_right-2.logs','Pretrain_Files/3v3_CentQ/base_right-3.logs','Pretrain_Files/3v3_CentQ/base_right-4.logs']
+        # opp_files = ['Pretrain_Files/base_left-1.logs','Pretrain_Files/base_left-2.logs']
         if os.path.isdir(os.getcwd() + '/pt_logs'):
             team_files = os.listdir(os.getcwd() + '/pt_logs')
             left_files = [os.getcwd() + '/pt_logs/' + f for f in team_files if '_left_' in f]
             right_files = [os.getcwd() + '/pt_logs/' + f for f in team_files if '_right_' in f]
         else:
-            print('log directory DNE')
+            print('logs directory DNE')
             exit(0)
 
         team_pt_status, team_pt_obs,team_pt_actions, opp_pt_status, opp_pt_obs, opp_pt_actions, status = pretrain_process(left_fnames=left_files, right_fnames=right_files, num_features = num_features)

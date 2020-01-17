@@ -12,7 +12,7 @@ class ImitationAlgorithm(Algorithm):
         super(ImitationAlgorithm, self).__init__(obs_space, acs_space, configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
-        self.action_policy = configs[1]['action_policy']
+        # self.action_policy = configs[1]['action_policy']
         self.loss = 0
     
     def supervised_update(self, agent, minibatch, step_n):
@@ -192,10 +192,10 @@ class ImitationAlgorithm(Algorithm):
         return new_agent
 
 class ImitationRoboCupAlgorithm(Algorithm):
-    def __init__(self,obs_space,acs_space,configs):
-        super(ImitationRoboCupAlgorithm, self).__init__(obs_space, acs_space, configs)
-        self.acs_dim = self.acs_space['discrete'] + self.acs_space['param']
-        self.action_policy = configs[1]['action_policy']
+    def __init__(self, observation_space, action_space, configs):
+        super(ImitationRoboCupAlgorithm, self).__init__(observation_space, action_space, configs)
+        self.discrete = action_space['acs_space']
+        self.param = action_space['param']
         self.loss = 0
     
     def supervised_update(self, agent, minibatch, step_n):
@@ -241,7 +241,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
         imitation_agent.actor_optimizer.step()
 
     def create_agent(self):
-        new_agent = DDPGAgent(self.id_generator(),self.obs_space,self.acs_space['discrete']+self.acs_space['param'],self.acs_space['discrete'],self.configs[1],self.configs[2])
+        new_agent = DDPGAgent(self.id_generator(),self.observation_space,self.discrete+self.param,self.discrete,self.configs[1],self.configs[2])
         return new_agent
     
     def get_loss(self):

@@ -320,7 +320,7 @@ class SACNetwork(LearningModel):
 
             self.action_probs = normalized_probs
 
-            # Really, this is entropy, but it has an analogous purpose to the log probs in the
+            # Really, this is entropy, but it has an analogous purpose to the logs probs in the
             # continuous case.
             self.all_log_probs = self.action_probs * normalized_logprobs
             self.output = output
@@ -965,7 +965,7 @@ class SACModel(LearningModel):
 
             # Same with policy loss, we have to do the loss per branch and average them,
             # so that larger branches don't get more weight.
-            # The equivalent KL divergence from Eq 10 of Haarnoja et al. is also pi*log(pi) - Q
+            # The equivalent KL divergence from Eq 10 of Haarnoja et al. is also pi*logs(pi) - Q
             branched_q_term = self.apply_as_branches(
                 self.policy_network.action_probs * self.policy_network.q1_p
             )

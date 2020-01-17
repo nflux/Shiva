@@ -112,7 +112,7 @@ from gym_unity.envs import UnityEnv
 
 def main():
     env = UnityEnv("./envs/GridWorld", 0, use_visual=True, uint8_visual=True)
-    logger.configure('./logs') # Çhange to log in a different directory
+    logger.configure('./logs') # Çhange to logs in a different directory
     act = deepq.learn(
         env,
         "cnn", # conv_only is also a good choice for GridWorld

@@ -11,7 +11,7 @@ from shiva.helpers.misc import action2one_hot
 class UnityWrapperEnvironment(Environment):
     def __init__(self, config):
         assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
-
+        self.on_policy = False
         super(UnityWrapperEnvironment, self).__init__(config)
         self.worker_id = 0
         self._connect()
@@ -51,8 +51,13 @@ class UnityWrapperEnvironment(Environment):
 
         self.batched_step_results = self.Unity.get_step_result(self.group_id)
 
-        self.num_instances = self.batched_step_results.n_agents()
-        self.instances_ids = self.batched_step_results.agent_id
+        # same behaviour
+        self.num_instances = self.batched_step_results.n_agents() # this is unique for Unity as it creates agents with same behaviours
+        self.instances_ids = self.batched_step_results.agent_id # unique for Unity
+
+        # diff behaviour
+        self.num_agents = 1 # agents with different behaviour
+        self.agents_id = [0] # diff behaviour agents ids
 
         self.observations = self.batched_step_results.obs[0]
         self.rewards = self.batched_step_results.reward
@@ -110,8 +115,10 @@ class UnityWrapperEnvironment(Environment):
         '''
             One Shiva episode is when all instances in the Environment terminate at least once
         '''
-        return self.temp_done_counter >= self.num_instances
-        # return self.temp_done_counter >= self.update_episodes
+        if not self.on_policy:
+            return self.temp_done_counter >= self.num_instances
+        else:
+            return self.temp_done_counter >= self.update_episodes
 
     def _clean_actions(self, actions):
         '''
@@ -149,10 +156,14 @@ class UnityWrapperEnvironment(Environment):
         '''
         return self.GroupSpec.observation_shapes[0][0]
 
+    def get_observations(self):
+        return self.observations
     def get_observation(self):
         return self.observations
 
     def get_actions(self):
+        return self.actions
+    def get_action(self):
         return self.actions
 
     def get_reward(self):

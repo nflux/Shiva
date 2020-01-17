@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package communication_objects;
-
-message AgentActionProto {
-    repeated float vector_actions = 1;
-}
