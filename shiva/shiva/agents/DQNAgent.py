@@ -1,9 +1,10 @@
 import copy
 import torch.optim
 import numpy as np
+import random
 
 from shiva.agents.Agent import Agent
-# from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork
+from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork
 import shiva.helpers.networks_handler as nh
 from shiva.helpers.misc import action2one_hot_v
 
@@ -28,11 +29,27 @@ class DQNAgent(Agent):
         self.target_policy = copy.deepcopy(self.policy)
         self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.policy.parameters(), lr=self.learning_rate)
 
-    def get_action(self, obs, step_n=0):
+    def get_action(self, obs, step_n=0, evaluate=False):
         '''
             This method iterates over all the possible actions to find the one with the highest Q value
         '''
-        return self.find_best_action(self.policy, obs)
+        # return self.find_best_action(self.policy, obs)
+        if evaluate:
+            return self.get_action(obs)
+        if step_n < self.exploration_steps:
+            action_idx = random.sample(range(self.acs_space), 1)[0]
+            action = action2one_hot_v(self.acs_space, action_idx)
+        elif random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
+            # this might not be correct implementation of e greedy
+            action_idx = random.sample(range(self.acs_space), 1)[0]
+            action = action2one_hot_v(self.acs_space, action_idx)
+        else:
+            if len(obs.shape) > 1:
+                print('Weird obs shape')
+                pass
+            # Iterate over all the actions to find the highest Q value
+            action = self.get_action(obs)
+        return action # replay buffer store lists and env does np.argmax(action)
 
     def get_action_target(self, obs):
         '''

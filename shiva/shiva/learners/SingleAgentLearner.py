@@ -40,9 +40,13 @@ class SingleAgentLearner(Learner):
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
-                exp = [obs, act, rew, next_obs, int(don)]
+                # exp = [obs, act, rew, next_obs, int(don)]
                 # print(act, rew, don)
-                self.buffer.append(exp)
+                # self.buffer.append(exp)
+
+                self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
+                                                        torch.from_numpy(next_observation),
+                                                        torch.from_numpy(np.array([done])).bool()))))
         elif self.env.env_name == 'RoboCup':
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action, device=self.device)
@@ -51,11 +55,13 @@ class SingleAgentLearner(Learner):
         else:
             action = self.agent.get_action(observation, self.env.step_count, self.evaluate)
             next_observation, reward, done, more_data = self.env.step(action)
-            t = [observation, more_data['action'], reward, next_observation, int(done)]
-            # print(action)
-            # input()
-            exp = copy.deepcopy(t)
-            self.buffer.append(exp)
+            # t = [observation, more_data['action'], reward, next_observation, int(done)]
+            # # print(action)
+            # # input()
+            # exp = copy.deepcopy(t)
+            # self.buffer.push(exp)
+            self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), torch.tensor(action), torch.tensor([reward]),
+                                                torch.from_numpy(next_observation), torch.tensor([done], dtype=torch.bool)))))
         """"""
 
 
@@ -77,11 +83,12 @@ class SingleAgentLearner(Learner):
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
-        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), self.evaluate ,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), self.configs)
 
     def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
+        # return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
+        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim)
 
     def launch(self):
         self.env = self.create_environment()
