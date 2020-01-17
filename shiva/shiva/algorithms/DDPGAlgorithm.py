@@ -8,7 +8,7 @@ from shiva.algorithms.Algorithm import Algorithm
 from shiva.helpers.misc import one_hot_from_logits
 
 class DDPGAlgorithm(Algorithm):
-    def __init__(self, observation_space: int, action_space: int, evaluate: bool, configs: dict):
+    def __init__(self, observation_space: int, action_space: int, configs: dict):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
@@ -19,7 +19,6 @@ class DDPGAlgorithm(Algorithm):
         self.critic_loss = 0
         self.discrete = action_space['acs_space']
         self.param = action_space['param']
-        self.evaluate = evaluate
         # self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
 
     def update(self, agent, buffer, step_count, episodic=False):
@@ -108,7 +107,7 @@ class DDPGAlgorithm(Algorithm):
         else:
             Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
 
-        print('dones', dones.size())
+        # print('dones', dones.size())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones] = 0.0
         # Use the Bellman equation.
@@ -206,7 +205,7 @@ class DDPGAlgorithm(Algorithm):
         #         target_param.data.copy_(param.data)
 
     def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.observation_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
+        self.agent = DDPGAgent(id, self.observation_space, self.discrete + self.param, self.discrete, self.configs['Agent'], self.configs['Network'])
         return self.agent
 
     def get_metrics(self, episodic=False):

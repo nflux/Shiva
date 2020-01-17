@@ -16,12 +16,12 @@ class Algorithm():
                 beta                Hyperparameter
         '''
         self.configs = configs
-        {setattr(self, k, v) for k, v in self.configs[0].items()}
+        {setattr(self, k, v) for k, v in self.configs['Algorithm'].items()}
         self.agentCount = 0
         self.agents = []
         self.observation_space = obs_space
         self.action_space = acs_space
-        self.loss_calc = getattr(torch.nn, configs[0]['loss_function'])()
+        self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
     def update(self, agent, data, episodic=False):

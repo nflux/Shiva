@@ -39,12 +39,13 @@ class CommMultiAgentLearner():
         self.menv_specs = self.comm_learner_server.recv(None, 0, self.learner_tags.menv_specs)
         self.menv_stub = get_menv_stub(self.menv_specs['address'])
 
+        self.num_agents = 1 # this is given by the environment or by the metalearner
+
         self.debug("Ready to instantiate algorithm, buffer and agents!")
 
         self.alg = self.create_algorithm(self.menv_specs['env_specs']['observation_space'], self.menv_specs['env_specs']['action_space'])
         self.buffer = self.create_buffer()
 
-        self.num_agents = 1
         self.agents = [self.alg.create_agent(ix) for ix in range(self.num_agents)]
 
         Admin.checkpoint(self, checkpoint_num=0, function_only=True)
@@ -64,8 +65,9 @@ class CommMultiAgentLearner():
             trajectory = self.comm_learner_server.recv(None, 0, self.learner_tags.trajectories) # blocking receive
             # self.debug("Ready to update: trajectory length {}".format(len(trajectory)))
             done_count += 1
-            for exp in trajectory:
-                self.buffer.append(exp)
+            for observation, action, reward, next_observation, done in trajectory:
+                exp = list(map(torch.clone, (torch.tensor(observation), torch.tensor(action), torch.tensor(reward), torch.tensor(next_observation), torch.tensor([done], dtype=torch.bool))))
+                self.buffer.push(exp)
                 step_count += 1
             if done_count % self.save_checkpoint_episodes == 0:
                 self.alg.update(self.agents[0], self.buffer, step_count)
@@ -75,11 +77,15 @@ class CommMultiAgentLearner():
 
     def create_algorithm(self, observation_space, action_space):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
-        return algorithm_class(observation_space, action_space, [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm_class(self.menv_specs['env_specs']['observation_space'], self.menv_specs['env_specs']['action_space'], self.configs)
 
     def create_buffer(self):
+        # SimpleBuffer
+        # buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        # return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.menv_specs['env_specs']['observation_space'], self.menv_specs['env_specs']['action_space']['acs_space'])
 
     def _get_learner_specs(self):
         return {

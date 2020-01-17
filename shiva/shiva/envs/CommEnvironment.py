@@ -42,6 +42,7 @@ def create_comm_env(cls, env_id, configs, menv_stub):
             while True:
                 observations = self.get_observations()
                 actions = self.menv_stub.get_actions(observations)
+                # self.debug(actions)
                 next_observations, rewards, dones, _ = self.step(actions)
                 #
                 #   Collect trajectories in an unstructured buffer of dim
