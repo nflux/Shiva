@@ -123,12 +123,8 @@ class UnityWrapperEnvironment(Environment):
         '''
 
         if self.GroupSpec.is_action_discrete():
-              actions = np.array([[_act] for _act in actions])
-
-        # if self.GroupSpec.is_action_discrete():
-        #     actions = np.array([[np.argmax(_act)] for _act in actions])
+            actions = np.array([[np.argmax(_act)] for _act in actions])
         elif type(actions) != np.ndarray:
-            print(actions)
             actions = np.array(actions)
         return actions
 
@@ -139,14 +135,16 @@ class UnityWrapperEnvironment(Environment):
             # return self.GroupSpec.discrete_action_branches[0] # grab the first branch only
             return {
                 'discrete': self.GroupSpec.discrete_action_branches[0],
-                'param': 0,
+                'continuous': 0,
+                'param': self.GroupSpec.discrete_action_branches[0],
                 'acs_space': self.GroupSpec.discrete_action_branches[0]
             }
         elif self.GroupSpec.is_action_continuous():
             # return self.GroupSpec.action_size
             return {
                 'discrete': 0,
-                'param': self.GroupSpec.action_size,
+                'continuous':self.GroupSpec.action_size,
+                'param': 0,
                 'acs_space': self.GroupSpec.action_size
             }
 

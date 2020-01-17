@@ -52,9 +52,19 @@ class rc_env:
             # self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
         elif self.action_level == 'discretized':
             
-            self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
-            power_discretization = np.linspace(0,100,21).tolist()
-            degree_discretization = np.linspace(-180,180,17).tolist()
+            # self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
+            # self.action_list = [hfo_env.TURN , hfo_env.KICK]
+            self.action_list = [hfo_env.DASH , hfo_env.KICK]
+
+            self.ACTION_DICT = {
+                                0 : (10,0),#(50,0),
+                                1 : (50,0) #(0,10)
+                               }
+
+
+
+            power_discretization =  np.linspace(0,100, (100 / self.pow_coef+1)    ).tolist()
+            degree_discretization = np.linspace(-180,180,(360/self.ang_coef+1)    ).tolist()
 
             self.pow_step = power_discretization[1]-power_discretization[0]
             self.degree_step = degree_discretization[1]-degree_discretization[0]
@@ -63,36 +73,40 @@ class rc_env:
             # self.DASH_TABLE = []
             # self.KICK_TABLE = []
             # self.TURN_TABLE = self.degree_discretization
-            self.ACTION_DICT = {}
-            self.REVERSE_ACTION_DICT = {}
-            dis_ctr = 0
-            rev_ctr = 0
-            turn_dict = kick_dict = {}
-            for dash_power in power_discretization:
-                for dash_degree in degree_discretization:
-                    self.ACTION_DICT[dis_ctr] = (dash_power, dash_degree)
-                    dis_ctr += 1
+            # self.ACTION_DICT = {}
+            # self.REVERSE_ACTION_DICT = {}
+            # dis_ctr = 0
+            # rev_ctr = 0
+            # turn_dict = kick_dict = {}
+            # for dash_power in power_discretization:
+            #     for dash_degree in degree_discretization:
+            #         self.ACTION_DICT[dis_ctr] = (dash_power, dash_degree)
+            #         dis_ctr += 1
             
-            self.dash_idx = dis_ctr
+            # self.dash_idx = dis_ctr
+            self.dash_idx = 0
             
-            self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(self.ACTION_DICT.values(), self.ACTION_DICT.keys()))
-            rev_ctr += 1
-            for turn_degree in degree_discretization:
-                turn_dict[dis_ctr] = (turn_degree,)
-                self.ACTION_DICT[dis_ctr] = (turn_degree,)
-                dis_ctr += 1
+            # self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(self.ACTION_DICT.values(), self.ACTION_DICT.keys()))
+            # rev_ctr += 1
+            # for turn_degree in degree_discretization:
+            #     turn_dict[dis_ctr] = (turn_degree,)
+            #     self.ACTION_DICT[dis_ctr] = (turn_degree,)
+            #     dis_ctr += 1
             
-            self.turn_idx = dis_ctr
+            # self.turn_idx = dis_ctr
+            self.turn_idx = 1
 
-            self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(turn_dict.values(), turn_dict.keys()))
-            rev_ctr += 1
-            for kick_power in power_discretization:
-                for kick_degree in degree_discretization:
-                    kick_dict[dis_ctr] = (kick_power, kick_degree)
-                    self.ACTION_DICT[dis_ctr] = (kick_power, kick_degree)
-                    dis_ctr += 1
+            # self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(turn_dict.values(), turn_dict.keys()))
+            # rev_ctr += 1
 
-            self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(kick_dict.values(), kick_dict.keys()))
+            # for kick_power in power_discretization:
+            #     for kick_degree in degree_discretization:
+            #         kick_dict[dis_ctr] = (kick_power, kick_degree)
+            #         self.ACTION_DICT[dis_ctr] = (kick_power, kick_degree)
+            #         dis_ctr += 1
+
+            # self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(kick_dict.values(), kick_dict.keys()))
+
             # for a in range(len(self.action_list)):
             #     if a == 0:
             #         self.ACTION_DICT[a] = dash_dict
@@ -113,10 +127,11 @@ class rc_env:
             # self.ACTION_MATRIX = self.DASH_TABLE + self.TURN_TABLE + self.KICK_TABLE
             # self.kick_actions = self.KICK_TABLE
 
-            print(self.dash_idx, self.turn_idx)
+            # print(self.dash_idx, self.turn_idx)
 
-            # self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
-            self.acs_dim =  dis_ctr
+            # # self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
+            # self.acs_dim =  dis_ctr
+            self.acs_dim = 2
             self.acs_param_dim = 0
 
         elif self.action_level == 'high':
@@ -269,6 +284,7 @@ class rc_env:
         '''
 
         if side == 'left':
+            # print("inside rc_env",self.left_obs[agent_id])
             return self.left_obs[agent_id]
         elif side == 'right':
             return self.right_obs[agent_id]
@@ -636,7 +652,7 @@ class rc_env:
         '''
         reward=0.0
         team_reward = 0.0
-        goal_points = 10.0
+        goal_points = 100.0
         #---------------------------
         global possession_side
         if self.d:
@@ -725,6 +741,9 @@ class rc_env:
         # just check for the value inside of action list
         # if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
 
+        reward -=1
+
+
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
 
             reward -= 0.1
@@ -744,7 +763,7 @@ class rc_env:
             # print(self.left_agent_possesion)
             if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
-                reward += 1
+                reward += 5
                 team_reward += 1.5
 
             # set initial ball position after kick
@@ -845,12 +864,12 @@ class rc_env:
         distance_cur, closest_agent = self.closest_player_to_ball(team_obs, num_ag)
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
-            delta = (distance_prev - distance_cur)*0
+            delta = (distance_prev - distance_cur)*1.0
             #if delta > 0:    
             if True:
                 team_reward += delta
                 reward+= delta * 5
-                # print("distance to ball reward")
+                # print("distance to ball reward", delta*5)
                 # print(distance_cur, delta)
                 pass
             
@@ -863,12 +882,12 @@ class rc_env:
         if ((self.left_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
-                delta = (2*self.num_left)*(r_prev - r)* 0
+                delta = (2*self.num_left)*(r_prev - r)* 1.0
                 if True:
                 # if delta > 0:
                     reward += delta * 10
                     team_reward += delta
-                    # print("ball distance to goal reward.")
+                    # print("ball distance to goal reward.", delta*10)
                     # pass
 
         # base right kicks

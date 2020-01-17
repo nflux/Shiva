@@ -40,8 +40,11 @@ class MultiGymWrapper(Environment):
 
         self.ou_noises = [noise.OUNoise(self.acs_dim, self.agent.exploration_noise)]*self.num_instances 
 
+        time.sleep(30)
 
         while(self.stop_collecting.item() == 0):
+
+            time.sleep(0.006)
 
             if self.step_count == self.agent.exploration_steps + 1:
                 for i in range(self.num_instances):
@@ -49,7 +52,7 @@ class MultiGymWrapper(Environment):
 
             if not loaded:
                 # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
-                if self.episode_count % 5 == 0 and self.episode_count != 0:
+                if self.episode_count % 1 == 0 and self.episode_count != 0:
                     loaded = True
                     if self.saveLoadFlag.item() == 1:
                         self.agent.load(self.agent_dir)
@@ -63,17 +66,17 @@ class MultiGymWrapper(Environment):
                 loaded = False
 
             # if (self.step_control.sum().item() == self.num_instances and self.action_available.item() == 0) or self.step_count.item() == 0:
-            if self.step_control.sum().item() == self.num_instances or self.step_count.item() == 0:
+            if self.step_control.sum().item() == self.num_instances:# or self.step_count.item() == 0:
                 # print("observations", self.observations[:,:self.obs_dim])
                 if self.resetNoiseFlags.sum() > 0:
                     for i, flag in enumerate(self.resetNoiseFlags):
                         if flag.item() == 1:
                             self.ou_noises[i].reset()
                             self.resetNoiseFlags[i] == 0
-
-                self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item())
-
-                # print(self.actions.numpy())
+                # print("obs going to actor before get actions",self.observations[:,:self.obs_dim])
+                self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item(), evaluate=True)
+                # print("actions returned from that observation",self.actions)
+                # print("actions from handshake", self.actions)
                 # print(self.ou_noises[0].noise())
                 # here I need to add the ou noise to all the actions
 
@@ -159,11 +162,12 @@ class MultiGymWrapper(Environment):
 
         environment = load_class('shiva.envs', self.configs['sub_type'])
 
+        # I can't send an instantiated RC Env through mp.Process()
         if self.configs['sub_type'] == 'RoboCupEnvironment':
-            self.envs.append(environment(self.configs, 9853))
-            self.acs_dim = self.envs[0].action_space['acs_space']
-            self.obs_dim = self.envs[0].observation_space
-            self.envs[0].close()
+            env = environment(self.configs, 9853)
+            self.acs_dim = env.action_space['acs_space']
+            self.obs_dim = env.observation_space
+            env.close()
 
         else:
             for i in range(self.num_instances):
@@ -366,14 +370,27 @@ def robo_process_target(observations,action_available,step_count,step_control,st
     idx = 0
     env.reset()
     observation = env.get_observation()
-    observations[id][:observation_space] = torch.tensor(observation).float()
+    print("obs as numpy",observation)
+    observation = torch.from_numpy(observation)
+    print("obs as tensor",observation)
+    print("test",observation[0][:observation_space])
+    observations[id][:observation_space] = copy.deepcopy(observation[0][:observation_space])
+    print("obs inside obss tensor",observations[id][:observation_space])
     step_control[id] = 1
 
     while(stop_collecting.item() == 0):
         if step_control[id] == 0 and waitForLearner.item() == 0:
             time.sleep(0.001)
             action = observations[id][:action_space].numpy()
+            print("action received from actor",action)
             action_available[0] = 0
+
+
+            '''
+            So maybe here is the place to count the kicks, dashes, and turns then send them to the learner
+            
+            '''
+
             next_observation, reward, done, more_data = env.step(torch.tensor(action), discrete_select='sample', collect=False, device='cuda:0')
             ep_observations[idx] = observation
             ep_actions[idx] = more_data['action']

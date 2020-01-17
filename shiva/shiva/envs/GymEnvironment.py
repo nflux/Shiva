@@ -15,13 +15,25 @@ class GymEnvironment(Environment):
         self.done = False
         self.action_space_continuous = None
         self.action_space_discrete = None
-        self.observation_space = self.set_observation_space()
-        # self.action_space = self.set_action_space()
+        self.observation_space = self.set_observation_space()         
 
         if self.action_space == "discrete":
-            self.action_space = {'discrete': self.set_action_space() , 'param': 0, 'acs_space': self.set_action_space()}
+            self.action_space = {
+                'discrete': self.set_action_space() , 
+                'continuous': 0,
+                'param': self.set_action_space(), 
+                'acs_space': self.set_action_space()
+            }
+            self.gymEnvType = 'discrete'
+            
         elif self.action_space == "continuous":
-            self.action_space = {'discrete': 0 , 'param': self.set_action_space(), 'acs_space': self.set_action_space()}
+            self.action_space = {
+                'discrete': 0 , 
+                'continuous': self.set_action_space(),
+                'param': 0, 
+                'acs_space': self.set_action_space()
+            }
+            self.gymEnvType = 'continuous'
 
         self.steps_per_episode = 0
         self.step_count = 0
@@ -34,19 +46,16 @@ class GymEnvironment(Environment):
 
     def step(self, action, discrete_select='argmax'):
         self.acs = action
-        # print(self.action_space_continuous)
 
         if discrete_select == 'argmax':
-            action4Gym = np.argmax(action) if self.action_space_continuous is None else action
+            action4Gym = torch.argmax(action) if self.action_space_continuous is None else action
         elif discrete_select == 'sample':
-            # print(action)
             action4Gym = Categorical(torch.tensor(action)).sample()
 
-        if self.action_space['discrete'] != 0:
-
+        if self.gymEnvType == 'discrete':
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
         else:
-            self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
+            self.obs, self.reward_per_step, self.done, info = self.env.step([action[action4Gym.item()]])
             
         self.load_viewer()
         '''

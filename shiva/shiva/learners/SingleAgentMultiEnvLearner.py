@@ -68,12 +68,17 @@ class SingleAgentMultiEnvLearner(Learner):
                 )
 
                 for i in range(t):
-                    self.reward_per_episode = self.ep_metrics_buffer[t,0].item()
-                    self.steps_per_episode = int(self.ep_metrics_buffer[t,1].item())
+                    self.ep_count +=1
+                    self.reward_per_episode = self.ep_metrics_buffer[i,0].item()
+                    self.steps_per_episode = int(self.ep_metrics_buffer[i,1].item())
                     self.collect_metrics(episodic=True)
+                    # print(self.reward_per_episode)
 
-                if len(self.buffer) <= self.buffer.batch_size:
-                    self.collect_metrics(episodic=True)
+                    if len(self.buffer) <= self.buffer.batch_size:
+                        self.collect_metrics(episodic=True)
+                    else:
+                        self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
+                        self.collect_metrics(episodic=True)
 
                 self.aggregator_index[0] = 0
                 self.metrics_idx[0] = 0
@@ -101,12 +106,12 @@ class SingleAgentMultiEnvLearner(Learner):
                     self.alg.update(self.agent,self.buffer,self.step_count)
                 self.collect_metrics(episodic=False)
 
-            if len(self.buffer) > self.buffer.batch_size:
-                # start_time = time.time()
-                self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
-                # print("Update--- %s seconds ---" % (time.time() - start_time))
-                # print("this happened")
-                self.collect_metrics(episodic=True)
+            # if len(self.buffer) > self.buffer.batch_size:
+            #     # start_time = time.time()
+            #     self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
+            #     # print("Update--- %s seconds ---" % (time.time() - start_time))
+            #     # print("this happened")
+            #     self.collect_metrics(episodic=True)
 
 
                 # self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
@@ -213,6 +218,7 @@ class SingleAgentMultiEnvLearner(Learner):
             # Tensor replay buffer at the moment
             self.buffer = self.create_buffer(obs_dim, acs_dim)
 
+        # buffers for the aggregator
         self.obs_buffer = torch.zeros((10_000, obs_dim), requires_grad=False).share_memory_()
         self.acs_buffer = torch.zeros( (10_000, acs_dim) ,requires_grad=False).share_memory_()
         self.rew_buffer = torch.zeros((10_000, 1),requires_grad=False).share_memory_()
@@ -264,13 +270,13 @@ def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buf
 
     while True:
 
-        time.sleep(0.5)
+        time.sleep(0.06)
 
         while not queue.empty():
 
             exps = queue.get()
             # print(queue.qsize())
-            ep_count += 1
+            # ep_count += 1
             obs, ac, rew, next_obs, done = zip(*exps)
 
             obs = torch.tensor(obs)

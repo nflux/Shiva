@@ -17,9 +17,10 @@ class DDPGAlgorithm(Algorithm):
         super(DDPGAlgorithm, self).__init__(observation_space, action_space, configs)
         self.actor_loss = 0
         self.critic_loss = 0
-        self.discrete = action_space['acs_space']
+        self.continuous = action_space['continuous']
+        self.acs_space = action_space['acs_space']
+        self.discrete = action_space['discrete']
         self.param = action_space['param']
-        # self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
 
     def update(self, agent, buffer, step_count, episodic=False):
         '''
@@ -27,12 +28,16 @@ class DDPGAlgorithm(Algorithm):
         '''
 
         '''
-            DDPG updates at every step. This avoids doing an extra update at the end of an episode
+            DDPG updates every episode. This avoids doing an extra update at the end of an episode
             But it does reset the noise after an episode
         '''
-        # if episodic:
-            # agent.ou_noise.reset()
-            # return
+        if episodic:
+            
+            agent.ou_noise.reset()
+            
+        else:
+            return
+
 
         # if step_count < self.agent.exploration_steps:
         #     '''
@@ -44,11 +49,7 @@ class DDPGAlgorithm(Algorithm):
             Updates starts here
         '''
 
-        # print("updating!")
-
         states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
-
-        # print("sampled",states)
 
         # Send everything to gpu if available
         states = states.to(self.device)
@@ -115,8 +116,10 @@ class DDPGAlgorithm(Algorithm):
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
 
         # Get Q values of the batch from states and actions.
-        # if self.a_space == 'discrete':
-        #     actions = one_hot_from_logits(actions)
+        if self.a_space == 'discrete':
+            actions = one_hot_from_logits(actions)
+        else:
+            action = softmax(actions) 
             # print(actions)
 
         # Grab the discrete actions in the batch
@@ -202,7 +205,7 @@ class DDPGAlgorithm(Algorithm):
         #         target_param.data.copy_(param.data)
 
     def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.observation_space, self.discrete + self.param, self.discrete, self.configs[1], self.configs[2])
+        self.agent = DDPGAgent(id, self.observation_space, self.action_space, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):

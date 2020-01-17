@@ -25,7 +25,12 @@ class RoboCupEnvironment(Environment):
         self.rews = self.env.left_rewards
         # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
-        self.action_space = {'discrete': self.env.acs_dim,'acs_space': self.env.acs_dim, 'param': 0}
+        self.action_space = {
+            'discrete': self.env.acs_dim,
+            'continuous':0,
+            'param': self.env.acs_dim,
+            'acs_space': self.env.acs_dim 
+        }
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
@@ -74,6 +79,9 @@ class RoboCupEnvironment(Environment):
         if discrete_select == 'argmax':
             act_choice = torch.argmax(actions[:self.action_space['acs_space']])
         elif discrete_select == 'sample':
+            if self.step_count % 10 == 0:
+                # print("roboenv",actions)
+                pass
             act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
         elif discrete_select == 'imit_discrete':
             act_choice = actions[0]
@@ -84,18 +92,26 @@ class RoboCupEnvironment(Environment):
 
         if self.action_level == 'discretized':
             self.left_action_option[0] = act_choice
-            # indicates whether its a dash, turn, or kick action from the action matrix
-            if 0 <= self.left_action_option[0] < self.env.dash_idx:
+            # # indicates whether its a dash, turn, or kick action from the action matrix
+            # if 0 <= self.left_action_option[0] < self.env.dash_idx:
+            #     self.left_actions[0] = 0
+            #     self.dashes += 1
+            # elif self.env.dash_idx <= self.left_action_option[0] < self.env.turn_idx:
+            #     self.left_actions[0] = 1
+            #     self.turns += 1
+            # else:
+            #     self.left_actions[0] = 2
+            #     self.kicks += 1
+
+            if self.left_action_option[0] == self.env.dash_idx:
                 self.left_actions[0] = 0
                 self.dashes += 1
-            elif self.env.dash_idx <= self.left_action_option[0] < self.env.turn_idx:
-                self.left_actions[0] = 1
-                self.turns += 1
             else:
-                self.left_actions[0] = 2
+                self.left_actions[0] = 1
                 self.kicks += 1
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
+            # self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=torch.tensor([2]), left_options=torch.tensor([552]))
             actions_v = action2one_hot_v(self.action_space['acs_space'], act_choice)
         else:
             self.left_actions = act_choice.unsqueeze(dim=0)
@@ -107,6 +123,8 @@ class RoboCupEnvironment(Environment):
 
         if collect:
             self.collect_metrics()
+
+        # print(actions_v)
         
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
