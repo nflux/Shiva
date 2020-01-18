@@ -26,9 +26,15 @@ class CommMultiAgentLearnerServer(LearnerServicer):
         self.debug("Received config with {} keys".format(len(self.configs.keys())))
 
     def SendTrajectories(self, request: SimpleMessage, context) -> Empty:
-        trajectories = json.loads(request.data)
-        # trajectories = np.array(json.loads(request.data))
-        self.learner.send(trajectories, 0, self.learner_tags.trajectories) # this should be non-blocking MPI send
+        traj_list = json.loads(request.data)
+        # send as raw list of lists
+        self.learner.send(traj_list, 0, self.learner_tags.trajectories)
+
+        # try sending as a tensor later
+        # trajectories = np.array(traj_list)
+        # self.learner.send(trajectories.shape, 0, self.learner_tags.trajectories_length)
+        # self.learner.Send([trajectories, MPI.FLOAT], 0, self.learner_tags.trajectories) # this should be non-blocking MPI send
+
         return Empty()
 
     def SendSpecs(self, simple_message: SimpleMessage, context) -> Empty:

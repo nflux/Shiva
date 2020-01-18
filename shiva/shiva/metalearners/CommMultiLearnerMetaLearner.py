@@ -1,10 +1,11 @@
 import time, os
 import torch.multiprocessing as mp
+from mpi4py import MPI
 
 from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_class
 
-from shiva.helpers.launch_servers_helper import start_meta_server
+from shiva.helpers.launch_servers_helper import start_meta_server, check_port
 from shiva.helpers.launch_components_helper import start_menv, start_learner
 from shiva.learners.CommMultiAgentLearnerServer import get_learner_stub
 from shiva.envs.CommMultiEnvironmentServer import get_menv_stub
@@ -13,13 +14,15 @@ class CommMultiLearnerMetaLearner(MetaLearner):
     def __init__(self, configs):
         super(CommMultiLearnerMetaLearner, self).__init__(configs)
         self.configs = configs
-
+        self.port = '50001'
+        check_port(self.port)
         self.address = ':'.join(['localhost', '50001'])
 
         # initiate server
         self.comm_meta_server, self.meta_tags = start_meta_server(self.address, maxprocs=1)
         # self.debug('MPI Send Configs to MetaServer')
-        self.comm_meta_server.send(self.configs, dest=0, tag=self.meta_tags.configs)
+        req = self.comm_meta_server.isend(self.configs, dest=0, tag=self.meta_tags.configs)
+        req.Wait()
 
         '''
             Assuming 1 MultiEnv for now!
@@ -31,6 +34,10 @@ class CommMultiLearnerMetaLearner(MetaLearner):
             self.debug("Starts MultiEnv # {}".format(menv_id))
             self.comm_menv = start_menv(menv_id, self.address)
 
+        # received menv specs & create stubs as they come in
+        self.check_in_menvs()
+        # self.comm_menv.bcast(self.configs, root=MPI.ROOT)
+
         # initiate learner processes
         '''
             Problem when multiple Learners, they initialize their server on the same address :/
@@ -39,11 +46,9 @@ class CommMultiLearnerMetaLearner(MetaLearner):
         for learner_id in range(self.num_learners):
             # self.debug("Starts Learner # {}".format(learner_id))
             self.comm_learner = start_learner(learner_id, self.address)
-
-        # received menv specs & create stubs as they come in
-        self.check_in_menvs()
         # receive learners specs & create stubs as they come in
         self.check_in_learners()
+        # self.comm_learner.bcast(self.configs, root=MPI.ROOT)
 
         '''
             Here we need to decide how to distribute the Environment Specs across the Learners

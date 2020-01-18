@@ -1,6 +1,7 @@
 import time, os
 import torch
 import numpy as np
+from mpi4py import MPI
 
 from shiva.core.admin import Admin
 
@@ -18,10 +19,16 @@ class CommMultiAgentLearner():
 
     def launch(self, meta_address):
         self.meta_stub = get_meta_stub(meta_address)
-
         self.debug("gRPC Request Meta for Configs")
         self.configs = self.meta_stub.get_configs()
         self.debug("gRPC Received Config from Meta")
+
+        # self.meta_comm = MPI.Comm.Get_parent()
+        # self.id = self.meta_comm.Get_rank()
+        # self.configs = {}
+        # self.meta_comm.bcast(self.configs, root=0) # receive configs
+        # self.debug("MPI Received Config from Meta")
+
         {setattr(self, k, v) for k, v in self.configs['Learner'].items()}
         Admin.init(self.configs['Admin'])
         Admin.add_learner_profile(self, function_only=True)
@@ -47,6 +54,7 @@ class CommMultiAgentLearner():
         self.buffer = self.create_buffer()
 
         self.agents = [self.alg.create_agent(ix) for ix in range(self.num_agents)]
+        self.agents[0].step_count = 0
 
         Admin.checkpoint(self, checkpoint_num=0, function_only=True)
 
@@ -57,21 +65,33 @@ class CommMultiAgentLearner():
         self.run()
 
     def run(self):
-        step_count = 0
-        done_count = 0
+        self.step_count = 0
+        self.done_count = 0
         trajectory = None
         while True:
             # self.debug("Waiting trajectory...")
-            trajectory = self.comm_learner_server.recv(None, 0, self.learner_tags.trajectories) # blocking receive
-            # self.debug("Ready to update: trajectory length {}".format(len(trajectory)))
-            done_count += 1
+
+            # try receiving as tensor later
+            # trajectory_length = self.comm_learner_server.recv(None, 0, self.learner_tags.trajectories_length)
+            # self.debug(trajectory_length)
+            # trajectory = np.empty(trajectory_length)
+            # self.comm_learner_server.Recv([trajectory, MPI.FLOAT], 0, self.learner_tags.trajectories) # blocking receive
+            # self.debug(trajectory.shape)
+
+            trajectory = self.comm_learner_server.recv(None, 0, self.learner_tags.trajectories) # blocking communication
+
+            self.done_count += 1
             for observation, action, reward, next_observation, done in trajectory:
                 exp = list(map(torch.clone, (torch.tensor(observation), torch.tensor(action), torch.tensor(reward), torch.tensor(next_observation), torch.tensor([done], dtype=torch.bool))))
                 self.buffer.push(exp)
-                step_count += 1
-            if done_count % self.save_checkpoint_episodes == 0:
-                self.alg.update(self.agents[0], self.buffer, step_count)
-                Admin.checkpoint(self, checkpoint_num=done_count, function_only=True)
+                self.step_count += 1
+
+            if self.step_count > self.configs['Agent']['exploration_steps'] and self.done_count % self.save_checkpoint_episodes == 0:
+                self.alg.update(self.agents[0], self.buffer, self.step_count)
+                self.agents[0].step_count = self.step_count
+                self.debug("Sending Agent Step # {}".format(self.step_count))
+                Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
+                self._collect_metrics()
                 self.menv_stub.send_new_agents(Admin.get_last_checkpoint(self))
             # self.debug("Sent new agents")
 
@@ -86,6 +106,11 @@ class CommMultiAgentLearner():
         # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
         return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.menv_specs['env_specs']['observation_space'], self.menv_specs['env_specs']['action_space']['acs_space'])
+
+    def _collect_metrics(self):
+        metrics = self.alg.get_metrics(True)# + self.env.get_metrics(episodic)
+        for metric_name, y_val in metrics:
+            Admin.add_summary_writer(self, self.agents[0], metric_name, y_val, self.step_count)
 
     def _get_learner_specs(self):
         return {

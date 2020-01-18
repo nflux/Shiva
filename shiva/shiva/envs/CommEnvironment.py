@@ -1,11 +1,10 @@
-import os, time
 
-from shiva.helpers.config_handler import load_class
+import sys, os, argparse, time
+from pathlib import Path
+from mpi4py import MPI
 
-from shiva.envs.CommMultiEnvironmentServer import get_menv_stub
-from shiva.learners.CommMultiAgentLearnerServer import get_learner_stub
 
-def create_comm_env(cls, env_id, configs, menv_stub):
+def create_comm_env(cls, env_id, configs, menv_address, menv_comm):
     '''
         Dynamic Inheritance from @cls
     '''
@@ -17,24 +16,29 @@ def create_comm_env(cls, env_id, configs, menv_stub):
         #   agent_id -> learner_client
         trajectories = {}
 
-        def __init__(self, env_id, configs, menv_stub):
+        def __init__(self, id, configs, menv_address, menv_comm):
             super(CommEnvironment, self).__init__(configs)
-            self.id = env_id
-            # self.menv_stub = get_menv_stub(menv_address)
-            self.menv_stub = menv_stub
+            self.id = id
+            self.menv_comm = menv_comm # MPI
+            self.menv_stub = get_menv_stub(menv_address) # gRPC
 
             # send my specs to the multi env
             self.menv_stub.send_env_specs(self._get_env_specs())
             # self.debug("Will soon request Learners info")
             time.sleep(3) # give some time here...
             self.debug("Requesting Learners info")
-            self.learners_specs = self.menv_stub.get_learners_specs(self._get_env_specs())
+            self.learners_specs = []
+            while len(self.learners_specs) == 0:
+                self.learners_specs = self.menv_stub.get_learners_specs(self._get_env_specs())
+                time.sleep(2)
             self.learners_stub = {}
             for spec in self.learners_specs:
                 self.learners_stub[spec['id']] = get_learner_stub(spec['address'])
-            self.debug("Successfully created stubs for the {} learners READY TO RUN!!!".format(len(self.learners_specs)))
+            self.debug("Successfully created stubs for the Learner # {} - Waiting ready signal from MultiEnv!!!".format(len(self.learners_specs)))
 
             self.trajectories = []
+
+            self.menv_comm.bcast(None, root=0) # this is the flag given by the MultiEnv to start!
 
             self.run()
 
@@ -59,6 +63,7 @@ def create_comm_env(cls, env_id, configs, menv_stub):
                         Need decentralized implementation
                     '''
                     self.learners_stub[0].send_trajectory(self.trajectories)
+                    self.trajectories = []
 
 
         def _get_env_specs(self):
@@ -72,4 +77,22 @@ def create_comm_env(cls, env_id, configs, menv_stub):
         def debug(self, msg):
             print("PID {} Environm\t\t{}".format(os.getpid(), msg))
 
-    return CommEnvironment(env_id, configs, menv_stub)
+    return CommEnvironment(env_id, configs, menv_address, menv_comm)
+
+if __name__ == "__main__":
+    sys.path.append(str(Path(__file__).absolute().parent.parent.parent)) # necessary to add Shiva modules to the path
+
+    from shiva.envs.CommMultiEnvironmentServer import get_menv_stub
+    from shiva.learners.CommMultiAgentLearnerServer import get_learner_stub
+    from shiva.helpers.config_handler import load_class
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-pa", "--parent-address", required=True, type=str, help='Parent address')
+    args = parser.parse_args()
+
+    menv_comm = MPI.Comm.Get_parent()
+    size = menv_comm.Get_size()
+    rank = menv_comm.Get_rank()
+
+    configs = menv_comm.bcast(None, root=0)
+    env_cls = load_class('shiva.envs', configs['Environment']['type'])  # all envs with same config
+    create_comm_env(env_cls, rank, configs, args.parent_address, menv_comm)
