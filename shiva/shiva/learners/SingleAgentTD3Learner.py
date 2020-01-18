@@ -30,31 +30,26 @@ class SingleAgentTD3Learner(Learner):
 
         """Temporary fix for Unity as it receives multiple observations"""
         if len(observation.shape) > 1:
-            action = [self.alg.get_action(self.agent, obs, self.env.step_count) for obs in observation]
+            action = [self.agent.get_action(obs, self.env.step_count) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
-                exp = [obs, act, rew, next_obs, int(don)]
-                # print(act, rew, don)
-                self.buffer.append(exp)
+                self.buffer.push(list(map(torch.clone, (torch.tensor(obs), torch.from_numpy(act), torch.tensor(rew), torch.tensor(next_obs), torch.tensor([don], dtype=torch.bool)))))
         else:
-            action = self.alg.get_action(self.agent, observation, self.env.step_count)
+            action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action)
-            t = [observation, action, reward, next_observation, int(done)]
-            exp = copy.deepcopy(t)
-            self.buffer.append(exp)
-
-        # if self.step_count % 16 == 0:
-        #     self.alg.update(self.agent, self.buffer, self.env.step_count)
+            self.buffer.push(list(map(torch.clone, (torch.tensor(observation), torch.tensor(action), torch.tensor(reward), torch.tensor(next_observation), torch.tensor([done], dtype=torch.bool)))))
         """"""
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
-        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), self.configs)
 
     def create_buffer(self):
+        # buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        # return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, self.env.get_observation_space(), self.env.get_action_space()['acs_space'])
 
     def launch(self):
         self.env = self.create_environment()

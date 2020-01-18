@@ -6,7 +6,7 @@ from shiva.agents.TD3Agent import TD3Agent
 from shiva.algorithms.Algorithm import Algorithm
 # from utils.Gaussian_Exploration import Gaussian_Exploration
 # from utils.OU_Noise_Exploration import OU_Noise_Exploration
-from shiva.utils import Noise as noise
+# from shiva.utils import Noise as noise
 
 class TD3Algorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):
@@ -18,8 +18,8 @@ class TD3Algorithm(Algorithm):
         self.acs_space = action_space['acs_space']
         # self.exploration_strategy = OU_Noise_Exploration(action_space, self.configs[0])
         # self.exploration_strategy_critic = Gaussian_Exploration(self.configs[0])
-        self.ou_noise = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
-        self.ou_noise_critic = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        # self.ou_noise = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        # self.ou_noise_critic = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
 
         self.actor_loss = 0
         self.critic_loss_1 = 0
@@ -27,12 +27,9 @@ class TD3Algorithm(Algorithm):
 
     def update(self, agent, buffer, step_count, episodic=False):
         if episodic:
-            self.ou_noise.reset()
-            self.ou_noise_critic.reset()
-            return
-
-        if step_count < self.exploration_steps:
-            return
+            agent.ou_noise.reset()
+            agent.ou_noise_critic.reset()
+            # return
 
         '''
             Update starts here
@@ -91,7 +88,7 @@ class TD3Algorithm(Algorithm):
         with torch.no_grad():
             actions_next = self.agent.actor(next_states.to(self.device))
             # actions_next_with_noise =  self.exploration_strategy_critic.perturb_action_for_exploration_purposes({"action": actions_next})
-            actions_next_with_noise = actions_next + torch.tensor(self.ou_noise_critic.noise(), dtype=torch.float).to(self.device)
+            actions_next_with_noise = actions_next + torch.tensor(self.agent.ou_noise_critic.noise(), dtype=torch.float).to(self.device)
             critic_targets_next_1 = self.agent.target_critic(torch.cat((next_states, actions_next_with_noise), 1))
             critic_targets_next_2 = self.agent.target_critic_2(torch.cat((next_states, actions_next_with_noise), 1))
             critic_targets_next = torch.min(torch.cat((critic_targets_next_1, critic_targets_next_2),1), dim=-1)[0].unsqueeze(-1)
@@ -122,24 +119,24 @@ class TD3Algorithm(Algorithm):
             target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
 
     # Gets actions with a linearly decreasing e greedy strat
-    def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
-        print('User agent.get_action!')
-        if step_count < self.exploration_steps:
-            self.action = np.array([np.random.uniform(-1, 1) for _ in range(self.acs_space)])
-            return self.action
-        else:
-            """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
-            self.agent.actor.eval()
-            with torch.no_grad():
-                obs = torch.tensor(observation, dtype=torch.float).to(self.device)
-                self.action = self.agent.actor(obs).cpu().data.numpy()
-            self.agent.actor.train()
-            # action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
-            self.action += self.ou_noise.noise()
-            return self.action
+    # def get_action(self, agent, observation, step_count) -> np.ndarray: # maybe a torch.tensor
+        # print('User agent.get_action!')
+        # if step_count < self.exploration_steps:
+        #     self.action = np.array([np.random.uniform(-1, 1) for _ in range(self.acs_space)])
+        #     return self.action
+        # else:
+        #     """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
+        #     self.agent.actor.eval()
+        #     with torch.no_grad():
+        #         obs = torch.tensor(observation, dtype=torch.float).to(self.device)
+        #         self.action = self.agent.actor(obs).cpu().data.numpy()
+        #     self.agent.actor.train()
+        #     # action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
+        #     self.action += self.ou_noise.noise()
+        #     return self.action
 
     def create_agent(self, id):
-        self.agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+        self.agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs['Agent'], self.configs['Network'])
         return self.agent
 
     def get_metrics(self, episodic=False):
@@ -149,8 +146,8 @@ class TD3Algorithm(Algorithm):
                 ('Algorithm/Critic_Loss', self.critic_loss_2),
                 ('Algorithm/Critic_2_Loss', self.critic_loss_2)
             ]
-            for i, ac in enumerate(self.action):
-                metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
+            for i, ac in enumerate(self.agent.action):
+                metrics.append(('Agent/Actor_Output_'+str(i), self.agent.action[i]))
         else:
             metrics = []
         return metrics

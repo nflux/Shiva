@@ -127,6 +127,7 @@ def get_menv_stub(address: str):
             simple_message = SimpleMessage()
             simple_message.data = json.dumps(list(observations))
             response = self.GetActions(simple_message, wait_for_ready=True)
+            # print(response.data, type(response.data))
             return json.loads(response.data)
 
         def send_env_specs(self, env_specs: dict) -> None:
