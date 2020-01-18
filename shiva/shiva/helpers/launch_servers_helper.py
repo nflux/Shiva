@@ -1,4 +1,4 @@
-import sys, os, argparse, time
+import sys, os, argparse, time, socket
 from collections import namedtuple
 from pathlib import Path
 
@@ -24,6 +24,19 @@ learner_tags = TagsTuple(*list(learner_server_tags.values()))
 menv_server_tags = {'close': 0, 'error': 1, 'configs': 2, 'learner_specs': 3, 'env_specs': 4, 'new_agents': 5}
 TagsTuple = namedtuple('Tags', list(menv_server_tags.keys()))
 menv_tags = TagsTuple(*list(menv_server_tags.values()))
+
+
+def check_port(port):
+    """
+    Attempts to bind to the requested communicator port, checking if it is already in use.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("localhost", int(port)))
+    except socket.error:
+        assert 'Port not available'
+    finally:
+        s.close()
 
 def start_meta_server(meta_address, maxprocs=1):
     global meta_tags

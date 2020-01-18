@@ -18,14 +18,12 @@ class CommMultiLearnerMetaLearnerServer(MetaLearnerServicer):
     def __init__(self, meta_tags):
         self.meta_tags = meta_tags
         self.meta = MPI.Comm.Get_parent()
-        self.status = MPI.Status()
-        self.any_src, self.any_tag = MPI.ANY_SOURCE, MPI.ANY_TAG
+        # self.status = MPI.Status()
+        # self.any_src, self.any_tag = MPI.ANY_SOURCE, MPI.ANY_TAG
 
-        self.configs = None
         # self.debug("MPI Request for configs")
         self.configs = self.meta.recv(None, source=0, tag=self.meta_tags.configs)
         self.debug("Received config with {} keys".format(len(self.configs.keys())))
-
         self.menvs_check = []
         self.learners_data = []
 

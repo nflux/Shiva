@@ -41,6 +41,7 @@ class MultiEnvironmentServer(MultiEnvironmentServicer):
         response = SimpleMessage()
         response.data = json.dumps(list(actions))
         self.step_count += 1
+        # self.debug("Received Agent Step {}".format(self.agents[0].step_count))
         return response
 
     def SendSpecs(self, simple_message: SimpleMessage, context) -> Empty:
@@ -52,11 +53,11 @@ class MultiEnvironmentServer(MultiEnvironmentServicer):
         elif specs['type'] == ComponentType.LEARNER:
             self.learners_data.append(specs)
             self.debug("received gRPC LearnerSpecs {} and sharing with MultiEnv".format(specs['id']))
-            self.menv.send(specs, 0, self.menv_tags.learner_specs)
             '''
                 Loading Agents locally for now!
             '''
             self.agents = Admin._load_agents(specs['load_path'])
+            self.menv.send(specs, 0, self.menv_tags.learner_specs)
         else:
             self._return_error(SimpleMessage, context, "InvalidComponentType")
         return Empty()
@@ -65,8 +66,6 @@ class MultiEnvironmentServer(MultiEnvironmentServicer):
         response = SimpleMessage()
         specs = json.loads(simple_message.data)
         if specs['type'] == ComponentType.ENVIRONMENT:
-            while len(self.learners_data) == 0: # busy waiting for the learners to check in
-                pass
             response.data = json.dumps(self.learners_data)
         else:
             self._return_error(SimpleMessage, context, "InvalidComponentType")
@@ -82,7 +81,8 @@ class MultiEnvironmentServer(MultiEnvironmentServicer):
                 Loading Single Agent locally for now!
             '''
             self.agents = Admin._load_agents(config['load_path'])
-            # self.menv.send(config, 0, self.menv_tags.new_agents)
+            self.debug("Received Agent Step {}".format(self.agents[0].step_count))
+            # self.menv.send(config, 0, self.menv_tags.new_agents) # if want to share with the MultiEnv
         else:
             self._return_error(ConfigProto, context, "InvalidComponentType")
         return Empty()
@@ -93,7 +93,7 @@ class MultiEnvironmentServer(MultiEnvironmentServicer):
         return return_class()
 
     def debug(self, msg):
-        print("PID {} MultiEnvServer\t{}".format(os.getpid(), msg))
+        print("PID {} MultiEnvServer\t\t{}".format(os.getpid(), msg))
 
     # def SendObservations(self, request, context) -> ActionsProto:
     #     assert "NotImplemented"
@@ -133,7 +133,7 @@ def get_menv_stub(address: str):
             simple_message = SimpleMessage()
             env_specs['type'] = ComponentType.ENVIRONMENT
             simple_message.data = json.dumps(env_specs)
-            response = self.SendSpecs(simple_message, wait_for_ready=True)
+            response = self.SendSpecs(simple_message)
             return None
 
         def send_learner_specs(self, specs: dict) -> None:
@@ -143,7 +143,7 @@ def get_menv_stub(address: str):
             simple_message = SimpleMessage()
             specs['type'] = ComponentType.LEARNER
             simple_message.data = json.dumps(specs)
-            response = self.SendSpecs(simple_message, wait_for_ready=True)
+            response = self.SendSpecs(simple_message)
             return None
 
         def get_learners_specs(self, spec: dict) -> dict:
@@ -153,7 +153,7 @@ def get_menv_stub(address: str):
             simple_message = SimpleMessage()
             spec['type'] = ComponentType.ENVIRONMENT
             simple_message.data = json.dumps(spec)
-            response_simple_message = self.GetSpecs(simple_message, wait_for_ready=True)
+            response_simple_message = self.GetSpecs(simple_message)
             return json.loads(response_simple_message.data)
 
         def send_new_agents(self, checkpoint_url: str) -> None:
