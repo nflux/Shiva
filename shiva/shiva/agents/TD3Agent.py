@@ -4,6 +4,7 @@ import torch
 
 from shiva.agents.Agent import Agent
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
+from shiva.utils import Noise as noise
 
 class TD3Agent(Agent):
     def __init__(self, id, obs_dim, action_dim, agent_config: dict, networks: dict):
@@ -33,8 +34,25 @@ class TD3Agent(Agent):
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_lr, eps=self.eps)
         self.critic_optimizer_2 = self.optimizer_function(params=self.critic_2.parameters(), lr=self.critic_2_lr, eps=self.eps)
 
+        self.ou_noise = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        self.ou_noise_critic = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+
     def get_action(self, observation, step_count):
-        return self.actor(torch.tensor(observation))
+        # return self.actor(torch.tensor(observation))
+        if step_count < self.exploration_steps:
+            self.action = np.array([np.random.uniform(-1, 1) for _ in range(self.acs_space)])
+            return self.action
+        else:
+            """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
+            self.actor.eval()
+            with torch.no_grad():
+                obs = torch.tensor(observation, dtype=torch.float).to(self.device)
+                self.action = self.actor(obs).cpu().data.numpy()
+            self.actor.train()
+            # action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
+            self.action += self.ou_noise.noise()
+            self.action = self.action.tolist()
+            return self.action
 
     def save(self, save_path, step):
         torch.save(self.actor, save_path + '/actor.pth')
@@ -44,11 +62,10 @@ class TD3Agent(Agent):
         torch.save(self.critic_2, save_path + '/critic_2.pth')
         torch.save(self.target_critic_2, save_path + '/target_critic_2.pth')
 
-    def load_net(self, load_path):
-        network = torch.load(load_path)
-        attr = os.path.split('/')[-1].replace('.pth', '')
-        setattr(self, attr, network)
-
+    # def load_net(self, load_path):
+    #     network = torch.load(load_path)
+    #     attr = os.path.split('/')[-1].replace('.pth', '')
+    #     setattr(self, attr, network)
 
     def __str__(self):
         return 'TD3Agent'

@@ -77,7 +77,7 @@ class SingleAgentLearner(Learner):
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
-        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space() ,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), self.evaluate ,[self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])

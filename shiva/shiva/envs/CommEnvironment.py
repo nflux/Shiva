@@ -34,7 +34,7 @@ def create_comm_env(cls, env_id, configs, menv_address, menv_comm):
             self.learners_stub = {}
             for spec in self.learners_specs:
                 self.learners_stub[spec['id']] = get_learner_stub(spec['address'])
-            self.debug("Successfully created stubs for the Learner # {} - Waiting ready signal from MultiEnv!!!".format(len(self.learners_specs)))
+            # self.debug("Successfully created stubs for the Learner # {} - Waiting ready signal from MultiEnv!!!".format(len(self.learners_specs)))
 
             self.trajectories = []
 
@@ -43,6 +43,7 @@ def create_comm_env(cls, env_id, configs, menv_address, menv_comm):
             self.run()
 
         def run(self):
+            self.debug("Started collection..")
             while True:
                 observations = self.get_observations()
                 actions = self.menv_stub.get_actions(observations)

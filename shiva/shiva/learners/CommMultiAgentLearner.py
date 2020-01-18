@@ -85,8 +85,8 @@ class CommMultiAgentLearner():
                 exp = list(map(torch.clone, (torch.tensor(observation), torch.tensor(action), torch.tensor(reward), torch.tensor(next_observation), torch.tensor([done], dtype=torch.bool))))
                 self.buffer.push(exp)
                 self.step_count += 1
-
-            if self.step_count > self.configs['Agent']['exploration_steps'] and self.done_count % self.save_checkpoint_episodes == 0:
+            if True:
+            # if self.step_count > self.configs['Agent']['exploration_steps'] and self.done_count % self.save_checkpoint_episodes == 0:
                 self.alg.update(self.agents[0], self.buffer, self.step_count)
                 self.agents[0].step_count = self.step_count
                 self.debug("Sending Agent Step # {}".format(self.step_count))
