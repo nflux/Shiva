@@ -60,6 +60,11 @@ class Agent(object):
         assert False, "Method Not Implemented"
 
     def find_best_action(self, network, observation) -> np.ndarray:
+        if not torch.is_tensor(observation):
+            observation = torch.tensor(observation).float()
+        return self.find_best_action_from_tensor(network, observation)
+
+    def find_best_action_from_tensor(self, network, observation) -> np.ndarray:
         '''
             Iterates over the action space to find the one with the highest Q value
 
@@ -70,16 +75,17 @@ class Agent(object):
             Returns
                 A one-hot encoded list
         '''
-        obs_v = torch.tensor(observation).float().to(self.device)
+        obs_v = observation #torch.tensor(observation).float().to(self.device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
         for i in range(self.acs_space):
             act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device)
-            q_val = network(torch.cat([obs_v, act_v]))
+            q_val = network(torch.cat([obs_v, act_v], dim=-1))
             if q_val > best_q:
                 best_q = q_val
                 best_act_v = act_v
         best_act = best_act_v.tolist()
         return best_act
+
 
     @staticmethod
     def copy_model_over(from_model, to_model):

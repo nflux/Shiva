@@ -133,7 +133,7 @@ class GymEnvironment(Environment):
     def get_observations(self):
         return self.obs
     def get_observation(self):
-        return torch.tensor(self.obs)
+        return self.obs
 
     def get_actions(self):
         return self.acs

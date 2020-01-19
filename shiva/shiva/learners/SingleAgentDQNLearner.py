@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import copy
+import torch
 
 from shiva.core.admin import Admin
 from shiva.learners.Learner import Learner
@@ -40,32 +41,39 @@ class SingleAgentDQNLearner(Learner):
         observation = self.env.get_observation()
         """Temporary fix for Unity as it receives multiple observations"""
         if len(observation.shape) > 1:
-            action = [self.alg.get_action(self.agent, obs, self.step_count) for obs in observation]
+            action = [self.agent.get_action(obs, self.step_count) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
             z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
             for obs, act, rew, next_obs, don in z:
-                exp = [obs, act, rew, next_obs, int(don)]
+                # exp = [obs, act, rew, next_obs, int(don)]
+                exp = list(map(torch.clone, (torch.tensor(observation), torch.tensor(action), torch.tensor(reward), torch.tensor(next_observation), torch.tensor([done], dtype=torch.bool))))
                 # print(act, rew, don)
-                self.buffer.append(exp)
+                self.buffer.push(exp)
         else:
-            action = self.alg.get_action(self.agent, observation, self.step_count)
+            action = self.agent.get_action(observation, self.step_count)
             next_observation, reward, done, more_data = self.env.step(action)
             t = [observation, action, reward, next_observation, int(done)]
-            exp = copy.deepcopy(t)
-            self.buffer.append(exp)
+            # exp = copy.deepcopy(t)
+            exp = list(map(torch.clone, (torch.tensor(observation), torch.tensor(action), torch.tensor(reward), torch.tensor(next_observation), torch.tensor([done], dtype=torch.bool))))
+            self.buffer.push(exp)
         """"""
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         try:
             self.configs['Agent']['learning_rate'] = random.uniform(self.learning_rate[0],self.learning_rate[1])
-            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), self.configs)
         except:
-            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+            return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), self.configs)
 
     def create_buffer(self):
+        # SimpleBuffer
+        # buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
+        # return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, self.env.get_observation_space(), self.env.get_action_space()['acs_space'])
+
 
     def launch(self):
         self.env = self.create_environment()
