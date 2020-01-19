@@ -39,16 +39,19 @@ class DQNAgent(Agent):
         if step_n < self.exploration_steps:
             action_idx = random.sample(range(self.acs_space), 1)[0]
             action = action2one_hot_v(self.acs_space, action_idx)
+            # print('random - step_n', step_n)
         elif random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
             # this might not be correct implementation of e greedy
             action_idx = random.sample(range(self.acs_space), 1)[0]
             action = action2one_hot_v(self.acs_space, action_idx)
+            # print('greedy')
         else:
             if len(obs.shape) > 1:
                 print('Weird obs shape')
                 pass
             # Iterate over all the actions to find the highest Q value
-            action = self.get_action(obs)
+            action = self.find_best_action(self.policy, obs)
+            # print('agent step_n', step_n)
         return action # replay buffer store lists and env does np.argmax(action)
 
     def get_action_target(self, obs):

@@ -31,13 +31,11 @@ class DQNAlgorithm(Algorithm):
             Input
                 agent       Agent reference who we are updating
                 buffer      Buffer reference to sample from
-                step_n      Current step number
+                step_n      Current step number or done_count when doing episodic updates!
                 episodic    Flag indicating if update is episodic
         '''
-        if episodic:
-            '''
-                DQN updates at every timestep, here we avoid doing an extra update after the episode terminates
-            '''
+        # if episodic: # for DQN to do step-wise updates only
+        if not episodic: # for DQN to do episodic update
             return
 
         states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
