@@ -74,11 +74,11 @@ class SingleAgentMultiEnvLearner(Learner):
                     self.collect_metrics(episodic=True)
                     # print(self.reward_per_episode)
 
-                    if len(self.buffer) <= self.buffer.batch_size:
-                        self.collect_metrics(episodic=True)
-                    else:
-                        self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
-                        self.collect_metrics(episodic=True)
+                    # if len(self.buffer) <= self.buffer.batch_size:
+                    #     self.collect_metrics(episodic=True)
+                    # else:
+                    # #     self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
+                    #     self.collect_metrics(episodic=True)
 
                 self.aggregator_index[0] = 0
                 self.metrics_idx[0] = 0
@@ -106,12 +106,12 @@ class SingleAgentMultiEnvLearner(Learner):
                     self.alg.update(self.agent,self.buffer,self.step_count)
                 self.collect_metrics(episodic=False)
 
-            # if len(self.buffer) > self.buffer.batch_size:
-            #     # start_time = time.time()
-            #     self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
-            #     # print("Update--- %s seconds ---" % (time.time() - start_time))
-            #     # print("this happened")
-            #     self.collect_metrics(episodic=True)
+            if len(self.buffer) > self.buffer.batch_size:
+                # start_time = time.time()
+                self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
+                # print("Update--- %s seconds ---" % (time.time() - start_time))
+                # print("this happened")
+                self.collect_metrics(episodic=True)
 
 
                 # self.alg.update(self.agent,self.buffer,self.step_count, episodic=True)
@@ -204,12 +204,30 @@ class SingleAgentMultiEnvLearner(Learner):
         return self.alg
 
     def launch(self):
-        environment = load_class('shiva.envs', self.configs['Environment']['sub_type'])
-        self.env = environment(self.configs, 20_000)
-        obs_dim = self.env.get_observation_space()
-        acs_dim = self.env.get_action_space()['acs_space']
-        time.sleep(5)
-        self.env.close()
+
+        if self.configs['Environment']['sub_type'] == 'RoboCupEnvironment':
+            environment = load_class('shiva.envs', self.configs['Environment']['sub_type'])
+            self.env = environment(self.configs, 20_000)
+            obs_dim = self.env.get_observation_space()
+            acs_dim = self.env.get_action_space()['acs_space']
+            time.sleep(5)
+            self.env.close()
+
+        else:
+            environment = load_class('shiva.envs', self.configs['Environment']['sub_type'])
+            self.env = environment(self.configs)
+            obs_dim = self.env.get_observation_space()
+            acs_dim = self.env.get_action_space()['acs_space']
+            time.sleep(5)
+            self.env.close()
+
+        if hasattr(self, 'manual_play') and self.manual_play:
+            '''
+                Only for RoboCup!
+                Maybe for Unity at some point?????
+            '''
+            from shiva.envs.RoboCupEnvironment import HumanPlayerInterface
+            self.HPI = HumanPlayerInterface()
 
 
 
@@ -219,12 +237,12 @@ class SingleAgentMultiEnvLearner(Learner):
             self.buffer = self.create_buffer(obs_dim, acs_dim)
 
         # buffers for the aggregator
-        self.obs_buffer = torch.zeros((10_000, obs_dim), requires_grad=False).share_memory_()
-        self.acs_buffer = torch.zeros( (10_000, acs_dim) ,requires_grad=False).share_memory_()
-        self.rew_buffer = torch.zeros((10_000, 1),requires_grad=False).share_memory_()
-        self.next_obs_buffer = torch.zeros((10_000, obs_dim),requires_grad=False).share_memory_()
-        self.done_buffer = torch.zeros((10_000, 1),requires_grad=False).share_memory_()
-        self.ep_metrics_buffer = torch.zeros((10_000, 2),requires_grad=False).share_memory_()
+        self.obs_buffer = torch.zeros((self.aggregator_size, obs_dim), requires_grad=False).share_memory_()
+        self.acs_buffer = torch.zeros( (self.aggregator_size, acs_dim) ,requires_grad=False).share_memory_()
+        self.rew_buffer = torch.zeros((self.aggregator_size, 1),requires_grad=False).share_memory_()
+        self.next_obs_buffer = torch.zeros((self.aggregator_size, obs_dim),requires_grad=False).share_memory_()
+        self.done_buffer = torch.zeros((self.aggregator_size, 1),requires_grad=False).share_memory_()
+        self.ep_metrics_buffer = torch.zeros((self.aggregator_size, 2),requires_grad=False).share_memory_()
 
 
         self.create_aggregator(obs_dim, acs_dim)
@@ -266,7 +284,7 @@ class SingleAgentMultiEnvLearner(Learner):
         return metrics
 
 
-def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buffer, ep_metrics_buffer, queue, current_index, metrics_idx, ep_count, max_size, obs_dim, acs_dim):
+def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buffer, ep_metrics_buffer, queue, aggregator_index, metrics_idx, ep_count, max_size, obs_dim, acs_dim):
 
     while True:
 
@@ -296,7 +314,7 @@ def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buf
 
             print("Episode {} Episodic Reward {} ".format(int(ep_count.item()), rew.sum().item()))
 
-            idx = int(current_index.item())
+            idx = int(aggregator_index.item())
             t = int(metrics_idx.item())
 
             obs_buffer[idx:idx+nentries] = obs
@@ -307,7 +325,7 @@ def data_aggregator(obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buf
             ep_metrics_buffer[t:t+1, 0] = rew.sum()
             ep_metrics_buffer[t:t+1, 1] = nentries
             metrics_idx += 1
-            current_index += nentries
+            aggregator_index += nentries
 
 
     # def close(self):

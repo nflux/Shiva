@@ -92,7 +92,7 @@ class RoboCupEnvironment(Environment):
 
         if self.action_level == 'discretized':
             self.left_action_option[0] = act_choice
-            # # indicates whether its a dash, turn, or kick action from the action matrix
+            # indicates whether its a dash, turn, or kick action from the action matrix
             # if 0 <= self.left_action_option[0] < self.env.dash_idx:
             #     self.left_actions[0] = 0
             #     self.dashes += 1
@@ -103,11 +103,11 @@ class RoboCupEnvironment(Environment):
             #     self.left_actions[0] = 2
             #     self.kicks += 1
 
-            if self.left_action_option[0] == self.env.dash_idx:
+            if self.left_action_option[0] < self.env.dash_idx:
                 self.left_actions[0] = 0
                 self.dashes += 1
             else:
-                self.left_actions[0] = 1
+                self.left_actions[0] = 0
                 self.kicks += 1
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
@@ -200,8 +200,8 @@ class RoboCupEnvironment(Environment):
 
         return metrics
 
-#from pynput.keyboard import Key, KeyCode, Listener
-#from math import atan2, pi, acos
+from pynput.keyboard import Key, KeyCode, Listener
+from math import atan2, pi, acos
 
 class HumanPlayerInterface():
 
@@ -274,6 +274,42 @@ class HumanPlayerInterface():
         # global_theta = atan2(y_rad, x_rad) * 180 / pi
         # print("global angle(atan2):", global_theta)
 
+        # if self.action_level discretized
+
+        # if action == self.KEY_DASH:
+        #     '''
+        #         Dash forward
+        #     '''
+        #     dash_degree = 0
+        #     dash_power = self.normalize_power(50)
+
+        #     action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
+
+        # elif action == self.KEY_TURN_LEFT:
+        #     '''
+        #         Turn Agent Left
+        #     '''
+        #     action = [0, 1, 0, 0, 0, -0.25, 0, 0]
+
+        # elif action == self.KEY_TURN_RIGHT:
+        #     '''
+        #         Turn Agent Right
+        #     '''
+        #     action = [0, 1, 0, 0, 0, .25, 0, 0]
+
+        # elif action == self.KEY_KICK:
+        #     '''
+        #         Agent Kick
+        #     '''
+        #     kick_degree = 0
+        #     kick_power = self.normalize_power(50)
+
+        #     action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
+        # else:
+        #     assert False, "Wrong action given"
+
+
+
         if action == self.KEY_DASH:
             '''
                 Dash forward
@@ -281,30 +317,34 @@ class HumanPlayerInterface():
             dash_degree = 0
             dash_power = self.normalize_power(50)
 
-            action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
+            action = (10,0)
+            action = 0
 
         elif action == self.KEY_TURN_LEFT:
             '''
                 Turn Agent Left
             '''
-            action = [0, 1, 0, 0, 0, -0.25, 0, 0]
+            action = (22.5,)
+            action = 1
 
         elif action == self.KEY_TURN_RIGHT:
             '''
                 Turn Agent Right
             '''
-            action = [0, 1, 0, 0, 0, .25, 0, 0]
+            action = (-22.5,)
+            action = 2
 
-        elif action == self.KEY_KICK:
+        elif action == elf.KEY_KICK:
             '''
                 Agent Kick
             '''
             kick_degree = 0
             kick_power = self.normalize_power(50)
 
-            action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
+            action = (50,0)
+            action = 3
         else:
-            assert False, "Wrong action given"
+            assert False, "Wrong action given"            
 
         return np.array(action)
 

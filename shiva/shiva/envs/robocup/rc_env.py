@@ -54,17 +54,29 @@ class rc_env:
             
             # self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
             # self.action_list = [hfo_env.TURN , hfo_env.KICK]
-            self.action_list = [hfo_env.DASH , hfo_env.KICK]
+            # self.action_list = [hfo_env.DASH , hfo_env.KICK]
+            self.action_list = [hfo_env.KICK]
 
             self.ACTION_DICT = {
-                                0 : (10,0),#(50,0),
-                                1 : (50,0) #(0,10)
+                                # 0 : (10,), # turn
+                                0 : (0,0),  # kick forwards
+                                1 : (25,0),
+                                2 : (100,0) #kick backwards
                                }
 
+            # For testing rewards with HPI
+            # self.ACTION_DICT = {
+            #                     0 : (10,0), # dash forward
+            #                     1 : (-22.5), # turn left (0,10)
+            #                     2 : (22.5), # turn right
+            #                     3 : (50,0)  # kick straight ahead
+            #                    }
 
+            # self.dash_idx = 0
+            # self.turn_idx = 2
 
-            power_discretization =  np.linspace(0,100, (100 / self.pow_coef+1)    ).tolist()
-            degree_discretization = np.linspace(-180,180,(360/self.ang_coef+1)    ).tolist()
+            power_discretization =  np.linspace(    0,100, (100/self.pow_coef+1)  ).tolist()
+            degree_discretization = np.linspace( -180,180, (360/self.ang_coef+1)  ).tolist()
 
             self.pow_step = power_discretization[1]-power_discretization[0]
             self.degree_step = degree_discretization[1]-degree_discretization[0]
@@ -94,7 +106,7 @@ class rc_env:
             #     dis_ctr += 1
             
             # self.turn_idx = dis_ctr
-            self.turn_idx = 1
+            self.turn_idx = 0
 
             # self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(turn_dict.values(), turn_dict.keys()))
             # rev_ctr += 1
@@ -131,7 +143,7 @@ class rc_env:
 
             # # self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
             # self.acs_dim =  dis_ctr
-            self.acs_dim = 2
+            self.acs_dim = 3
             self.acs_param_dim = 0
 
         elif self.action_level == 'high':
@@ -621,7 +633,7 @@ class rc_env:
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-            time.sleep(10) # Wait for server to startup before connecting a player
+            time.sleep(3) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         '''
@@ -746,7 +758,8 @@ class rc_env:
 
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
 
-            reward -= 0.1
+            # reward -= 0.1
+            pass
             # print("agent is getting penalized for kicking when not kickable")
 
         
@@ -763,7 +776,7 @@ class rc_env:
             # print(self.left_agent_possesion)
             if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
-                reward += 5
+                reward += 0#5
                 team_reward += 1.5
 
             # set initial ball position after kick
@@ -864,7 +877,8 @@ class rc_env:
         distance_cur, closest_agent = self.closest_player_to_ball(team_obs, num_ag)
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
-            delta = (distance_prev - distance_cur)*1.0
+            delta = (distance_prev - distance_cur)*0
+            pass
             #if delta > 0:    
             if True:
                 team_reward += delta
@@ -882,7 +896,7 @@ class rc_env:
         if ((self.left_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
-                delta = (2*self.num_left)*(r_prev - r)* 1.0
+                delta = (2*self.num_left)*(r_prev - r)* 0
                 if True:
                 # if delta > 0:
                     reward += delta * 10

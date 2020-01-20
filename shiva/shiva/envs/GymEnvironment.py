@@ -48,6 +48,8 @@ class GymEnvironment(Environment):
         self.acs = action
 
         if discrete_select == 'argmax':
+            if type(action).__module__ == np.__name__:
+                action = torch.from_numpy(action)
             action4Gym = torch.argmax(action) if self.action_space_continuous is None else action
         elif discrete_select == 'sample':
             action4Gym = Categorical(torch.tensor(action)).sample()

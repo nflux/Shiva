@@ -29,14 +29,18 @@ class DDPGAlgorithm(Algorithm):
 
         '''
             DDPG updates every episode. This avoids doing an extra update at the end of an episode
-            But it does reset the noise after an episode
+            But it does reset the noise after an episode.
+
+            For Multi-Environment scenarios, the agent whose noise is being reset is not the agent inside
+            the multi environment instances, as such, 
         '''
         if episodic:
             
             agent.ou_noise.reset()
             
         else:
-            return
+            agent.ou_noise.reset()
+            # return
 
 
         # if step_count < self.agent.exploration_steps:

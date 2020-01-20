@@ -39,9 +39,9 @@ class MultiGymWrapper(Environment):
         last_load = 0
 
         self.ou_noises = [noise.OUNoise(self.acs_dim, self.agent.exploration_noise)]*self.num_instances 
-
-        time.sleep(30)
-
+        print("multi step waiting")
+        # time.sleep(30)
+        print("multi step began")
         while(self.stop_collecting.item() == 0):
 
             time.sleep(0.006)
@@ -73,7 +73,7 @@ class MultiGymWrapper(Environment):
                         if flag.item() == 1:
                             self.ou_noises[i].reset()
                             self.resetNoiseFlags[i] == 0
-                # print("obs going to actor before get actions",self.observations[:,:self.obs_dim])
+                print("obs going to actor before get actions",self.observations[:,:self.obs_dim])
                 self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item(), evaluate=True)
                 # print("actions returned from that observation",self.actions)
                 # print("actions from handshake", self.actions)
@@ -100,10 +100,10 @@ class MultiGymWrapper(Environment):
                     #         print(i,d)
 
                 # self.action_available[0] = 1
-
+                # print("THIS RAN WHILE ENVIRONMENTS WERE INITIALIZING")
             # if self.action_available.item() == 1:
                 self.observations[:,0:self.acs_dim] = copy.deepcopy(self.actions)
-                self.control = self.step_control.fill_(0)
+                self.step_control.fill_(0)
                 # self.action_available[0] = 0
 
             if self.episode_count == self.total_episodes:
@@ -227,7 +227,7 @@ def launch_robo_process( observations, action_available, step_count, step_contro
 
     return process_list
 
-def process_target(env,observations,action_available,step_count,step_control,stop_collecting, waitForLearner, id, queue,max_ep_length):
+def process_target(env,observations,action_available,step_count,step_control,stop_collecting, waitForLearner, id, queue, resetNoiseFlags,max_ep_length):
 
     observation_space = env.observation_space
     action_space = env.action_space['acs_space']
@@ -244,7 +244,7 @@ def process_target(env,observations,action_available,step_count,step_control,sto
 
     while(stop_collecting.item() == 0):
         if step_control[id] == 0 and waitForLearner.item() == 0:
-            time.sleep(0.06)
+            time.sleep(0.01)
             action = observations[id][:action_space].numpy()
             action_available[0] = 0
             next_observation, reward, done, more_data = env.step(action, discrete_select='sample')
@@ -380,10 +380,11 @@ def robo_process_target(observations,action_available,step_count,step_control,st
 
     while(stop_collecting.item() == 0):
         if step_control[id] == 0 and waitForLearner.item() == 0:
-            time.sleep(0.001)
+            # time.sleep(0.001)
             action = observations[id][:action_space].numpy()
             print("action received from actor",action)
             action_available[0] = 0
+            time.sleep(0.075)
 
 
             '''
@@ -391,7 +392,7 @@ def robo_process_target(observations,action_available,step_count,step_control,st
             
             '''
 
-            next_observation, reward, done, more_data = env.step(torch.tensor(action), discrete_select='sample', collect=False, device='cuda:0')
+            next_observation, reward, done, more_data = env.step(torch.tensor(action), discrete_select='argmax', collect=False, device='cuda:0')
             ep_observations[idx] = observation
             ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
@@ -423,6 +424,8 @@ def robo_process_target(observations,action_available,step_count,step_control,st
                 idx = 0
                 step_control[id] = 1
             else:
+                # print("nex obs", next_observation)
                 observations[id][:observation_space] = torch.from_numpy(next_observation)
+                # print(observations[id][:observation_space])
                 observation = next_observation
                 step_control[id] = 1

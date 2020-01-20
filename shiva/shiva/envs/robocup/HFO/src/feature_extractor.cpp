@@ -146,8 +146,7 @@ float FeatureExtractor::normalize(float val, float min_val, float max_val) {
     //           << max_val << "]" << std::endl;
     val = std::min(std::max(val, min_val), max_val);
   }
-  return ((val - min_val) / (max_val - min_val))
-      * (FEAT_MAX - FEAT_MIN) + FEAT_MIN;
+  return ((val - min_val) / (max_val - min_val)) * (FEAT_MAX - FEAT_MIN) + FEAT_MIN;
 }
 
 float FeatureExtractor::unnormalize(float val, float min_val, float max_val) {
