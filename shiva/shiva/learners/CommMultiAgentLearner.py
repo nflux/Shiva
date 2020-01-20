@@ -1,5 +1,6 @@
-import time, os
+import time, os, copy
 import torch
+import torch.multiprocessing as mp
 import numpy as np
 from mpi4py import MPI
 
@@ -50,8 +51,27 @@ class CommMultiAgentLearner():
 
         self.debug("Ready to instantiate algorithm, buffer and agents!")
 
-        self.alg = self.create_algorithm(self.menv_specs['env_specs']['observation_space'], self.menv_specs['env_specs']['action_space'])
+        self.queue = mp.Queue(maxsize=self.queue_size)
+        self.aggregator_index = torch.zeros(1).share_memory_()
+        self.metrics_idx = torch.zeros(1).share_memory_()
+        # self.agent_dir = os.getcwd() + self.agent_path
+
+        self.observation_space = self.menv_specs['env_specs']['observation_space']
+        self.action_space = self.menv_specs['env_specs']['action_space']
+
+        self.alg = self.create_algorithm(self.observation_space, self.action_space)
+
         self.buffer = self.create_buffer()
+
+        # buffers for the aggregator
+        self.obs_buffer = torch.zeros((self.aggregator_size, self.observation_space), requires_grad=False).share_memory_()
+        self.acs_buffer = torch.zeros((self.aggregator_size, self.action_space), requires_grad=False).share_memory_()
+        self.rew_buffer = torch.zeros((self.aggregator_size, 1), requires_grad=False).share_memory_()
+        self.next_obs_buffer = torch.zeros((self.aggregator_size, self.observation_space), requires_grad=False).share_memory_()
+        self.done_buffer = torch.zeros((self.aggregator_size, 1), requires_grad=False).share_memory_()
+        self.ep_metrics_buffer = torch.zeros((self.aggregator_size, 2), requires_grad=False).share_memory_()
+
+        self.create_aggregator(self.observation_space, self.action_space)
 
         if self.load_agents:
             self.agents = Admin._load_agents(self.load_agents, absolute_path=False)
@@ -73,32 +93,77 @@ class CommMultiAgentLearner():
         self.done_count = 0
         trajectory = None
         while True:
-            # self.debug("Waiting trajectory...")
+            if self.aggregator_index.item():
+                # trajectory = self.comm_learner_server.recv(None, 0, self.learner_tags.trajectories) # blocking communication
 
-            # try receiving as tensor later
-            # trajectory_length = self.comm_learner_server.recv(None, 0, self.learner_tags.trajectories_length)
-            # self.debug(trajectory_length)
-            # trajectory = np.empty(trajectory_length)
-            # self.comm_learner_server.Recv([trajectory, MPI.FLOAT], 0, self.learner_tags.trajectories) # blocking receive
-            # self.debug(trajectory.shape)
+                idx = int(self.aggregator_index.item())
+                t = int(self.metrics_idx.item())
 
-            trajectory = self.comm_learner_server.recv(None, 0, self.learner_tags.trajectories) # blocking communication
+                exp = copy.deepcopy(
+                    [
+                        self.obs_buffer[:idx],
+                        self.acs_buffer[:idx],
+                        self.rew_buffer[:idx],
+                        self.next_obs_buffer[:idx],
+                        self.done_buffer[:idx]
+                    ]
+                )
 
-            self.done_count += 1
-            for observation, action, reward, next_observation, done in trajectory:
-                exp = list(map(torch.clone, (torch.tensor(observation), torch.tensor(action), torch.tensor(reward), torch.tensor(next_observation), torch.tensor([done], dtype=torch.bool))))
+                for i in range(t):
+                    self.ep_count += 1
+                    self.reward_per_episode = self.ep_metrics_buffer[i, 0].item()
+                    self.steps_per_episode = int(self.ep_metrics_buffer[i, 1].item())
+                    self._collect_metrics(episodic=True)
+
+                self.aggregator_index[0] = 0
+                self.metrics_idx[0] = 0
                 self.buffer.push(exp)
-                self.step_count += 1
 
-            if True:
-            # if self.step_count > self.configs['Agent']['exploration_steps'] and self.done_count % self.save_checkpoint_episodes == 0:
-                self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
-                self.agents[0].step_count = self.step_count
-                # self.debug("Sending Agent Step # {}".format(self.step_count))
-                Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
-                self._collect_metrics()
-                self.menv_stub.send_new_agents(Admin.get_last_checkpoint(self))
-            # self.debug("Sent new agents")
+            # #############################
+            # ## old without aggregator
+            # trajectory = self.comm_learner_server.recv(None, 0, self.learner_tags.trajectories) # blocking communication
+            #
+            # self.done_count += 1
+            # for observation, action, reward, next_observation, done in trajectory:
+            #     exp = list(map(torch.clone, (torch.tensor(observation), torch.tensor(action), torch.tensor(reward), torch.tensor(next_observation), torch.tensor([done], dtype=torch.bool))))
+            #     self.buffer.push(exp)
+            #     self.step_count += 1
+            #
+            # if self.done_count % self.save_checkpoint_episodes == 0:
+            #     self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
+            #     self.agents[0].step_count = self.step_count
+            #     # self.debug("Sending Agent Step # {}".format(self.step_count))
+            #     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
+            #     self._collect_metrics()
+            #     self.menv_stub.send_new_agents(Admin.get_last_checkpoint(self))
+            # # self.debug("Sent new agents")
+            # ###############################
+
+    def create_aggregator(self, obs_dim, acs_dim):
+
+        self.aggregator = mp.Process(
+            target=data_aggregator,
+
+            args=(
+                self.comm_learner_server, # send communication with the server to receive trajectory
+                self.learner_tags.trajectories, # tag where the aggregator should be looking for incoming data from server
+                self.obs_buffer,
+                self.acs_buffer,
+                self.rew_buffer,
+                self.next_obs_buffer,
+                self.done_buffer,
+                self.ep_metrics_buffer,
+                self.queue,
+                self.aggregator_index,
+                self.metrics_idx,
+                self.ep_count,
+                self.aggregator_size,
+                obs_dim,
+                acs_dim,
+            )
+        )
+
+        self.aggregator.start()
 
     def create_algorithm(self, observation_space, action_space):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
@@ -140,13 +205,54 @@ class CommMultiAgentLearner():
     def debug(self, msg):
         print("PID {} Learner\t\t{}".format(os.getpid(), msg))
 
-def collect_forever(minibuffer, queue, ix, num_agents, acs_dim, obs_dim, metrics):
-    '''
-        Separate process who collects the data from the server queue and puts it into a temporary minibuffer
-    '''
-    while True: # maybe a lock here
-        pass
-        # trajectory = from_TrajectoryProto_2_trajectory( queue.pop() )
-        # collect metrics
-        # metrics['rewards'] =
-        # push to minibuffer
+
+def data_aggregator(comm_server, tag, obs_buffer, acs_buffer, rew_buffer, next_obs_buffer,done_buffer, ep_metrics_buffer, queue, aggregator_index, metrics_idx, ep_count, max_size, obs_dim, acs_dim):
+
+    while True:
+        # time.sleep(0.06)
+        # while not queue.empty():
+
+        exps = comm_server.recv(None, 0, tag=tag)  # blocking communication
+
+        # exps = queue.get()
+        # print(queue.qsize())
+        # ep_count += 1
+        obs, ac, rew, next_obs, done = zip(*exps)
+
+        obs = torch.tensor(obs)
+        ac = torch.tensor(ac)
+        rew = torch.tensor(rew).reshape(-1,1)
+        next_obs = torch.tensor(next_obs)
+        done = torch.tensor(done).reshape(-1,1)
+
+
+        '''
+            Collect metrics here
+            average reward
+            sum of rewards
+        '''
+        nentries = len(obs)
+
+        print("Episode {} Episodic Reward {} ".format(int(ep_count.item()), rew.sum().item()))
+
+        idx = int(aggregator_index.item())
+        t = int(metrics_idx.item())
+
+        obs_buffer[idx:idx+nentries] = obs
+        acs_buffer[idx:idx+nentries] = ac
+        rew_buffer[idx:idx+nentries] = rew
+        next_obs_buffer[idx:idx+nentries] = next_obs
+        done_buffer[idx:idx+nentries] = done
+        ep_metrics_buffer[t:t+1, 0] = rew.sum()
+        ep_metrics_buffer[t:t+1, 1] = nentries
+        metrics_idx += 1
+        aggregator_index += nentries
+
+
+    # def close(self):
+
+        # for env in self.env.envs:
+            # env.close()
+
+        # for p in self.env.process_list:
+        #     p.close()

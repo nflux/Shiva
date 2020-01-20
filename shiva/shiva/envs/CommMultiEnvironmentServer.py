@@ -72,16 +72,17 @@ class MultiEnvironmentServer(MultiEnvironmentServicer):
             self._return_error(SimpleMessage, context, "InvalidComponentType")
         return response
 
-    def SendConfig(self, config_proto: ConfigProto, context) -> Empty:
-        config = {
-            'load_type': config_proto.load_type,
-            'load_path': config_proto.load_path
+    def SendConfig(self, configs_proto: ConfigProto, context) -> Empty:
+        configs = {
+            'load_type': configs_proto.load_type,
+            'load_path': configs_proto.load_path
         }
-        if config_proto.type == ComponentType.AGENTS:
+        if configs_proto.type == ComponentType.AGENTS:
             '''
                 Loading Single Agent locally for now!
             '''
-            self.agents = Admin._load_agents(config['load_path'])
+            self.new_agents_config = configs
+            self.agents = Admin._load_agents(self.new_agents_config['load_path'])
             # self.debug("Received Agent Step {}".format(self.agents[0].step_count))
             # self.menv.send(config, 0, self.menv_tags.new_agents) # if want to share with the MultiEnv
         else:
