@@ -45,6 +45,7 @@ class ShivaAdmin():
     def __init__(self, config=None):
         if config is not None:
             self.init(config)
+        self.base_url = os.path.abspath('.')
 
     def init(self, config):
         '''
@@ -76,7 +77,6 @@ class ShivaAdmin():
             The procedure as well creates the needed folders for this directories if they don't exist
         '''
         assert 'runs' in self.dirs, "Need the 'runs' key on the 'directory' attribute on the [admin] section of the config"
-        self.base_url = os.path.abspath('.')
         for key, folder_name in self.dirs.items():
             directory = self.base_url + folder_name
             setattr(self, key+'_url', directory)
@@ -386,7 +386,7 @@ class ShivaAdmin():
         #     _new_learner.buffer = self._load_buffer(learner_path)
         # return _new_learner
 
-    def _load_agents(self, path) -> list:
+    def _load_agents(self, path, absolute_path=True) -> list:
         '''
             For a given @path, the procedure will walk recursively over all the folders inside the @path
             And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
@@ -394,6 +394,8 @@ class ShivaAdmin():
             Input
                 @path       Path where the agents files will be located
         '''
+        if not absolute_path:
+            path = '/'.join([self.base_url, path])
         agents = []
         agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
         agents_policies = dh.find_pattern_in_path(path, '.pth')

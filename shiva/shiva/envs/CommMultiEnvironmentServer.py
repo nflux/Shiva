@@ -38,8 +38,9 @@ class MultiEnvironmentServer(MultiEnvironmentServicer):
         '''
         # check if we have a new agent to load..
         actions = self.agents[0].get_action(observations, self.step_count)
+        # self.debug("{}".format(actions))
         response = SimpleMessage()
-        response.data = json.dumps(list(actions))
+        response.data = json.dumps(actions)
         self.step_count += 1
         # self.debug("Received Agent Step {}".format(self.agents[0].step_count))
         return response
@@ -81,7 +82,7 @@ class MultiEnvironmentServer(MultiEnvironmentServicer):
                 Loading Single Agent locally for now!
             '''
             self.agents = Admin._load_agents(config['load_path'])
-            self.debug("Received Agent Step {}".format(self.agents[0].step_count))
+            # self.debug("Received Agent Step {}".format(self.agents[0].step_count))
             # self.menv.send(config, 0, self.menv_tags.new_agents) # if want to share with the MultiEnv
         else:
             self._return_error(ConfigProto, context, "InvalidComponentType")

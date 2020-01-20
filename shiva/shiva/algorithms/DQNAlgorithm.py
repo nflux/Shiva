@@ -73,6 +73,7 @@ class DQNAlgorithm(Algorithm):
         agent.optimizer.step()
 
         if step_n % self.c == 0:
+            # print('update target')
             agent.target_policy.load_state_dict(agent.policy.state_dict()) # Assuming is PyTorch!
 
     # def update_using_SimpleBuffer(self, agent, buffer, step_n, episodic=False):

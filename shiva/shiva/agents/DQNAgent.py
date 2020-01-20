@@ -6,7 +6,7 @@ import random
 from shiva.agents.Agent import Agent
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork
 import shiva.helpers.networks_handler as nh
-from shiva.helpers.misc import action2one_hot_v
+from shiva.helpers.misc import action2one_hot
 
 class DQNAgent(Agent):
     def __init__(self, id, acs_space, obs_space, agent_config, net_config):
@@ -35,20 +35,17 @@ class DQNAgent(Agent):
         '''
         # return self.find_best_action(self.policy, obs)
         if evaluate:
-            return self.get_action(obs)
+            return self.find_best_action(self.policy, obs)
         if step_n < self.exploration_steps:
             action_idx = random.sample(range(self.acs_space), 1)[0]
-            action = action2one_hot_v(self.acs_space, action_idx)
+            action = list(action2one_hot(self.acs_space, action_idx))
             # print('random - step_n', step_n)
         elif random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
             # this might not be correct implementation of e greedy
             action_idx = random.sample(range(self.acs_space), 1)[0]
-            action = action2one_hot_v(self.acs_space, action_idx)
+            action = list(action2one_hot(self.acs_space, action_idx))
             # print('greedy')
         else:
-            if len(obs.shape) > 1:
-                print('Weird obs shape')
-                pass
             # Iterate over all the actions to find the highest Q value
             action = self.find_best_action(self.policy, obs)
             # print('agent step_n', step_n)

@@ -53,7 +53,11 @@ class CommMultiAgentLearner():
         self.alg = self.create_algorithm(self.menv_specs['env_specs']['observation_space'], self.menv_specs['env_specs']['action_space'])
         self.buffer = self.create_buffer()
 
-        self.agents = [self.alg.create_agent(ix) for ix in range(self.num_agents)]
+        if self.load_agents:
+            self.agents = Admin._load_agents(self.load_agents, absolute_path=False)
+        else:
+            self.agents = [self.alg.create_agent(ix) for ix in range(self.num_agents)]
+
         self.agents[0].step_count = 0
 
         Admin.checkpoint(self, checkpoint_num=0, function_only=True)
@@ -85,11 +89,12 @@ class CommMultiAgentLearner():
                 exp = list(map(torch.clone, (torch.tensor(observation), torch.tensor(action), torch.tensor(reward), torch.tensor(next_observation), torch.tensor([done], dtype=torch.bool))))
                 self.buffer.push(exp)
                 self.step_count += 1
+
             if True:
             # if self.step_count > self.configs['Agent']['exploration_steps'] and self.done_count % self.save_checkpoint_episodes == 0:
-                self.alg.update(self.agents[0], self.buffer, self.step_count)
+                self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
                 self.agents[0].step_count = self.step_count
-                self.debug("Sending Agent Step # {}".format(self.step_count))
+                # self.debug("Sending Agent Step # {}".format(self.step_count))
                 Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
                 self._collect_metrics()
                 self.menv_stub.send_new_agents(Admin.get_last_checkpoint(self))
