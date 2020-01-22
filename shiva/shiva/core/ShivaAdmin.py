@@ -119,12 +119,14 @@ class ShivaAdmin():
             new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
             self._learner_dir[learner.id]['base'] = new_dir
             self._learner_dir[learner.id]['checkpoint'] = [] # keep track of each checkpoint directory
+            temp_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], 'temp') )
+            self._learner_dir[learner.id]['temp'] = temp_dir
             new_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['summary']) )
             self._learner_dir[learner.id]['summary'] = new_dir
             self._agent_dir[learner.id] = {}
             self.writer[learner.id] = {} # this will be a dictionary whos key is an agent.id that maps to a unique tensorboard file for that agent
 
-    def checkpoint(self, learner, checkpoint_num=None, function_only=False):
+    def checkpoint(self, learner, checkpoint_num=None, function_only=False, use_temp_folder=False):
         '''
             This procedure:
                 1. Adds Learner profile if not existing
@@ -134,15 +136,19 @@ class ShivaAdmin():
             Input
                 @learner            Learner instance
                 @checkpoint_num     Optional checkpoint number given, used for distributed processes scenario and running locally
-                @function_only      When we only want to use this functionality, used for distributed processes and running locally
+                @function_only      When we only want to use this functionality, used for distributed processes and running locally - future to be used on the cloud?
         '''
         if not self.need_to_save: return
         self.add_learner_profile(learner, function_only) # will only add if was not profiled before
         if checkpoint_num is None:
             checkpoint_num = learner.env.done_count
         # create checkpoint folder
-        new_checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ))
-        self._learner_dir[learner.id]['checkpoint'].append(new_checkpoint_dir)
+        self.use_temp_folder = use_temp_folder
+        if self.use_temp_folder:
+            checkpoint_dir = self._learner_dir[learner.id]['temp']
+        else:
+            checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ))
+        self._learner_dir[learner.id]['checkpoint'].append(checkpoint_dir)
         # self._save_learner(learner, checkpoint_num)
         self._save_learner_agents(learner, checkpoint_num)
 
@@ -152,6 +158,10 @@ class ShivaAdmin():
             return False
         else:
             return self._learner_dir[learner.id]['checkpoint'][-1]
+
+    def get_temp_directory(self, learner):
+        assert learner.id in self._learner_dir, "Learner was not profiled by ShivaAdmin, try calling Admin.add_learner_profile at initialization "
+        return self._learner_dir[learner.id]['temp']
 
     def _add_agent_checkpoint(self, learner, agent):
         '''
@@ -177,8 +187,11 @@ class ShivaAdmin():
                 @learner            Learner instance owner of the Agent
                 @agent              Agent instance
         '''
-        self._add_agent_checkpoint(learner, agent)
-        return self._agent_dir[learner.id][agent.id][-1]
+        if self.use_temp_folder:
+            return self._learner_dir[learner.id]['temp']
+        else:
+            self._add_agent_checkpoint(learner, agent)
+            return self._agent_dir[learner.id][agent.id][-1]
 
     def init_summary_writer(self, learner, agent) -> None:
         '''
@@ -329,7 +342,10 @@ class ShivaAdmin():
         agent_path = self.get_new_agent_dir(learner, agent)
         fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
         if checkpoint_num is None:
-            checkpoint_num = learner.env.get_current_step()
+            try:
+                checkpoint_num = learner.env.done_count
+            except:
+                checkpoint_num = learner.done_count
         agent.save(agent_path, checkpoint_num)
 
     '''

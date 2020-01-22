@@ -1,13 +1,14 @@
 from shiva.core.admin import Admin
 
 class MetaLearner(object):
-    def __init__(self, config):
+    def __init__(self, config, profile=True):
         {setattr(self, k, v) for k,v in config['MetaLearner'].items()}
         self.config = config
         self.episodes = config['Learner']['episodes']
         self.learnerCount = 0
         self.PROD_MODE, self.EVAL_MODE = 'production', 'evaluation'
-        Admin.add_meta_profile(self, self.get_folder_name())
+        if profile:
+            Admin.add_meta_profile(self, self.get_folder_name())
 
     # this would play with different hyperparameters until it found the optimal ones
     def exploit_explore(self, hp, algorithms):

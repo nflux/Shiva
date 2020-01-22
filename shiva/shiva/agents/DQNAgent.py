@@ -33,29 +33,56 @@ class DQNAgent(Agent):
         '''
             This method iterates over all the possible actions to find the one with the highest Q value
         '''
-        # return self.find_best_action(self.policy, obs)
+        if not torch.is_tensor(obs):
+            obs = torch.tensor(obs).float()
         if evaluate:
             return self.find_best_action(self.policy, obs)
-        if step_n < self.exploration_steps:
-            action_idx = random.sample(range(self.acs_space), 1)[0]
-            action = list(action2one_hot(self.acs_space, action_idx))
-            # print('random - step_n', step_n)
-        elif random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
-            # this might not be correct implementation of e greedy
-            action_idx = random.sample(range(self.acs_space), 1)[0]
-            action = list(action2one_hot(self.acs_space, action_idx))
-            # print('greedy')
+        if step_n < self.exploration_steps or random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
+            '''Random action or e-greedy exploration'''
+            # check if obs is a batch!
+            if len(obs.shape) > 1:
+                # it's a batch operation!
+                action = [self.get_random_action() for _ in range(obs.shape[0])]
+            else:
+                action = self.get_random_action()
         else:
-            # Iterate over all the actions to find the highest Q value
             action = self.find_best_action(self.policy, obs)
-            # print('agent step_n', step_n)
-        return action # replay buffer store lists and env does np.argmax(action)
+        return action
 
     def get_action_target(self, obs):
-        '''
-            Same as above but using the Target network
-        '''
+        if not torch.is_tensor(obs):
+            obs = torch.tensor(obs).float()
         return self.find_best_action(self.target_policy, obs)
+
+    def get_random_action(self):
+        action_idx = random.sample(range(self.acs_space), 1)[0]
+        action = list(action2one_hot(self.acs_space, action_idx))
+        return action
+
+    def find_best_action(self, network, observation) -> np.ndarray:
+        return self.find_best_action_from_tensor(network, observation)
+
+    def find_best_action_from_tensor(self, network, observation) -> np.ndarray:
+        '''
+            Iterates over the action space to find the one with the highest Q value
+
+            Input
+                network         policy network to be used
+                observation     observation from the environment
+
+            Returns
+                A one-hot encoded list
+        '''
+        obs_v = observation #torch.tensor(observation).float().to(self.device)
+        best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
+        for i in range(self.acs_space):
+            act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device)
+            q_val = network(torch.cat([obs_v, act_v], dim=-1))
+            if q_val > best_q:
+                best_q = q_val
+                best_act_v = act_v
+        best_act = best_act_v.tolist()
+        return best_act
 
     def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
 
