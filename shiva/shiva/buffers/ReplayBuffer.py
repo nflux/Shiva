@@ -16,10 +16,10 @@ class ReplayBuffer(object):
         return self.size
 
     def push(self):
-        pass
+        assert "NotImplemented"
 
     def sample(self):
-        pass
+        assert "NotImplemented"
 
     def clear(self):
-        pass
+        assert "NotImplemented"

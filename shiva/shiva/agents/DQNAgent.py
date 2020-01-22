@@ -44,9 +44,12 @@ class DQNAgent(Agent):
             if len(obs.shape) > 1:
                 # it's a batch operation!
                 action = [self.get_random_action() for _ in range(obs.shape[0])]
+                # print('random batch action')
             else:
                 action = self.get_random_action()
+                # print("random act")
         else:
+            # print('action!'.format(obs, obs.shape))
             action = self.find_best_action(self.policy, obs)
         return action
 
@@ -61,9 +64,13 @@ class DQNAgent(Agent):
         return action
 
     def find_best_action(self, network, observation) -> np.ndarray:
-        return self.find_best_action_from_tensor(network, observation)
+        if len(observation.shape) > 1:
+            '''This is for batch operation, as we need to find the highest Q for each obs'''
+            return [self.find_best_action_from_tensor(network, ob) for ob in observation ]
+        else:
+            return self.find_best_action_from_tensor(network, observation)
 
-    def find_best_action_from_tensor(self, network, observation) -> np.ndarray:
+    def find_best_action_from_tensor(self, network, obs_v) -> np.ndarray:
         '''
             Iterates over the action space to find the one with the highest Q value
 
@@ -74,7 +81,6 @@ class DQNAgent(Agent):
             Returns
                 A one-hot encoded list
         '''
-        obs_v = observation #torch.tensor(observation).float().to(self.device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
         for i in range(self.acs_space):
             act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device)

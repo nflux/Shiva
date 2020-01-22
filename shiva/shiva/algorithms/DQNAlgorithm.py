@@ -31,7 +31,7 @@ class DQNAlgorithm(Algorithm):
             Input
                 agent       Agent reference who we are updating
                 buffer      Buffer reference to sample from
-                step_n      Current step number or done_count when doing episodic updates!
+                step_n      Current step number or done_count when doing episodic updates!!!!
                 episodic    Flag indicating if update is episodic
         '''
         # if episodic: # for DQN to do step-wise updates only

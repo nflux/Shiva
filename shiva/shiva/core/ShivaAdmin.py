@@ -187,10 +187,10 @@ class ShivaAdmin():
                 @learner            Learner instance owner of the Agent
                 @agent              Agent instance
         '''
+        self._add_agent_checkpoint(learner, agent)
         if self.use_temp_folder:
             return self._learner_dir[learner.id]['temp']
         else:
-            self._add_agent_checkpoint(learner, agent)
             return self._agent_dir[learner.id][agent.id][-1]
 
     def init_summary_writer(self, learner, agent) -> None:
@@ -215,13 +215,17 @@ class ShivaAdmin():
 
             Input
                 @learner            Learner instance owner of the agent
-                @agent              Agent who we want to add
+                @agent              Agent who we want to add, or agent_id
                 @scalar_name        Metric name
                 @value_y            Usually the metric
                 @value_x            Usually time
         '''
         if not self.need_to_save: return
-        self.writer[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
+        if type(agent) == int:
+            '''Agent ID was sent'''
+            self.writer[learner.id][agent].add_scalar(scalar_name, value_y, value_x)
+        else:
+            self.writer[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
 
     def save(self, caller) -> None:
         '''

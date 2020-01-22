@@ -38,22 +38,22 @@ class Learner(object):
         '''
         if hasattr(self, 'agent'):
             if type(self.agent) == list:
-                print("MultiAgents metrics are not yet implemented! 1")
-                return
+                '''Multi Agent Metrics'''
+                for agent in self.agent:
+                    self._collect_metrics(agent.id, episodic)
             else:
-                self._collect_metrics('agent', episodic)
+                self._collect_metrics(self.agent.id, episodic)
         elif hasattr(self, 'agents'):
             if type(self.agents) == list:
-                print("MultiAgents metrics are not yet implemented! 2")
-                return
+                '''Multi Agent Metrics'''
+                for agent in self.agents:
+                    self._collect_metrics(agent.id, episodic)
             else:
-                self._collect_metrics('agents', episodic)
+                self._collect_metrics(self.agents[0].id, episodic)
         else:
             assert False, "Learner attribute 'agent' or 'agents' was not found..."
 
-    def _collect_metrics(self, attr, episodic):
-        # if not multi environment
-        # if multi environment
+    def _collect_metrics(self, agent_id, episodic):
 
         if hasattr(self, 'MULTI_ENV_FLAG'):
 
@@ -61,20 +61,20 @@ class Learner(object):
 
             if not episodic:
                 for metric_name, y_val in metrics:
-                    Admin.add_summary_writer(self, getattr(self, attr), metric_name, y_val, self.step_count)
+                    Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.step_count)
             else:
                 for metric_name, y_val in metrics:
-                    Admin.add_summary_writer(self, getattr(self, attr), metric_name, y_val, self.ep_count)
+                    Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.done_count)
         else:
 
             metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
 
             if not episodic:
                 for metric_name, y_val in metrics:
-                    Admin.add_summary_writer(self, getattr(self, attr), metric_name, y_val, self.env.step_count)
+                    Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.env.step_count)
             else:
                 for metric_name, y_val in metrics:
-                    Admin.add_summary_writer(self, getattr(self, attr), metric_name, y_val, self.env.done_count)
+                    Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.env.done_count)
 
 
 

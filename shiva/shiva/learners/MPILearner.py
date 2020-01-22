@@ -31,6 +31,7 @@ class MPILearner(Learner):
         self.debug("Open port {}".format(self.port))
 
         # Set some self attributes from received Config (it should have MultiEnv data!)
+        self.MULTI_ENV_FLAG = True
         self.num_envs = self.configs['Environment']['num_instances']
         self.num_agents = 1 # self.configs['Environment']['num_agents']
         self.menvs_specs = self.configs['MultiEnv']
@@ -59,19 +60,22 @@ class MPILearner(Learner):
         self.step_count = 0
         self.done_count = 0
         self.update_num = 0
+        self.steps_per_episode = 0
+        self.reward_per_episode = 0
         while self.train:
-            traj = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=7) # blocking operation until all environments sent at least 1 trajectory
-
-            self.done_count += 1
-
+            self.env_state = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=7) # blocking operation until all environments sent at least 1 trajectory
+            traj = self.env_state['buffer']
+            self.env_metrics = self.env_state['metrics']
             '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
             agent_ix = 0
             observations, actions, rewards, next_observations, dones = traj[agent_ix]
-
+            self.step_count += len(observations)
+            self.done_count += 1
+            self.steps_per_episode = len(observations)
+            self.reward_per_episode = sum(rewards)
             # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
             # self.debug("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
 
-            self.step_count += len(observations)
             exp = list(map(torch.clone, (torch.tensor(observations), torch.tensor(actions), torch.tensor(rewards).reshape(-1, 1), torch.tensor(next_observations), torch.tensor(dones, dtype=torch.bool).reshape(-1, 1))))
             self.buffer.push(exp)
 
@@ -86,9 +90,10 @@ class MPILearner(Learner):
                 for ix in range(self.num_menvs):
                     self.menv.send(self._get_learner_state(), dest=ix, tag=10)
 
-            if self.update_num % self.save_checkpoint_episodes == 0:
+            self.collect_metrics(episodic=True)
+
+            if self.done_count % self.save_checkpoint_episodes == 0:
                 Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
-                # self.collect_metrics()
 
             '''Send Updated Agents to Meta'''
             # self.debug("Sending metrics to Meta")
@@ -98,11 +103,6 @@ class MPILearner(Learner):
                 evolution_config = self.learners.recv(None, source=0, tag=11)  # block statement
                 self.debug("Got evolution config!")
             ''''''
-
-    def _get_trajectory(self):
-        for ix in range(self.num_envs):
-            probe = self.envs.probe(source=ix, tag=7)
-            print(probe)
 
     def _connect_menvs(self):
         # Connect with MultiEnv
@@ -134,6 +134,23 @@ class MPILearner(Learner):
             'menv_port': self.menv_port,
             'load_path': Admin.get_temp_directory(self),
         }
+
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                # ('Reward/Per_Step', self.reward_per_step)
+            ]
+        else:
+            metrics = [
+
+            ]
+            try:
+                for i, ac in enumerate(self.env_state['buffer'][0][1][-1]):
+                    metrics.append(('Agent/Actor_Output_' + str(i), ac))
+                metrics += self.env_metrics
+            except:
+                pass
+        return metrics
 
     def create_agents(self):
         if self.load_agents:

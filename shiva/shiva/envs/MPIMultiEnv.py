@@ -1,4 +1,4 @@
-import sys
+import sys, time
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
@@ -44,11 +44,12 @@ class MPIMultiEnv(Environment):
         self.step_count = 0
         while self.collect:
             observations = self.envs.gather(None, root=MPI.ROOT)
-            # self.debug(observations)
+            # self.debug("Obs {}".format(observations))
             self.step_count += len(observations)
-            actions = self.agents[0].get_action(observations) # assuming one agent for all obs
-            # self.debug(actions)
+            actions = self.agents[0].get_action(observations, self.step_count) # assuming one agent for all obs
+            # self.debug("Acs {}".format(actions))
             self.envs.scatter(actions, root=MPI.ROOT)
+            # time.sleep(0.5)
             '''Assuming 1 Learner'''
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=10):
                 learner_spec = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=10)  # block statement

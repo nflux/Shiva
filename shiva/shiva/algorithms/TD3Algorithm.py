@@ -26,10 +26,18 @@ class TD3Algorithm(Algorithm):
         self.critic_loss_2 = 0
 
     def update(self, agent, buffer, step_count, episodic=False):
+        '''
+            NOTE
+            If doing episodic updates only, step_count is the number of episodes actually!!!
+        '''
         if episodic:
             agent.ou_noise.reset()
             agent.ou_noise_critic.reset()
             # return
+
+        if step_count < self.configs['Agent']['exploration_steps']:
+            '''Avoid updating during exploration'''
+            pass
 
         '''
             Update starts here
@@ -37,13 +45,15 @@ class TD3Algorithm(Algorithm):
 
         self.agent = agent
         for _ in range(self.update_iterations):
-            states, actions, rewards, next_states, dones = buffer.sample()
+            states, actions, rewards, next_states, dones_mask = buffer.sample()
+            rewards = rewards.view(-1, 1)
+            dones_mask = dones_mask.view(-1, 1).float()
 
-            states = torch.tensor(states, dtype=torch.float).to(self.device)
-            actions = torch.tensor(actions, dtype=torch.float).to(self.device)
-            rewards = torch.tensor(rewards, dtype=torch.float).view(-1,1).to(self.device)
-            next_states = torch.tensor(next_states, dtype=torch.float).to(self.device)
-            dones_mask = torch.tensor(dones, dtype=torch.float).view(-1,1).to(self.device)
+            # states = torch.tensor(states, dtype=torch.float).to(self.device)
+            # actions = torch.tensor(actions, dtype=torch.float).to(self.device)
+            # rewards = torch.tensor(rewards, dtype=torch.float).view(-1,1).to(self.device)
+            # next_states = torch.tensor(next_states, dtype=torch.float).to(self.device)
+            # dones_mask = torch.tensor(dones, dtype=torch.float).view(-1,1).to(self.device)
             # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
             # print('from buffer:', states, actions, rewards, next_states, dones_mask, '\n')
             '''
@@ -140,17 +150,25 @@ class TD3Algorithm(Algorithm):
         return self.agent
 
     def get_metrics(self, episodic=False):
-        if not episodic:
-            metrics = [
-                ('Algorithm/Actor_Loss', self.actor_loss),
-                ('Algorithm/Critic_Loss', self.critic_loss_2),
-                ('Algorithm/Critic_2_Loss', self.critic_loss_2)
-            ]
-            for i, ac in enumerate(self.agent.action):
-                metrics.append(('Agent/Actor_Output_'+str(i), self.agent.action[i]))
-        else:
-            metrics = []
+        metrics = [
+            ('Algorithm/Actor_Loss', self.actor_loss),
+            ('Algorithm/Critic_Loss', self.critic_loss_2),
+            ('Algorithm/Critic_2_Loss', self.critic_loss_2)
+        ]
+        for i, ac in enumerate(self.agent.action):
+            metrics.append(('Agent/Actor_Output_' + str(i), ac))
         return metrics
+        # if not episodic:
+        #     metrics = [
+        #         ('Algorithm/Actor_Loss', self.actor_loss),
+        #         ('Algorithm/Critic_Loss', self.critic_loss_2),
+        #         ('Algorithm/Critic_2_Loss', self.critic_loss_2)
+        #     ]
+        #     for i, ac in enumerate(self.agent.action):
+        #         metrics.append(('Agent/Actor_Output_'+str(i), self.agent.action[i]))
+        # else:
+        #     pass
+        # return metrics
 
     def __str__(self):
         return 'TD3Algorithm'

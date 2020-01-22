@@ -46,11 +46,12 @@ class GymEnvironment(Environment):
             # print(action)
             action4Gym = Categorical(torch.tensor(action)).sample()
 
-        if self.action_space['discrete'] != 0:
+        # if self.action_space['discrete'] != 0:
+        #     self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
+        # else:
+        #     self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
 
-            self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
-        else:
-            self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
+        self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         self.obs = list(self.obs)
         self.load_viewer()
         '''
@@ -68,8 +69,8 @@ class GymEnvironment(Environment):
         self.reward_per_episode += self.reward_per_step
         self.reward_total += self.reward_per_step
 
-        if self.action_space['discrete'] != 0:
-            action = action2one_hot(self.action_space['discrete'], action4Gym)
+        # if self.action_space['discrete'] != 0:
+        #     action = action2one_hot(self.action_space['discrete'], action4Gym)
 
         if self.normalize:
             return self.obs, self.normalize_reward(self.reward_per_step), self.done, {'raw_reward': self.reward_per_step, 'action': action}

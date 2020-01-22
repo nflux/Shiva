@@ -66,7 +66,7 @@ class MPIEnv(Environment):
                         Spec should indicate what agent corresponds to that learner dest=ix
                 '''
                 for ix in range(self.num_learners):
-                    self.learner.send(self.buffer, dest=ix, tag=7)
+                    self.learner.send(self._get_env_state(), dest=ix, tag=7)
 
                 self.buffer = []
                 self.env.reset()
@@ -95,6 +95,12 @@ class MPIEnv(Environment):
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
+
+    def _get_env_state(self):
+        return {
+            'metrics': self.env.get_metrics(episodic=True),
+            'buffer': self.buffer
+        }
 
     def _get_env_specs(self):
         return {

@@ -37,22 +37,43 @@ class TD3Agent(Agent):
         self.ou_noise = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
         self.ou_noise_critic = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
 
+        self.action = self.get_random_action()
+
     def get_action(self, observation, step_count):
-        # return self.actor(torch.tensor(observation))
+        if not torch.is_tensor(observation):
+            observation = torch.tensor(observation).float()
+
         if step_count < self.exploration_steps:
-            self.action = np.array([np.random.uniform(-1, 1) for _ in range(self.acs_space)])
-            return self.action
+            '''Exploration random action'''
+            # check if obs is a batch!
+            if len(observation.shape) > 1:
+                # print('random batch action')
+                action = [self.get_random_action() for _ in range(observation.shape[0])]
+                self.action = action # for tensorboard
+            else:
+                # print("random act")
+                action = self.get_random_action()
+                self.action = [action] # for tensorboard
         else:
             """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
             self.actor.eval()
             with torch.no_grad():
                 obs = torch.tensor(observation, dtype=torch.float).to(self.device)
-                self.action = self.actor(obs).cpu().data.numpy()
+                action = self.actor(obs).cpu().data.numpy()
             self.actor.train()
-            # action = self.exploration_strategy.perturb_action_for_exploration_purposes({"action": action})
-            self.action += self.ou_noise.noise()
-            self.action = self.action.tolist()
-            return self.action
+            if len(observation.shape) > 1:
+                # print('batch action')
+                action = [list(act + self.ou_noise.noise()) for act in action]
+                self.action = action # for tensorboard
+            else:
+                # print('single action')
+                action += self.ou_noise.noise()
+                action = action.tolist()
+                self.action = [action] # for tensorboard
+        return action
+
+    def get_random_action(self):
+        return np.array([np.random.uniform(-1, 1) for _ in range(self.acs_space)]).tolist()
 
     def save(self, save_path, step):
         torch.save(self.actor, save_path + '/actor.pth')
