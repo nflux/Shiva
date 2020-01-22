@@ -55,21 +55,56 @@ class rc_env:
             # self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
             # self.action_list = [hfo_env.TURN , hfo_env.KICK]
             # self.action_list = [hfo_env.DASH , hfo_env.KICK]
+            # self.action_list = [hfo_env.DASH]
+            # self.action_list = [hfo_env.TURN]
             self.action_list = [hfo_env.KICK]
 
+
+            # Experiment 1
+            # self.ACTION_DICT = {
+            #                     0 : (0,0),  # Kick 0   Forward  ghost kick
+            #                     1 : (100,0) # Kick 100 Forward
+            #                    }
+
+            # Experiment 1b
             self.ACTION_DICT = {
-                                # 0 : (10,), # turn
-                                0 : (0,0),  # kick forwards
-                                1 : (25,0),
-                                2 : (100,0) #kick backwards
+                                0 : (100,45),  # Kick 0 Backward
+                                1 : (100,0)      # Kick 100 Forward
                                }
+
+            # Experiment 2
+            # self.ACTION_DICT = {
+            #                     # 0 : (10,), # turn
+            #                     0 : (0,0),  # Kick 0   Forward
+            #                     1 : (25,0), # Kick 25  Forward
+            #                     2 : (100,0) # Kick 100 Forward
+            #                    }
+
+            # Experiment 3  
+            # self.ACTION_DICT = {
+            #                     0 : (10,0), # Dash 10  Forward
+            #                     1 : (20,0), # Dash 20  Forward
+            #                     2 : (0,0),  # Kick 0   Forward
+            #                     3 : (25,0), # Kick 25  Forward
+            #                     4 : (100,0) # Kick 100 Forward
+            #                     }
+
+            # Experiment 4
+            # self.ACTION_DICT = {
+            #                     0 : (10,0),    # Dash 10  Forward
+            #                     1 : (25,0),    # Dash 25  Forward
+            #                     2 : (100,0),   # Dash 100 Forward
+            #                     3 : (0,0),     # Kick 0   Forward  # maybe this is simply not a good action to have.
+            #                     4 : (25,0),    # Kick 25  Forward
+            #                     5 : (100,0)    # Kick 100 Forward 
+            #                    }
 
             # For testing rewards with HPI
             # self.ACTION_DICT = {
-            #                     0 : (10,0), # dash forward
+            #                     0 : (10,0),  # dash forward
             #                     1 : (-22.5), # turn left (0,10)
-            #                     2 : (22.5), # turn right
-            #                     3 : (50,0)  # kick straight ahead
+            #                     2 : (22.5),  # turn right
+            #                     3 : (50,0)   # kick straight ahead
             #                    }
 
             # self.dash_idx = 0
@@ -96,7 +131,7 @@ class rc_env:
             #         dis_ctr += 1
             
             # self.dash_idx = dis_ctr
-            self.dash_idx = 0
+            self.dash_idx = 3
             
             # self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(self.ACTION_DICT.values(), self.ACTION_DICT.keys()))
             # rev_ctr += 1
@@ -143,7 +178,7 @@ class rc_env:
 
             # # self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
             # self.acs_dim =  dis_ctr
-            self.acs_dim = 3
+            self.acs_dim = 2
             self.acs_param_dim = 0
 
         elif self.action_level == 'high':
@@ -186,8 +221,8 @@ class rc_env:
 
         # Left side actions, obs, rewards
         self.left_actions = np.array([0]*self.num_left)
-        self.left_obs = np.empty([self.num_left,self.left_features],dtype=float)
-        self.left_obs_previous = np.empty([self.num_left,self.left_features],dtype=float)
+        self.left_obs = np.ones([self.num_left,self.left_features],dtype=float)
+        self.left_obs_previous = np.ones([self.num_left,self.left_features],dtype=float)
         self.left_rewards = np.zeros(self.num_left)
         self.left_kickable = [0] * self.num_left
         self.left_agent_possession = ['N'] * self.num_left
@@ -753,12 +788,14 @@ class rc_env:
         # just check for the value inside of action list
         # if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
 
+
+        # -1 per timestep for being alive
         reward -=1
 
 
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
 
-            # reward -= 0.1
+            # reward -= 1
             pass
             # print("agent is getting penalized for kicking when not kickable")
 
@@ -878,11 +915,11 @@ class rc_env:
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
             delta = (distance_prev - distance_cur)*0
-            pass
+            # pass
             #if delta > 0:    
             if True:
                 team_reward += delta
-                reward+= delta * 5
+                reward+= delta * 10.0
                 # print("distance to ball reward", delta*5)
                 # print(distance_cur, delta)
                 pass
@@ -899,7 +936,7 @@ class rc_env:
                 delta = (2*self.num_left)*(r_prev - r)* 0
                 if True:
                 # if delta > 0:
-                    reward += delta * 10
+                    reward += delta * 25
                     team_reward += delta
                     # print("ball distance to goal reward.", delta*10)
                     # pass

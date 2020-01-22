@@ -22,6 +22,8 @@ class SingleAgentLearner(Learner):
                 if self.is_multi_process_cutoff(): return None # PBT Cutoff
                 else: continue
             self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
+            # this is one hundred percent an episodic agent noise reset
+            self.agent.ou_noise.reset()
             self.collect_metrics(episodic=True)
             self.checkpoint()
             print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))

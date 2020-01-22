@@ -34,14 +34,15 @@ class DDPGAlgorithm(Algorithm):
             For Multi-Environment scenarios, the agent whose noise is being reset is not the agent inside
             the multi environment instances, as such, 
         '''
-        if episodic:
+        # if episodic:
             
-            agent.ou_noise.reset()
+        #     agent.ou_noise.reset()
             
-        else:
-            agent.ou_noise.reset()
-            # return
+        # else:
+        #     agent.ou_noise.reset()
+        #     # return
 
+        # agent.ou_noise.reset()
 
         # if step_count < self.agent.exploration_steps:
         #     '''

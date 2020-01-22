@@ -76,12 +76,15 @@ class RoboCupEnvironment(Environment):
 
         '''
 
+        self.steps_per_episode += 1
+
         if discrete_select == 'argmax':
+            if type(action).__module__ == np.__name__:
+                action = torch.from_numpy(action)
             act_choice = torch.argmax(actions[:self.action_space['acs_space']])
         elif discrete_select == 'sample':
-            if self.step_count % 10 == 0:
-                # print("roboenv",actions)
-                pass
+            if self.steps_per_episode == 0:
+                print("roboenv",actions)
             act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
         elif discrete_select == 'imit_discrete':
             act_choice = actions[0]
@@ -92,6 +95,7 @@ class RoboCupEnvironment(Environment):
 
         if self.action_level == 'discretized':
             self.left_action_option[0] = act_choice
+            
             # indicates whether its a dash, turn, or kick action from the action matrix
             # if 0 <= self.left_action_option[0] < self.env.dash_idx:
             #     self.left_actions[0] = 0
@@ -103,12 +107,18 @@ class RoboCupEnvironment(Environment):
             #     self.left_actions[0] = 2
             #     self.kicks += 1
 
-            if self.left_action_option[0] < self.env.dash_idx:
-                self.left_actions[0] = 0
-                self.dashes += 1
-            else:
-                self.left_actions[0] = 0
-                self.kicks += 1
+            # if self.left_action_option[0].item() < 3:
+            #     self.left_actions[0] = 0
+            #     # print("DASH")
+            #     self.dashes += 1
+            # else:
+            #     # print("KICK")
+            #     self.left_actions[0] = 1
+            #     self.kicks += 1
+
+            # Experiment 2
+            self.left_actions[0] = 0
+            self.kicks += 1
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
             # self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=torch.tensor([2]), left_options=torch.tensor([552]))

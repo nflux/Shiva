@@ -40,7 +40,7 @@ class MultiGymWrapper(Environment):
 
         self.ou_noises = [noise.OUNoise(self.acs_dim, self.agent.exploration_noise)]*self.num_instances 
         print("multi step waiting")
-        # time.sleep(30)
+        time.sleep(30)
         print("multi step began")
         while(self.stop_collecting.item() == 0):
 
@@ -51,8 +51,8 @@ class MultiGymWrapper(Environment):
                     self.ou_noises[i].set_scale(self.agent.training_noise)
 
             if not loaded:
-                # if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
-                if self.episode_count % 1 == 0 and self.episode_count != 0:
+                if self.episode_count % self.agent_update_episodes == 0 and self.episode_count != 0:
+                # if self.episode_count % 5 == 0 and self.episode_count != 0:
                     loaded = True
                     if self.saveLoadFlag.item() == 1:
                         self.agent.load(self.agent_dir)
@@ -73,7 +73,7 @@ class MultiGymWrapper(Environment):
                         if flag.item() == 1:
                             self.ou_noises[i].reset()
                             self.resetNoiseFlags[i] == 0
-                print("obs going to actor before get actions",self.observations[:,:self.obs_dim])
+                # print("obs going to actor before get actions",self.observations[:,:self.obs_dim])
                 self.actions = self.agent.get_action(copy.deepcopy(self.observations[:,:self.obs_dim]), self.step_count.item(), evaluate=True)
                 # print("actions returned from that observation",self.actions)
                 # print("actions from handshake", self.actions)
@@ -360,6 +360,8 @@ def robo_process_target(observations,action_available,step_count,step_control,st
     env = load_class('shiva.envs', config['sub_type'])
     env = env(config, (id+45) * 1000)
 
+    # time.sleep()
+
     observation_space = env.observation_space
     action_space = env.action_space['acs_space']
     ep_observations = np.zeros((max_ep_length,observation_space))
@@ -370,19 +372,20 @@ def robo_process_target(observations,action_available,step_count,step_control,st
     idx = 0
     env.reset()
     observation = env.get_observation()
-    print("obs as numpy",observation)
+    # print("obs as numpy",observation)
     observation = torch.from_numpy(observation)
-    print("obs as tensor",observation)
-    print("test",observation[0][:observation_space])
+    # print("obs as tensor",observation)
+    # print("test",observation[0][:observation_space])
     observations[id][:observation_space] = copy.deepcopy(observation[0][:observation_space])
-    print("obs inside obss tensor",observations[id][:observation_space])
+    # print("obs inside obss tensor",observations[id][:observation_space])
     step_control[id] = 1
 
     while(stop_collecting.item() == 0):
         if step_control[id] == 0 and waitForLearner.item() == 0:
             # time.sleep(0.001)
             action = observations[id][:action_space].numpy()
-            print("action received from actor",action)
+            if idx % 10:
+                print("action received from actor", action)
             action_available[0] = 0
             time.sleep(0.075)
 
@@ -392,7 +395,7 @@ def robo_process_target(observations,action_available,step_count,step_control,st
             
             '''
 
-            next_observation, reward, done, more_data = env.step(torch.tensor(action), discrete_select='argmax', collect=False, device='cuda:0')
+            next_observation, reward, done, more_data = env.step(torch.tensor(action), discrete_select='sample', collect=False, device='cuda:0')
             ep_observations[idx] = observation
             ep_actions[idx] = more_data['action']
             ep_rewards[idx] = reward
