@@ -49,7 +49,7 @@ class DQNAlgorithm(Algorithm):
 
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]
         # For the observations s_j+1, select an action using the Policy and calculate Q values of those using the Target net
-        target_next_state_actions = torch.tensor([agent.get_action_target(s_i) for s_i in next_states])
+        target_next_state_actions = torch.tensor([agent.get_action_target(s_i) for s_i in next_states]).to(self.device)
         input_v = torch.cat([next_states, target_next_state_actions], dim=-1)
         next_state_values = agent.target_policy(input_v)
 
