@@ -75,8 +75,8 @@ class MPILearner(Learner):
             exp = list(map(torch.clone, (torch.tensor(observations), torch.tensor(actions), torch.tensor(rewards).reshape(-1, 1), torch.tensor(next_observations), torch.tensor(dones, dtype=torch.bool).reshape(-1, 1))))
             self.buffer.push(exp)
 
-            # what condition do we want here for updates after receiving trajectories
-            if self.done_count % 2 == 0:
+            '''Change freely condition when to update'''
+            if self.done_count % self.num_envs == 0:
                 self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
                 self.update_num += 1
                 self.agents[0].step_count = self.step_count
@@ -90,12 +90,14 @@ class MPILearner(Learner):
                 Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
                 # self.collect_metrics()
 
-            '''
-                Report back with Meta
-                Try getting Evolution Config
-            '''
+            '''Send Updated Agents to Meta'''
             # self.debug("Sending metrics to Meta")
             self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
+            '''Check for Evolution Configs'''
+            if self.meta.Iprobe(source=0, tag=1):
+                evolution_config = self.learners.recv(None, source=0, tag=11)  # block statement
+                self.debug("Got evolution config!")
+            ''''''
 
     def _get_trajectory(self):
         for ix in range(self.num_envs):
