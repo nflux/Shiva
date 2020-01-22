@@ -22,7 +22,7 @@ class MPIMultiEnv(Environment):
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEnv, self).__init__(self.configs)
         self.debug("Received config with {} keys".format(len(self.configs.keys())))
-        # Open Port for Single Learner
+        # Open Port for Learners
         self.port = MPI.Open_port(MPI.INFO_NULL)
         self.debug("Open port {}".format(self.port))
 
@@ -37,21 +37,20 @@ class MPIMultiEnv(Environment):
         # Give start flag!
         self.envs.bcast([True], root=MPI.ROOT)
 
-        self.collect = True
         self.run()
 
     def run(self):
         self.step_count = 0
-        while self.collect:
+        while True:
             observations = self.envs.gather(None, root=MPI.ROOT)
             # self.debug("Obs {}".format(observations))
             self.step_count += len(observations)
             actions = self.agents[0].get_action(observations, self.step_count) # assuming one agent for all obs
             # self.debug("Acs {}".format(actions))
             self.envs.scatter(actions, root=MPI.ROOT)
-            # time.sleep(0.5)
-            '''Assuming 1 Learner'''
+
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=10):
+                '''Assuming 1 Learner, need to grab the source rank to load the appropiate agent'''
                 learner_spec = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=10)  # block statement
                 self.agents = Admin._load_agents(learner_spec['load_path'])
                 self.debug("Loaded Agent at Episode {}".format(self.agents[0].done_count))
@@ -86,7 +85,7 @@ class MPIMultiEnv(Environment):
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
         # Get signal that they have communicated with Learner
-        envs_status = self.envs.gather(None, root=MPI.ROOT)
+        envs_states = self.envs.gather(None, root=MPI.ROOT)
         # self.debug(envs_status)
 
     def _get_menv_specs(self):

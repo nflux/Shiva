@@ -28,7 +28,6 @@ class MPIMetaLearner(MetaLearner):
         self.menvs = MPI.COMM_WORLD.Spawn(sys.executable, args=['shiva/envs/MPIMultiEnv.py'], maxprocs=self.num_menvs)
         self.menvs.bcast(self.configs, root=MPI.ROOT)
         menvs_specs = self.menvs.gather(None, root=MPI.ROOT)
-        self.debug("Got MenvsSpecs {}".format(menvs_specs))
         self.debug("Got total of {} MultiEnvsSpecs with {} keys".format(len(menvs_specs), len(menvs_specs[0].keys())))
         self.configs['MultiEnv'] = menvs_specs
 

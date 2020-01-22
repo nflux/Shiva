@@ -68,6 +68,7 @@ class TensorBuffer(ReplayBuffer):
 
     def push(self, exps):
         obs, ac, rew, next_obs, done = exps
+        # print("{} {} {} {} {}".format(obs.shape, ac.shape, rew.shape, next_obs.shape, done.shape))
         nentries = len(obs)
         if self.current_index + nentries > self.max_size:
             rollover = self.max_size - self.current_index
@@ -77,7 +78,8 @@ class TensorBuffer(ReplayBuffer):
             self.done_buffer = bh.roll(self.done_buffer, rollover)
             self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
             self.current_index = 0
-            # self.size = self.max_size
+            self.size = self.max_size
+
         self.obs_buffer[self.current_index:self.current_index + nentries, :self.obs_dim] = obs
         self.acs_buffer[self.current_index:self.current_index + nentries, :self.acs_dim] = ac
         self.rew_buffer[self.current_index:self.current_index + nentries, :1] = rew
@@ -85,8 +87,7 @@ class TensorBuffer(ReplayBuffer):
         self.next_obs_buffer[self.current_index:self.current_index + nentries, :self.obs_dim] = next_obs
         if self.size < self.max_size:
             self.size += nentries
-            if self.size + nentries > self.max_size:
-                self.size = self.max_size
+
         self.current_index += nentries
 
     def sample(self, device='cpu'):

@@ -36,7 +36,7 @@ class MPILearner(Learner):
         self.num_agents = 1 # self.configs['Environment']['num_agents']
         self.menvs_specs = self.configs['MultiEnv']
         self.num_menvs = len(self.menvs_specs)
-        # assuming 1 MultiEnv here
+
         self.menv_port = self.menvs_specs[0]['port']
         self.observation_space = self.menvs_specs[0]['env_specs']['observation_space']
         self.action_space = self.menvs_specs[0]['env_specs']['action_space']
@@ -52,7 +52,7 @@ class MPILearner(Learner):
         # Connect with MultiEnvs
         self._connect_menvs()
 
-        self.train = True
+
         self.run()
 
     def run(self, train=True):
@@ -62,17 +62,20 @@ class MPILearner(Learner):
         self.update_num = 0
         self.steps_per_episode = 0
         self.reward_per_episode = 0
+        self.train = True
         while self.train:
             self.env_state = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=7) # blocking operation until all environments sent at least 1 trajectory
-            traj = self.env_state['buffer']
+            traj = self.env_state['trajectory']
             self.env_metrics = self.env_state['metrics']
             '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
             agent_ix = 0
             observations, actions, rewards, next_observations, dones = traj[agent_ix]
+
             self.step_count += len(observations)
             self.done_count += 1
             self.steps_per_episode = len(observations)
             self.reward_per_episode = sum(rewards)
+
             # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
             # self.debug("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
 
@@ -110,7 +113,7 @@ class MPILearner(Learner):
         self.menv = MPI.COMM_WORLD.Connect(self.menv_port,  MPI.INFO_NULL)
         self.debug('Connected with MultiEnv')
 
-        # Check in with MultiEnv # 0, there's only 1 for now
+        '''Assuming 1 MultiEnv'''
         self.menv.send(self._get_learner_specs(), dest=0, tag=0)
 
         # Accept Single Env Connection

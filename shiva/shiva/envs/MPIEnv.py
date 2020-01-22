@@ -25,26 +25,23 @@ class MPIEnv(Environment):
         super(MPIEnv, self).__init__(self.configs)
         self.debug("Received config with {} keys".format(len(self.configs.keys())))
         self._launch_env()
+        # Check in and send single env specs with MultiEnv
+        self.menv.gather(self._get_env_specs(), root=0)
         self._connect_learners()
         # Check-in with MultiEnv that successfully connected with Learner
-        self.menv.gather(self._get_env_specs(), root=0)
-        self._create_buffer()
+        self.menv.gather(self._get_env_state(), root=0)
+        self._clear_buffers()
         # Wait for flag to start running
         self.debug("Waiting MultiEnv flag to start")
         start_flag = self.menv.bcast(None, root=0)
         self.debug("Start collecting..")
-        self.collect = True
+
         self.run()
 
     def run(self):
-        self.observations = []
-        self.actions = []
-        self.next_observations = []
-        self.rewards = []
-        self.done = []
-
         self.env.reset()
-        while self.collect:
+
+        while True:
             observations = list(self.env.get_observations())
             self.menv.gather(observations, root=0)
             actions = self.menv.scatter(None, root=0)
@@ -58,29 +55,31 @@ class MPIEnv(Environment):
             self.done.append(done)
 
             if self.env.is_done():
-                traj = [self.observations, self.actions, self.rewards, self.next_observations, self.done]
-                self.buffer.append(traj)
+                traj = [[self.observations, self.actions, self.rewards, self.next_observations, self.done]]
+
                 self.debug(self.env.get_metrics(episodic=True))
                 '''
                     Assuming 1 learner here
                         Spec should indicate what agent corresponds to that learner dest=ix
                 '''
                 for ix in range(self.num_learners):
-                    self.learner.send(self._get_env_state(), dest=ix, tag=7)
-
-                self.buffer = []
+                    self.learner.send(self._get_env_state(traj), dest=ix, tag=7)
+                self._clear_buffers()
                 self.env.reset()
 
         self.close()
 
-    def _create_buffer(self):
-        self.buffer = []
+    def _clear_buffers(self):
+        '''Maybe to be optimized'''
+        self.observations = []
+        self.actions = []
+        self.next_observations = []
+        self.rewards = []
+        self.done = []
 
     def _launch_env(self):
         # initiate env from the config
         self.env = self.create_environment()
-        # Check in and send single env specs with MultiEnv
-        self.menv.gather(self._get_env_specs(), root=0)
 
     def _connect_learners(self):
         self.debug("Waiting Learners info")
@@ -96,10 +95,10 @@ class MPIEnv(Environment):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
 
-    def _get_env_state(self):
+    def _get_env_state(self, traj=[]):
         return {
             'metrics': self.env.get_metrics(episodic=True),
-            'buffer': self.buffer
+            'trajectory': traj
         }
 
     def _get_env_specs(self):
