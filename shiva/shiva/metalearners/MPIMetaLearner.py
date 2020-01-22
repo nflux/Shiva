@@ -20,8 +20,9 @@ class MPIMetaLearner(MetaLearner):
         self.run()
 
     def run(self):
-        learner_specs = self.learners.gather(None, root=MPI.ROOT)
-        print(learner_specs)
+        while True:
+            learner_specs = self.learners.gather(None, root=MPI.ROOT)
+            self.debug("Got Learners metrics {}".format(learner_specs))
 
     def _launch_menvs(self):
         self.menvs = MPI.COMM_WORLD.Spawn(sys.executable, args=['shiva/envs/MPIMultiEnv.py'], maxprocs=self.num_menvs)

@@ -83,7 +83,7 @@ class ShivaAdmin():
             if not self.need_to_save: continue
             dh.make_dir(os.path.join(self.base_url, directory), overwrite=True)
 
-    def add_meta_profile(self, meta_learner, folder_name: str=None) -> None:
+    def add_meta_profile(self, meta_learner, folder_name: str=None, overwrite=False) -> None:
         '''
             This method would be called by a Meta Learner in order to add himself
             Is needed in order to keep track of the Meta Learner directory.
@@ -96,7 +96,7 @@ class ShivaAdmin():
         if not self.need_to_save: return
         if folder_name is None:
             folder_name = self.__folder_name__['metalearner'].format(algorithm=meta_learner.config['Algorithm']['type'], env=meta_learner.config['Environment']['env_name'])
-        new_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, folder_name))
+        new_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, folder_name), overwrite=overwrite)
         self._meta_learner_dir = new_dir
         print("New MetaLearner @ {}".format(self._meta_learner_dir))
 
@@ -114,7 +114,7 @@ class ShivaAdmin():
             if function_only:
                 # need to create a new fake "meta profile" to create root session folder structures for this learner
                 folder_name = self.__folder_name__['metalearner'].format(algorithm=learner.configs['Algorithm']['type'], env=learner.configs['Environment']['env_name'])
-                self.add_meta_profile(None, folder_name)
+                self.add_meta_profile(None, folder_name, overwrite=True)
             self._learner_dir[learner.id] = {}
             new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
             self._learner_dir[learner.id]['base'] = new_dir

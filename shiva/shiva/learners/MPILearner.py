@@ -54,72 +54,48 @@ class MPILearner(Learner):
         self.train = True
         self.run()
 
-    def run(self):
+    def run(self, train=True):
         self.debug("Waiting for trajectories..")
+        self.step_count = 0
         self.done_count = 0
         self.update_num = 0
         while self.train:
-            '''Gather a trajectory from all environments at once'''
-            trajectories = self.envs.Iallgather(None) # blocking operation until all environments sent at least 1 trajectory
-            self.done_count += len(trajectories)
-            self.debug("Received {} trajectories".format(len(trajectories)))
-            # self.debug(trajectories)
-            # this unwrapping needs optimization, either the aggregator or one tensor operation maybe
+            traj = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=7) # blocking operation until all environments sent at least 1 trajectory
+
+            self.done_count += 1
+
+            '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
             agent_ix = 0
-            for traj in trajectories:
-                observations, actions, rewards, next_observations, dones = zip(traj[agent_ix])
-                self.debug("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
-                self.step_count += len(observations)
-                exp = list(map(torch.clone, (torch.tensor(observations), torch.tensor(actions), torch.tensor(rewards), torch.tensor(next_observations), torch.tensor(dones, dtype=torch.bool))))
-                self.buffer.push(exp)
+            observations, actions, rewards, next_observations, dones = traj[agent_ix]
 
-                # what condition do we want here for updates after receiving trajectories
-                if True:
-                    self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
-                    self.update_num += 1
-                    self.agents[0].step_count = self.step_count
-                    # Send new agents to all MultiEnvs
-                    self.debug("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                    self.menv.allgather(self._get_learner_state(), root=MPI.ROOT)
+            # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
+            # self.debug("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
 
-                if self.update_num % self.save_checkpoint_episodes == 0:
-                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
-                    self._collect_metrics()
+            self.step_count += len(observations)
+            exp = list(map(torch.clone, (torch.tensor(observations), torch.tensor(actions), torch.tensor(rewards).reshape(-1, 1), torch.tensor(next_observations), torch.tensor(dones, dtype=torch.bool).reshape(-1, 1))))
+            self.buffer.push(exp)
 
+            # what condition do we want here for updates after receiving trajectories
+            if self.done_count % 2 == 0:
+                self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
+                self.update_num += 1
+                self.agents[0].step_count = self.step_count
+                self.agents[0].done_count = self.done_count
+                # self.debug("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
+                Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                for ix in range(self.num_menvs):
+                    self.menv.send(self._get_learner_state(), dest=ix, tag=10)
 
-            # agent_ix = 0  # need to iterate thru the multi agents here
-            # for traj in enumerate(self._get_trajectory()):
-            #     observations, actions, rewards, next_observations, dones = zip(traj[agent_ix])
-            #     self.debug("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
-            #     self.step_count += len(observations)
-            #     exp = list(map(torch.clone, (torch.tensor(observations), torch.tensor(actions), torch.tensor(rewards), torch.tensor(next_observations), torch.tensor(dones, dtype=torch.bool))))
-            #     self.buffer.push(exp)
-            #
-            #     # what condition do we want here for updates after receiving trajectories
-            #     if True:
-            #         self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
-            #         self.update_num += 1
-            #         self.agents[0].step_count = self.step_count
-            #         # Send new agents to all MultiEnvs
-            #         self.debug("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-            #         Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-            #         self.menv.allgather(self._get_learner_state(), root=MPI.ROOT)
-            #
-            #     if self.update_num % self.save_checkpoint_episodes == 0:
-            #         Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
-            #         self._collect_metrics()
+            if self.update_num % self.save_checkpoint_episodes == 0:
+                Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
+                # self.collect_metrics()
 
             '''
                 Report back with Meta
                 Try getting Evolution Config
             '''
-            self.debug("Sending metrics to Meta")
+            # self.debug("Sending metrics to Meta")
             self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
-
-            self.train = self.done_count < self.episodes # just something to stop it
-
-        self.close()
 
     def _get_trajectory(self):
         for ix in range(self.num_envs):
@@ -143,7 +119,6 @@ class MPILearner(Learner):
         return {
             'train': self.train,
             'num_agents': self.num_agents,
-            'agents_id': self.agents_id,
             'update_num': self.update_num,
             'load_path': Admin.get_temp_directory(self),
             'metrics': {}

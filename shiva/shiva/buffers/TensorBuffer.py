@@ -67,11 +67,10 @@ class TensorBuffer(ReplayBuffer):
         self.done_buffer = torch.zeros((self.max_size, 1), dtype=torch.bool, requires_grad=False)
 
     def push(self, exps):
-
         obs, ac, rew, next_obs, done = exps
         nentries = len(obs)
         if self.current_index + nentries > self.max_size:
-            rollover = self.max_size - self.current_index + nentries
+            rollover = self.max_size - self.current_index
             self.obs_buffer = bh.roll(self.obs_buffer, rollover)
             self.acs_buffer = bh.roll(self.acs_buffer, rollover)
             self.rew_buffer = bh.roll(self.rew_buffer, rollover)
@@ -79,15 +78,15 @@ class TensorBuffer(ReplayBuffer):
             self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
             self.current_index = 0
             # self.size = self.max_size
-
-        self.obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = obs
-        self.acs_buffer[self.current_index:self.current_index+nentries, :self.acs_dim] = ac
-        self.rew_buffer[self.current_index:self.current_index+nentries, :1] = rew
-        self.done_buffer[self.current_index:self.current_index+nentries, :1] = done
-        self.next_obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = next_obs
-
+        self.obs_buffer[self.current_index:self.current_index + nentries, :self.obs_dim] = obs
+        self.acs_buffer[self.current_index:self.current_index + nentries, :self.acs_dim] = ac
+        self.rew_buffer[self.current_index:self.current_index + nentries, :1] = rew
+        self.done_buffer[self.current_index:self.current_index + nentries, :1] = done
+        self.next_obs_buffer[self.current_index:self.current_index + nentries, :self.obs_dim] = next_obs
         if self.size < self.max_size:
             self.size += nentries
+            if self.size + nentries > self.max_size:
+                self.size = self.max_size
         self.current_index += nentries
 
     def sample(self, device='cpu'):

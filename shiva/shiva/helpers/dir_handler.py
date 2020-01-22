@@ -18,7 +18,7 @@ def make_dir(new_folder: str, overwrite=False) -> str:
         os.makedirs(new_folder)
     return new_folder
 
-def make_dir_timestamp(new_folder: str, create_new_timestamp_folder=False, name_append: str=None) -> str:
+def make_dir_timestamp(new_folder: str, create_new_timestamp_folder=False, name_append: str=None, overwrite=False) -> str:
     date, time = str(datetime.datetime.now()).split()
     tmpst = date[5:] + '-' + time[0:5]
     if name_append is not None:
@@ -27,7 +27,7 @@ def make_dir_timestamp(new_folder: str, create_new_timestamp_folder=False, name_
         new_folder = os.path.join(new_folder, tmpst)
     else:
         new_folder = new_folder + '-' + tmpst
-    return make_dir(new_folder)
+    return make_dir(new_folder, overwrite=overwrite)
 
 def find_pattern_in_path(path, pattern):
     result = []

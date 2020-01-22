@@ -49,7 +49,7 @@ class MPIEnv(Environment):
             self.menv.gather(observations, root=0)
             actions = self.menv.scatter(None, root=0)
             next_observations, reward, done, _ = self.env.step(actions)
-            self.debug("{} {} {} {} {}".format(type(observations), type(actions), type(next_observations), type(reward), type(done)))
+            # self.debug("{} {} {} {} {}".format(type(observations), type(actions), type(next_observations), type(reward), type(done)))
 
             self.observations.append(observations)
             self.actions.append(actions)
@@ -65,14 +65,11 @@ class MPIEnv(Environment):
                     Assuming 1 learner here
                         Spec should indicate what agent corresponds to that learner dest=ix
                 '''
-                # for ix, spec in enumerate(self.learners_specs):
-                #     self.learner.send(self.buffer, dest=ix, tag=7)
-                self.learner.Iallgather(self.buffer, None)
+                for ix in range(self.num_learners):
+                    self.learner.send(self.buffer, dest=ix, tag=7)
 
                 self.buffer = []
                 self.env.reset()
-
-            self.collect = self.env.done_count < 50
 
         self.close()
 

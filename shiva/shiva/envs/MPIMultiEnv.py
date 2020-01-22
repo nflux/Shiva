@@ -41,14 +41,20 @@ class MPIMultiEnv(Environment):
         self.run()
 
     def run(self):
+        self.step_count = 0
         while self.collect:
             observations = self.envs.gather(None, root=MPI.ROOT)
             # self.debug(observations)
+            self.step_count += len(observations)
             actions = self.agents[0].get_action(observations) # assuming one agent for all obs
             # self.debug(actions)
             self.envs.scatter(actions, root=MPI.ROOT)
-            # check if we have
-            # Admin._load_agents(self.learners_specs[0]['load_path'])
+            '''Assuming 1 Learner'''
+            if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=10):
+                learner_spec = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=10)  # block statement
+                self.agents = Admin._load_agents(learner_spec['load_path'])
+                self.debug("Loaded Agent at Episode {}".format(self.agents[0].done_count))
+            ''''''
         self.close()
 
     def _launch_envs(self):
