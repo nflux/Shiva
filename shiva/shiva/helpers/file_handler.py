@@ -9,8 +9,6 @@ def save_pickle_obj(obj, filename):
             @obj        Instance to save
             @filename   Absolute path where to save including filename
     '''
-    # print(obj)
-    # input()
     with open(filename, 'wb') as handle:
         pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -21,8 +19,13 @@ def load_pickle_obj(filename):
         Input
             @filename   Absolute path to the file
     '''
-    with open(filename, 'rb') as handle:
-        return pickle.load(handle)
+    flag = True
+    while flag:
+        try:
+            with open(filename, 'rb') as handle:
+                return pickle.load(handle)
+        except:
+            pass
 
 def save_to_json(data, filename):
     '''

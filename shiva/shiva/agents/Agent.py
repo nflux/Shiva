@@ -51,8 +51,14 @@ class Agent(object):
             - ShivaAdmin finds the policies saved for the Agent and calls this method that many times
 
         '''
-        # assert False, "Method Not Implemented"
-        setattr(self, policy_name, torch.load(policy_file))
+        flag = True
+        while flag:
+            try:
+                setattr(self, policy_name, torch.load(policy_file))
+                flag = False
+            except:
+                # try again
+                pass
 
     def get_action(self, obs):
         assert False, "Method Not Implemented"
