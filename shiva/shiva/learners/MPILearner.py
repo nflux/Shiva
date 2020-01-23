@@ -5,6 +5,7 @@ import torch
 import logging
 from mpi4py import MPI
 
+from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin
 from shiva.helpers.config_handler import load_class
 from shiva.learners.Learner import Learner
@@ -64,7 +65,7 @@ class MPILearner(Learner):
         self.reward_per_episode = 0
         self.train = True
         while self.train:
-            self.env_state = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=7) # blocking operation until all environments sent at least 1 trajectory
+            self.env_state = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory) # blocking operation until all environments sent at least 1 trajectory
             traj = self.env_state['trajectory']
             self.env_metrics = self.env_state['metrics']
             '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
@@ -91,7 +92,7 @@ class MPILearner(Learner):
                 # self.debug("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
                 Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
                 for ix in range(self.num_menvs):
-                    self.menv.send(self._get_learner_state(), dest=ix, tag=10)
+                    self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
             self.collect_metrics(episodic=True)
 
@@ -102,8 +103,8 @@ class MPILearner(Learner):
             # self.debug("Sending metrics to Meta")
             self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
             '''Check for Evolution Configs'''
-            if self.meta.Iprobe(source=0, tag=1):
-                evolution_config = self.learners.recv(None, source=0, tag=11)  # block statement
+            if self.meta.Iprobe(source=0, tag=Tags.evolution):
+                evolution_config = self.learners.recv(None, source=0, tag=Tags.evolution)  # block statement
                 self.debug("Got evolution config!")
             ''''''
 
@@ -114,7 +115,7 @@ class MPILearner(Learner):
         self.debug('Connected with MultiEnv')
 
         '''Assuming 1 MultiEnv'''
-        self.menv.send(self._get_learner_specs(), dest=0, tag=0)
+        self.menv.send(self._get_learner_specs(), dest=0, tag=Tags.specs)
 
         # Accept Single Env Connection
         self.debug("Expecting connection from {} Envs @ {}".format(self.num_envs, self.port))

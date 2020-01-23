@@ -33,7 +33,7 @@ class TD3Algorithm(Algorithm):
         if episodic:
             agent.ou_noise.reset()
             agent.ou_noise_critic.reset()
-            # return
+            return
 
         if step_count < self.configs['Agent']['exploration_steps']:
             '''Avoid updating during exploration'''

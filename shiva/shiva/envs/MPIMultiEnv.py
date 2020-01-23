@@ -4,6 +4,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
 from mpi4py import MPI
 
+from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin
 from shiva.envs.Environment import Environment
 
@@ -49,9 +50,9 @@ class MPIMultiEnv(Environment):
             # self.debug("Acs {}".format(actions))
             self.envs.scatter(actions, root=MPI.ROOT)
 
-            if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=10):
+            if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents):
                 '''Assuming 1 Learner, need to grab the source rank to load the appropiate agent'''
-                learner_spec = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=10)  # block statement
+                learner_spec = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.new_agents)  # block statement
                 self.agents = Admin._load_agents(learner_spec['load_path'])
                 self.debug("Loaded Agent at Episode {}".format(self.agents[0].done_count))
             ''''''
@@ -71,7 +72,7 @@ class MPIMultiEnv(Environment):
         self.learners_specs = []
         self.debug("Expecting {} learners".format(self.num_learners))
         for i in range(self.num_learners):
-            learner_data = self.learners.recv(None, source=i, tag=0)
+            learner_data = self.learners.recv(None, source=i, tag=Tags.specs)
             self.learners_specs.append(learner_data)
             self.debug("Received Learner {}".format(learner_data['id']))
 

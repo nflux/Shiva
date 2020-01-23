@@ -52,7 +52,7 @@ class GymEnvironment(Environment):
         #     self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
 
         self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
-        self.obs = list(self.obs)
+        # self.obs = list(self.obs)
         self.load_viewer()
         '''
             Metrics collection

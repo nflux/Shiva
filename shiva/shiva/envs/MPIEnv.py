@@ -6,6 +6,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
 from mpi4py import MPI
 
+from shiva.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.helpers.config_handler import load_class
 
@@ -63,7 +64,7 @@ class MPIEnv(Environment):
                         Spec should indicate what agent corresponds to that learner dest=ix
                 '''
                 for ix in range(self.num_learners):
-                    self.learner.send(self._get_env_state(traj), dest=ix, tag=7)
+                    self.learner.send(self._get_env_state(traj), dest=ix, tag=Tags.trajectory)
                 self._clear_buffers()
                 self.env.reset()
 

@@ -16,7 +16,7 @@ class SingleAgentTD3Learner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.alg.update(self.agent, self.buffer, self.env.step_count)
+                # self.alg.update(self.agent, self.buffer, self.env.step_count)
                 self.collect_metrics()
             self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
             self.collect_metrics(episodic=True)
