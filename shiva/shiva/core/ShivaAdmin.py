@@ -475,7 +475,7 @@ class ShivaAdmin():
 
     def log(self, msg, to_print=False):
         text = "Admin\t\t{}".format(msg)
-        self.logger.info(text, to_print)
+        self.logger.info(text, to_print or self.print_debug)
     
 
 ###########################################################################

@@ -38,11 +38,18 @@ class MPIMultiEnv(Environment):
 
     def run(self):
         self.step_count = 0
+        self.log(self.env_specs)
         while True:
+            '''We could optimize this gather/scatter ops using numpys'''
             observations = self.envs.gather(None, root=MPI.ROOT)
             # self.log("Obs {}".format(observations))
             self.step_count += len(observations)
-            actions = self.agents[0].get_action(observations, self.step_count) # assuming one agent for all obs
+
+            if self.env_specs['num_instances_per_env'] > 1:
+                '''Unity case!!'''
+                actions = [self.agents[0].get_action(obs, self.step_count) for obs in observations]
+            else:
+                actions = self.agents[0].get_action(observations, self.step_count) # assuming one agent for all obs
             # self.log("Acs {}".format(actions))
             self.envs.scatter(actions, root=MPI.ROOT)
 
@@ -100,7 +107,7 @@ class MPIMultiEnv(Environment):
 
     def log(self, msg, to_print=False):
         text = 'Menv {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print)
+        logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

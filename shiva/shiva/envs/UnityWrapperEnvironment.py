@@ -13,7 +13,7 @@ class UnityWrapperEnvironment(Environment):
         assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
         self.on_policy = False
         super(UnityWrapperEnvironment, self).__init__(config)
-        self.worker_id = 0
+        self.worker_id = config['worker_id'] if 'worker_id' in config else 0
         self._connect()
         self.set_initial_values()
 
@@ -22,7 +22,8 @@ class UnityWrapperEnvironment(Environment):
         self.channel = EngineConfigurationChannel()
         self.Unity = UnityEnvironment(
             file_name= self.exec,
-            # base_port = self.port,
+            base_port = self.port if hasattr(self, 'port') else 5005, # 5005 is Unity's default value
+            worker_id = self.worker_id,
             seed = self.configs['Algorithm']['manual_seed'],
             side_channels = [self.channel],
             no_graphics= not self.render
@@ -30,7 +31,7 @@ class UnityWrapperEnvironment(Environment):
         self.Unity.reset()
         self.groups = self.Unity.get_agent_groups()
 
-        # we only control 1 agent spec..
+        '''Assuming to control 1 Group ID on Unity here'''
         assert self.group_id in self.groups, "Wrong env_name provided.. (corresponds to Unity's Agent Group ID)"
         self.GroupSpec = self.Unity.get_agent_group_spec(self.group_id)
         self.reset()
@@ -58,7 +59,7 @@ class UnityWrapperEnvironment(Environment):
         # diff behaviour
         self.num_agents = 1 # agents with different behaviour
         self.agents_id = [0] # diff behaviour agents ids
-
+        # self.debug()
         self.observations = self.batched_step_results.obs[0]
         self.rewards = self.batched_step_results.reward
         self.dones = self.batched_step_results.done
@@ -158,6 +159,7 @@ class UnityWrapperEnvironment(Environment):
 
     def get_observations(self):
         return self.observations
+
     def get_observation(self):
         return self.observations
 

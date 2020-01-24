@@ -40,9 +40,12 @@ class MPIEnv(Environment):
         self.env.reset()
 
         while True:
+            '''We could optimize this gather/scatter ops using numpys'''
             observations = list(self.env.get_observations())
+            # self.log("Obs {}".format(observations))
             self.menv.gather(observations, root=0)
             actions = self.menv.scatter(None, root=0)
+            # self.log("Act {}".format(actions))
             next_observations, reward, done, _ = self.env.step(actions)
 
             # self.log("{} {} {} {} {}".format(observations, actions, next_observations, reward, done))
@@ -56,7 +59,7 @@ class MPIEnv(Environment):
 
             if self.env.is_done():
 
-                self.log(self.env.get_metrics(episodic=True), to_print=True) # print metrics
+                self.print(self.env.get_metrics(episodic=True)) # print metrics
 
                 '''ASSUMING trajectory for 1 AGENT on both approaches'''
                 # self._send_trajectory_python_list()
@@ -119,6 +122,8 @@ class MPIEnv(Environment):
         self.log("Connected with {} learners on {}".format(self.num_learners, self.learners_port))
 
     def create_environment(self):
+        self.configs['Environment']['port'] = 5005 + (self.id * 10)
+        self.configs['Environment']['worker_id'] = self.id * 11
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
 
@@ -135,6 +140,7 @@ class MPIEnv(Environment):
             'observation_space': self.env.get_observation_space(),
             'action_space': self.env.get_action_space(),
             'num_agents': self.env.num_agents,
+            'num_instances_per_env': self.env.num_instances if hasattr(self.env, 'num_instances') else 1, # Unity case!!!!
             'learners_port': self.learners_port if hasattr(self, 'learners_port') else False
         }
 
@@ -144,7 +150,11 @@ class MPIEnv(Environment):
 
     def log(self, msg, to_print=False):
         text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print)
+        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+
+    def print(self, msg):
+        text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)
+        print(text)
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

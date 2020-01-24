@@ -76,8 +76,7 @@ class MPILearner(Learner):
             #     exit()
 
             '''Change freely condition when to update'''
-            if True:
-            # if self.done_count % self.episodes_to_update == 0:
+            if self.done_count % self.episodes_to_update == 0:
                 self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
                 self.update_num += 1
                 self.agents[0].step_count = self.step_count
@@ -89,8 +88,7 @@ class MPILearner(Learner):
 
             self.collect_metrics(episodic=True)
 
-            if True:
-            # if self.done_count % self.save_checkpoint_episodes == 0:
+            if self.done_count % self.save_checkpoint_episodes == 0:
                 Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
             '''Send Updated Agents to Meta'''
@@ -251,7 +249,7 @@ class MPILearner(Learner):
 
     def log(self, msg, to_print=False):
         text = 'Learner {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print)
+        logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

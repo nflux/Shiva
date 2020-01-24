@@ -37,7 +37,7 @@ class MPIMetaLearner(MetaLearner):
 
     def log(self, msg, to_print=False):
         text = "Meta\t\t{}".format(msg)
-        logger.info(text, to_print)
+        logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def close(self):
         self.menvs.Disconnect()
