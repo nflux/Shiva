@@ -1,15 +1,11 @@
 import sys, time
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
-import logging
 from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
-from shiva.core.admin import Admin
+from shiva.core.admin import Admin, logger
 from shiva.envs.Environment import Environment
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("shiva")
 
 class MPIMultiEnv(Environment):
 
@@ -22,10 +18,10 @@ class MPIMultiEnv(Environment):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEnv, self).__init__(self.configs)
-        self.debug("Received config with {} keys".format(len(self.configs.keys())))
+        self.log("Received config with {} keys".format(len(self.configs.keys())))
         # Open Port for Learners
         self.port = MPI.Open_port(MPI.INFO_NULL)
-        self.debug("Open port {}".format(self.port))
+        self.log("Open port {}".format(self.port))
 
         # Grab configs
         self.num_learners = 1 # assuming 1 Learner
@@ -44,17 +40,17 @@ class MPIMultiEnv(Environment):
         self.step_count = 0
         while True:
             observations = self.envs.gather(None, root=MPI.ROOT)
-            # self.debug("Obs {}".format(observations))
+            # self.log("Obs {}".format(observations))
             self.step_count += len(observations)
             actions = self.agents[0].get_action(observations, self.step_count) # assuming one agent for all obs
-            # self.debug("Acs {}".format(actions))
+            # self.log("Acs {}".format(actions))
             self.envs.scatter(actions, root=MPI.ROOT)
 
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents):
                 '''Assuming 1 Learner, need to grab the source rank to load the appropiate agent'''
                 learner_spec = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.new_agents)  # block statement
                 self.agents = Admin._load_agents(learner_spec['load_path'])
-                self.debug("Loaded Agent at Episode {}".format(self.agents[0].done_count))
+                self.log("Loaded Agent at Episode {}".format(self.agents[0].done_count))
             ''''''
         self.close()
 
@@ -70,11 +66,11 @@ class MPIMultiEnv(Environment):
         self.learners = MPI.COMM_WORLD.Accept(self.port) # Wait until check in learners, create comm
         # Get LearnersSpecs to load agents and start running
         self.learners_specs = []
-        self.debug("Expecting {} learners".format(self.num_learners))
+        self.log("Expecting {} learners".format(self.num_learners))
         for i in range(self.num_learners):
             learner_data = self.learners.recv(None, source=i, tag=Tags.specs)
             self.learners_specs.append(learner_data)
-            self.debug("Received Learner {}".format(learner_data['id']))
+            self.log("Received Learner {}".format(learner_data['id']))
 
         '''
             TODO
@@ -87,7 +83,7 @@ class MPIMultiEnv(Environment):
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
         # Get signal that they have communicated with Learner
         envs_states = self.envs.gather(None, root=MPI.ROOT)
-        # self.debug(envs_status)
+        # self.log(envs_status)
 
     def _get_menv_specs(self):
         return {
@@ -102,17 +98,15 @@ class MPIMultiEnv(Environment):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def debug(self, msg, to_print=False):
+    def log(self, msg, to_print=False):
         text = 'Menv {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logging.debug(text)
-        if to_print or self.configs['Admin']['debug']:
-            print(text)
+        logger.info(text, to_print)
 
     def show_comms(self):
-        self.debug("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
-        self.debug("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
-        self.debug("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
-        self.debug("LEARNER = Inter: {} / Intra: {}".format(self.learners.Is_inter(), self.learners.Is_intra()))
+        self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
+        self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
+        self.log("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
+        self.log("LEARNER = Inter: {} / Intra: {}".format(self.learners.Is_inter(), self.learners.Is_intra()))
 
 
 if __name__ == "__main__":

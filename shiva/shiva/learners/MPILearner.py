@@ -2,18 +2,13 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
-import logging
-import time
 import numpy as np
 from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
-from shiva.core.admin import Admin
+from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_class
 from shiva.learners.Learner import Learner
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("shiva")
 
 class MPILearner(Learner):
 
@@ -26,12 +21,12 @@ class MPILearner(Learner):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPILearner, self).__init__(self.id, self.configs)
-        self.debug("Received config with {} keys".format(len(self.configs.keys())))
+        self.log("Received config with {} keys".format(len(self.configs.keys())))
         Admin.init(self.configs['Admin'])
         Admin.add_learner_profile(self, function_only=True)
         # Open Port for Single Environments
         self.port = MPI.Open_port(MPI.INFO_NULL)
-        self.debug("Open port {}".format(self.port))
+        self.log("Open port {}".format(self.port))
 
         # Set some self attributes from received Config (it should have MultiEnv data!)
         self.MULTI_ENV_FLAG = True
@@ -59,7 +54,7 @@ class MPILearner(Learner):
         self.run()
 
     def run(self, train=True):
-        self.debug("Waiting for trajectories..")
+        self.log("Waiting for trajectories..")
         self.step_count = 0
         self.done_count = 0
         self.update_num = 0
@@ -77,7 +72,7 @@ class MPILearner(Learner):
             # '''Used for time calculation'''
             # if self.done_count == n_episodes:
             #     t1 = time.time()
-            #     self.debug("Collected {} episodes in {} seconds".format(n_episodes, (t1-t0)))
+            #     self.log("Collected {} episodes in {} seconds".format(n_episodes, (t1-t0)))
             #     exit()
 
             '''Change freely condition when to update'''
@@ -87,7 +82,7 @@ class MPILearner(Learner):
                 self.update_num += 1
                 self.agents[0].step_count = self.step_count
                 self.agents[0].done_count = self.done_count
-                # self.debug("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
+                # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
                 Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
                 for ix in range(self.num_menvs):
                     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
@@ -99,12 +94,12 @@ class MPILearner(Learner):
                 Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
             '''Send Updated Agents to Meta'''
-            # self.debug("Sending metrics to Meta")
+            # self.log("Sending metrics to Meta")
             self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
             '''Check for Evolution Configs'''
             if self.meta.Iprobe(source=0, tag=Tags.evolution):
                 evolution_config = self.learners.recv(None, source=0, tag=Tags.evolution)  # block statement
-                self.debug("Got evolution config!")
+                self.log("Got evolution config!")
             ''''''
 
     def _receive_trajectory_python_list(self):
@@ -124,9 +119,9 @@ class MPILearner(Learner):
         self.steps_per_episode = len(observations)
         self.reward_per_episode = sum(rewards)
 
-        # self.debug(trajectory)
-        # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-        # self.debug("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
+        # self.log(trajectory)
+        # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
+        # self.log("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
 
         exp = list(map(torch.clone, (
             torch.tensor(observations), torch.tensor(actions), torch.tensor(rewards).reshape(-1, 1),
@@ -173,9 +168,9 @@ class MPILearner(Learner):
         self.steps_per_episode = traj_length
         self.reward_per_episode = sum(rewards)
 
-        # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-        # self.debug("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-        # self.debug("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
+        # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
+        # self.log("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+        # self.log("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
 
         exp = list(map(torch.clone, (torch.tensor(observations[agent_ix]), torch.tensor(actions[agent_ix]), torch.tensor(rewards[agent_ix]).reshape(-1, 1),
         torch.tensor(next_observations[agent_ix]), torch.tensor(dones[agent_ix], dtype=torch.bool).reshape(-1, 1))))
@@ -183,15 +178,15 @@ class MPILearner(Learner):
 
     def _connect_menvs(self):
         # Connect with MultiEnv
-        self.debug("Trying to connect to MultiEnv @ {}".format(self.menv_port))
+        self.log("Trying to connect to MultiEnv @ {}".format(self.menv_port))
         self.menv = MPI.COMM_WORLD.Connect(self.menv_port,  MPI.INFO_NULL)
-        self.debug('Connected with MultiEnv')
+        self.log('Connected with MultiEnv')
 
         '''Assuming 1 MultiEnv'''
         self.menv.send(self._get_learner_specs(), dest=0, tag=Tags.specs)
 
         # Accept Single Env Connection
-        self.debug("Expecting connection from {} Envs @ {}".format(self.num_envs, self.port))
+        self.log("Expecting connection from {} Envs @ {}".format(self.num_envs, self.port))
         self.envs = MPI.COMM_WORLD.Accept(self.port)
 
     def _get_learner_state(self):
@@ -234,38 +229,36 @@ class MPILearner(Learner):
             agents = Admin._load_agents(self.load_agents, absolute_path=False)
         else:
             agents = [self.alg.create_agent(ix) for ix in range(self.num_agents)]
-        self.debug("Agents created: {} of type {}".format(len(agents), type(agents[0])))
+        self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
         return agents
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         alg = algorithm_class(self.observation_space, self.action_space, self.configs)
-        self.debug("Algorithm created of type {}".format(algorithm_class))
+        self.log("Algorithm created of type {}".format(algorithm_class))
         return alg
 
     def create_buffer(self):
         # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
         buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
-        self.debug("Buffer created of type {}".format(buffer_class))
+        self.log("Buffer created of type {}".format(buffer_class))
         return buffer
 
     def close(self):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def debug(self, msg, to_print=False):
+    def log(self, msg, to_print=False):
         text = 'Learner {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.debug(text)
-        if to_print or self.configs['Admin']['debug']:
-            print(text)
+        logger.info(text, to_print)
 
     def show_comms(self):
-        self.debug("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
-        self.debug("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
-        self.debug("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
-        self.debug("MENV = Inter: {} / Intra: {}".format(self.menv.Is_inter(), self.menv.Is_intra()))
-        self.debug("ENV = Inter: {} / Intra: {}".format(self.envs.Is_inter(), self.envs.Is_intra()))
+        self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
+        self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
+        self.log("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
+        self.log("MENV = Inter: {} / Intra: {}".format(self.menv.Is_inter(), self.menv.Is_intra()))
+        self.log("ENV = Inter: {} / Intra: {}".format(self.envs.Is_inter(), self.envs.Is_intra()))
 
 
 if __name__ == "__main__":

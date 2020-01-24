@@ -42,9 +42,10 @@ class ShivaAdmin():
         'agent':        'A{id}',
     }
 
-    def __init__(self, config=None):
+    def __init__(self, logger, config=None):
         if config is not None:
             self.init(config)
+        self.logger = logger
         self.base_url = os.path.abspath('.')
 
     def init(self, config):
@@ -98,7 +99,7 @@ class ShivaAdmin():
             folder_name = self.__folder_name__['metalearner'].format(algorithm=meta_learner.config['Algorithm']['type'], env=meta_learner.config['Environment']['env_name'])
         new_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, folder_name), overwrite=overwrite)
         self._meta_learner_dir = new_dir
-        print("New MetaLearner @ {}".format(self._meta_learner_dir))
+        self.log("New MetaLearner @ {}".format(self._meta_learner_dir), to_print=True)
 
     def add_learner_profile(self, learner, function_only=False) -> None:
         '''
@@ -255,7 +256,7 @@ class ShivaAdmin():
             Not sure what do we want to save here
         '''
         assert False, "Not implemented"
-        # print("Saving Meta Learner @ {}".format(self._meta_learner_dir))
+        # self.log("Saving Meta Learner @ {}".format(self._meta_learner_dir))
         # # create the meta learner configs folder
         # dh.make_dir(os.path.join(self._meta_learner_dir, self.__folder_name__['config']))
 
@@ -329,7 +330,7 @@ class ShivaAdmin():
                 else:
                     self._save_agent(learner, learner.agent, checkpoint_num)
             except AttributeError:
-                print(learner)
+                self.log(learner)
                 assert False, "Couldn't find the Learners agent/s..."
 
     def _save_agent(self, learner, agent, checkpoint_num=None):
@@ -381,7 +382,7 @@ class ShivaAdmin():
                 MetaLearner instance
         '''
         assert False, "Not implemented"
-        print("Loading MetaLearner")
+        self.log("Loading MetaLearner")
 
     def _load_learner(self, path: str, includeAgents: bool=True) -> object:
         '''
@@ -398,7 +399,7 @@ class ShivaAdmin():
         # learner_pickle = dh.find_pattern_in_path(path, 'learner_cls.pickle')
         # assert len(learner_pickle) == 1, "{} learner pickles were found in {}".format(str(len(learner_pickle)), path)
         # learner_pickle = learner_pickle[0]
-        # print('Loading Learner\n\t{}\n'.format(learner_pickle))
+        # self.log('Loading Learner\n\t{}\n'.format(learner_pickle))
         # learner_path, _ = os.path.split(learner_pickle)
         # _new_learner = fh.load_pickle_obj(learner_pickle)
         # if includeAgents:
@@ -420,7 +421,7 @@ class ShivaAdmin():
         agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
         agents_policies = dh.find_pattern_in_path(path, '.pth')
         assert len(agents_pickles) > 0, "No agents found in {}".format(path)
-        # print("Loading Agents..")
+        # self.log("Loading Agents..")
         for agent_pickle in agents_pickles:
             _new_agent = fh.load_pickle_obj(agent_pickle)
             this_agent_folder = agent_pickle.replace('agent_cls.pickle', '')
@@ -431,7 +432,7 @@ class ShivaAdmin():
                     this_agent_policies.append(pols)
                     policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
                     _new_agent.load_net(policy_name, pols)
-            print("Loading Agent {} with {} networks".format(agent_pickle.replace(os.getcwd(), ''), len(this_agent_policies)))
+            self.log("Loading Agent {} with {} networks".format(agent_pickle.replace(os.getcwd(), ''), len(this_agent_policies)), to_print=True)
             agents.append(_new_agent)
         return agents
 
@@ -448,8 +449,7 @@ class ShivaAdmin():
         assert len(agent_pickle) > 0, "No agent found in {}".format(path)
         assert len(agent_pickle) == 1, "Multiple agent_cls.pickles found. Try using shiva._load_agents()"
         agent_pickle = agent_pickle[0]
-        print("Loading Agent..")
-        print("\t{} with {} networks\n".format(agent_pickle, len(agent_policy)))
+        self.log("Loading Agent..\n\t{} with {} networks\n".format(agent_pickle, len(agent_policy)), to_print=True)
         _new_agent = fh.load_pickle_obj(agent_pickle)
         this_agent_folder = agent_pickle.replace('agent_cls.pickle', '')
         for pols in agent_policy:
@@ -469,10 +469,13 @@ class ShivaAdmin():
 
         buffer_pickle = dh.find_pattern_in_path(path, 'buffer_cls.pickle')
         assert len(buffer_pickle) > 0, "No buffer found in {}".format(path)
-        print("Loading Buffer..")
-        print("\t{}\n".format(buffer_pickle[0]))
+        self.log("Loading Buffer..", to_print=True)
+        self.log("\t{}\n".format(buffer_pickle[0]))
         return fh.load_pickle_obj(buffer_pickle[0])
 
+    def log(self, msg, to_print=False):
+        text = "Admin\t\t{}".format(msg)
+        self.logger.info(text, to_print)
     
 
 ###########################################################################

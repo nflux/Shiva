@@ -3,15 +3,12 @@ import numpy as np
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
-import logging
 from mpi4py import MPI
 
+from shiva.core.admin import logger
 from shiva.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.helpers.config_handler import load_class
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("shiva")
 
 class MPIEnv(Environment):
 
@@ -24,7 +21,7 @@ class MPIEnv(Environment):
         # Receive Config from MultiEnv
         self.configs = self.menv.bcast(None, root=0)
         super(MPIEnv, self).__init__(self.configs)
-        self.debug("Received config with {} keys".format(len(self.configs.keys())))
+        self.log("Received config with {} keys".format(len(self.configs.keys())))
         self._launch_env()
         # Check in and send single env specs with MultiEnv
         self.menv.gather(self._get_env_specs(), root=0)
@@ -33,9 +30,9 @@ class MPIEnv(Environment):
         self.menv.gather(self._get_env_state(), root=0)
         self._clear_buffers()
         # Wait for flag to start running
-        self.debug("Waiting MultiEnv flag to start")
+        self.log("Waiting MultiEnv flag to start")
         start_flag = self.menv.bcast(None, root=0)
-        self.debug("Start collecting..")
+        self.log("Start collecting..")
 
         self.run()
 
@@ -48,8 +45,8 @@ class MPIEnv(Environment):
             actions = self.menv.scatter(None, root=0)
             next_observations, reward, done, _ = self.env.step(actions)
 
-            # self.debug("{} {} {} {} {}".format(observations, actions, next_observations, reward, done))
-            # self.debug("{} {} {} {} {}".format(type(observations), type(actions), type(next_observations), type(reward), type(done)))
+            # self.log("{} {} {} {} {}".format(observations, actions, next_observations, reward, done))
+            # self.log("{} {} {} {} {}".format(type(observations), type(actions), type(next_observations), type(reward), type(done)))
 
             self.observations.append(observations)
             self.actions.append(actions)
@@ -59,7 +56,7 @@ class MPIEnv(Environment):
 
             if self.env.is_done():
 
-                self.debug(self.env.get_metrics(episodic=True)) # print metrics
+                self.log(self.env.get_metrics(episodic=True), to_print=True) # print metrics
 
                 '''ASSUMING trajectory for 1 AGENT on both approaches'''
                 # self._send_trajectory_python_list()
@@ -112,14 +109,14 @@ class MPIEnv(Environment):
         self.env = self.create_environment()
 
     def _connect_learners(self):
-        self.debug("Waiting Learners info")
+        self.log("Waiting Learners info")
         self.learners_specs = self.menv.bcast(None, root=0) # Wait until Learners info arrives from MultiEnv
         self.num_learners = len(self.learners_specs)
-        # self.debug("Got Learners info and will connect with {} learners".format(self.num_learners))
+        # self.log("Got Learners info and will connect with {} learners".format(self.num_learners))
         # Start communication with Learners
         self.learners_port = self.learners_specs[0]['port']
         self.learner = MPI.COMM_WORLD.Connect(self.learners_port, MPI.INFO_NULL)
-        self.debug("Connected with {} learners on {}".format(self.num_learners, self.learners_port))
+        self.log("Connected with {} learners on {}".format(self.num_learners, self.learners_port))
 
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
@@ -145,16 +142,14 @@ class MPIEnv(Environment):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def debug(self, msg, to_print=False):
+    def log(self, msg, to_print=False):
         text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logging.debug(text)
-        if to_print or self.configs['Admin']['debug']:
-            print(text)
+        logger.info(text, to_print)
 
     def show_comms(self):
-        self.debug("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
-        self.debug("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
-        self.debug("MENV = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
+        self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
+        self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
+        self.log("MENV = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
 
 
 if __name__ == "__main__":
