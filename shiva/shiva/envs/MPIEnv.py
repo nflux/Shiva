@@ -47,6 +47,8 @@ class MPIEnv(Environment):
             self.menv.gather(observations, root=0)
             actions = self.menv.scatter(None, root=0)
             next_observations, reward, done, _ = self.env.step(actions)
+
+            # self.debug("{} {} {} {} {}".format(observations, actions, next_observations, reward, done))
             # self.debug("{} {} {} {} {}".format(type(observations), type(actions), type(next_observations), type(reward), type(done)))
 
             self.observations.append(observations)
@@ -56,22 +58,49 @@ class MPIEnv(Environment):
             self.done.append(done)
 
             if self.env.is_done():
-                traj = [[self.observations, self.actions, self.rewards, self.next_observations, self.done]]
 
-                self.debug(self.env.get_metrics(episodic=True))
-                '''
-                    Assuming 1 learner here
-                        Spec should indicate what agent corresponds to that learner dest=ix
-                '''
-                for ix in range(self.num_learners):
-                    self.learner.send(self._get_env_state(traj), dest=ix, tag=Tags.trajectory)
+                self.debug(self.env.get_metrics(episodic=True)) # print metrics
+
+                '''ASSUMING trajectory for 1 AGENT on both approaches'''
+                # self._send_trajectory_python_list()
+                self._send_trajectory_numpy()
+
                 self._clear_buffers()
                 self.env.reset()
 
         self.close()
 
+    def _send_trajectory_python_list(self):
+        '''Python List approach'''
+        trajectory = [[self.observations, self.actions, self.rewards, self.next_observations, self.done]]
+        '''Assuming 1 learner here --> Spec should indicate what agent corresponds to that learner dest=ix'''
+        for ix in range(self.num_learners):
+            '''Python List Approach'''
+            self.learner.send(self._get_env_state(trajectory), dest=ix, tag=Tags.trajectory)
+
+    def _send_trajectory_numpy(self):
+        '''Numpy approach'''
+        self.observations = np.array(self.observations)
+        self.actions = np.array(self.actions)
+        self.next_observations = np.array(self.next_observations)
+        self.rewards = np.array(self.rewards)
+        self.done = np.array(self.done)
+        '''Assuming 1 learner here --> Spec should indicate what agent corresponds to that learner, use dest=ix'''
+        for ix in range(self.num_learners):
+            self.learner.send(self.env.steps_per_episode, dest=ix, tag=Tags.trajectory_length)
+            self.learner.Send([self.observations, MPI.FLOAT], dest=ix, tag=Tags.trajectory_observations)
+            self.learner.Send([self.actions, MPI.FLOAT], dest=ix, tag=Tags.trajectory_actions)
+            self.learner.Send([self.rewards, MPI.FLOAT], dest=ix, tag=Tags.trajectory_rewards)
+            self.learner.Send([self.next_observations, MPI.FLOAT], dest=ix, tag=Tags.trajectory_next_observations)
+            self.learner.Send([self.done, MPI.BOOL], dest=ix, tag=Tags.trajectory_dones)
+
     def _clear_buffers(self):
-        '''Maybe to be optimized'''
+        '''
+            --NEED TO DO MORE RESEARCH ON THIS--
+            Python List append is O(1)
+            While Numpy concatenation needs to reallocate memory for the list, thus slower
+            https://stackoverflow.com/questions/38470264/numpy-concatenate-is-slow-any-alternative-approach
+        '''
         self.observations = []
         self.actions = []
         self.next_observations = []
