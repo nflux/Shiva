@@ -59,7 +59,7 @@ class MPIMultiEnv(Environment):
                 learner_spec = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.new_agents)  # block statement
                 self.agents = Admin._load_agents(learner_spec['load_path'])
                 self.log("Loaded Agent at Episode {}".format(self.agents[0].done_count))
-            ''''''
+                
         self.close()
 
     def _launch_envs(self):
