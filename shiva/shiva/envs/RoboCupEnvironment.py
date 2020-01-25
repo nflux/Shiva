@@ -7,12 +7,9 @@ from torch.distributions import Categorical
 
 
 class RoboCupEnvironment(Environment):
-    def __init__(self, config, port):
+    def __init__(self, config):
         super(RoboCupEnvironment, self).__init__(config)
-        np.random.seed(self.seed)
-        torch.manual_seed(self.seed)
-        self.port = port            
-        self.env = rc_env(config, port)
+        self.env = rc_env(config)
         self.env.launch()
 
         self.left_actions = self.env.left_actions
@@ -69,9 +66,10 @@ class RoboCupEnvironment(Environment):
         '''
 
         if discrete_select == 'argmax':
-            act_choice = torch.argmax(actions[:self.action_space['acs_space']])
+            act_choice = np.argmax(actions[:self.action_space['acs_space']])
         elif discrete_select == 'sample':
-            act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
+            # act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
+            act_choice = np.random.choice(self.action_space['acs_space'], p=actions[:self.action_space['acs_space']])
         elif discrete_select == 'imit_discrete':
             act_choice = actions[0]
             # action = action2one_hot(self.acs_discrete, action.item())
@@ -93,7 +91,7 @@ class RoboCupEnvironment(Environment):
                 self.kicks += 1
 
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
-            actions_v = action2one_hot_v(self.action_space['acs_space'], act_choice)
+            actions_v = action2one_hot(self.action_space['acs_space'], act_choice)
         else:
             self.left_actions = act_choice.unsqueeze(dim=0)
             self.left_action_option = actions[self.action_space['acs_space']:].unsqueeze(dim=0)
@@ -107,7 +105,7 @@ class RoboCupEnvironment(Environment):
         
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
-    def get_observation(self):
+    def get_observations(self):
         return self.obs
 
     def get_observation_space(self):
@@ -130,7 +128,7 @@ class RoboCupEnvironment(Environment):
             self.env._start_viewer()
 
     def close(self):
-        self.env.start = False
+        self.env.close = True
         self.env.d = True
 
     def is_done(self):
@@ -171,11 +169,10 @@ class RoboCupEnvironment(Environment):
                 ('Turns_per_Episode', self.turns),
                 ('Dashes_per_Episode', self.dashes),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode),
-                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/self.done_count)*100.0)
+                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/(self.done_count+1))*100.0)
             ]
 
             print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
-
 
         return metrics
 

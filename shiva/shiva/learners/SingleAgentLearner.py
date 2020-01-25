@@ -50,7 +50,7 @@ class SingleAgentLearner(Learner):
         elif self.env.env_name == 'RoboCup':
             action = self.agent.get_action(observation, self.env.step_count)
             next_observation, reward, done, more_data = self.env.step(action, device=self.device)
-            self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
+            self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), torch.from_numpy(action), torch.from_numpy(reward),
                                                 torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).bool()))))
         else:
             action = self.agent.get_action(observation, self.env.step_count, self.evaluate)
@@ -79,7 +79,8 @@ class SingleAgentLearner(Learner):
     
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs, self.port)
+        self.configs['Environment']['port'] = 1050
+        return env_class(self.configs)
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])

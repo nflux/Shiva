@@ -59,7 +59,7 @@ class MPIEnv(Environment):
 
             if self.env.is_done():
 
-                self.print(self.env.get_metrics(episodic=True)) # print metrics
+                self.log(self.env.get_metrics(episodic=True)) # print metrics
 
                 '''ASSUMING trajectory for 1 AGENT on both approaches'''
                 # self._send_trajectory_python_list()
@@ -139,7 +139,7 @@ class MPIEnv(Environment):
             'id': self.id,
             'observation_space': self.env.get_observation_space(),
             'action_space': self.env.get_action_space(),
-            'num_agents': self.env.num_agents,
+            'num_agents': self.env.num_agents if hasattr(self.env, 'num_agents') else self.env.num_left+self.env.num_right,
             'num_instances_per_env': self.env.num_instances if hasattr(self.env, 'num_instances') else 1, # Unity case!!!!
             'learners_port': self.learners_port if hasattr(self, 'learners_port') else False
         }
@@ -152,9 +152,9 @@ class MPIEnv(Environment):
         text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
-    def print(self, msg):
-        text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        print(text)
+    # def print(self, msg):
+    #     text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)
+    #     print(text)
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

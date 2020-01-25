@@ -49,7 +49,8 @@ class MPIMultiEnv(Environment):
                 '''Unity case!!'''
                 actions = [self.agents[0].get_action(obs, self.step_count) for obs in observations]
             else:
-                actions = self.agents[0].get_action(observations, self.step_count) # assuming one agent for all obs
+                actions = [agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)]
+                # actions = [ in self.agents[0].get_action(observations, self.step_count) # assuming one agent for all obs
             # self.log("Acs {}".format(actions))
             self.envs.scatter(actions, root=MPI.ROOT)
 

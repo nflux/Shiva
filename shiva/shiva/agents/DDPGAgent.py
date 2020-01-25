@@ -66,7 +66,7 @@ class DDPGAgent(Agent):
                 action = action.cpu().numpy() + self.ou_noise.noise()
                 action = softmax(torch.from_numpy(action), dim=-1)
 
-        return action.tolist()
+        return action.numpy()
             
     def get_continuous_action(self,observation, step_count, evaluate):
         if evaluate:

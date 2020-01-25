@@ -24,14 +24,13 @@ class rc_env:
             @port       Required for the robocup server
     '''
 
-    def __init__(self, config, port=None):
+    def __init__(self, config):
 
         if 'MetaLearner' in config:
             {setattr(self, k, v) for k,v in config['Environment'].items()}
         else:
             {setattr(self, k, v) for k,v in config.items()}
 
-        self.port = port
         self.hfo_path = hfo.get_hfo_path()
         # self.seed = np.random.randint(1000)
         self.viewer = None
@@ -146,6 +145,8 @@ class rc_env:
         self.d = 0
         # flag to wait for all the agents to load
         self.start = False
+
+        self.close = False
 
         # Various Barriers to keep all agents actions in sync
         self.sync_after_queue = threading.Barrier(self.num_left+self.num_right+1)
@@ -401,21 +402,7 @@ class rc_env:
         else:
             discrete_action = self.right_action_option[agentID]
 
-        # if 0 <= int(action_params[agentID][0]) <= 188:
-        #     return self.ACTION_MATRIX[int(action_params[agentID][0])]
-        # elif 189 <= int(action_params[agentID][0]) <= 197:
-        #     return (self.ACTION_MATRIX[int(action_params[agentID][0])],)
-        # else:
-        #     return self.ACTION_MATRIX[int(action_params[agentID][0])]
-        # print('action', self.ACTION_DICT[discrete_action])
-        return self.ACTION_DICT[discrete_action.item()]
-        # if 189 <= discrete_action <= 197:
-        #     # Turn
-        #     return (self.ACTION_MATRIX[discrete_action],)
-        # else:
-        #     # Dash and Kick
-        #     return self.ACTION_MATRIX[discrete_action]
-
+        return self.ACTION_DICT[discrete_action]
 
     # takes param index (0-4)
     def get_valid_scaled_param(self,agentID,ac_index,base):
@@ -478,10 +465,9 @@ class rc_env:
             feat_lvl = hfo_env.SIMPLE_LEVEL_FEATURE_SET
 
         config_dir = hfo.get_config_path() 
-        recorder_dir = 'log/'
         envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                             server_port=port, server_addr='localhost', team_name=base,
-                                                play_goalie=goalie,record_dir =recorder_dir)
+                                                play_goalie=goalie,record_dir =self.rc_log+'/')
         
         if base == 'base_left':
             obs_prev = self.left_obs_previous
@@ -556,7 +542,7 @@ class rc_env:
                     # Break if episode done
                     if self.d == True:
                         break
-            if not self.start:
+            if self.close:
                 break
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -575,7 +561,7 @@ class rc_env:
                   % (self.ep_length, self.untouched, self.num_left,
                      self.num_right, self.num_l_bot, self.num_r_bot, self.port,
                      self.offense_ball, self.seed, self.ball_x_min, self.ball_x_max,
-                     self.ball_y_min, self.ball_y_max, self.log, self.seed)
+                     self.ball_y_min, self.ball_y_max, self.rc_log, self.seed)
             #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
             if self.num_l_bot > 0:   cmd += " --offense-team %s" \
                 % (self.left_bin)
@@ -600,7 +586,7 @@ class rc_env:
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-            time.sleep(10) # Wait for server to startup before connecting a player
+            time.sleep(3) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         '''
