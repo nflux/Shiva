@@ -78,7 +78,7 @@ class TensorBuffer(ReplayBuffer):
             self.done_buffer = bh.roll(self.done_buffer, rollover)
             self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
             self.current_index = 0
-            # self.size = self.max_size
+            self.size = self.max_size
 
         self.obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = obs
         self.acs_buffer[self.current_index:self.current_index+nentries, :self.acs_dim] = ac
@@ -88,8 +88,7 @@ class TensorBuffer(ReplayBuffer):
 
         if self.size < self.max_size:
             self.size += nentries
-            if self.size + nentries > self.max_size:
-                self.size = self.max_size
+
         self.current_index += nentries
 
     def sample(self, device='cpu'):
@@ -131,7 +130,7 @@ class TensorBufferLogProbs(ReplayBuffer):
             self.log_probs_buffer = bh.roll(self.log_probs_buffer, rollover)
 
             self.current_index = 0
-            # self.size = self.max_size
+            self.size = self.max_size
 
         # print(ac)
         # input()

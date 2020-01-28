@@ -17,11 +17,13 @@ class SingleAgentLearner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                self.alg.update(self.agent, self.buffer, self.env.step_count)
+                if not self.evaluate:
+                    self.alg.update(self.agent, self.buffer, self.env.step_count)
                 self.collect_metrics()
                 if self.is_multi_process_cutoff(): return None # PBT Cutoff
                 else: continue
-            self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
+            if not self.evaluate:
+                self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
             # this is one hundred percent an episodic agent noise reset
             self.agent.ou_noise.reset()
             self.collect_metrics(episodic=True)
@@ -35,8 +37,11 @@ class SingleAgentLearner(Learner):
         """Temporary fix for Unity as it receives multiple observations"""
 
         if self.env.env_name == 'RoboCup':
-            action = self.agent.get_action(observation, self.env.step_count)
-            next_observation, reward, done, more_data = self.env.step(action, device=self.device)
+
+            action = self.agent.get_action(observation, self.env.step_count, self.evaluate)
+
+            next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.action_selection_method,device=self.device)
+            
             exp = list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
                                                 torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).bool()) ))
         

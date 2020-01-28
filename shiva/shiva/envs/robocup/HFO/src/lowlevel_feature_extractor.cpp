@@ -45,6 +45,7 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // const AbstractPlayerCont& allPlayers = wm.allPlayers();
   // const AbstractPlayerCont& theirPlayers = wm.theirPlayers();
 
+  // Ball observations
   const BallObject& ball = wm.ball();
   addNormFeature(ball.pos().x, -pitchHalfLength, pitchHalfLength);
   addNormFeature(ball.pos().y, -pitchHalfWidth, pitchHalfWidth);
@@ -53,8 +54,10 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   addNormFeature(pitchHalfLength, -pitchHalfLength, pitchHalfLength);
   addNormFeature(0., -pitchHalfWidth, pitchHalfWidth);
 
+  // self x and y
   addNormFeature(self_pos.x, -pitchHalfLength, pitchHalfLength);
   addNormFeature(self_pos.y, -pitchHalfWidth, pitchHalfWidth);
+  // stamina
   addNormFeature(self.stamina(), 0., observedStaminaMax);
   addFeature(self.isKickable() ? FEAT_MAX : FEAT_MIN);
 
@@ -71,7 +74,6 @@ LowLevelFeatureExtractor::ExtractFeatures(const rcsc::WorldModel& wm,
   // agent self speed
   addNormFeature(self.speed(), 0., observedPlayerSpeedMax);
   addAngFeature(self_ang);
-  
   // std::ofstream myfile;
   // myfile.open("example.txt", std::ios_base::app);
   // for(AbstractPlayerCont::const_iterator it=allPlayers.begin(); it != allPlayers.end(); it++){

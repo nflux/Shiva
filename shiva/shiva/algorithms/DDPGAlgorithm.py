@@ -63,13 +63,15 @@ class DDPGAlgorithm(Algorithm):
         next_states = next_states.to(self.device)
         dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
         # print(actions)
+        # ja
+        # print(states[0])
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
         # input()
 
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
             "acs_space config must be set to either discrete, continuous, or parameterized."
 
-        '''
+        '''  yes its supposed to be
             Training the Critic
         '''
     
@@ -124,7 +126,7 @@ class DDPGAlgorithm(Algorithm):
         if self.a_space == 'discrete':
             actions = one_hot_from_logits(actions)
         else:
-            action = softmax(actions) 
+            actions = softmax(actions) 
             # print(actions)
 
         # Grab the discrete actions in the batch
@@ -169,7 +171,7 @@ class DDPGAlgorithm(Algorithm):
         # penalty for going beyond the bounded interval
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
         # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration
-        actor_loss = -actor_loss_value.mean() + param_reg #+ entropy_reg
+        actor_loss = -actor_loss_value.mean() + param_reg # + entropy_reg
         # Backward Propogation!
         actor_loss.backward()
         # Update the weights in the direction of the gradient.
