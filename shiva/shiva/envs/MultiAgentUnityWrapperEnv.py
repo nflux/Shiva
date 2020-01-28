@@ -8,11 +8,11 @@ from mlagents_envs.side_channel.engine_configuration_channel import EngineConfig
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
 
-class UnityWrapperEnvironment(Environment):
+class MultiAgentUnityWrapperEnv(Environment):
     def __init__(self, config):
         assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
         self.on_policy = False
-        super(UnityWrapperEnvironment, self).__init__(config)
+        super(MultiAgentUnityWrapperEnv, self).__init__(config)
         self.worker_id = config['worker_id'] if 'worker_id' in config else 0
         self._connect()
         self.set_initial_values()
@@ -42,10 +42,14 @@ class UnityWrapperEnvironment(Environment):
 
         self.collect_step_data()
 
-        # cumulative metrics
-        self.reward_total = {group:0 for group in self.agent_groups}
-        self.step_count = { group:0 for group in self.agent_groups }
+        '''Calculate how many instances Unity has'''
+        self.num_instances_per_group = {group:self.BatchedStepResult[group].n_agents() for group in self.agent_groups}
+        self.num_instances_per_env = int( sum(list(self.num_instances_per_group.values())) / self.num_agents ) # all that matters is that is > 1
 
+        '''Init session cumulative metrics'''
+        self.reward_total = {group:0 for group in self.agent_groups}
+        self.step_count = 0 #{group:0 for group in self.agent_groups}
+        self.done_count = 0 #{group:0 for group in self.agent_groups}
         '''Reset Metrics'''
         self.reset()
 
@@ -54,17 +58,20 @@ class UnityWrapperEnvironment(Environment):
             To be called by Shiva Learner
             It's just to reinitialize our metrics. Unity resets the environment on its own.
         '''
-        self.steps_per_episode = { group:0 for group in self.agent_groups }
-        self.temp_done_counter = { group:0 for group in self.agent_groups }
-        self.reward_per_step = { group:0 for group in self.agent_groups }
-        self.reward_per_episode = { group:0 for group in self.agent_groups }
+        self.steps_per_episode = 0 #{group:0 for group in self.agent_groups}
+        self.temp_done_counter = 0 #{group:0 for group in self.agent_groups}
+        self.reward_per_step = {group:0 for group in self.agent_groups}
+        self.reward_per_episode = {group:0 for group in self.agent_groups}
 
     def collect_step_data(self):
         self.BatchedStepResult = {group:self.Unity.get_step_result(group) for group in self.agent_groups}
-
-        self.observations = {group:self.BatchedStepResult[group].obs for group in self.agent_groups}
+        self.observations = {group:self._flatten_observations(self.BatchedStepResult[group].obs) for group in self.agent_groups}
         self.rewards = {group:self.BatchedStepResult[group].reward for group in self.agent_groups}
         self.dones = {group:self.BatchedStepResult[group].done for group in self.agent_groups}
+
+    def _flatten_observations(self, obs):
+        '''Turns the funky (2, 16, 56) array into a (16, 112)'''
+        return np.concatenate([o for o in obs], axis=-1)
 
     def step(self, actions):
         self.actions = {group:self._clean_actions(group, actions[ix]) for ix, group in enumerate(self.agent_groups)}
@@ -82,18 +89,26 @@ class UnityWrapperEnvironment(Environment):
                 Episodic Reward                 self.reward_per_episode
                 Cumulative Reward               self.reward_total
         '''
+        self.steps_per_episode += self.num_instances_per_env
+        self.step_count += self.num_instances_per_env
+        self.temp_done_counter += sum(sum(self.dones[group]) for group in self.agent_groups)
+        self.done_count += sum(sum(self.dones[group]) for group in self.agent_groups)
         for group in self.agent_groups:
             # in case there's asymetric environment
-            self.steps_per_episode[group] += self.BatchedStepResult[group].n_agents()
-            self.step_count += self.BatchedStepResult[group].n_agents()
-            self.temp_done_counter[group] += sum(self.dones[group])
-            self.done_count[group] += sum(self.dones[group])
             self.reward_per_step[group] += sum(self.BatchedStepResult[group].reward) / self.BatchedStepResult[group].n_agents()
             self.reward_per_episode[group] += self.reward_per_step[group]
             self.reward_total[group] += self.reward_per_episode[group]
 
+            # self.steps_per_episode[group] += self.BatchedStepResult[group].n_agents()
+            # self.step_count[group] += self.BatchedStepResult[group].n_agents()
+            # self.temp_done_counter[group] += sum(self.dones[group])
+            # self.done_count[group] += sum(self.dones[group])
+            # self.reward_per_step[group] += sum(self.BatchedStepResult[group].reward) / self.BatchedStepResult[group].n_agents()
+            # self.reward_per_episode[group] += self.reward_per_step[group]
+            # self.reward_total[group] += self.reward_per_episode[group]
+
         # self.debug()
-        return self.observations, self.rewards, self.dones, {}
+        return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
 
     def get_metrics(self, episodic=True):
         if not episodic:
@@ -112,7 +127,8 @@ class UnityWrapperEnvironment(Environment):
             One Shiva episode is when all instances in the Environment terminate at least once
             On MultiAgent env, all agents will have the same number of dones, so we can check only one of them
         '''
-        return self.temp_done_counter[self.agent_groups[0]] > n_episodes if n_episodes is not None else self.BatchedStepResult[self.agent_groups[0]].n_agents()
+        return self.temp_done_counter > 0
+        # return self.temp_done_counter > self.num_instances_per_env
 
     def _clean_actions(self, group, group_actions):
         '''
@@ -120,7 +136,7 @@ class UnityWrapperEnvironment(Environment):
             else,
                 make sure it's numpy array
         '''
-        assert group_actions.shape == (self.BatchedStepResult[group].n_agents(), 1), "Actions for group {} should be of shape {}".format(group, (self.BatchedStepResult[group].n_agents(), 1))
+        # assert group_actions.shape == (self.BatchedStepResult[group].n_agents(), 1), "Actions for group {} should be of shape {}".format(group, (self.BatchedStepResult[group].n_agents(), 1))
         if self.GroupSpec[group].is_action_discrete():
             actions = np.array([ [np.argmax(_act)] for _act in group_actions ])
         elif type(group_actions) != np.ndarray:
@@ -130,9 +146,9 @@ class UnityWrapperEnvironment(Environment):
     def get_action_space_from_unity_spec(self, unity_spec):
         if unity_spec.is_action_discrete():
             return {
-                'discrete': unity_spec.action_shape,
+                'discrete': unity_spec.action_shape[0],
                 'param': 0,
-                'acs_space': unity_spec.action_shape
+                'acs_space': unity_spec.action_shape[0]
             }
         elif unity_spec.is_action_continuous():
             return {
@@ -144,22 +160,23 @@ class UnityWrapperEnvironment(Environment):
             assert "Something weird happened here..."
 
     def get_observation_space_from_unity_spec(self, unity_spec):
-        return unity_spec[0][0]
+        # flatten the obs_shape, g.e. from [(56,), (56,)] to 112
+        return sum([ sum(obs_shape) for obs_shape in unity_spec.observation_shapes])
 
     def get_observations(self):
-        return self.observations
+        return list(self.observations.values())
 
     def get_observation(self, group_ix):
         return list(self.observations.values())[group_ix]
 
     def get_actions(self):
-        return self.actions
+        return list(self.actions.values())
 
     def get_action(self, group_ix):
         return self.actions[group_ix]
 
     def get_rewards(self):
-        return self.rewards
+        return list(self.rewards.values())
 
     def get_reward(self, group_ix):
         return list(self.rewards.values())[group_ix]

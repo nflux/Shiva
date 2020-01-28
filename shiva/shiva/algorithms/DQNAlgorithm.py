@@ -38,8 +38,14 @@ class DQNAlgorithm(Algorithm):
         if not episodic: # for DQN to do episodic update
             return
 
-        states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
-        rewards = rewards.view(-1, 1)
+        try:
+            '''For MultiAgentTensorBuffer - 1 Agent only here'''
+            states, actions, rewards, next_states, dones = buffer.sample(agent_id=0, device=self.device)
+            dones = dones.bool()
+        except:
+            states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+            rewards = rewards.view(-1, 1)
+
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones.shape, '\n')
 
         agent.optimizer.zero_grad()
