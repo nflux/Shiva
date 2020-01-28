@@ -128,7 +128,6 @@ class PPOAgent(Agent):
         return logprobs.tolist()
 
 
-
     def save_agent(self, save_path,step):
         if self.action_space == 'Discrete':
             torch.save(self.actor.state_dict(), save_path + '/actor.pth')

@@ -7,12 +7,15 @@ from torch.distributions import Categorical
 
 
 class RoboCupEnvironment(Environment):
-    def __init__(self, config, port):
+    def __init__(self, config, port=None):
         super(RoboCupEnvironment, self).__init__(config)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-        self.port = port            
-        self.env = rc_env(config, port)
+        if port != None:
+            self.env = rc_env(config, port)
+            self.port = port
+        else:
+            self.env = rc_env(config, self.port)
         self.env.launch()
 
         self.left_actions = self.env.left_actions
@@ -22,7 +25,12 @@ class RoboCupEnvironment(Environment):
         self.rews = self.env.left_rewards
         # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
-        self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
+        self.action_space = {
+            'discrete': self.env.acs_dim,
+            'continuous':0,
+            'param': self.env.acs_dim,
+            'acs_space': self.env.acs_dim 
+        }
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
@@ -68,9 +76,16 @@ class RoboCupEnvironment(Environment):
 
         '''
 
+
         if discrete_select == 'argmax':
+            if type(actions).__module__ == np.__name__:
+                action = torch.from_numpy(actions)
+            # if self.steps_per_episode == 0:
+            print("argmax",actions)
             act_choice = torch.argmax(actions[:self.action_space['acs_space']])
         elif discrete_select == 'sample':
+            # if self.steps_per_episode == 0:
+            print("sample",actions)
             act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
         elif discrete_select == 'imit_discrete':
             act_choice = actions[0]
@@ -78,9 +93,10 @@ class RoboCupEnvironment(Environment):
             # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
 
         # self.left_actions = act_choice.unsqueeze(dim=-1)
-
+        self.steps_per_episode += 1
         if self.action_level == 'discretized':
             self.left_action_option[0] = act_choice
+            
             # indicates whether its a dash, turn, or kick action from the action matrix
             if 0 <= self.left_action_option[0] < self.env.dash_idx:
                 self.left_actions[0] = 0
@@ -92,7 +108,21 @@ class RoboCupEnvironment(Environment):
                 self.left_actions[0] = 2
                 self.kicks += 1
 
+            # if self.left_action_option[0].item() < self.env.dash_idx:
+            #     self.left_actions[0] = 0
+            #     # print("DASH")
+            #     self.dashes += 1
+            # else:
+            #     # print("KICK")
+            #     self.left_actions[0] = 1
+            #     self.kicks += 1
+
+            # # Experiment 2
+            # self.left_actions[0] = 0
+            # self.kicks += 1
+
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
+            # self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=torch.tensor([2]), left_options=torch.tensor([552]))
             actions_v = action2one_hot_v(self.action_space['acs_space'], act_choice)
         else:
             self.left_actions = act_choice.unsqueeze(dim=0)
@@ -104,7 +134,8 @@ class RoboCupEnvironment(Environment):
 
         if collect:
             self.collect_metrics()
-        
+
+        # print(actions_v)
         return self.obs, self.rews, self.done, {'raw_reward': self.rews, 'action': actions_v}
 
     def get_observation(self):
@@ -130,7 +161,7 @@ class RoboCupEnvironment(Environment):
             self.env._start_viewer()
 
     def close(self):
-        self.env.start = False
+        self.env.close = True
         self.env.d = True
 
     def is_done(self):
@@ -179,8 +210,8 @@ class RoboCupEnvironment(Environment):
 
         return metrics
 
-#from pynput.keyboard import Key, KeyCode, Listener
-#from math import atan2, pi, acos
+from pynput.keyboard import Key, KeyCode, Listener
+from math import atan2, pi, acos
 
 class HumanPlayerInterface():
 
@@ -253,6 +284,42 @@ class HumanPlayerInterface():
         # global_theta = atan2(y_rad, x_rad) * 180 / pi
         # print("global angle(atan2):", global_theta)
 
+        # if self.action_level discretized
+
+        # if action == self.KEY_DASH:
+        #     '''
+        #         Dash forward
+        #     '''
+        #     dash_degree = 0
+        #     dash_power = self.normalize_power(50)
+
+        #     action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
+
+        # elif action == self.KEY_TURN_LEFT:
+        #     '''
+        #         Turn Agent Left
+        #     '''
+        #     action = [0, 1, 0, 0, 0, -0.25, 0, 0]
+
+        # elif action == self.KEY_TURN_RIGHT:
+        #     '''
+        #         Turn Agent Right
+        #     '''
+        #     action = [0, 1, 0, 0, 0, .25, 0, 0]
+
+        # elif action == self.KEY_KICK:
+        #     '''
+        #         Agent Kick
+        #     '''
+        #     kick_degree = 0
+        #     kick_power = self.normalize_power(50)
+
+        #     action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
+        # else:
+        #     assert False, "Wrong action given"
+
+
+
         if action == self.KEY_DASH:
             '''
                 Dash forward
@@ -260,30 +327,34 @@ class HumanPlayerInterface():
             dash_degree = 0
             dash_power = self.normalize_power(50)
 
-            action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
+            action = (10,0)
+            action = 0
 
         elif action == self.KEY_TURN_LEFT:
             '''
                 Turn Agent Left
             '''
-            action = [0, 1, 0, 0, 0, -0.25, 0, 0]
+            action = (22.5,)
+            action = 1
 
         elif action == self.KEY_TURN_RIGHT:
             '''
                 Turn Agent Right
             '''
-            action = [0, 1, 0, 0, 0, .25, 0, 0]
+            action = (-22.5,)
+            action = 2
 
-        elif action == self.KEY_KICK:
+        elif action == elf.KEY_KICK:
             '''
                 Agent Kick
             '''
             kick_degree = 0
             kick_power = self.normalize_power(50)
 
-            action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
+            action = (50,0)
+            action = 3
         else:
-            assert False, "Wrong action given"
+            assert False, "Wrong action given"            
 
         return np.array(action)
 

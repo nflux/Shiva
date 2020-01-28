@@ -17,9 +17,10 @@ class DDPGAlgorithm(Algorithm):
         super(DDPGAlgorithm, self).__init__(observation_space, action_space, configs)
         self.actor_loss = 0
         self.critic_loss = 0
-        self.discrete = action_space['acs_space']
+        self.continuous = action_space['continuous']
+        self.acs_space = action_space['acs_space']
+        self.discrete = action_space['discrete']
         self.param = action_space['param']
-        # self.ou_noise = noise.OUNoise(self.discrete + self.param, self.exploration_noise)
 
     def update(self, agent, buffer, step_count, episodic=False):
         '''
@@ -33,36 +34,51 @@ class DDPGAlgorithm(Algorithm):
             agent.ou_noise.reset()
             return
 
-        if step_count < agent.exploration_steps:
-            '''
-                Don't update during exploration!
-            '''
-            return
+        '''
+            DDPG updates every episode. This avoids doing an extra update at the end of an episode
+            But it does reset the noise after an episode.
+
+            For Multi-Environment scenarios, the agent whose noise is being reset is not the agent inside
+            the multi environment instances, as such, 
+        '''
+        # if episodic:
+            
+        #     agent.ou_noise.reset()
+            
+        # else:
+        #     agent.ou_noise.reset()
+        #     # return
+
+        # agent.ou_noise.reset()
+
+        # if step_count < self.agent.exploration_steps:
+        #     '''
+        #         Don't update during exploration!
+        #     '''
+        #     return
 
         '''
             Updates starts here
         '''
 
-        # print("updating!")
-
         states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
 
-        # print("sampled",states)
-
-        # Make everything a tensor and send to gpu if available
-        # states = torch.tensor(states).to(self.device)
-        # actions = torch.tensor(actions).to(self.device)
-        # rewards = torch.tensor(rewards).to(self.device)
-        # next_states = torch.tensor(next_states).to(self.device)
-        # dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
+        # Send everything to gpu if available
+        states = states.to(self.device)
+        actions = actions.to(self.device)
+        rewards = rewards.to(self.device)
+        next_states = next_states.to(self.device)
+        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
         # print(actions)
+        # ja
+        # print(states[0])
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
         # input()
 
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
             "acs_space config must be set to either discrete, continuous, or parameterized."
 
-        '''
+        '''  yes its supposed to be
             Training the Critic
         '''
     
@@ -114,8 +130,10 @@ class DDPGAlgorithm(Algorithm):
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
 
         # Get Q values of the batch from states and actions.
-        # if self.a_space == 'discrete':
-        #     actions = one_hot_from_logits(actions)
+        if self.a_space == 'discrete':
+            actions = one_hot_from_logits(actions)
+        else:
+            actions = softmax(actions) 
             # print(actions)
 
         if self.a_space == 'discrete':
@@ -164,7 +182,7 @@ class DDPGAlgorithm(Algorithm):
         # penalty for going beyond the bounded interval
         param_reg = torch.clamp((current_state_actor_actions**2)-torch.ones_like(current_state_actor_actions),min=0.0).mean()
         # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration
-        actor_loss = -actor_loss_value.mean() + param_reg #+ entropy_reg
+        actor_loss = -actor_loss_value.mean() + param_reg # + entropy_reg
         # Backward Propogation!
         actor_loss.backward()
         # Update the weights in the direction of the gradient.
@@ -205,7 +223,7 @@ class DDPGAlgorithm(Algorithm):
         #         target_param.data.copy_(param.data)
 
     def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.observation_space, self.discrete + self.param, self.discrete, self.configs['Agent'], self.configs['Network'])
+        self.agent = DDPGAgent(id, self.observation_space, self.action_space, self.configs[1], self.configs[2])
         return self.agent
 
     def get_metrics(self, episodic=False):

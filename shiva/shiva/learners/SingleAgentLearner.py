@@ -21,11 +21,13 @@ class SingleAgentLearner(Learner):
                 self.step()
                 if not self.evaluate:
                     self.alg.update(self.agent, self.buffer, self.env.step_count)
-                    self.collect_metrics()
+                self.collect_metrics()
                 if self.is_multi_process_cutoff(): return None # PBT Cutoff
                 else: continue
             if not self.evaluate:
-                self.alg.update(self.agent, self.buffer, self.env.done_count, episodic=True)
+                self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
+            # this is one hundred percent an episodic agent noise reset
+            self.agent.ou_noise.reset()
             self.collect_metrics(episodic=True)
             self.checkpoint()
             print('Step # {}\tEpisode {} completed on {} steps!\tEpisodic reward: {} '.format(self.env.step_count, self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))
@@ -35,33 +37,39 @@ class SingleAgentLearner(Learner):
         observation = self.env.get_observation()
 
         """Temporary fix for Unity as it receives multiple observations"""
-        if len(observation.shape) > 1 and self.env.env_name != 'RoboCup':
-            action = [self.agent.get_action(obs, self.env.step_count, self.evaluate) for obs in observation]
-            next_observation, reward, done, more_data = self.env.step(action)
-            z = copy.deepcopy(zip(observation, action, reward, next_observation, done))
-            for obs, act, rew, next_obs, don in z:
-                # exp = [obs, act, rew, next_obs, int(don)]
-                # print(act, rew, don)
-                # self.buffer.append(exp)
 
-                self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
-                                                        torch.from_numpy(next_observation),
-                                                        torch.from_numpy(np.array([done])).bool()))))
-        elif self.env.env_name == 'RoboCup':
-            action = self.agent.get_action(observation, self.env.step_count)
-            next_observation, reward, done, more_data = self.env.step(action, device=self.device)
-            self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
-                                                torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).bool()))))
-        else:
+        if self.env.env_name == 'RoboCup':
+
             action = self.agent.get_action(observation, self.env.step_count, self.evaluate)
+
+            next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.action_selection_method,device=self.device)
+            
+            exp = list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
+                                                torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).bool()) ))
+        
+        elif len(observation.shape) > 1:
+            action = [self.agent.get_action(obs, self.env.step_count) for obs in observation]
             next_observation, reward, done, more_data = self.env.step(action)
-            # t = [observation, more_data['action'], reward, next_observation, int(done)]
-            # # print(action)
-            # # input()
-            # exp = copy.deepcopy(t)
-            # self.buffer.push(exp)
-            self.buffer.push(list(map(torch.clone, (torch.from_numpy(observation), torch.tensor(action), torch.tensor([reward]),
-                                                torch.from_numpy(next_observation), torch.tensor([done], dtype=torch.bool)))))
+            # print(action)
+            exp = copy.deepcopy([
+                        torch.tensor(observation),
+                        torch.tensor(action[0]),
+                        torch.tensor(reward).reshape(-1,1),
+                        torch.tensor(next_observation),
+                        torch.tensor(done).reshape(-1,1)
+                ])
+        else:
+            action = self.agent.get_action(observation, self.env.step_count)
+            next_observation, reward, done, more_data = self.env.step(action, self.action_selection_method)
+            exp = copy.deepcopy([
+                        torch.tensor(observation),
+                        torch.tensor(action),
+                        torch.tensor(reward).reshape(-1,1),
+                        torch.tensor(next_observation),
+                        torch.tensor(done).reshape(-1,1)
+                ])
+
+        self.buffer.push(exp)
         """"""
 
 
@@ -79,7 +87,7 @@ class SingleAgentLearner(Learner):
     
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs, self.port)
+        return env_class(self.configs)
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
@@ -87,8 +95,11 @@ class SingleAgentLearner(Learner):
 
     def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        # return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
-        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim)
+        if self.env.env_name == 'RoboCupEnvironment':
+            return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
+        else:
+            return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim)
+
 
     def launch(self):
         self.env = self.create_environment()
@@ -107,5 +118,5 @@ class SingleAgentLearner(Learner):
         else:
             self.agent = self.alg.create_agent(self.get_new_agent_id())
             if self.using_buffer:
-                self.buffer = self.create_buffer(self.env.observation_space, self.env.action_space['acs_space'] + self.env.action_space['param'])
+                self.buffer = self.create_buffer(self.env.observation_space, self.env.action_space['acs_space'])
         print('Launch Successful.')
