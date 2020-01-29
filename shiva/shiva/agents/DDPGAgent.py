@@ -78,15 +78,15 @@ class DDPGAgent(Agent):
                 self.ou_noise.set_scale(self.exploration_noise)
                 action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
-                action = softmax(action)
+                action = softmax(action, dim=-1)
 
             else:
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-                action = action/action.sum()
+                action = action / action.sum()
 
-        return action
+        return action.tolist()
 
     def get_continuous_action(self,observation, step_count, evaluate):
         if evaluate:

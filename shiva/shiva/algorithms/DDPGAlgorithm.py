@@ -26,13 +26,13 @@ class DDPGAlgorithm(Algorithm):
         '''
             @buffer         buffer is a reference
         '''
-        if episodic:
-            '''
-                DDPG updates at every step. This avoids doing an extra update at the end of an episode
-                But it does reset the noise after an episode
-            '''
-            agent.ou_noise.reset()
-            return
+        # if episodic:
+        #     '''
+        #         DDPG updates at every step. This avoids doing an extra update at the end of an episode
+        #         But it does reset the noise after an episode
+        #     '''
+        #     agent.ou_noise.reset()
+        #     return
 
         '''
             DDPG updates every episode. This avoids doing an extra update at the end of an episode
@@ -223,7 +223,7 @@ class DDPGAlgorithm(Algorithm):
         #         target_param.data.copy_(param.data)
 
     def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.observation_space, self.action_space, self.configs[1], self.configs[2])
+        self.agent = DDPGAgent(id, self.observation_space, self.action_space, self.configs['Agent'], self.configs['Network'])
         return self.agent
 
     def get_metrics(self, episodic=False):

@@ -147,12 +147,14 @@ class MultiAgentUnityWrapperEnv(Environment):
         if unity_spec.is_action_discrete():
             return {
                 'discrete': unity_spec.action_shape[0],
+                'continuous': 0,
                 'param': 0,
                 'acs_space': unity_spec.action_shape[0]
             }
         elif unity_spec.is_action_continuous():
             return {
                 'discrete': 0,
+                'continuous': unity_spec.action_size,
                 'param': unity_spec.action_size,
                 'acs_space': unity_spec.action_size
             }
