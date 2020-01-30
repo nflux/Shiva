@@ -51,6 +51,7 @@ class DQNAgent(Agent):
         else:
             # print('action!'.format(obs, obs.shape))
             action = self.find_best_action(self.policy, obs)
+        # print("From DQAgent Acs {}".format(action))
         return action
 
     def get_action_target(self, obs):

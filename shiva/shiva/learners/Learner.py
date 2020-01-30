@@ -56,9 +56,9 @@ class Learner(object):
     def _collect_metrics(self, agent_id, episodic):
 
         if hasattr(self, 'MULTI_ENV_FLAG'):
-
+            '''Assuming 1 Agent per Learner here'''
             metrics = self.alg.get_metrics(episodic) + self.get_metrics(episodic)
-
+            # self.log("{} at step {} / done {}".format(metrics, self.step_count, self.done_count))
             if not episodic:
                 for metric_name, y_val in metrics:
                     Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.step_count)

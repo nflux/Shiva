@@ -1,10 +1,12 @@
 import copy, os
 import numpy as np
 import torch
+from torch.nn.functional import softmax
 
 from shiva.agents.Agent import Agent
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 from shiva.utils import Noise as noise
+from shiva.helpers.calc_helper import np_softmax
 
 class TD3Agent(Agent):
     def __init__(self, id, obs_dim, action_dim, agent_config: dict, networks: dict):
@@ -49,27 +51,35 @@ class TD3Agent(Agent):
             if len(observation.shape) > 1:
                 # print('random batch action')
                 action = [self.get_random_action() for _ in range(observation.shape[0])]
+                action = [np_softmax(a) for a in action]
                 self.action = action # for tensorboard
             else:
                 # print("random act")
                 action = self.get_random_action()
+                action = np_softmax(action)
                 self.action = [action] # for tensorboard
+
         else:
             """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
             self.actor.eval()
             with torch.no_grad():
                 obs = torch.tensor(observation, dtype=torch.float).to(self.device)
-                action = self.actor(obs).cpu().data.numpy()
+                action = self.actor(obs).cpu()
+                action = softmax(action, dim=-1)
+                action = action.data.numpy()
             self.actor.train()
             if len(observation.shape) > 1:
                 # print('batch action')
-                action = [list(act + self.ou_noise.noise()) for act in action]
+                action = [list(np.absolute(act + self.ou_noise.noise())) for act in action]
+                action = [ act/act.sum() for act in action]
                 self.action = action # for tensorboard
             else:
                 # print('single action')
-                action += self.ou_noise.noise()
+                action = np.absolute(action + self.ou_noise.noise())
+                action = action / action.sum()
                 action = action.tolist()
                 self.action = [action] # for tensorboard
+        # print(action)
         return action
 
     def get_random_action(self):

@@ -11,7 +11,7 @@ class Tags(IntEnum):
     trajectory = 2
 
     # for Numpy approach
-    trajectory_length = 2
+    trajectory_info = 2
     trajectory_observations = 3
     trajectory_actions = 4
     trajectory_rewards = 5

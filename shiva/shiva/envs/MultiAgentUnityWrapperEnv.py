@@ -4,6 +4,7 @@ import time
 
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
+from mlagents_envs.side_channel.float_properties_channel import FloatPropertiesChannel
 
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
@@ -18,15 +19,22 @@ class MultiAgentUnityWrapperEnv(Environment):
         self.set_initial_values()
 
     def _connect(self):
-        self.channel = EngineConfigurationChannel()
+        self.channel = {
+            'config': EngineConfigurationChannel(),
+            'props': FloatPropertiesChannel()
+        }
         self.Unity = UnityEnvironment(
             file_name= self.exec,
             base_port = self.port if hasattr(self, 'port') else 5005, # 5005 is Unity's default value
             worker_id = self.worker_id,
             seed = self.configs['Algorithm']['manual_seed'],
-            side_channels = [self.channel],
+            side_channels = [self.channel['config'], self.channel['props']],
             no_graphics= not self.render
         )
+        # self.channel['config'].set_configuration_parameters(**self.unity_configs)
+        # for k, v in self.unity_props.items():
+        #     self.channel['props'].set_property(k, v)
+
         self.Unity.reset()
 
     def set_initial_values(self):
@@ -99,25 +107,21 @@ class MultiAgentUnityWrapperEnv(Environment):
             self.reward_per_episode[group] += self.reward_per_step[group]
             self.reward_total[group] += self.reward_per_episode[group]
 
-            # self.steps_per_episode[group] += self.BatchedStepResult[group].n_agents()
-            # self.step_count[group] += self.BatchedStepResult[group].n_agents()
-            # self.temp_done_counter[group] += sum(self.dones[group])
-            # self.done_count[group] += sum(self.dones[group])
-            # self.reward_per_step[group] += sum(self.BatchedStepResult[group].reward) / self.BatchedStepResult[group].n_agents()
-            # self.reward_per_episode[group] += self.reward_per_step[group]
-            # self.reward_total[group] += self.reward_per_episode[group]
-
-        # self.debug()
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
 
     def get_metrics(self, episodic=True):
+        '''MultiAgent Metrics'''
+        metrics = {group:self.get_group_metrics(ix, episodic) for ix, group in enumerate(self.agent_groups)}
+        return list(metrics.values())
+
+    def get_group_metrics(self, group_ix=None, episodic=True):
         if not episodic:
             metrics = [
-                ('Reward/Per_Step', self.reward_per_step)
+                ('Reward/Per_Step', self.reward_per_step[self.agent_groups[group_ix]])
             ]
         else:
             metrics = [
-                ('Reward/Per_Episode', self.reward_per_episode),
+                ('Reward/Per_Episode', self.reward_per_episode[self.agent_groups[group_ix]]),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
         return metrics
@@ -127,8 +131,8 @@ class MultiAgentUnityWrapperEnv(Environment):
             One Shiva episode is when all instances in the Environment terminate at least once
             On MultiAgent env, all agents will have the same number of dones, so we can check only one of them
         '''
-        return self.temp_done_counter > 0
-        # return self.temp_done_counter > self.num_instances_per_env
+        # return self.temp_done_counter > 0
+        return self.temp_done_counter > self.num_instances_per_env
 
     def _clean_actions(self, group, group_actions):
         '''

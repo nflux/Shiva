@@ -35,6 +35,8 @@ class GymEnvironment(Environment):
             }
             self.gymEnvType = 'continuous'
 
+        self.num_instances_per_env = 1
+        self.agent_groups = ['Agent']
         self.num_agents = 1 # all Gym environments contain 1 agent
         self.agent_ids = [0]
 
@@ -49,6 +51,8 @@ class GymEnvironment(Environment):
         self.last_action = None
 
     def step(self, action, discrete_select='argmax'):
+        if not torch.is_tensor(action):
+            action = torch.tensor(action)
         self.acs = action
 
         if discrete_select == 'argmax':

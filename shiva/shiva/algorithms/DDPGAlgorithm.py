@@ -61,7 +61,12 @@ class DDPGAlgorithm(Algorithm):
             Updates starts here
         '''
 
-        states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+        try:
+            '''For MultiAgentTensorBuffer - 1 Agent only here'''
+            states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
+            dones = dones.bool()
+        except:
+            states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
 
         # Send everything to gpu if available
         states = states.to(self.device)

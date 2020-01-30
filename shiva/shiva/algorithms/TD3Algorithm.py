@@ -30,14 +30,14 @@ class TD3Algorithm(Algorithm):
             NOTE
             If doing episodic updates only, step_count is the number of episodes actually!!!
         '''
-        if episodic:
-            agent.ou_noise.reset()
-            agent.ou_noise_critic.reset()
-            return
+        # if episodic:
+        #     agent.ou_noise.reset()
+        #     agent.ou_noise_critic.reset()
+        #     return
 
-        if step_count < self.configs['Agent']['exploration_steps']:
-            '''Avoid updating during exploration'''
-            pass
+        # if step_count < self.configs['Agent']['exploration_steps']:
+        #     '''Avoid updating during exploration'''
+        #     pass
 
         '''
             Update starts here
@@ -45,9 +45,16 @@ class TD3Algorithm(Algorithm):
 
         self.agent = agent
         for _ in range(self.update_iterations):
-            states, actions, rewards, next_states, dones_mask = buffer.sample()
-            rewards = rewards.view(-1, 1)
-            dones_mask = dones_mask.view(-1, 1).float()
+
+            try:
+                '''For MultiAgentTensorBuffer - 1 Agent only here'''
+                states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
+                # dones_mask = dones.bool()
+                dones_mask = dones.float()
+            except:
+                states, actions, rewards, next_states, dones_mask = buffer.sample(device=self.device)
+                rewards = rewards.view(-1, 1)
+                dones_mask = dones_mask.view(-1, 1).float()
 
             # states = torch.tensor(states, dtype=torch.float).to(self.device)
             # actions = torch.tensor(actions, dtype=torch.float).to(self.device)
@@ -56,6 +63,9 @@ class TD3Algorithm(Algorithm):
             # dones_mask = torch.tensor(dones, dtype=torch.float).view(-1,1).to(self.device)
             # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
             # print('from buffer:', states, actions, rewards, next_states, dones_mask, '\n')
+
+            # print('from buffer Actions {}', actions, '\n')
+            # print('from buffer Rewards {}', rewards, '\n')
             '''
                 Training the Critic
             '''
@@ -82,10 +92,10 @@ class TD3Algorithm(Algorithm):
             '''
                 Target updates
             '''
-            if step_count % self.c == 0:
-                self.soft_update_of_target_network(self.agent.critic, self.agent.target_critic, self.critic_soft_update)
-                self.soft_update_of_target_network(self.agent.critic_2, self.agent.target_critic_2, self.critic_soft_update)
-                self.soft_update_of_target_network(self.agent.actor, self.agent.target_actor, self.actor_soft_update)
+            # if step_count % self.c == 0:
+            self.soft_update_of_target_network(self.agent.critic, self.agent.target_critic, self.critic_soft_update)
+            self.soft_update_of_target_network(self.agent.critic_2, self.agent.target_critic_2, self.critic_soft_update)
+            self.soft_update_of_target_network(self.agent.actor, self.agent.target_actor, self.actor_soft_update)
 
     def calculate_actor_loss(self, states):
         """Calculates the loss for the actor"""

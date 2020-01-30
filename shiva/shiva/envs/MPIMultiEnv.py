@@ -46,7 +46,11 @@ class MPIMultiEnv(Environment):
             - all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI
             - agents_instances are in equal amount for all agents
         '''
-        self._obs_recv_buffer = np.zeros(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ))
+        try:
+            self._obs_recv_buffer = np.zeros(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ))
+        except:
+            self._obs_recv_buffer = np.zeros(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ))
+
 
         while True:
             # self._step_python_list()
@@ -61,36 +65,39 @@ class MPIMultiEnv(Environment):
         self.close()
 
     def _step_numpy(self):
-        self.envs.gather(self._obs_recv_buffer, root=MPI.ROOT)
+        self.envs.Gather(None, [self._obs_recv_buffer, MPI.FLOAT], root=MPI.ROOT)
+        # self.log("Obs {}".format(self._obs_recv_buffer))
         # self.log("Obs Shape {}".format(self._obs_recv_buffer.shape))
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
-        if self.env_specs['num_instances_per_env'] > 1:
-            '''Unity case!!'''
+
+        if 'Unity' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
-            actions = [ [ [self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(observations) ] for observations in self._obs_recv_buffer]
+            actions = [ [ [self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
         else:
-            # implement for Gym and Robocup
-            # actions = self.agents[0].get_action(self._obs_recv_buffer, self.step_count)
-            pass
+            # Gym
+            # same?
+            actions = [ [ [self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+
         self.actions = np.array(actions)
-        # self.log("{} {}".format(self.actions[0][0][0][0], self.actions[0][1][0][0]))
+
+        self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions))
         # self.log("Acs Shape {}".format(self.actions.shape))
         self.envs.scatter(actions, root=MPI.ROOT)
 
-    def _step_python_list(self):
-        '''We could optimize this gather/scatter ops using numpys'''
-        self.observations = self.envs.gather(None, root=MPI.ROOT)
-        self.log("Obs {}".format(self.observations))
-
-        self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
-        if self.env_specs['num_instances_per_env'] > 1:
-            '''Unity case!!'''
-            actions = [[self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(self.observations)]
-        else:
-            actions = self.agents[0].get_action(self.observations, self.step_count)  # assuming one agent for all obs
-        self.log("Acs {}".format(actions))
-        self.envs.scatter(actions, root=MPI.ROOT)
+    # def _step_python_list(self):
+    #     '''We could optimize this gather/scatter ops using numpys'''
+    #     self.observations = self.envs.gather(None, root=MPI.ROOT)
+    #     # self.log("Obs {}".format(self.observations))
+    #
+    #     self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
+    #     if self.env_specs['num_instances_per_env'] > 1:
+    #         '''Unity case!!'''
+    #         actions = [[self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(self.observations)]
+    #     else:
+    #         actions = self.agents[0].get_action(self.observations, self.step_count)  # assuming one agent for all obs
+    #     # self.log("Acs {}".format(actions))
+    #     self.envs.scatter(actions, root=MPI.ROOT)
 
     def _launch_envs(self):
         # Spawn Single Environments

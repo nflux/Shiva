@@ -40,8 +40,13 @@ class MPILearner(Learner):
         '''Do the Agent selection using my ID (rank)'''
         '''Assuming 1 Agent per Learner!'''
         self.num_agents = 1
-        self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
-        self.action_space = list(self.env_specs['action_space'].values())[self.id]
+
+        try:
+            self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
+            self.action_space = list(self.env_specs['action_space'].values())[self.id]
+        except:
+            self.observation_space = self.env_specs['observation_space']
+            self.action_space = self.env_specs['action_space']
 
         # self.log("Got MultiEnvSpecs {}".format(self.menvs_specs))
         self.log("Obs space {} / Action space {}".format(self.observation_space, self.action_space))
@@ -111,32 +116,32 @@ class MPILearner(Learner):
         '''Assuming 1 Agent here (no support for MADDPG), may need to iterate thru all the indexes of the @traj'''
 
         info = MPI.Status()
-        traj_length = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_length, status=info)
+        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
         env_source = info.Get_source()
 
-        '''
-            Ideas to optimize -> needs some messages that are not multidimensional
-                - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional)
-        '''
+        '''Assuming 1 Agent here'''
+        self.metrics_env = self.traj_info['metrics']
+        traj_length = self.traj_info['length']
 
-        observations = np.zeros([traj_length, self.num_agents, self.observation_space])
+        self.log(self.traj_info)
+
+        observations = np.zeros(self.traj_info['obs_shape'])
         self.envs.Recv([observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_observations)
         # self.log("Got Obs shape {}".format(observations.shape))
 
-        actions = np.zeros([traj_length, self.num_agents, self.action_space['acs_space']])
+        actions = np.zeros(self.traj_info['acs_shape'])
         self.envs.Recv([actions, MPI.FLOAT], source=env_source, tag=Tags.trajectory_actions)
         # self.log("Got Acs shape {}".format(actions.shape))
 
-        rewards = np.zeros([traj_length, self.num_agents, 1])
+        rewards = np.zeros(self.traj_info['rew_shape'])
         self.envs.Recv([rewards, MPI.FLOAT], source=env_source, tag=Tags.trajectory_rewards)
         # self.log("Got Rewards shape {}".format(rewards.shape))
 
-        next_observations = np.zeros([traj_length, self.num_agents, self.observation_space])
+        next_observations = np.zeros(self.traj_info['obs_shape'])
         self.envs.Recv([next_observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_next_observations)
         # self.log("Got Next Obs shape {}".format(next_observations.shape))
 
-        '''are dones even needed? It's obviously a trajectory...'''
-        dones = np.zeros([traj_length, self.num_agents, 1])
+        dones = np.zeros(self.traj_info['done_shape'])
         self.envs.Recv([dones, MPI.FLOAT], source=env_source, tag=Tags.trajectory_dones)
         # self.log("Got Dones shape {}".format(dones.shape))
 
@@ -146,8 +151,8 @@ class MPILearner(Learner):
         self.reward_per_episode = sum(rewards)
 
         # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-        self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-        # self.log("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
+        # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+        self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
 
         exp = list(map(torch.clone, (torch.tensor(observations),
                                      torch.tensor(actions),
@@ -156,6 +161,8 @@ class MPILearner(Learner):
                                      torch.tensor(dones, dtype=torch.bool)
                                      )))
         self.buffer.push(exp)
+
+        self.close()
 
     def _connect_menvs(self):
         # Connect with MultiEnv
@@ -189,21 +196,8 @@ class MPILearner(Learner):
         }
 
     def get_metrics(self, episodic=False):
-        if not episodic:
-            metrics = [
-                # ('Reward/Per_Step', self.reward_per_step)
-            ]
-        else:
-            metrics = [
-
-            ]
-            try:
-                for i, ac in enumerate(self.env_state['buffer'][0][1][-1]):
-                    metrics.append(('Agent/Actor_Output_' + str(i), ac))
-                metrics += self.env_metrics
-            except:
-                pass
-        return metrics
+        '''Assuming 1 agent here'''
+        return self.metrics_env
 
     def create_agents(self):
         if self.load_agents:

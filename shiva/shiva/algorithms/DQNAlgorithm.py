@@ -18,7 +18,7 @@ class DQNAlgorithm(Algorithm):
         np.random.seed(self.manual_seed)
         self.acs_space = acs_space['acs_space']
         self.obs_space = obs_space
-        self.loss = 0
+        self.loss = torch.tensor([0])
 
     def update(self, agent, buffer, step_n, episodic=False):
         '''
@@ -34,19 +34,22 @@ class DQNAlgorithm(Algorithm):
                 step_n      Current step number or done_count when doing episodic updates!!!!
                 episodic    Flag indicating if update is episodic
         '''
+        self.agent = agent
+
         # if episodic: # for DQN to do step-wise updates only
-        if not episodic: # for DQN to do episodic update
-            return
+        # if not episodic: # for DQN to do episodic update
+        #     return
 
         try:
             '''For MultiAgentTensorBuffer - 1 Agent only here'''
-            states, actions, rewards, next_states, dones = buffer.sample(agent_id=0, device=self.device)
+            states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
             dones = dones.bool()
         except:
             states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
             rewards = rewards.view(-1, 1)
 
-        # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones.shape, '\n')
+        # print('from buffer Obs {} Acs {} Rew {} NextObs {} Dones {}:'.format(states[:3], actions[:3], rewards[:3], next_states[:3], dones[:3]))
+        # # print('from buffer Acs: {} \n'.format(actions))
 
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j)
@@ -148,26 +151,6 @@ class DQNAlgorithm(Algorithm):
     #     if step_n % self.c == 0:
     #         agent.target_policy.load_state_dict(agent.policy.state_dict())  # Assuming is PyTorch!
 
-    def get_action(self, agent, observation, step_n) -> np.ndarray:
-        assert "DoNotUse"
-        '''
-            With the probability epsilon we take the random action,
-            otherwise we use the network to obtain the best Q-value per each action
-        '''
-        # if step_n < self.exploration_steps:
-        #     action_idx = random.sample(range(self.acs_space), 1)[0]
-        #     action = action2one_hot(self.acs_space, action_idx, numpy=False)
-        # elif random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
-        #     # this might not be correct implementation of e greedy
-        #     action_idx = random.sample(range(self.acs_space), 1)[0]
-        #     action = action2one_hot(self.acs_space, action_idx)
-        # else:
-        #     if len(observation.shape) > 1:
-        #         # print('here')
-        #         pass
-        #     # Iterate over all the actions to find the highest Q value
-        #     action = agent.get_action(observation)
-        # return action # replay buffer store lists and env does np.argmax(action)
 
     def get_loss(self):
         return self.loss
@@ -179,11 +162,14 @@ class DQNAlgorithm(Algorithm):
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
-                ('Algorithm/Loss_per_Step', self.loss),
+                ('Algorithm/Loss_per_Step', self.loss.item()),
                 ('Agent/learning_rate', self.agent.learning_rate)
             ]
         else:
-            metrics = []
+            metrics = [
+                ('Algorithm/Loss_per_Episode', self.loss.item()),
+                ('Agent/Learning_Rate', self.agent.learning_rate)
+            ]
         return metrics
 
     def __str__(self):
