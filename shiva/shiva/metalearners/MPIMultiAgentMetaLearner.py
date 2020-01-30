@@ -15,17 +15,6 @@ class MPIMultiAgentMetaLearner(MetaLearner):
         self.configs = configs
         self.launch()
 
-    # def launch(self):
-    #     try:
-    #         self._launch_menvs()
-    #         self._launch_learners()
-    #         self.run()
-    #     except KeyboardInterrupt:
-    #         print('Pressed Crt-C cleaning up')
-    #     finally:
-    #         self.close()
-    #         sys.exit()
-
     def launch(self):
         self._launch_menvs()
         self._launch_learners()

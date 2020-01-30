@@ -31,13 +31,17 @@ class MPIMultiAgentLearner(Learner):
         # Set some self attributes from received Config (it should have MultiEnv data!)
         self.MULTI_ENV_FLAG = True
         self.num_envs = self.configs['Environment']['num_instances']
-        self.num_agents = 1 # self.configs['Environment']['num_agents']
         self.menvs_specs = self.configs['MultiEnv']
         self.num_menvs = len(self.menvs_specs)
-
         self.menv_port = self.menvs_specs[0]['port']
-        self.observation_space = self.menvs_specs[0]['env_specs']['observation_space']
-        self.action_space = self.menvs_specs[0]['env_specs']['action_space']
+
+        '''Do the Agent selection using my ID (rank)'''
+        '''Assuming 1 Agent per Learner!'''
+        self.num_agents = 1
+        self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
+        self.action_space = list(self.env_specs['action_space'].values())[self.id]
+
+        self.log("Obs space {} / Action space {}".format(self.observation_space, self.action_space))
 
         # Check in with Meta
         self.meta.gather(self._get_learner_specs(), root=0)
@@ -100,32 +104,6 @@ class MPIMultiAgentLearner(Learner):
                 self.log("Got evolution config!")
             ''''''
 
-    def _receive_trajectory_python_list(self):
-        '''Python Lists approach (non-efficient)'''
-        '''Receive trajectory from each single environment in self.envs process group'''
-        '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
-
-        self.env_state = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory) # blocking operation until all environments sent at least 1 trajectory
-        trajectory = self.env_state['trajectory']
-        self.env_metrics = self.env_state['metrics']
-
-        agent_ix = 0
-        observations, actions, rewards, next_observations, dones = trajectory[agent_ix]
-
-        self.step_count += len(observations)
-        self.done_count += 1
-        self.steps_per_episode = len(observations)
-        self.reward_per_episode = sum(rewards)
-
-        # self.log(trajectory)
-        # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-        # self.log("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
-
-        exp = list(map(torch.clone, (
-            torch.tensor(observations), torch.tensor(actions), torch.tensor(rewards).reshape(-1, 1),
-            torch.tensor(next_observations), torch.tensor(dones, dtype=torch.bool).reshape(-1, 1))))
-        self.buffer.push(exp)
-
     def _receive_trajectory_numpy(self):
         '''Receive trajectory from each single environment in self.envs process group'''
         '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
@@ -136,42 +114,48 @@ class MPIMultiAgentLearner(Learner):
 
         '''
             Ideas to optimize -> needs some messages that are not multidimensional
-                - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional)
-                - Concat 
+                - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional) 
         '''
 
-        observations = np.zeros([self.num_agents, traj_length, self.observation_space])
+        observations = np.zeros([traj_length, self.num_agents, self.observation_space])
         self.envs.Recv([observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_observations)
+        # self.log("Got Obs shape {}".format(observations.shape))
 
-        actions = np.zeros([self.num_agents, traj_length, self.action_space['acs_space']])
+        actions = np.zeros([traj_length, self.num_agents, self.action_space['acs_space']])
         self.envs.Recv([actions, MPI.FLOAT], source=env_source, tag=Tags.trajectory_actions)
+        # self.log("Got Acs shape {}".format(actions.shape))
 
-        rewards = np.zeros([self.num_agents, traj_length, 1])
+        rewards = np.zeros([traj_length, self.num_agents, 1])
         self.envs.Recv([rewards, MPI.FLOAT], source=env_source, tag=Tags.trajectory_rewards)
+        # self.log("Got Rewards shape {}".format(rewards.shape))
 
-        next_observations = np.zeros([self.num_agents, traj_length, self.observation_space])
+        next_observations = np.zeros([traj_length, self.num_agents, self.observation_space])
         self.envs.Recv([next_observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_next_observations)
+        # self.log("Got Next Obs shape {}".format(next_observations.shape))
 
         '''are dones even needed? It's obviously a trajectory...'''
-        dones = np.zeros([self.num_agents, traj_length, 1])
+        dones = np.zeros([traj_length, self.num_agents, 1])
         self.envs.Recv([dones, MPI.FLOAT], source=env_source, tag=Tags.trajectory_dones)
-
-        ''''''
-
-        '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
-        agent_ix = 0
+        # self.log("Got Dones shape {}".format(dones.shape))
 
         self.step_count += traj_length
         self.done_count += 1
         self.steps_per_episode = traj_length
         self.reward_per_episode = sum(rewards)
 
+        self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+
         # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
         # self.log("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
         # self.log("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
 
-        exp = list(map(torch.clone, (torch.tensor(observations[agent_ix]), torch.tensor(actions[agent_ix]), torch.tensor(rewards[agent_ix]).reshape(-1, 1),
-        torch.tensor(next_observations[agent_ix]), torch.tensor(dones[agent_ix], dtype=torch.bool).reshape(-1, 1))))
+        exp = list(map(torch.clone, (torch.tensor(observations),
+                                     torch.tensor(actions),
+                                     torch.tensor(rewards),
+                                     torch.tensor(next_observations),
+                                     torch.tensor(dones, dtype=torch.bool)
+                                     )))
+                                     
         self.buffer.push(exp)
 
     def _connect_menvs(self):

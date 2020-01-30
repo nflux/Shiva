@@ -190,7 +190,8 @@ class ShivaAdmin():
         '''
         self._add_agent_checkpoint(learner, agent)
         if self.use_temp_folder:
-            return self._learner_dir[learner.id]['temp']
+            # return self._learner_dir[learner.id]['temp']
+            return os.path.join(self._learner_dir[learner.id]['temp'], self.__folder_name__['agent'].format(id=str(agent.id)))
         else:
             return self._agent_dir[learner.id][agent.id][-1]
 

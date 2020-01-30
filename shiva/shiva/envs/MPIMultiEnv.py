@@ -23,9 +23,9 @@ class MPIMultiEnv(Environment):
         self.port = MPI.Open_port(MPI.INFO_NULL)
         self.log("Open port {}".format(self.port))
 
-        # Grab configs
-        self.num_learners = 1 # assuming 1 Learner
-        self.num_envs = self.num_instances
+        '''Set self attrs from Config'''
+        self.num_learners = self.configs['MetaLearner']['num_learners']
+        self.num_envs = self.num_instances # number of childrens
 
         self._launch_envs()
         self.meta.gather(self._get_menv_specs(), root=0) # checkin with Meta
@@ -39,28 +39,60 @@ class MPIMultiEnv(Environment):
     def run(self):
         self.step_count = 0
         self.log(self.env_specs)
-        while True:
-            '''We could optimize this gather/scatter ops using numpys'''
-            observations = self.envs.gather(None, root=MPI.ROOT)
-            # self.log("Obs {}".format(observations))
-            self.step_count += len(observations)
+        info = MPI.Status()
 
-            if self.env_specs['num_instances_per_env'] > 1:
-                '''Unity case!!'''
-                actions = [self.agents[0].get_action(obs, self.step_count) for obs in observations]
-            else:
-                actions = [agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)]
-                # actions = [ in self.agents[0].get_action(observations, self.step_count) # assuming one agent for all obs
+        ''' Assuming that
+            - all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI
+            - agents_instances are in equal amount for all agents
+        '''
+        self._obs_recv_buffer = np.zeros(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ))
+
+        while True:
+            # self._step_python_list()
+            self._step_numpy()
+
+            if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=info):
+                learner_id = info.Get_source()
+                learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
+                '''Assuming 1 Agent per Learner'''
+                self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
+                self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
+
+        self.close()
+    
+    def _step_numpy(self):
+        self.envs.gather(self._obs_recv_buffer, root=MPI.ROOT)
+        # self.log("Obs Shape {}".format(self._obs_recv_buffer.shape))
+
+        self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
+        if self.env_specs['num_instances_per_env'] > 1:
+            '''Unity case!!'''
+            '''self._obs_recv_buffer receives data from many MPIEnv.py'''
+            actions = [[[self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(observations) ] for observations in self._obs_recv_buffer]
+        else:
+            # implement for Gym and Robocup
+            actions = [agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)]
             # self.log("Acs {}".format(actions))
             self.envs.scatter(actions, root=MPI.ROOT)
+            
+        self.actions = np.array(actions)
+        # self.log("{} {}".format(self.actions[0][0][0][0], self.actions[0][1][0][0]))
+        # self.log("Acs Shape {}".format(self.actions.shape))
+        self.envs.scatter(actions, root=MPI.ROOT)
 
-            if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents):
-                '''Assuming 1 Learner, need to grab the source rank to load the appropiate agent'''
-                learner_spec = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.new_agents)  # block statement
-                self.agents = Admin._load_agents(learner_spec['load_path'])
-                self.log("Loaded Agent at Episode {}".format(self.agents[0].done_count))
-                
-        self.close()
+    def _step_python_list(self):
+        '''We could optimize this gather/scatter ops using numpys'''
+        self.observations = self.envs.gather(None, root=MPI.ROOT)
+        self.log("Obs {}".format(self.observations))
+
+        self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
+        if self.env_specs['num_instances_per_env'] > 1:
+            '''Unity case!!'''
+            actions = [[self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(self.observations)]
+        else:
+            actions = self.agents[0].get_action(self.observations, self.step_count)  # assuming one agent for all obs
+        self.log("Acs {}".format(actions))
+        self.envs.scatter(actions, root=MPI.ROOT)
 
     def _launch_envs(self):
         # Spawn Single Environments
@@ -85,7 +117,7 @@ class MPIMultiEnv(Environment):
                 - Assuming one learner above
                 - load centralized/decentralized agents using the config
         '''
-        self.agents = Admin._load_agents(self.learners_specs[0]['load_path'])
+        self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
