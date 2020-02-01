@@ -34,12 +34,22 @@ class MPIMultiAgentLearner(Learner):
         self.menvs_specs = self.configs['MultiEnv']
         self.num_menvs = len(self.menvs_specs)
         self.menv_port = self.menvs_specs[0]['port']
+        self.env_specs = self.menvs_specs[0]['env_specs']
 
         '''Do the Agent selection using my ID (rank)'''
         '''Assuming 1 Agent per Learner!'''
         self.num_agents = 1
-        self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
-        self.action_space = list(self.env_specs['action_space'].values())[self.id]
+
+        if 'Unity' in self.env_specs['type']:
+            self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
+            self.action_space = list(self.env_specs['action_space'].values())[self.id]
+            self.acs_dim = self.action_space['acs_space']
+        elif 'RoboCup' in self.env_specs['type']:
+            self.observation_space = self.env_specs['observation_space']
+            self.action_space = self.env_specs['action_space']
+            self.acs_dim = self.action_space['acs_space'] + self.action_space['param']
+        else:
+            assert "Not Implemented for Gym"
 
         self.log("Obs space {} / Action space {}".format(self.observation_space, self.action_space))
 
@@ -81,6 +91,7 @@ class MPIMultiAgentLearner(Learner):
 
             '''Change freely condition when to update'''
             if self.done_count % self.episodes_to_update == 0:
+                self.log("Updating at the Learner")
                 self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
                 self.update_num += 1
                 self.agents[0].step_count = self.step_count
@@ -121,7 +132,7 @@ class MPIMultiAgentLearner(Learner):
         self.envs.Recv([observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_observations)
         # self.log("Got Obs shape {}".format(observations.shape))
 
-        actions = np.zeros([traj_length, self.num_agents, self.action_space['acs_space']])
+        actions = np.zeros([traj_length, self.num_agents, self.acs_dim])
         self.envs.Recv([actions, MPI.FLOAT], source=env_source, tag=Tags.trajectory_actions)
         # self.log("Got Acs shape {}".format(actions.shape))
 
@@ -143,7 +154,7 @@ class MPIMultiAgentLearner(Learner):
         self.steps_per_episode = traj_length
         self.reward_per_episode = sum(rewards)
 
-        self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+        # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
 
         # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
         # self.log("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
@@ -155,7 +166,7 @@ class MPIMultiAgentLearner(Learner):
                                      torch.tensor(next_observations),
                                      torch.tensor(dones, dtype=torch.bool)
                                      )))
-                                     
+  
         self.buffer.push(exp)
 
     def _connect_menvs(self):
@@ -223,13 +234,18 @@ class MPIMultiAgentLearner(Learner):
     def create_buffer(self):
         # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
+        buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.acs_dim)
         self.log("Buffer created of type {}".format(buffer_class))
         return buffer
 
     def close(self):
+        self.envs.Unpublish_name()
+        self.envs.Close_port()
+        self.menv.Disconnect()
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
+        MPI.Comm.Disconnect()
+        MPI.COMM_WORLD.Abort()
 
     def log(self, msg, to_print=False):
         text = 'Learner {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)

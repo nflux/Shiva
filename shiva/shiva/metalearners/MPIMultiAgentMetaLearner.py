@@ -45,3 +45,4 @@ class MPIMultiAgentMetaLearner(MetaLearner):
     def close(self):
         self.menvs.Disconnect()
         self.learners.Disconnect()
+        MPI.COMM_WORLD.Abort()

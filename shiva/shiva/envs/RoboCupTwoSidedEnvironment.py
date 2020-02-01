@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import itertools
 from shiva.envs.robocup.rc_env import rc_env
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot, action2one_hot_v
@@ -7,13 +8,15 @@ from torch.distributions import Categorical
 
 
 class RoboCupTwoSidedEnvironment(Environment):
-    def __init__(self, config, port):
+    def __init__(self, config):
         super(RoboCupTwoSidedEnvironment, self).__init__(config)
         np.random.seed(self.seed)
         torch.manual_seed(self.seed)
-        self.port = port
-        self.env = rc_env(config, port)
+        # self.port = port
+        self.env = rc_env(config)
         self.env.launch()
+
+        self.num_agents = self.num_left + self.num_right
 
         self.left_actions = self.env.left_actions
         self.left_action_option = self.env.left_action_option
@@ -24,8 +27,13 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.left_rews = self.env.left_rewards
         self.right_obs = self.env.right_obs
         self.right_rews = self.env.right_rewards
+
+        self.obs = self.left_obs.tolist()+self.right_obs.tolist()
+        self.rews = self.left_rews.tolist()+self.right_rews.tolist()
+
         # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
+        self._action_space = self.env.acs_dim + self.env.acs_param_dim
         self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
         self.step_count = 0
         self.render = self.env.env_render
@@ -131,16 +139,19 @@ class RoboCupTwoSidedEnvironment(Environment):
         if collect:
             self.collect_metrics()
         
-        return self.left_obs.tolist()+self.right_obs.tolist(), self.left_rews.tolist()+self.right_rews.tolist(), self.done, {'raw_reward': self.left_rews, 'action': actions_v}
+        self.obs = self.left_obs.tolist()+self.right_obs.tolist()
+        self.rews = self.left_rews.tolist()+self.right_rews.tolist()
+        
+        return self.obs, self.rews, self.done, {'raw_reward': self.left_rews, 'action': actions_v}
 
-    def get_observation(self):
-        return self.left_obs.tolist()+self.right_obs.tolist()
+    def get_observations(self):
+        return self.obs
 
     def get_observation_space(self):
         return self.observation_space
 
     def get_action_space(self):
-        return self.action_space
+        return self._action_space
     
     def get_imit_obs_msg(self):
         return self.env.getImitObsMsg()
@@ -149,7 +160,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         return self.left_actions, self.left_action_option, self.right_actions, self.right_action_option
 
     def get_reward(self):
-        return self.left_rews.tolist()+self.right_rews.tolist()
+        return self.rews
 
     def load_viewer(self):
         if self.render:
@@ -182,13 +193,13 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.steps_per_episode += 1
         self.step_count += 1
         self.done_count += 1 if self.done else 0
-        self.reward_per_episode += self.rews[0]
+        self.reward_per_episode += sum(self.rews)
         self.goal_ctr += 1 if self.isGoal() else 0
 
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
-                ('Reward/Per_Step', self.rews)
+                ('Reward/Per_Step', sum(self.rews))
             ]
         else:
             metrics = [
@@ -197,11 +208,10 @@ class RoboCupTwoSidedEnvironment(Environment):
                 ('Turns_per_Episode', self.turns),
                 ('Dashes_per_Episode', self.dashes),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode),
-                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/self.done_count)*100.0)
+                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/(self.done_count+1))*100.0)
             ]
 
             print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
-
 
         return metrics
 

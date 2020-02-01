@@ -32,6 +32,7 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         self.rew_buffer[self.current_index:self.current_index + nentries, :, :] = rew
         self.done_buffer[self.current_index:self.current_index + nentries, :, :] = done
         self.next_obs_buffer[self.current_index:self.current_index + nentries, :, :] = next_obs
+
         if self.size < self.max_size:
             self.size += nentries
         self.current_index += nentries
@@ -77,6 +78,16 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             self.rew_buffer[:self.current_index, :, :].cpu().detach().numpy(),
             self.next_obs_buffer[:self.current_index, :, :].cpu().detach().numpy(),
             self.done_buffer[:self.current_index, :, :].cpu().detach().numpy()
+        ]
+    
+    def agent_numpy(self, agent_id, reshape_fn=None):
+        '''For data passing'''
+        return [
+            self.obs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.acs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.rew_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.next_obs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.done_buffer[:self.current_index, agent_id, :].cpu().detach().numpy()
         ]
 
     def reset(self):

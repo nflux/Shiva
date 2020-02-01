@@ -1,6 +1,7 @@
 import sys, time
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
+import numpy as np
 from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
@@ -45,7 +46,10 @@ class MPIMultiEnv(Environment):
             - all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI
             - agents_instances are in equal amount for all agents
         '''
-        self._obs_recv_buffer = np.zeros(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ))
+        if 'Unity' in self.env_specs['type']:
+            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0]))
+        else:
+            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space']))
 
         while True:
             # self._step_python_list()
@@ -71,14 +75,14 @@ class MPIMultiEnv(Environment):
             actions = [[[self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(observations) ] for observations in self._obs_recv_buffer]
         else:
             # implement for Gym and Robocup
-            actions = [agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)]
+            actions = [[agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
             # self.log("Acs {}".format(actions))
-            self.envs.scatter(actions, root=MPI.ROOT)
+            # self.envs.scatter(actions, root=MPI.ROOT)
             
         self.actions = np.array(actions)
         # self.log("{} {}".format(self.actions[0][0][0][0], self.actions[0][1][0][0]))
         # self.log("Acs Shape {}".format(self.actions.shape))
-        self.envs.scatter(actions, root=MPI.ROOT)
+        self.envs.scatter(self.actions, root=MPI.ROOT)
 
     def _step_python_list(self):
         '''We could optimize this gather/scatter ops using numpys'''
@@ -135,8 +139,12 @@ class MPIMultiEnv(Environment):
         }
 
     def close(self):
+        self.learners.Unpublish_name()
+        self.learners.Close_port()
+        self.envs.Disconnect()
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
+        MPI.COMM_WORLD.Abort()
 
     def log(self, msg, to_print=False):
         text = 'Menv {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
@@ -150,4 +158,4 @@ class MPIMultiEnv(Environment):
 
 
 if __name__ == "__main__":
-    MPIMultiEnv()
+    multi = MPIMultiEnv()
