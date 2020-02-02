@@ -77,7 +77,6 @@ class MPIMultiEnv(Environment):
             # implement for Gym and Robocup
             actions = [[agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
             # self.log("Acs {}".format(actions))
-            # self.envs.scatter(actions, root=MPI.ROOT)
             
         self.actions = np.array(actions)
         # self.log("{} {}".format(self.actions[0][0][0][0], self.actions[0][1][0][0]))

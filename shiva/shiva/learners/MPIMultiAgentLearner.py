@@ -64,7 +64,6 @@ class MPIMultiAgentLearner(Learner):
         # Connect with MultiEnvs
         self._connect_menvs()
 
-
         self.run()
 
     def run(self, train=True):
@@ -107,7 +106,7 @@ class MPIMultiAgentLearner(Learner):
                 Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
             '''Send Updated Agents to Meta'''
-            # self.log("Sending metrics to Meta")
+            self.log("Sending metrics to Meta")
             self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
             '''Check for Evolution Configs'''
             if self.meta.Iprobe(source=0, tag=Tags.evolution):
@@ -128,6 +127,7 @@ class MPIMultiAgentLearner(Learner):
                 - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional) 
         '''
 
+        self.log("Getting Numpies")
         observations = np.zeros([traj_length, self.num_agents, self.observation_space])
         self.envs.Recv([observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_observations)
         # self.log("Got Obs shape {}".format(observations.shape))
@@ -154,7 +154,7 @@ class MPIMultiAgentLearner(Learner):
         self.steps_per_episode = traj_length
         self.reward_per_episode = sum(rewards)
 
-        # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+        self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
 
         # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
         # self.log("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))

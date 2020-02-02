@@ -18,6 +18,7 @@ class MPIMultiAgentMetaLearner(MetaLearner):
     def launch(self):
         self._launch_menvs()
         self._launch_learners()
+        
         self.run()
 
     def run(self):

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-import sys, traceback
+import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 from mpi4py import MPI
@@ -62,7 +62,7 @@ class MPIEnv(Environment):
         self.menv.gather(send_obs_buffer, root=0)
         self.actions = self.menv.scatter(None, root=0)
         # self.log("After getting actions")
-        # self.log("Act {}".format(self.actions))
+        # self.log("Act {}".format(self.actions.shape))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
         # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.reward).shape, np.array(self.done).shape))

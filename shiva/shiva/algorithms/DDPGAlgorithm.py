@@ -31,6 +31,7 @@ class DDPGAlgorithm(Algorithm):
                 But it does reset the noise after an episode
             '''
             agent.ou_noise.reset()
+            print("This is not updating!!!!!")
             return
 
         if step_count < agent.exploration_steps:
