@@ -88,30 +88,31 @@ class MPILearner(Learner):
             #     self.log("Collected {} episodes in {} seconds".format(n_episodes, (t1-t0)))
             #     exit()
 
-            '''Change freely condition when to update'''
-            if self.done_count % self.episodes_to_update == 0:
-                self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
-                self.update_num += 1
-                self.agents[0].step_count = self.step_count
-                self.agents[0].done_count = self.done_count
-                # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-                Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                for ix in range(self.num_menvs):
-                    self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+            if not self.evaluate:
+                '''Change freely condition when to update'''
+                if self.done_count % self.episodes_to_update == 0:
+                    self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
+                    self.update_num += 1
+                    self.agents[0].step_count = self.step_count
+                    self.agents[0].done_count = self.done_count
+                    # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
+                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                    for ix in range(self.num_menvs):
+                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+
+                if self.done_count % self.save_checkpoint_episodes == 0:
+                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
+
+                '''Send Updated Agents to Meta'''
+                # self.log("Sending metrics to Meta")
+                self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
+                '''Check for Evolution Configs'''
+                if self.meta.Iprobe(source=0, tag=Tags.evolution):
+                    evolution_config = self.learners.recv(None, source=0, tag=Tags.evolution)  # block statement
+                    self.log("Got evolution config!")
+                ''''''
 
             self.collect_metrics(episodic=True)
-
-            if self.done_count % self.save_checkpoint_episodes == 0:
-                Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
-
-            '''Send Updated Agents to Meta'''
-            # self.log("Sending metrics to Meta")
-            self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
-            '''Check for Evolution Configs'''
-            if self.meta.Iprobe(source=0, tag=Tags.evolution):
-                evolution_config = self.learners.recv(None, source=0, tag=Tags.evolution)  # block statement
-                self.log("Got evolution config!")
-            ''''''
 
     def _receive_trajectory_numpy(self):
         '''Receive trajectory from each single environment in self.envs process group'''

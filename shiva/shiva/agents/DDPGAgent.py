@@ -86,7 +86,7 @@ class DDPGAgent(Agent):
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
                 action = torch.abs(action)
                 action = action / action.sum()
-                print("Net: {}".format(action))
+                # print("Net: {}".format(action))
         return action.tolist()
 
     def get_continuous_action(self,observation, step_count, evaluate):

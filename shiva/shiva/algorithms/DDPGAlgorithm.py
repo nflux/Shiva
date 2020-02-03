@@ -15,8 +15,8 @@ class DDPGAlgorithm(Algorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(DDPGAlgorithm, self).__init__(observation_space, action_space, configs)
-        self.actor_loss = 0
-        self.critic_loss = 0
+        self.actor_loss = torch.tensor(0)
+        self.critic_loss = torch.tensor(0)
         self.set_action_space(action_space)
 
     def update(self, agent, buffer, step_count, episodic=False):
@@ -72,7 +72,7 @@ class DDPGAlgorithm(Algorithm):
         next_states = next_states.to(self.device)
         dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
 
-        print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
+        # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
         # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape))
 
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
@@ -89,9 +89,6 @@ class DDPGAlgorithm(Algorithm):
         next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
 
         dims = len(next_state_actions_target.shape)
-
-
-        print("dims:", dims)
 
         if self.a_space == "discrete" or self.a_space == "parameterized":
 
@@ -134,11 +131,9 @@ class DDPGAlgorithm(Algorithm):
 
         # Get Q values of the batch from states and actions.
         if self.a_space == 'discrete':
-            print("this happened")
             actions = one_hot_from_logits(actions)
         else:
             actions = softmax(actions) 
-            print(actions[0])
 
         # Grab the discrete actions in the batch
         if dims == 3:
@@ -150,9 +145,6 @@ class DDPGAlgorithm(Algorithm):
             Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 0) )
 
         # Calculate the loss.
-
-        print("y_i", y_i.shape)
-        print("Q these", Q_these_states_main.shape)
 
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
         # Backward propogation!
@@ -170,7 +162,6 @@ class DDPGAlgorithm(Algorithm):
         agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
         if self.a_space == "discrete" or self.a_space == "parameterized":
-            print(states.shape)
             current_state_actor_actions = agent.actor(states.float(), gumbel=True)
         else:
             current_state_actor_actions = agent.actor(states.float())

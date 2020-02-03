@@ -64,7 +64,7 @@ class Learner(object):
                         '''Is a list of set metrics'''
                         for metric_name, y_val in m:
                             Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.step_count)
-                    elif type(m) == set:
+                    elif type(m) == tuple:
                         '''One single metric'''
                         metric_name, y_val = m
                         Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.step_count)
@@ -73,11 +73,11 @@ class Learner(object):
                     if type(m) == list:
                         '''Is a list of set metrics'''
                         for metric_name, y_val in m:
-                            Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.step_count)
-                    elif type(m) == set:
+                            Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.done_count)
+                    elif type(m) == tuple:
                         '''One single metric'''
                         metric_name, y_val = m
-                        Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.step_count)
+                        Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.done_count)
         else:
             metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
             if not episodic:

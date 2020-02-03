@@ -89,7 +89,7 @@ class TD3Agent(Agent):
                     action = action / action.sum()
                 action = action.tolist()
                 self.action = [action] # for tensorboard
-            print("Net:", action)
+            # print("Net:", action)
         return action
 
     def get_random_action(self):

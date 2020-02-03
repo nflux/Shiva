@@ -118,7 +118,8 @@ class ShivaAdmin():
         if learner.id not in self._learner_dir:
             if function_only:
                 # need to create a new fake "meta profile" to create root session folder structures for this learner
-                folder_name = self.__folder_name__['metalearner'].format(algorithm=learner.configs['Algorithm']['type'], env=learner.configs['Environment']['env_name'])
+                env_name = learner.configs['Environment']['exec'].split('/')[-1].replace('.app', '').replace('.86_64', '')
+                folder_name = self.__folder_name__['metalearner'].format(algorithm=learner.configs['Algorithm']['type'], env=env_name)
                 self.add_meta_profile(None, folder_name, overwrite=True)
             self._learner_dir[learner.id] = {}
             new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
