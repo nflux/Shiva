@@ -4,7 +4,7 @@ class MetaLearner(object):
     def __init__(self, config, profile=True):
         {setattr(self, k, v) for k,v in config['MetaLearner'].items()}
         self.config = config
-        self.episodes = config['Learner']['episodes']
+        self.episodes = config['Learner']['episodes'] if 'Learner' in config else None
         self.learnerCount = 0
         self.PROD_MODE, self.EVAL_MODE = 'production', 'evaluation'
         if profile:

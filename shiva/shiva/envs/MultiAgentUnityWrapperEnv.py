@@ -27,7 +27,7 @@ class MultiAgentUnityWrapperEnv(Environment):
             file_name= self.exec,
             base_port = self.port if hasattr(self, 'port') else 5005, # 5005 is Unity's default value
             worker_id = self.worker_id,
-            seed = self.configs['Algorithm']['manual_seed'],
+            seed = self.worker_id * 5005,
             side_channels = [self.channel['config'], self.channel['props']],
             no_graphics= not self.render
         )
@@ -132,7 +132,8 @@ class MultiAgentUnityWrapperEnv(Environment):
             On MultiAgent env, all agents will have the same number of dones, so we can check only one of them
         '''
         # return self.temp_done_counter > 0
-        return self.temp_done_counter > self.num_instances_per_env
+        # print("{} {}".format(self.temp_done_counter, self.num_instances_per_env))
+        return self.temp_done_counter >= self.num_instances_per_env
 
     def _clean_actions(self, group, group_actions):
         '''

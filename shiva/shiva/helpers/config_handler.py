@@ -46,6 +46,7 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
     parser = configparser.ConfigParser()
     parser.read(_FILENAME)
     r = {}
+    assert len(list(parser.sections())) > 0, "Config {} is empty".format(_FILENAME)
     for _section in parser.sections():
         r[_section] = {}
         for _key in parser[_section]:
@@ -87,3 +88,8 @@ def save_dict_2_config_file(config_dict: dict, file_path: str):
                     config.set(section_name, attr_name, dtype_2_configstr(attr_val))
     with open(file_path, 'w') as configfile:
         config.write(configfile)
+
+
+def merge_dicts(dict1, dict2):
+    res = {**dict1, **dict2}
+    return res

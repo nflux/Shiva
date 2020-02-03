@@ -161,9 +161,9 @@ class TD3Algorithm(Algorithm):
 
     def get_metrics(self, episodic=False):
         metrics = [
-            ('Algorithm/Actor_Loss', self.actor_loss),
-            ('Algorithm/Critic_Loss', self.critic_loss_2),
-            ('Algorithm/Critic_2_Loss', self.critic_loss_2)
+            ('Algorithm/Actor_Loss', self.actor_loss.item()),
+            ('Algorithm/Critic_Loss', self.critic_loss_2.item()),
+            ('Algorithm/Critic_2_Loss', self.critic_loss_2.item())
         ]
         for i, ac in enumerate(self.agent.action):
             metrics.append(('Agent/Actor_Output_' + str(i), ac))

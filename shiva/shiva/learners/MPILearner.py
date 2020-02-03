@@ -19,7 +19,9 @@ class MPILearner(Learner):
 
     def launch(self):
         # Receive Config from Meta
-        self.configs = self.meta.bcast(None, root=0)
+        self.configs = self.meta.scatter(None, root=0)
+        print("Config {}".format(self.configs))
+        # exit()
         super(MPILearner, self).__init__(self.id, self.configs)
         self.log("Received config with {} keys".format(len(self.configs.keys())))
         Admin.init(self.configs['Admin'])
@@ -42,6 +44,8 @@ class MPILearner(Learner):
         self.num_agents = 1
 
         try:
+            # self.observation_space = self.env_specs['observation_space'][self.config['Learner']['group']]
+            # self.action_space = self.env_specs['action_space'][self.config['Learner']['group']]
             self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
             self.action_space = list(self.env_specs['action_space'].values())[self.id]
         except:
@@ -60,8 +64,6 @@ class MPILearner(Learner):
         Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
         # Connect with MultiEnvs
         self._connect_menvs()
-
-
         self.run()
 
     def run(self, train=True):
@@ -123,26 +125,26 @@ class MPILearner(Learner):
         self.metrics_env = self.traj_info['metrics']
         traj_length = self.traj_info['length']
 
-        self.log(self.traj_info)
+        self.log("{}".format(self.traj_info))
 
-        observations = np.zeros(self.traj_info['obs_shape'])
-        self.envs.Recv([observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_observations)
+        observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+        self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
         # self.log("Got Obs shape {}".format(observations.shape))
 
-        actions = np.zeros(self.traj_info['acs_shape'])
-        self.envs.Recv([actions, MPI.FLOAT], source=env_source, tag=Tags.trajectory_actions)
+        actions = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
+        self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
         # self.log("Got Acs shape {}".format(actions.shape))
 
-        rewards = np.zeros(self.traj_info['rew_shape'])
-        self.envs.Recv([rewards, MPI.FLOAT], source=env_source, tag=Tags.trajectory_rewards)
+        rewards = np.empty(self.traj_info['rew_shape'], dtype=np.float64)
+        self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
         # self.log("Got Rewards shape {}".format(rewards.shape))
 
-        next_observations = np.zeros(self.traj_info['obs_shape'])
-        self.envs.Recv([next_observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_next_observations)
+        next_observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+        self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
         # self.log("Got Next Obs shape {}".format(next_observations.shape))
 
-        dones = np.zeros(self.traj_info['done_shape'])
-        self.envs.Recv([dones, MPI.FLOAT], source=env_source, tag=Tags.trajectory_dones)
+        dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
+        self.envs.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
         # self.log("Got Dones shape {}".format(dones.shape))
 
         self.step_count += traj_length
@@ -152,17 +154,17 @@ class MPILearner(Learner):
 
         # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
         # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-        self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
+        # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
 
-        exp = list(map(torch.clone, (torch.tensor(observations),
-                                     torch.tensor(actions),
-                                     torch.tensor(rewards),
-                                     torch.tensor(next_observations),
-                                     torch.tensor(dones, dtype=torch.bool)
+        exp = list(map(torch.clone, (torch.from_numpy(observations),
+                                     torch.from_numpy(actions),
+                                     torch.from_numpy(rewards),
+                                     torch.from_numpy(next_observations),
+                                     torch.from_numpy(dones)
                                      )))
         self.buffer.push(exp)
 
-        self.close()
+        # self.close()
 
     def _connect_menvs(self):
         # Connect with MultiEnv

@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 import torch
 from torch.autograd import Variable
@@ -33,6 +34,10 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         self.rew_buffer[self.current_index:self.current_index + nentries, :, :] = rew
         self.done_buffer[self.current_index:self.current_index + nentries, :, :] = done
         self.next_obs_buffer[self.current_index:self.current_index + nentries, :, :] = next_obs
+
+        # print("From in-buffer Obs {}".format(self.obs_buffer[self.current_index:self.current_index + nentries, :, :]))
+        # print("From in-buffer Acs {}".format(self.acs_buffer[self.current_index:self.current_index + nentries, :, :]))
+
         if self.size < self.max_size:
             self.size += nentries
         self.current_index += nentries
@@ -72,13 +77,13 @@ class MultiAgentTensorBuffer(ReplayBuffer):
 
     def all_numpy(self, reshape_fn=None):
         '''For data passing'''
-        return [
-            self.obs_buffer[:self.current_index, :, :].cpu().detach().numpy(),
-            self.acs_buffer[:self.current_index, :, :].cpu().detach().numpy(),
-            self.rew_buffer[:self.current_index, :, :].cpu().detach().numpy(),
-            self.next_obs_buffer[:self.current_index, :, :].cpu().detach().numpy(),
-            self.done_buffer[:self.current_index, :, :].cpu().detach().numpy()
-        ]
+        return copy.deepcopy([
+            self.obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
+            self.acs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
+            self.rew_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
+            self.next_obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
+            self.done_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64)
+        ])
 
     def reset(self):
         '''Resets the buffer parameters'''

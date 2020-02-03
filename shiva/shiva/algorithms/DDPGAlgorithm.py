@@ -8,7 +8,7 @@ from shiva.algorithms.Algorithm import Algorithm
 from shiva.helpers.misc import one_hot_from_logits
 
 class DDPGAlgorithm(Algorithm):
-    def __init__(self, observation_space: int, action_space: int, configs: dict):
+    def __init__(self, observation_space: int, action_space: dict, configs: dict):
         '''
             Inputs
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
@@ -17,10 +17,7 @@ class DDPGAlgorithm(Algorithm):
         super(DDPGAlgorithm, self).__init__(observation_space, action_space, configs)
         self.actor_loss = 0
         self.critic_loss = 0
-        self.continuous = action_space['continuous']
-        self.acs_space = action_space['acs_space']
-        self.discrete = action_space['discrete']
-        self.param = action_space['param']
+        self.set_action_space(action_space)
 
     def update(self, agent, buffer, step_count, episodic=False):
         '''
@@ -73,12 +70,10 @@ class DDPGAlgorithm(Algorithm):
         actions = actions.to(self.device)
         rewards = rewards.to(self.device)
         next_states = next_states.to(self.device)
-        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
-        # print(actions)
-        # ja
-        # print(states[0])
-        # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
-        # input()
+        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
+
+        print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
+        # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape))
 
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
             "acs_space config must be set to either discrete, continuous, or parameterized."
@@ -94,6 +89,9 @@ class DDPGAlgorithm(Algorithm):
         next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
 
         dims = len(next_state_actions_target.shape)
+
+
+        print("dims:", dims)
 
         if self.a_space == "discrete" or self.a_space == "parameterized":
 
@@ -132,18 +130,15 @@ class DDPGAlgorithm(Algorithm):
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones] = 0.0
         # Use the Bellman equation.
-        y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
+        y_i = rewards + self.gamma * Q_next_states_target
 
         # Get Q values of the batch from states and actions.
         if self.a_space == 'discrete':
+            print("this happened")
             actions = one_hot_from_logits(actions)
         else:
             actions = softmax(actions) 
-            # print(actions)
-
-        if self.a_space == 'discrete':
-            actions = one_hot_from_logits(actions)
-            # print(actions)
+            print(actions[0])
 
         # Grab the discrete actions in the batch
         if dims == 3:
@@ -155,6 +150,10 @@ class DDPGAlgorithm(Algorithm):
             Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 0) )
 
         # Calculate the loss.
+
+        print("y_i", y_i.shape)
+        print("Q these", Q_these_states_main.shape)
+
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
         # Backward propogation!
         critic_loss.backward()
@@ -171,6 +170,7 @@ class DDPGAlgorithm(Algorithm):
         agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
         if self.a_space == "discrete" or self.a_space == "parameterized":
+            print(states.shape)
             current_state_actor_actions = agent.actor(states.float(), gumbel=True)
         else:
             current_state_actor_actions = agent.actor(states.float())
@@ -231,6 +231,20 @@ class DDPGAlgorithm(Algorithm):
         self.agent = DDPGAgent(id, self.observation_space, self.action_space, self.configs['Agent'], self.configs['Network'])
         return self.agent
 
+    def set_action_space(self, action_space):
+        if action_space['continuous'] == 0:
+            self.a_space = 'discrete'
+
+        elif action_space['discrete'] == 0:
+            self.a_space = 'continuous'
+        else:
+            assert "Parametrized not supported yet"
+        self.continuous = action_space['continuous']
+        self.acs_space = action_space['acs_space']
+        self.discrete = action_space['discrete']
+        self.param = action_space['param']
+
+
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
@@ -242,8 +256,8 @@ class DDPGAlgorithm(Algorithm):
             #     metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
         else:
             metrics = [
-                ('Algorithm/Actor_Loss', self.actor_loss),
-                ('Algorithm/Critic_Loss', self.critic_loss)                
+                ('Algorithm/Actor_Loss', self.actor_loss.item()),
+                ('Algorithm/Critic_Loss', self.critic_loss.item())
             ]
         return metrics
 

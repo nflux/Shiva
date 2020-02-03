@@ -54,7 +54,11 @@ class ShivaAdmin():
                 @config       Dictionary of the Shiva Admin config
         '''
         self.config = config
-        
+        if 'Admin' in config:
+            {setattr(self, k, v) for k, v in config['Admin'].items()}
+        else:
+            {setattr(self, k, v) for k, v in config.items()}
+
         self.need_to_save = self.config['save']
         self.traceback = self.config['traceback']
         self.dirs = self.config['directory']
@@ -222,6 +226,7 @@ class ShivaAdmin():
                 @value_x            Usually time
         '''
         if not self.need_to_save: return
+        # self.log("{} {} {} {} {}".format(learner.id, agent, scalar_name, value_y, value_x) )
         if type(agent) == int:
             '''Agent ID was sent'''
             self.writer[learner.id][agent].add_scalar(scalar_name, value_y, value_x)

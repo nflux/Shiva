@@ -47,9 +47,9 @@ class MPIMultiEnv(Environment):
             - agents_instances are in equal amount for all agents
         '''
         try:
-            self._obs_recv_buffer = np.zeros(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ))
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         except:
-            self._obs_recv_buffer = np.zeros(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ))
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
 
 
         while True:
@@ -62,12 +62,10 @@ class MPIMultiEnv(Environment):
                 '''Assuming 1 Agent per Learner'''
                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
                 self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
-        self.close()
+        # self.close()
 
     def _step_numpy(self):
-        self.envs.Gather(None, [self._obs_recv_buffer, MPI.FLOAT], root=MPI.ROOT)
-        # self.log("Obs {}".format(self._obs_recv_buffer))
-        # self.log("Obs Shape {}".format(self._obs_recv_buffer.shape))
+        self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
 
@@ -80,24 +78,8 @@ class MPIMultiEnv(Environment):
             actions = [ [ [self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
 
         self.actions = np.array(actions)
-
-        self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions))
-        # self.log("Acs Shape {}".format(self.actions.shape))
         self.envs.scatter(actions, root=MPI.ROOT)
-
-    # def _step_python_list(self):
-    #     '''We could optimize this gather/scatter ops using numpys'''
-    #     self.observations = self.envs.gather(None, root=MPI.ROOT)
-    #     # self.log("Obs {}".format(self.observations))
-    #
-    #     self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
-    #     if self.env_specs['num_instances_per_env'] > 1:
-    #         '''Unity case!!'''
-    #         actions = [[self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(self.observations)]
-    #     else:
-    #         actions = self.agents[0].get_action(self.observations, self.step_count)  # assuming one agent for all obs
-    #     # self.log("Acs {}".format(actions))
-    #     self.envs.scatter(actions, root=MPI.ROOT)
+        # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions))
 
     def _launch_envs(self):
         # Spawn Single Environments
@@ -114,9 +96,9 @@ class MPIMultiEnv(Environment):
         self.log("Expecting {} learners".format(self.num_learners))
         for i in range(self.num_learners):
             '''Learner IDs are inserted in order :)'''
-            learner_data = self.learners.recv(None, source=i, tag=Tags.specs)
-            self.learners_specs.append(learner_data)
-            self.log("Received Learner {}".format(learner_data['id']))
+            learner_spec = self.learners.recv(None, source=i, tag=Tags.specs)
+            self.learners_specs.append(learner_spec)
+            self.log("Received Learner {}".format(learner_spec['id']))
 
         '''
             TODO
@@ -129,7 +111,7 @@ class MPIMultiEnv(Environment):
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
-        # Get signal that they have communicated with Learner
+        # Get signal from single env that they have connected with Learner
         envs_states = self.envs.gather(None, root=MPI.ROOT)
         # self.log(envs_status)
 

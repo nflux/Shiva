@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import time
 import numpy as np
 import sys
 from pathlib import Path
@@ -47,18 +48,18 @@ class MPIEnv(Environment):
                 self.print(self.env.get_metrics(episodic=True)) # print metrics
                 self._send_trajectory_numpy()
                 self.env.reset()
-        self.close()
+        # self.close()
 
     def _step_numpy(self):
         self.observations = self.env.get_observations()
         '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
                                     --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
         '''
-        send_obs_buffer = np.array(self.observations)
-        self.menv.Gather([send_obs_buffer, MPI.FLOAT], None, root=0)
+        send_obs_buffer = np.array(self.observations, dtype=np.float64)
+        self.menv.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
 
         self.actions = self.menv.scatter(None, root=0)
-        self.log("Obs {} Act {}".format(self.observations, self.actions))
+        # self.log("Obs {} Act {}".format(self.observations, self.actions))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
         # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.reward).shape, np.array(self.done).shape))
@@ -76,11 +77,11 @@ class MPIEnv(Environment):
                 buffer.push(exp)
         else:
             # Gym
-            exp = list(map(torch.clone, (torch.tensor([self.observations]),
-                                         torch.tensor([self.actions]),
-                                         torch.tensor([self.rewards]).unsqueeze(dim=-1),
-                                         torch.tensor([self.next_observations]),
-                                         torch.tensor([self.dones], dtype=torch.bool).unsqueeze(dim=-1)
+            exp = list(map(torch.clone, (torch.from_numpy(self.observations).unsqueeze(dim=0),
+                                         torch.tensor(self.actions).unsqueeze(dim=0),
+                                         torch.tensor(self.rewards).reshape(1, 1, 1),
+                                         torch.from_numpy(self.next_observations).unsqueeze(dim=0),
+                                         torch.tensor(self.dones, dtype=torch.bool).reshape(1, 1, 1)
                                          )))
             self.trajectory_buffers[0].push(exp)
 
@@ -94,21 +95,28 @@ class MPIEnv(Environment):
         if 'Unity' in self.type:
             for ix in range(self.num_learners):
                 '''Assuming 1 Agent per Learner, no support for MADDPG here'''
-                obs_buffer, acs_buffer, rew_buffer, next_obs_buffer, done_buffer = map(self._unity_reshape, self.trajectory_buffers[ix].all_numpy())
-
-                # self.log("Sending to Learner {} Obs shape {} Acs shape {} Rew shape {} NextObs shape {} Dones shape {}".format(ix, obs_buffer.shape, acs_buffer.shape, rew_buffer.shape, next_obs_buffer.shape, done_buffer.shape))
+                self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape, self.trajectory_buffers[ix].all_numpy())
 
                 trajectory_info = {
+                    'env_id': self.id,
                     'length': self.env.steps_per_episode,
-                    'metrics': self.env.get_group_metrics(ix)
+                    'obs_shape': self.observations_buffer.shape,
+                    'acs_shape': self.actions_buffer.shape,
+                    'rew_shape': self.rewards_buffer.shape,
+                    'done_shape': self.done_buffer.shape,
+                    'metrics': self.env.get_metrics(episodic=True)[ix]
                 }
 
+                # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape, self.rewards_buffer.shape, self.next_observations_buffer.shape, self.done_buffer.shape))
+                # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
+                # self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
+
                 self.learner.send(trajectory_info, dest=ix, tag=Tags.trajectory_info)
-                self.learner.Send([obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_observations)
-                self.learner.Send([acs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_actions)
-                self.learner.Send([rew_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_rewards)
-                self.learner.Send([next_obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_next_observations)
-                self.learner.Send([done_buffer, MPI.BOOL], dest=ix, tag=Tags.trajectory_dones)
+                self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_observations)
+                self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_actions)
+                self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
+                self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix,tag=Tags.trajectory_next_observations)
+                self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_dones)
         else:
             # Gym
             learner_ix = 0
@@ -117,6 +125,7 @@ class MPIEnv(Environment):
                                                                                    self.trajectory_buffers[learner_ix].all_numpy())
 
             trajectory_info = {
+                'env_id': self.id,
                 'length': self.env.steps_per_episode,
                 'obs_shape': self.observations_buffer.shape,
                 'acs_shape': self.actions_buffer.shape,
@@ -125,24 +134,19 @@ class MPIEnv(Environment):
                 'metrics': self.env.get_metrics(episodic=True)
             }
 
-            self.log(
-                "Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(
-                    self.observations_buffer.shape, self.actions_buffer.shape,
-                    self.rewards_buffer.shape,
-                    self.next_observations_buffer.shape,
-                    self.done_buffer.shape))
+            # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
+            # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
             self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
 
-
             self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
-            self.learner.Send([self.observations_buffer, MPI.FLOAT], dest=learner_ix, tag=Tags.trajectory_observations)
-            self.learner.Send([self.actions_buffer, MPI.FLOAT], dest=learner_ix, tag=Tags.trajectory_actions)
-            self.learner.Send([self.rewards_buffer, MPI.FLOAT], dest=learner_ix, tag=Tags.trajectory_rewards)
-            self.learner.Send([self.next_observations_buffer, MPI.FLOAT], dest=learner_ix, tag=Tags.trajectory_next_observations)
-            self.learner.Send([self.done_buffer, MPI.BOOL], dest=learner_ix, tag=Tags.trajectory_dones)
+            self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
+            self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_actions)
+            self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_rewards)
+            self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_next_observations)
+            self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
 
         self.reset_buffers()
-        self.close()
+        # time.sleep(5)
 
     def create_buffers(self):
         if 'Unity' in self.type:
@@ -179,7 +183,7 @@ class MPIEnv(Environment):
         # Start communication with Learners
         self.learners_port = self.learners_specs[0]['port']
         self.learner = MPI.COMM_WORLD.Connect(self.learners_port, MPI.INFO_NULL)
-        self.log("Connected with {} learners on {}".format(self.num_learners, self.learners_port))
+        self.log("Connected with {} learners on port {}".format(self.num_learners, self.learners_port))
 
     def create_environment(self):
         self.configs['Environment']['port'] += (self.id * 10)
@@ -200,7 +204,7 @@ class MPIEnv(Environment):
             'observation_space': self.env.get_observation_space(),
             'action_space': self.env.get_action_space(),
             'num_agents': self.env.num_agents,
-            'agents_group': self.env.agent_groups, # agents names given by the env - needs to be implemented by RoboCup
+            'agents_group': self.env.agent_groups if hasattr(self.env, 'agent_groups') else ['Agent_0'], # agents names given by the env - needs to be implemented by RoboCup
             'num_instances_per_env': self.env.num_instances_per_env if hasattr(self.env, 'num_instances_per_env') else 1, # Unity case
             'learners_port': self.learners_port if hasattr(self, 'learners_port') else False
         }
