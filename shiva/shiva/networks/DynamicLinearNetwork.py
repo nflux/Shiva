@@ -24,7 +24,7 @@ class DynamicLinearNetwork(torch.nn.Module):
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
                         ).double()
     def forward(self, x):
-        return self.net(x)
+        return self.net(x).double()
 
 class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
     def __init__(self, input_dim, output_dim, param_ix, config):
@@ -57,9 +57,8 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                         ).double()
                         
     def forward(self, x, gumbel=False):
-        print("This is x:", x)
-        a = self.net(x)
-        print("This is a:", a)
+        a = self.net(x).double()
+        print('I love nans', a)
         # if a.shape[0] < 1:
         #     print(a)
         if gumbel:
