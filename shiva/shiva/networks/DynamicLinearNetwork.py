@@ -22,7 +22,7 @@ class DynamicLinearNetwork(torch.nn.Module):
                             config['last_layer'],
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
-                        )
+                        ).double()
     def forward(self, x):
         return self.net(x)
 
@@ -54,9 +54,7 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                             config['last_layer'],
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
-                        )
-        print("This is the net", self.net)
-
+                        ).double()
                         
     def forward(self, x, gumbel=False):
         print("This is x:", x)
