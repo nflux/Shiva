@@ -127,26 +127,25 @@ class MPIMultiAgentLearner(Learner):
                 - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional) 
         '''
 
-        self.log("Getting Numpies")
-        observations = np.zeros([traj_length, self.num_agents, self.observation_space])
-        self.envs.Recv([observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_observations)
+        observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
+        self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
         # self.log("Got Obs shape {}".format(observations.shape))
 
-        actions = np.zeros([traj_length, self.num_agents, self.acs_dim])
-        self.envs.Recv([actions, MPI.FLOAT], source=env_source, tag=Tags.trajectory_actions)
+        actions = np.zeros([traj_length, self.num_agents, self.acs_dim], dtype=np.float64)
+        self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
         # self.log("Got Acs shape {}".format(actions.shape))
 
-        rewards = np.zeros([traj_length, self.num_agents, 1])
-        self.envs.Recv([rewards, MPI.FLOAT], source=env_source, tag=Tags.trajectory_rewards)
+        rewards = np.zeros([traj_length, self.num_agents, 1], dtype=np.float64)
+        self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
         # self.log("Got Rewards shape {}".format(rewards.shape))
 
-        next_observations = np.zeros([traj_length, self.num_agents, self.observation_space])
-        self.envs.Recv([next_observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_next_observations)
+        next_observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
+        self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
         # self.log("Got Next Obs shape {}".format(next_observations.shape))
 
         '''are dones even needed? It's obviously a trajectory...'''
-        dones = np.zeros([traj_length, self.num_agents, 1])
-        self.envs.Recv([dones, MPI.FLOAT], source=env_source, tag=Tags.trajectory_dones)
+        dones = np.zeros([traj_length, self.num_agents, 1], dtype=np.float64)
+        self.envs.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
         # self.log("Got Dones shape {}".format(dones.shape))
 
         self.step_count += traj_length
@@ -154,7 +153,7 @@ class MPIMultiAgentLearner(Learner):
         self.steps_per_episode = traj_length
         self.reward_per_episode = sum(rewards)
 
-        self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+        # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
 
         # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
         # self.log("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))

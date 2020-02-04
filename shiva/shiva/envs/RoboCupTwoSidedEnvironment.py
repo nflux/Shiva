@@ -60,7 +60,7 @@ class RoboCupTwoSidedEnvironment(Environment):
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, actions, discrete_select='sample', collect=True, device='cpu'):
+    def step(self, actions, discrete_select='sample', collect=True):
         '''
             Input
                 @actions
@@ -79,7 +79,6 @@ class RoboCupTwoSidedEnvironment(Environment):
                                         ]
 
         '''
-
         left_actions = actions[:self.num_left]
         right_actions = actions[self.num_left:]
 
@@ -122,10 +121,10 @@ class RoboCupTwoSidedEnvironment(Environment):
                 else:
                     self.right_actions[a] = 2
                     self.kicks += 1
-
+            
             self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
                                                                     left_options=self.left_action_option, right_options=self.right_action_option)
-
+            
             actions_v = [action2one_hot(self.action_space['acs_space'], act) for act in left_act_choice]
         else:
             self.left_actions = left_act_choice

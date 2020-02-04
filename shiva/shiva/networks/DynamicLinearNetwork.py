@@ -22,7 +22,7 @@ class DynamicLinearNetwork(torch.nn.Module):
                             config['last_layer'],
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
-                        ).to(self.device)
+                        )
     def forward(self, x):
         return self.net(x)
 
@@ -55,27 +55,31 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
                         )
+        print("This is the net", self.net)
+
+                        
     def forward(self, x, gumbel=False):
+        print("This is x:", x)
         a = self.net(x)
-        # print(a.shape)
+        print("This is a:", a)
         # if a.shape[0] < 1:
         #     print(a)
         if gumbel:
             # print("Network Output (before gumbel):", x, a)
             if len(a.shape) == 3:
-                return torch.cat([self.gumbel(a[:, :, :self.param_ix]), a[:, :, self.param_ix:]], dim=2)
+                return torch.cat([self.gumbel(a[:, :, :self.param_ix]).double(), a[:, :, self.param_ix:]], dim=2)
             elif len(a.shape) == 2:
-                return torch.cat([self.gumbel(a[:, :self.param_ix]), a[:, self.param_ix:]], dim=1)
+                return torch.cat([self.gumbel(a[:, :self.param_ix]).double(), a[:, self.param_ix:]], dim=1)
             else:
-                return torch.cat([self.gumbel(a[:self.param_ix]), a[self.param_ix:]], dim=0)
+                return torch.cat([self.gumbel(a[:self.param_ix]).double(), a[self.param_ix:]], dim=0)
 
 
         else:
             # print("Network Output (before softmax):", x, a)
             if len(a.shape) == 3:
-                return torch.cat([self.softmax(a[:, :, :self.param_ix]), a[:, :, self.param_ix:]], dim=2)
+                return torch.cat([self.softmax(a[:, :, :self.param_ix]).double(), a[:, :, self.param_ix:]], dim=2)
             elif len(a.shape) == 2:
-                return torch.cat([self.softmax(a[:, :self.param_ix]), a[:, self.param_ix:]], dim=1)
+                return torch.cat([self.softmax(a[:, :self.param_ix]).double(), a[:, self.param_ix:]], dim=1)
             else:
-                return torch.cat([self.softmax(a[:self.param_ix]), a[self.param_ix:]], dim=0)
+                return torch.cat([self.softmax(a[:self.param_ix]).double(), a[self.param_ix:]], dim=0)
 

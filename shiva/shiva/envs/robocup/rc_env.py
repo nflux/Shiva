@@ -355,7 +355,7 @@ class rc_env:
         
         return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
-    def Queue_action(self,agent_id,base,action,options=[]):
+    def Queue_action(self,agent_id,base,action,options):
         '''
             Description
                 Queue up the actions and params for the agents before 
@@ -369,8 +369,7 @@ class rc_env:
                     self.left_action_option[agent_id][p] = options[agent_id][p]
             # i was thinking that maybe I could choose the action here        
             elif self.action_level == 'discretized':
-                for op in options:
-                    self.left_action_option[agent_id] = op
+                self.left_action_option[agent_id] = options[agent_id]
         else:
             self.right_actions[agent_id] = action
             if self.action_level == 'low':
@@ -494,7 +493,7 @@ class rc_env:
                 while j < ep_length:
 
                     self.sync_after_queue.wait()
-                    
+
                     # take the action
                     a = actions[agent_ID]
 
@@ -505,20 +504,11 @@ class rc_env:
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID,a,base))
                     elif act_lvl == 'discretized':
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID,base))
-                        # t = self.left_action_option[agent_ID][0]
-                        # # print("t right before .act():",t)
-                        
-                        # if 0 <= t <= 188:
-                        #     envs[agent_ID].act(0, *self.get_valid_scaled_param(agent_ID, a, base))
-                        # elif 189 <= t <= 197:
-                        #     envs[agent_ID].act(1, *self.get_valid_scaled_param(agent_ID, a, base))
-                        # else:
-                        #     envs[agent_ID].act(3, *self.get_valid_scaled_param(agent_ID, a, base))
 
                     self.sync_at_status.wait()
                     
                     obs_prev[agent_ID] = obs[agent_ID]
-                    self.world_status = envs[agent_ID].step() # update world                        
+                    self.world_status = envs[agent_ID].step() # update world                  
                     obs[agent_ID] = envs[agent_ID].getState() # update obs after all agents have acted
                     # obs[agent_ID] = actions_OH[agent_ID]
 

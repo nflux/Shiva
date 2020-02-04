@@ -47,9 +47,9 @@ class MPIMultiEnv(Environment):
             - agents_instances are in equal amount for all agents
         '''
         if 'Unity' in self.env_specs['type']:
-            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0]))
+            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0]), dtype=np.float64)
         else:
-            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space']))
+            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
         while True:
             # self._step_python_list()
@@ -65,8 +65,9 @@ class MPIMultiEnv(Environment):
         self.close()
     
     def _step_numpy(self):
-        self.envs.gather(self._obs_recv_buffer, root=MPI.ROOT)
-        # self.log("Obs Shape {}".format(self._obs_recv_buffer.shape))
+        self.log("Getting stuck before gather")
+        self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
+        self.log("Obs Shape {}".format(self._obs_recv_buffer.shape))
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         if self.env_specs['num_instances_per_env'] > 1:
@@ -75,13 +76,16 @@ class MPIMultiEnv(Environment):
             actions = [[[self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(observations) ] for observations in self._obs_recv_buffer]
         else:
             # implement for Gym and Robocup
-            actions = [[agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+            # self.log("Obs {}".format(self._obs_recv_buffer[0]))
+            actions = [[agent.get_action(obs, self.step_count, evaluate=True) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
             # self.log("Acs {}".format(actions))
-            
-        self.actions = np.array(actions)
+        
+        # self.log("Acs Shape 1 {}".format(actions))
+        self.actions = np.array(actions, dtype=np.float64)
         # self.log("{} {}".format(self.actions[0][0][0][0], self.actions[0][1][0][0]))
-        # self.log("Acs Shape {}".format(self.actions.shape))
-        self.envs.scatter(self.actions, root=MPI.ROOT)
+
+        # self.log("Acs Shape 2 {}".format(self.actions))
+        self.envs.Scatter([self.actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
     def _step_python_list(self):
         '''We could optimize this gather/scatter ops using numpys'''

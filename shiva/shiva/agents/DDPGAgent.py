@@ -49,20 +49,21 @@ class DDPGAgent(Agent):
             return self.get_parameterized_action(observation, evaluate)
 
     def get_discrete_action(self, observation, step_count, evaluate):
+        # print("The shape of the obs", observation.dtype)
         if evaluate:
-            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+            action = self.actor(torch.tensor(observation).to(self.device).double()).detach()
             # action = torch.argmax(action)
             # action = action2one_hot(self.acs_discrete, action.item())
         else:
+            # print("This is the obs in agent", observation)
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.exploration_noise)
                 action = [np.random.uniform(0,1) for _ in range(self.acs_discrete)] 
                 action += self.ou_noise.noise()
                 action = softmax(torch.from_numpy(action), dim=-1)
-
             else:
                 self.ou_noise.set_scale(self.training_noise)
-                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+                action = self.actor(torch.tensor(observation).to(self.device).double()).detach()
                 action = action.cpu().numpy() + self.ou_noise.noise()
                 action = softmax(torch.from_numpy(action), dim=-1)
 
