@@ -55,6 +55,7 @@ class rc_env:
 
             self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
             # self.action_list = [hfo_env.TURN , hfo_env.KICK]
+            # self.action_list = [hfo_env.DASH , hfo_env.TURN]
             # self.action_list = [hfo_env.DASH, hfo_env.KICK]
             # self.action_list = [hfo_env.DASH]
             # self.action_list = [hfo_env.TURN]
@@ -83,23 +84,27 @@ class rc_env:
             #     4: (100, 0)  # Kick 100 Forward
             # }
 
-            # self.ACTION_DICT = {
-            #     0: (10, 0),  # Dash 10  Forward
-            #     1: (20, 0)  # Dash 20  Forward
-            # }
+            self.ACTION_DICT = {
+                0: (10, 0),         # Dash 10  Forward
+                1: (20, 0),         # Dash 20  Forward
+                2: (100, 0),        # Dash 100 Forward
+                3: (-22.5,),        # Turn left 22.5 degrees
+                4: (22.5,),         # Turn left 22.5 degrees
+                5: (100, 0)         # Kick 100 Forward
+            }
 
             # Experiment 4
-            self.ACTION_DICT = {
-                                0: (10, 0),         # Dash 10  Forward  Maybe the move is to remove this but then I fear the agent might over step and not be able stop for the ball, unless
-                                                    # dashing power equates to speed? or is it distance traveled per dash dictated by power? are they the same thing?
-                                1: (25, 0),         # Dash 25  Forward
-                                2: (100, 0),        # Dash 100 Forward
-                                3: (-22.5,),        # Turn left 22.5 degrees
-                                4: (22.5,),         # Turn right 22.5 degrees
-                                5: (100, -22.5),    # Kick 25  Forward
-                                6: (100, 0),        # Kick 100 Forward
-                                7: (100, 22.5)      # Kick 100 Forward
-                               }
+            # self.ACTION_DICT = {
+            #                     0: (10, 0),         # Dash 10  Forward  Maybe the move is to remove this but then I fear the agent might over step and not be able stop for the ball, unless
+            #                                         # dashing power equates to speed? or is it distance traveled per dash dictated by power? are they the same thing?
+            #                     1: (25, 0),         # Dash 25  Forward
+            #                     2: (100, 0),        # Dash 100 Forward
+            #                     3: (-22.5,),        # Turn left 22.5 degrees
+            #                     4: (22.5,),         # Turn right 22.5 degrees
+            #                     5: (100, -22.5),    # Kick 25  Forward
+            #                     6: (100, 0),        # Kick 100 Forward
+            #                     7: (100, 22.5)      # Kick 100 Forward
+            #                    }
 
             # For testing rewards with HPI
             # self.ACTION_DICT = {
@@ -179,7 +184,7 @@ class rc_env:
 
             # # self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
             # self.acs_dim =  dis_ctr
-            self.acs_dim = 8
+            self.acs_dim = 5
             self.acs_param_dim = 0
 
         elif self.action_level == 'high':
@@ -774,7 +779,7 @@ class rc_env:
         # so this appears to be working, maybe just because the agent doesn't really have to run to it
         # will verify after I fix HPI
         if team_obs[agentID][self.stamina] < 0.0:  # LOW STAMINA
-            reward -= 1
+            reward -= 1.0
             team_reward -= 1
             # print("agent is getting penalized for having low stamina")
 
@@ -798,11 +803,14 @@ class rc_env:
         # if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
 
         # -1 per timestep for being alive
-        reward -= 1
+        # reward -= 1
+
+        # if self.off_the_field(team_obs[agentID]):
+        #     reward -= 2.0
 
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
-            # reward -= 1
-            pass
+            reward -= 0.1
+            # pass
             # print("agent is getting penalized for kicking when not kickable")
 
         # it looks like this is broken for discretized as well
@@ -818,7 +826,7 @@ class rc_env:
             # print(self.left_agent_possesion)
             if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
-                reward += 10 #
+                reward += 100 #
                 team_reward += 1.5
 
             # set initial ball position after kick
@@ -914,6 +922,8 @@ class rc_env:
         #     reward  += delta
         #     team_reward += delta
 
+        # time.sleep(0.2)
+
         ####################### Rewards the closest player to ball for advancing toward ball ############
         distance_cur, closest_agent = self.closest_player_to_ball(team_obs, num_ag)
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
@@ -923,18 +933,18 @@ class rc_env:
             if delta >= 0:
             # if True:
                 team_reward += delta
-                reward += delta * 5.0
-            # else:
-            # reward += delta * 2.5
+                reward += delta * 10.0
+            else:
+                reward += delta * 10.0
             # print("distance to ball reward", delta*5)
             # print(distance_cur, delta)
-            # passs
+            # pass
 
 
             # elif not ball_in_motion:
             #     pass
-            else:
-                reward += delta * 2.5
+            # else:
+            #     reward += delta * 2.5
 
         ##################################################################################
 
@@ -950,8 +960,8 @@ class rc_env:
                 if delta >= 0:
                     reward += delta * 10.0
                     team_reward += delta
-                # else:
-                #     reward += delta * 2.5
+                else:
+                    reward += delta * 5.0
                     # print("ball distance to goal reward.", delta*10)
                     # pass
 
@@ -1026,3 +1036,11 @@ class rc_env:
 
     def prox_2_dist(self, prox):
         return (prox + .8) / 1.8
+
+    def off_the_field(self, obs):
+        print(obs[self.x],obs[self.y])
+        if -1 <= obs[self.x] <= 1 and -1 <= obs[self.y] <= 1:
+            return False
+        else:
+            return True
+

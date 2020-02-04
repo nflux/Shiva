@@ -108,6 +108,14 @@ class RoboCupEnvironment(Environment):
                 self.left_actions[0] = 2
                 self.kicks += 1
 
+            # indicates whether its a dash, turn, or kick action from the action matrix
+            # if 0 <= self.left_action_option[0] < self.env.dash_idx:
+            #     self.left_actions[0] = 0
+            #     self.dashes += 1
+            # else:
+            #     self.left_actions[0] = 1
+            #     self.turns += 1
+
             # if self.left_action_option[0].item() < self.env.dash_idx:
             #     self.left_actions[0] = 0
             #     # print("DASH")
@@ -124,6 +132,7 @@ class RoboCupEnvironment(Environment):
             self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=self.left_actions, left_options=self.left_action_option)
             # self.obs, self.rews, _, _, self.done, _ = self.env.Step(left_actions=torch.tensor([2]), left_options=torch.tensor([552]))
             actions_v = action2one_hot_v(self.action_space['acs_space'], act_choice)
+            print(self.rews)
         else:
             self.left_actions = act_choice.unsqueeze(dim=0)
             self.left_action_option = actions[self.action_space['acs_space']:].unsqueeze(dim=0)

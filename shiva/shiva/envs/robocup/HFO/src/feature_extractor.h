@@ -172,8 +172,8 @@ protected:
 
   int featIndx;
   std::vector<float> feature_vec; // Contains the current features
-  constexpr static float FEAT_MIN = -1;
-  constexpr static float FEAT_MAX = 1;
+  constexpr static float FEAT_MIN = -1.01;
+  constexpr static float FEAT_MAX = 1.01;
   constexpr static float FEAT_INVALID = -2;
 
   int numFeatures; // Total number of features

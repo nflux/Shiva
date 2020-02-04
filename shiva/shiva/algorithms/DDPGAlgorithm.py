@@ -35,9 +35,7 @@ class DDPGAlgorithm(Algorithm):
             the multi environment instances, as such, 
         '''
         # if episodic:
-            
         #     agent.ou_noise.reset()
-            
         # else:
         #     agent.ou_noise.reset()
         #     # return
@@ -63,7 +61,6 @@ class DDPGAlgorithm(Algorithm):
         next_states = next_states.to(self.device)
         dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
         # print(actions)
-        # ja
         # print(states[0])
         # print('from buffer:', states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape, '\n')
         # input()

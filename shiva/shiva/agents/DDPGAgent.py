@@ -38,14 +38,14 @@ class DDPGAgent(Agent):
         if self.continuous == 0:
             self.action_space = 'discrete'
             # print(self.action_space)
-            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete, self.param, networks['actor'])
+            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space, self.discrete, self.param, networks['actor'])
         elif self.discrete == 0:
             self.action_space = 'continuous'
             # print(self.action_space)
-            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.continuous, self.param, networks['actor'])
+            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space, self.continuous, self.param, networks['actor'])
         else:
             print("DDPG Agent, check if this makes sense for parameterized robocup")
-            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete+self.param, self.param, networks['actor'])
+            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space, self.discrete+self.param, self.param, networks['actor'])
 
         self.target_actor = copy.deepcopy(self.actor)
 
@@ -80,9 +80,38 @@ class DDPGAgent(Agent):
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+                action = torch.abs(action)
                 action = action/action.sum()
 
         return action
+
+    # def get_continuous_action(self, observation, step_count, evaluate):
+    #     if evaluate:
+    #         observation = torch.tensor(observation).float().to(self.device)
+    #         action = self.actor(observation)
+    #     else:
+    #         if step_count < self.exploration_steps:
+    #             self.ou_noise.set_scale(self.exploration_noise)
+    #             action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
+    #             # print(action)
+    #             action += self.ou_noise.noise()
+    #             action = np.clip(action, -1, 1)
+    #             # print(action)
+    #             # action = softmax(torch.from_numpy(action))
+    #
+    #         else:
+    #             observation = torch.tensor(observation).float().to(self.device)
+    #             action = self.actor(observation)
+    #             # print(action)
+    #             self.ou_noise.set_scale(self.training_noise)
+    #             action += torch.from_numpy(self.ou_noise.noise()).float().to(self.device)
+    #             action = torch.clamp(action, -1, 1)
+    #             # action = torch.abs(action)
+    #             if len(action) > 1:
+    #                 action = action / action.sum()
+    #
+    #     return action.tolist()
+
 
     def get_continuous_action(self,observation, step_count, evaluate):
         if evaluate:
@@ -91,17 +120,14 @@ class DDPGAgent(Agent):
         else:
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.exploration_noise)
-                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
                 action += self.ou_noise.noise()
-                action = softmax(torch.from_numpy(action))
-
             else:
                 observation = torch.tensor(observation).float().to(self.device)
                 action = self.actor(observation)
                 self.ou_noise.set_scale(self.training_noise)
                 action += torch.tensor(self.ou_noise.noise()).float().to(self.device)
-                action = action/action.sum()
-
+                action = np.clip(action.cpu().detach().numpy(),-1,1)
         return action.tolist()
 
     def get_parameterized_action(self, observation, step_count, evaluate):
@@ -117,29 +143,22 @@ class DDPGAgent(Agent):
 
         return action[0]
 
-
     def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
         observation = torch.tensor(observation).to(self.device)
         action = self.actor(observation.float())
         return action[0]
 
     def save(self, save_path, step):
-        torch.save(self.actor.state_dict(), save_path + 'actor.pth')
-        torch.save(self.target_actor.state_dict(), save_path + 'target_actor.pth')
-        torch.save(self.critic.state_dict(), save_path + 'critic.pth')
-        torch.save(self.target_critic.state_dict(), save_path + 'target_critic.pth')
-        torch.save(self.actor_optimizer.state_dict(), save_path + 'actor_optimizer.pth')
-        torch.save(self.critic_optimizer.state_dict(), save_path + 'critic_optimizer.pth')
+        torch.save(self.actor, save_path + 'actor.pth')
+        torch.save(self.target_actor, save_path + 'target_actor.pth')
+        torch.save(self.critic, save_path + 'critic.pth')
+        torch.save(self.target_critic, save_path + 'target_critic.pth')
 
-
-    def load(self,save_path):
-        self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
-        self.target_actor.load_state_dict(torch.load(save_path + 'target_actor.pth'))
-        self.critic.load_state_dict(torch.load(save_path + 'critic.pth'))
-        self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
-        self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
-        self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
+    def load(self, save_path):
+        self.actor = torch.load(save_path + 'actor.pth')
+        self.target_actor = torch.load(save_path + 'target_actor.pth')
+        self.critic = torch.load(save_path + 'critic.pth')
+        self.target_critic = torch.load(save_path + 'target_critic.pth')
         
     def __str__(self):
         return 'DDPGAgent'
-        
