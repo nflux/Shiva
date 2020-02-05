@@ -1,4 +1,4 @@
-import sys
+import sys, traceback
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
@@ -8,6 +8,7 @@ from mpi4py import MPI
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_class
+from shiva.helpers.misc import terminate_process
 from shiva.learners.Learner import Learner
 
 class MPILearner(Learner):
@@ -240,4 +241,9 @@ class MPILearner(Learner):
 
 
 if __name__ == "__main__":
-    l = MPILearner()
+    try:
+        l = MPILearner()
+    except Exception as e:
+        print("Learner error:", traceback.format_exc())
+    finally:
+        terminate_process()

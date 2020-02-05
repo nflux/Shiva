@@ -6,6 +6,7 @@ from mpi4py import MPI
 from shiva.core.admin import logger
 from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
+from shiva.helpers.misc import terminate_process
 
 class MPIMetaLearner(MetaLearner):
     def __init__(self, configs):
