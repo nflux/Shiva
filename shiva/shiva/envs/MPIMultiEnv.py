@@ -67,7 +67,7 @@ class MPIMultiEnv(Environment):
     def _step_numpy(self):
         self.log("Getting stuck before gather")
         self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
-        self.log("Obs Shape {}".format(self._obs_recv_buffer.shape))
+        self.log("Obs Shape {}".format(self._obs_recv_buffer.dtype))
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         if self.env_specs['num_instances_per_env'] > 1:
@@ -81,11 +81,11 @@ class MPIMultiEnv(Environment):
             # self.log("Acs {}".format(actions))
         
         # self.log("Acs Shape 1 {}".format(actions))
-        self.actions = np.array(actions, dtype=np.float64)
+        actions = np.array(actions, dtype=np.float64)
         # self.log("{} {}".format(self.actions[0][0][0][0], self.actions[0][1][0][0]))
 
         # self.log("Acs Shape 2 {}".format(self.actions))
-        self.envs.Scatter([self.actions, MPI.DOUBLE], None, root=MPI.ROOT)
+        self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
     def _step_python_list(self):
         '''We could optimize this gather/scatter ops using numpys'''
