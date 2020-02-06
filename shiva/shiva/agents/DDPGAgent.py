@@ -72,14 +72,14 @@ class DDPGAgent(Agent):
     def get_discrete_action(self, observation, step_count, evaluate):
         if evaluate:
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-
+            # print("Agent Evaluate {}".format(action))
         else:
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.exploration_noise)
                 action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
-
+                # print("Random: {}".format(action))
             else:
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()

@@ -71,11 +71,11 @@ class MPIMultiEnv(Environment):
 
         if 'Unity' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
-            actions = [ [ [self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+            actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
         else:
             # Gym
             # same?
-            actions = [ [ [self.agents[ix].get_action(o, self.step_count) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+            actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
 
         self.actions = np.array(actions)
         self.envs.scatter(actions, root=MPI.ROOT)

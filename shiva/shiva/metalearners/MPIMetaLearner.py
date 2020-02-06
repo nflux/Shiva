@@ -33,14 +33,14 @@ class MPIMetaLearner(MetaLearner):
         self.configs['MultiEnv'] = menvs_specs
 
     def _launch_learners(self):
-        self._load_learners_configs()
+        self.learners_configs = self._get_learners_configs()
         self.learners = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/learners/MPILearner.py'], maxprocs=self.num_learners)
         # self.log("Scattering {}".format(self.learners_configs))
         self.learners.scatter(self.learners_configs, root=MPI.ROOT)
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
         self.log("Got {} LearnerSpecs".format(len(learners_specs)))
 
-    def _load_learners_configs(self):
+    def _get_learners_configs(self):
         '''
             Check that the Learners assignment with the environment Group Names are correct
             This will only run if the learners_map is set
@@ -61,6 +61,7 @@ class MPIMetaLearner(MetaLearner):
         else:
             '''This happens when all configs are in 1 file'''
             self.learners_configs = [self.configs.copy() for _ in range(self.num_learners)]
+        return self.learners_configs
 
     def _preprocess_config(self):
         if hasattr(self, 'learners_map'):

@@ -183,7 +183,7 @@ class MPILearner(Learner):
 
     def _get_learner_state(self):
         return {
-            'train': self.train,
+            'evaluate': self.evaluate,
             'num_agents': self.num_agents,
             'update_num': self.update_num,
             'load_path': Admin.get_temp_directory(self),
@@ -194,6 +194,7 @@ class MPILearner(Learner):
         return {
             'type': 'Learner',
             'id': self.id,
+            'evaluate': self.evaluate,
             'port': self.port,
             'menv_port': self.menv_port,
             'load_path': Admin.get_temp_directory(self),
