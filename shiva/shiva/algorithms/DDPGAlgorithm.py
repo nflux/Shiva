@@ -72,8 +72,6 @@ class DDPGAlgorithm(Algorithm):
         # The actions that target actor would do in the next state.
         next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
 
-        print('next state type', next_state_actions_target.dtype)
-
         dims = len(next_state_actions_target.shape)
 
         if self.a_space == "discrete" or self.a_space == "parameterized":

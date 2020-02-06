@@ -46,7 +46,7 @@ class MPIEnv(Environment):
 
             if self.env.is_done():
                 # self.print(self.env.get_metrics(episodic=True)) # print metrics
-                self.log("Is done now")
+                # self.log("Is done now")
                 self._send_trajectory_numpy()
                 self.env.reset()
         self.close()
@@ -91,7 +91,7 @@ class MPIEnv(Environment):
                                             torch.tensor([self.dones], dtype=torch.bool).unsqueeze(dim=-1)
                                             )))
 
-            self.log("Pushing to env buffer")
+            # self.log("Pushing to env buffer")
             self.trajectory_buffer.push(exp)
 
     def _unity_reshape(self, arr):
@@ -132,12 +132,12 @@ class MPIEnv(Environment):
             for ix in range(self.num_learners):
                 obs_buffer, acs_buffer, rew_buffer, next_obs_buffer, done_buffer = map(self._reshape, self.trajectory_buffer.agent_numpy(ix))
 
-                self.log(
-                "Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(
-                    obs_buffer.shape, acs_buffer.shape,
-                    rew_buffer.shape,
-                    next_obs_buffer.shape,
-                    done_buffer.shape))
+                # self.log(
+                # "Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(
+                #     obs_buffer.shape, acs_buffer.shape,
+                #     rew_buffer.shape,
+                #     next_obs_buffer.shape,
+                #     done_buffer.shape))
             
                 self.learner.send(self.env.steps_per_episode, dest=ix, tag=Tags.trajectory_length)
                 self.learner.Send([obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_observations)

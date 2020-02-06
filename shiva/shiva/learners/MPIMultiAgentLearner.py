@@ -90,7 +90,7 @@ class MPIMultiAgentLearner(Learner):
 
             '''Change freely condition when to update'''
             if self.done_count % self.episodes_to_update == 0:
-                self.log("Updating at the Learner")
+                self.log("Updating at the Learner with done count: {}".format(self.done_count))
                 self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
                 self.update_num += 1
                 self.agents[0].step_count = self.step_count

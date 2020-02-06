@@ -60,14 +60,14 @@ class MPIMultiEnv(Environment):
                 learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
                 '''Assuming 1 Agent per Learner'''
                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
-                self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
+                # self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
 
         self.close()
     
     def _step_numpy(self):
-        self.log("Getting stuck before gather")
+        # self.log("Getting stuck before gather")
         self.envs.Gather(None, [self._obs_recv_buffer, MPI.FLOAT], root=MPI.ROOT)
-        self.log("Obs Shape {}".format(self._obs_recv_buffer.dtype))
+        # self.log("Obs Shape {}".format(self._obs_recv_buffer.dtype))
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         if self.env_specs['num_instances_per_env'] > 1:
