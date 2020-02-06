@@ -45,15 +45,15 @@ class rc_env:
             self.kick_actions = [hfo_env.KICK] # actions that require the ball to be kickable
             self.acs_dim = len(self.action_list)
             self.acs_param_dim = 5 # 2 for dash and kick 1 for turn and tackle
-            self.left_action_option = np.asarray([[0.0]*self.acs_param_dim for i in range(self.num_left)])
+            self.left_action_option = np.asarray([[0.0]*self.acs_param_dim for i in range(self.num_left)], dtype=np.float32)
             # self.left_actions_OH = np.empty([self.num_left, 8],dtype=float)
-            self.right_action_option = np.asarray([[0.0]*self.acs_param_dim for i in range(self.num_right)])
+            self.right_action_option = np.asarray([[0.0]*self.acs_param_dim for i in range(self.num_right)], dtype=np.float32)
             # self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
         elif self.action_level == 'discretized':
             
             self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
-            power_discretization = np.linspace(0,100,21).tolist()
-            degree_discretization = np.linspace(-180,180,17).tolist()
+            power_discretization = np.linspace(0,100,21, dtype=np.float32).tolist()
+            degree_discretization = np.linspace(-180,180,17, dtype=np.float32).tolist()
 
             self.pow_step = power_discretization[1]-power_discretization[0]
             self.degree_step = degree_discretization[1]-degree_discretization[0]
@@ -155,20 +155,20 @@ class rc_env:
         self.sync_at_reward = threading.Barrier(self.num_left+self.num_right)
 
         # Left side actions, obs, rewards
-        self.left_actions = np.array([0]*self.num_left)
-        self.left_obs = np.empty([self.num_left,self.left_features],dtype=float)
-        self.left_obs_previous = np.empty([self.num_left,self.left_features],dtype=float)
-        self.left_rewards = np.zeros(self.num_left)
+        self.left_actions = np.array([0]*self.num_left, dtype=int)
+        self.left_obs = np.zeros([self.num_left,self.left_features],dtype=np.float32)
+        self.left_obs_previous = np.zeros([self.num_left,self.left_features],dtype=np.float32)
+        self.left_rewards = np.zeros(self.num_left, dtype=np.float32)
         self.left_kickable = [0] * self.num_left
         self.left_agent_possession = ['N'] * self.num_left
         self.left_passer = [0]*self.num_left
         self.left_lost_possession = [0]*self.num_left
 
         # Right side actions, obs, rewards
-        self.right_actions = np.array([0]*self.num_right)
-        self.right_obs = np.empty([self.num_right,self.right_features],dtype=float)
-        self.right_obs_previous = np.empty([self.num_right,self.right_features],dtype=float)
-        self.right_rewards = np.zeros(self.num_right)
+        self.right_actions = np.array([0]*self.num_right, dtype=int)
+        self.right_obs = np.zeros([self.num_right,self.right_features],dtype=np.float32)
+        self.right_obs_previous = np.zeros([self.num_right,self.right_features],dtype=np.float32)
+        self.right_rewards = np.zeros(self.num_right, dtype=np.float32)
         self.right_kickable = [0] * self.num_right
         self.right_agent_possession = ['N'] * self.num_right
         self.right_passer = [0]*self.num_right

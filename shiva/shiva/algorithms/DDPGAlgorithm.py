@@ -70,7 +70,7 @@ class DDPGAlgorithm(Algorithm):
         agent.critic_optimizer.zero_grad()
 
         # The actions that target actor would do in the next state.
-        next_state_actions_target = agent.target_actor(next_states.double(), gumbel=False)
+        next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
 
         print('next state type', next_state_actions_target.dtype)
 
@@ -103,11 +103,11 @@ class DDPGAlgorithm(Algorithm):
 
         # The Q-value the target critic estimates for taking those actions in the next state.
         if dims == 3:
-            Q_next_states_target = agent.target_critic( torch.cat([next_states.double(), next_state_actions_target.double()], 2) )
+            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )
         elif dims == 2:
-            Q_next_states_target = agent.target_critic( torch.cat([next_states.double(), next_state_actions_target.double()], 1) )
+            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 1) )
         else:
-            Q_next_states_target = agent.target_critic( torch.cat([next_states.double(), next_state_actions_target.double()], 0) )
+            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
 
         # print('dones', dones.size())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
@@ -127,11 +127,11 @@ class DDPGAlgorithm(Algorithm):
         # Grab the discrete actions in the batch
         if dims == 3:
             # print(states.shape, actions.shape)
-            Q_these_states_main = agent.critic( torch.cat([states.double(), actions.double()], 2) )
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 2) )
         elif dims == 2:
-            Q_these_states_main = agent.critic( torch.cat([states.double(), actions.double()], 1) )
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 1) )
         else:
-            Q_these_states_main = agent.critic( torch.cat([states.double(), actions.double()], 0) )
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 0) )
 
         # Calculate the loss.
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
@@ -150,17 +150,17 @@ class DDPGAlgorithm(Algorithm):
         agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
         if self.a_space == "discrete" or self.a_space == "parameterized":
-            current_state_actor_actions = agent.actor(states.double(), gumbel=True)
+            current_state_actor_actions = agent.actor(states.float(), gumbel=True)
         else:
-            current_state_actor_actions = agent.actor(states.double())
+            current_state_actor_actions = agent.actor(states.float())
 
         # Calculate Q value for taking those actions in those states'
         if dims == 3:
-            actor_loss_value = agent.critic( torch.cat([states.double(), current_state_actor_actions.double()], 2) )
+            actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
         elif dims == 2:
-            actor_loss_value = agent.critic( torch.cat([states.double(), current_state_actor_actions.double()], 1) )
+            actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 1) )
         else:
-            actor_loss_value = agent.critic( torch.cat([states.double(), current_state_actor_actions.double()], 0) )
+            actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 0) )
 
         # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using logs probabilities
         # penalty for going beyond the bounded interval

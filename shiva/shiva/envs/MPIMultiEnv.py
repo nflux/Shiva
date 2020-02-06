@@ -47,9 +47,9 @@ class MPIMultiEnv(Environment):
             - agents_instances are in equal amount for all agents
         '''
         if 'Unity' in self.env_specs['type']:
-            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0]), dtype=np.float64)
+            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0]), dtype=np.float32)
         else:
-            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
+            self._obs_recv_buffer = np.zeros((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float32)
 
         while True:
             # self._step_python_list()
@@ -66,7 +66,7 @@ class MPIMultiEnv(Environment):
     
     def _step_numpy(self):
         self.log("Getting stuck before gather")
-        self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
+        self.envs.Gather(None, [self._obs_recv_buffer, MPI.FLOAT], root=MPI.ROOT)
         self.log("Obs Shape {}".format(self._obs_recv_buffer.dtype))
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
@@ -77,15 +77,15 @@ class MPIMultiEnv(Environment):
         else:
             # implement for Gym and Robocup
             # self.log("Obs {}".format(self._obs_recv_buffer[0]))
-            actions = [[agent.get_action(obs, self.step_count, evaluate=True) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+            actions = [[agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
             # self.log("Acs {}".format(actions))
         
         # self.log("Acs Shape 1 {}".format(actions))
-        actions = np.array(actions, dtype=np.float64)
+        actions = np.array(actions, dtype=np.float32)
         # self.log("{} {}".format(self.actions[0][0][0][0], self.actions[0][1][0][0]))
 
         # self.log("Acs Shape 2 {}".format(self.actions))
-        self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
+        self.envs.Scatter([actions, MPI.FLOAT], None, root=MPI.ROOT)
 
     def _step_python_list(self):
         '''We could optimize this gather/scatter ops using numpys'''

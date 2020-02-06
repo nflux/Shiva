@@ -52,25 +52,24 @@ class MPIEnv(Environment):
         self.close()
 
     def _step_numpy(self):
-        self.log("Not getting obs")
         self.observations = self.env.get_observations()
         '''
             Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
         '''
         # self.log("Obs Shape {}".format(self.observations.shape))
-        send_obs_buffer = np.array(self.observations, dtype=np.float64)
-        self.log("Obs Shape Send {}".format(send_obs_buffer.shape))
-        self.menv.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
+        send_obs_buffer = np.array(self.observations, dtype=np.float32)
+        # self.log("Obs Shape Send {}".format(send_obs_buffer.shape))
+        self.menv.Gather([send_obs_buffer, MPI.FLOAT], None, root=0)
 
-        recv_action = np.zeros((self.env.num_agents, sum(self.env.action_space.values())), dtype=np.float64)
-        self.log("The recv action {}".format(recv_action.shape))
-        self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
+        recv_action = np.zeros((self.env.num_agents, sum(self.env.action_space.values())), dtype=np.float32)
+        # self.log("The recv action {}".format(recv_action.shape))
+        self.menv.Scatter(None, [recv_action, MPI.FLOAT], root=0)
         self.actions = recv_action
         # self.log("After getting actions")
-        # self.log("Act {}".format(self.actions))
+        # self.log("Act {}".format(self.actions.shape))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
-        self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.rewards).shape, np.array(self.dones).shape))
+        # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.rewards).shape, np.array(self.dones).shape))
         # self.log("Actual types: {} {} {} {} {}".format(type(self.observations), type(self.actions), type(self.next_observations), type(self.reward), type(self.done)))
 
     def _append_step(self):
@@ -121,10 +120,10 @@ class MPIEnv(Environment):
                 self.log("Sending to Learner {} Obs shape {} Acs shape {} Rew shape {} NextObs shape {} Dones shape {}".format(ix, obs_buffer.shape, acs_buffer.shape, rew_buffer.shape, next_obs_buffer.shape, done_buffer.shape))
 
                 self.learner.send(self.env.steps_per_episode, dest=ix, tag=Tags.trajectory_length)
-                self.learner.Send([obs_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_observations)
-                self.learner.Send([acs_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_actions)
-                self.learner.Send([rew_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
-                self.learner.Send([next_obs_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_next_observations)
+                self.learner.Send([obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_observations)
+                self.learner.Send([acs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_actions)
+                self.learner.Send([rew_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_rewards)
+                self.learner.Send([next_obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_next_observations)
                 self.learner.Send([done_buffer, MPI.BOOL], dest=ix, tag=Tags.trajectory_dones)
 
             self.reset_buffers()
@@ -141,10 +140,10 @@ class MPIEnv(Environment):
                     done_buffer.shape))
             
                 self.learner.send(self.env.steps_per_episode, dest=ix, tag=Tags.trajectory_length)
-                self.learner.Send([obs_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_observations)
-                self.learner.Send([acs_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_actions)
-                self.learner.Send([rew_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
-                self.learner.Send([next_obs_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_next_observations)
+                self.learner.Send([obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_observations)
+                self.learner.Send([acs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_actions)
+                self.learner.Send([rew_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_rewards)
+                self.learner.Send([next_obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_next_observations)
                 self.learner.Send([done_buffer, MPI.BOOL], dest=ix, tag=Tags.trajectory_dones)
             
             self.reset_buffer()
