@@ -1,10 +1,11 @@
-import sys, os, argparse
+import sys, os, argparse, traceback
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent))
 
 import torch.multiprocessing as mp
 from shiva.core.admin import Admin
 from shiva.helpers.config_handler import load_config_file_2_dict, load_class
+from shiva.helpers.misc import terminate_process
 
 if __name__ == "__main__":
     mp.set_start_method('spawn')
@@ -19,5 +20,11 @@ if __name__ == "__main__":
     Admin.init(main_dict['Admin']) # Admin is instantiated at shiva.core.admin for project global access
 
     metalearner_class = load_class("shiva.metalearners", main_dict['MetaLearner']['type'])
-    meta = metalearner_class(main_dict)
+
+    try:
+        meta = metalearner_class(main_dict)
+    except Exception as e:
+        print("Meta error:", traceback.format_exc())
+    finally:
+        terminate_process()
         

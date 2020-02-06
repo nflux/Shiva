@@ -1,4 +1,4 @@
-import sys, time
+import sys, time, traceback
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import numpy as np
@@ -7,6 +7,7 @@ from mpi4py import MPI
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.envs.Environment import Environment
+from shiva.helpers.misc import terminate_process
 
 class MPIMultiEnv(Environment):
 
@@ -161,4 +162,9 @@ class MPIMultiEnv(Environment):
 
 
 if __name__ == "__main__":
-    multi = MPIMultiEnv()
+    try:
+        menv = MPIMultiEnv()
+    except Exception as e:
+        print("MultiEnv error:", traceback.format_exc())
+    finally:
+        terminate_process()

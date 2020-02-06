@@ -2,6 +2,7 @@ import sys
 import traceback, warnings
 import numpy as np
 import torch
+import subprocess
 
 def handle_package(package, class_name):
     '''
@@ -43,3 +44,7 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
 def one_hot_from_logits(logits):
     # print(logits.max(1, keepdim=True))
     return (logits == logits.max(1, keepdim=True)[0]).float()
+
+def terminate_process():
+    cmd = 'pkill -e -f "python shiva"'
+    subprocess.call(cmd, shell=True)

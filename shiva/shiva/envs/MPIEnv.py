@@ -11,6 +11,7 @@ from shiva.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.buffers.TensorBuffer import MultiAgentTensorBuffer
 from shiva.helpers.config_handler import load_class
+from shiva.helpers.misc import terminate_process
 
 class MPIEnv(Environment):
 
@@ -296,4 +297,9 @@ class MPIEnv(Environment):
 
 
 if __name__ == "__main__":
-    env = MPIEnv()
+    try:
+        env = MPIEnv()
+    except Exception as e:
+        print("Env error:", traceback.format_exc())
+    finally:
+        terminate_process()
