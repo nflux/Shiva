@@ -23,7 +23,8 @@ class Learner(object):
         return []
         for t in d:
             if t not in attributes_to_ignore:
-                print(t)
+                # print(t)
+                pass
         for a in attributes_to_ignore:
             try:
                 del d[a]

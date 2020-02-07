@@ -29,7 +29,8 @@ class MultiAgentUnityWrapperEnv(Environment):
             worker_id = self.worker_id,
             seed = self.worker_id * 5005,
             side_channels = [self.channel['config'], self.channel['props']],
-            no_graphics= not self.render
+            no_graphics= not self.render,
+            timeout_wait = self.timeout_wait if hasattr(self, 'timeout_wait') else 60
         )
         # self.channel['config'].set_configuration_parameters(**self.unity_configs)
         # for k, v in self.unity_props.items():
