@@ -22,7 +22,6 @@ class MPILearner(Learner):
         # Receive Config from Meta
         self.configs = self.meta.scatter(None, root=0)
         print("Config {}".format(self.configs))
-        # exit()
         super(MPILearner, self).__init__(self.id, self.configs)
         self.log("Received config with {} keys".format(len(self.configs.keys())))
         Admin.init(self.configs['Admin'])
