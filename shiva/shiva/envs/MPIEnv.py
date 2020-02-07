@@ -46,7 +46,7 @@ class MPIEnv(Environment):
             self._step_numpy()
             self._append_step()
             if self.env.is_done():
-                self.print(self.env.get_metrics(episodic=True)) # print metrics
+                self.log(self.env.get_metrics(episodic=True)) # print metrics
                 self._send_trajectory_numpy()
                 self.env.reset()
         # self.close()

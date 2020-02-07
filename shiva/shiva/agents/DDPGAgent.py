@@ -33,8 +33,8 @@ class DDPGAgent(Agent):
         self.param = acs_space['discrete']
         self.acs_space = acs_space['acs_space']
 
-        print(self.discrete, self.continuous, self.param, self.acs_space)
-        print(obs_space)
+        # print(self.discrete, self.continuous, self.param, self.acs_space)
+        # print(obs_space)
         
         if self.continuous == 0:
             self.action_space = 'discrete'
@@ -45,7 +45,7 @@ class DDPGAgent(Agent):
             # print(self.action_space)
             self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.continuous, self.param, networks['actor'])
         else:
-            print("DDPG Agent, check if this makes sense for parameterized robocup")
+            # print("DDPG Agent, check if this makes sense for parameterized robocup")
             self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete+self.param, self.param, networks['actor'])
 
         self.target_actor = copy.deepcopy(self.actor)

@@ -65,7 +65,6 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
             if len(a.shape) == 3:
                 return torch.cat([self.gumbel(a[:, :, :self.param_ix]), a[:, :, self.param_ix:]], dim=2)
             elif len(a.shape) == 2:
-                print(self.param_ix)
                 return torch.cat([self.gumbel(a[:, :self.param_ix]), a[:, self.param_ix:]], dim=1)
             else:
                 return torch.cat([self.gumbel(a[:self.param_ix]), a[self.param_ix:]], dim=0)
