@@ -36,12 +36,12 @@ class DDPGAlgorithm(Algorithm):
             But it does reset the noise after an episode.
 
             For Multi-Environment scenarios, the agent whose noise is being reset is not the agent inside
-            the multi environment instances, as such, 
+            the multi environment instances, as such,
         '''
         # if episodic:
-            
+
         #     agent.ou_noise.reset()
-            
+
         # else:
         #     agent.ou_noise.reset()
         #     # return
@@ -64,6 +64,7 @@ class DDPGAlgorithm(Algorithm):
             dones = dones.bool()
         except:
             states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+            dones = dones.byte()
 
         # Send everything to gpu if available
         states = states.to(self.device)
@@ -81,7 +82,7 @@ class DDPGAlgorithm(Algorithm):
         '''  yes its supposed to be
             Training the Critic
         '''
-    
+
         # Zero the gradient
         agent.critic_optimizer.zero_grad()
 
@@ -112,7 +113,7 @@ class DDPGAlgorithm(Algorithm):
 
 
 
-       
+
         # print(next_state_actions_target.shape, '\n')
 
         # The Q-value the target critic estimates for taking those actions in the next state.
@@ -133,12 +134,12 @@ class DDPGAlgorithm(Algorithm):
         if self.a_space == 'discrete':
             actions = one_hot_from_logits(actions)
         else:
-            actions = softmax(actions) 
+            actions = softmax(actions)
 
         # Grab the discrete actions in the batch
         if dims == 3:
             # print(states.shape, actions.shape)
-            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], 2) )
+            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 2) )
         elif dims == 2:
             Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 1) )
         else:
@@ -195,7 +196,7 @@ class DDPGAlgorithm(Algorithm):
         tgt_ac_state = agent.target_actor.state_dict()
 
         for k, v in ac_state.items():
-            tgt_ac_state[k] = v*self.tau + (1 - self.tau)*tgt_ac_state[k] 
+            tgt_ac_state[k] = v*self.tau + (1 - self.tau)*tgt_ac_state[k]
         agent.target_actor.load_state_dict(tgt_ac_state)
 
         # Update Target Critic
@@ -203,7 +204,7 @@ class DDPGAlgorithm(Algorithm):
         tgt_ct_state = agent.target_critic.state_dict()
 
         for k, v in ct_state.items():
-            tgt_ct_state[k] =  v*self.tau + (1 - self.tau)*tgt_ct_state[k] 
+            tgt_ct_state[k] =  v*self.tau + (1 - self.tau)*tgt_ct_state[k]
         agent.target_critic.load_state_dict(tgt_ct_state)
 
         '''

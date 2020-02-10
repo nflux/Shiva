@@ -17,6 +17,11 @@ class Tags(IntEnum):
     trajectory_rewards = 5
     trajectory_next_observations = 6
     trajectory_dones = 7
+    trajectory_eval = 8
 
     new_agents = 10
+    #For updated rankings
+    rankings = 11
     evolution = 20
+    agent_id = 30
+    evals = 40

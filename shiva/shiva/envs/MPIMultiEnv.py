@@ -20,10 +20,10 @@ class MPIMultiEnv(Environment):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEnv, self).__init__(self.configs)
-        self.log("Received config with {} keys".format(len(self.configs.keys())))
+        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         # Open Port for Learners
         self.port = MPI.Open_port(MPI.INFO_NULL)
-        self.log("Open port {}".format(self.port))
+        #self.log("Open port {}".format(self.port))
 
         '''Set self attrs from Config'''
         self.num_learners = self.configs['MetaLearner']['num_learners']
@@ -61,7 +61,7 @@ class MPIMultiEnv(Environment):
                 learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
                 '''Assuming 1 Agent per Learner'''
                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
-                self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
+                #self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
         # self.close()
 
     def _step_numpy(self):
@@ -93,19 +93,19 @@ class MPIMultiEnv(Environment):
         self.learners = MPI.COMM_WORLD.Accept(self.port) # Wait until check in learners, create comm
         # Get LearnersSpecs to load agents and start running
         self.learners_specs = []
-        self.log("Expecting {} learners".format(self.num_learners))
+        #self.log("Expecting {} learners".format(self.num_learners))
         for i in range(self.num_learners):
             '''Learner IDs are inserted in order :)'''
             learner_spec = self.learners.recv(None, source=i, tag=Tags.specs)
             self.learners_specs.append(learner_spec)
-            self.log("Received Learner {}".format(learner_spec['id']))
+            #self.log("Received Learner {}".format(learner_spec['id']))
 
         '''
             TODO
                 - Assuming one learner above
                 - load centralized/decentralized agents using the config
         '''
-        self.log("Got all Learners Specs\n\t{}".format(self.learners_specs))
+        #self.log("Got all Learners Specs\n\t{}".format(self.learners_specs))
         '''Assuming 1 Agent per Learner, we could break it with a star operation'''
         self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
 

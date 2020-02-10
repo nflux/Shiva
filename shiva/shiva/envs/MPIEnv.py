@@ -25,7 +25,7 @@ class MPIEnv(Environment):
         # Receive Config from MultiEnv
         self.configs = self.menv.bcast(None, root=0)
         super(MPIEnv, self).__init__(self.configs)
-        self.log("Received config with {} keys".format(len(self.configs.keys())))
+        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self._launch_env()
         # Check in and send single env specs with MultiEnv
         self.menv.gather(self._get_env_specs(), root=0)
@@ -34,9 +34,9 @@ class MPIEnv(Environment):
         self.menv.gather(self._get_env_state(), root=0)
         self.create_buffers()
         # Wait for flag to start running
-        self.log("Waiting MultiEnv flag to start")
+        #self.log("Waiting MultiEnv flag to start")
         start_flag = self.menv.bcast(None, root=0)
-        self.log("Start collecting..")
+        #self.log("Start collecting..")
 
         self.run()
 
@@ -137,7 +137,7 @@ class MPIEnv(Environment):
 
             # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
             # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
-            self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
+            #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
 
             self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
             self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
@@ -177,14 +177,14 @@ class MPIEnv(Environment):
         self.env = self.create_environment()
 
     def _connect_learners(self):
-        self.log("Waiting Learners info")
+        #self.log("Waiting Learners info")
         self.learners_specs = self.menv.bcast(None, root=0) # Wait until Learners info arrives from MultiEnv
         self.num_learners = len(self.learners_specs)
         # self.log("Got Learners info and will connect with {} learners".format(self.num_learners))
         # Start communication with Learners
         self.learners_port = self.learners_specs[0]['port']
         self.learner = MPI.COMM_WORLD.Connect(self.learners_port, MPI.INFO_NULL)
-        self.log("Connected with {} learners on port {}".format(self.num_learners, self.learners_port))
+        #self.log("Connected with {} learners on port {}".format(self.num_learners, self.learners_port))
 
     def create_environment(self):
         self.configs['Environment']['port'] += (self.id * 10)

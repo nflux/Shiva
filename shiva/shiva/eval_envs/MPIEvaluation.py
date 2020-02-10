@@ -24,22 +24,19 @@ class MPIEvaluation(Evaluation):
         # Receive Config from MultiEvalWrapper
         self.configs = self.meval.bcast(None, root=0)
         super(MPIEvaluation, self).__init__(self.configs)
-        self.log("Received config with {} keys".format(len(self.configs.keys())))
-        # Open Port for Learners
-        #self.port = MPI.Open_port(MPI.INFO_NULL)
-        #self.debug("Open port {}".format(self.port))
+        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
 
-        # Grab configs
-        #self.num_learners = 1 # assuming 1 Learner
-        self.num_envs = self.num_instances
-        self.evals = np.zeros(self.eval_episodes)
-        self.eval_count = 0
         self._launch_envs()
         self.meval.gather(self._get_eval_specs(), root=0) # checkin with MultiEvalWrapper
         #self._connect_learners()
-        self.agent_id = self.meval.scatter(None, root=0)
-        self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.agent_id))
-        self.log("Agents created: {} of type {}".format(len(self.agents), type(self.agents[0])))
+        self.agent_sel = self.meval.scatter(None, root=0)
+        self.agent_ids = [id for id in self.agent_sel]
+        print('Agent IDs: ', self.agent_ids)
+        print('\n\n\n\n\n')
+        self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
+        self.eval_counts = np.zeros(len(self.agent_ids),dtype=int)
+        self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
+        #self.log("Agents created: {} of type {}".format(len(self.agents), type(self.agents[0])))
 
         # Give start flag!
         self.envs.bcast([True], root=MPI.ROOT)
@@ -48,28 +45,47 @@ class MPIEvaluation(Evaluation):
 
     def run(self):
         self.step_count = 0
+        info = MPI.Status()
+
+
+        try:
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
+        except:
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
+
+
         while True:
             self._receive_eval_numpy()
-            observations = self.envs.gather(None, root=MPI.ROOT)
+            self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
             # self.debug("Obs {}".format(observations))
-            self.step_count += len(observations)
-            actions = self.agents[0].get_action(observations, self.step_count) # assuming one agent for all obs
-            # self.debug("Acs {}".format(actions))
-            self.envs.scatter(actions, root=MPI.ROOT)
+            self.step_count  += self.env_specs['num_instances_per_env'] * self.num_envs
 
-
-            if self.eval_count >= self.eval_episodes:
-                path = self.eval_path+'Agent_'+str(self.agent_id)
-                self.meval.send(self.evals,dest=0,tag=Tags.evals)
-                np.save(path+'/episode_evaluations',self.evals)
-                #self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
-                self.agents = Admin._load_agents(path)
-                self.evals = np.zeros(self.eval_episodes)
-                self.eval_count = 0
-                self.envs.bcast([True], root=MPI.ROOT)
-                self.log("Agents have been told to clear buffers for new agents")
+            if 'Unity' in self.env_specs['type']:
+                actions = [ [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
             else:
-                self.envs.bcast([False], root=MPI.ROOT)
+                # Gym
+                # same?
+                actions = [ [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+
+            self.actions = np.array(actions)
+            self.envs.scatter(self.actions, root=MPI.ROOT)
+
+
+            if self.eval_counts.sum() >= self.eval_episodes*self.num_agents:
+
+                for i in range(self.num_agents):
+                    path = self.eval_path+'Agent_'+str(self.agent_ids[i])
+                    self.meval.send(self.agent_ids[i],dest=0,tag=Tags.agent_id)
+                    self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
+                    np.save(path+'/episode_evaluations',self.evals[i])
+                #self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
+                    self.agents[i] = Admin._load_agents(path)[0]
+                    self.evals[i].fill(0)
+                    self.eval_counts[i]=0
+                    self.envs.bcast([True], root=MPI.ROOT)
+                    print("Agents have been told to clear buffers for new agents")
+                else:
+                    self.envs.bcast([False], root=MPI.ROOT)
 
 
         self.close()
@@ -89,16 +105,16 @@ class MPIEvaluation(Evaluation):
             'type': 'Evaluation',
             'id': self.id,
             'env_specs': self.env_specs,
-            'num_envs': self.num_instances
+            'num_envs': self.num_envs
         }
 
     def _receive_eval_numpy(self):
         '''Receive trajectory reward from each single  evaluation environment in self.envs process group'''
         '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
 
-        if self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_length):
+        if self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info):
             info = MPI.Status()
-            traj_length = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_length, status=info)
+            agent_idx = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
             env_source = info.Get_source()
 
             '''
@@ -106,8 +122,13 @@ class MPIEvaluation(Evaluation):
                     - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional)
                     - Concat
                     '''
-            self.evals[self.eval_count] = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
-            self.eval_count += 1
+            if self.eval_counts[agent_idx] < self.eval_episodes:
+                eval = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
+                self.evals[agent_idx,self.eval_counts[agent_idx]] = eval
+                print('Eval: ', self.evals[agent_idx,self.eval_counts[agent_idx]])
+                self.eval_counts[agent_idx] += 1
+            else:
+                _ = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
 
 
         # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
@@ -121,7 +142,7 @@ class MPIEvaluation(Evaluation):
         comm.Disconnect()
 
     def log(self, msg, to_print=False):
-        text = 'Learner {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
+        text = 'Eval Env {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def show_comms(self):

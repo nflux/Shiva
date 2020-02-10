@@ -1,4 +1,4 @@
-import sys, traceback
+import sys, traceback, os
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
@@ -7,6 +7,7 @@ from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
+import shiva.helpers.file_handler as fh
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process
 from shiva.learners.Learner import Learner
@@ -21,14 +22,13 @@ class MPILearner(Learner):
     def launch(self):
         # Receive Config from Meta
         self.configs = self.meta.scatter(None, root=0)
-        print("Config {}".format(self.configs))
         super(MPILearner, self).__init__(self.id, self.configs)
-        self.log("Received config with {} keys".format(len(self.configs.keys())))
+        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         Admin.init(self.configs['Admin'])
         Admin.add_learner_profile(self, function_only=True)
         # Open Port for Single Environments
         self.port = MPI.Open_port(MPI.INFO_NULL)
-        self.log("Open port {}".format(self.port))
+        #self.log("Open port {}".format(str(self.port)))
 
         # Set some self attributes from received Config (it should have MultiEnv data!)
         self.MULTI_ENV_FLAG = True
@@ -38,7 +38,6 @@ class MPILearner(Learner):
         self.num_menvs = len(self.menvs_specs)
         self.menv_port = self.menvs_specs[0]['port']
         self.env_specs = self.menvs_specs[0]['env_specs']
-
         '''Do the Agent selection using my ID (rank)'''
         '''Assuming 1 Agent per Learner!'''
         self.num_agents = 1
@@ -53,13 +52,21 @@ class MPILearner(Learner):
             self.action_space = self.env_specs['action_space']
 
         # self.log("Got MultiEnvSpecs {}".format(self.menvs_specs))
-        self.log("Obs space {} / Action space {}".format(self.observation_space, self.action_space))
+        #self.log("Obs space {} / Action space {}".format(self.observation_space, self.action_space))
         # Check in with Meta
         self.meta.gather(self._get_learner_specs(), root=0)
+
         # Initialize inter components
         self.alg = self.create_algorithm()
         self.buffer = self.create_buffer()
         self.agents = self.create_agents()
+        if self.pbt:
+            self.create_pbt_dirs()
+            self.save_pbt_agents()
+            for agent in self.agents:
+                agent.save(self.eval_path+'Agent_'+str(agent.id),0)
+
+        self.evolution_checks = 1
         # make first saving
         Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
         # Connect with MultiEnvs
@@ -67,7 +74,7 @@ class MPILearner(Learner):
         self.run()
 
     def run(self, train=True):
-        self.log("Waiting for trajectories..")
+        #self.log("Waiting for trajectories..")
         self.step_count = 0
         self.done_count = 0
         self.update_num = 0
@@ -103,13 +110,11 @@ class MPILearner(Learner):
                 if self.done_count % self.save_checkpoint_episodes == 0:
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
-                '''Send Updated Agents to Meta'''
-                # self.log("Sending metrics to Meta")
-                self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
+            if self.done_count % self.evolution_episodes == 0:
+                self.meta.send(range(self.start_agent_idx,self.end_agent_idx), dest=0, tag=Tags.evolution) # send for evaluation
                 '''Check for Evolution Configs'''
-                if self.meta.Iprobe(source=0, tag=Tags.evolution):
-                    evolution_config = self.learners.recv(None, source=0, tag=Tags.evolution)  # block statement
-                    self.log("Got evolution config!")
+                evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution)  # block statement
+                self.log("Got evolution config!")
                 ''''''
 
             self.collect_metrics(episodic=True)
@@ -126,7 +131,7 @@ class MPILearner(Learner):
         self.metrics_env = self.traj_info['metrics']
         traj_length = self.traj_info['length']
 
-        self.log("{}".format(self.traj_info))
+        #self.log("{}".format(self.traj_info))
 
         observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
         self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
@@ -169,15 +174,15 @@ class MPILearner(Learner):
 
     def _connect_menvs(self):
         # Connect with MultiEnv
-        self.log("Trying to connect to MultiEnv @ {}".format(self.menv_port))
+        #self.log("Trying to connect to MultiEnv @ {}".format(self.menv_port))
         self.menv = MPI.COMM_WORLD.Connect(self.menv_port,  MPI.INFO_NULL)
-        self.log('Connected with MultiEnv')
+        #self.log('Connected with MultiEnv')
 
         '''Assuming 1 MultiEnv'''
         self.menv.send(self._get_learner_specs(), dest=0, tag=Tags.specs)
 
         # Accept Single Env Connection
-        self.log("Expecting connection from {} Envs @ {}".format(self.num_envs, self.port))
+        #self.log("Expecting connection from {} Envs @ {}".format(self.num_envs, self.port))
         self.envs = MPI.COMM_WORLD.Accept(self.port)
 
     def _get_learner_state(self):
@@ -207,7 +212,9 @@ class MPILearner(Learner):
         if self.load_agents:
             agents = Admin._load_agents(self.load_agents, absolute_path=False)
         else:
-            agents = [self.alg.create_agent(ix) for ix in range(self.num_agents)]
+            self.start_agent_idx = self.num_agents * self.id
+            self.end_agent_idx = self.start_agent_idx + self.num_agents
+            agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
         self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
         return agents
 
@@ -223,6 +230,40 @@ class MPILearner(Learner):
         buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
         self.log("Buffer created of type {}".format(buffer_class))
         return buffer
+
+    def save_pbt_agents(self):
+        for agent in self.agents:
+            agent_path = self.eval_path+'Agent_'+str(agent.id)
+            agent.save(agent_path,0)
+            fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
+
+    def create_pbt_dirs(self):
+        for agent in self.agents:
+            if not os.path.isdir(self.eval_path+'Agent_'+str(agent.id)):
+                agent_dir = self.eval_path+'Agent_'+str(agent.id)
+                os.mkdir(agent_dir)
+
+    def welch_T_Test(self):
+        pass
+
+    def copy_weights(self):
+        pass
+
+    def t_test(self):
+        pass
+
+    def sample(self):
+        pass
+
+    def pertubation(self):
+        pass
+
+    def exploitation(self):
+        pass
+
+    def exploration(self):
+        pass
+
 
     def close(self):
         comm = MPI.Comm.Get_parent()

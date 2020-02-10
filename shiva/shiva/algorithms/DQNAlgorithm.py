@@ -47,10 +47,10 @@ class DQNAlgorithm(Algorithm):
         except:
             states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
             rewards = rewards.view(-1, 1)
+            dones = dones.byte()
 
         # print('from buffer Obs {} Acs {} Rew {} NextObs {} Dones {}:'.format(states[:3], actions[:3], rewards[:3], next_states[:3], dones[:3]))
         # # print('from buffer Acs: {} \n'.format(actions))
-
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j)
         input_v = torch.cat([states, actions], dim=-1)

@@ -2,6 +2,7 @@ import os
 import configparser
 import inspect
 from tensorboardX import SummaryWriter
+import numpy as np
 
 import shiva.helpers.dir_handler as dh
 import shiva.helpers.file_handler as fh
@@ -9,7 +10,7 @@ import shiva.helpers.config_handler as ch
 import shiva.helpers.misc as misc
 
 ###################################################################################
-# 
+#
 #   ShivaAdmin
 #       This administrator class is a filing helper for the Shiva framework
 #
@@ -27,7 +28,7 @@ import shiva.helpers.misc as misc
 #            save =              True                   Saving option
 #            traceback =         True                   Debugging traceback option
 #            directory =         { 'runs': '/runs' }    Dictionary of folders where data will be stored
-#         
+#
 ###################################################################################
 
 class ShivaAdmin():
@@ -74,7 +75,7 @@ class ShivaAdmin():
 
     def __str__(self):
         return "<ShivaAdmin>"
-    
+
     def _set_dirs_attrs(self) -> None:
         '''
             Set self attributes for accessing directories
@@ -231,7 +232,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         # self.log("{} {} {} {} {}".format(learner.id, agent, scalar_name, value_y, value_x) )
-        if type(agent) == int:
+        if type(agent) == int or type(agent) == np.int64:
             '''Agent ID was sent'''
             self.writer[learner.id][agent].add_scalar(scalar_name, value_y, value_x)
         else:
@@ -241,7 +242,7 @@ class ShivaAdmin():
         '''
             This procedure is for the MetaLearner (or Learner) to save all it's configurations and agents
             If a MetaLearner is the caller, the saving will cascade along all the Learner that it has, and all the agents inside the Learner
-            
+
             Requirement
                 The caller, before saving, must have added his profile, if not, an error will be thrown
 
@@ -386,7 +387,7 @@ class ShivaAdmin():
         '''
             TODO
                 Implement once needed in order to see what's the best approach
-                
+
             Returns
                 MetaLearner instance
         '''
@@ -485,8 +486,8 @@ class ShivaAdmin():
     def log(self, msg, to_print=False):
         text = "Admin\t\t{}".format(msg)
         self.logger.info(text, to_print or self.print_debug)
-    
+
 
 ###########################################################################
-#         
+#
 ###########################################################################

@@ -7,39 +7,77 @@ from shiva.core.admin import logger
 from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
 from shiva.helpers.misc import terminate_process
+from shiva.utils.Tags import Tags
 
-class MPIMetaLearner(MetaLearner):
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("shiva")
+
+class MPIPBTMetaLearner(MetaLearner):
     def __init__(self, configs):
-        super(MPIMetaLearner, self).__init__(configs, profile=False)
+        super(MPIPBTMetaLearner, self).__init__(configs, profile=False)
         self.configs = configs
         self._preprocess_config()
+        self.learner_specs = None
         self.launch()
+
 
     def launch(self):
         self._launch_menvs()
         self._launch_learners()
+        self._launch_mevals()
         self.run()
 
     def run(self):
-        while True:
-            learner_specs = self.learners.gather(None, root=MPI.ROOT)
-            self.log("Got Learners metrics {}".format(learner_specs))
 
+        while True:
+            self.evaluations = self.mevals.recv(None,source=MPI.ANY_SOURCE, tag=Tags.rankings)
+            print('MetaLearner Rankings: ', self.evaluations)
+
+            if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution):
+                print('MetaLearner Received evolution request')
+                info = MPI.Status()
+                agent_nums = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evolution,status=info)  # block statement
+                learner_source = info.get_source()
+                for agent_id in agent_nums:
+                    evo = dict()
+                    ranking = np.where(self.rankings == agent_id)[0][0]
+                    evo['agent_id'] = agent_id
+                    if ranking >= len(evaluations) * .80:
+                        evo['evolution'] = False
+                        self.learners.send(evo,source=learner_source,tag=Tags.evolution)
+                    elif len(evaluations) *.20  <= ranking <= len(evaluation)) * 0.8:
+                        sample_agent = np.random.choice(range(len(evaluations)))
+                        sample_ranking = np.where(self.rankings == sample_agent)[0][0]
+
+
+
+
+                print('Evolution Agent: ', agent)
+
+                self.log("Got evolution config!")
+
+            # self.debug("Got Learners metrics {}".format(learner_specs))
 
     def _launch_menvs(self):
         self.menvs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIMultiEnv.py'], maxprocs=self.num_menvs)
         self.menvs.bcast(self.configs, root=MPI.ROOT)
         menvs_specs = self.menvs.gather(None, root=MPI.ROOT)
-        self.log("Got total of {} MultiEnvsSpecs with {} keys".format(len(menvs_specs), len(menvs_specs[0].keys())))
+        self.log("Got total of {} MultiEnvsSpecs with {} keys".format(str(len(menvs_specs)), str(len(menvs_specs[0].keys()))))
         self.configs['MultiEnv'] = menvs_specs
 
     def _launch_learners(self):
         self.learners_configs = self._get_learners_configs()
         self.learners = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/learners/MPILearner.py'], maxprocs=self.num_learners)
-        # self.log("Scattering {}".format(self.learners_configs))
         self.learners.scatter(self.learners_configs, root=MPI.ROOT)
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
-        self.log("Got {} LearnerSpecs".format(len(learners_specs)))
+        self.log("Got {}".format(learners_specs))
+
+    def _launch_mevals(self):
+        self.mevals = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/eval_envs/MPIMultiEvaluationWrapper.py'], maxprocs=self.num_mevals)
+        self.mevals.bcast(self.configs, root=MPI.ROOT)
+        mevals_specs = self.mevals.gather(None, root=MPI.ROOT)
+        self.log("Got total of {} MultiEvalSpecs with {} keys".format(len(mevals_specs), len(mevals_specs[0].keys())))
+        self.configs['MultiEvals'] = mevals_specs
 
     def _get_learners_configs(self):
         '''
@@ -78,7 +116,4 @@ class MPIMetaLearner(MetaLearner):
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def close(self):
-        '''Send message to childrens'''
-        #
         self.menvs.Disconnect()
-        self.learners.Disconnect()

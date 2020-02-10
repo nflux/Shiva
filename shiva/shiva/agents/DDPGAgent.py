@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import torch
 import copy
 import pickle
@@ -23,10 +24,10 @@ class DDPGAgent(Agent):
         self.id = id
 
         '''
-        
+
             Maybe do something like
 
-        
+
         '''
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']
@@ -35,7 +36,7 @@ class DDPGAgent(Agent):
 
         print(self.discrete, self.continuous, self.param, self.acs_space)
         print(obs_space)
-        
+
         if self.continuous == 0:
             self.action_space = 'discrete'
             # print(self.action_space)
@@ -53,8 +54,14 @@ class DDPGAgent(Agent):
         self.critic = DynamicLinearNetwork(obs_space + self.acs_space, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
-        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        if isinstance(agent_config['actor_learning_rate'],list):
+            self.actor_learning_rate = random.uniform(agent_config['actor_learning_rate'][0],agent_config['actor_learning_rate'][1])
+            self.critic_learning_rate = random.uniform(agent_config['critic_learning_rate'][0],agent_config['critic_learning_rate'][1])
+            self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        else:
+            self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
 
@@ -112,7 +119,7 @@ class DDPGAgent(Agent):
     def get_parameterized_action(self, observation, step_count, evaluate):
         if evaluate:
             observation = torch.tensor(observation).to(self.device)
-            action = self.actor(observation.float())           
+            action = self.actor(observation.float())
         else:
             # if step_count > self.exploration_steps:
             # else:
@@ -143,7 +150,6 @@ class DDPGAgent(Agent):
     #     self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
     #     self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
     #     self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
-        
+
     def __str__(self):
         return 'DDPGAgent'
-        

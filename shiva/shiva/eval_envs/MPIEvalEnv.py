@@ -26,15 +26,15 @@ class MPIEvalEnv(Environment):
         # Receive Config from MPI Evaluation Object
         self.configs = self.eval.bcast(None, root=0)
         super(MPIEvalEnv, self).__init__(self.configs)
-        self.log("Received config with {} keys".format(len(self.configs.keys())))
+        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self._launch_env()
         # Check in and send single env specs with MPI Evaluation Object
         self.eval.gather(self._get_env_specs(), root=0)
         self.eval.gather(self._get_env_state(), root=0)
         #self._connect_learners()
-        self._clear_buffers()
+        self.create_buffers()
         # Wait for flag to start running
-        self.debug("Waiting Eval flag to start")
+        #self.log("Waiting Eval flag to start")
         start_flag = self.eval.bcast(None, root=0)
         self.log("Start collecting..")
 
@@ -43,32 +43,15 @@ class MPIEvalEnv(Environment):
     def run(self):
         self.env.reset()
 
-
         while True:
-            observations = list(self.env.get_observations())
-            self.eval.gather(observations, root=0)
-            actions = self.eval.scatter(None, root=0)
-            next_observations, reward, done, _ = self.env.step(actions)
 
-            # self.debug("{} {} {} {} {}".format(observations, actions, next_observations, reward, done))
-            # self.debug("{} {} {} {} {}".format(type(observations), type(actions), type(next_observations), type(reward), type(done)))
-
-            self.observations.append(observations)
-            self.actions.append(actions)
-            self.next_observations.append(next_observations)
-            self.rewards.append(reward)
-            self.done.append(done)
+            self._step_numpy()
 
             if self.env.is_done():
 
-                self.log(self.env.get_metrics(episodic=True)) # print metrics
-
-                '''ASSUMING trajectory for 1 AGENT on both approaches'''
-                # self._send_trajectory_python_list()
-                self._send_eval_numpy()
-
-                self._clear_buffers()
                 self.env.reset()
+
+
 
 
             '''Come back to this for emptying old evaluations when a new agent is Loaded
@@ -80,49 +63,71 @@ class MPIEvalEnv(Environment):
 
         self.close()
 
-    def _send_trajectory_python_list(self):
-        '''Python List approach'''
-        trajectory = [[self.observations, self.actions, self.rewards, self.next_observations, self.done]]
-        '''Assuming 1 learner here --> Spec should indicate what agent corresponds to that learner dest=ix'''
-        for ix in range(self.num_learners):
-            '''Python List Approach'''
-            self.learner.send(self._get_env_state(trajectory), dest=ix, tag=Tags.trajectory)
+    def _step_numpy(self):
 
-    def _send_eval_numpy(self):
+        self.observations = self.env.get_observations()
+        '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
+                                    --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
+        '''
+        send_obs_buffer = np.array(self.observations, dtype=np.float64)
+        self.eval.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
+
+        self.actions = self.eval.scatter(None, root=0)
+        # self.log("Obs {} Act {}".format(self.observations, self.actions))
+        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions.tolist())
+
+        for i in range(len(self.rewards)):
+            self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
+            if self.dones[i]:
+                self._send_eval_numpy(self.episode_rewards[i,:].sum(),i)
+                self.episode_rewards[i,:].fill(0)
+                self.reward_idxs[i] = 0
+            self.reward_idxs[i] += 1
+
+
+    def _send_eval_numpy(self,episode_reward,agent_idx):
         '''Numpy approach'''
+        self.eval.send(agent_idx, dest=0, tag=Tags.trajectory_info)
+        self.eval.send(episode_reward, dest=0, tag = Tags.trajectory_eval)
 
-        self.episode_reward = np.array(self.rewards).sum()
-        self.eval.send(self.env.steps_per_episode, dest=0, tag=Tags.trajectory_length)
-        self.eval.send(self.episode_reward, dest=0, tag = Tags.trajectory_eval)
+    def create_buffers(self):
+        if 'Unity' in self.type:
+            '''
+                Need a buffer for each Agent Group (Brain)
+                Agent Groups may have different act/obs spaces and number of agent IDs
+                (Unity is a bit different due to the multi-instance per single environment)
+            '''
+            self.episode_rewards = np.zeros((self.num_agents,self.episode_max_length))
 
-    def _clear_buffers(self):
-        '''
-            --NEED TO DO MORE RESEARCH ON THIS--
-            Python List append is O(1)
-            While Numpy concatenation needs to reallocate memory for the list, thus slower
-            https://stackoverflow.com/questions/38470264/numpy-concatenate-is-slow-any-alternative-approach
-        '''
-        self.observations = []
-        self.actions = []
-        self.next_observations = []
-        self.rewards = []
-        self.done = []
+        else:
+            '''Gym - has only 1 agent per environment and no groups'''
+            self.episode_rewards = np.zeros(self.episode_max_length)
+
+        self.reward_idxs = dict()
+        for i in range(self.num_agents): self.reward_idxs[i] = 0
+
+
+    def reset_buffers(self):
+        if 'Unity' in self.type:
+            '''
+                Need a buffer for each Agent Group (Brain)
+                Agent Groups may have different act/obs spaces and number of agent IDs
+                (Unity is a bit different due to the multi-instance per single environment)
+            '''
+            self.episode_rewards[i].fill(0)
+        else:
+            '''Gym - has only 1 agent per environment and no groups'''
+            self.episode_rewards.fill(0)
+        for i in range(self.num_agents): self.reward_idxs[i] = 0
 
     def _launch_env(self):
         # initiate env from the config
         self.env = self.create_environment()
 
-    def _connect_learners(self):
-        self.log("Waiting Learners info")
-        self.learners_specs = self.menv.bcast(None, root=0) # Wait until Learners info arrives from MultiEnv
-        self.num_learners = len(self.learners_specs)
-        # self.debug("Got Learners info and will connect with {} learners".format(self.num_learners))
-        # Start communication with Learners
-        self.learners_port = self.learners_specs[0]['port']
-        self.learner = MPI.COMM_WORLD.Connect(self.learners_port, MPI.INFO_NULL)
-        self.log("Connected with {} learners on {}".format(self.num_learners, self.learners_port))
 
     def create_environment(self):
+        self.configs['Environment']['port'] += 100 +(self.id * 10)
+        self.configs['Environment']['worker_id'] = 100 * (self.id * 22)
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
 
@@ -134,12 +139,14 @@ class MPIEvalEnv(Environment):
 
     def _get_env_specs(self):
         return {
-            'type': 'EvalEnv',
+            'type': self.type,
             'id': self.id,
             'observation_space': self.env.get_observation_space(),
             'action_space': self.env.get_action_space(),
             'num_agents': self.env.num_agents,
-            #'learners_port': self.learners_port if hasattr(self, 'learners_port') else False
+            'agents_group': self.env.agent_groups if hasattr(self.env, 'agent_groups') else ['Agent_0'], # agents names given by the env - needs to be implemented by RoboCup
+            'num_instances_per_env': self.env.num_instances_per_env if hasattr(self.env, 'num_instances_per_env') else 1, # Unity case
+            'learners_port': self.learners_port if hasattr(self, 'learners_port') else False
         }
 
     def close(self):
@@ -147,7 +154,7 @@ class MPIEvalEnv(Environment):
         comm.Disconnect()
 
     def log(self, msg, to_print=False):
-        text = 'Learner {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
+        text = 'Evaluation Environment {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def show_comms(self):

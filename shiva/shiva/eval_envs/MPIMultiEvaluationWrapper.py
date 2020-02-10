@@ -4,6 +4,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
 from mpi4py import MPI
 import numpy as np
+import pandas as pd
 
 from shiva.eval_envs.Evaluation import Evaluation
 from shiva.utils.Tags import Tags
@@ -25,14 +26,16 @@ class MPIMultiEvaluationWrapper(Evaluation):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEvaluationWrapper, self).__init__(self.configs)
-        self.log("Received config with {} keys".format(len(self.configs.keys())))
-        self.num_evals = self.num_instances
+        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self.rankings = np.zeros(self.num_agents)
         self.evaluations = dict()
         self._launch_evals()
         self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
-        self.agent_ids = np.arange(self.num_agents)
-        self.evals.scatter(self.agent_ids,root=MPI.ROOT)
+        self.agent_ids = range(self.num_agents)
+        self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
+        print('Selected Evaluation Agents: ', self.agent_sel)
+        print('\n\n\n\n\n')
+        self.evals.scatter(self.agent_sel,root=MPI.ROOT)
 
         self.run()
 
@@ -46,19 +49,20 @@ class MPIMultiEvaluationWrapper(Evaluation):
             if self.sort:
                 self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__))
                 print('Rankings: ', self.rankings)
+                print('Rankings type: ', type(self.rankings))
                 self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
-                self.log('Sent rankings to Meta')
+                print('Sent rankings to Meta')
                 self.sort = False
 
         self.close()
 
     def _launch_evals(self):
         # Spawn Single Environments
-        self.evals = MPI.COMM_WORLD.Spawn(sys.executable, args=['shiva/eval_envs/MPIEvaluation.py'], maxprocs=self.num_evals)
+        self.evals = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/eval_envs/MPIEvaluation.py'], maxprocs=self.num_evals)
         self.evals.bcast(self.configs, root=MPI.ROOT)  # Send them the Config
-        self.log('Eval configs sent')
+        #self.log('Eval configs sent')
         eval_spec = self.evals.gather(None, root=MPI.ROOT)  # Wait for Eval Specs ()
-        self.log('Eval specs received')
+        #self.log('Eval specs received')
         assert len(eval_spec) == self.num_evals, "Not all Evaluations checked in.."
         self.eval_specs = eval_spec[0] # set self attr only 1 of them
 
@@ -68,23 +72,23 @@ class MPIMultiEvaluationWrapper(Evaluation):
             'type': 'MultiEval',
             'id': self.id,
             'eval_specs': self.eval_specs,
-            'num_envs': self.num_instances
+            'num_evals': self.num_evals
         }
 
     def _get_evaluations(self):
-        info = MPI.Status()
-        eval = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evals, status=info)
-        env_source = info.Get_source()
-        self.evaluations[env_source] = eval.mean()
-        self.sort = True
+        if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.agent_id):
+            info = MPI.Status()
+            agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.agent_id, status=info)
+            env_source = info.Get_source()
+            eval = self.evals.recv(None, source=env_source, tag=Tags.evals)
+            self.evaluations[agent_id] = eval.mean()
+            self.sort = True
+            print('Multi Evaluation has received evaluations!')
 
     def _get_initial_evaluations(self):
         while len(self.evaluations ) < self.configs['MetaLearner']['num_learners']:
-            info = MPI.Status()
-            eval = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evals, status=info)
-            env_source = info.Get_source()
-            self.evaluations[env_source] = eval.mean()
-        self.sort = True
+            self._get_evaluations()
+            #print('Multi Evaluations: ',self.evaluations)
 
 
     def close(self):
@@ -92,7 +96,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         comm.Disconnect()
 
     def log(self, msg, to_print=False):
-        text = 'Learner {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
+        text = 'MultiEval {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def show_comms(self):
