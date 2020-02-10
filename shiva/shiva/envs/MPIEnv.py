@@ -66,6 +66,7 @@ class MPIEnv(Environment):
         # self.log("The recv action {}".format(recv_action.shape))
         self.menv.Scatter(None, [recv_action, MPI.FLOAT], root=0)
         self.actions = recv_action
+        # self.log("Actions {} Obs {}".format(self.actions, send_obs_buffer))
         # self.log("After getting actions")
         # self.log("Act {}".format(self.actions.shape))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
@@ -134,18 +135,18 @@ class MPIEnv(Environment):
                 obs_buffer, acs_buffer, rew_buffer, next_obs_buffer, done_buffer = map(self._reshape, self.trajectory_buffer.agent_numpy(ix))
 
                 # self.log(
-                # "Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(
-                #     obs_buffer.shape, acs_buffer.shape,
-                #     rew_buffer.shape,
-                #     next_obs_buffer.shape,
-                #     done_buffer.shape))
+                # "Trajectory: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(
+                #     obs_buffer.dtype, acs_buffer.dtype,
+                #     rew_buffer.dtype,
+                #     next_obs_buffer.dtype,
+                #     done_buffer.dtype))
             
                 self.learner.send(self.env.steps_per_episode, dest=ix, tag=Tags.trajectory_length)
                 self.learner.Send([obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_observations)
                 self.learner.Send([acs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_actions)
                 self.learner.Send([rew_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_rewards)
                 self.learner.Send([next_obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_next_observations)
-                self.learner.Send([done_buffer, MPI.BOOL], dest=ix, tag=Tags.trajectory_dones)
+                self.learner.Send([done_buffer, MPI.C_BOOL], dest=ix, tag=Tags.trajectory_dones)
             
             self.reset_buffer()
 
@@ -300,6 +301,6 @@ if __name__ == "__main__":
     try:
         env = MPIEnv()
     except Exception as e:
-        print("Env error:", traceback.format_exc())
+        print("Env error:", traceback.format_exc(), flush=True)
     finally:
         terminate_process()

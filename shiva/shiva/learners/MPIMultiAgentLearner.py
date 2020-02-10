@@ -121,6 +121,7 @@ class MPIMultiAgentLearner(Learner):
 
         info = MPI.Status()
         traj_length = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_length, status=info)
+        # self.log("This is the traj {}".format(type(traj_length)))
         env_source = info.Get_source()
 
         '''
@@ -128,25 +129,25 @@ class MPIMultiAgentLearner(Learner):
                 - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional) 
         '''
 
-        observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
+        observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float32)
         self.envs.Recv([observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_observations)
         # self.log("Got Obs shape {}".format(observations.shape))
 
-        actions = np.zeros([traj_length, self.num_agents, self.acs_dim], dtype=np.float64)
+        actions = np.zeros([traj_length, self.num_agents, self.acs_dim], dtype=np.float32)
         self.envs.Recv([actions, MPI.FLOAT], source=env_source, tag=Tags.trajectory_actions)
         # self.log("Got Acs shape {}".format(actions.shape))
 
-        rewards = np.zeros([traj_length, self.num_agents, 1], dtype=np.float64)
+        rewards = np.zeros([traj_length, self.num_agents, 1], dtype=np.float32)
         self.envs.Recv([rewards, MPI.FLOAT], source=env_source, tag=Tags.trajectory_rewards)
         # self.log("Got Rewards shape {}".format(rewards.shape))
 
-        next_observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
+        next_observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float32)
         self.envs.Recv([next_observations, MPI.FLOAT], source=env_source, tag=Tags.trajectory_next_observations)
         # self.log("Got Next Obs shape {}".format(next_observations.shape))
 
         '''are dones even needed? It's obviously a trajectory...'''
-        dones = np.zeros([traj_length, self.num_agents, 1], dtype=np.float64)
-        self.envs.Recv([dones, MPI.FLOAT], source=env_source, tag=Tags.trajectory_dones)
+        dones = np.zeros([traj_length, self.num_agents, 1], dtype=np.bool)
+        self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
         # self.log("Got Dones shape {}".format(dones.shape))
 
         self.step_count += traj_length
@@ -263,6 +264,6 @@ if __name__ == "__main__":
     try:
         l = MPIMultiAgentLearner()
     except Exception as e:
-        print("Learner error:", traceback.format_exc())
+        print("Learner error:", traceback.format_exc(), flush=True)
     finally:
         terminate_process()

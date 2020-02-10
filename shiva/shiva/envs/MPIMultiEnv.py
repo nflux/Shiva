@@ -61,7 +61,6 @@ class MPIMultiEnv(Environment):
                 learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
                 '''Assuming 1 Agent per Learner'''
                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
-                # self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
 
         self.close()
     
@@ -83,6 +82,7 @@ class MPIMultiEnv(Environment):
         
         # self.log("Acs Shape 1 {}".format(actions))
         actions = np.array(actions, dtype=np.float32)
+        # self.log("Actions {} Obs {}".format(actions, self._obs_recv_buffer))
         # self.log("{} {}".format(self.actions[0][0][0][0], self.actions[0][1][0][0]))
 
         # self.log("Acs Shape 2 {}".format(self.actions))
@@ -165,6 +165,6 @@ if __name__ == "__main__":
     try:
         menv = MPIMultiEnv()
     except Exception as e:
-        print("MultiEnv error:", traceback.format_exc())
+        print("MultiEnv error:", traceback.format_exc(), flush=True)
     finally:
         terminate_process()

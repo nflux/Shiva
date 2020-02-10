@@ -14,7 +14,7 @@ class MultiAgentTensorBuffer(ReplayBuffer):
     def push(self, exps):
         obs, ac, rew, next_obs, done = exps
         #         print("Received action:\n", ac)
-        # print("Obs shape {} Acs shape {} Rew shape {} Next Obs shape {} Dones shape {}".format(obs.shape, ac.shape, rew.shape, next_obs.shape, done.shape))
+        # print("Obs shape {} Acs shape {} Rew shape {} Next Obs shape {} Dones shape {}".format(obs, ac, rew, next_obs, done))
         nentries = len(obs)
         if self.current_index + nentries > self.max_size:
             rollover = self.max_size - self.current_index

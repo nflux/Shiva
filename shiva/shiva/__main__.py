@@ -24,7 +24,7 @@ if __name__ == "__main__":
     try:
         meta = metalearner_class(main_dict)
     except Exception as e:
-        print("Meta error:", traceback.format_exc())
+        print("Meta error:", traceback.format_exc(), flush=True)
     finally:
         terminate_process()
         
