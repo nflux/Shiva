@@ -39,7 +39,7 @@ class ShivaAdmin():
         'summary':      'Tensorboards',
         'checkpoint':   'Ep{ep_num}',
         'learner_data': 'Learner_Data',
-        'agent':        'A{id}',
+        'agent':        '{role}{id}',
     }
 
     def __init__(self, logger, config=None):
@@ -182,7 +182,7 @@ class ShivaAdmin():
                 @agent              Agent instance ref to be saved
         '''
         if not self.need_to_save: return
-        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id)) ) )
+        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ) )
         if agent.id not in self._agent_dir[learner.id]:
             self._agent_dir[learner.id][agent.id] = []
         self._agent_dir[learner.id][agent.id].append(new_dir)
@@ -198,7 +198,7 @@ class ShivaAdmin():
         '''
         self._add_agent_checkpoint(learner, agent)
         if self.use_temp_folder:
-            return os.path.join(self._learner_dir[learner.id]['temp'], self.__folder_name__['agent'].format(id=str(agent.id)))
+            return os.path.join(self._learner_dir[learner.id]['temp'], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) )
         else:
             return self._agent_dir[learner.id][agent.id][-1]
 
@@ -212,7 +212,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         if agent.id not in self.writer[learner.id]:
-            new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['summary'], self.__folder_name__['agent'].format(id=str(agent.id)) ) )
+            new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['summary'], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ) )
             self.writer[learner.id][agent.id] = SummaryWriter(
                 logdir = new_dir,
                 # filename_suffix = '-' + self.__folder_name__['agent'].format(id=str(agent.id))

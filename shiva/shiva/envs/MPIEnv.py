@@ -96,7 +96,8 @@ class MPIEnv(Environment):
         if 'Unity' in self.type:
             for ix in range(self.num_learners):
                 '''Assuming 1 Agent per Learner, no support for MADDPG here'''
-                self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape, self.trajectory_buffers[ix].all_numpy())
+                agent_ix = ix
+                self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape, self.trajectory_buffers[agent_ix].all_numpy())
 
                 trajectory_info = {
                     'env_id': self.id,

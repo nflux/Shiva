@@ -16,6 +16,8 @@ class Agent(object):
             learning_rate = Learning Rate
         '''
         {setattr(self, k, v) for k,v in agent_config.items()}
+        self.id = id
+        self.role = agent_config['role'] if 'role' in agent_config else 'A' # use 'A' for the folder name when there's no role assigned
         self.obs_space = obs_space
         self.acs_space = acs_space
         self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])

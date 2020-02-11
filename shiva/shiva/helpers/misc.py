@@ -3,6 +3,7 @@ import traceback, warnings
 import numpy as np
 import torch
 import subprocess
+import platform
 
 def handle_package(package, class_name):
     '''
@@ -46,5 +47,9 @@ def one_hot_from_logits(logits):
     return (logits == logits.max(1, keepdim=True)[0]).float()
 
 def terminate_process():
-    cmd = 'pkill -e -f "python shiva"'
+    system = platform.system()
+    if system == 'Darwin':
+        cmd = 'pkill -f "Python shiva"'
+    else:
+        cmd = 'pkill -e -f "python shiva"'
     subprocess.call(cmd, shell=True)

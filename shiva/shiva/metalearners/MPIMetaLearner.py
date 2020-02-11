@@ -26,8 +26,9 @@ class MPIMetaLearner(MetaLearner):
             self.log("Got Learners metrics {}".format(learner_specs))
 
     def _launch_menvs(self):
+        self.menv_configs = self._get_menv_configs()
         self.menvs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIMultiEnv.py'], maxprocs=self.num_menvs)
-        self.menvs.bcast(self.configs, root=MPI.ROOT)
+        self.menvs.bcast(self.menv_configs, root=MPI.ROOT)
         menvs_specs = self.menvs.gather(None, root=MPI.ROOT)
         self.log("Got total of {} MultiEnvsSpecs with {} keys".format(len(menvs_specs), len(menvs_specs[0].keys())))
         self.configs['MultiEnv'] = menvs_specs
@@ -40,6 +41,15 @@ class MPIMetaLearner(MetaLearner):
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
         self.log("Got {} LearnerSpecs".format(len(learners_specs)))
 
+    def _get_menv_configs(self):
+        self.menv_configs = []
+        if hasattr(self, 'learners_map'):
+            ''' Create a friendly Learners map for the MultiEnv '''
+            self.menv_configs = self.configs.copy()
+        elif 'Learner' in self.configs:
+            self.menv_configs = self.configs.copy()
+        return self.menv_configs
+
     def _get_learners_configs(self):
         '''
             Check that the Learners assignment with the environment Group Names are correct
@@ -47,20 +57,27 @@ class MPIMetaLearner(MetaLearner):
         '''
         self.learner_configs = []
         if hasattr(self, 'learners_map'):
+            '''First check that all Agents Groups are assigned to a Learner'''
             for ix, agent_group in enumerate(self.configs['MultiEnv'][0]['env_specs']['agents_group']):
                 if agent_group in set(self.learners_map.keys()):
                     pass
                 else:
-                    assert "Config error - Agent Group {} was not found on the [MetaLearner] learners_map attribute".format(agent_group)
+                    assert "Agent Group {} is not being assigned to any Learner\nUse the 'learners_map' attribute on the [MetaLearner] section".format(agent_group)
             '''Do some preprocessing before spreading the config'''
             # load each one of the configs and keeping same order
             self.learners_configs = []
-            for config_path in list(self.learners_map.keys()):
+            for config_path, learner_agent_groups in self.learners_map.items():
                 learner_config = load_config_file_2_dict(config_path)
-                self.learners_configs.append(merge_dicts(self.configs, learner_config))
-        else:
-            '''This happens when all configs are in 1 file'''
+                learner_config = merge_dicts(self.configs, learner_config)
+                learner_config['Learner']['agent_groups'] = learner_agent_groups
+                self.learners_configs.append(learner_config)
+            # for config_path in list(self.learners_map.keys()):
+            #     learner_config = load_config_file_2_dict(config_path)
+            #     self.learners_configs.append(merge_dicts(self.configs, learner_config))
+        elif 'Learner' in self.configs:
             self.learners_configs = [self.configs.copy() for _ in range(self.num_learners)]
+        else:
+            assert "Error processing Learners Configs"
         return self.learners_configs
 
     def _preprocess_config(self):

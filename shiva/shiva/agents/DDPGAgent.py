@@ -20,8 +20,6 @@ class DDPGAgent(Agent):
             torch.manual_seed(5)
             np.random.seed(5)
 
-        self.id = id
-
         '''
         
             Maybe do something like

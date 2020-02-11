@@ -69,6 +69,8 @@ class MPIMultiEnv(Environment):
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
 
+        self.log("{}\n{}".format(self.agents, self._obs_recv_buffer))
+
         if 'Unity' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
             actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
@@ -89,25 +91,35 @@ class MPIMultiEnv(Environment):
         assert len(envs_spec) == self.num_envs, "Not all Environments checked in.."
         self.env_specs = envs_spec[0] # set self attr only 1 of them
 
+    def _load_learner_agents_from_spec(self, learner_spec):
+
+        if self.configs['MetaLearner']['learners_map']:
+            if not hasattr(self, 'agents'):
+                self.learner_agents = []
+                self.agents = []
+            assert 'agent_groups' in learner_spec, "Expected the Learner {} to have an Agent Groups assigned, got {}".format(learner_spec['id'], learner_spec)
+            new_agents = Admin._load_agents(learner_spec['load_path'])
+            for a in new_agents:
+                self.agents[a.role] = a
+            self.learner_agents[learner_spec['id']] = new_agents
+        else:
+            return Admin._load_agents(learner_spec['load_path'])[0]  # force to grab the first
+
+    def _receive_learner_spec(self, learner_ix):
+        learner_spec = self.learners.recv(None, source=learner_ix, tag=Tags.specs)
+        self.agents[learner_ix] = self._load_learner_agents_from_spec(learner_spec)
+        self.learners_specs.append(learner_spec)
+        self.log("Received Learner<{}>".format(learner_spec['id']))
+
     def _connect_learners(self):
         self.learners = MPI.COMM_WORLD.Accept(self.port) # Wait until check in learners, create comm
         # Get LearnersSpecs to load agents and start running
         self.learners_specs = []
-        self.log("Expecting {} learners".format(self.num_learners))
-        for i in range(self.num_learners):
-            '''Learner IDs are inserted in order :)'''
-            learner_spec = self.learners.recv(None, source=i, tag=Tags.specs)
-            self.learners_specs.append(learner_spec)
-            self.log("Received Learner {}".format(learner_spec['id']))
-
-        '''
-            TODO
-                - Assuming one learner above
-                - load centralized/decentralized agents using the config
-        '''
-        self.log("Got all Learners Specs\n\t{}".format(self.learners_specs))
-        '''Assuming 1 Agent per Learner, we could break it with a star operation'''
-        self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
+        self.log("Expecting {} Learners".format(self.num_learners))
+        self.agents = []
+        for ix in range(self.num_learners):
+            self._receive_learner_spec(ix)
+        self.log("Got {} Agents, {} Learners\n{}".format(len(self.agents), len(self.learners_specs), self.learners_specs))
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
@@ -121,7 +133,8 @@ class MPIMultiEnv(Environment):
             'id': self.id,
             'port': self.port,
             'env_specs': self.env_specs,
-            'num_envs': self.num_instances
+            'num_envs': self.num_instances,
+            'num_learners': self.num_learners
         }
 
     def close(self):

@@ -39,27 +39,29 @@ class MPILearner(Learner):
         self.menv_port = self.menvs_specs[0]['port']
         self.env_specs = self.menvs_specs[0]['env_specs']
 
-        '''Do the Agent selection using my ID (rank)'''
-        '''Assuming 1 Agent per Learner!'''
-        self.num_agents = 1
+        self.num_agents = len(self.agent_groups) if hasattr(self, 'agent_groups') else 1
 
         try:
+            self.observation_space = self.env_specs['observation_space']
+            self.action_space = self.env_specs['action_space']
             # self.observation_space = self.env_specs['observation_space'][self.config['Learner']['group']]
             # self.action_space = self.env_specs['action_space'][self.config['Learner']['group']]
-            self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
-            self.action_space = list(self.env_specs['action_space'].values())[self.id]
+            # self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
+            # self.action_space = list(self.env_specs['action_space'].values())[self.id]
         except:
             self.observation_space = self.env_specs['observation_space']
             self.action_space = self.env_specs['action_space']
 
         # self.log("Got MultiEnvSpecs {}".format(self.menvs_specs))
         self.log("Obs space {} / Action space {}".format(self.observation_space, self.action_space))
+
         # Check in with Meta
         self.meta.gather(self._get_learner_specs(), root=0)
         # Initialize inter components
         self.alg = self.create_algorithm()
         self.buffer = self.create_buffer()
         self.agents = self.create_agents()
+
         # make first saving
         Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
         # Connect with MultiEnvs
@@ -182,7 +184,10 @@ class MPILearner(Learner):
 
     def _get_learner_state(self):
         return {
+            'type': 'Learner',
+            'id': self.id,
             'evaluate': self.evaluate,
+            'agent_groups': self.agent_groups,
             'num_agents': self.num_agents,
             'update_num': self.update_num,
             'load_path': Admin.get_temp_directory(self),
@@ -194,6 +199,9 @@ class MPILearner(Learner):
             'type': 'Learner',
             'id': self.id,
             'evaluate': self.evaluate,
+            'agent_groups': self.agent_groups if hasattr(self, 'agent_groups') else False,
+            'num_agents': self.num_agents,
+            'num_agents_per_group': self.num_agents_per_group if hasattr(self, 'num_agents_per_group') else 1
             'port': self.port,
             'menv_port': self.menv_port,
             'load_path': Admin.get_temp_directory(self),
@@ -206,9 +214,15 @@ class MPILearner(Learner):
     def create_agents(self):
         if self.load_agents:
             agents = Admin._load_agents(self.load_agents, absolute_path=False)
-        else:
+        if hasattr(self, 'agent_groups'):
+            agents = [self.alg.create_agent_of_group(ix, group) for ix, group in enumerate(self.agent_groups)]
+            self.num_agents_per_group = {group:len(agents[group]) for group in self.agent_groups}
+            self.log("{} agents created of type {}".format(len(agents), [str(a) for a in agents]))
+        elif self.num_agents == 1:
             agents = [self.alg.create_agent(ix) for ix in range(self.num_agents)]
-        self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
+            self.log("{} agents created of type {}".format(len(agents), str(agents[0])))
+        else:
+            assert "Some error"
         return agents
 
     def create_algorithm(self):
@@ -220,7 +234,11 @@ class MPILearner(Learner):
     def create_buffer(self):
         # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
+        if hasattr(self, 'agent_groups'):
+            '''Assuming agents with same obs/acs dim'''
+            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space[self.agent_groups[0]], self.action_space[self.agent_groups[0]]['acs_space'])
+        else:
+            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
         self.log("Buffer created of type {}".format(buffer_class))
         return buffer
 
