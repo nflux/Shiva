@@ -29,32 +29,32 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
 
     net_layers = []
 
-    net_layers.append(nn.Linear(input_dim, layers[0]).float())
-    net_layers.append(activ_function[0]().float())
+    net_layers.append(nn.Linear(input_dim, layers[0]))
+    net_layers.append(activ_function[0]())
     in_layer_size = layers[0]
 
     if len(activ_function) > 1:
         for i, (out_layer_size, af) in enumerate(zip(layers, activ_function)):
             if i == 0: continue
-            net_layers.append(nn.Linear(in_layer_size, out_layer_size).float())
-            net_layers.append(af().float())
+            net_layers.append(nn.Linear(in_layer_size, out_layer_size))
+            net_layers.append(af())
             in_layer_size = out_layer_size
     else:
         af = activ_function[0]
         for i, out_layer_size in enumerate(layers):
             if i == 0: continue
-            net_layers.append(nn.Linear(in_layer_size, out_layer_size).float())
-            net_layers.append(af().float())
+            net_layers.append(nn.Linear(in_layer_size, out_layer_size))
+            net_layers.append(af())
             in_layer_size = out_layer_size
 
     if last_layer:
         last_layer_dim = layers[len(layers)-1] if len(layers) > 1 else layers[0]
-        net_layers.append(nn.Linear(last_layer_dim, output_dim).float())
+        net_layers.append(nn.Linear(last_layer_dim, output_dim))
 
 
     for i, layer in enumerate(net_layers):
         if 'linear' in str(type(layer)):
-            layer.weight.data.normal_(0, 0.01).float()
+            layer.weight.data.normal_(0, 0.01)
         # if i % 2 == 0:
         #     net_layers[i] = 
 
@@ -62,9 +62,9 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
 
     if output_function is not None:
         try:
-            net_layers.append(output_function(dim=-1).float())
+            net_layers.append(output_function(dim=-1))
         except TypeError:
-            net_layers.append(output_function().float())
+            net_layers.append(output_function())
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    return nn.Sequential(*net_layers).to(device).float()
+    return nn.Sequential(*net_layers).to(device)

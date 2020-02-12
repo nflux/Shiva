@@ -55,6 +55,7 @@ class ShivaAdmin():
         '''
         self.config = config
         
+        self.print_debug = self.config['print_debug']
         self.need_to_save = self.config['save']
         self.traceback = self.config['traceback']
         self.dirs = self.config['directory']
@@ -331,7 +332,7 @@ class ShivaAdmin():
                 else:
                     self._save_agent(learner, learner.agent, checkpoint_num)
             except AttributeError:
-                self.log(learner)
+                # self.log(learner)
                 assert False, "Couldn't find the Learners agent/s..."
 
     def _save_agent(self, learner, agent, checkpoint_num=None):

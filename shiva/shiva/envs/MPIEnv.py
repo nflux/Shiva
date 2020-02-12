@@ -58,9 +58,9 @@ class MPIEnv(Environment):
             Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
         '''
         # self.log("Obs Shape {}".format(self.observations.shape))
-        send_obs_buffer = np.array(self.observations, dtype=np.float32)
+        self.observations = np.array(self.observations, dtype=np.float32)
         # self.log("Obs Shape Send {}".format(send_obs_buffer.shape))
-        self.menv.Gather([send_obs_buffer, MPI.FLOAT], None, root=0)
+        self.menv.Gather([self.observations, MPI.FLOAT], None, root=0)
 
         recv_action = np.zeros((self.env.num_agents, sum(self.env.action_space.values())), dtype=np.float32)
         # self.log("The recv action {}".format(recv_action.shape))

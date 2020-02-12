@@ -179,6 +179,7 @@ class rc_env:
         self.right_base = 'base_right'
 
         self.left_agent_possesion = ['N'] * self.num_left
+        self.right_agent_possesion = ['N'] * self.num_right
 
     def set_observation_indexes(self):
 
@@ -645,7 +646,6 @@ class rc_env:
                     reward+= 0 #-goal_points/4.0
 
                 possession_side = 'N'
-                self.right_agent_possesion = ['N'] * self.num_right
                 return reward
         
         if self.left_base == base:

@@ -131,12 +131,12 @@ class DDPGAgent(Agent):
         # torch.save(self.critic_optimizer.state_dict(), save_path + 'critic_optimizer.pth')
 
         # Ezequiel was here :)
-        torch.save(self.actor, save_path + '/actor.pth')
-        torch.save(self.target_actor, save_path + '/target_actor.pth')
-        torch.save(self.critic, save_path + '/critic.pth')
-        torch.save(self.target_critic, save_path + '/target_critic.pth')
-        torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
-        torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
+        torch.save(self.actor.state_dict(), save_path + '/actor.pth')
+        torch.save(self.target_actor.state_dict(), save_path + '/target_actor.pth')
+        torch.save(self.critic.state_dict(), save_path + '/critic.pth')
+        torch.save(self.target_critic.state_dict(), save_path + '/target_critic.pth')
+        torch.save(self.actor_optimizer.state_dict(), save_path + '/actor_optimizer.pth')
+        torch.save(self.critic_optimizer.state_dict(), save_path + '/critic_optimizer.pth')
 
 
     # def load(self,save_path):
