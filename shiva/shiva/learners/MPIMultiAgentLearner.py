@@ -91,7 +91,7 @@ class MPIMultiAgentLearner(Learner):
 
             '''Change freely condition when to update'''
             if self.done_count % self.episodes_to_update == 0:
-                self.log("Updating at the Learner with done count: {}".format(self.done_count))
+                # self.log("Updating at the Learner with done count: {}".format(self.done_count))
                 self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
                 self.update_num += 1
                 self.agents[0].step_count = self.step_count
@@ -161,10 +161,10 @@ class MPIMultiAgentLearner(Learner):
         # self.log("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
         # self.log("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
 
-        exp = list(map(torch.clone, (torch.tensor(observations),
-                                     torch.tensor(actions),
-                                     torch.tensor(rewards),
-                                     torch.tensor(next_observations),
+        exp = list(map(torch.clone, (torch.tensor(observations, dtype=torch.float32),
+                                     torch.tensor(actions, dtype=torch.float32),
+                                     torch.tensor(rewards, dtype=torch.float32),
+                                     torch.tensor(next_observations, dtype=torch.float32),
                                      torch.tensor(dones, dtype=torch.bool)
                                      )))
   

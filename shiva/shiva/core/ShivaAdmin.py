@@ -434,7 +434,7 @@ class ShivaAdmin():
                     this_agent_policies.append(pols)
                     policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
                     _new_agent.load_net(policy_name, pols)
-            self.log("Loading Agent {} with {} networks".format(agent_pickle.replace(os.getcwd(), ''), len(this_agent_policies)), to_print=True)
+            # self.log("Loading Agent {} with {} networks".format(agent_pickle.replace(os.getcwd(), ''), len(this_agent_policies)), to_print=True)
             agents.append(_new_agent)
         return agents
 

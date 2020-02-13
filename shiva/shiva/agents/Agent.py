@@ -1,5 +1,6 @@
 import torch
 import torch.nn
+import time
 
 class Agent(object):
     
@@ -55,7 +56,10 @@ class Agent(object):
         while flag:
             try:
                 model = getattr(self, policy_name)
+                # time.sleep(0.1)
                 model.load_state_dict(torch.load(policy_file))
+                # if 'optimizer' not in policy_name:
+                #     model.eval()
                 setattr(self, policy_name, model)
                 flag = False
             except:

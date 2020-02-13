@@ -72,7 +72,7 @@ class MPIEnv(Environment):
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
         # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.rewards).shape, np.array(self.dones).shape))
-        # self.log("Actual types: {} {} {} {} {}".format(type(self.observations), type(self.actions), type(self.next_observations), type(self.reward), type(self.done)))
+        # self.log("Actual types: {} {} {} {} {}".format(type(self.observations), type(self.actions), type(self.next_observations), type(self.rewards), type(self.dones)))
 
     def _append_step(self):
         if 'Unity' in self.type:
@@ -86,10 +86,10 @@ class MPIEnv(Environment):
                 buffer.push(exp)
         else:
             # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.rewards).shape, np.array(self.dones).shape))
-            exp = list(map(torch.clone, (torch.tensor([self.observations]),
-                                            torch.tensor([self.actions]),
-                                            torch.tensor([self.rewards]).unsqueeze(dim=-1),
-                                            torch.tensor([self.next_observations]),
+            exp = list(map(torch.clone, (torch.tensor([self.observations], dtype=torch.float32),
+                                            torch.tensor([self.actions], dtype=torch.float32),
+                                            torch.tensor([self.rewards], dtype=torch.float32).unsqueeze(dim=-1),
+                                            torch.tensor([self.next_observations], dtype=torch.float32),
                                             torch.tensor([self.dones], dtype=torch.bool).unsqueeze(dim=-1)
                                             )))
 
@@ -119,7 +119,7 @@ class MPIEnv(Environment):
                 '''Assuming 1 Agent per Learner, no support for MADDPG here'''
                 obs_buffer, acs_buffer, rew_buffer, next_obs_buffer, done_buffer = map(self._unity_reshape, self.trajectory_buffers[ix].all_numpy())
 
-                self.log("Sending to Learner {} Obs shape {} Acs shape {} Rew shape {} NextObs shape {} Dones shape {}".format(ix, obs_buffer.shape, acs_buffer.shape, rew_buffer.shape, next_obs_buffer.shape, done_buffer.shape))
+                # self.log("Sending to Learner {} Obs shape {} Acs shape {} Rew shape {} NextObs shape {} Dones shape {}".format(ix, obs_buffer.shape, acs_buffer.shape, rew_buffer.shape, next_obs_buffer.shape, done_buffer.shape))
 
                 self.learner.send(self.env.steps_per_episode, dest=ix, tag=Tags.trajectory_length)
                 self.learner.Send([obs_buffer, MPI.FLOAT], dest=ix, tag=Tags.trajectory_observations)
