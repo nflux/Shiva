@@ -67,7 +67,7 @@ class MPIMultiEnv(Environment):
                 '''Assuming 1 Agent per Learner'''
                 # if self.update_nums[learner_id] != learner_spec['update_num']:
                 self.log("About to load {}".format(learner_id))
-                self.load_flags[learner_id] = learner_spec['load']
+                self.saving[learner_id] = learner_spec['load']
                 if not self.saving[learner_id]:
                     self.saving[learner_id] = True
                     self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]

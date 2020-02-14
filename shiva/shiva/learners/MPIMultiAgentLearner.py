@@ -197,7 +197,7 @@ class MPIMultiAgentLearner(Learner):
 
     def _get_learner_state(self):
         return {
-            'save': self.save_flag,
+            'load': self.save_flag,
             'train': self.train,
             'num_agents': self.num_agents,
             'update_num': self.update_num,
