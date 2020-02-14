@@ -19,5 +19,5 @@ class Tags(IntEnum):
     trajectory_dones = 7
 
     new_agents = 10
-    load_agents = 15
+    save_agents = 15
     evolution = 20

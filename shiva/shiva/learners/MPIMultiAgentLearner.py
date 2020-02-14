@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
 import numpy as np
 from mpi4py import MPI
-
+import copy
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_class
@@ -75,6 +75,7 @@ class MPIMultiAgentLearner(Learner):
         self.steps_per_episode = 0
         self.reward_per_episode = 0
         self.train = True
+        self.save_flag = True
 
         # '''Used for time calculation'''
         # t0 = time.time()
@@ -97,9 +98,15 @@ class MPIMultiAgentLearner(Learner):
                 self.agents[0].step_count = self.step_count
                 self.agents[0].done_count = self.done_count
                 # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-                Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                for ix in range(self.num_menvs):
-                    self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+
+                if self.save_flag:
+                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                    for ix in range(self.num_menvs):
+                        self.menv.send(copy.deepcopy(self._get_learner_state()), dest=ix, tag=Tags.new_agents)
+                    self.save_flag = False
+                
+            if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
+                self.save_flag = True
 
             self.collect_metrics(episodic=True)
 
@@ -185,6 +192,7 @@ class MPIMultiAgentLearner(Learner):
 
     def _get_learner_state(self):
         return {
+            'load': self.save_flag,
             'train': self.train,
             'num_agents': self.num_agents,
             'update_num': self.update_num,
