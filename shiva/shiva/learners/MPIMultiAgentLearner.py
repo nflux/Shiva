@@ -17,6 +17,7 @@ class MPIMultiAgentLearner(Learner):
         self.meta = MPI.Comm.Get_parent()
         self.id = self.meta.Get_rank()
         self.launch()
+        self.save_flag = True
 
     def launch(self):
         # Receive Config from Meta
@@ -98,15 +99,15 @@ class MPIMultiAgentLearner(Learner):
                 self.agents[0].step_count = self.step_count
                 self.agents[0].done_count = self.done_count
                 # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-
                 if self.save_flag:
+                    self.log("MPI LEARNER SAVED THE AGENT")
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                    for ix in range(self.num_menvs):
-                        self.menv.send(copy.deepcopy(self._get_learner_state()), dest=ix, tag=Tags.new_agents)
                     self.save_flag = False
-                
+                    for ix in range(self.num_menvs):
+                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+
             if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
-                self.save_flag = True
+                self.save_flag = self.menv.recv(source=MPI.ANY_SOURCE, tag=Tags.save_agents)
 
             self.collect_metrics(episodic=True)
 
