@@ -98,7 +98,7 @@ class UnityWrapperEnvironment(Environment):
         self.reward_total += self.reward_per_episode
 
         # self.debug()
-        return self.observations, self.rewards, self.dones, {}
+        return self.observations, self.rewards, self.dones, np.argwhere(self.dones)
 
     def get_metrics(self, episodic=True):
         if not episodic:

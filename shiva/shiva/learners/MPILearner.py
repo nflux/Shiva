@@ -3,6 +3,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
 import numpy as np
+import uuid
 from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
@@ -40,7 +41,6 @@ class MPILearner(Learner):
         self.env_specs = self.menvs_specs[0]['env_specs']
         '''Do the Agent selection using my ID (rank)'''
         '''Assuming 1 Agent per Learner!'''
-        self.num_agents = 1
 
         try:
             # self.observation_space = self.env_specs['observation_space'][self.config['Learner']['group']]
@@ -59,12 +59,14 @@ class MPILearner(Learner):
         # Initialize inter components
         self.alg = self.create_algorithm()
         self.buffer = self.create_buffer()
-        self.agents = self.create_agents()
+        self.agents, self.agent_ids = self.create_agents()
         if self.pbt:
             self.create_pbt_dirs()
             self.save_pbt_agents()
             for agent in self.agents:
                 agent.save(self.eval_path+'Agent_'+str(agent.id),0)
+
+        self.meta.gather(self.agent_ids,root=0)
 
         self.evolution_checks = 1
         # make first saving
@@ -111,9 +113,25 @@ class MPILearner(Learner):
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
             if self.done_count % self.evolution_episodes == 0:
-                self.meta.send(range(self.start_agent_idx,self.end_agent_idx), dest=0, tag=Tags.evolution) # send for evaluation
-                '''Check for Evolution Configs'''
-                evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution)  # block statement
+                print('Requesting evolution config')
+                self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
+                for agent in self.agents:
+                    self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
+                    print('Received evolution config')
+                    if self.evolution_config['evolution'] == False:
+                        continue
+                    setattr(self, 'exploitation', self.evolution_config['exploitation'])
+                    setattr(self, 'exploration', self.evolution_config['exploration'])
+                    print('Starting Evolution')
+                    self.exploitation = getattr(self, self.exploitation)
+                    self.exploration = getattr(self, self.exploration)
+                    self.exploitation(agent,self.evolution_config)
+                    self.exploration(agent)
+                    print('Evolution Complete\n\n\n\n\n')
+
+
+
+
                 self.log("Got evolution config!")
                 ''''''
 
@@ -212,11 +230,13 @@ class MPILearner(Learner):
         if self.load_agents:
             agents = Admin._load_agents(self.load_agents, absolute_path=False)
         else:
-            self.start_agent_idx = self.num_agents * self.id
-            self.end_agent_idx = self.start_agent_idx + self.num_agents
-            agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
+            #self.start_agent_idx = self.num_agents * self.id
+            #self.end_agent_idx = self.start_agent_idx + self.num_agents
+            #agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
+            agents = [self.alg.create_agent(uuid.uuid4().int) for i in range (self.num_agents)]
+            agent_ids = [agent.id for agent in agents]
         self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
-        return agents
+        return agents, agent_ids
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
@@ -243,27 +263,38 @@ class MPILearner(Learner):
                 agent_dir = self.eval_path+'Agent_'+str(agent.id)
                 os.mkdir(agent_dir)
 
-    def welch_T_Test(self):
-        pass
+    def welch_T_Test(self,evals,evo_evals):
+        t,p = stats.ttest_ind(evals, evo_evals, equal_var=False)
+        return p < self.p_value
 
-    def copy_weights(self):
-        pass
+    def t_test(self,agent,evo_config):
+        if evo_config['ranking'] < evo_config['evo_ranking']:
+            evals = np.load(this.eval_path+'Agent_'+str(evo_config['agent']+'/episode_evaluations'))
+            evo_evals = np.load(this.eval_path+'Agent_'+str(evo_config['evo_agent']+'/episode_evaluations'))
+            if welch_T_Test(evals,evo_evals):
+                path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
+                evo_agent = Admin._load_agents(path)[0]
+                agent.copy_weights(evo_agent)
 
-    def t_test(self):
-        pass
+    def truncation(self,agent,evo_config):
+        print('Truncating')
+        path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
+        evo_agent = Admin._load_agents(path)[0]
+        agent.copy_weights(evo_agent)
+        print('Truncated')
 
-    def sample(self):
-        pass
+    def perturb(self,agent):
+        perturb_factor = np.random.choice([0.8,1.2])
+        agent.perturb_hyperparameters(perturb_factor)
 
-    def pertubation(self):
-        pass
+    def resample(self,agent):
+        agent.resample_hyperparameters()
 
     def exploitation(self):
         pass
 
     def exploration(self):
         pass
-
 
     def close(self):
         comm = MPI.Comm.Get_parent()

@@ -31,7 +31,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.evaluations = dict()
         self._launch_evals()
         self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
-        self.agent_ids = range(self.num_agents)
+        self.agent_ids = self.meta.bcast(None,root=0)
+        print('Agent IDS: ', self.agent_ids)
         self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
         print('Selected Evaluation Agents: ', self.agent_sel)
         print('\n\n\n\n\n')

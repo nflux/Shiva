@@ -23,5 +23,6 @@ class Tags(IntEnum):
     #For updated rankings
     rankings = 11
     evolution = 20
+    evolution_config = 21
     agent_id = 30
     evals = 40

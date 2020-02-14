@@ -14,6 +14,7 @@ from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHea
 class DDPGAgent(Agent):
     def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
+        self.agent_config = agent_config
         try:
             torch.manual_seed(self.manual_seed)
             np.random.seed(self.manual_seed)
@@ -150,6 +151,29 @@ class DDPGAgent(Agent):
     #     self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
     #     self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
     #     self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
+
+    def copy_weights(self,evo_agent):
+        self.actor_learning_rate = evo_agent.actor_learning_rate
+        self.critic_learning_rate = evo_agent.critic_learning_rate
+        self.actor_optimizer = copy.deepcopy(evo_agent.actor_optimizer)
+        self.critic_optimizer = copy.deepcopy(evo_agent.critic_optimizer)
+        self.actor = copy.deepcopy(evo_agent.actor)
+        self.target_actor = copy.deepcopy(evo_agent.target_actor)
+        self.critic = copy.deepcopy(evo_agent.critic)
+        self.target_critic = copy.deepcopy(evo_agent.target_critic)
+
+    def perturb_hyperparameters(self,perturb_factor):
+        self.actor_learning_rate = self.actor_learning_rate * perturb_factor
+        self.critic_learning_rate = self.actor_learning_rate * perturb_factor
+        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+
+    def resample_hyperparameters(self):
+        self.actor_learning_rate = random.uniform(self.agent_config['actor_learning_rate'][0],self.agent_config['actor_learning_rate'][1])
+        self.critic_learning_rate = random.uniform(self.agent_config['critic_learning_rate'][0],self.agent_config['critic_learning_rate'][1])
+        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+
 
     def __str__(self):
         return 'DDPGAgent'

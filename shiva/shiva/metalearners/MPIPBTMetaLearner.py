@@ -18,7 +18,10 @@ class MPIPBTMetaLearner(MetaLearner):
         self.configs = configs
         self._preprocess_config()
         self.learner_specs = None
+        self.info = MPI.Status()
+        self.learner_ids = list()
         self.launch()
+
 
 
     def launch(self):
@@ -30,31 +33,48 @@ class MPIPBTMetaLearner(MetaLearner):
     def run(self):
 
         while True:
-            self.evaluations = self.mevals.recv(None,source=MPI.ANY_SOURCE, tag=Tags.rankings)
-            print('MetaLearner Rankings: ', self.evaluations)
+            if self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings):
+                self.rankings = self.mevals.recv(None,source=MPI.ANY_SOURCE, tag=Tags.rankings)
+                self.rankings_size = len(self.rankings)
+                self.bottom_20 = int(self.rankings_size * .80)
+                self.top_20 = int(self.rankings_size * .20)
+                if self.top_20 == 0: self.top_20 = 1
+                print('MetaLearner Rankings: ', self.rankings)
 
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution):
                 print('MetaLearner Received evolution request')
                 info = MPI.Status()
-                agent_nums = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evolution,status=info)  # block statement
-                learner_source = info.get_source()
+                agent_nums = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evolution,status=self.info)  # block statement
+                learner_source = self.info.Get_source()
                 for agent_id in agent_nums:
                     evo = dict()
-                    ranking = np.where(self.rankings == agent_id)[0][0]
+                    print('Current Agent Ranking: ', np.where(self.rankings == agent_id)[0])
+                    ranking = np.where(self.rankings == agent_id)[0]
                     evo['agent_id'] = agent_id
-                    if ranking >= len(evaluations) * .80:
+                    if ranking >= self.top_20:
                         evo['evolution'] = False
-                        self.learners.send(evo,source=learner_source,tag=Tags.evolution)
-                    elif len(evaluations) *.20  <= ranking <= len(evaluation)) * 0.8:
-                        sample_agent = np.random.choice(range(len(evaluations)))
-                        sample_ranking = np.where(self.rankings == sample_agent)[0][0]
+                        self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
+                    elif self.bottom_20  <= ranking <= self.top_20:
+                        evo['evolution'] = True
+                        evo['agent'] = agent_id
+                        evo['ranking'] = ranking
+                        evo['evo_agent'] = self.rankings[np.random.choice(range(self.bottom_20))]
+                        evo['evo_ranking']= np.where(self.rankings == evo['evo_agent'])
+                        evo['exploitation'] = 't_test'
+                        evo['exploration'] = np.random.choice(['perturb', 'resample'])
+                        self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
+                    else:
+                        evo['evolution'] = True
+                        evo['agent'] = agent_id
+                        evo['ranking'] = ranking
+                        evo['evo_agent'] = self.rankings[np.random.choice(range(self.top_20))]
+                        evo['evo_ranking'] = np.where(self.rankings == evo['evo_agent'])
+                        evo['exploitation'] = 'truncation'
+                        evo['exploration'] = np.random.choice(['perturb', 'resample'])
+                        self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
+                    print('MetaLearner Responded to evolution request with evolution config')
 
 
-
-
-                print('Evolution Agent: ', agent)
-
-                self.log("Got evolution config!")
 
             # self.debug("Got Learners metrics {}".format(learner_specs))
 
@@ -70,12 +90,15 @@ class MPIPBTMetaLearner(MetaLearner):
         self.learners = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/learners/MPILearner.py'], maxprocs=self.num_learners)
         self.learners.scatter(self.learners_configs, root=MPI.ROOT)
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
+        self.agent_ids = self.learners.gather(None, root=MPI.ROOT)
+        self.agent_ids = np.array(self.agent_ids).squeeze(axis=1)
         self.log("Got {}".format(learners_specs))
 
     def _launch_mevals(self):
         self.mevals = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/eval_envs/MPIMultiEvaluationWrapper.py'], maxprocs=self.num_mevals)
         self.mevals.bcast(self.configs, root=MPI.ROOT)
         mevals_specs = self.mevals.gather(None, root=MPI.ROOT)
+        self.mevals.bcast(self.agent_ids,root=MPI.ROOT)
         self.log("Got total of {} MultiEvalSpecs with {} keys".format(len(mevals_specs), len(mevals_specs[0].keys())))
         self.configs['MultiEvals'] = mevals_specs
 

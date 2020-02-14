@@ -63,6 +63,11 @@ class MPIEvalEnv(Environment):
 
         self.close()
 
+    def _unity_reshape(self, arr):
+        '''Unity reshape of the data - concat all agents trajectories'''
+        traj_length, num_agents, dim = arr.shape
+        return np.reshape(arr, (traj_length * num_agents, 1, dim))
+
     def _step_numpy(self):
 
         self.observations = self.env.get_observations()
@@ -74,7 +79,7 @@ class MPIEvalEnv(Environment):
 
         self.actions = self.eval.scatter(None, root=0)
         # self.log("Obs {} Act {}".format(self.observations, self.actions))
-        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions.tolist())
+        self.next_observations, self.rewards, self.dones, self.done_idxs = self.env.step(self.actions.tolist())
 
         for i in range(len(self.rewards)):
             self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
