@@ -99,6 +99,9 @@ class MPIMultiAgentLearner(Learner):
                 self.agents[0].step_count = self.step_count
                 self.agents[0].done_count = self.done_count
                 # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
+
+
+                '''self.save_flag assumes one MultiEnv'''
                 if self.save_flag:
                     self.log("MPI LEARNER SAVED THE AGENT")
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
@@ -108,6 +111,7 @@ class MPIMultiAgentLearner(Learner):
 
             if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
                 self.save_flag = self.menv.recv(source=MPI.ANY_SOURCE, tag=Tags.save_agents)
+
 
             self.collect_metrics(episodic=True)
 
@@ -175,7 +179,7 @@ class MPIMultiAgentLearner(Learner):
                                      torch.tensor(next_observations, dtype=torch.float32),
                                      torch.tensor(dones, dtype=torch.bool)
                                      )))
-  
+
         self.buffer.push(exp)
 
     def _connect_menvs(self):
@@ -193,7 +197,7 @@ class MPIMultiAgentLearner(Learner):
 
     def _get_learner_state(self):
         return {
-            'load': self.save_flag,
+            'save': self.save_flag,
             'train': self.train,
             'num_agents': self.num_agents,
             'update_num': self.update_num,

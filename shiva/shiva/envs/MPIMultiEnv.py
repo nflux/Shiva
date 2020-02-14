@@ -27,7 +27,7 @@ class MPIMultiEnv(Environment):
 
         '''Set self attrs from Config'''
         self.num_learners = self.configs['MetaLearner']['num_learners']
-        # self.update_nums = [0]*self.num_learners
+        self.update_nums = [0]*self.num_learners
         self.num_envs = self.num_instances # number of childrens
 
         self._launch_envs()
@@ -74,6 +74,7 @@ class MPIMultiEnv(Environment):
                     self.log("Agent Loaded From Learner {}".format(learner_id))
                     self.learners.send(True, dest=learner_id, tag=Tags.save_agents)
                     # self.update_nums[learner_id] = learner_spec['update_num']
+
 
         self.close()
     

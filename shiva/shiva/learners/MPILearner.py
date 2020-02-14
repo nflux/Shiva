@@ -27,6 +27,7 @@ class MPILearner(Learner):
         # Open Port for Single Environments
         self.port = MPI.Open_port(MPI.INFO_NULL)
         self.log("Open port {}".format(self.port))
+        self.MULTI_ENV_FLAG = True
 
         # Set some self attributes from received Config (it should have MultiEnv data!)
         self.MULTI_ENV_FLAG = True
