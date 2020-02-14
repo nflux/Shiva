@@ -99,13 +99,15 @@ class MPIMultiAgentLearner(Learner):
                 self.agents[0].done_count = self.done_count
                 # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
 
+                '''self.save_flag assumes one MultiEnv'''
                 if self.save_flag:
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                    for ix in range(self.num_menvs):
-                        self.menv.send(copy.deepcopy(self._get_learner_state()), dest=ix, tag=Tags.new_agents)
                     self.save_flag = False
+                    for ix in range(self.num_menvs):
+                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
                 
             if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
+                self.log("The save flag is changing")
                 self.save_flag = True
 
             self.collect_metrics(episodic=True)
@@ -192,7 +194,7 @@ class MPIMultiAgentLearner(Learner):
 
     def _get_learner_state(self):
         return {
-            'load': self.save_flag,
+            'save': self.save_flag,
             'train': self.train,
             'num_agents': self.num_agents,
             'update_num': self.update_num,

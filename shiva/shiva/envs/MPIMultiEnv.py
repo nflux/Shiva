@@ -27,7 +27,7 @@ class MPIMultiEnv(Environment):
 
         '''Set self attrs from Config'''
         self.num_learners = self.configs['MetaLearner']['num_learners']
-        # self.update_nums = [0]*self.num_learners
+        self.update_nums = [0]*self.num_learners
         self.num_envs = self.num_instances # number of childrens
 
         self._launch_envs()
@@ -41,7 +41,6 @@ class MPIMultiEnv(Environment):
 
     def run(self):
         self.step_count = 0
-        self.load_flags = [False]*self.num_learners
         self.log(self.env_specs)
         info = MPI.Status()
 
@@ -61,16 +60,13 @@ class MPIMultiEnv(Environment):
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=info):
                 learner_id = info.Get_source()
                 learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
-                # self.log("These are the learner specs {}".format(learner_spec))
+                self.log("These are the learner specs {}".format(learner_spec))
                 '''Assuming 1 Agent per Learner'''
-                # if self.update_nums[learner_id] != learner_spec['update_num']:
-                self.log("About to load {}".format(learner_id))
-                self.load_flags[learner_id] = learner_spec['load']
-                if self.load_flags[learner_id]:
+                if self.update_nums[learner_id] != learner_spec['update_num'] and not learner_spec['save']:
+                    self.log("About to load {}".format(learner_id))
                     self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
-                    self.load_flags[learner_id] = False
                     self.learners.send(None, dest=learner_id, tag=Tags.save_agents)
-                    # self.update_nums[learner_id] = learner_spec['update_num']
+                    self.update_nums[learner_id] = learner_spec['update_num']
 
         self.close()
     
