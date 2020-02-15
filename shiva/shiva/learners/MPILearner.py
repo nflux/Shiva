@@ -42,14 +42,18 @@ class MPILearner(Learner):
         '''Do the Agent selection using my ID (rank)'''
         '''Assuming 1 Agent per Learner!'''
 
-        try:
+        if 'Unity' in self.env_specs['type']:
             # self.observation_space = self.env_specs['observation_space'][self.config['Learner']['group']]
             # self.action_space = self.env_specs['action_space'][self.config['Learner']['group']]
             self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
             self.action_space = list(self.env_specs['action_space'].values())[self.id]
-        except:
+        elif 'Gym' in self.env_specs['type']:
             self.observation_space = self.env_specs['observation_space']
             self.action_space = self.env_specs['action_space']
+        elif 'RoboCup' in self.env_specs['type']:
+            self.observation_space = self.env_specs['observation_space']
+            self.action_space = self.env_specs['action_space']
+            self.acs_dim = self.action_space['acs_space'] + self.action_space['param']
 
         # self.log("Got MultiEnvSpecs {}".format(self.menvs_specs))
         #self.log("Obs space {} / Action space {}".format(self.observation_space, self.action_space))
@@ -65,7 +69,7 @@ class MPILearner(Learner):
             self.save_pbt_agents()
             for agent in self.agents:
                 agent.save(self.eval_path+'Agent_'+str(agent.id),0)
-        print("DURING LAUNCH", self.agent_ids)
+        # print("DURING LAUNCH", self.agent_ids)
         self.meta.gather(self.agent_ids,root=0)
 
         self.evolution_checks = 1
@@ -113,11 +117,11 @@ class MPILearner(Learner):
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
             if self.done_count % self.evolution_episodes == 0:
-                print('Requesting evolution config')
+                # print('Requesting evolution config')
                 self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
                 for agent in self.agents:
                     self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
-                    print('Received evolution config')
+                    # print('Received evolution config')
                     if self.evolution_config['evolution'] == False:
                         continue
                     setattr(self, 'exploitation', self.evolution_config['exploitation'])
@@ -127,13 +131,10 @@ class MPILearner(Learner):
                     self.exploration = getattr(self, self.exploration)
                     self.exploitation(agent,self.evolution_config)
                     self.exploration(agent)
-                    print('Evolution Complete\n\n\n\n\n')
-
-
+                    print('Evolution Complete\n')
 
 
                 self.log("Got evolution config!")
-                ''''''
 
             self.collect_metrics(episodic=True)
 
@@ -233,7 +234,7 @@ class MPILearner(Learner):
             #self.start_agent_idx = self.num_agents * self.id
             #self.end_agent_idx = self.start_agent_idx + self.num_agents
             #agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
-            agents = [self.alg.create_agent(self.get_id()) for i in range (self.num_agents)]
+            agents = [self.alg.create_agent(self.id + i) for i in range(self.num_agents)]
             agent_ids = [agent.id for agent in agents]
         self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
         return agents, agent_ids

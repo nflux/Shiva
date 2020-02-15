@@ -59,7 +59,17 @@ class MPIEnv(Environment):
         send_obs_buffer = np.array(self.observations, dtype=np.float64)
         self.menv.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
 
-        self.actions = self.menv.scatter(None, root=0)
+        if 'RoboCup' in self.type:
+            recv_action = np.zeros((self.env.num_agents, sum(self.env.action_space.values())), dtype=np.float64)
+            self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
+            self.actions = recv_action
+        elif 'Gym' in self.type:
+            recv_action = np.zeros((1, self.env.action_space['acs_space']), dtype=np.float64)
+            self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
+            self.actions = recv_action
+        elif 'Unity':
+            self.actions = self.menv.scatter(None, root=0)
+ 
         # self.log("Obs {} Act {}".format(self.observations, self.actions))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
@@ -197,7 +207,7 @@ class MPIEnv(Environment):
 
     def _get_env_specs(self):
         return {
-            'type': 'Env',
+            'type': self.env.type,
             'id': self.id,
             'observation_space': self.env.get_observation_space(),
             'action_space': self.env.get_action_space(),

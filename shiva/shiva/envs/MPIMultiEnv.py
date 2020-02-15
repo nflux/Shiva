@@ -46,9 +46,10 @@ class MPIMultiEnv(Environment):
             - all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI
             - agents_instances are in equal amount for all agents
         '''
-        try:
+        
+        if 'Unity' in self.type:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
-        except:
+        else:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
 
 
@@ -71,14 +72,17 @@ class MPIMultiEnv(Environment):
 
         if 'Unity' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
-            actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
-        else:
+            actions = [[[self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+            actions = np.array(actions)
+            self.envs.scatter(actions, root=MPI.ROOT)
+        elif 'Gym' in self.type or 'RoboCup' in self.type:
             # Gym
             # same?
-            actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+            actions = [[[self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+            actions = np.array(actions)
+            self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
-        self.actions = np.array(actions)
-        self.envs.scatter(actions, root=MPI.ROOT)
+        
         # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions))
 
     def _launch_envs(self):

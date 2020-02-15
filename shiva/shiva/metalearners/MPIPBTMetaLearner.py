@@ -124,6 +124,7 @@ class MPIPBTMetaLearner(MetaLearner):
             self.learners_configs = []
             for config_path in list(self.learners_map.keys()):
                 learner_config = load_config_file_2_dict(config_path)
+                learner_config['num_learners'] = self.num_learners
                 self.learners_configs.append(merge_dicts(self.configs, learner_config))
         else:
             '''This happens when all configs are in 1 file'''
