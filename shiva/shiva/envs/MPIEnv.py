@@ -104,9 +104,10 @@ class MPIEnv(Environment):
 
     def _send_trajectory_numpy(self):
         if 'Unity' in self.type:
-            for learner_ix in range(self.num_learners):
+            for ix in range(len(self.env.agent_groups)):
+                self.log("This is the ix {}".format(ix))
                 '''Assuming 1 Agent per Learner, no support for MADDPG here'''
-                self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape, self.trajectory_buffers[learner_ix].all_numpy())
+                self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape, self.trajectory_buffers[ix].all_numpy())
 
                 trajectory_info = {
                     'env_id': self.id,
@@ -115,7 +116,7 @@ class MPIEnv(Environment):
                     'acs_shape': self.actions_buffer.shape,
                     'rew_shape': self.rewards_buffer.shape,
                     'done_shape': self.done_buffer.shape,
-                    'metrics': self.env.get_metrics(episodic=True)[learner_ix]
+                    'metrics': self.env.get_metrics(episodic=True)[ix]
                 }
 
                 # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape, self.rewards_buffer.shape, self.next_observations_buffer.shape, self.done_buffer.shape))

@@ -45,8 +45,9 @@ class MPILearner(Learner):
         if 'Unity' in self.env_specs['type']:
             # self.observation_space = self.env_specs['observation_space'][self.config['Learner']['group']]
             # self.action_space = self.env_specs['action_space'][self.config['Learner']['group']]
-            self.observation_space = list(self.env_specs['observation_space'].values())[self.id]
-            self.action_space = list(self.env_specs['action_space'].values())[self.id]
+            # self.log("Env specs {} id {}".format(self.env_specs['observation_space'], self.id))
+            self.observation_space = list(self.env_specs['observation_space'].values())[0]
+            self.action_space = list(self.env_specs['action_space'].values())[0]
         elif 'Gym' in self.env_specs['type']:
             self.observation_space = self.env_specs['observation_space']
             self.action_space = self.env_specs['action_space']

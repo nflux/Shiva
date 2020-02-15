@@ -93,9 +93,7 @@ class MPIEvalEnv(Environment):
                 self.reward_idxs[i] += 1
 
         elif 'Gym' in self.type:
-
-
-
+            
             self.episode_rewards[self.reward_idxs] = self.rewards
             if self.dones:
                 self._send_eval_numpy(self.episode_rewards.sum(),0)
