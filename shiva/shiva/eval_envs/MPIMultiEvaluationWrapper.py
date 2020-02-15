@@ -35,7 +35,6 @@ class MPIMultiEvaluationWrapper(Evaluation):
         print('Agent IDS: ', self.agent_ids)
         self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
         print('Selected Evaluation Agents: ', self.agent_sel)
-        print('\n\n\n\n\n')
         self.evals.scatter(self.agent_sel,root=MPI.ROOT)
 
         self.run()
@@ -81,8 +80,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
             info = MPI.Status()
             agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.agent_id, status=info)
             env_source = info.Get_source()
-            eval = self.evals.recv(None, source=env_source, tag=Tags.evals)
-            self.evaluations[agent_id] = eval.mean()
+            evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
+            self.evaluations[agent_id] = evals.mean()
             self.sort = True
             print('Multi Evaluation has received evaluations!')
 

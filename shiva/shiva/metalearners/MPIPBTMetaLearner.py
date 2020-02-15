@@ -9,8 +9,8 @@ from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
 from shiva.helpers.misc import terminate_process
 from shiva.utils.Tags import Tags
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("shiva")
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger("shiva")
 
 class MPIPBTMetaLearner(MetaLearner):
     def __init__(self, configs):
@@ -41,7 +41,7 @@ class MPIPBTMetaLearner(MetaLearner):
                 if self.top_20 == 0: self.top_20 = 1
                 print('MetaLearner Rankings: ', self.rankings)
 
-            if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution):
+            if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution) and hasattr(self, 'rankings'):
                 print('MetaLearner Received evolution request')
                 info = MPI.Status()
                 agent_nums = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evolution,status=self.info)  # block statement
@@ -58,6 +58,7 @@ class MPIPBTMetaLearner(MetaLearner):
                         evo['evolution'] = True
                         evo['agent'] = agent_id
                         evo['ranking'] = ranking
+                        print(self.rankings)
                         evo['evo_agent'] = self.rankings[np.random.choice(range(self.bottom_20))]
                         evo['evo_ranking']= np.where(self.rankings == evo['evo_agent'])
                         evo['exploitation'] = 't_test'
@@ -73,6 +74,8 @@ class MPIPBTMetaLearner(MetaLearner):
                         evo['exploration'] = np.random.choice(['perturb', 'resample'])
                         self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
                     print('MetaLearner Responded to evolution request with evolution config')
+
+                    delattr(self, 'rankings')
 
 
 
@@ -92,7 +95,9 @@ class MPIPBTMetaLearner(MetaLearner):
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
         self.agent_ids = self.learners.gather(None, root=MPI.ROOT)
         self.agent_ids = np.array(self.agent_ids).squeeze(axis=1)
-        self.log("Got {}".format(learners_specs))
+        print("AFTER LAUNCHING ALL THE LEARNERS", self.agent_ids)
+        # print("META: This is the specs", learners_specs)
+        self.log("Got {}".format(len(learners_specs)))
 
     def _launch_mevals(self):
         self.mevals = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/eval_envs/MPIMultiEvaluationWrapper.py'], maxprocs=self.num_mevals)
@@ -129,6 +134,7 @@ class MPIPBTMetaLearner(MetaLearner):
         if hasattr(self, 'learners_map'):
             # calculate number of learners using the learners_map dict
             self.num_learners = len(set(self.learners_map.keys()))
+            print("PREPROCESS CONFIG {}".format(self.num_learners) )
             self.configs['MetaLearner']['num_learners'] = self.num_learners
         else:
             # num_learners is explicitely in the config

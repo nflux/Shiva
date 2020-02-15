@@ -40,14 +40,16 @@ class DQNAlgorithm(Algorithm):
         # if not episodic: # for DQN to do episodic update
         #     return
 
-        try:
-            '''For MultiAgentTensorBuffer - 1 Agent only here'''
-            states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
-            dones = dones.bool()
-        except:
-            states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
-            rewards = rewards.view(-1, 1)
-            dones = dones.byte()
+        states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+
+        # try:
+        #     '''For MultiAgentTensorBuffer - 1 Agent only here'''
+        #     states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
+        #     dones = dones.bool()
+        # except:
+        #     states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+        #     rewards = rewards.view(-1, 1)
+        #     dones = dones.byte()
 
         # print('from buffer Obs {} Acs {} Rew {} NextObs {} Dones {}:'.format(states[:3], actions[:3], rewards[:3], next_states[:3], dones[:3]))
         # # print('from buffer Acs: {} \n'.format(actions))

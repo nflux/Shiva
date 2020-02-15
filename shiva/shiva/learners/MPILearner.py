@@ -3,7 +3,6 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
 import numpy as np
-import uuid
 from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
@@ -39,6 +38,7 @@ class MPILearner(Learner):
         self.num_menvs = len(self.menvs_specs)
         self.menv_port = self.menvs_specs[0]['port']
         self.env_specs = self.menvs_specs[0]['env_specs']
+
         '''Do the Agent selection using my ID (rank)'''
         '''Assuming 1 Agent per Learner!'''
 
@@ -65,7 +65,7 @@ class MPILearner(Learner):
             self.save_pbt_agents()
             for agent in self.agents:
                 agent.save(self.eval_path+'Agent_'+str(agent.id),0)
-
+        print("DURING LAUNCH", self.agent_ids)
         self.meta.gather(self.agent_ids,root=0)
 
         self.evolution_checks = 1
@@ -167,8 +167,8 @@ class MPILearner(Learner):
         self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
         # self.log("Got Next Obs shape {}".format(next_observations.shape))
 
-        dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
-        self.envs.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
+        dones = np.empty(self.traj_info['done_shape'], dtype=np.bool)
+        self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
         # self.log("Got Dones shape {}".format(dones.shape))
 
         self.step_count += traj_length
@@ -233,7 +233,7 @@ class MPILearner(Learner):
             #self.start_agent_idx = self.num_agents * self.id
             #self.end_agent_idx = self.start_agent_idx + self.num_agents
             #agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
-            agents = [self.alg.create_agent(uuid.uuid4().int) for i in range (self.num_agents)]
+            agents = [self.alg.create_agent(self.get_id()) for i in range (self.num_agents)]
             agent_ids = [agent.id for agent in agents]
         self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
         return agents, agent_ids

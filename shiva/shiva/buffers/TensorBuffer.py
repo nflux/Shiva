@@ -48,22 +48,22 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         cast = lambda x: Variable(x, requires_grad=False).to(device)
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
-        if agent_id is None:
-            return (
-                cast_obs(self.obs_buffer[inds, :, :]),
-                cast(self.acs_buffer[inds, :, :]),
-                cast(self.rew_buffer[inds, :, :]),
-                cast_obs(self.next_obs_buffer[inds, :, :]),
-                cast(self.done_buffer[inds, :, :])
-            )
-        else:
-            return (
-                cast_obs(self.obs_buffer[inds, agent_id, :]),
-                cast(self.acs_buffer[inds, agent_id, :]),
-                cast(self.rew_buffer[inds, agent_id, :]),
-                cast_obs(self.next_obs_buffer[inds, agent_id, :]),
-                cast(self.done_buffer[inds, agent_id, :])
-            )
+        # if agent_id is None:
+        return (
+            cast_obs(self.obs_buffer[inds, :, :]),
+            cast(self.acs_buffer[inds, :, :]),
+            cast(self.rew_buffer[inds, :, :]),
+            cast_obs(self.next_obs_buffer[inds, :, :]),
+            cast(self.done_buffer[inds, :, :])
+        )
+        # else:
+        #     return (
+        #         cast_obs(self.obs_buffer[inds, agent_id, :]),
+        #         cast(self.acs_buffer[inds, agent_id, :]),
+        #         cast(self.rew_buffer[inds, agent_id, :]),
+        #         cast_obs(self.next_obs_buffer[inds, agent_id, :]),
+        #         cast(self.done_buffer[inds, agent_id, :])
+        #     )
 
     def all(self):
         '''Returns all buffers'''
@@ -82,7 +82,7 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             self.acs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
             self.rew_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
             self.next_obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
-            self.done_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64)
+            self.done_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.bool)
         ])
 
     def reset(self):
@@ -91,7 +91,7 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         self.acs_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), requires_grad=False)
         self.rew_buffer = torch.zeros((self.max_size, self.num_agents, 1), requires_grad=False)
         self.next_obs_buffer = torch.zeros((self.max_size, self.num_agents, self.obs_dim), requires_grad=False)
-        self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1), requires_grad=False)
+        self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.bool, requires_grad=False)
         self.current_index = 0
         self.size = 0
 

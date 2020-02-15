@@ -32,7 +32,6 @@ class MPIEvaluation(Evaluation):
         self.agent_sel = self.meval.scatter(None, root=0)
         self.agent_ids = [id for id in self.agent_sel]
         print('Agent IDs: ', self.agent_ids)
-        print('\n\n\n\n\n')
         self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
         self.eval_counts = np.zeros(len(self.agent_ids),dtype=int)
         self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
@@ -123,8 +122,8 @@ class MPIEvaluation(Evaluation):
                     - Concat
                     '''
             if self.eval_counts[agent_idx] < self.eval_episodes:
-                eval = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
-                self.evals[agent_idx,self.eval_counts[agent_idx]] = eval
+                evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
+                self.evals[agent_idx,self.eval_counts[agent_idx]] = evals
                 print('Eval: ', self.evals[agent_idx,self.eval_counts[agent_idx]])
                 self.eval_counts[agent_idx] += 1
             else:

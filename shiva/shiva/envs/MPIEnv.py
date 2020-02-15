@@ -94,9 +94,9 @@ class MPIEnv(Environment):
 
     def _send_trajectory_numpy(self):
         if 'Unity' in self.type:
-            for ix in range(self.num_learners):
+            for learner_ix in range(self.num_learners):
                 '''Assuming 1 Agent per Learner, no support for MADDPG here'''
-                self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape, self.trajectory_buffers[ix].all_numpy())
+                self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape, self.trajectory_buffers[learner_ix].all_numpy())
 
                 trajectory_info = {
                     'env_id': self.id,
@@ -105,7 +105,7 @@ class MPIEnv(Environment):
                     'acs_shape': self.actions_buffer.shape,
                     'rew_shape': self.rewards_buffer.shape,
                     'done_shape': self.done_buffer.shape,
-                    'metrics': self.env.get_metrics(episodic=True)[ix]
+                    'metrics': self.env.get_metrics(episodic=True)[learner_ix]
                 }
 
                 # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape, self.rewards_buffer.shape, self.next_observations_buffer.shape, self.done_buffer.shape))
@@ -117,13 +117,10 @@ class MPIEnv(Environment):
                 self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_actions)
                 self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
                 self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix,tag=Tags.trajectory_next_observations)
-                self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_dones)
+                self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=ix, tag=Tags.trajectory_dones)
         else:
-            # Gym
-            learner_ix = 0
-
-            self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape,
-                                                                                   self.trajectory_buffers[learner_ix].all_numpy())
+            # Gym/RoboCup
+            self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = self.trajectory_buffers[0].all_numpy()
 
             trajectory_info = {
                 'env_id': self.id,
@@ -139,12 +136,12 @@ class MPIEnv(Environment):
             # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
             #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
 
-            self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
-            self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
-            self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_actions)
-            self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_rewards)
-            self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_next_observations)
-            self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
+            self.learner.send(trajectory_info, dest=0, tag=Tags.trajectory_info)
+            self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=0, tag=Tags.trajectory_observations)
+            self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=0, tag=Tags.trajectory_actions)
+            self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=0, tag=Tags.trajectory_rewards)
+            self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=0, tag=Tags.trajectory_next_observations)
+            self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=0, tag=Tags.trajectory_dones)
 
         self.reset_buffers()
         # time.sleep(5)
@@ -166,7 +163,7 @@ class MPIEnv(Environment):
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
                                                               1,
                                                               self.env.observation_space,
-                                                              self.env.action_space['acs_space']) ]
+                                                              self.env.action_space['acs_space'])]
 
     def reset_buffers(self):
         for buffer in self.trajectory_buffers:

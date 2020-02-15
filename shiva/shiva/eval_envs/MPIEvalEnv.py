@@ -7,12 +7,13 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
 from mpi4py import MPI
 
+from shiva.core.admin import logger
 from shiva.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.helpers.config_handler import load_class
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("shiva")
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger("shiva")
 
 class MPIEvalEnv(Environment):
 
@@ -79,15 +80,29 @@ class MPIEvalEnv(Environment):
 
         self.actions = self.eval.scatter(None, root=0)
         # self.log("Obs {} Act {}".format(self.observations, self.actions))
-        self.next_observations, self.rewards, self.dones, self.done_idxs = self.env.step(self.actions.tolist())
+        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions.tolist())
 
-        for i in range(len(self.rewards)):
-            self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
-            if self.dones[i]:
-                self._send_eval_numpy(self.episode_rewards[i,:].sum(),i)
-                self.episode_rewards[i,:].fill(0)
-                self.reward_idxs[i] = 0
-            self.reward_idxs[i] += 1
+        if 'Unity' in self.type:
+
+            for i in range(len(self.rewards)):
+                self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
+                if self.dones[i]:
+                    self._send_eval_numpy(self.episode_rewards[i,:].sum(),i)
+                    self.episode_rewards[i,:].fill(0)
+                    self.reward_idxs[i] = 0
+                self.reward_idxs[i] += 1
+
+        elif 'Gym' in self.type:
+
+
+
+            self.episode_rewards[self.reward_idxs] = self.rewards
+            if self.dones:
+                self._send_eval_numpy(self.episode_rewards.sum(),0)
+                self.episode_rewards.fill(0)
+                self.reward_idxs = 0
+            self.reward_idxs += 1
+
 
 
     def _send_eval_numpy(self,episode_reward,agent_idx):
@@ -103,13 +118,13 @@ class MPIEvalEnv(Environment):
                 (Unity is a bit different due to the multi-instance per single environment)
             '''
             self.episode_rewards = np.zeros((self.num_agents,self.episode_max_length))
+            self.reward_idxs = dict()
+            for i in range(self.num_agents): self.reward_idxs[i] = 0
 
         else:
             '''Gym - has only 1 agent per environment and no groups'''
             self.episode_rewards = np.zeros(self.episode_max_length)
-
-        self.reward_idxs = dict()
-        for i in range(self.num_agents): self.reward_idxs[i] = 0
+            self.reward_idxs = 0
 
 
     def reset_buffers(self):
@@ -128,6 +143,7 @@ class MPIEvalEnv(Environment):
     def _launch_env(self):
         # initiate env from the config
         self.env = self.create_environment()
+        self.num_agents = self.env.num_agents
 
 
     def create_environment(self):
