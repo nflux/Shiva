@@ -1,12 +1,13 @@
 import numpy as np
+import copy
 import torch
 from torch.nn.functional import softmax
 from shiva.utils import Noise as noise
 from shiva.helpers.calc_helper import np_softmax
-from shiva.agents.DDPGAgent import DDPGAgent
+from shiva.agents.MADDPGAgent import MADDPGAgent
 from shiva.algorithms.DDPGAlgorithm import DDPGAlgorithm
+from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork
 from shiva.helpers.misc import one_hot_from_logits
-
 
 class MADDPGAlgorithm(DDPGAlgorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):
@@ -15,224 +16,158 @@ class MADDPGAlgorithm(DDPGAlgorithm):
         self.critic_loss = torch.tensor(0)
         self.set_action_space(action_space)
 
-    def update(self, agent, buffer, step_count, episodic=False):
-        '''
-            @buffer         buffer is a reference
-        '''
-        # if episodic:
-        #     '''
-        #         DDPG updates at every step. This avoids doing an extra update at the end of an episode
-        #         But it does reset the noise after an episode
-        #     '''
-        #     agent.ou_noise.reset()
-        #     return
+        critic_input = sum([self.action_space[role]['acs_space'] for role in self.roles]) + sum([self.observation_space[role] for role in self.roles])
+        self.critic = DynamicLinearNetwork(critic_input, 1, self.configs['Network']['critic'])
+        self.target_critic = copy.deepcopy(self.critic)
+        self.optimizer_function = getattr(torch.optim, self.optimizer_function)
+        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
-        '''
-            DDPG updates every episode. This avoids doing an extra update at the end of an episode
-            But it does reset the noise after an episode.
 
-            For Multi-Environment scenarios, the agent whose noise is being reset is not the agent inside
-            the multi environment instances, as such, 
-        '''
-        # if episodic:
+    def update(self, agents: list, buffer: object, step_count: int, episodic=False):
+        states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+        dones = dones.bool()
 
-        #     agent.ou_noise.reset()
-
-        # else:
-        #     agent.ou_noise.reset()
-        #     # return
-
-        # agent.ou_noise.reset()
-
-        # if step_count < self.agent.exploration_steps:
-        #     '''
-        #         Don't update during exploration!
-        #     '''
-        #     return
-
-        '''
-            Updates starts here
-        '''
-
-        try:
-            '''For MultiAgentTensorBuffer - 1 Agent only here'''
-            states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
-            dones = dones.bool()
-        except:
-            states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
-
-        # Send everything to gpu if available
         states = states.to(self.device)
         actions = actions.to(self.device)
         rewards = rewards.to(self.device)
         next_states = next_states.to(self.device)
-        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
+        dones_mask = torch.tensor(dones[:,0,0], dtype=torch.bool).view(-1, 1).to(self.device) # assuming done is the same for all agents
+
+        '''Assuming all agents have the same obs_dim!'''
+        batch_size, num_agents, obs_dim = states.shape
+        _, _, acs_dim = actions.shape
 
         # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
-        # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape))
-
-        assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
-            "acs_space config must be set to either discrete, continuous, or parameterized."
-
-        '''  yes its supposed to be
-            Training the Critic
-        '''
+        print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape))
+        print("Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.dtype, actions.dtype, rewards.dtype, next_states.dtype, dones_mask.dtype))
 
         # Zero the gradient
-        agent.critic_optimizer.zero_grad()
+        self.critic_optimizer.zero_grad()
+        # The actions that target actor would do in the next state & concat actions
+        '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
+        next_state_actions_target = torch.cat([one_hot_from_logits(agent.target_actor(next_states[:, ix, :])) for ix, agent in enumerate(agents)], dim=-1)
+        print('OneHot next_state_actions_target {}'.format(next_state_actions_target))
 
-        # The actions that target actor would do in the next state.
-        next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
+        Q_next_states_target = self.target_critic(torch.cat([next_states.reshape(batch_size, num_agents*obs_dim).float(), next_state_actions_target.float()], 1))
+        print('Q_next_states_target {}'.format(Q_next_states_target))
+        Q_next_states_target[dones_mask] = 0.0
+        print('Q_next_states_target {}'.format(Q_next_states_target))
 
-        dims = len(next_state_actions_target.shape)
-
-        if self.a_space == "discrete" or self.a_space == "parameterized":
-
-            # Grab the discrete actions in the batch
-            # generate a tensor of one hot encodings of the argmax of each discrete action tensors
-            # concat the discrete and parameterized actions back together
-
-            if dims == 3:
-                discrete_actions = next_state_actions_target[:, :, :self.discrete].squeeze(dim=1)
-                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions).unsqueeze(dim=1)
-                next_state_actions_target = torch.cat(
-                    [one_hot_encoded_discrete_actions, next_state_actions_target[:, :, self.discrete:]], dim=2)
-
-            elif dims == 2:
-                discrete_actions = next_state_actions_target[:, :self.discrete]
-                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
-                next_state_actions_target = torch.cat(
-                    [one_hot_encoded_discrete_actions, next_state_actions_target[:, self.discrete:]], dim=1)
-            else:
-                discrete_actions = next_state_actions_target[:self.discrete]
-                one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
-                next_state_actions_target = torch.cat(
-                    [one_hot_encoded_discrete_actions, next_state_actions_target[self.discrete:]], dim=0)
-
-        # print(next_state_actions_target.shape, '\n')
-
-        # The Q-value the target critic estimates for taking those actions in the next state.
-        if dims == 3:
-            Q_next_states_target = agent.target_critic(
-                torch.cat([next_states.float(), next_state_actions_target.float()], 2))
-        elif dims == 2:
-            Q_next_states_target = agent.target_critic(
-                torch.cat([next_states.float(), next_state_actions_target.float()], 1))
-        else:
-            Q_next_states_target = agent.target_critic(
-                torch.cat([next_states.float(), next_state_actions_target.float()], 0))
-
-        # print('dones', dones.size())
-        # Sets the Q values of the next states to zero if they were from the last step in an episode.
-        Q_next_states_target[dones] = 0.0
         # Use the Bellman equation.
+        ''''''
         y_i = rewards + self.gamma * Q_next_states_target
+        print('y_i {}'.format(y_i))
+
+        for ix, (role, action_space) in enumerate(self.action_space.items()):
+            if action_space['type'] == 'discrete':
+                actions[:, ix, :] = one_hot_from_logits(actions[:, ix, :])
+            else:
+                # Ezequiel: curious if here is doing a second softmax?
+                actions[:, ix, :] = softmax(actions[:, ix, :])
 
         # Get Q values of the batch from states and actions.
-        if self.a_space == 'discrete':
-            actions = one_hot_from_logits(actions)
-        else:
-            actions = softmax(actions)
-
-            # Grab the discrete actions in the batch
-        if dims == 3:
-            # print(states.shape, actions.shape)
-            Q_these_states_main = agent.critic(torch.cat([states.float(), actions.unsqueeze(dim=1).float()], 2))
-        elif dims == 2:
-            Q_these_states_main = agent.critic(torch.cat([states.float(), actions.float()], 1))
-        else:
-            Q_these_states_main = agent.critic(torch.cat([states.float(), actions.float()], 0))
+        Q_these_states_main = self.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), actions.reshape(batch_size, num_agents*acs_dim).float()], 1))
+        print('Q_these_states_main {}'.format(Q_these_states_main))
 
         # Calculate the loss.
-
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
-        # Backward propogation!
+        print('critic_loss {}'.format(critic_loss))
+        # Backward propagation!
         critic_loss.backward()
         # Update the weights in the direction of the gradient.
-        agent.critic_optimizer.step()
+        self.critic_optimizer.step()
         # Save critic loss for tensorboard
         self.critic_loss = critic_loss
 
         '''
-            Training the Actor
+            Training the Actors
         '''
+        for ix, agent in enumerate(agents):
+            # Zero the gradient
+            agent.actor_optimizer.zero_grad()
+            # Get the actions the main actor would take from the initial states
+            if self.action_space[agent.role]['type'] == "discrete" or self.action_space[agent.role]['type'] == "parameterized":
+                current_state_actor_actions = agent.actor(states[:, ix, :].float(), gumbel=True)
+            else:
+                current_state_actor_actions = agent.actor(states[:, ix, :].float())
+            # Calculate Q value for taking those actions in those states
 
-        # Zero the gradient
-        agent.actor_optimizer.zero_grad()
-        # Get the actions the main actor would take from the initial states
-        if self.a_space == "discrete" or self.a_space == "parameterized":
-            current_state_actor_actions = agent.actor(states.float(), gumbel=True)
-        else:
-            current_state_actor_actions = agent.actor(states.float())
+            '''
+                Agent 1 and 2
+                - Make sure actions/obs per agent are in the same indices
+                
+                Option 1:
+                    Each agent has it's own critic, order should be consistent
+                Option 2:
+                    Single critic with a one-hot encoding to correlate (Discriminator)
+                    Expensive as it needs to find the correlation between the one-hot and all the obs/acs
+                    Increase size of network to let it learn more
+                Option 3:
+                    Permute obs/acs and permute the reward being predicted (Critic would think they are just one agent, but looking at many datapoints)
+                
+                Option 1: get historical actions
+                Option 2: get current actions the agents would take (could be expensive)
+                
+                1 Actor loss
+                
+                Imagine agent with same reward function: 1 critic
+                
+                If one central critic and predict reward of each agent, need to permute the critic input as well on every agent iteration
+                
+                Discriminator: one hot encoding that changes on agent iteration, maybe good when the action space is different
+                
+                Basic approach:
+                    Critic per agent who receives all obs and acs
+            '''
 
-        # Calculate Q value for taking those actions in those states'
-        if dims == 3:
-            actor_loss_value = agent.critic(torch.cat([states.float(), current_state_actor_actions.float()], 2))
-        elif dims == 2:
-            actor_loss_value = agent.critic(torch.cat([states.float(), current_state_actor_actions.float()], 1))
-        else:
-            actor_loss_value = agent.critic(torch.cat([states.float(), current_state_actor_actions.float()], 0))
-
-        # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using logs probabilities
-        # penalty for going beyond the bounded interval
-        param_reg = torch.clamp((current_state_actor_actions ** 2) - torch.ones_like(current_state_actor_actions),
-                                min=0.0).mean()
-        # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration
-        actor_loss = -actor_loss_value.mean() + param_reg  # + entropy_reg
-        # Backward Propogation!
-        actor_loss.backward()
-        # Update the weights in the direction of the gradient.
-        agent.actor_optimizer.step()
-        # Save actor loss for tensorboard
-        self.actor_loss = actor_loss
+            actor_loss_value = self.critic(torch.cat([states[:, ix, :].float(), current_state_actor_actions.float()], -1))
+            # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using logs probabilities
+            # penalty for going beyond the bounded interval
+            param_reg = torch.clamp((current_state_actor_actions ** 2) - torch.ones_like(current_state_actor_actions), min=0.0).mean()
+            # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration
+            actor_loss = -actor_loss_value.mean() + param_reg  # + entropy_reg
+            # Backward Propogation!
+            actor_loss.backward()
+            # Update the weights in the direction of the gradient.
+            agent.actor_optimizer.step()
+            # Save actor loss for tensorboard
+            self.actor_loss[ix] = actor_loss
 
         '''
             Soft Target Network Updates
         '''
+        for agent in agents:
+            # Update Target Actor
+            ac_state = agent.actor.state_dict()
+            tgt_ac_state = agent.target_actor.state_dict()
 
-        # Update Target Actor
-        ac_state = agent.actor.state_dict()
-        tgt_ac_state = agent.target_actor.state_dict()
-
-        for k, v in ac_state.items():
-            tgt_ac_state[k] = v * self.tau + (1 - self.tau) * tgt_ac_state[k]
-        agent.target_actor.load_state_dict(tgt_ac_state)
+            for k, v in ac_state.items():
+                tgt_ac_state[k] = v * self.tau + (1 - self.tau) * tgt_ac_state[k]
+            agent.target_actor.load_state_dict(tgt_ac_state)
 
         # Update Target Critic
-        ct_state = agent.critic.state_dict()
-        tgt_ct_state = agent.target_critic.state_dict()
+        ct_state = self.critic.state_dict()
+        tgt_ct_state = self.target_critic.state_dict()
 
         for k, v in ct_state.items():
             tgt_ct_state[k] = v * self.tau + (1 - self.tau) * tgt_ct_state[k]
-        agent.target_critic.load_state_dict(tgt_ct_state)
+        self.target_critic.load_state_dict(tgt_ct_state)
 
-        '''
-            Hard Target Network Updates
-        '''
+    def create_agent_of_role(self, role):
+        assert role in self.roles, "Invalid given role, got {} expected of {}".format(role, self.roles)
+        self.configs['Agent']['role'] = role
+        return MADDPGAgent(self.id_generator(), self.observation_space[role], self.action_space[role], self.configs['Agent'], self.configs['Network'])
 
-        # if step_count % 1000 == 0:
-
-        #     for target_param,param in zip(agent.target_critic.parameters(), agent.critic.parameters()):
-        #         target_param.data.copy_(param.data)
-
-        #     for target_param,param in zip(agent.target_actor.parameters(), agent.actor.parameters()):
-        #         target_param.data.copy_(param.data)
-
-    def create_agent_of_group(self, id, group):
-        self.configs['Agent']['role'] = group
-        self.agent = DDPGAgent(id, self.observation_space[group], self.action_space[group], self.configs['Agent'], self.configs['Network'])
-        return self.agent
-
-    def set_action_space(self, group_action_space):
+    def set_action_space(self, role_action_space):
         self.action_space = {}
-        for group in list(group_action_space.keys()):
-            if group_action_space[group]['continuous'] == 0:
-                group_action_space[group]['type'] = 'discrete'
-            elif group_action_space[group]['discrete'] == 0:
-                group_action_space[group]['type'] = 'continuous'
+        for role in list(role_action_space.keys()):
+            if role_action_space[role]['continuous'] == 0:
+                role_action_space[role]['type'] = 'discrete'
+            elif role_action_space[role]['discrete'] == 0:
+                role_action_space[role]['type'] = 'continuous'
             else:
                 assert "Parametrized not supported yet"
-            self.action_space[group] = group_action_space[group]
+            self.action_space[role] = role_action_space[role]
 
     def get_metrics(self, episodic=False):
         if not episodic:
@@ -246,4 +181,4 @@ class MADDPGAlgorithm(DDPGAlgorithm):
         return metrics
 
     def __str__(self):
-        return 'MADDPGAlgorithm'
+        return '<MADDPGAlgorithm>'

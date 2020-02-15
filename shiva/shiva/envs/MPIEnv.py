@@ -49,6 +49,12 @@ class MPIEnv(Environment):
                 self.log(self.env.get_metrics(episodic=True)) # print metrics
                 self._send_trajectory_numpy()
                 self.env.reset()
+            '''Check if there a new Role->LearnerID mapping'''
+            # if self.menv.Iprobe():
+            #     '''Receive message'''
+            #     '''Clear the buffer'''
+            #     pass
+
         # self.close()
 
     def _step_numpy(self):
@@ -69,6 +75,7 @@ class MPIEnv(Environment):
     def _append_step(self):
         if 'Unity' in self.type:
             for ix, buffer in enumerate(self.trajectory_buffers):
+                '''Order is maintained, each ix is for each Agent Role'''
                 exp = list(map(torch.clone, (torch.tensor([self.observations[ix]]),
                                              torch.tensor([self.actions[ix]]),
                                              torch.tensor([self.rewards[ix]]).unsqueeze(dim=-1),
@@ -88,37 +95,60 @@ class MPIEnv(Environment):
 
 
     def _unity_reshape(self, arr):
-        '''Unity reshape of the data - concat all agents trajectories'''
+        '''Unity reshape of the data - concat all same Role agents trajectories'''
         traj_length, num_agents, dim = arr.shape
         return np.reshape(arr, (traj_length * num_agents, 1, dim))
 
     def _send_trajectory_numpy(self):
+        metrics = self.env.get_metrics(episodic=True)
         if 'Unity' in self.type:
-            for ix in range(self.num_learners):
-                '''Assuming 1 Agent per Learner, no support for MADDPG here'''
-                agent_ix = ix
-                self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape, self.trajectory_buffers[agent_ix].all_numpy())
+            for learner_spec in self.learners_specs:
+                self.observations_buffer = []
+                self.actions_buffer = []
+                self.rewards_buffer = []
+                self.next_observations_buffer = []
+                self.done_buffer = []
+                self.metrics = []
+
+                '''Accumulate the Learners Roles to send only 1 message with all trajectories'''
+                '''If Agent Roles have different acs/obs dimensions, we may need to split the trajectories'''
+                for ix, role in enumerate(learner_spec['roles']):
+                    obs, acs, rew, nobs, don = map(self._unity_reshape, self.trajectory_buffers[ix].all_numpy())
+                    self.observations_buffer.append(obs)
+                    self.actions_buffer.append(acs)
+                    self.rewards_buffer.append(rew)
+                    self.next_observations_buffer.append(nobs)
+                    self.done_buffer.append(don)
+                    self.metrics.append(metrics[ix]) # accumulate the metrics for each role
+
+                self.observations_buffer = np.array(self.observations_buffer)
+                self.actions_buffer = np.array(self.actions_buffer) # NOTE this will fail if we have 1 learner handling 2 roles with diff acs space
+                self.rewards_buffer = np.array(self.rewards_buffer)
+                self.next_observations_buffer = np.array(self.next_observations_buffer)
+                self.done_buffer = np.array(self.done_buffer)
 
                 trajectory_info = {
                     'env_id': self.id,
+                    'role': learner_spec['roles'],
                     'length': self.env.steps_per_episode,
                     'obs_shape': self.observations_buffer.shape,
                     'acs_shape': self.actions_buffer.shape,
                     'rew_shape': self.rewards_buffer.shape,
                     'done_shape': self.done_buffer.shape,
-                    'metrics': self.env.get_metrics(episodic=True)[ix]
+                    'metrics': self.metrics
                 }
 
-                # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape, self.rewards_buffer.shape, self.next_observations_buffer.shape, self.done_buffer.shape))
+                self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape, self.rewards_buffer.shape, self.next_observations_buffer.shape, self.done_buffer.shape))
                 # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
                 # self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
 
-                self.learner.send(trajectory_info, dest=ix, tag=Tags.trajectory_info)
-                self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_observations)
-                self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_actions)
-                self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
-                self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix,tag=Tags.trajectory_next_observations)
-                self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_dones)
+                learner_ix = learner_spec['id']
+                self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
+                self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
+                self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_actions)
+                self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_rewards)
+                self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_next_observations)
+                self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
         else:
             # Gym
             learner_ix = 0
@@ -153,17 +183,18 @@ class MPIEnv(Environment):
     def create_buffers(self):
         if 'Unity' in self.type:
             '''
-                Need a buffer for each Agent Group (Brain)
-                Agent Groups may have different act/obs spaces and number of agent IDs
-                (Unity is a bit different due to the multi-instance per single environment)
+                Need a buffer for each Agent Role
+                - Agent roles may have different act/obs spaces and number of agent role
+                - And each Role may have many agents instances (num_instances_per_env)
+                - Order is maintained
             '''
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
-                                                              self.env.num_instances_per_group[group],
-                                                              self.env.observation_space[group],
-                                                              self.env.action_space[group]['acs_space']) \
-                                       for i, group in enumerate(self.env.agent_groups) ]
+                                                              self.env.num_instances_per_role[role],
+                                                              self.env.observation_space[role],
+                                                              self.env.action_space[role]['acs_space']) \
+                                       for i, role in enumerate(self.env.roles) ]
         else:
-            '''Gym - has only 1 agent per environment and no groups'''
+            '''Gym - has only 1 agent per environment and no roles'''
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
                                                               1,
                                                               self.env.observation_space,
@@ -178,8 +209,9 @@ class MPIEnv(Environment):
         self.env = self.create_environment()
 
     def _connect_learners(self):
-        self.log("Waiting Learners info")
+        self.log("Waiting LearnersSpecs from the MultiEnv")
         self.learners_specs = self.menv.bcast(None, root=0) # Wait until Learners info arrives from MultiEnv
+        self.role2learner = self.menv.scatter(None, root=0)
         self.num_learners = len(self.learners_specs)
         # self.log("Got Learners info and will connect with {} learners".format(self.num_learners))
         # Start communication with Learners
@@ -206,7 +238,7 @@ class MPIEnv(Environment):
             'observation_space': self.env.get_observation_space(),
             'action_space': self.env.get_action_space(),
             'num_agents': self.env.num_agents,
-            'agents_group': self.env.agent_groups if hasattr(self.env, 'agent_groups') else ['Agent_0'], # agents names given by the env - needs to be implemented by RoboCup
+            'roles': self.env.roles if hasattr(self.env, 'roles') else ['Agent_0'], # agents names given by the env - needs to be implemented by RoboCup
             'num_instances_per_env': self.env.num_instances_per_env if hasattr(self.env, 'num_instances_per_env') else 1, # Unity case
             'learners_port': self.learners_port if hasattr(self, 'learners_port') else False
         }

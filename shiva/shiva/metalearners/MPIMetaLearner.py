@@ -52,24 +52,24 @@ class MPIMetaLearner(MetaLearner):
 
     def _get_learners_configs(self):
         '''
-            Check that the Learners assignment with the environment Group Names are correct
+            Check that the Learners assignment with the environment Role Names are correct
             This will only run if the learners_map is set
         '''
         self.learner_configs = []
         if hasattr(self, 'learners_map'):
-            '''First check that all Agents Groups are assigned to a Learner'''
-            for ix, agent_group in enumerate(self.configs['MultiEnv'][0]['env_specs']['agents_group']):
-                if agent_group in set(self.learners_map.keys()):
+            '''First check that all Agents Roles are assigned to a Learner'''
+            for ix, roles in enumerate(self.configs['MultiEnv'][0]['env_specs']['roles']):
+                if roles in set(self.learners_map.keys()):
                     pass
                 else:
-                    assert "Agent Group {} is not being assigned to any Learner\nUse the 'learners_map' attribute on the [MetaLearner] section".format(agent_group)
+                    assert "Agent Roles {} is not being assigned to any Learner\nUse the 'learners_map' attribute on the [MetaLearner] section".format(roles)
             '''Do some preprocessing before spreading the config'''
             # load each one of the configs and keeping same order
             self.learners_configs = []
-            for config_path, learner_agent_groups in self.learners_map.items():
+            for config_path, learner_roles in self.learners_map.items():
                 learner_config = load_config_file_2_dict(config_path)
                 learner_config = merge_dicts(self.configs, learner_config)
-                learner_config['Learner']['agent_groups'] = learner_agent_groups
+                learner_config['Learner']['roles'] = learner_roles
                 self.learners_configs.append(learner_config)
             # for config_path in list(self.learners_map.keys()):
             #     learner_config = load_config_file_2_dict(config_path)

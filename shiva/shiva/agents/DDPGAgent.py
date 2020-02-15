@@ -52,20 +52,24 @@ class DDPGAgent(Agent):
         self.target_critic = copy.deepcopy(self.critic)
 
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        try:
+            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        except:
+            pass
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
 
-
-    def get_action(self, observation, step_count, evaluate=False):
+    def get_action(self, observation, step_count, evaluate=None):
+        if evaluate is not None:
+            self.evaluate = evaluate
         if self.action_space == 'discrete':
-            return self.get_discrete_action(observation, step_count, evaluate)
+            return self.get_discrete_action(observation, step_count, self.evaluate)
         elif self.action_space == 'continuous':
-            return self.get_continuous_action(observation, step_count, evaluate)
+            return self.get_continuous_action(observation, step_count, self.evaluate)
         elif self.action_space == 'parameterized':
             assert "DDPG Parametrized NotImplemented"
             pass
-            return self.get_parameterized_action(observation, evaluate)
+            return self.get_parameterized_action(observation, self.evaluate)
 
     def get_discrete_action(self, observation, step_count, evaluate):
         if evaluate:
@@ -143,5 +147,5 @@ class DDPGAgent(Agent):
     #     self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
         
     def __str__(self):
-        return 'DDPGAgent'
+        return '<DDPGAgent(id={}, role={})>'.format(self.id, self.role)
         

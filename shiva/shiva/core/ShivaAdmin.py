@@ -39,7 +39,8 @@ class ShivaAdmin():
         'summary':      'Tensorboards',
         'checkpoint':   'Ep{ep_num}',
         'learner_data': 'Learner_Data',
-        'agent':        '{role}{id}',
+        'agent':        '{id}-{role}',
+        'latest':      'temp'
     }
 
     def __init__(self, logger, config=None):
@@ -128,8 +129,8 @@ class ShivaAdmin():
             new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
             self._learner_dir[learner.id]['base'] = new_dir
             self._learner_dir[learner.id]['checkpoint'] = [] # keep track of each checkpoint directory
-            temp_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], 'temp') )
-            self._learner_dir[learner.id]['temp'] = temp_dir
+            latest_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['latest']) )
+            self._learner_dir[learner.id]['latest'] = latest_dir
             new_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['summary']) )
             self._learner_dir[learner.id]['summary'] = new_dir
             self._agent_dir[learner.id] = {}
@@ -154,7 +155,7 @@ class ShivaAdmin():
         # create checkpoint folder
         self.use_temp_folder = use_temp_folder
         if self.use_temp_folder:
-            checkpoint_dir = self._learner_dir[learner.id]['temp']
+            checkpoint_dir = self._learner_dir[learner.id]['latest']
         else:
             checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ))
         self._learner_dir[learner.id]['checkpoint'].append(checkpoint_dir)
@@ -170,7 +171,7 @@ class ShivaAdmin():
 
     def get_temp_directory(self, learner):
         assert learner.id in self._learner_dir, "Learner was not profiled by ShivaAdmin, try calling Admin.add_learner_profile at initialization "
-        return self._learner_dir[learner.id]['temp']
+        return self._learner_dir[learner.id]['latest']
 
     def _add_agent_checkpoint(self, learner, agent):
         '''
@@ -198,7 +199,7 @@ class ShivaAdmin():
         '''
         self._add_agent_checkpoint(learner, agent)
         if self.use_temp_folder:
-            return os.path.join(self._learner_dir[learner.id]['temp'], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) )
+            return os.path.join(self._learner_dir[learner.id]['latest'], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) )
         else:
             return self._agent_dir[learner.id][agent.id][-1]
 

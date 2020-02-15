@@ -1,5 +1,5 @@
-import numpy as np
 import torch
+from shiva.core.admin import logger
 
 class Algorithm():
     def __init__(self, obs_space, acs_space, configs):
@@ -69,3 +69,7 @@ class Algorithm():
 
     def get_agents(self):
         return self.agents
+
+    def log(self, msg, to_print=False):
+        text = '{}\t{}'.format(self, msg)
+        logger.info(text, to_print or self.configs['Admin']['print_debug'])
