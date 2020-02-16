@@ -62,14 +62,19 @@ class MPIEvaluation(Evaluation):
 
             if 'Unity' in self.env_specs['type']:
                 actions = [ [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
-            else:
+                self.actions = np.array(actions)
+                self.envs.scatter(self.actions, root=MPI.ROOT)
+            elif 'Gym' in self.env_specs['type']:
                 # Gym
                 # same?
                 actions = [ [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
-
-            self.actions = np.array(actions)
-            self.envs.scatter(self.actions, root=MPI.ROOT)
-
+                self.actions = np.array(actions)
+                self.envs.scatter(self.actions, root=MPI.ROOT)
+            elif 'RoboCup' in self.env_specs['type']:
+                actions = [[agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+                actions = np.array(actions)
+                # self.log("The actions shape {}".format(actions.shape))
+                self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
             if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
                 print('Sending Eval and updating most recent agent file path ')

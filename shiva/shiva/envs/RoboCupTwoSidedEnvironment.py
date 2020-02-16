@@ -34,7 +34,12 @@ class RoboCupTwoSidedEnvironment(Environment):
         # self.world_status = self.env.world_status
         self.observation_space = self.env.left_features
         self._action_space = self.env.acs_dim + self.env.acs_param_dim
-        self.action_space = {'acs_space': self.env.acs_dim, 'param': self.env.acs_param_dim}
+        self.action_space = {
+                             'discrete': self.env.acs_dim,
+                             'continuous': 0,
+                             'param': self.env.acs_param_dim,
+                             'acs_space': self._action_space}
+
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
@@ -87,8 +92,8 @@ class RoboCupTwoSidedEnvironment(Environment):
             right_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in right_actions]
         elif discrete_select == 'sample':
             # act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
-            left_act_choice = [np.random.choice(self.action_space['acs_space'], p=a[:self.action_space['acs_space']]) for a in left_actions]
-            right_act_choice = [np.random.choice(self.action_space['acs_space'], p=a[:self.action_space['acs_space']]) for a in right_actions]
+            left_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in left_actions]
+            right_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in right_actions]
         elif discrete_select == 'imit_discrete':
             act_choice = actions[0]
             # action = action2one_hot(self.acs_discrete, action.item())
@@ -150,8 +155,8 @@ class RoboCupTwoSidedEnvironment(Environment):
     def get_observation_space(self):
         return self.observation_space
 
-    def get_action_space(self):
-        return self._action_space
+    # def get_action_space(self):
+    #     return self._action_space
     
     def get_imit_obs_msg(self):
         return self.env.getImitObsMsg()

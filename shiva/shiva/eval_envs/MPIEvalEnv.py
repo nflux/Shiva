@@ -83,11 +83,10 @@ class MPIEvalEnv(Environment):
         send_obs_buffer = np.array(self.observations, dtype=np.float64)
         self.eval.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
 
-        self.actions = self.eval.scatter(None, root=0)
-        # self.log("Obs {} Act {}".format(self.observations, self.actions))
-        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions.tolist())
-
         if 'Unity' in self.type:
+            self.actions = self.eval.scatter(None, root=0)
+            # self.log("Obs {} Act {}".format(self.observations, self.actions))
+            self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions.tolist())
 
             for i in range(len(self.rewards)):
                 self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
@@ -98,6 +97,9 @@ class MPIEvalEnv(Environment):
                 self.reward_idxs[i] += 1
 
         elif 'Gym' in self.type:
+            self.actions = self.eval.scatter(None, root=0)
+            # self.log("Obs {} Act {}".format(self.observations, self.actions))
+            self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions.tolist())
 
             self.episode_rewards[self.reward_idxs] = self.rewards
             if self.dones:
@@ -105,8 +107,21 @@ class MPIEvalEnv(Environment):
                 self.episode_rewards.fill(0)
                 self.reward_idxs = 0
             self.reward_idxs += 1
+        
+        elif 'RoboCup' in self.type:
+            recv_action = np.zeros((self.env.num_agents, sum(self.env.action_space.values())), dtype=np.float32)
+            # self.log("The recv action {}".format(recv_action.shape))
+            self.menv.Scatter(None, [recv_action, MPI.FLOAT], root=0)
+            self.actions = recv_action
+            self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
-
+            for i in range(len(self.rewards)):
+                self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
+                if self.dones[i]:
+                    self._send_eval_numpy(self.episode_rewards[i,:].sum(),i)
+                    self.episode_rewards[i,:].fill(0)
+                    self.reward_idxs[i] = 0
+                self.reward_idxs[i] += 1
 
     def _send_eval_numpy(self,episode_reward,agent_idx):
         '''Numpy approach'''
@@ -124,10 +139,13 @@ class MPIEvalEnv(Environment):
             self.reward_idxs = dict()
             for i in range(self.num_agents): self.reward_idxs[i] = 0
 
-        else:
+        elif 'Gym' in self.type:
             '''Gym - has only 1 agent per environment and no groups'''
             self.episode_rewards = np.zeros(self.episode_max_length)
             self.reward_idxs = 0
+        elif 'RoboCup' in self.type:
+            self.episode_rewards = np.zeros((self.agents_per_env, self.episode_max_length))
+            self.reward_idxs = np.zeros(self.agents_per_env)
 
 
     def reset_buffers(self):
@@ -141,10 +159,13 @@ class MPIEvalEnv(Environment):
             self.reward_idxs = dict()
             for i in range(self.num_agents): self.reward_idxs[i] = 0
 
-        else:
+        elif 'Gym' in self.type:
             '''Gym - has only 1 agent per environment and no groups'''
             self.episode_rewards.fill(0)
             self.reward_idxs = 0
+        elif 'RoboCup' in self.type:
+            self.episode_rewards.fill(0)
+            self.reward_idxs.fill(0)
 
     def _launch_env(self):
         # initiate env from the config

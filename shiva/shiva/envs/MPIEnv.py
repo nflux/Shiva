@@ -56,15 +56,11 @@ class MPIEnv(Environment):
         '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
                                     --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
         '''
-        send_obs_buffer = np.array(self.observations, dtype=np.float64)
-        self.menv.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
+        self.observations = np.array(self.observations, dtype=np.float64)
+        self.menv.Gather([self.observations, MPI.DOUBLE], None, root=0)
 
-        if 'RoboCup' in self.type:
-            recv_action = np.zeros((self.env.num_agents, sum(self.env.action_space.values())), dtype=np.float64)
-            self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
-            self.actions = recv_action
-        elif 'Gym' in self.type:
-            recv_action = np.zeros((1, self.env.action_space['acs_space']), dtype=np.float64)
+        if 'Gym' in self.type or 'RoboCup' in self.type:
+            recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
             self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
             self.actions = recv_action
         elif 'Unity':
@@ -86,8 +82,8 @@ class MPIEnv(Environment):
                                              torch.tensor([self.dones[ix]], dtype=torch.bool).unsqueeze(dim=-1)
                                              )))
                 buffer.push(exp)
-        else:
-            # Gym
+        elif 'Gym' in self.type:
+            # Gym/RoboCup
             exp = list(map(torch.clone, (torch.from_numpy(self.observations).unsqueeze(dim=0),
                                          torch.tensor(self.actions).unsqueeze(dim=0),
                                          torch.tensor(self.rewards).reshape(1, 1, 1),
@@ -95,12 +91,25 @@ class MPIEnv(Environment):
                                          torch.tensor(self.dones, dtype=torch.bool).reshape(1, 1, 1)
                                          )))
             self.trajectory_buffers[0].push(exp)
+        elif 'RoboCup' in self.type:
+            exp = list(map(torch.clone, (torch.tensor([self.observations], dtype=torch.float64),
+                                            torch.tensor([self.actions], dtype=torch.float64),
+                                            torch.tensor([self.rewards], dtype=torch.float64).unsqueeze(dim=-1),
+                                            torch.tensor([self.next_observations], dtype=torch.float64),
+                                            torch.tensor([self.dones], dtype=torch.bool).unsqueeze(dim=-1)
+                                            )))
+            self.trajectory_buffers[0].push(exp)
 
 
     def _unity_reshape(self, arr):
         '''Unity reshape of the data - concat all agents trajectories'''
         traj_length, num_agents, dim = arr.shape
         return np.reshape(arr, (traj_length * num_agents, 1, dim))
+
+    def _robo_reshape(self, arr):
+        arr = np.ascontiguousarray(arr)
+        traj, dim = arr.shape
+        return np.reshape(arr, (traj, 1, dim))
 
     def _send_trajectory_numpy(self):
         if 'Unity' in self.type:
@@ -129,7 +138,7 @@ class MPIEnv(Environment):
                 self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
                 self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix,tag=Tags.trajectory_next_observations)
                 self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=ix, tag=Tags.trajectory_dones)
-        else:
+        elif 'Gym' in self.type:
             # Gym/RoboCup
             self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = self.trajectory_buffers[0].all_numpy()
 
@@ -146,6 +155,7 @@ class MPIEnv(Environment):
             # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
             # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
             #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
+            self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
 
             self.learner.send(trajectory_info, dest=self.id, tag=Tags.trajectory_info)
             self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_observations)
@@ -153,6 +163,32 @@ class MPIEnv(Environment):
             self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_rewards)
             self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
             self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
+        elif 'RoboCup' in self.type:
+            for ix in range(self.num_learners):
+                self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._robo_reshape, self.trajectory_buffers[0].agent_numpy(ix))
+
+                trajectory_info = {
+                    'env_id': self.id,
+                    'length': self.env.steps_per_episode,
+                    'obs_shape': self.observations_buffer.shape,
+                    'acs_shape': self.actions_buffer.shape,
+                    'rew_shape': self.rewards_buffer.shape,
+                    'done_shape': self.done_buffer.shape,
+                    'metrics': self.env.get_metrics(episodic=True)
+                }
+
+                # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
+                # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
+                #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
+                self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
+
+                self.learner.send(trajectory_info, dest=ix, tag=Tags.trajectory_info)
+                self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_observations)
+                self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_actions)
+                self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
+                self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_next_observations)
+                self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=ix, tag=Tags.trajectory_dones)
+
 
         self.reset_buffers()
         # time.sleep(5)
@@ -170,9 +206,9 @@ class MPIEnv(Environment):
                                                               self.env.action_space[group]['acs_space']) \
                                        for i, group in enumerate(self.env.agent_groups) ]
         else:
-            '''Gym - has only 1 agent per environment and no groups'''
+            # Gym/RoboCup
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
-                                                              1,
+                                                              self.env.num_agents,
                                                               self.env.observation_space,
                                                               self.env.action_space['acs_space'])]
 

@@ -55,7 +55,6 @@ class MPILearner(Learner):
         elif 'RoboCup' in self.env_specs['type']:
             self.observation_space = self.env_specs['observation_space']
             self.action_space = self.env_specs['action_space']
-            self.acs_dim = self.action_space['acs_space'] + self.action_space['param']
 
         # self.log("Got MultiEnvSpecs {}".format(self.menvs_specs))
         #self.log("Obs space {} / Action space {}".format(self.observation_space, self.action_space))
@@ -93,7 +92,10 @@ class MPILearner(Learner):
         # n_episodes = 500
         while self.train:
             # self._receive_trajectory_python_list()
-            self._receive_trajectory_numpy()
+            if 'RoboCup' in self.env_specs['type']:
+                self._robo_receive_trajectory_numpy()
+            else:
+                self._receive_trajectory_numpy()
 
             # '''Used for calculating collection time'''
             # if self.done_count == n_episodes:
@@ -198,7 +200,63 @@ class MPILearner(Learner):
                                      )))
         self.buffer.push(exp)
 
-        # self.close()
+    def _robo_receive_trajectory_numpy(self):
+        '''Receive trajectory from each single environment in self.envs process group'''
+        '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
+
+        info = MPI.Status()
+        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
+        env_source = info.Get_source()
+
+        '''Assuming 1 Agent here'''
+        self.metrics_env = self.traj_info['metrics']
+        traj_length = self.traj_info['length']
+
+        '''
+            Ideas to optimize -> needs some messages that are not multidimensional
+                - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional) 
+        '''
+
+        observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
+        self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
+        # self.log("Got Obs shape {}".format(observations.shape))
+
+        actions = np.zeros([traj_length, self.num_agents, self.action_space['acs_space']], dtype=np.float64)
+        self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
+        # self.log("Got Acs shape {}".format(actions.shape))
+
+        rewards = np.zeros([traj_length, self.num_agents, 1], dtype=np.float64)
+        self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
+        # self.log("Got Rewards shape {}".format(rewards.shape))
+
+        next_observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
+        self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
+        # self.log("Got Next Obs shape {}".format(next_observations.shape))
+
+        '''are dones even needed? It's obviously a trajectory...'''
+        dones = np.zeros([traj_length, self.num_agents, 1], dtype=np.bool)
+        self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
+        # self.log("Got Dones shape {}".format(dones.shape))
+
+        self.step_count += traj_length
+        self.done_count += 1
+        self.steps_per_episode = traj_length
+        self.reward_per_episode = sum(rewards)
+
+        # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+
+        # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
+        # self.log("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+        # self.log("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
+
+        exp = list(map(torch.clone, (torch.from_numpy(observations),
+                                     torch.from_numpy(actions),
+                                     torch.from_numpy(rewards),
+                                     torch.from_numpy(next_observations),
+                                     torch.from_numpy(dones)
+                                     )))
+
+        self.buffer.push(exp)
 
     def _connect_menvs(self):
         # Connect with MultiEnv
@@ -257,7 +315,7 @@ class MPILearner(Learner):
     def create_buffer(self):
         # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
+        buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, self.observation_space, self.action_space['acs_space'])
         self.log("Buffer created of type {}".format(buffer_class))
         return buffer
 
