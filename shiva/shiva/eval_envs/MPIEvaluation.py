@@ -29,9 +29,10 @@ class MPIEvaluation(Evaluation):
         self._launch_envs()
         self.meval.gather(self._get_eval_specs(), root=0) # checkin with MultiEvalWrapper
         #self._connect_learners()
-        self.agent_sel = self.meval.scatter(None, root=0)
+        self.agent_sel = self.meval.recv(None, source=0,tag=Tags.new_agents)
         self.agent_ids = [id for id in self.agent_sel]
         print('Agent IDs: ', self.agent_ids)
+        print('Agent Sel: ', self.agent_sel)
         self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
         self.eval_counts = np.zeros(len(self.agent_ids),dtype=int)
         self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
@@ -70,21 +71,28 @@ class MPIEvaluation(Evaluation):
             self.envs.scatter(self.actions, root=MPI.ROOT)
 
 
-            if self.eval_counts.sum() >= self.eval_episodes*self.num_agents:
+            if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
+                print('Sending Eval and updating most recent agent file path ')
 
-                for i in range(self.num_agents):
+                for i in range(self.agents_per_env):
                     path = self.eval_path+'Agent_'+str(self.agent_ids[i])
                     self.meval.send(self.agent_ids[i],dest=0,tag=Tags.agent_id)
                     self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
                     np.save(path+'/episode_evaluations',self.evals[i])
                 #self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
+                    new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0]
+                    self.agent_ids[i] = new_agent
+                    print('New Eval Agent: {}'.format(new_agent))
+                    path = self.eval_path+'Agent_'+str(new_agent)
                     self.agents[i] = Admin._load_agents(path)[0]
                     self.evals[i].fill(0)
                     self.eval_counts[i]=0
-                    self.envs.bcast([True], root=MPI.ROOT)
-                    print("Agents have been told to clear buffers for new agents")
-                else:
-                    self.envs.bcast([False], root=MPI.ROOT)
+
+
+                for i in range(self.num_envs):
+                    self.envs.send([True],dest=i,tag=Tags.clear_buffers)
+                print("Agents have been told to clear buffers for new agents")
+
 
 
         self.close()

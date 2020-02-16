@@ -69,7 +69,7 @@ class MPIEnv(Environment):
             self.actions = recv_action
         elif 'Unity':
             self.actions = self.menv.scatter(None, root=0)
- 
+
         # self.log("Obs {} Act {}".format(self.observations, self.actions))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
@@ -147,12 +147,12 @@ class MPIEnv(Environment):
             # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
             #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
 
-            self.learner.send(trajectory_info, dest=0, tag=Tags.trajectory_info)
-            self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=0, tag=Tags.trajectory_observations)
-            self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=0, tag=Tags.trajectory_actions)
-            self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=0, tag=Tags.trajectory_rewards)
-            self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=0, tag=Tags.trajectory_next_observations)
-            self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=0, tag=Tags.trajectory_dones)
+            self.learner.send(trajectory_info, dest=self.id, tag=Tags.trajectory_info)
+            self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_observations)
+            self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_actions)
+            self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_rewards)
+            self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
+            self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
 
         self.reset_buffers()
         # time.sleep(5)

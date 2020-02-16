@@ -38,7 +38,6 @@ class MPIPBTMetaLearner(MetaLearner):
                 self.rankings_size = len(self.rankings)
                 self.bottom_20 = int(self.rankings_size * .80)
                 self.top_20 = int(self.rankings_size * .20)
-                if self.top_20 == 0: self.top_20 = 1
                 print('MetaLearner Rankings: ', self.rankings)
 
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution) and hasattr(self, 'rankings'):
@@ -51,24 +50,29 @@ class MPIPBTMetaLearner(MetaLearner):
                     print('Current Agent Ranking: ', np.where(self.rankings == agent_id)[0])
                     ranking = np.where(self.rankings == agent_id)[0]
                     evo['agent_id'] = agent_id
-                    if ranking >= self.top_20:
+                    if ranking <= self.top_20:
                         evo['evolution'] = False
+                        print('Do Not Evolve')
                         self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
-                    elif self.bottom_20  <= ranking <= self.top_20:
+                    elif self.top_20  < ranking < self.bottom_20:
+                        print('Middle of the Pack')
                         evo['evolution'] = True
                         evo['agent'] = agent_id
                         evo['ranking'] = ranking
-                        print(self.rankings)
                         evo['evo_agent'] = self.rankings[np.random.choice(range(self.bottom_20))]
                         evo['evo_ranking']= np.where(self.rankings == evo['evo_agent'])
                         evo['exploitation'] = 't_test'
                         evo['exploration'] = np.random.choice(['perturb', 'resample'])
                         self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
                     else:
+                        print('You suck')
                         evo['evolution'] = True
                         evo['agent'] = agent_id
                         evo['ranking'] = ranking
-                        evo['evo_agent'] = self.rankings[np.random.choice(range(self.top_20))]
+                        if not self.top_20 == 0:
+                            evo['evo_agent'] = self.rankings[np.random.choice(range(self.top_20))]
+                        else:
+                            evo['evo_agent'] = self.rankings[0]
                         evo['evo_ranking'] = np.where(self.rankings == evo['evo_agent'])
                         evo['exploitation'] = 'truncation'
                         evo['exploration'] = np.random.choice(['perturb', 'resample'])

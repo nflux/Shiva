@@ -52,6 +52,11 @@ class MPIEvalEnv(Environment):
 
                 self.env.reset()
 
+            if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
+                _ = self.eval.recv(None, source=0 , tag=Tags.clear_buffers)
+                self.reset_buffers()
+                print('Buffers have been reset')
+
 
 
 
@@ -93,7 +98,7 @@ class MPIEvalEnv(Environment):
                 self.reward_idxs[i] += 1
 
         elif 'Gym' in self.type:
-            
+
             self.episode_rewards[self.reward_idxs] = self.rewards
             if self.dones:
                 self._send_eval_numpy(self.episode_rewards.sum(),0)
@@ -132,11 +137,14 @@ class MPIEvalEnv(Environment):
                 Agent Groups may have different act/obs spaces and number of agent IDs
                 (Unity is a bit different due to the multi-instance per single environment)
             '''
-            self.episode_rewards[i].fill(0)
+            self.episode_rewards.fill(0)
+            self.reward_idxs = dict()
+            for i in range(self.num_agents): self.reward_idxs[i] = 0
+
         else:
             '''Gym - has only 1 agent per environment and no groups'''
             self.episode_rewards.fill(0)
-        for i in range(self.num_agents): self.reward_idxs[i] = 0
+            self.reward_idxs = 0
 
     def _launch_env(self):
         # initiate env from the config

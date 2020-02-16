@@ -46,7 +46,7 @@ class MPIMultiEnv(Environment):
             - all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI
             - agents_instances are in equal amount for all agents
         '''
-        
+
         if 'Unity' in self.type:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         else:
@@ -82,7 +82,7 @@ class MPIMultiEnv(Environment):
             actions = np.array(actions)
             self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
-        
+
         # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions))
 
     def _launch_envs(self):

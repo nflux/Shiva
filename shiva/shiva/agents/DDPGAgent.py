@@ -61,6 +61,8 @@ class DDPGAgent(Agent):
             self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
         else:
+            self.actor_learning_rate = agent_config['actor_learning_rate']
+            self.critic_learning_rate = agent_config['critic_learning_rate']
             self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
@@ -164,7 +166,7 @@ class DDPGAgent(Agent):
 
     def perturb_hyperparameters(self,perturb_factor):
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor
-        self.critic_learning_rate = self.actor_learning_rate * perturb_factor
+        self.critic_learning_rate = self.critic_learning_rate * perturb_factor
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 

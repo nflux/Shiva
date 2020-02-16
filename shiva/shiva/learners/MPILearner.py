@@ -3,6 +3,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
 import numpy as np
+from scipy import stats
 from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
@@ -68,12 +69,10 @@ class MPILearner(Learner):
         if self.pbt:
             self.create_pbt_dirs()
             self.save_pbt_agents()
-            for agent in self.agents:
-                agent.save(self.eval_path+'Agent_'+str(agent.id),0)
+            #for agent in self.agents:
+                #agent.save(self.eval_path+'Agent_'+str(agent.id),0)
         # print("DURING LAUNCH", self.agent_ids)
         self.meta.gather(self.agent_ids,root=0)
-
-        self.evolution_checks = 1
         # make first saving
         Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
         # Connect with MultiEnvs
@@ -111,31 +110,40 @@ class MPILearner(Learner):
                     self.agents[0].done_count = self.done_count
                     # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                    #self.save_pbt_agents()
                     for ix in range(self.num_menvs):
                         self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
                 if self.done_count % self.save_checkpoint_episodes == 0:
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
-            if self.done_count % self.evolution_episodes == 0:
-                # print('Requesting evolution config')
-                self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
-                for agent in self.agents:
-                    self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
-                    # print('Received evolution config')
-                    if self.evolution_config['evolution'] == False:
-                        continue
-                    setattr(self, 'exploitation', self.evolution_config['exploitation'])
-                    setattr(self, 'exploration', self.evolution_config['exploration'])
-                    print('Starting Evolution')
-                    self.exploitation = getattr(self, self.exploitation)
-                    self.exploration = getattr(self, self.exploration)
-                    self.exploitation(agent,self.evolution_config)
-                    self.exploration(agent)
-                    print('Evolution Complete\n')
 
 
-                self.log("Got evolution config!")
+                if self.done_count % self.evolution_episodes == 0:
+                    # print('Requesting evolution config')
+                    self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
+                    for agent in self.agents:
+                        self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
+                        # print('Received evolution config')
+                        if self.evolution_config['evolution'] == False:
+                            continue
+                        setattr(self, 'exploitation', self.evolution_config['exploitation'])
+                        setattr(self, 'exploration', self.evolution_config['exploration'])
+                        print('Starting Evolution')
+                        self.exploitation = getattr(self, self.exploitation)
+                        self.exploration = getattr(self, self.exploration)
+                        self.exploitation(agent,self.evolution_config)
+                        self.exploration(agent)
+
+                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                    #self.save_pbt_agents()
+                    for ix in range(self.num_menvs):
+                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+
+
+                        print('Evolution Complete\n')
+
+
 
             self.collect_metrics(episodic=True)
 
@@ -232,8 +240,8 @@ class MPILearner(Learner):
         if self.load_agents:
             agents = Admin._load_agents(self.load_agents, absolute_path=False)
         else:
-            #self.start_agent_idx = self.num_agents * self.id
-            #self.end_agent_idx = self.start_agent_idx + self.num_agents
+            self.start_agent_idx = self.num_agents * self.id
+            self.end_agent_idx = self.start_agent_idx + self.num_agents
             #agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
             agents = [self.alg.create_agent(self.id + i) for i in range(self.num_agents)]
             agent_ids = [agent.id for agent in agents]
@@ -270,13 +278,18 @@ class MPILearner(Learner):
         return p < self.p_value
 
     def t_test(self,agent,evo_config):
-        if evo_config['ranking'] < evo_config['evo_ranking']:
-            evals = np.load(this.eval_path+'Agent_'+str(evo_config['agent']+'/episode_evaluations'))
-            evo_evals = np.load(this.eval_path+'Agent_'+str(evo_config['evo_agent']+'/episode_evaluations'))
-            if welch_T_Test(evals,evo_evals):
+        print('Starting t_test')
+        if evo_config['ranking'] > evo_config['evo_ranking']:
+            print('Ranking > Evo_Ranking')
+            evals = np.load(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy')
+            evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy')
+            if self.welch_T_Test(evals,evo_evals):
+                print('Welch Passed')
                 path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
                 evo_agent = Admin._load_agents(path)[0]
                 agent.copy_weights(evo_agent)
+        print('Finished t_test')
+
 
     def truncation(self,agent,evo_config):
         print('Truncating')
@@ -286,10 +299,13 @@ class MPILearner(Learner):
         print('Truncated')
 
     def perturb(self,agent):
+        print('Pertubing')
         perturb_factor = np.random.choice([0.8,1.2])
         agent.perturb_hyperparameters(perturb_factor)
+        print('Finished Pertubing')
 
     def resample(self,agent):
+        print('Resampling')
         agent.resample_hyperparameters()
 
     def exploitation(self):
