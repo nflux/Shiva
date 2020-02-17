@@ -129,7 +129,7 @@ class ShivaAdmin():
             new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
             self._learner_dir[learner.id]['base'] = new_dir
             self._learner_dir[learner.id]['checkpoint'] = [] # keep track of each checkpoint directory
-            latest_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['latest']) )
+            latest_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['latest']), overwrite=True )
             self._learner_dir[learner.id]['latest'] = latest_dir
             new_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['summary']) )
             self._learner_dir[learner.id]['summary'] = new_dir
@@ -183,7 +183,7 @@ class ShivaAdmin():
                 @agent              Agent instance ref to be saved
         '''
         if not self.need_to_save: return
-        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ) )
+        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ), overwrite=self.use_temp_folder )
         if agent.id not in self._agent_dir[learner.id]:
             self._agent_dir[learner.id][agent.id] = []
         self._agent_dir[learner.id][agent.id].append(new_dir)
