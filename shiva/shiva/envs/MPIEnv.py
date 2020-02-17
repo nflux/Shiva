@@ -130,7 +130,8 @@ class MPIEnv(Environment):
                 trajectory_info = {
                     'env_id': self.id,
                     'role': learner_spec['roles'],
-                    'length': self.env.steps_per_episode,
+                    # 'length': self.env.steps_per_episode,
+                    'length_index': 1, # trajectory length index on obs_shape
                     'obs_shape': self.observations_buffer.shape,
                     'acs_shape': self.actions_buffer.shape,
                     'rew_shape': self.rewards_buffer.shape,

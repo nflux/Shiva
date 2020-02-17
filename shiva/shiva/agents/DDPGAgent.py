@@ -7,7 +7,7 @@ from torch.nn.functional import softmax
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.Agent import Agent
 from shiva.utils import Noise as noise
-from shiva.helpers.misc import action2one_hot
+from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 class DDPGAgent(Agent):
@@ -59,11 +59,11 @@ class DDPGAgent(Agent):
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
 
-    def get_action(self, observation, step_count, evaluate=None):
+    def get_action(self, observation, step_count, one_hot=True, evaluate=None):
         if evaluate is not None:
             self.evaluate = evaluate
         if self.action_space == 'discrete':
-            return self.get_discrete_action(observation, step_count, self.evaluate)
+            return self.get_discrete_action(observation, step_count, one_hot, self.evaluate)
         elif self.action_space == 'continuous':
             return self.get_continuous_action(observation, step_count, self.evaluate)
         elif self.action_space == 'parameterized':
@@ -71,7 +71,7 @@ class DDPGAgent(Agent):
             pass
             return self.get_parameterized_action(observation, self.evaluate)
 
-    def get_discrete_action(self, observation, step_count, evaluate):
+    def get_discrete_action(self, observation, step_count, one_hot, evaluate):
         if evaluate:
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
             # print("Agent Evaluate {}".format(action))
@@ -89,6 +89,8 @@ class DDPGAgent(Agent):
                 action = torch.abs(action)
                 action = action / action.sum()
                 # print("Net: {}".format(action))
+        if one_hot:
+            action = action2one_hot(action.shape[0], torch.argmax(action).item())
         return action.tolist()
 
     def get_continuous_action(self,observation, step_count, evaluate):

@@ -81,20 +81,18 @@ class MPILearner(Learner):
             #     self.log("Collected {} episodes in {} seconds".format(n_episodes, (t1-t0)))
             #     exit()
 
-            if not self.evaluate:
-                '''Change freely condition when to update'''
-                if self.done_count % self.episodes_to_update == 0:
-                    self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
-                    self.update_num += 1
-                    for ix in range(len(self.agents)):
-                        self.agents[ix].step_count = self.step_count
-                        self.agents[ix].done_count = self.done_count
-                    # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+            if not self.evaluate and len(self.buffer) > self.buffer.batch_size and (self.done_count % self.episodes_to_update == 0):
+                self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
+                self.update_num += 1
+                for ix in range(len(self.agents)):
+                    self.agents[ix].step_count = self.step_count
+                    self.agents[ix].done_count = self.done_count
+                # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
+                Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
-                    '''No need to send message to MultiEnv'''
-                    # for ix in range(self.num_menvs):
-                    #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+                '''No need to send message to MultiEnv'''
+                # for ix in range(self.num_menvs):
+                #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
                 if self.done_count % self.save_checkpoint_episodes == 0:
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
@@ -120,7 +118,8 @@ class MPILearner(Learner):
 
         '''Assuming 1 Agent here'''
         self.metrics_env = self.traj_info['metrics']
-        traj_length = self.traj_info['length']
+        traj_length_index = self.traj_info['length_index']
+        traj_length = self.traj_info['obs_shape'][traj_length_index]
         role = self.traj_info['role']
         assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
 
@@ -151,7 +150,7 @@ class MPILearner(Learner):
 
         # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
         # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-        # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
+        self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
 
         '''Assuming roles with same acs/obs dimension'''
         exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.roles), observations.shape[-1]),
@@ -202,9 +201,8 @@ class MPILearner(Learner):
             'load_path': Admin.get_temp_directory(self),
         }
 
-    def get_metrics(self, episodic=False):
-        '''Assuming 1 agent here'''
-        return self.metrics_env
+    def get_metrics(self, episodic, agent_id):
+        return self.metrics_env[agent_id]
 
     def create_agents(self):
         if self.load_agents:

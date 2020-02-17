@@ -42,9 +42,7 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     traceback.print_stack(file=log)
     log.write(warnings.formatwarning(message, category, filename, lineno, line))
 
-
 def one_hot_from_logits(logits, dim=0):
-    # print(logits.max(1, keepdim=True))
     return (logits == logits.max(1, keepdim=True)[dim]).float()
 
 def terminate_process():
