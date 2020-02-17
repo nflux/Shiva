@@ -6,13 +6,14 @@ from mpi4py import MPI
 import numpy as np
 import pandas as pd
 
+from shiva.core.admin import logger
 from shiva.eval_envs.Evaluation import Evaluation
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin
 from shiva.envs.Environment import Environment
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("shiva")
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger("shiva")
 
 class MPIMultiEvaluationWrapper(Evaluation):
 

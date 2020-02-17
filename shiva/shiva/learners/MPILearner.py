@@ -86,6 +86,7 @@ class MPILearner(Learner):
         self.steps_per_episode = 0
         self.reward_per_episode = 0
         self.train = True
+        self.save_flag = True
 
         # '''Used for calculating collection time'''
         # t0 = time.time()
@@ -110,16 +111,25 @@ class MPILearner(Learner):
                     self.update_num += 1
                     self.agents[0].step_count = self.step_count
                     self.agents[0].done_count = self.done_count
-                    # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                    #self.save_pbt_agents()
-                    for ix in range(self.num_menvs):
-                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+
+                    if self.save_flag:
+                        # self.log("MPI LEARNER SAVED THE AGENT")
+                        Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                        self.save_flag = False
+                        for ix in range(self.num_menvs):
+                            self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+
+                if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
+                    self.save_flag = self.menv.recv(source=MPI.ANY_SOURCE, tag=Tags.save_agents)
+
+                    # # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
+                    # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                    # #self.save_pbt_agents()
+                    # for ix in range(self.num_menvs):
+                    #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
                 if self.done_count % self.save_checkpoint_episodes == 0:
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
-
-
 
                 if self.done_count % self.evolution_episodes == 0:
                     # print('Requesting evolution config')
@@ -273,6 +283,7 @@ class MPILearner(Learner):
 
     def _get_learner_state(self):
         return {
+            'load': self.save_flag,
             'evaluate': self.evaluate,
             'num_agents': self.num_agents,
             'update_num': self.update_num,
@@ -336,34 +347,34 @@ class MPILearner(Learner):
         return p < self.p_value
 
     def t_test(self,agent,evo_config):
-        print('Starting t_test')
+        # print('Starting t_test')
         if evo_config['ranking'] > evo_config['evo_ranking']:
-            print('Ranking > Evo_Ranking')
+            # print('Ranking > Evo_Ranking')
             evals = np.load(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy')
             evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy')
             if self.welch_T_Test(evals,evo_evals):
-                print('Welch Passed')
+                # print('Welch Passed')
                 path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
                 evo_agent = Admin._load_agents(path)[0]
                 agent.copy_weights(evo_agent)
-        print('Finished t_test')
+        # print('Finished t_test')
 
 
     def truncation(self,agent,evo_config):
-        print('Truncating')
+        # print('Truncating')
         path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
         evo_agent = Admin._load_agents(path)[0]
         agent.copy_weights(evo_agent)
-        print('Truncated')
+        # print('Truncated')
 
     def perturb(self,agent):
-        print('Pertubing')
+        # print('Pertubing')
         perturb_factor = np.random.choice([0.8,1.2])
         agent.perturb_hyperparameters(perturb_factor)
-        print('Finished Pertubing')
+        # print('Finished Pertubing')
 
     def resample(self,agent):
-        print('Resampling')
+        # print('Resampling')
         agent.resample_hyperparameters()
 
     def exploitation(self):

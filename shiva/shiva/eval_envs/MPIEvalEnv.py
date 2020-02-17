@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
 from mpi4py import MPI
+import time
 
 from shiva.core.admin import logger
 from shiva.utils.Tags import Tags
@@ -25,24 +26,32 @@ class MPIEvalEnv(Environment):
 
     def launch(self):
         # Receive Config from MPI Evaluation Object
+        print('Waiting for config')
         self.configs = self.eval.bcast(None, root=0)
+        self.log('Received Config')
         super(MPIEvalEnv, self).__init__(self.configs)
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self._launch_env()
+        self.log('Launched Eval Env')
         # Check in and send single env specs with MPI Evaluation Object
         self.eval.gather(self._get_env_specs(), root=0)
         self.eval.gather(self._get_env_state(), root=0)
+        self.log('Sent specs')
         #self._connect_learners()
         self.create_buffers()
         # Wait for flag to start running
-        #self.log("Waiting Eval flag to start")
+        self.log("Waiting Eval flag to start")
         start_flag = self.eval.bcast(None, root=0)
         self.log("Start collecting..")
-
+        
+        # time.sleep(3)
         self.run()
 
     def run(self):
+        self.log("Get here at 45")
         self.env.reset()
+
+        self.log("Get here at 48")
 
         while True:
 
@@ -80,6 +89,7 @@ class MPIEvalEnv(Environment):
         '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
                                     --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
         '''
+        self.log("Hello Josh")
         send_obs_buffer = np.array(self.observations, dtype=np.float64)
         self.eval.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
 
@@ -109,11 +119,15 @@ class MPIEvalEnv(Environment):
             self.reward_idxs += 1
         
         elif 'RoboCup' in self.type:
-            recv_action = np.zeros((self.env.num_agents, sum(self.env.action_space.values())), dtype=np.float32)
+            self.log("Getting to 112")
+            recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
             # self.log("The recv action {}".format(recv_action.shape))
-            self.menv.Scatter(None, [recv_action, MPI.FLOAT], root=0)
+            self.eval.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
+            self.log('Made it to 124')
             self.actions = recv_action
+            self.log("The action is {}".format(self.actions.shape))
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
+            self.log('Made it to 127')
 
             for i in range(len(self.rewards)):
                 self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
@@ -122,6 +136,7 @@ class MPIEvalEnv(Environment):
                     self.episode_rewards[i,:].fill(0)
                     self.reward_idxs[i] = 0
                 self.reward_idxs[i] += 1
+                self.log('Made it to 134')
 
     def _send_eval_numpy(self,episode_reward,agent_idx):
         '''Numpy approach'''
@@ -144,8 +159,9 @@ class MPIEvalEnv(Environment):
             self.episode_rewards = np.zeros(self.episode_max_length)
             self.reward_idxs = 0
         elif 'RoboCup' in self.type:
-            self.episode_rewards = np.zeros((self.agents_per_env, self.episode_max_length))
-            self.reward_idxs = np.zeros(self.agents_per_env)
+            self.episode_rewards = np.zeros((self.num_agents,self.episode_max_length))
+            self.reward_idxs = dict()
+            for i in range(self.num_agents): self.reward_idxs[i] = 0
 
 
     def reset_buffers(self):
@@ -165,7 +181,8 @@ class MPIEvalEnv(Environment):
             self.reward_idxs = 0
         elif 'RoboCup' in self.type:
             self.episode_rewards.fill(0)
-            self.reward_idxs.fill(0)
+            self.reward_idxs = dict()
+            for i in range(self.num_agents): self.reward_idxs[i] = 0
 
     def _launch_env(self):
         # initiate env from the config
@@ -176,6 +193,8 @@ class MPIEvalEnv(Environment):
     def create_environment(self):
         self.configs['Environment']['port'] += 100 +(self.id * 10)
         self.configs['Environment']['worker_id'] = 100 * (self.id * 22)
+        # self.configs['Environment']['rc_log'] = 'rc_eval_log'
+        self.configs['Environment']['seed'] = self.id
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
 

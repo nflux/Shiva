@@ -67,6 +67,7 @@ class MPIEnv(Environment):
             self.actions = self.menv.scatter(None, root=0)
 
         # self.log("Obs {} Act {}".format(self.observations, self.actions))
+        # self.log("Act {}".format(self.actions))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
         # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.reward).shape, np.array(self.done).shape))
@@ -180,7 +181,7 @@ class MPIEnv(Environment):
                 # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
                 # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
                 #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
-                self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
+                # self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
 
                 self.learner.send(trajectory_info, dest=ix, tag=Tags.trajectory_info)
                 self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_observations)

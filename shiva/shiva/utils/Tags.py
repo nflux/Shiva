@@ -24,6 +24,7 @@ class Tags(IntEnum):
     #For updated rankings
     rankings = 12
     new_pbt_agents = 13
+    save_agents = 14
     evolution = 20
     evolution_config = 21
     agent_id = 30

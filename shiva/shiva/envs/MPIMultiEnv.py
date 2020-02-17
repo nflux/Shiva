@@ -41,6 +41,7 @@ class MPIMultiEnv(Environment):
         self.step_count = 0
         self.log(self.env_specs)
         info = MPI.Status()
+        self.saving = [True] * self.num_learners
 
         ''' Assuming that
             - all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI
@@ -59,10 +60,26 @@ class MPIMultiEnv(Environment):
             self._step_numpy()
 
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=info):
+                # self.log("THERE ARE NEW AGENTS TO LOAD")
                 learner_id = info.Get_source()
                 learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
+                # self.log("These are the learner specs {}".format(learner_spec))
                 '''Assuming 1 Agent per Learner'''
-                self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
+                # if self.update_nums[learner_id] != learner_spec['update_num']:
+                # self.log("About to load {}".format(learner_id))
+                self.saving[learner_id] = learner_spec['load']
+                if not self.saving[learner_id]:
+                    self.saving[learner_id] = True
+                    self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
+                    # self.log("Agent Loaded From Learner {}".format(learner_id))
+                    self.learners.send(True, dest=learner_id, tag=Tags.save_agents)
+                    # self.update_nums[learner_id] = learner_spec['update_num']
+
+            # if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=info):
+            #     learner_id = info.Get_source()
+            #     learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
+            #     '''Assuming 1 Agent per Learner'''
+            #     self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
                 #self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
         # self.close()
 
