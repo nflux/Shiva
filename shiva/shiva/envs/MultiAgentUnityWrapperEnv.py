@@ -104,8 +104,8 @@ class MultiAgentUnityWrapperEnv(Environment):
         self.done_count += sum(sum(self.dones[role]) for role in self.roles)
         for role in self.roles:
             # in case there's asymetric environment
-            self.reward_per_step[role] += sum(self.BatchedStepResult[role].reward) / self.BatchedStepResult[role].n_agents()
-            self.reward_per_episode[role] += self.reward_per_step[role]
+            self.reward_per_step[role] += sum(self.rewards[role]) / self.BatchedStepResult[role].n_agents()
+            self.reward_per_episode[role] += sum(self.rewards[role]) / self.BatchedStepResult[role].n_agents()
             self.reward_total[role] += self.reward_per_episode[role]
 
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}

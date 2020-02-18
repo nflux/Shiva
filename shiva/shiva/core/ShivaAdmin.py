@@ -159,7 +159,7 @@ class ShivaAdmin():
         else:
             checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ))
         self._learner_dir[learner.id]['checkpoint'].append(checkpoint_dir)
-        # self._save_learner(learner, checkpoint_num)
+        self._save_learner(learner, checkpoint_num)
         self._save_learner_agents(learner, checkpoint_num)
 
     def get_last_checkpoint(self, learner):
@@ -289,7 +289,7 @@ class ShivaAdmin():
         # except AttributeError:
         #     self._save_learner(self.caller.learner)
 
-    def _save_learner(self, learner=None) -> None:
+    def _save_learner(self, learner=None, checkpoint_num=None) -> None:
         '''
             Mechanics of saving a Learner
                 1.  Pickles the Learner class
@@ -299,13 +299,16 @@ class ShivaAdmin():
             Input
                 @learner        Learner instance we want to save
         '''
+        if self.use_temp_folder:
+            # no need to save Learner data when using temp folder
+            return
         learner = self.caller if learner is None else learner
         self.add_learner_profile(learner) # will only add if was not profiled before
         # save learner pickle
         learner_data_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['learner_data']) )
         fh.save_pickle_obj(learner, os.path.join(learner_data_dir, 'learner_cls.pickle'))
         # save buffer
-        fh.save_pickle_obj(learner.buffer, os.path.join(learner_data_dir, 'buffer_cls.pickle'))
+        # fh.save_pickle_obj(learner.buffer, os.path.join(learner_data_dir, 'buffer_cls.pickle'))
         # save learner current config status
         if type(learner.configs) == dict:
             cf = learner.configs

@@ -46,7 +46,6 @@ class MPIEnv(Environment):
             self._step_numpy()
             self._append_step()
             if self.env.is_done():
-                self.log(self.env.get_metrics(episodic=True)) # print metrics
                 self._send_trajectory_numpy()
                 self.env.reset()
             '''Check if there a new Role->LearnerID mapping'''
@@ -101,6 +100,7 @@ class MPIEnv(Environment):
 
     def _send_trajectory_numpy(self):
         metrics = self.env.get_metrics(episodic=True)
+        self.log(metrics) # print metrics from this end
         if 'Unity' in self.type:
             for learner_spec in self.learners_specs:
                 self.observations_buffer = []
@@ -119,7 +119,7 @@ class MPIEnv(Environment):
                     self.rewards_buffer.append(rew)
                     self.next_observations_buffer.append(nobs)
                     self.done_buffer.append(don)
-                    self.metrics.append(metrics[ix]) # accumulate the metrics for each role
+                    self.metrics.append(metrics[ix]) # accumulate the metrics for each role of this learner
 
                 self.observations_buffer = np.array(self.observations_buffer)
                 self.actions_buffer = np.array(self.actions_buffer) # NOTE this will fail if we have 1 learner handling 2 roles with diff acs space

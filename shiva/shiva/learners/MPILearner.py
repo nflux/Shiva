@@ -116,7 +116,6 @@ class MPILearner(Learner):
         self.log("{}".format(self.traj_info))
         env_source = info.Get_source()
 
-        '''Assuming 1 Agent here'''
         self.metrics_env = self.traj_info['metrics']
         traj_length_index = self.traj_info['length_index']
         traj_length = self.traj_info['obs_shape'][traj_length_index]
@@ -150,7 +149,8 @@ class MPILearner(Learner):
 
         # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
         # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-        self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
+        # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
+        self.log("From Env received Rew {}\n".format(rewards))
 
         '''Assuming roles with same acs/obs dimension'''
         exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.roles), observations.shape[-1]),

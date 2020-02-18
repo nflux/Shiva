@@ -53,8 +53,8 @@ class MADDPGAlgorithm(DDPGAlgorithm):
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
         dones = bf_dones.bool()
         # self.log("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
-        self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape))
-        self.log("FROM BUFFER Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.dtype, bf_actions.dtype, bf_rewards.dtype, bf_next_states.dtype, bf_dones.dtype))
+        # self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape))
+        # self.log("FROM BUFFER Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.dtype, bf_actions.dtype, bf_rewards.dtype, bf_next_states.dtype, bf_dones.dtype))
 
         '''Transform buffer actions to a one hot or softmax if needed'''
         # for ix, (role, action_space) in enumerate(self.action_space.items()):
@@ -112,7 +112,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
             # Use the Bellman equation.
             # Reward to predict is always index 0
             y_i = rewards[:, 0, :] + self.gamma * Q_next_states_target
-            self.log("Rewards Agent ID {} {}".format(ix, rewards[:, 0, :].view(1, -1)))
+            # self.log("Rewards Agent ID {} {}".format(ix, rewards[:, 0, :].view(1, -1)))
             # self.log('y_i {}'.format(y_i.shape))
 
             # Get Q values of the batch from states and actions.
@@ -135,10 +135,10 @@ class MADDPGAlgorithm(DDPGAlgorithm):
             agent.actor_optimizer.zero_grad()
             # Get the actions the main actor would take from the initial states
             if self.action_space[agent.role]['type'] == "discrete" or self.action_space[agent.role]['type'] == "parameterized":
-                current_state_actor_actions = torch.cat([_agent.actor(next_states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
+                current_state_actor_actions = torch.cat([_agent.actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
                 # current_state_actor_actions = agent.actor(states[:, ix, :].float(), gumbel=True)
             else:
-                current_state_actor_actions = torch.cat([_agent.actor(next_states[:, _ix, :].float()) for _ix, _agent in enumerate(agents)], dim=1)
+                current_state_actor_actions = torch.cat([_agent.actor(states[:, _ix, :].float()) for _ix, _agent in enumerate(agents)], dim=1)
                 # current_state_actor_actions = agent.actor(states[:, ix, :].float())
             # Calculate Q value for taking those actions in those states
             actor_loss_value = self.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), current_state_actor_actions.float()] , 1))
