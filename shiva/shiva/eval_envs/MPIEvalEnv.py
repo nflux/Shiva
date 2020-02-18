@@ -34,50 +34,51 @@ class MPIEvalEnv(Environment):
         super(MPIEvalEnv, self).__init__(self.configs)
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self._launch_env()
-        self.log('Launched Eval Env')
+        # self.log('Launched Eval Env')
         # Check in and send single env specs with MPI Evaluation Object
         self.eval.gather(self._get_env_specs(), root=0)
         self.eval.gather(self._get_env_state(), root=0)
-        self.log('Sent specs')
+        # self.log('Sent specs')
         #self._connect_learners()
         self.create_buffers()
         # Wait for flag to start running
-        self.log("Waiting Eval flag to start")
+        # self.log("Waiting Eval flag to start")
         start_flag = self.eval.bcast(None, root=0)
-        self.log("Start collecting..")
+        # self.log("Start collecting..")
         
         self.run()
 
     def run(self):
-        self.log("Get here at 45")
+        # self.log("Get here at 45")
         self.env.reset()
 
-        self.log("Get here at 48")
+        # self.log("Get here at 48")
 
         while True:
+            while self.env.start_env():
 
-            self._step_numpy()
+                self._step_numpy()
 
-            if self.env.is_done():
+                if self.env.is_done():
 
-                self.env.reset()
+                    self.env.reset()
 
-            if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
-                _ = self.eval.recv(None, source=0 , tag=Tags.clear_buffers)
-                self.reset_buffers()
-                print('Buffers have been reset')
-
-
+                if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
+                    _ = self.eval.recv(None, source=0 , tag=Tags.clear_buffers)
+                    self.reset_buffers()
+                    # print('Buffers have been reset')
 
 
-            '''Come back to this for emptying old evaluations when a new agent is Loaded
 
-                if self.eval.bcast(None,root=0):
-                self._clear_buffers()
-                self.debug('Buffer has been cleared')
-                self.env.reset()'''
 
-        self.close()
+                '''Come back to this for emptying old evaluations when a new agent is Loaded
+
+                    if self.eval.bcast(None,root=0):
+                    self._clear_buffers()
+                    self.debug('Buffer has been cleared')
+                    self.env.reset()'''
+
+            self.close()
 
     def _unity_reshape(self, arr):
         '''Unity reshape of the data - concat all agents trajectories'''
@@ -90,7 +91,7 @@ class MPIEvalEnv(Environment):
         '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
                                     --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
         '''
-        self.log("Hello Josh")
+        # self.log("Hello Josh")
         send_obs_buffer = np.array(self.observations, dtype=np.float64)
         self.eval.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
 
@@ -120,15 +121,15 @@ class MPIEvalEnv(Environment):
             self.reward_idxs += 1
         
         elif 'RoboCup' in self.type:
-            self.log("Getting to 112")
+            # self.log("Getting to 112")
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
             # self.log("The recv action {}".format(recv_action.shape))
             self.eval.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
-            self.log('Made it to 124')
+            # self.log('Made it to 124')
             self.actions = recv_action
-            self.log("The action is {}".format(self.actions.shape))
+            # self.log("The action is {}".format(self.actions.shape))
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions, is_eval=True)
-            self.log('Made it to 127 {}'.format(self.rewards))
+            # self.log('Made it to 127 {}'.format(self.rewards))
 
             for i in range(len(self.rewards)):
                 self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
@@ -137,7 +138,7 @@ class MPIEvalEnv(Environment):
                     self.episode_rewards[i,:].fill(0)
                     self.reward_idxs[i] = 0
                 self.reward_idxs[i] += 1
-                self.log('Made it to 134')
+                # self.log('Made it to 134')
 
     def _send_eval_numpy(self,episode_reward,agent_idx):
         '''Numpy approach'''

@@ -118,11 +118,12 @@ class MPILearner(Learner):
                         self.save_flag = False
                         for ix in range(self.num_menvs):
                             self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
-
+                
+                self.log("This is printing at 122")
                 if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
                     self.save_flag = self.menv.recv(source=MPI.ANY_SOURCE, tag=Tags.save_agents)
 
-                    # # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
+                    self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
                     # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
                     # #self.save_pbt_agents()
                     # for ix in range(self.num_menvs):
@@ -132,25 +133,29 @@ class MPILearner(Learner):
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
                 if self.done_count % self.evolution_episodes == 0:
-                    # print('Requesting evolution config')
+                    self.log('Requesting evolution config')
                     self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
+                
+                if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config):
+                    '''Assumes one agent'''
                     for agent in self.agents:
+                        self.log("Before the recv evo config")
                         self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
-                        # print('Received evolution config')
+                        self.log('Received evolution config')
                         if self.evolution_config['evolution'] == False:
                             continue
                         setattr(self, 'exploitation', self.evolution_config['exploitation'])
                         setattr(self, 'exploration', self.evolution_config['exploration'])
-                        print('Starting Evolution')
+                        self.log('Starting Evolution')
                         self.exploitation = getattr(self, self.exploitation)
                         self.exploration = getattr(self, self.exploration)
                         self.exploitation(agent,self.evolution_config)
                         self.exploration(agent)
 
-                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                    #self.save_pbt_agents()
-                    for ix in range(self.num_menvs):
-                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+                        Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                        #self.save_pbt_agents()
+                        for ix in range(self.num_menvs):
+                            self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
 
                         print('Evolution Complete\n')

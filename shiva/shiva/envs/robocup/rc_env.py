@@ -250,10 +250,13 @@ class rc_env:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.right_base,
                                                 False,i,self.ep_length,self.action_level,self.right_envs,))
             t.start()
-            time.sleep(1.5)
+            time.sleep(3)
 
         print("All players connected to server")
         self.start = True
+    
+    def start_env(self):
+        return self.start
 
     def Observation(self,agent_id,side):
         '''

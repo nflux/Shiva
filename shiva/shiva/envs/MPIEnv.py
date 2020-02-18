@@ -43,13 +43,14 @@ class MPIEnv(Environment):
     def run(self):
         self.env.reset()
         while True:
-            self._step_numpy()
-            self._append_step()
-            if self.env.is_done():
-                self.print(self.env.get_metrics(episodic=True)) # print metrics
-                self._send_trajectory_numpy()
-                self.env.reset()
-        # self.close()
+            while self.env.start_env():
+                self._step_numpy()
+                self._append_step()
+                if self.env.is_done():
+                    self.print(self.env.get_metrics(episodic=True)) # print metrics
+                    self._send_trajectory_numpy()
+                    self.env.reset()
+            # self.close()
 
     def _step_numpy(self):
         self.observations = self.env.get_observations()

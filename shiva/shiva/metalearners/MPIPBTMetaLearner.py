@@ -38,12 +38,13 @@ class MPIPBTMetaLearner(MetaLearner):
                 self.rankings_size = len(self.rankings)
                 self.bottom_20 = int(self.rankings_size * .80)
                 self.top_20 = int(self.rankings_size * .20)
-                print('MetaLearner Rankings: ', self.rankings)
+                self.log('MetaLearner Rankings: {}'.format(self.rankings))
 
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution) and hasattr(self, 'rankings'):
-                print('MetaLearner Received evolution request')
+                self.log('MetaLearner Received evolution request')
                 info = MPI.Status()
                 agent_nums = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evolution,status=self.info)  # block statement
+                self.log("After getting the agent nums")
                 learner_source = self.info.Get_source()
                 for agent_id in agent_nums:
                     evo = dict()

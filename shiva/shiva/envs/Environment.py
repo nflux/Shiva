@@ -24,6 +24,9 @@ class Environment:
         '''
         assert (n_episodes is not None), 'A @n_episodes is required to check if we are done running the Environment'
         return self.done_count >= n_episodes
+    
+    def start_env(self):
+        return True
 
     def get_observation(self, agent):
         pass

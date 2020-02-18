@@ -53,6 +53,9 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.dashes = 0
         self.goal_ctr = 0
     
+    def start_env(self):
+        return self.env.start_env()
+    
     def isImit(self):
         return self.run_imit
     
