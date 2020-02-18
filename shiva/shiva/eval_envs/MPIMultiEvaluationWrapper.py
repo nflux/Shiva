@@ -32,6 +32,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.evaluations = dict()
         self.info = MPI.Status()
         self._launch_evals()
+        self.log("This at 35 is not printed")
         self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
         self.agent_ids = self.meta.bcast(None,root=0)
         print('Agent IDS: ', self.agent_ids)
@@ -64,10 +65,11 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     def _launch_evals(self):
         # Spawn Single Environments
-        self.evals = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/eval_envs/MPIEvaluation.py'], maxprocs=self.num_evals)
+        self.evals = MPI.COMM_WORLD.Spawn(sys.executable, args=['shiva/eval_envs/MPIEvaluation.py'], maxprocs=self.num_evals)
         self.evals.bcast(self.configs, root=MPI.ROOT)  # Send them the Config
         #self.log('Eval configs sent')
         eval_spec = self.evals.gather(None, root=MPI.ROOT)  # Wait for Eval Specs ()
+        self.log("These are the evals {}".format(eval_spec))
         #self.log('Eval specs received')
         assert len(eval_spec) == self.num_evals, "Not all Evaluations checked in.."
         self.eval_specs = eval_spec[0] # set self attr only 1 of them
@@ -127,4 +129,9 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
 
 if __name__ == "__main__":
-    MPIMultiEvaluationWrapper()
+    try:
+        MPIMultiEvaluationWrapper()
+    except Exception as e:
+        print("Eval Wrapper error:", traceback.format_exc())
+    finally:
+        terminate_process()

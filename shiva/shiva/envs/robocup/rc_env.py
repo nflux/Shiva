@@ -239,7 +239,7 @@ class rc_env:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.left_base,
                                                 False,i,self.ep_length,self.action_level,self.left_envs,))
             t.start()
-            time.sleep(1.5)
+            time.sleep(3)
         
         for i in range(self.num_right):
             print("Connecting player %i" % i , "on rightonent %s to the server" % self.right_base)
@@ -318,7 +318,7 @@ class rc_env:
 
 
     def Step(self, left_actions=[], right_actions=[], left_options=[], 
-            right_options=[], left_actions_OH = [], right_actions_OH = []):
+            right_options=[], left_actions_OH = [], right_actions_OH = [], eval_flag=False):
         '''
             Description
                 Method for the agents to take a single step in the environment.
@@ -351,8 +351,15 @@ class rc_env:
         [self.Queue_action(i,self.left_base,left_actions[i],left_options) for i in range(len(left_actions))]
         [self.Queue_action(j,self.right_base,right_actions[j],right_options) for j in range(len(right_actions))]
 
+        if eval_flag:
+            print("Getting here at holy guacamole")
+
         self.sync_after_queue.wait()
+        if eval_flag:
+            print("Getting here at holy moly")
         self.sync_before_step.wait()
+        if eval_flag:
+            print("Getting here at holy cow")
         
         return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
@@ -464,7 +471,7 @@ class rc_env:
         elif feat_lvl == 'simple':
             feat_lvl = hfo_env.SIMPLE_LEVEL_FEATURE_SET
 
-        config_dir = hfo.get_config_path() 
+        config_dir = hfo.get_config_path()
         envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                             server_port=port, server_addr='localhost', team_name=base,
                                                 play_goalie=goalie,record_dir =self.rc_log+'/')

@@ -99,7 +99,7 @@ class MPIPBTMetaLearner(MetaLearner):
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
         self.agent_ids = self.learners.gather(None, root=MPI.ROOT)
         self.agent_ids = np.array(self.agent_ids).squeeze(axis=1)
-        print("AFTER LAUNCHING ALL THE LEARNERS", self.agent_ids)
+        self.log("AFTER LAUNCHING ALL THE LEARNERS {}".format(self.agent_ids))
         # print("META: This is the specs", learners_specs)
         self.log("Got {}".format(len(learners_specs)))
 
@@ -108,7 +108,8 @@ class MPIPBTMetaLearner(MetaLearner):
         self.mevals.bcast(self.configs, root=MPI.ROOT)
         mevals_specs = self.mevals.gather(None, root=MPI.ROOT)
         self.mevals.bcast(self.agent_ids,root=MPI.ROOT)
-        self.log("Got total of {} MultiEvalSpecs with {} keys".format(len(mevals_specs), len(mevals_specs[0].keys())))
+        self.log("AFTER LAUNCHING ALL THE EVALS {}".format(self.agent_ids))
+        # self.log("Got total of {} MultiEvalSpecs with {} keys".format(len(mevals_specs), len(mevals_specs[0].keys())))
         self.configs['MultiEvals'] = mevals_specs
 
     def _get_learners_configs(self):

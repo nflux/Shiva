@@ -85,7 +85,7 @@ class MPIEvaluation(Evaluation):
                 self.envs.scatter(self.actions, root=MPI.ROOT)
             elif 'RoboCup' in self.env_specs['type']:
                 actions = [[agent.get_action(obs, self.step_count, False) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
-                actions = np.array(actions)
+                actions = np.array(actions, dtype=np.float64)
                 self.log("The actions shape {}".format(actions.shape))
                 self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
             
@@ -180,4 +180,9 @@ class MPIEvaluation(Evaluation):
 
 
 if __name__ == "__main__":
-    MPIEvaluation()
+    try:
+        MPIEvaluation()
+    except Exception as e:
+        print("Eval error:", traceback.format_exc())
+    finally:
+        terminate_process()

@@ -65,7 +65,7 @@ class RoboCupTwoSidedEnvironment(Environment):
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, actions, discrete_select='sample', collect=True):
+    def step(self, actions, discrete_select='sample', collect=True, is_eval=False):
         '''
             Input
                 @actions
@@ -101,6 +101,8 @@ class RoboCupTwoSidedEnvironment(Environment):
 
         # self.left_actions = act_choice.unsqueeze(dim=-1)
 
+        if is_eval:
+            print("Ez is cool")
         if self.action_level == 'discretized':
             self.left_action_option = left_act_choice
             self.right_action_option = right_act_choice
@@ -127,8 +129,16 @@ class RoboCupTwoSidedEnvironment(Environment):
                     self.right_actions[a] = 2
                     self.kicks += 1
             
+            # if is_eval:
+            #     print("Ez is even cooler")
+            #     print("Daniel left {}, right {}, left_op {}, right_op {}".format(self.left_actions, self.right_actions, self.left_action_option, self.right_action_option))
+            # else:
+            #     print("Ez left {}, right {}, left_op {}, right_op {}".format(self.left_actions, self.right_actions, self.left_action_option, self.right_action_option))
+
             self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
-                                                                    left_options=self.left_action_option, right_options=self.right_action_option)
+                                                                    left_options=self.left_action_option, right_options=self.right_action_option, eval_flag=is_eval)
+            if is_eval:
+                print("RoboCup Getting at 137")
             
             actions_v = [action2one_hot(self.action_space['acs_space'], act) for act in left_act_choice]
         else:

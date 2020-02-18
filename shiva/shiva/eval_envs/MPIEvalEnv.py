@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-import sys
+import sys, traceback
 import argparse
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
@@ -8,10 +8,12 @@ import logging
 from mpi4py import MPI
 import time
 
+
 from shiva.core.admin import logger
 from shiva.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.helpers.config_handler import load_class
+from shiva.helpers.misc import terminate_process
 
 # logging.basicConfig(level=logging.INFO)
 # logger = logging.getLogger("shiva")
@@ -44,7 +46,6 @@ class MPIEvalEnv(Environment):
         start_flag = self.eval.bcast(None, root=0)
         self.log("Start collecting..")
         
-        # time.sleep(3)
         self.run()
 
     def run(self):
@@ -126,12 +127,12 @@ class MPIEvalEnv(Environment):
             self.log('Made it to 124')
             self.actions = recv_action
             self.log("The action is {}".format(self.actions.shape))
-            self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-            self.log('Made it to 127')
+            self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions, is_eval=True)
+            self.log('Made it to 127 {}'.format(self.rewards))
 
             for i in range(len(self.rewards)):
                 self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
-                if self.dones[i]:
+                if self.dones:
                     self._send_eval_numpy(self.episode_rewards[i,:].sum(),i)
                     self.episode_rewards[i,:].fill(0)
                     self.reward_idxs[i] = 0
@@ -194,6 +195,7 @@ class MPIEvalEnv(Environment):
         self.configs['Environment']['port'] += 100 +(self.id * 10)
         self.configs['Environment']['worker_id'] = 100 * (self.id * 22)
         # self.configs['Environment']['rc_log'] = 'rc_eval_log'
+        # self.configs['Environment']['server_addr'] = self.eval.Get_attr(MPI.HOST)
         self.configs['Environment']['seed'] = self.id
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
@@ -231,4 +233,10 @@ class MPIEvalEnv(Environment):
 
 
 if __name__ == "__main__":
-    MPIEvalEnv()
+    try:
+        env = MPIEvalEnv()
+    except Exception as e:
+        print("Eval Env error:", traceback.format_exc())
+    finally:
+        terminate_process()
+    
