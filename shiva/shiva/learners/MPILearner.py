@@ -29,6 +29,8 @@ class MPILearner(Learner):
         Admin.add_learner_profile(self, function_only=True)
         # Open Port for Single Environments
         self.port = MPI.Open_port(MPI.INFO_NULL)
+        self.port_pbt = MPI.Open_port(MPI.INFO_NULL)
+        MPI.Publish_name('Learner_Meval',self.port_pbt)
         #self.log("Open port {}".format(str(self.port)))
 
         # Set some self attributes from received Config (it should have MultiEnv data!)
@@ -76,6 +78,7 @@ class MPILearner(Learner):
         Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
         # Connect with MultiEnvs
         self._connect_menvs()
+        self.meval = MPI.COMM_WORLD.Accept(self.port_pbt)
         self.run()
 
     def run(self, train=True):
@@ -112,6 +115,7 @@ class MPILearner(Learner):
                     self.agents[0].step_count = self.step_count
                     self.agents[0].done_count = self.done_count
 
+                    self.save_pbt_agents()
                     if self.save_flag:
                         # self.log("MPI LEARNER SAVED THE AGENT")
                         Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
@@ -125,12 +129,9 @@ class MPILearner(Learner):
 
                     self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
                     # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                    # #self.save_pbt_agents()
+                
                     # for ix in range(self.num_menvs):
                     #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
-
-                if self.done_count % self.save_checkpoint_episodes == 0:
-                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
                 if self.done_count % self.evolution_episodes == 0:
                     self.log('Requesting evolution config')
@@ -152,7 +153,6 @@ class MPILearner(Learner):
                         self.exploitation(agent,self.evolution_config)
                         self.exploration(agent)
 
-                        Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
                         #self.save_pbt_agents()
                         for ix in range(self.num_menvs):
                             self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
@@ -285,10 +285,12 @@ class MPILearner(Learner):
         # Accept Single Env Connection
         #self.log("Expecting connection from {} Envs @ {}".format(self.num_envs, self.port))
         self.envs = MPI.COMM_WORLD.Accept(self.port)
+        
 
     def _get_learner_state(self):
         return {
             'load': self.save_flag,
+            'load_pbt': self.save_pbt_flag,
             'evaluate': self.evaluate,
             'num_agents': self.num_agents,
             'update_num': self.update_num,
@@ -302,6 +304,7 @@ class MPILearner(Learner):
             'id': self.id,
             'evaluate': self.evaluate,
             'port': self.port,
+            'port_pbt': self.port_pbt,
             'menv_port': self.menv_port,
             'load_path': Admin.get_temp_directory(self),
         }
@@ -390,6 +393,8 @@ class MPILearner(Learner):
 
     def close(self):
         comm = MPI.Comm.Get_parent()
+        self.envs.Disconnect()
+        self.meval.Disconnet()
         comm.Disconnect()
 
     def log(self, msg, to_print=False):
@@ -402,6 +407,7 @@ class MPILearner(Learner):
         self.log("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
         self.log("MENV = Inter: {} / Intra: {}".format(self.menv.Is_inter(), self.menv.Is_intra()))
         self.log("ENV = Inter: {} / Intra: {}".format(self.envs.Is_inter(), self.envs.Is_intra()))
+        self.log("MEVAL = Inter: {} / Intra: {}".format(self.meval.Is_inter(), self.meval.Is_intra()))
 
 
 if __name__ == "__main__":
