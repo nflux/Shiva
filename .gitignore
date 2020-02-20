@@ -18,3 +18,5 @@ ipython_config.py
 
 # Misc
 .idea/
+
+shiva/runs*

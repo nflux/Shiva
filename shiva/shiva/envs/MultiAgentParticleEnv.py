@@ -64,7 +64,10 @@ class MultiAgentParticleEnv(Environment):
         obs, rew, don, _ = self.env.step(list(self.actions.values()))
         self.observations = {role:obs[ix] for ix, role in enumerate(self.roles)}
         self.rewards = {role:rew[ix] for ix, role in enumerate(self.roles)}
+
+        # maybe overwrite the done - not sure if env tells when is Done
         self.dones = {role:don[ix] for ix, role in enumerate(self.roles)}
+
         '''
             Metrics collection
                 Episodic # of steps             self.steps_per_episode --> is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
@@ -105,15 +108,8 @@ class MultiAgentParticleEnv(Environment):
             ]
         return metrics
 
-    def is_done(self, n_episodes=None):
-        '''
-            One Shiva episode is when all instances in the Environment terminate at least once
-            On MultiAgent env, all agents will have the same number of dones, so we can check only one of them
-        '''
-        # return self.temp_done_counter > 0
-        # print("{} {}".format(self.temp_done_counter, self.num_instances_per_env))
-        # return self.temp_done_counter >= self.num_instances_per_env
-        return self.step_count > self.episode_max_length
+    def is_done(self):
+        return self.steps_per_episode >= self.episode_max_length
 
     def _clean_actions(self, role, role_actions):
         '''

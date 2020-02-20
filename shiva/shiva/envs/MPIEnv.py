@@ -62,7 +62,7 @@ class MPIEnv(Environment):
         self.observations = self.env.get_observations()
         self.menv.gather(self.observations, root=0)
         self.actions = self.menv.scatter(None, root=0)
-        # self.log("Obs {} Act {}".format(self.observations, self.actions))
+        self.log("Obs {} Act {}".format(self.observations, self.actions))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
     def _step_numpy(self):
@@ -82,7 +82,8 @@ class MPIEnv(Environment):
 
     def _append_step(self):
         if 'Unity' in self.type or 'Particle' in self.type:
-            for ix, buffer in enumerate(self.trajectory_buffers):
+            # for ix, buffer in enumerate(self.trajectory_buffers):
+            for ix, role in enumerate(self.env.roles):
                 '''Order is maintained, each ix is for each Agent Role'''
                 exp = list(map(torch.clone, (torch.tensor([self.observations[ix]]),
                                              torch.tensor([self.actions[ix]]),
@@ -90,7 +91,8 @@ class MPIEnv(Environment):
                                              torch.tensor([self.next_observations[ix]]),
                                              torch.tensor([self.dones[ix]], dtype=torch.bool).unsqueeze(dim=-1)
                                              )))
-                buffer.push(exp)
+                # buffer.push(exp)
+                self.trajectory_buffers[ix].push(exp)
         else:
             # Gym
             exp = list(map(torch.clone, (torch.from_numpy(self.observations).unsqueeze(dim=0),
@@ -118,10 +120,8 @@ class MPIEnv(Environment):
                 self.next_observations_buffer = []
                 self.done_buffer = []
                 self.metrics = []
-
                 '''Accumulate the Learners Roles to send only 1 message with all trajectories
-                    dimensions of roles x timesteps x instances_per_env x (obs or acs dim)
-                                                        (maybe unnecessary)
+                    number of roles x timesteps x (obs or acs dim)
                 '''
                 '''If Agent Roles have different acs/obs dimensions, we may need to split the trajectories'''
                 for ix, role in enumerate(learner_spec['roles']):
@@ -164,6 +164,7 @@ class MPIEnv(Environment):
                 self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_next_observations)
                 self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
         else:
+            assert 'NotRevised yet'
             # Gym
             learner_ix = 0
 
@@ -182,7 +183,7 @@ class MPIEnv(Environment):
 
             # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
             # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
-            self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
+            # self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
 
             self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
             self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
