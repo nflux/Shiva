@@ -96,7 +96,7 @@ class MPIEnv(Environment):
     def _unity_reshape(self, arr):
         '''Unity reshape of the data - concat all same Role agents trajectories'''
         traj_length, num_agents, dim = arr.shape
-        return np.reshape(arr, (traj_length * num_agents, 1, dim))
+        return np.reshape(arr, (traj_length * num_agents, dim))
 
     def _send_trajectory_numpy(self):
         metrics = self.env.get_metrics(episodic=True)
@@ -110,16 +110,20 @@ class MPIEnv(Environment):
                 self.done_buffer = []
                 self.metrics = []
 
-                '''Accumulate the Learners Roles to send only 1 message with all trajectories'''
+                '''Accumulate the Learners Roles to send only 1 message with all trajectories
+                    dimensions of roles x timesteps x instances_per_env x (obs or acs dim)
+                                                        (maybe unnecessary)
+                '''
                 '''If Agent Roles have different acs/obs dimensions, we may need to split the trajectories'''
                 for ix, role in enumerate(learner_spec['roles']):
-                    obs, acs, rew, nobs, don = map(self._unity_reshape, self.trajectory_buffers[ix].all_numpy())
+                    role_ix = self.env.roles.index(role)
+                    obs, acs, rew, nobs, don = map(self._unity_reshape, self.trajectory_buffers[role_ix].all_numpy())
                     self.observations_buffer.append(obs)
                     self.actions_buffer.append(acs)
                     self.rewards_buffer.append(rew)
                     self.next_observations_buffer.append(nobs)
                     self.done_buffer.append(don)
-                    self.metrics.append(metrics[ix]) # accumulate the metrics for each role of this learner
+                    self.metrics.append(metrics[role_ix]) # accumulate the metrics for each role of this learner
 
                 self.observations_buffer = np.array(self.observations_buffer)
                 self.actions_buffer = np.array(self.actions_buffer) # NOTE this will fail if we have 1 learner handling 2 roles with diff acs space

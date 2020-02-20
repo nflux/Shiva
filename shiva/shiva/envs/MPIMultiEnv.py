@@ -42,21 +42,20 @@ class MPIMultiEnv(Environment):
         self.done_count = 0
         self.log(self.env_specs)
         info = MPI.Status()
+
         '''Note: all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI'''
         try:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         except:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
 
-        self.episodes_to_load = 1
         while True:
             self._step_numpy()
 
-            '''TODO: after X amount of episodes, load new agents'''
-            if self.done_count % self.episodes_to_load == 0:
+            '''TODO: after X amount of steps or dones, load new agents'''
+            if self.step_count % self.episode_max_length == 0:
                 self.agents = self.load_agents()
 
-            '''No need to receive new agents from Learner'''
             # if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=info):
             #     learner_id = info.Get_source()
             #     learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
@@ -69,7 +68,7 @@ class MPIMultiEnv(Environment):
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
 
-        self.log("{}\n{}\n{}".format(self.agents, self.role2agent, self._obs_recv_buffer))
+        self.log("{}\n{}\n{}\n{}".format([str(a) for a in self.agents], self.role2agent, self.envs_role2learner, self._obs_recv_buffer))
 
         if 'Unity' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
@@ -103,6 +102,7 @@ class MPIMultiEnv(Environment):
         self.env_specs = envs_spec[0] # set self attr only 1 of them
 
     def load_agents(self):
+        '''Load path is fixed'''
         return flat_1d_list([Admin._load_agents(learner_spec['load_path']) for learner_spec in self.learners_specs])
 
     def _receive_learner_spec(self, learner_ix):

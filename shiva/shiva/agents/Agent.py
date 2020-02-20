@@ -1,3 +1,4 @@
+import time
 import torch
 import torch.nn
 from shiva.core.admin import logger
@@ -64,6 +65,7 @@ class Agent(object):
                 flag = False
             except:
                 # try again
+                time.sleep(0.25)
                 pass
 
     def get_action(self, obs):

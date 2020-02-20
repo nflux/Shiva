@@ -106,6 +106,7 @@ class MPILearner(Learner):
                     self.log("Got evolution config!")
                 ''''''
 
+            self.log("{}".format([str(a) for a in self.agents]))
             self.collect_metrics(episodic=True)
 
     def _receive_trajectory_numpy(self):
@@ -150,7 +151,7 @@ class MPILearner(Learner):
         # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
         # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
         # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
-        self.log("From Env received Rew {}\n".format(rewards))
+        # self.log("From Env received Rew {}\n".format(rewards))
 
         '''Assuming roles with same acs/obs dimension'''
         exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.roles), observations.shape[-1]),
@@ -182,7 +183,7 @@ class MPILearner(Learner):
             'type': 'Learner',
             'id': self.id,
             'evaluate': self.evaluate,
-            'roles': self.roles,
+            'roles': self.roles if hasattr(self, 'roles') else False,
             'num_agents': self.num_agents,
             'update_num': self.update_num,
             'load_path': Admin.get_temp_directory(self),

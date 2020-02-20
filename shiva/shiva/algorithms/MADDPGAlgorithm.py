@@ -77,20 +77,21 @@ class MADDPGAlgorithm(DDPGAlgorithm):
                 data[d] = data[d][p]
             return data
 
+        self.log("Rewards from Buff {}".format(bf_rewards))
         '''Do all permutations of experiences to concat for the 1 single critic'''
         possible_permutations = set(permutations(np.arange(len(agents))))
         self.log("will update with {} different permutations".format(len(possible_permutations)))
         for perms in possible_permutations:
-            # self.log('permutation {} from {}'.format(perms, set(permutations(np.arange(len(agents))))))
             ix = perms[0]
             agent = agents[ix]
+            self.log('Updating {} on permutation {}/{}'.format(agent, perms, set(permutations(np.arange(len(agents))))))
             permutate_f = partial(_permutate, p=perms, dim=0)
             states = permutate_f(bf_states.to(self.device))
             actions = permutate_f(bf_actions.to(self.device))
             rewards = permutate_f(bf_rewards.to(self.device))
             next_states = permutate_f(bf_next_states.to(self.device))
             dones_mask = torch.tensor(dones[:, 0, 0], dtype=torch.bool).view(-1, 1).to(self.device)
-
+            self.log("Permuted {} is {}".format(perms, rewards))
             '''Assuming all agents have the same obs_dim!'''
             batch_size, num_agents, obs_dim = states.shape
             _, _, acs_dim = actions.shape
@@ -101,7 +102,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
             # The actions that target actor would do in the next state & concat actions
             '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
             # this iteration might not be following the same permutation order - at least is from a different _agent.target_actor
-            next_state_actions_target = torch.cat([one_hot_from_logits(_agent.target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
+            next_state_actions_target = torch.cat([one_hot_from_logits(_agent.target_actor(next_states[:, perms[_ix], :])) for _ix, _agent in enumerate(agents)], dim=1)
             # self.log('OneHot next_state_actions_target {}'.format(next_state_actions_target))
 
             Q_next_states_target = self.target_critic(torch.cat( [next_states.reshape(batch_size, num_agents*obs_dim).float(), next_state_actions_target.float()] , 1))
@@ -131,17 +132,17 @@ class MADDPGAlgorithm(DDPGAlgorithm):
                 Training the Actors
             '''
 
-            # Zero the gradient
-            agent.actor_optimizer.zero_grad()
+            # Zero the gradients
+            { _agent.actor_optimizer.zero_grad() for _agent in agents }
             # Get the actions the main actor would take from the initial states
             if self.action_space[agent.role]['type'] == "discrete" or self.action_space[agent.role]['type'] == "parameterized":
-                current_state_actor_actions = torch.cat([_agent.actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
-                # current_state_actor_actions = agent.actor(states[:, ix, :].float(), gumbel=True)
+                current_state_actor_actions = torch.cat([_agent.actor(states[:, perms[_ix], :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
+                # current_state_actor_actions = agent.actor(states[:, ix,s :].float(), gumbel=True)
             else:
-                current_state_actor_actions = torch.cat([_agent.actor(states[:, _ix, :].float()) for _ix, _agent in enumerate(agents)], dim=1)
+                current_state_actor_actions = torch.cat([_agent.actor(states[:, perms[_ix], :].float()) for _ix, _agent in enumerate(agents)], dim=1)
                 # current_state_actor_actions = agent.actor(states[:, ix, :].float())
             # Calculate Q value for taking those actions in those states
-            actor_loss_value = self.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), current_state_actor_actions.float()] , 1))
+            actor_loss_value = self.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), current_state_actor_actions.float()], dim=1))
             # actor_loss_value = self.critic(torch.cat([states[:, ix, :].float(), current_state_actor_actions[:, ix, :].float()], -1))
             # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using logs probabilities
             # penalty for going beyond the bounded interval
