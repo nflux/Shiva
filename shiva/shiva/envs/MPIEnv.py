@@ -43,7 +43,9 @@ class MPIEnv(Environment):
     def run(self):
         self.env.reset()
         while True:
-            self._step_numpy()
+            self._step_python()
+            # self._step_numpy()
+
             self._append_step()
             if self.env.is_done():
                 self._send_trajectory_numpy()
@@ -55,6 +57,13 @@ class MPIEnv(Environment):
             #     pass
 
         # self.close()
+
+    def _step_python(self):
+        self.observations = self.env.get_observations()
+        self.menv.gather(self.observations, root=0)
+        self.actions = self.menv.scatter(None, root=0)
+        # self.log("Obs {} Act {}".format(self.observations, self.actions))
+        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
     def _step_numpy(self):
         self.observations = self.env.get_observations()
@@ -72,7 +81,7 @@ class MPIEnv(Environment):
         # self.log("Actual types: {} {} {} {} {}".format(type(self.observations), type(self.actions), type(self.next_observations), type(self.reward), type(self.done)))
 
     def _append_step(self):
-        if 'Unity' in self.type:
+        if 'Unity' in self.type or 'Particle' in self.type:
             for ix, buffer in enumerate(self.trajectory_buffers):
                 '''Order is maintained, each ix is for each Agent Role'''
                 exp = list(map(torch.clone, (torch.tensor([self.observations[ix]]),
@@ -101,7 +110,7 @@ class MPIEnv(Environment):
     def _send_trajectory_numpy(self):
         metrics = self.env.get_metrics(episodic=True)
         self.log(metrics) # print metrics from this end
-        if 'Unity' in self.type:
+        if 'Unity' in self.type or 'Particle' in self.type:
             for learner_spec in self.learners_specs:
                 self.observations_buffer = []
                 self.actions_buffer = []
@@ -182,7 +191,7 @@ class MPIEnv(Environment):
         # time.sleep(5)
 
     def create_buffers(self):
-        if 'Unity' in self.type:
+        if 'Unity' in self.type or 'Particle' in self.type:
             '''
                 Need a buffer for each Agent Role
                 - Agent roles may have different act/obs spaces and number of agent role
@@ -221,8 +230,11 @@ class MPIEnv(Environment):
         self.log("Connected with {} learners on port {}".format(self.num_learners, self.learners_port))
 
     def create_environment(self):
-        self.configs['Environment']['port'] += (self.id * 10)
-        self.configs['Environment']['worker_id'] = self.id * 11
+        try:
+            self.configs['Environment']['port'] += (self.id * 10)
+            self.configs['Environment']['worker_id'] = self.id * 11
+        except:
+            pass
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
 
