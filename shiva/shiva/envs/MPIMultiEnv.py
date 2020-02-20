@@ -50,7 +50,8 @@ class MPIMultiEnv(Environment):
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
 
         while True:
-            self._step_numpy()
+            self._step_python()
+            # self._step_numpy()
 
             '''TODO: after X amount of steps or dones, load new agents'''
             if self.step_count % self.episode_max_length == 0:
@@ -63,6 +64,40 @@ class MPIMultiEnv(Environment):
             #     self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
             #     self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
 
+    def _step_python(self):
+        self._obs_recv_buffer = self.envs.gather(None, root=MPI.ROOT)
+        # self.log("Obs Shape {}".format(self._obs_recv_buffer.shape))
+
+        self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
+        if 'Unity' in self.type:
+            actions = []
+            for env_observations in self._obs_recv_buffer:
+                env_actions = []
+                for role_ix, role_name in enumerate(self.env_specs['roles']):
+                    role_actions = []
+                    role_obs = env_observations[role_ix]
+                    agent_ix = self.role2agent[role_name]
+                    for o in role_obs:
+                        role_actions.append(self.agents[agent_ix].get_action(o, self.step_count))
+                    env_actions.append(role_actions)
+                actions.append(env_actions)
+        elif 'Particle' in self.type:
+            actions = []
+            for env_observations in self._obs_recv_buffer:
+                env_actions = []
+                for role_ix, role_name in enumerate(self.env_specs['roles']):
+                    role_obs = env_observations[role_ix]
+                    agent_ix = self.role2agent[role_name]
+                    role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count)
+                    env_actions.append(role_actions)
+                actions.append(env_actions)
+        else:
+            assert True, 'Not implemented'
+            pass
+        self.actions = np.array(actions)
+        # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions))
+        self.envs.scatter(actions, root=MPI.ROOT)
+
     def _step_numpy(self):
         self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
 
@@ -70,7 +105,7 @@ class MPIMultiEnv(Environment):
 
         self.log("{}\n{}\n{}\n{}".format([str(a) for a in self.agents], self.role2agent, self.envs_role2learner, self._obs_recv_buffer))
 
-        if 'Unity' in self.type:
+        if 'Unity' in self.type or 'Particle' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
             actions = []
             for env_observations in self._obs_recv_buffer:
