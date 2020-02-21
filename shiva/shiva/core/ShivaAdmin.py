@@ -162,6 +162,11 @@ class ShivaAdmin():
         # self._save_learner(learner, checkpoint_num)
         self._save_learner_agents(learner, checkpoint_num)
 
+    def checkpoint(self,learner_id, agents, checkpoint_num=None, function_only=False, use_temp_folder=False):
+        self.use_temp_folder = use_temp_folder
+        if self.use_temp_folder:
+            checkpoint_dir = self._learner_dict[learner_id]['temp']
+
     def get_last_checkpoint(self, learner):
         if len(self._learner_dir[learner.id]['checkpoint']) == 0:
             # no checkpoint available
@@ -362,6 +367,21 @@ class ShivaAdmin():
             except:
                 checkpoint_num = learner.done_count
         agent.save(agent_path, checkpoint_num)
+
+    def save_agent(self, learner_id, agent, checkpoint_num):
+        if not self.need_to_save: return
+        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id)) ) )
+        if agent.id not in self._agent_dir[learner.id]:
+            self._agent_dir[learner.id][agent.id] = []
+        self._agent_dir[learner.id][agent.id].append(new_dir)
+        self.init_summary_writer(learner, agent) # just in case it's a new agent?
+
+        if self.use_temp_folder:
+            return os.path.join(self._learner_dir[learner.id]['temp'], self.__folder_name__['agent'].format(id=str(agent.id)))
+        else:
+            return self._agent_dir[learner.id][agent.id][-1]
+
+
 
     '''
         LOAD METHODS

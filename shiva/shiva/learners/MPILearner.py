@@ -363,6 +363,7 @@ class MPILearner(Learner):
         self.io_request['function_only'] = function_only
         self.io_request['use_temp_foler'] = use_temp_folder
         self.io_request['agents'] = self.agents
+        self.io_request['path'] = '/runs/'
         self.io.send(self.io_request,dest=0,tag=Tags.io_checkpoint_save)
 
     def _io_save_pbt_agents(self):

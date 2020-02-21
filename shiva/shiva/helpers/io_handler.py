@@ -86,7 +86,10 @@ class IOHandler(object):
 
     def save_learner_agents(self):
         learner_dict = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_checkpoint_save)
-        Admin.checkpoint(learner_dict['learner'], learner_dict['checkpoint_num'], learner_dict['function_only'], learner_dict['use_temp_folder'])
+        
+        #Admin.checkpoint(learner_dict['learner'], learner_dict['checkpoint_num'], learner_dict['function_only'], learner_dict['use_temp_folder'])
+        for agent in learner_dict['agents']:
+
 
     def save_pbt_agents(self):
         learner_dict = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_pbt_save)
