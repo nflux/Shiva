@@ -77,10 +77,10 @@ class MADDPGAlgorithm(DDPGAlgorithm):
                 data[d] = data[d][p]
             return data
 
-        self.log("Rewards from Buff {}".format(bf_rewards))
+        self.log("States from Buff {}".format(bf_rewards.reshape(1, -1)))
         '''Do all permutations of experiences to concat for the 1 single critic'''
         possible_permutations = set(permutations(np.arange(len(agents))))
-        self.log("will update with {} different permutations".format(len(possible_permutations)))
+        # self.log("will update with {} different permutations".format(len(possible_permutations)))
         for perms in possible_permutations:
             ix = perms[0]
             agent = agents[ix]
@@ -91,7 +91,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
             rewards = permutate_f(bf_rewards.to(self.device))
             next_states = permutate_f(bf_next_states.to(self.device))
             dones_mask = torch.tensor(dones[:, 0, 0], dtype=torch.bool).view(-1, 1).to(self.device)
-            self.log("Permuted {} is {}".format(perms, rewards))
+            self.log("Permuted States {} is {}".format(perms, states.reshape(1, -1)))
             '''Assuming all agents have the same obs_dim!'''
             batch_size, num_agents, obs_dim = states.shape
             _, _, acs_dim = actions.shape

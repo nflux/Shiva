@@ -1,7 +1,7 @@
 import sys, traceback
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
-import torch
+import torch, time
 import numpy as np
 from mpi4py import MPI
 
