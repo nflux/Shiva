@@ -24,13 +24,12 @@ class MPILearner(Learner):
         # Receive Config from Meta
         self.configs = self.meta.scatter(None, root=0)
         super(MPILearner, self).__init__(self.id, self.configs)
+        self._connect_io_handler()
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         Admin.init(self.configs['Admin'])
         Admin.add_learner_profile(self, function_only=True)
         # Open Port for Single Environments
         self.port = MPI.Open_port(MPI.INFO_NULL)
-        self.port_pbt = MPI.Open_port(MPI.INFO_NULL)
-        MPI.Publish_name('Learner_Meval',self.port_pbt)
         #self.log("Open port {}".format(str(self.port)))
 
         # Set some self attributes from received Config (it should have MultiEnv data!)
@@ -41,6 +40,7 @@ class MPILearner(Learner):
         self.num_menvs = len(self.menvs_specs)
         self.menv_port = self.menvs_specs[0]['port']
         self.env_specs = self.menvs_specs[0]['env_specs']
+        self.t_test_config = dict()
 
         '''Do the Agent selection using my ID (rank)'''
         '''Assuming 1 Agent per Learner!'''
@@ -69,16 +69,15 @@ class MPILearner(Learner):
         self.agents, self.agent_ids = self.create_agents()
         if self.pbt:
             self.create_pbt_dirs()
-            self.save_pbt_agents()
-            #for agent in self.agents:
-                #agent.save(self.eval_path+'Agent_'+str(agent.id),0)
+            self.log('Sending IO save pbt agents request')
+            self._io_save_pbt_agents()
         # print("DURING LAUNCH", self.agent_ids)
         self.meta.gather(self.agent_ids,root=0)
         # make first saving
-        Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
+        #Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
+        self._io_checkpoint(checkpoint_num=0,function_only=True,use_temp_folder=True)
         # Connect with MultiEnvs
         self._connect_menvs()
-        self.meval = MPI.COMM_WORLD.Accept(self.port_pbt)
         self.run()
 
     def run(self, train=True):
@@ -115,28 +114,29 @@ class MPILearner(Learner):
                     self.agents[0].step_count = self.step_count
                     self.agents[0].done_count = self.done_count
 
-                    self.save_pbt_agents()
-                    if self.save_flag:
+                    self._io_save_pbt_agents()
+                    #if self.save_flag:
                         # self.log("MPI LEARNER SAVED THE AGENT")
-                        Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                        self.save_flag = False
-                        for ix in range(self.num_menvs):
-                            self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
-                
-                self.log("This is printing at 122")
-                if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
-                    self.save_flag = self.menv.recv(source=MPI.ANY_SOURCE, tag=Tags.save_agents)
+                        #Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                    self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                        #self.save_flag = False
+                    for ix in range(self.num_menvs):
+                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
-                    self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
+                    #self.log("This is printing at 122")
+                '''if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
+                    self.save_flag = self.menv.recv(source=MPI.ANY_SOURCE, tag=Tags.save_agents)'''
+
+                    #self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
                     # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                
+
                     # for ix in range(self.num_menvs):
                     #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
                 if self.done_count % self.evolution_episodes == 0:
                     self.log('Requesting evolution config')
                     self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
-                
+
                 if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config):
                     '''Assumes one agent'''
                     for agent in self.agents:
@@ -209,7 +209,7 @@ class MPILearner(Learner):
 
         exp = list(map(torch.clone, (torch.from_numpy(observations),
                                      torch.from_numpy(actions),
-                                     torch.from_numpy(rewards),
+                                     torch.from_numpy(rewards) ,
                                      torch.from_numpy(next_observations),
                                      torch.from_numpy(dones)
                                      )))
@@ -229,7 +229,7 @@ class MPILearner(Learner):
 
         '''
             Ideas to optimize -> needs some messages that are not multidimensional
-                - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional) 
+                - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional)
         '''
 
         observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
@@ -249,6 +249,7 @@ class MPILearner(Learner):
         # self.log("Got Next Obs shape {}".format(next_observations.shape))
 
         '''are dones even needed? It's obviously a trajectory...'''
+        '''Yes dones are needed for PPO when it calculates episode returns'''
         dones = np.zeros([traj_length, self.num_agents, 1], dtype=np.bool)
         self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
         # self.log("Got Dones shape {}".format(dones.shape))
@@ -285,12 +286,11 @@ class MPILearner(Learner):
         # Accept Single Env Connection
         #self.log("Expecting connection from {} Envs @ {}".format(self.num_envs, self.port))
         self.envs = MPI.COMM_WORLD.Accept(self.port)
-        
+
 
     def _get_learner_state(self):
         return {
             'load': self.save_flag,
-            'load_pbt': self.save_pbt_flag,
             'evaluate': self.evaluate,
             'num_agents': self.num_agents,
             'update_num': self.update_num,
@@ -304,7 +304,6 @@ class MPILearner(Learner):
             'id': self.id,
             'evaluate': self.evaluate,
             'port': self.port,
-            'port_pbt': self.port_pbt,
             'menv_port': self.menv_port,
             'load_path': Admin.get_temp_directory(self),
         }
@@ -350,11 +349,30 @@ class MPILearner(Learner):
                 agent_dir = self.eval_path+'Agent_'+str(agent.id)
                 os.mkdir(agent_dir)
 
+    def _connect_io_handler(self):
+        self.log('Sending IO Connectiong Request')
+        self.io = MPI.COMM_WORLD.Connect(self.learners_io_port, MPI.INFO_NULL)
+        self.log('Sent IO Connection Request')
+        self.io_checkpoint_request = dict()
+        self.io_pbt_request = dict()
+        self.io_pbt_request['path'] = self.eval_path+'Agent_'
+
+    def _io_checkpoint(self,checkpoint_num,function_only, use_temp_folder):
+        self.io_request['learner'] = self
+        self.io_request['checkpoint_num'] = checkpoint_num
+        self.io_request['function_only'] = function_only
+        self.io_request['use_temp_foler'] = use_temp_folder
+        self.io.send(self.io_request,dest=0,tag=Tags.io_checkpoint_save)
+
+    def _io_save_pbt_agents(self):
+        self.io_pbt_request['agents'] = self.agents
+        self.io.send(self.io_pbt_request,dest=0,tag=Tags.io_pbt_save)
+
     def welch_T_Test(self,evals,evo_evals):
         t,p = stats.ttest_ind(evals, evo_evals, equal_var=False)
         return p < self.p_value
 
-    def t_test(self,agent,evo_config):
+    def _t_test(self,agent,evo_config):
         # print('Starting t_test')
         if evo_config['ranking'] > evo_config['evo_ranking']:
             # print('Ranking > Evo_Ranking')
@@ -366,14 +384,30 @@ class MPILearner(Learner):
                 evo_agent = Admin._load_agents(path)[0]
                 agent.copy_weights(evo_agent)
         # print('Finished t_test')
+    def t_test(self,agent,evo_config):
+        if evo_config['ranking'] > evo_config['evo_ranking']:
+            self.t_test_config['evals_path'] = self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy'
+            self.t_test_config['evo_evals_path'] = self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy'
+            self.t_test_config['evo_agent_path'] = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
+            self.io.send(self.t_test_config,dest=0,tag=Tags.io_evals_load)
+            self.evo_evals = self.io.recv(None,source=MPI.ANY_SOURCE, tag=Tags.io_evals_load)
+            if self.welch_T_Test(self.evo_evals['evals'],self.evo_evals['evo_evals']):
+                agent.copy_weights(self.evo_evals['evo_agent'])
 
 
-    def truncation(self,agent,evo_config):
+
+    def _truncation(self,agent,evo_config):
         # print('Truncating')
         path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
         evo_agent = Admin._load_agents(path)[0]
         agent.copy_weights(evo_agent)
         # print('Truncated')
+
+    def truncation(self,agent,evo_config):
+        path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
+        self.io.send(path,dest=0,tag=Tags.io_evo_load)
+        evo_agent = self.io.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_evo_load)
+        agent.copy_weights(evo_agent)
 
     def perturb(self,agent):
         # print('Pertubing')
@@ -394,7 +428,7 @@ class MPILearner(Learner):
     def close(self):
         comm = MPI.Comm.Get_parent()
         self.envs.Disconnect()
-        self.meval.Disconnet()
+        self.menv.Disconnet()
         comm.Disconnect()
 
     def log(self, msg, to_print=False):

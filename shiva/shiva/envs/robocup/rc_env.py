@@ -16,7 +16,7 @@ class rc_env:
     '''
         Description
             Class to run the RoboCup Environment. This class runs each agent on
-            its own thread and uses Barriers to make the agents run 
+            its own thread and uses Barriers to make the agents run
             synchronously ergo take an action together at each timestep.
 
         Inputs
@@ -39,7 +39,7 @@ class rc_env:
         self.right_action_option = None
 
         if self.action_level == 'low':
-            #                   pow,deg   deg       deg         pow,deg    
+            #                   pow,deg   deg       deg         pow,deg
             #self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
             self.action_list = [hfo_env.DASH, hfo_env.TURN, hfo_env.KICK]
             self.kick_actions = [hfo_env.KICK] # actions that require the ball to be kickable
@@ -50,7 +50,7 @@ class rc_env:
             self.right_action_option = np.asarray([[0.0]*self.acs_param_dim for i in range(self.num_right)], dtype=np.float64)
             # self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
         elif self.action_level == 'discretized':
-            
+
             self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
             power_discretization = np.linspace(0,100,21, dtype=np.float64).tolist()
             degree_discretization = np.linspace(-180,180,17, dtype=np.float64).tolist()
@@ -71,16 +71,16 @@ class rc_env:
                 for dash_degree in degree_discretization:
                     self.ACTION_DICT[dis_ctr] = (dash_power, dash_degree)
                     dis_ctr += 1
-            
+
             self.dash_idx = dis_ctr
-            
+
             self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(self.ACTION_DICT.values(), self.ACTION_DICT.keys()))
             rev_ctr += 1
             for turn_degree in degree_discretization:
                 turn_dict[dis_ctr] = (turn_degree,)
                 self.ACTION_DICT[dis_ctr] = (turn_degree,)
                 dis_ctr += 1
-            
+
             self.turn_idx = dis_ctr
 
             self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(turn_dict.values(), turn_dict.keys()))
@@ -105,7 +105,7 @@ class rc_env:
             #         self.DASH_TABLE.append((dash_power,dash_degree))
             #         self.KICK_TABLE.append((dash_power,dash_degree))
 
-            
+
             self.left_action_option = [0]*self.num_left
             self.right_action_option = [0]*self.num_right
 
@@ -228,7 +228,7 @@ class rc_env:
         self._start_hfo_server()
         self.left_envs = [hfo_env.HFOEnvironment() for i in range(self.num_left)]
         self.right_envs = [hfo_env.HFOEnvironment() for i in range(self.num_right)]
-        
+
         # Create thread(s) for left side
         for i in range(self.num_left):
             print("Connecting player %i" % i , "on left %s to the server" % self.left_base)
@@ -240,7 +240,7 @@ class rc_env:
                                                 False,i,self.ep_length,self.action_level,self.left_envs,))
             t.start()
             time.sleep(3)
-        
+
         for i in range(self.num_right):
             print("Connecting player %i" % i , "on rightonent %s to the server" % self.right_base)
             if i == 0:
@@ -254,7 +254,7 @@ class rc_env:
 
         print("All players connected to server")
         self.start = True
-    
+
     def start_env(self):
         return self.start
 
@@ -290,7 +290,7 @@ class rc_env:
             obsMsg += str(env.getSelfVelX()) + " "
             obsMsg += str(env.getSelfVelY()) + " "
             obsMsg += str(env.getStamina()) + " "
-        
+
         # for env in self.right_envs:
         #     obsMsg += str(env.side()) + " "
         #     obsMsg += str(env.getUnum()) + " "
@@ -320,7 +320,7 @@ class rc_env:
             return self.right_rewards[agent_id]
 
 
-    def Step(self, left_actions=[], right_actions=[], left_options=[], 
+    def Step(self, left_actions=[], right_actions=[], left_options=[],
             right_options=[], left_actions_OH = [], right_actions_OH = [], eval_flag=False):
         '''
             Description
@@ -330,14 +330,14 @@ class rc_env:
                 the agents together before taking a step and returning
                 the values. Thus the while loop in connect will start another
                 iteration.
-            
+
             Inputs
                 @left_actions list of left actions
                 @right_actions list of right actions
                 @left_params list of params corresponding to each action
                 @right_params similar to left_params
                 @*_OH one-hot-encoded actions
-            
+
             Returns
                 Observations
                 Rewards
@@ -347,7 +347,7 @@ class rc_env:
 
         # for i in range(self.num_left):
         #     self.left_actions_OH[i] = misc.zero_params(left_actions_OH[i].reshape(-1))
-        
+
         # for i in range(self.num_right):
         #     self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
 
@@ -363,13 +363,13 @@ class rc_env:
         self.sync_before_step.wait()
         if eval_flag:
             print("Getting here at holy cow")
-        
+
         return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
     def Queue_action(self,agent_id,base,action,options):
         '''
             Description
-                Queue up the actions and params for the agents before 
+                Queue up the actions and params for the agents before
                 taking a step in the environment.
         '''
 
@@ -378,7 +378,7 @@ class rc_env:
             if self.action_level == 'low':
                 for p in range(options.shape[1]):
                     self.left_action_option[agent_id][p] = options[agent_id][p]
-            # i was thinking that maybe I could choose the action here        
+            # i was thinking that maybe I could choose the action here
             elif self.action_level == 'discretized':
                 self.left_action_option[agent_id] = options[agent_id]
         else:
@@ -386,7 +386,7 @@ class rc_env:
             if self.action_level == 'low':
                 for p in range(options.shape[1]):
                     self.right_action_option[agent_id][p] = options[agent_id][p]
-    
+
     def descritize_action(self, action):
         '''
         Descritize a parameterized action
@@ -418,7 +418,7 @@ class rc_env:
     def get_valid_scaled_param(self,agentID,ac_index,base):
         '''
             Description
-            
+
         '''
 
         if self.left_base == base:
@@ -453,7 +453,7 @@ class rc_env:
             recieve a new observation, world status, and reward then start
             all over again. The world status dictates if the done flag
             should change.
-            
+
         Inputs
             feat_lvl: Feature level to use. ('high', 'low', 'simple')
             base: Which base to launch agent to. ('base_left', 'base_right)
@@ -478,7 +478,7 @@ class rc_env:
         envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                             server_port=port, server_addr='localhost', team_name=base,
                                                 play_goalie=goalie,record_dir =self.rc_log+'/')
-        
+
         if base == 'base_left':
             obs_prev = self.left_obs_previous
             obs = self.left_obs
@@ -517,9 +517,9 @@ class rc_env:
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID,base))
 
                     self.sync_at_status.wait()
-                    
+
                     obs_prev[agent_ID] = obs[agent_ID]
-                    self.world_status = envs[agent_ID].step() # update world                  
+                    self.world_status = envs[agent_ID].step() # update world
                     obs[agent_ID] = envs[agent_ID].getState() # update obs after all agents have acted
                     # obs[agent_ID] = actions_OH[agent_ID]
 
@@ -550,7 +550,7 @@ class rc_env:
     def _start_hfo_server(self):
             '''
                 Description
-                    Runs the HFO command to pass parameters to the server. 
+                    Runs the HFO command to pass parameters to the server.
                     Refer to `HFO/bin/HFO` to see how these params are added.
             '''
             cmd = self.hfo_path + \
@@ -595,13 +595,13 @@ class rc_env:
         used with a *.rcg logfile to replay a game. See details at
         https://github.com/LARG/HFO/blob/master/doc/manual.pdf.
         '''
-        
+
         if self.viewer is not None:
             os.kill(self.viewer.pid, signal.SIGKILL)
         cmd = hfo.get_viewer_path() +\
               " --connect --port %d" % (self.port)
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
-    
+
     def checkGoal(self):
         return self.left_envs[0].statusToString(self.world_status) == 'Goal_By_Left'
 
@@ -611,10 +611,10 @@ class rc_env:
 
             Input
                 s           world status message
-                agentId     
+                agentId
                 base        left_base or right_base
                 ep_num      episode number
-            
+
         '''
         reward=0.0
         team_reward = 0.0
@@ -657,7 +657,7 @@ class rc_env:
 
                 possession_side = 'N'
                 return reward
-        
+
         if self.left_base == base:
             team_actions = self.left_actions
             team_obs = self.left_obs
@@ -711,16 +711,16 @@ class rc_env:
             reward -= 0.1
             # print("agent is getting penalized for kicking when not kickable")
 
-        
+
         # it looks like this is broken for discretized as well
-        # so its not getting any rewards for kicking 
+        # so its not getting any rewards for kicking
         # print(self.action_list)
         # print(self.kick_actions)
         # input()
-        # if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:    
-        if self.action_list[team_actions[agentID]] == 3 and kickable:    
+        # if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:
+        if self.action_list[team_actions[agentID]] == 3 and kickable:
 
-            # if True:        
+            # if True:
             # if self.num_right > 0:
             # print(self.left_agent_possesion)
             if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
@@ -735,7 +735,7 @@ class rc_env:
             else:
                 self.BR_ball_pos_x = team_obs[agentID][self.ball_x]
                 self.BR_ball_pos_y = team_obs[agentID][self.ball_y]
-                    
+
 
             # track ball delta in between kicks
             if self.left_base == base:
@@ -747,7 +747,7 @@ class rc_env:
 
             new_x = team_obs[agentID][self.ball_x]
             new_y = team_obs[agentID][self.ball_y]
-            
+
             if self.left_base == base:
                 ball_delta = math.sqrt((self.BL_ball_pos_x-new_x)**2+ (self.BL_ball_pos_y-new_y)**2)
                 self.BL_ball_pos_x = new_x
@@ -756,7 +756,7 @@ class rc_env:
                 ball_delta = math.sqrt((self.BR_ball_pos_x-new_x)**2+ (self.BR_ball_pos_y-new_y)**2)
                 self.BR_ball_pos_x = new_x
                 self.BR_ball_pos_y = new_y
-            
+
             self.pass_reward = ball_delta * 5.0
 
         #     ######## Pass Receiver Reward #########
@@ -766,7 +766,7 @@ class rc_env:
                     if not self.left_agent_possesion[agentID] == 'L':
                         self.left_passer[prev_poss] += 1 # sets passer flag to whoever passed
                         # Passer reward is added in step function after all agents have been checked
-                       
+
                         # reward += self.pass_reward
                         # team_reward += self.pass_reward
                         #print("received a pass worth:",self.pass_reward)
@@ -785,7 +785,7 @@ class rc_env:
                 self.right_agent_possesion = ['N'] * self.num_right
                 self.left_agent_possesion[agentID] = 'L'
                 if possession_side != 'L':
-                    possession_side = 'L'    
+                    possession_side = 'L'
                     #reward+=1
                     #team_reward+=1
             else:
@@ -817,30 +817,30 @@ class rc_env:
         # all agents rewarded for closer to ball
         # dist_cur = self.distance_to_ball(team_obs[agentID])
         # dist_prev = self.distance_to_ball(team_obs_previous[agentID])
-        # d = (0.5)*(dist_prev - dist_cur) # if cur > prev --> +   
+        # d = (0.5)*(dist_prev - dist_cur) # if cur > prev --> +
         # if delta > 0:
         #     reward  += delta
         #     team_reward += delta
-            
+
         ####################### Rewards the closest player to ball for advancing toward ball ############
         distance_cur, closest_agent = self.closest_player_to_ball(team_obs, num_ag)
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
             delta = (distance_prev - distance_cur)*1.0
-            #if delta > 0:    
+            #if delta > 0:
             if True:
                 team_reward += delta
                 reward+= delta * 5
                 # print("distance to ball reward")
                 # print(distance_cur, delta)
                 pass
-            
+
         ##################################################################################
-            
+
         ####################### reduce ball distance to goal ##################
         # base left kicks
-        r = self.ball_distance_to_goal(team_obs[agentID]) 
-        r_prev = self.ball_distance_to_goal(team_obs_previous[agentID]) 
+        r = self.ball_distance_to_goal(team_obs[agentID])
+        r_prev = self.ball_distance_to_goal(team_obs_previous[agentID])
         if ((self.left_base == base) and possession_side =='L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
@@ -868,8 +868,8 @@ class rc_env:
             if True:
             #if delta > 0:
                 # reward += delta
-                # team_reward += delta  
-                pass  
+                # team_reward += delta
+                pass
         '''
             Reward agent for maximizing it's proximity to the ball
         '''
@@ -910,7 +910,7 @@ class rc_env:
         relative_x = obs[self.x]-obs[self.ball_x]
         relative_y = obs[self.y]-obs[self.ball_y]
         ball_distance = math.sqrt(relative_x**2+relative_y**2)
-        
+
         return ball_distance
 
     def ball_distance_to_goal(self,obs):

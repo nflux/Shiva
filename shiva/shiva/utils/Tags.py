@@ -29,3 +29,11 @@ class Tags(IntEnum):
     evolution_config = 21
     agent_id = 30
     evals = 40
+    io_config = 50
+    io_checkpoint_save = 51
+    io_checkpoint_load =52
+    io_pbt_save = 53
+    io_pbt_load = 54
+    io_evo_load = 55
+    io_evals = 56
+    io_load_agents = 57

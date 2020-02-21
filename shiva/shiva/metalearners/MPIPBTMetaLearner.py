@@ -25,6 +25,7 @@ class MPIPBTMetaLearner(MetaLearner):
 
 
     def launch(self):
+        self._launch_io_handler()
         self._launch_menvs()
         self._launch_learners()
         self._launch_mevals()
@@ -85,6 +86,15 @@ class MPIPBTMetaLearner(MetaLearner):
 
 
             # self.debug("Got Learners metrics {}".format(learner_specs))
+
+    def _launch_io_handler(self):
+        self.io = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/helpers/io_handler.py'], maxprocs=1)
+        self.io_specs = self.io.recv(None, source = 0, tag=Tags.io_config)
+        self.configs['Environment']['menvs_io_port'] = self.io_specs['menvs_port']
+        self.configs['Learner']['learners_io_port'] = self.io_specs['learners_port']
+        self.configs['Evaluation']['evals_io_port'] = self.io_specs['evals_port']
+
+
 
     def _launch_menvs(self):
         self.menvs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIMultiEnv.py'], maxprocs=self.num_menvs)

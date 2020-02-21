@@ -128,7 +128,7 @@ class DDPGAlgorithm(Algorithm):
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones] = 0.0
         # Use the Bellman equation.
-        y_i = rewards + self.gamma * Q_next_states_target
+        y_i = rewards.float() + self.gamma * Q_next_states_target.float()
 
         # Get Q values of the batch from states and actions.
         if self.a_space == 'discrete':

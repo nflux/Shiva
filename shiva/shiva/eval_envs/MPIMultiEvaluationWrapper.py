@@ -1,4 +1,4 @@
-import sys, time
+import sys, time,traceback
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
@@ -8,6 +8,7 @@ import pandas as pd
 
 from shiva.core.admin import logger
 from shiva.eval_envs.Evaluation import Evaluation
+from shiva.helpers.misc import terminate_process
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin
 from shiva.envs.Environment import Environment
@@ -25,16 +26,15 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     def launch(self):
         # Receive Config from Meta
-        self._learners_connect()
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEvaluationWrapper, self).__init__(self.configs)
+        self._launch_evals()
+        self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self.rankings = np.zeros(self.num_agents)
         self.evaluations = dict()
         self.info = MPI.Status()
-        self._launch_evals()
         self.log("This at 35 is not printed")
-        self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
         self.agent_ids = self.meta.bcast(None,root=0)
         print('Agent IDS: ', self.agent_ids)
         self.initial_agent_selection()
@@ -79,21 +79,26 @@ class MPIMultiEvaluationWrapper(Evaluation):
             'num_evals': self.num_evals
         }
 
+    #def _get_evaluations(self,sort):
+        #if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.agent_id):
+            #self.info = MPI.Status()
+            #agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.agent_id, status=self.info)
+            #env_source = self.info.Get_source()
+            #evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
+            #self.evaluations[agent_id] = evals.mean()
+            #elf.sort = sort
+            #print('Multi Evaluation has received evaluations!')
+            #elf.agent_selection(env_source)
+
     def _get_evaluations(self,sort):
-        if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.agent_id):
-            self.info = MPI.Status()
-            agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.agent_id, status=self.info)
-            env_source = self.info.Get_source()
-            evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
-            self.evaluations[agent_id] = evals.mean()
-            self.sort = sort
+        if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag = Tags.evals):
+            evals = self.evals.recv(None,source=MPI.ANY_SOURCE,tag=Tags.evals,status=self.info)
+            eval_source = self.info.Get_source()
+            for i in range(len(evals['agent_ids'])):
+                self.evaluations[evals['agent_ids'][i]] = evals['evals'][i].mean()
+            self.sort=sort
             print('Multi Evaluation has received evaluations!')
-            self.agent_selection(env_source)
-
-    def _learners_connect(self):
-        self.learners_port = MPI.Lookup_name('Learner_Meval')
-        self.learner = MPI.COMM_WORLD.Connect(self.learners_port, MPI.INFO_NULL)
-
+            self.agent_selection(eval_source)
 
     def _get_initial_evaluations(self):
         while len(self.evaluations ) < self.num_agents:
@@ -107,10 +112,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self.evals.send(self.agent_sel,dest=i,tag=Tags.new_agents)
 
     def agent_selection(self,env_rank):
-        self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))[0]
+        self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
         print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
         self.evals.send(self.agent_sel,dest=env_rank,tag=Tags.new_agents)
-        
+
 
 
     def close(self):
