@@ -43,6 +43,12 @@ class MultiAgentParticleEnv(Environment):
         self.reward_total = {role:0 for role in self.roles}
         self.step_count = 0
         self.done_count = 0
+
+        # reward function
+        self.rewards_wrap = lambda x: x
+        if hasattr(self, 'normalize_reward') and self.normalize:
+            self.rewards_wrap = self.normalize_reward
+
         '''Reset Metrics'''
         self.reset()
 
@@ -63,7 +69,7 @@ class MultiAgentParticleEnv(Environment):
         self.actions = {role:self._clean_actions(role, actions[ix]) for ix, role in enumerate(self.roles)}
         obs, rew, don, _ = self.env.step(list(self.actions.values()))
         self.observations = {role:obs[ix] for ix, role in enumerate(self.roles)}
-        self.rewards = {role:rew[ix] for ix, role in enumerate(self.roles)}
+        self.rewards = {role:self.rewards_wrap(rew[ix]) for ix, role in enumerate(self.roles)}
 
         # maybe overwrite the done - not sure if env tells when is Done
         self.dones = {role:don[ix] for ix, role in enumerate(self.roles)}
