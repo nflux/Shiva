@@ -70,7 +70,7 @@ class MPILearner(Learner):
         if self.pbt:
             self.create_pbt_dirs()
             self.log('Sending IO save pbt agents request')
-            self._io_save_pbt_agents()
+            self.save_pbt_agents()
         # print("DURING LAUNCH", self.agent_ids)
         self.meta.gather(self.agent_ids,root=0)
         # make first saving
@@ -353,15 +353,16 @@ class MPILearner(Learner):
         self.log('Sending IO Connectiong Request')
         self.io = MPI.COMM_WORLD.Connect(self.learners_io_port, MPI.INFO_NULL)
         self.log('Sent IO Connection Request')
-        self.io_checkpoint_request = dict()
+        self.io_request = dict()
         self.io_pbt_request = dict()
         self.io_pbt_request['path'] = self.eval_path+'Agent_'
 
     def _io_checkpoint(self,checkpoint_num,function_only, use_temp_folder):
-        self.io_request['learner'] = self
+        self.io_request['learner'] = self.id
         self.io_request['checkpoint_num'] = checkpoint_num
         self.io_request['function_only'] = function_only
         self.io_request['use_temp_foler'] = use_temp_folder
+        self.io_request['agents'] = self.agents
         self.io.send(self.io_request,dest=0,tag=Tags.io_checkpoint_save)
 
     def _io_save_pbt_agents(self):

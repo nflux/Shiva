@@ -5,6 +5,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import numpy as np
 from shiva.core.admin import logger
 from shiva.helpers.misc import terminate_process
+import shiva.helpers.file_handler as fh
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin
 
@@ -54,7 +55,7 @@ class IOHandler(object):
         self.evals = MPI.COMM_WORLD.Accept(self.evals_port)
         self.log('Evals Port Connected')
 
-    def service_learner_request(self):
+    def service_learner_requests(self):
         if self.learners.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_checkpoint_save):
             self.save_learner_agents()
 

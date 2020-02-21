@@ -136,8 +136,8 @@ class MPIMultiEnv(Environment):
         '''
         #self.log("Got all Learners Specs\n\t{}".format(self.learners_specs))
         '''Assuming 1 Agent per Learner, we could break it with a star operation'''
-        self.io.send(self.learners_specs,dest=0,tag=Tags.io_menvs_load_agents)
-        self.agents = self.io.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_menvs_load_agents)
+        self.io.send(self.learners_specs,dest=0,tag=Tags.io_load_agents)
+        self.agents = self.io.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_load_agents)
         #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners
