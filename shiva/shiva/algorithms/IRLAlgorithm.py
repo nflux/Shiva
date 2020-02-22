@@ -6,56 +6,56 @@ from shiva.algorithms.Algorithm import Algorithm
 from shiva.agents.IRLAgent import IRLAgent
 from shiva.helpers.misc import action2one_hot
 from shiva.core.admin import Admin
-from shiva.networks import DynamicLinearNetwork
-
-
-'''
-
-    Experimental Algorithm for Inverse Reinforcement Learning
-    
-        - Will sample from a the buffer
-        - Will use various methods of calculating loss
-        - Something experimental could be providing the actual rewards it gave, updating in a DQN fashion with a 
-            target network.
-        - Accepted approach is that losses are calculated using supervised learning algorithms
-        - Currently supervised methods being considered are the following:
-            - Logistic Regression
-            - Support Vector Machines
-            - Artificial Neural Network (Supervised Style)  // This will be tried first
-        
-            - The supervised algorithms might be imported from other files to be reusable and make this code more 
-                readable.
-                
-
-    This will host the reward neural network
-
-    One thing is for certain I need to map a state action pair to a reward.
-        - If the network is giving a state action pair and produces a reward then how would I know what
-        the true reward is supposed to be. How will I update the network?
-
-        - How will a supervised learning algorithm know whether or not
-
-    It will have to save the network after every update and will have to be protected by a flag or something.
-
-    This will also utilize the supervised learning algorithms to make predictions.
-        - Score predictions?
-        - Preference predictions?
-
-    I know we'll use the predictions, whether they are by the neural network or supervised learning algorithms
-    to calculate the loss using Cross Entropy.
-    I think either could be updated using that loss.
-
-    Bradley-Terry model will be used for estimating score functions from pairwise preferences.
-
-    The estimated reward is defined by independently normalizing each of these predictors and averaging
-    the results.
-
-    1/e of data must be held out for validation.
-
-'''
+from shiva.networks import DynamicLinearNetwork, SupevisedNeuralNetwork
+# from shiva.helpers.config_handler import load_class // maybe not needed
 
 
 class IRLAlgorithm(Algorithm):
+    '''
+
+        Experimental Algorithm for Inverse Reinforcement Learning
+
+            - Will sample from a the buffer
+            - Will use various methods of calculating loss
+            - Something experimental could be providing the actual rewards it gave, updating in a DQN fashion with a
+                target network.
+            - Accepted approach is that losses are calculated using supervised learning algorithms
+            - Currently supervised methods being considered are the following:
+                - Logistic Regression
+                - Support Vector Machines
+                - Artificial Neural Network (Supervised Style)  // This will be tried first
+
+                - The supervised algorithms might be imported from other files to be reusable and make this code more
+                    readable.
+
+
+        This will host the reward neural network
+
+        One thing is for certain I need to map a state action pair to a reward.
+            - If the network is giving a state action pair and produces a reward then how would I know what
+            the true reward is supposed to be. How will I update the network?
+
+            - How will a supervised learning algorithm know whether or not
+
+        It will have to save the network after every update and will have to be protected by a flag or something.
+
+        This will also utilize the supervised learning algorithms to make predictions.
+            - Score predictions?
+            - Preference predictions?
+
+        I know we'll use the predictions, whether they are by the neural network or supervised learning algorithms
+        to calculate the loss using Cross Entropy.
+        I think either could be updated using that loss.
+
+        Bradley-Terry model will be used for estimating score functions from pairwise preferences.
+
+        The estimated reward is defined by independently normalizing each of these predictors and averaging
+        the results.
+
+        1/e of data must be held out for validation.
+
+    '''
+
     def __init__(self, obs_space, acs_space, configs):
         '''
             Inputs
@@ -71,7 +71,7 @@ class IRLAlgorithm(Algorithm):
         self.state_action_space = self.acs_space + self.obs_space
         self.loss = 0
         self.expert = Admin._load_expert(self.expert_path)
-        self.expert_predictor = DynamicLinearNetwork(self.state_action_space, 1, configs[2]['actor'])
+        self.expert_predictor = SupevisedNeuralNetwork(self.state_action_space, 1, configs[2]['expert_predictor'])
 
     def update(self, agent, buffer, step_n, episodic=False):
         '''
@@ -176,4 +176,4 @@ class IRLAlgorithm(Algorithm):
         return metrics
 
     def __str__(self):
-        return 'DQNAlgorithm'
+        return 'IRLAlgorithm'
