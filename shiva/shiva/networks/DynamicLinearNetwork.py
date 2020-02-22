@@ -1,15 +1,14 @@
 import torch
 from functools import partial
-
 from shiva.helpers import networks_handler as nh
 
+
 class DynamicLinearNetwork(torch.nn.Module):
+
     def __init__(self, input_dim, output_dim, config):
         super(DynamicLinearNetwork, self).__init__()
         torch.manual_seed(5)
-
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        # print(config)
         self.config = config
         self.net = nh.DynamicLinearSequential(
                             input_dim,
@@ -23,6 +22,7 @@ class DynamicLinearNetwork(torch.nn.Module):
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
                         ).to(self.device)
+
     def forward(self, x):
         return self.net(x)
 
@@ -55,11 +55,11 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
                         )
+
     def forward(self, x, gumbel=False):
+
         a = self.net(x)
-        # print(a.shape)
-        # if a.shape[0] < 1:
-        #     print(a)
+
         if gumbel:
             # print("Network Output (before gumbel):", x, a)
             if len(a.shape) == 3:
@@ -68,7 +68,6 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                 return torch.cat([self.gumbel(a[:, :self.param_ix]), a[:, self.param_ix:]], dim=1)
             else:
                 return torch.cat([self.gumbel(a[:self.param_ix]), a[self.param_ix:]], dim=0)
-
 
         else:
             # print("Network Output (before softmax):", x, a)

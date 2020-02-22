@@ -14,11 +14,11 @@ from shiva.helpers.misc import action2one_hot
         - Will use various methods of calculating loss
         - Something experimental could be providing the actual rewards it gave, updating in a DQN fashion with a 
             target network.
-        - Losses will also be calculated using supervised learning algorithms
+        - Accepted approach is that losses are calculated using supervised learning algorithms
         - Currently supervised methods being considered are the following:
             - Logistic Regression
             - Support Vector Machines
-            - Artificial Neural Network (Supervised Style)
+            - Artificial Neural Network (Supervised Style)  // This will be tried first
         
             - The supervised algorithms might be imported from other files to be reusable and make this code more 
                 readable.
@@ -65,6 +65,7 @@ class IRLAlgorithm(Algorithm):
         self.acs_space = acs_space['acs_space']
         self.obs_space = obs_space
         self.loss = 0
+        self.expert = torch.load(self.expert_path)
 
     def update(self, agent, buffer, step_n, episodic=False):
         '''
@@ -103,8 +104,8 @@ class IRLAlgorithm(Algorithm):
 
         agent.optimizer.zero_grad()
         # 1) GRAB Q_VALUE(s_j, a_j) from minibatch
-        input_v = torch.tensor([np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions)]).float().to(
-            self.device)
+        # input_v = torch.tensor([np.concatenate([s_i, a_i]) for s_i, a_i in zip(states, actions)]).float().to(
+        #     self.device)
 
         state_action_values = agent.policy(input_v)
         # 2) GRAB MAX[Q_HAT_VALUES(s_j+1)]

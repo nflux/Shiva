@@ -85,7 +85,8 @@ class PPOAgent(Agent):
 
     def get_discrete_action(self, observation):
         #retrieve the action given an observation
-        action = self.actor(observation.float()).to(self.device).float().detach()
+        obs = observation.float().to(self.device)
+        action = self.actor(obs)
         action = self.softmax(action)
         dist = Categorical(action)
         action = dist.sample()
@@ -102,8 +103,8 @@ class PPOAgent(Agent):
         action = misc.action2one_hot(self.acs_discrete, action.item())
         return action.tolist(), logprobs.tolist()
 
-    def get_discrete_logprobs(self,observation,action):
-        action_probs = self.actor(observation.float()).detach().to(self.device)
+    def get_discrete_logprobs(self, observation, action):
+        action_probs = self.actor(observation.float().to(self.device)).detach().to(self.device)
         action_probs = self.softmax(action_probs)
         dist = Categorical(action_probs)
         action = torch.tensor(np.argmax(action, axis=-1)).to(self.device).long()

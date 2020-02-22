@@ -35,7 +35,6 @@ class SingleAgentPPOLearner(Learner):
             #self.ep_count += 1
             self.collect_metrics(True) # metrics per episode
             #print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
-            print(self.ep_count)
             if int(self.ep_count / self.configs['Algorithm']['update_episodes']) > self.update_count:
                 self.update_count += 1
                 #self.ep_count += 1
