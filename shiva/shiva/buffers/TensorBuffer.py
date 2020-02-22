@@ -113,6 +113,7 @@ class TensorBufferLogProbs(ReplayBuffer):
         self.next_obs_buffer = torch.zeros((self.max_size, obs_dim),requires_grad=False)
         self.done_buffer = torch.zeros((self.max_size, 1),requires_grad=False)
         self.log_probs_buffer = torch.zeros( (self.max_size), requires_grad=False)
+        self.current_index = 0
 
     def push(self, exps):
 
@@ -131,10 +132,6 @@ class TensorBufferLogProbs(ReplayBuffer):
             self.current_index = 0
             # self.size = self.max_size
 
-        # print(ac)
-        # input()
-        # print(log_probs)
-        # input()
 
         self.obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = obs
         self.acs_buffer[self.current_index:self.current_index+nentries, :self.acs_dim] = ac
@@ -166,7 +163,7 @@ class TensorBufferLogProbs(ReplayBuffer):
         cast = lambda x: Variable(x, requires_grad=False).to(device)
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
-        return   (
+        return (
                     cast_obs(self.obs_buffer[:self.current_index,:]),
                     cast(self.acs_buffer[:self.current_index,:]),
                     cast(self.rew_buffer[:self.current_index,:]).squeeze(),

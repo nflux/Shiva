@@ -4,13 +4,21 @@ from torch.autograd import Variable
 from shiva.buffers.ReplayBuffer import ReplayBuffer
 from shiva.helpers import buffer_handler as bh
 
+'''
+
+    Might want to clear the buffer continually so that it is more aware of how the reward function estimator
+    is changing.
+    
+'''
+
+
 class SegmentBuffer(ReplayBuffer):
 
     def __init__(self, max_size, batch_size, num_agents, obs_dim, acs_dim):
         super(SegmentBuffer, self).__init__(max_size, batch_size, num_agents, obs_dim, acs_dim)
         self.obs_buffer = torch.zeros((self.max_size, obs_dim), requires_grad=False)
-        self.acs_buffer = torch.zeros( (self.max_size, acs_dim) ,requires_grad=False)
-        self.rew_buffer = torch.zeros((self.max_size, 1),requires_grad=False)
+        self.acs_buffer = torch.zeros( (self.max_size, acs_dim), requires_grad=False)
+        self.rew_buffer = torch.zeros((self.max_size, 1), requires_grad=False)
 
     def push(self, exps):
 

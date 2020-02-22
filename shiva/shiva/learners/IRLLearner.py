@@ -37,12 +37,9 @@ class IRLLearner(Learner):
 
         '''
 
-        # self._launch_policy_optimizer()
-        # self._launch_preference_elicitator()
-        # self._launch_rewards_function_fitter()
-
         self.env = self.create_environment()
-        self.alg = self.create_algorithm()
+        self.ppo_alg = self.create_algorithm()
+
         if self.load_agents:
             self.agent = Admin._load_agent(self.load_agents)
             if self.using_buffer:
@@ -57,6 +54,7 @@ class IRLLearner(Learner):
 
         # load in the expert from path specified in the config
         self.expert = Admin._load_agent(self.expert_path)
+        self.irl_alg = self.create_irl_algorithm()
         # I guess the neural network would have to classify the ppo_action as expert or not
         # instantiate a buffer with tuples (state, ppo_action, 0 or 1)
         # 0 indicates it was an expert action where as 1 does not
@@ -65,53 +63,6 @@ class IRLLearner(Learner):
         print('Launch Successful.')
 
         self.run()
-
-
-    def assess_actions_by_expert(self):
-        '''
-
-            This function will use the expert to identify whether actions were expert actions given the state
-
-        '''
-
-        # for state in states:
-            # get expert action
-            # check if actions match
-            # create triple with s (ppo_action, expert_action)
-        # create
-        pass
-
-    def _launch_rewards_function_fitter(self):
-
-        '''
-
-            This will host the reward neural network
-
-            One thing is for certain I need to map a state action pair to a reward.
-                - If the network is giving a state action pair and produces a reward then how would I know what
-                the true reward is supposed to be. How will I update the network?
-
-                - How will a supervised learning algorithm know whether or not
-
-            It will have to save the network after every update and will have to be protected by a flag or something.
-
-            This will also utilize the supervised learning algorithms to make predictions.
-                - Score predictions?
-                - Preference predictions?
-
-            I know we'll use the predictions, whether they are by the neural network or supervised learning algorithms
-            to calculate the loss using Cross Entropy.
-            I think either could be updated using that loss.
-
-            Bradley-Terry model will be used for estimating score functions from pairwise preferences.
-
-            The estimated reward is defined by independently normalizing each of these predictors and averaging
-            the results.
-
-            1/e of data must be held out for validation.
-
-        '''
-        pass
 
     def run(self):
         self.step_count = 0
@@ -133,7 +84,8 @@ class IRLLearner(Learner):
             if int(self.ep_count / self.configs['Algorithm']['update_episodes']) > self.update_count:
                 self.update_count += 1
                 #self.ep_count += 1
-                self.alg.update(self.agent,self.buffer, self.step_count)
+                self.ppo_alg.update(self.agent, self.buffer, self.step_count)
+                self.irl_alg.update(self.irl_agent, self.segment_buffer)
             self.checkpoint()
         del(self.queues)
         self.env.close()
@@ -168,9 +120,13 @@ class IRLLearner(Learner):
         #                 while not self.queues[i].empty():
         #                     self.buffer.append(self.queues[i].get())
         # else:
+
+        '''
+            Currently only supports Gym, if this is successful, it will be extended to RoboCup and Unity
+        '''
         action = self.agent.get_action(observation)
         next_observation, _, done, more_data = self.env.step(action)
-        reward = self.reward_model(observation, action)
+        reward = self.irl_agent.get_reward(observation, action)
         log_probs = self.agent.get_logprobs(observation, action)
         self.rewards[0] += reward
         t = [observation.numpy(), action, reward, next_observation, int(done), log_probs]
@@ -185,16 +141,16 @@ class IRLLearner(Learner):
         reward_model = load_class('shiva.irl', self.configs['IRL']['type'])
         return reward_model(self.configs['URL'])
 
-    def _create_segment_buffer(self, obs_space, acs_space):
-        buffer_class = load_class('shiva.buffers', self.configs['IRL']['type'])
-        return buffer_class(self.configs['IRL']['capacity'], self.configs['IRL']['batch_size'], self.env.num_left,
-                            obs_space, acs_space)
-
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs, self.port)
 
-    def create_algorithm(self):
+    def create_rl_algorithm(self):
+        algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),
+                               [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+
+    def create_irl_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),
                                [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
@@ -204,3 +160,7 @@ class IRLLearner(Learner):
         return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left,
                             obs_dim, ac_dim)
 
+    def _create_segment_buffer(self, obs_space, acs_space):
+        buffer_class = load_class('shiva.buffers', self.configs['IRL']['type'])
+        return buffer_class(self.configs['IRL']['capacity'], self.configs['IRL']['batch_size'], self.env.num_left,
+                            obs_space, acs_space)

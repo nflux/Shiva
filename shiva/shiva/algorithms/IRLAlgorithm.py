@@ -6,6 +6,51 @@ from shiva.algorithms.Algorithm import Algorithm
 from shiva.agents.IRLAgent import IRLAgent
 from shiva.helpers.misc import action2one_hot
 
+'''
+
+    Experimental Algorithm for Inverse Reinforcement Learning
+    
+        - Will sample from a the buffer
+        - Will use various methods of calculating loss
+        - Something experimental could be providing the actual rewards it gave, updating in a DQN fashion with a 
+            target network.
+        - Losses will also be calculated using supervised learning algorithms
+        - Currently supervised methods being considered are the following:
+            - Logistic Regression
+            - Support Vector Machines
+            - Artificial Neural Network (Supervised Style)
+        
+            - The supervised algorithms might be imported from other files to be reusable and make this code more 
+                readable.
+                
+
+    This will host the reward neural network
+
+    One thing is for certain I need to map a state action pair to a reward.
+        - If the network is giving a state action pair and produces a reward then how would I know what
+        the true reward is supposed to be. How will I update the network?
+
+        - How will a supervised learning algorithm know whether or not
+
+    It will have to save the network after every update and will have to be protected by a flag or something.
+
+    This will also utilize the supervised learning algorithms to make predictions.
+        - Score predictions?
+        - Preference predictions?
+
+    I know we'll use the predictions, whether they are by the neural network or supervised learning algorithms
+    to calculate the loss using Cross Entropy.
+    I think either could be updated using that loss.
+
+    Bradley-Terry model will be used for estimating score functions from pairwise preferences.
+
+    The estimated reward is defined by independently normalizing each of these predictors and averaging
+    the results.
+
+    1/e of data must be held out for validation.
+
+'''
+
 
 class IRLAlgorithm(Algorithm):
     def __init__(self, obs_space, acs_space, configs):
@@ -23,6 +68,9 @@ class IRLAlgorithm(Algorithm):
 
     def update(self, agent, buffer, step_n, episodic=False):
         '''
+            This update could be done episodically or stepwise, I don't think it matters but something to be considered
+            is whether or not it will be done in batches or one data point at a time if that makes sense.
+
             Implementation
                 1) Calculate what the current expected Q val from each sample on the replay buffer would be
                 2) Calculate loss between current and past reward
@@ -84,10 +132,24 @@ class IRLAlgorithm(Algorithm):
         self.loss.backward()
         agent.optimizer.step()
 
+        # This might be useful if I decided to combine all the loss and use the target network for
+        # Calculating an additional loss value. Might stabilize the reward function.
         if step_n % self.c == 0:
             agent.target_policy.load_state_dict(agent.policy.state_dict())  # Assuming is PyTorch!
 
+    def assess_actions_by_expert(self, sample):
+        '''
 
+            This function will use the expert to identify whether actions were expert actions given the state
+
+        '''
+
+        # for state, action in sample:
+        #     get expert action
+        #     check if actions match
+        #     create triple with s (ppo_action, expert_action)
+        # create
+        pass
 
     def get_loss(self):
         return self.loss
