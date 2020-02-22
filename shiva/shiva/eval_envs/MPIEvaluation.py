@@ -122,12 +122,13 @@ class MPIEvaluation(Evaluation):
                 self.ep_evals['evals'] = self.evals
                 self.ep_evals['path'] = self.eval_path
                 self.meval.send(self.ep_evals,dest=0,tag=Tags.evals)
-                self.agent_ids= self.meval.recv(None,source=MPI.ANY_SOURCE,tag=Tags.new_agents)
+                self.agent_ids= self.meval.recv(None,source=MPI.ANY_SOURCE,tag=Tags.new_agents)[0]
                 self.ep_evals['new_agent_ids'] = self.agent_ids
-                self.io.send(self.ep_evals,dest=0,tag=Tags.io_evals,)
-                self.agents = self.io.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_evals)
+                self.io.send(self.ep_evals,dest=0,tag=Tags.io_evals_save,)
+                self.agents = self.io.recv(None,source=0,tag=Tags.io_evals_save)
                 self.evals.fill(0)
                 self.eval_counts.fill(0)
+                time.sleep(0.1)
 
 
 
@@ -185,7 +186,8 @@ class MPIEvaluation(Evaluation):
     def _io_load_agents(self):
         agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
         self.io.send(agent_paths,dest=0,tag=Tags.io_load_agents)
-        self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
+        #self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
+        self.agents = self.io.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_load_agents)
 
 
         # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))

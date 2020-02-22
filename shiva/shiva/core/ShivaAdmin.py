@@ -115,6 +115,7 @@ class ShivaAdmin():
                 @learner            Learner instance to be saved
                 @function_only      When we only want to use this functionality without profiling, used for distributed processes but running locally
         '''
+        print('Learner {} has added its profile to shivaAdmin'.format(learner.id))
         if not self.need_to_save: return
         if learner.id not in self._learner_dir:
             if function_only:
@@ -135,6 +136,7 @@ class ShivaAdmin():
             self._learner_dir[learner.id]['summary'] = new_dir
             self._agent_dir[learner.id] = {}
             self.writer[learner.id] = {} # this will be a dictionary whos key is an agent.id that maps to a unique tensorboard file for that agent
+            print('Admin _learner_dir: {}'.format(self._learner_dir))
 
     def checkpoint(self, learner, checkpoint_num=None, function_only=False, use_temp_folder=False):
         '''
@@ -162,10 +164,11 @@ class ShivaAdmin():
         # self._save_learner(learner, checkpoint_num)
         self._save_learner_agents(learner, checkpoint_num)
 
-    def checkpoint(self,learner_id, agents, checkpoint_num=None, function_only=False, use_temp_folder=False):
-        self.use_temp_folder = use_temp_folder
-        if self.use_temp_folder:
-            checkpoint_dir = self._learner_dict[learner_id]['temp']
+    def new_checkpoint_dir(self,learner,checkpoint_num):
+        checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ))
+        self._learner_dir[learner.id]['checkpoint'].append(checkpoint_dir)
+        return checkpoint_dir
+
 
     def get_last_checkpoint(self, learner):
         if len(self._learner_dir[learner.id]['checkpoint']) == 0:
@@ -368,18 +371,27 @@ class ShivaAdmin():
                 checkpoint_num = learner.done_count
         agent.save(agent_path, checkpoint_num)
 
-    def save_agent(self, learner_id, agent, checkpoint_num):
-        if not self.need_to_save: return
-        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id)) ) )
-        if agent.id not in self._agent_dir[learner.id]:
-            self._agent_dir[learner.id][agent.id] = []
-        self._agent_dir[learner.id][agent.id].append(new_dir)
-        self.init_summary_writer(learner, agent) # just in case it's a new agent?
+    def save_agents(self, learner_id, agents, checkpoint_num, use_temp_folder):
+        print(use_temp_folder)
+        for agent in agents:
+            new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id)) ) )
+            if agent.id not in self._agent_dir[learner.id]:
+                self._agent_dir[learner.id][agent.id] = []
+            self._agent_dir[learner.id][agent.id].append(new_dir)
+            #self.init_summary_writer(learner, agent) # just in case it's a new agent?
+            if use_temp_folder:
+                agent_path = os.path.join(self._learner_dir[learner.id]['temp'], self.__folder_name__['agent'].format(id=str(agent.id)))
+            else:
+                agent_path = self._agent_dir[learner.id][agent.id][-1]
 
-        if self.use_temp_folder:
-            return os.path.join(self._learner_dir[learner.id]['temp'], self.__folder_name__['agent'].format(id=str(agent.id)))
-        else:
-            return self._agent_dir[learner.id][agent.id][-1]
+            fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
+            if checkpoint_num is None:
+                try:
+                    checkpoint_num = learner.env.done_count
+                except:
+                    checkpoint_num = learner.done_count
+            agent.save(agent_path, checkpoint_num)
+
 
 
 

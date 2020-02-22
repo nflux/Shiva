@@ -77,7 +77,7 @@ class MPIMultiEnv(Environment):
                     # self.update_nums[learner_id] = learner_spec['update_num']
 
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
-                self.io_load_agents()
+                self._io_load_agents()
                  #learner_id = info.Get_source()
                  #learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
                  #'''Assuming 1 Agent per Learner'''

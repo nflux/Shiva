@@ -1,5 +1,5 @@
 from mpi4py import MPI
-import sys, time, traceback
+import sys, time, traceback, os
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import numpy as np
@@ -57,38 +57,57 @@ class IOHandler(object):
 
     def service_learner_requests(self):
         if self.learners.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_checkpoint_save):
+            #self.log('Detected Learner Checkpoint Request')
             self.save_learner_agents()
+            #self.log('Learner Checkpoint Request Complete')
 
         if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.io_pbt_save):
-            self.log('Detected PBT Save request')
+            #self.log('Detected PBT Save request')
             self.save_pbt_agents()
+            #self.log('PBT save request complete')
 
         if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.io_evo_load):
+            #self.log('Detected evolution agent request')
             self.load_evolution_agent()
+            #self.log('Evolution agent request complete')
 
         if self.learners.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_evals_load):
+            #self.log('Detected evaluation request')
             self.load_evaluations()
+            #self.log('Evaluation request complete')
 
     def service_menv_requests(self):
         if self.menvs.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_checkpoint_load):
+            #self.log('Detected Checkpoint request')
             self.load_agent_checkpoint()
+            #self.log('Checkpoint request complete')
 
         if self.menvs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.io_load_agents):
+            #self.log('Detected  MultiEnv agent load request')
             self.load_agents()
+            #self.log('Agent MultiEnv load request complete')
 
     def service_eval_requests(self):
         if self.evals.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_load_agents):
+            #self.log('Detected Eval agent load request')
             self.load_eval_agents()
+            #self.log('Agent Eval load request complete')
 
         if self.evals.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_evals_save):
+            #self.log('Detected Evaluation save request')
             self.save_evals()
+            #self.log('Evaluation save request complete')
 
 
     def save_learner_agents(self):
         learner_dict = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_checkpoint_save)
-        
+        agents = [None] * len(learner_dict['agents'])
+
         #Admin.checkpoint(learner_dict['learner'], learner_dict['checkpoint_num'], learner_dict['function_only'], learner_dict['use_temp_folder'])
-        for agent in learner_dict['agents']:
+        for i in range(len(learner_dict['agents'])):
+            agent_path = os.path.join(learner_dict['checkpoint_path'],learner_dict['agent_dir'][i].format(id=str(learner_dict['agents'][i].id)))
+            fh.save_pickle_obj(learner_dict['agents'][i], os.path.join(agent_path, 'agent_cls.pickle'))
+            learner_dict['agents'][i].save(agent_path, learner_dict['checkpoint_num'])
 
 
     def save_pbt_agents(self):
@@ -107,9 +126,10 @@ class IOHandler(object):
     def load_evaluations(self):
         eval_config = self.learners.recv(None,source=MPI.ANY_SOURCE, tag=Tags.io_evals_load,status=self.info)
         source = self.info.Get_source()
+        self.log('Eval Config: {}'.format(eval_config))
         self.evo_evals['evals'] = np.load(eval_config['evals_path'])
         self.evo_evals['evo_evals'] = np.load(eval_config['evo_evals_path'])
-        self.evo_evals['evo_agent'] = Admin._load_agents(self.evo_evals['evo_agent_path'])[0]
+        self.evo_evals['evo_agent'] = Admin._load_agents(eval_config['evo_agent_path'])[0]
         self.learners.send(self.evo_evals,dest=source,tag=Tags.io_evals_load)
 
     def load_agent_checkpoint(self):
@@ -119,26 +139,31 @@ class IOHandler(object):
         self.menvs.send(agent,dest=source,tag=Tags.io_checkpoint_load)
 
     def load_agents(self):
-        learners_specs = self.menvs.recv(None, source = MPI.ANY_SOURCE, tag=Tags.io_menvs_load_agents,status=self.info)
+        learners_specs = self.menvs.recv(None, source = MPI.ANY_SOURCE, tag=Tags.io_load_agents,status=self.info)
         source = self.info.Get_source()
-        agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
-        self.menvs.send(agents,dest=source,tag=Tags.io_menvs_load_agents)
+        agents = [ Admin._load_agents(learner_specs['load_path'])[0] for learner_specs in learners_specs ]
+        self.menvs.send(agents,dest=source,tag=Tags.io_load_agents)
 
     def load_eval_agents(self):
         agent_paths = self.evals.recv(None,source=MPI.ANY_SOURCE, tag=Tags.io_load_agents,status=self.info)
+        self.log('Step 1 complete: {}'.format(agent_paths))
         source = self.info.Get_source()
+        self.log('Step 2 complete: {}'.format(source))
         agents = [Admin._load_agents(path)[0] for path in agent_paths]
+        self.log('Step 3 complete: {}'.format(agents))
         self.evals.send(agents,dest=source,tag=Tags.io_load_agents)
+        self.log('Done')
 
     def save_evals(self):
-        ep_evals = self.evals.recv(None, source=MPI.ANY_SOURCE,tag=Tags.io_evals,status=self.info)
+        ep_evals = self.evals.recv(None, source=MPI.ANY_SOURCE,tag=Tags.io_evals_save,status=self.info)
         source = self.info.Get_source()
         agents = [None] * len(ep_evals['agent_ids'])
         for i in range(len(ep_evals['agent_ids'])):
-            path = self.eval_path+'Agent_'+str(ep_evals['agent_ids'][i])
-            agents[i] = Admin._load_agents(path)[0]
-            np.save(path+'/episode_evaluations',ep_evals['evals'][i])
-        self.evals.send(agents,dest=source,tag=Tags.io_evals)
+            save_path = ep_evals['path']+'Agent_'+str(ep_evals['agent_ids'][i])
+            load_path = ep_evals['path']+'Agent_'+str(ep_evals['new_agent_ids'][i])
+            agents[i] = Admin._load_agents(load_path)[0]
+            np.save(save_path+'/episode_evaluations',ep_evals['evals'][i])
+        self.evals.send(agents,dest=source,tag=Tags.io_evals_save)
 
     def log(self, msg, to_print=False):
         text = 'IOHandler: {}'.format(msg)

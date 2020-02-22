@@ -26,8 +26,10 @@ class MPILearner(Learner):
         super(MPILearner, self).__init__(self.id, self.configs)
         self._connect_io_handler()
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
+
         Admin.init(self.configs['Admin'])
         Admin.add_learner_profile(self, function_only=True)
+        #print('This is my Admin object: {}'.format(Admin))
         # Open Port for Single Environments
         self.port = MPI.Open_port(MPI.INFO_NULL)
         #self.log("Open port {}".format(str(self.port)))
@@ -74,8 +76,8 @@ class MPILearner(Learner):
         # print("DURING LAUNCH", self.agent_ids)
         self.meta.gather(self.agent_ids,root=0)
         # make first saving
-        #Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
-        self._io_checkpoint(checkpoint_num=0,function_only=True,use_temp_folder=True)
+        Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
+        #self._io_checkpoint(checkpoint_num=0,function_only=True,use_temp_folder=True)
         # Connect with MultiEnvs
         self._connect_menvs()
         self.run()
@@ -100,65 +102,68 @@ class MPILearner(Learner):
             else:
                 self._receive_trajectory_numpy()
 
+            self.log('Episodes collected: {}'.format(self.done_count))
+
             # '''Used for calculating collection time'''
             # if self.done_count == n_episodes:
             #     t1 = time.time()
             #     self.log("Collected {} episodes in {} seconds".format(n_episodes, (t1-t0)))
             #     exit()
 
-            if not self.evaluate:
-                '''Change freely condition when to update'''
-                if self.done_count % self.episodes_to_update == 0:
-                    self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
-                    self.update_num += 1
-                    self.agents[0].step_count = self.step_count
-                    self.agents[0].done_count = self.done_count
 
-                    self._io_save_pbt_agents()
+            '''Change freely condition when to update'''
+            if self.done_count % self.episodes_to_update == 0:
+                self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
+                self.update_num += 1
+                self.agents[0].step_count = self.step_count
+                self.agents[0].done_count = self.done_count
+
+                self._io_save_pbt_agents()
                     #if self.save_flag:
                         # self.log("MPI LEARNER SAVED THE AGENT")
                         #Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                    self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                        #self.save_flag = False
+                if self.done_count % self.save_checkpoint_episodes == 0:
+                    self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
+                    #self.save_flag = False
                     for ix in range(self.num_menvs):
                         self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
-                    #self.log("This is printing at 122")
-                '''if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
-                    self.save_flag = self.menv.recv(source=MPI.ANY_SOURCE, tag=Tags.save_agents)'''
+                #self.log("This is printing at 122")
+            '''if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
+                self.save_flag = self.menv.recv(source=MPI.ANY_SOURCE, tag=Tags.save_agents)'''
 
-                    #self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-                    # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                #self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
+                # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
-                    # for ix in range(self.num_menvs):
-                    #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+                # for ix in range(self.num_menvs):
+                #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
-                if self.done_count % self.evolution_episodes == 0:
-                    self.log('Requesting evolution config')
-                    self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
+            if self.done_count % self.evolution_episodes == 0:
+                self.log('Requesting evolution config')
+                self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
 
-                if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config):
-                    '''Assumes one agent'''
-                    for agent in self.agents:
-                        self.log("Before the recv evo config")
-                        self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
-                        self.log('Received evolution config')
-                        if self.evolution_config['evolution'] == False:
-                            continue
-                        setattr(self, 'exploitation', self.evolution_config['exploitation'])
-                        setattr(self, 'exploration', self.evolution_config['exploration'])
-                        self.log('Starting Evolution')
-                        self.exploitation = getattr(self, self.exploitation)
-                        self.exploration = getattr(self, self.exploration)
-                        self.exploitation(agent,self.evolution_config)
-                        self.exploration(agent)
+            if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config):
+                '''Assumes one agent'''
+                for agent in self.agents:
+                    self.log("Before the recv evo config")
+                    self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
+                    self.log('Received evolution config')
+                    if self.evolution_config['evolution'] == False:
+                        continue
+                    setattr(self, 'exploitation', self.evolution_config['exploitation'])
+                    setattr(self, 'exploration', self.evolution_config['exploration'])
+                    self.log('Starting Evolution')
+                    self.exploitation = getattr(self, self.exploitation)
+                    self.exploration = getattr(self, self.exploration)
+                    self.exploitation(agent,self.evolution_config)
+                    self.exploration(agent)
 
-                        #self.save_pbt_agents()
-                        for ix in range(self.num_menvs):
-                            self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+                    #self.save_pbt_agents()
+                    for ix in range(self.num_menvs):
+                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
 
-                        print('Evolution Complete\n')
+                    self.log('Evolution Complete')
 
 
 
@@ -360,10 +365,11 @@ class MPILearner(Learner):
     def _io_checkpoint(self,checkpoint_num,function_only, use_temp_folder):
         self.io_request['learner'] = self.id
         self.io_request['checkpoint_num'] = checkpoint_num
-        self.io_request['function_only'] = function_only
-        self.io_request['use_temp_foler'] = use_temp_folder
+        #self.io_request['function_only'] = function_only
+        #self.io_request['use_temp_folder'] = use_temp_folder
         self.io_request['agents'] = self.agents
-        self.io_request['path'] = '/runs/'
+        self.io_request['checkpoint_path'] = Admin.new_checkpoint_dir(self,checkpoint_num)
+        self.io_request['agent_dir'] = [Admin.get_new_agent_dir(self,agent) for agent in self.agents]
         self.io.send(self.io_request,dest=0,tag=Tags.io_checkpoint_save)
 
     def _io_save_pbt_agents(self):

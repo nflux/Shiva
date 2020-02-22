@@ -35,5 +35,6 @@ class Tags(IntEnum):
     io_pbt_save = 53
     io_pbt_load = 54
     io_evo_load = 55
-    io_evals = 56
-    io_load_agents = 57
+    io_evals_save = 56
+    io_evals_load = 57
+    io_load_agents = 58

@@ -3,7 +3,7 @@ import logging
 import numpy as np
 from mpi4py import MPI
 
-from shiva.core.admin import logger
+from shiva.core.admin import Admin, logger
 from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
 from shiva.helpers.misc import terminate_process
@@ -20,6 +20,7 @@ class MPIPBTMetaLearner(MetaLearner):
         self.learner_specs = None
         self.info = MPI.Status()
         self.learner_ids = list()
+        #Admin.init(self.configs['Admin'])
         self.launch()
 
 
@@ -57,7 +58,7 @@ class MPIPBTMetaLearner(MetaLearner):
                         print('Do Not Evolve')
                         self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
                     elif self.top_20  < ranking < self.bottom_20:
-                        print('Middle of the Pack')
+                        print('Middle of the Pack: {}'.format(learner_source))
                         evo['evolution'] = True
                         evo['agent'] = agent_id
                         evo['ranking'] = ranking
