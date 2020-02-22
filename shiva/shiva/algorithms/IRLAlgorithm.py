@@ -5,6 +5,9 @@ import random
 from shiva.algorithms.Algorithm import Algorithm
 from shiva.agents.IRLAgent import IRLAgent
 from shiva.helpers.misc import action2one_hot
+from shiva.core.admin import Admin
+from shiva.networks import DynamicLinearNetwork
+
 
 '''
 
@@ -59,13 +62,16 @@ class IRLAlgorithm(Algorithm):
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(IRLAlgorithm, self).__init__(obs_space, acs_space, configs)
+        super(IRLAlgorithm, self).__init__(obs_space, acs_space, configs[0])
+        self.configs = configs
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
         self.acs_space = acs_space['acs_space']
         self.obs_space = obs_space
+        self.state_action_space = self.acs_space + self.obs_space
         self.loss = 0
-        self.expert = torch.load(self.expert_path)
+        self.expert = Admin._load_expert(self.expert_path)
+        self.expert_predictor = DynamicLinearNetwork(self.state_action_space, 1, configs[2]['actor'])
 
     def update(self, agent, buffer, step_n, episodic=False):
         '''
@@ -138,7 +144,7 @@ class IRLAlgorithm(Algorithm):
         if step_n % self.c == 0:
             agent.target_policy.load_state_dict(agent.policy.state_dict())  # Assuming is PyTorch!
 
-    def assess_actions_by_expert(self, sample):
+    def assign_labels(self, sample):
         '''
 
             This function will use the expert to identify whether actions were expert actions given the state

@@ -24,7 +24,8 @@ class IRLLearner(Learner):
         self.env = self.create_environment()
         self.ppo_alg = self.create_rl_algorithm()
 
-        self.reward_predictor = self.create_reward_predictor(self.env.observation_space, self.env.action_space['acs_space'])
+        self.reward_predictor = self.create_reward_predictor(self.env.observation_space,
+                                                             self.env.action_space['acs_space'])
         self.irl_alg = self.create_irl_algorithm()
 
         if self.load_agents:
