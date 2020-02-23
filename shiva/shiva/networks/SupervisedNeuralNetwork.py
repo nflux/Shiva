@@ -1,6 +1,7 @@
 import torch
-from shiva.helpers import networks_handler as nh
-from shiva.helpers.misc import action2one_hot_v
+# from shiva.helpers import networks_handler as nh
+# from shiva.helpers.misc import action2one_hot_v
+from shiva.shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 
 class SupervisedNeuralNetwork(torch.nn.Module):
@@ -36,6 +37,12 @@ class SupervisedNeuralNetwork(torch.nn.Module):
         # Zero the gradient
         self.optimizer.zero_grad()
 
+
+        '''
+            I think I still need to do the one hot encoding on the features?
+            Do I need to do a one hot encoding on the actual_labels, will find out when I get there.
+        '''
+
         # discrete classifications get gumble softmaxed values
         if self.output == 'discrete':
             predicted_labels = self.model(features, gumbel=True)
@@ -45,6 +52,8 @@ class SupervisedNeuralNetwork(torch.nn.Module):
 
         # get which label the model predicted for each set of features; I think dim = 0 will be okay
         # if something is amiss this is definitely something to check
+
+        # This doesn't provide the one hot encoding though, so that might be an issue
         predicted_labels = torch.argmax(predicted_labels, dim=0)
 
         # get and set the loss
