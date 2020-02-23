@@ -19,15 +19,21 @@ class SingleAgentLearner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                if not self.evaluate:
+
+                if not self.evaluate and not (self.configs['Algorithm']['algorithm'] == 'PPO'):
                     self.alg.update(self.agent, self.buffer, self.env.step_count)
                 self.collect_metrics()
                 if self.is_multi_process_cutoff(): return None # PBT Cutoff
                 else: continue
             if not self.evaluate:
-                self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
+                if self.configs['Algorithm']['algorithm'] == 'PPO':
+                    if self.buffer.size >= self.configs['Buffer']['batch_size']:
+                        self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
+                else:
+                    self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
             # this is one hundred percent an episodic agent noise reset
-            self.agent.ou_noise.reset()
+            if self.agent.__str__() == 'DDPGAgent':
+                self.agent.ou_noise.reset()
             self.collect_metrics(episodic=True)
             self.checkpoint()
             print('Step # {}\tEpisode {} completed on {} steps!\tEpisodic reward: {} '.format(self.env.step_count, self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))
@@ -43,33 +49,65 @@ class SingleAgentLearner(Learner):
             action = self.agent.get_action(observation, self.env.step_count, self.evaluate)
 
             next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.action_selection_method,device=self.device)
-            
+
             exp = list(map(torch.clone, (torch.from_numpy(observation), action, torch.from_numpy(reward),
                                                 torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).bool()) ))
-        
-        elif len(observation.shape) > 1:
-            action = [self.agent.get_action(obs, self.env.step_count) for obs in observation]
-            next_observation, reward, done, more_data = self.env.step(action)
-            # print(action)
-            exp = copy.deepcopy([
-                        torch.tensor(observation),
-                        torch.tensor(action[0]),
-                        torch.tensor(reward).reshape(-1,1),
-                        torch.tensor(next_observation),
-                        torch.tensor(done).reshape(-1,1)
-                ])
-        else:
-            action = self.agent.get_action(observation, self.env.step_count)
-            next_observation, reward, done, more_data = self.env.step(action, self.action_selection_method)
-            exp = copy.deepcopy([
-                        torch.tensor(observation),
-                        torch.tensor(action),
-                        torch.tensor(reward).reshape(-1,1),
-                        torch.tensor(next_observation),
-                        torch.tensor(done).reshape(-1,1)
-                ])
 
-        self.buffer.push(exp)
+        elif self.configs['Algorithm']['algorithm'] == 'PPO':
+            if len(observation.shape) > 1:
+                action = self.agent.get_action(observation)
+                logprobs = self.agent.get_logprobs(observation,action).sum(-1,keepdim=True)
+                next_observation, reward, done, more_data = self.env.step(action)
+
+                exp = copy.deepcopy([
+                            torch.tensor(observation),
+                            torch.tensor(action[0]),
+                            torch.tensor(reward).reshape(-1,1),
+                            torch.tensor(next_observation),
+                            torch.tensor(done).reshape(-1,1),
+                            logprobs.clone().detach().requires_grad_(True)
+                    ])
+
+            else:
+                action = self.agent.get_action(observation)
+                logprobs = self.agent.get_logprobs(observation,action).sum(-1,keepdim=True)
+                next_observation, reward, done, more_data = self.env.step(action, self.action_selection_method)
+
+                exp = copy.deepcopy([
+                            torch.tensor(observation),
+                            torch.tensor(action),
+                            torch.tensor(reward).reshape(-1,1),
+                            torch.tensor(next_observation),
+                            torch.tensor(done).reshape(-1,1),
+                            logprobs.clone().detach().requires_grad_(True)
+                    ])
+            self.buffer.push(exp)
+
+        else:
+            if len(observation.shape) > 1:
+                action = [self.agent.get_action(obs, self.env.step_count) for obs in observation]
+                next_observation, reward, done, more_data = self.env.step(action)
+                # print(action)
+                exp = copy.deepcopy([
+                            torch.tensor(observation),
+                            torch.tensor(action[0]),
+                            torch.tensor(reward).reshape(-1,1),
+                            torch.tensor(next_observation),
+                            torch.tensor(done).reshape(-1,1)
+                    ])
+            else:
+                action = self.agent.get_action(observation, self.env.step_count)
+                next_observation, reward, done, more_data = self.env.step(action, self.action_selection_method)
+                exp = copy.deepcopy([
+                            torch.tensor(observation),
+                            torch.tensor(action),
+                            torch.tensor(reward).reshape(-1,1),
+                            torch.tensor(next_observation),
+                            torch.tensor(done).reshape(-1,1)
+                    ])
+
+            self.buffer.push(exp)
+
         """"""
 
 
@@ -84,7 +122,7 @@ class SingleAgentLearner(Learner):
             pass
         self.step_count_per_run += 1
         return False
-    
+
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
@@ -98,7 +136,7 @@ class SingleAgentLearner(Learner):
         if self.env.env_name == 'RoboCupEnvironment':
             return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
         else:
-            return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim)
+            return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], self.env.num_instances, obs_dim, ac_dim)
 
 
     def launch(self):

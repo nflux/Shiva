@@ -15,22 +15,22 @@ class GymEnvironment(Environment):
         self.done = False
         self.action_space_continuous = None
         self.action_space_discrete = None
-        self.observation_space = self.set_observation_space()         
+        self.observation_space = self.set_observation_space()
 
         if self.action_space == "discrete":
             self.action_space = {
-                'discrete': self.set_action_space() , 
+                'discrete': self.set_action_space() ,
                 'continuous': 0,
-                'param': self.set_action_space(), 
+                'param': self.set_action_space(),
                 'acs_space': self.set_action_space()
             }
             self.gymEnvType = 'discrete'
-            
+
         elif self.action_space == "continuous":
             self.action_space = {
-                'discrete': 0 , 
+                'discrete': 0 ,
                 'continuous': self.set_action_space(),
-                'param': 0, 
+                'param': 0,
                 'acs_space': self.set_action_space()
             }
             self.gymEnvType = 'continuous'
@@ -66,7 +66,7 @@ class GymEnvironment(Environment):
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
         else:
             self.obs, self.reward_per_step, self.done, info = self.env.step([action[action4Gym.item()]])
-            
+
         self.load_viewer()
         '''
             Metrics collection

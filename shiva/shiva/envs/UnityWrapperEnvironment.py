@@ -116,10 +116,10 @@ class UnityWrapperEnvironment(Environment):
         '''
             One Shiva episode is when all instances in the Environment terminate at least once
         '''
-        if not self.on_policy:
-            return self.temp_done_counter >= self.num_instances
-        else:
+        if self.on_policy:
             return self.temp_done_counter >= self.update_episodes
+        else:
+            return self.temp_done_counter >= self.num_instances
 
     def _clean_actions(self, actions):
         '''
