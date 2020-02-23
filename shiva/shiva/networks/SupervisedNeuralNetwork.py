@@ -36,26 +36,26 @@ class SupervisedNeuralNetwork(torch.nn.Module):
         # Zero the gradient
         self.optimizer.zero_grad()
 
-        # discrete classifications get gumble softmax values
-        if self.output == 'discrete'
+        # discrete classifications get gumble softmaxed values
+        if self.output == 'discrete':
             predicted_labels = self.model(features, gumbel=True)
-        # continuous classifications get softmax values
+        # continuous classifications get softmaxed values
         elif self.output == 'continuous':
-            predicted_labels = self.model(features, gumbel=False)
+            predicted_labels = self.model(features)
 
         # get which label the model predicted for each set of features; I think dim = 0 will be okay
         # if something is amiss this is definitely something to check
         predicted_labels = torch.argmax(predicted_labels, dim=0)
 
         # get and set the loss
-        self.loss = self.loss_function(predicted_labels, actual_labels)
+        self.prediction_loss = self.loss_function(predicted_labels, actual_labels)
 
         # update the classification model
-        self.loss.backward()
+        self.prediction_loss.backward()
         self.optimizer.step()
 
     def get_loss(self):
-        return self.loss
+        return self.prediction_loss
 
     def __str__(self):
         return 'SupervisedNeuralNetwork'
