@@ -74,22 +74,7 @@ class IRLAlgorithm(Algorithm):
         self.expert_predictor = SupevisedNeuralNetwork(self.state_action_space, 1, configs[2]['expert_predictor'])
 
     def update(self, agent, buffer, step_n, episodic=False):
-        '''
-            This update could be done episodically or stepwise, I don't think it matters but something to be considered
-            is whether or not it will be done in batches or one data point at a time if that makes sense.
 
-            Implementation
-                1) Calculate what the current expected Q val from each sample on the replay buffer would be
-                2) Calculate loss between current and past reward
-                3) Optimize
-                4) If agent steps reached C, update agent.target network
-
-            Input
-                agent       Agent reference who we are updating
-                buffer      Buffer reference to sample from
-                step_n      Current step number
-                episodic    Flag indicating if update is episodic
-        '''
         if episodic:
             '''
                 DQN updates at every timestep, here we avoid doing an extra update after the episode terminates

@@ -12,40 +12,45 @@ class SupervisedNeuralNetwork(torch.nn.Module):
 
     '''
 
-    def __init__(self, input_dim, output_dim, config):
+    def __init__(self, num_features, num_labels, config):
         super(SupervisedNeuralNetwork, self).__init__()
         torch.manual_seed(5)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.config = config
         self.loss = 0
-        self.model = nh.DynamicLinearSequential(
-                            input_dim,
-                            output_dim,
-                            config['layers'],
-                            nh.parse_functions(torch.nn, config['activation_function']),
-                            config['last_layer'],
-                            getattr(torch.nn, config['output_function'])
-                            if config['output_function'] is not None else None
-                        ).to(self.device)
-        self.optimizer = getattr(torch.optim, config['optimizer_function'])(params=self.net.parameters(),
+        self.output = self.config['output']
+
+        if self.output == 'discrete':
+            self.model = SoftMaxHeadDynamicLinearNetwork(num_features, num_labels, num_labels, config)
+
+        elif self.output == 'continuous':
+            self.model = SoftMaxHeadDynamicLinearNetwork(num_features, num_labels, 0, config)
+
+        self.optimizer = getattr(torch.optim, config['optimizer_function'])(params=self.model.parameters(),
                                                                             lr=config['learning_rate'])
 
         self.loss_function = getattr(torch.nn, config['loss_function'])()
 
-    def forward(self, x):
-        return self.model(x)
+    def fit(self, features, actual_labels):
 
-    def fit(self, data):
+        # Zero the gradient
         self.optimizer.zero_grad()
-        # Throwing away the rewards
-        states, actions, _, actual_labels = data
-        # Might want to one hot encode the actions to have the appropriate dimensions
-        state_action_pairs = torch.cat([states, actions], dim=0)
-        # I might have to give these labels the clamps
-        # Also might need to softmax, or use the SoftMaxHeadLinearNetwork, otherwise I might have issues
-        # getting it to learn since is outputting a discrete value. Might be a good question for Andrew.
-        predicted_labels = self.model(state_action_pairs)
+
+        # discrete classifications get gumble softmax values
+        if self.output == 'discrete'
+            predicted_labels = self.model(features, gumbel=True)
+        # continuous classifications get softmax values
+        elif self.output == 'continuous':
+            predicted_labels = self.model(features, gumbel=False)
+
+        # get which label the model predicted for each set of features; I think dim = 0 will be okay
+        # if something is amiss this is definitely something to check
+        predicted_labels = torch.argmax(predicted_labels, dim=0)
+
+        # get and set the loss
         self.loss = self.loss_function(predicted_labels, actual_labels)
+
+        # update the classification model
         self.loss.backward()
         self.optimizer.step()
 
