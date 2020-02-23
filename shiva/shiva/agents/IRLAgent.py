@@ -20,18 +20,18 @@ class IRLAgent(Agent):
         self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.policy.parameters(),
                                                                                   lr=self.learning_rate)
 
-    def get_reward(self, state, action,  step_n):
+    def get_reward(self, state_action_pairs,  step_n):
         '''
             Gets reward current reward function estimator
         '''
-        return self.reward(state, action)
+        return self.reward(state_action_pairs)
 
-    def get_reward_target(self, state, action):
+    def get_reward_target(self, state_action_pairs):
         '''
             Gets reward from target reward function estimator
             for Experimental Update
         '''
-        return self.target_reward(state, action)
+        return self.target_reward(state_action_pairs)
 
     def save(self, save_path, step):
         torch.save(self.reward, save_path + '/reward.pth')

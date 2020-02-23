@@ -2,7 +2,6 @@ import torch
 import copy
 import random
 import numpy as np
-
 from shiva.core.admin import Admin
 from shiva.learners.Learner import Learner
 from shiva.helpers.config_handler import load_class
@@ -21,12 +20,13 @@ class IRLLearner(Learner):
 
     def launch(self):
 
-        self.env = self.create_environment()
-        self.ppo_alg = self.create_rl_algorithm()
+        self.env = self._create_environment()
+        self.ppo_alg = self._create_rl_algorithm()
 
-        self.reward_predictor = self.create_reward_predictor(self.env.observation_space,
-                                                             self.env.action_space['acs_space'])
-        self.irl_alg = self.create_irl_algorithm()
+        # I don't think I need this anymore because the IRLAgent will predict the reward
+        # self.reward_predictor = self.create_reward_predictor(self.env.observation_space,
+        #                                                      self.env.action_space['acs_space'])
+        self.irl_alg = self._create_irl_algorithm()
 
         if self.load_agents:
             self.agent = Admin._load_agent(self.load_agents)
@@ -36,7 +36,7 @@ class IRLLearner(Learner):
             self.agent = self.alg.create_agent(self.get_new_agent_id())
             self.irl_agent = self.irl_alg.create_agent(0)
             if self.using_buffer:
-                self.buffer = self.create_buffer(self.env.observation_space,
+                self.buffer = self._create_buffer(self.env.observation_space,
                                                  self.env.action_space['acs_space'] + self.env.action_space['param'])
 
         print('Launch Successful.')
@@ -119,30 +119,27 @@ class IRLLearner(Learner):
             print('Episode: ', self.ep_count, ' reward: ', self.rewards[0])
         self.buffer.push(exp)
 
-    def create_reward_predictor(self, obs_space, acs_space):
-        reward_model = load_class('shiva.irl', self.configs['IRL']['type'])
-        return reward_model(self.configs['URL'])
-
-    def create_environment(self):
+    def _create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs, self.port)
 
-    def create_rl_algorithm(self):
+    def _create_rl_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),
-                               [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+                               [self.configs['Algorithm'], self_.configs['Agent'], self.configs['Network']])
 
-    def create_irl_algorithm(self):
+    def _create_irl_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['IRLAlgorithm']['type'])
         return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),
                                [self.configs['IRLAlgorithm'], self.configs['IRLAgent'], self.configs['IRLNetwork']])
 
-    def create_buffer(self, obs_dim, ac_dim):
+    def _create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
         return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'],
                             self.env.num_left, obs_dim, ac_dim)
 
-    def create_segment_buffer(self, obs_space, acs_space):
-        buffer_class = load_class('shiva.buffers', self.configs['SegmentBuffer']['type'])
-        return buffer_class(self.configs['SegmentBuffer']['capacity'], self.configs['SegmentBuffer']['batch_size'],
-                            self.env.num_left, obs_space, acs_space)
+    # May not be necessary
+    # def create_segment_buffer(self, obs_space, acs_space):
+    #     buffer_class = load_class('shiva.buffers', self.configs['SegmentBuffer']['type'])
+    #     return buffer_class(self.configs['SegmentBuffer']['capacity'], self.configs['SegmentBuffer']['batch_size'],
+    #                         self.env.num_left, obs_space, acs_space)

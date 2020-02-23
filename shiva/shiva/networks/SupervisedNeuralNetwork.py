@@ -5,6 +5,13 @@ from shiva.helpers.misc import action2one_hot_v
 
 class SupervisedNeuralNetwork(torch.nn.Module):
 
+    '''
+
+        Eventually will need to distinguish between discrete and continuous actions.
+        Need to one hot encode the actions in the discrete case which I'm currently working with.
+
+    '''
+
     def __init__(self, input_dim, output_dim, config):
         super(SupervisedNeuralNetwork, self).__init__()
         torch.manual_seed(5)
@@ -34,6 +41,9 @@ class SupervisedNeuralNetwork(torch.nn.Module):
         states, actions, _, actual_labels = data
         # Might want to one hot encode the actions to have the appropriate dimensions
         state_action_pairs = torch.cat([states, actions], dim=0)
+        # I might have to give these labels the clamps
+        # Also might need to softmax, or use the SoftMaxHeadLinearNetwork, otherwise I might have issues
+        # getting it to learn since is outputting a discrete value. Might be a good question for Andrew.
         predicted_labels = self.model(state_action_pairs)
         self.loss = self.loss_function(predicted_labels, actual_labels)
         self.loss.backward()
