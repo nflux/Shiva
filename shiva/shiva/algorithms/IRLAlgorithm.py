@@ -6,7 +6,7 @@ from shiva.algorithms.Algorithm import Algorithm
 from shiva.agents.IRLAgent import IRLAgent
 from shiva.helpers.misc import action2one_hot
 from shiva.core.admin import Admin
-from shiva.networks import DynamicLinearNetwork, SupevisedNeuralNetwork
+from shiva.networks import DynamicLinearNetwork, SupervisedNeuralNetwork
 # from shiva.helpers.config_handler import load_class // maybe not needed
 
 
@@ -62,7 +62,7 @@ class IRLAlgorithm(Algorithm):
                 epsilon        (start, end, decay rate), example: (1, 0.02, 10**5)
                 C              Number of iterations before the target network is updated
         '''
-        super(IRLAlgorithm, self).__init__(obs_space, acs_space, configs[0])
+        super(IRLAlgorithm, self).__init__(obs_space, acs_space, configs)
         self.configs = configs
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
@@ -70,8 +70,8 @@ class IRLAlgorithm(Algorithm):
         self.obs_space = obs_space
         self.state_action_space = self.acs_space + self.obs_space
         self.loss = 0
-        self.expert = Admin._load_expert(self.expert_path)
-        self.expert_predictor = SupevisedNeuralNetwork(self.state_action_space, 1, configs[2]['expert_predictor'])
+        self.expert = Admin._load_agent(self.expert_path)
+        self.expert_predictor = SupervisedNeuralNetwork(self.state_action_space, 1, configs[2]['expert_predictor'])
 
     def update(self, agent, buffer, step_n, episodic=False):
 

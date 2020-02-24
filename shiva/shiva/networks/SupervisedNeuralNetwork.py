@@ -1,7 +1,7 @@
 import torch
 # from shiva.helpers import networks_handler as nh
 # from shiva.helpers.misc import action2one_hot_v
-from shiva.shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
+from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 
 class SupervisedNeuralNetwork(torch.nn.Module):

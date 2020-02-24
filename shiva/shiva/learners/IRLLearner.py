@@ -126,7 +126,7 @@ class IRLLearner(Learner):
     def _create_rl_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),
-                               [self.configs['Algorithm'], self_.configs['Agent'], self.configs['Network']])
+                               [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def _create_irl_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['IRLAlgorithm']['type'])
