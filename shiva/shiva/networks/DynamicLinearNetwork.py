@@ -1,6 +1,6 @@
 import torch
 from functools import partial
-from shiva.shiva.helpers import networks_handler as nh
+from shiva.helpers import networks_handler as nh
 
 
 class DynamicLinearNetwork(torch.nn.Module):

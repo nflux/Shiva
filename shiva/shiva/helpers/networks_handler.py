@@ -1,4 +1,4 @@
-import shiva.shiva.helpers.misc as misc
+import shiva.helpers.misc as misc
 import torch
 import torch.nn as nn
 
