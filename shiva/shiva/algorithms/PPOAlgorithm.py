@@ -12,9 +12,9 @@ from shiva.agents.PPOAgent import PPOAgent
 from shiva.algorithms.Algorithm import Algorithm
 
 class PPOAlgorithm(Algorithm):
-    def __init__(self,obs_space, acs_space,configs):
+    def __init__(self,obs_space, acs_space, configs):
 
-        super(PPOAlgorithm, self).__init__(obs_space,acs_space,configs)
+        super(PPOAlgorithm, self).__init__(obs_space, acs_space, configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
         self.epsilon_clip = configs[0]['epsilon_clip']
@@ -37,7 +37,7 @@ class PPOAlgorithm(Algorithm):
         minibatch = buffer.full_buffer()
 
         # Batch of Experiences
-        states, actions, rewards, next_states, dones,logprobs = minibatch
+        states, actions, rewards, next_states, dones, logprobs = minibatch
 
         # Make everything a tensor and send to gpu if available
         states = torch.tensor(states).to(self.device)
@@ -116,7 +116,7 @@ class PPOAlgorithm(Algorithm):
         return metrics
 
     def create_agent(self):
-        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1],self.configs[2])
+        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
         return self.agent
 
     def __str__(self):

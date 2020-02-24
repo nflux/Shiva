@@ -108,11 +108,11 @@ class TensorBufferLogProbs(ReplayBuffer):
     def __init__(self, max_size, batch_size, num_agents, obs_dim, acs_dim):
         super(TensorBufferLogProbs, self).__init__(max_size, batch_size, num_agents, obs_dim, acs_dim)
         self.obs_buffer = torch.zeros((self.max_size, obs_dim), requires_grad=False)
-        self.acs_buffer = torch.zeros( (self.max_size, acs_dim) ,requires_grad=False)
-        self.rew_buffer = torch.zeros((self.max_size, 1),requires_grad=False)
-        self.next_obs_buffer = torch.zeros((self.max_size, obs_dim),requires_grad=False)
-        self.done_buffer = torch.zeros((self.max_size, 1),requires_grad=False)
-        self.log_probs_buffer = torch.zeros( (self.max_size), requires_grad=False)
+        self.acs_buffer = torch.zeros( (self.max_size, acs_dim), requires_grad=False)
+        self.rew_buffer = torch.zeros((self.max_size, 1), requires_grad=False)
+        self.next_obs_buffer = torch.zeros((self.max_size, obs_dim), requires_grad=False)
+        self.done_buffer = torch.zeros((self.max_size, 1), requires_grad=False)
+        self.log_probs_buffer = torch.zeros((self.max_size), requires_grad=False)
         self.current_index = 0
 
     def push(self, exps):

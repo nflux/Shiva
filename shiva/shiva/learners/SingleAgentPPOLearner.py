@@ -77,12 +77,16 @@ class SingleAgentPPOLearner(Learner):
             next_observation, reward, done, more_data = self.env.step(action)
             self.rewards[0] += reward
             log_probs = self.agent.get_logprobs(observation,action)
-            t = [observation.numpy(), action, reward, next_observation, int(done), log_probs]
-            exp = copy.deepcopy(t)
+            exp = copy.deepcopy([ torch.tensor(observation.numpy()),
+                                  torch.tensor(action),
+                                  torch.tensor(reward),
+                                  torch.tensor(next_observation),
+                                  torch.tensor(int(done)),
+                                  torch.tensor(log_probs)])
             if done:
                 self.ep_count += 1
                 #print('Episode: ', self.ep_count, ' reward: ', self.rewards[0])
-            self.buffer.append(exp)
+            self.buffer.push(exp)
         """"""
 
         # if self.configs['Agent']['action_space'] == 'Discrete':
@@ -115,11 +119,14 @@ class SingleAgentPPOLearner(Learner):
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
-        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),
+                               [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
 
     def create_buffer(self):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        print(self.env.get_action_space())
+        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'], 1,
+                            self.env.get_observation_space(), self.env.get_action_space()['acs_space'])
 
     def get_agents(self):
         return self.agents
