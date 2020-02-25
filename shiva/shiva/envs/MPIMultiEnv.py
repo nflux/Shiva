@@ -27,7 +27,6 @@ class MPIMultiEnv(Environment):
 
         '''Set self attrs from Config'''
         self.num_learners = self.configs['MetaLearner']['num_learners']
-        self.num_envs = self.num_instances # number of childrens
 
         self._launch_envs()
         self.meta.gather(self._get_menv_specs(), root=0) # checkin with Meta
@@ -132,9 +131,10 @@ class MPIMultiEnv(Environment):
         # Spawn Single Environments
         self.envs = MPI.COMM_WORLD.Spawn(sys.executable, args=['shiva/envs/MPIEnv.py'], maxprocs=self.num_envs)
         self.envs.bcast(self.configs, root=MPI.ROOT)  # Send them the Config
-        envs_spec = self.envs.gather(None, root=MPI.ROOT)  # Wait for Env Specs (obs, acs spaces)
+        envs_spec = self.envs.gather(None, root=MPI.ROOT)  # Wait for Env Specs (obs, acs spaces) for Learners
         assert len(envs_spec) == self.num_envs, "Not all Environments checked in.."
         self.env_specs = envs_spec[0] # set self attr only 1 of them
+        self.log("Got {} EnvSpecs".format(len(envs_spec)))
 
     def load_agents(self):
         '''Load path is fixed'''
@@ -170,7 +170,7 @@ class MPIMultiEnv(Environment):
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
         '''Need match making process here'''
-        self.envs_role2learner = self.get_envs_role2learner()
+        self.envs_role2learner =  self.get_envs_role2learner()
         self.envs.scatter(self.envs_role2learner, root=MPI.ROOT)
         # Get signal from single env that they have connected with Learner
         envs_states = self.envs.gather(None, root=MPI.ROOT)
@@ -193,7 +193,7 @@ class MPIMultiEnv(Environment):
             'id': self.id,
             'port': self.port,
             'env_specs': self.env_specs,
-            'num_envs': self.num_instances,
+            'num_envs': self.num_envs,
             'num_learners': self.num_learners
         }
 
@@ -202,8 +202,11 @@ class MPIMultiEnv(Environment):
         comm.Disconnect()
 
     def log(self, msg, to_print=False):
-        text = 'Menv {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
+        text = '{}\t{}'.format(str(self), msg)
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
+
+    def __str__(self):
+        return "<MultiEnv(id={}, num_envs={})>".format(self.id, self.num_envs)
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

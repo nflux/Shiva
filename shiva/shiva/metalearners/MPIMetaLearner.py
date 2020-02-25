@@ -90,8 +90,11 @@ class MPIMetaLearner(MetaLearner):
             pass
 
     def log(self, msg, to_print=False):
-        text = "Meta\t\t{}".format(msg)
+        text = "{}\t\t{}".format(str(self), msg)
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
+
+    def __str__(self):
+        return "<Meta>"
 
     def close(self):
         '''Send message to childrens'''

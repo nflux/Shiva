@@ -30,8 +30,6 @@ class MPIEnv(Environment):
         # Check in and send single env specs with MultiEnv
         self.menv.gather(self._get_env_specs(), root=0)
         self._connect_learners()
-        # Check-in with MultiEnv that successfully connected with Learner
-        self.menv.gather(self._get_env_state(), root=0)
         self.create_buffers()
         # Wait for flag to start running
         self.log("Waiting MultiEnv flag to start")
@@ -233,6 +231,8 @@ class MPIEnv(Environment):
         self.learners_port = self.learners_specs[0]['port']
         self.learner = MPI.COMM_WORLD.Connect(self.learners_port, MPI.INFO_NULL)
         self.log("Connected with {} learners on port {}".format(self.num_learners, self.learners_port))
+        # Check-in with MultiEnv that we successfully connected with Learner/s
+        self.menv.gather(self._get_env_state(), root=0)
 
     def create_environment(self):
         try:
@@ -266,12 +266,11 @@ class MPIEnv(Environment):
         comm.Disconnect()
 
     def log(self, msg, to_print=False):
-        text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)
+        text = "{}\t\t\t{}".format(str(self), msg)
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
-    def print(self, msg):
-        text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        print(text)
+    def __str__(self):
+        return "<Env(id={})>".format(self.id, MPI.COMM_WORLD.Get_size())
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

@@ -20,6 +20,11 @@ class TD3Agent(Agent):
 
         self.id = id
 
+        if not hasattr(self, 'random_min'):
+            self.random_min = -1
+        if not hasattr(self, 'random_max'):
+            self.random_max = 1
+
         self.actor = DynamicLinearNetwork(obs_dim, action_dim, networks['actor'])
         self.target_actor = DynamicLinearNetwork(obs_dim, action_dim, networks['actor'])
         self.copy_model_over(self.actor, self.target_actor)

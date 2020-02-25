@@ -32,7 +32,7 @@ class MPILearner(Learner):
 
         # Set some self attributes from received Config (it should have MultiEnv data!)
         self.MULTI_ENV_FLAG = True
-        self.num_envs = self.configs['Environment']['num_instances']
+        self.num_envs = self.configs['Environment']['num_envs']
         '''Assuming all MultiEnvs running have equal Specs in terms of Obs/Acs/Agents'''
         self.menvs_specs = self.configs['MultiEnv']
         self.num_menvs = len(self.menvs_specs)
@@ -214,7 +214,7 @@ class MPILearner(Learner):
             agents = list(self.agents_dict.values())
             self.log("{} agents created of type {}".format(len(agents), [str(a) for a in agents]))
         elif self.num_agents == 1:
-            agents = [self.alg.create_agent(ix) for ix in range(self.num_agents)]
+            agents = [self.alg.create_agent() for ix in range(self.num_agents)]
             self.log("{} agents created of type {}".format(len(agents), str(agents[0])))
         else:
             assert "Some error on creating agents"
@@ -244,8 +244,11 @@ class MPILearner(Learner):
         comm.Disconnect()
 
     def log(self, msg, to_print=False):
-        text = 'Learner {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
+        text = '{}\t{}'.format(str(self), msg)
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
+
+    def __str__(self):
+        return "<Learner(id={})>".format(self.id)
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

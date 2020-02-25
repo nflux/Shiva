@@ -45,12 +45,15 @@ class DDPGAgent(Agent):
         else:
             # print("DDPG Agent, check if this makes sense for parameterized robocup")
             self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete+self.param, self.param, networks['actor'])
-
         self.target_actor = copy.deepcopy(self.actor)
 
-        self.critic = DynamicLinearNetwork(obs_space + self.acs_space, 1, networks['critic'])
+        if not hasattr(self, 'critic_input_size'):
+            self.critic_input_size = obs_space + self.acs_space
+
+        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
+        # Optimizers
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         try:
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
