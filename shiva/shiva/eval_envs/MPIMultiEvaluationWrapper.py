@@ -5,6 +5,8 @@ import logging
 from mpi4py import MPI
 import numpy as np
 import pandas as pd
+import math
+import random
 
 from shiva.core.admin import logger
 from shiva.eval_envs.Evaluation import Evaluation
@@ -111,12 +113,42 @@ class MPIMultiEvaluationWrapper(Evaluation):
             print('Selected Evaluation Agents for Environment {}: {}'.format(i, self.agent_sel))
             self.evals.send(self.agent_sel,dest=i,tag=Tags.new_agents)
 
+
+    #Agent Selection currently randomly Selects an agent. 
     def agent_selection(self,env_rank):
         self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
         print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
         self.evals.send(self.agent_sel,dest=env_rank,tag=Tags.new_agents)
 
+    # rating1 - Score for average Agent/Team1
+    # rating2 - Score for Agent/Team2
+    # n - Determine How large the score it would take to effect the overall score
+    # Probability of rating2 
+    def eloProbability (self, rating1, rating2, n):
+        self.probability = 1.0 * 1.0 / (1 + 1.0 * math.pow (10, 1.0 * (rating1 - rating2)))
+        self.log("ELO Probability Score : {}", self.probability)
+        return self.probability
+    
 
+    # reward - A current Agent/Team's average Reward 
+    # Elo Probability - A Current Agent/Team's Probability Reward
+    # K - some kind of constant
+    # w - 1 when A Team/Agent had won
+    # w - 0.5 when A Team/Agent had Tied
+    # w - 0 when A Team/ Agent had Lost
+    def CalculateEloReward(self, reward, eloProbability, k, w):
+        self.reward = reward + k *(w - eloProbability)
+        self.log('Elo Reward : {}', self.reward )
+        return self.reward
+
+    # team1 - Average Reward for Team1 or Agent1
+    # team2 - Average Reward for Team2 or Agent2
+    # n - How high a constant n, should be to make a significant change to a team's score
+    # The Probability of Team2 winning.
+    def TeamEloRating(self, team1, team2, n):
+        self.rating = self.eloProbability(team1, team2, n)
+        self.log("Probability Calculation Done. Probability of Team2 wiining : {}", self.rating)
+        return self.rating
 
     def close(self):
         comm = MPI.Comm.Get_parent()
