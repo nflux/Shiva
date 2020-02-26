@@ -67,11 +67,17 @@ class DDPGAlgorithm(Algorithm):
             dones = dones.byte()
 
         # Send everything to gpu if available
-        states = states.to(self.device)
-        actions = actions.to(self.device)
-        rewards = rewards.to(self.device)
-        next_states = next_states.to(self.device)
-        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
+        states = states.squeeze(1).to(self.device)
+        actions = actions.squeeze(1).to(self.device)
+        rewards = rewards.squeeze(1).to(self.device)
+        next_states = next_states.squeeze(1).to(self.device)
+        dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
+        #print('States: {} \n States Size: {}'.format(states,states.size()))
+        #print('Actions: {} \n Actions Size: {}'.format(actions,actions.size()))
+        #print('Rewards: {} \n Rewards Size: {}'.format(rewards,rewards.size()))
+        #print('Next States: {} \n Next States Size: {}'.format(next_states,next_states.size()))
+        #print('Dones: {} \n Dones Size: {}'.format(dones,dones.size()))
+
 
         # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
         # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape))

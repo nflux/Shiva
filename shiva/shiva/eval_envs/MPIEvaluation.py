@@ -95,40 +95,41 @@ class MPIEvaluation(Evaluation):
 
             # self.log("Getting here at 91")
 
-            #if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-                #print('Sending Eval and updating most recent agent file path ')
-                #self.io.send(range(self.agents_per_env, dest=0,tag=Tags.io_evals_save))
-
-                #for i in range(self.agents_per_env):
-                    #path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                    #self.meval.send(self.agent_ids[i],dest=0,tag=Tags.agent_id)
-                    #self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
-                    #self.ep_evals['path'] = path+'/episode_evaluations'
-                    #self.ep_evals['evals'] = self.evals[i]
-                    #self.io.send(self.ep_evals,dest=0,tag=Tags.io_evals_save)
-                    #np.save(path+'/episode_evaluations',self.evals[i])
-                #self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
-                    #new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0]
-                    #self.agent_ids[i] = new_agent
-                    #print('New Eval Agent: {}'.format(new_agent))
-                    #path = self.eval_path+'Agent_'+str(new_agent)
-                    #self.agents[i] = Admin._load_agents(path)[0]
-                    #self.evals[i].fill(0)
-                    #self.eval_counts[i]=0
-
             if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-                self.log('Sending Eval and updating most recent agent file path')
-                self.ep_evals['agent_ids'] = self.agent_ids
-                self.ep_evals['evals'] = self.evals
-                self.ep_evals['path'] = self.eval_path
-                self.meval.send(self.ep_evals,dest=0,tag=Tags.evals)
-                self.agent_ids= self.meval.recv(None,source=MPI.ANY_SOURCE,tag=Tags.new_agents)[0]
-                self.ep_evals['new_agent_ids'] = self.agent_ids
-                self.io.send(self.ep_evals,dest=0,tag=Tags.io_evals_save,)
-                self.agents = self.io.recv(None,source=0,tag=Tags.io_evals_save)
-                self.evals.fill(0)
-                self.eval_counts.fill(0)
-                time.sleep(0.1)
+                print('Sending Eval and updating most recent agent file path ')
+                for i in range(self.agents_per_env):
+                    path = self.eval_path+'Agent_'+str(self.agent_ids[i])
+                    self.meval.send(self.agent_ids[i],dest=0,tag=Tags.agent_id)
+                    self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
+                    self.ep_evals['path'] = path+'/episode_evaluations'
+                    self.ep_evals['evals'] = self.evals[i]
+                    self.io.send(True, dest=0, tag=Tags.io_learner_request)
+                    _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
+                    np.save(path+'/episode_evaluations',self.evals[i])
+                    self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
+                    new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0]
+                    self.agent_ids[i] = new_agent
+                    print('New Eval Agent: {}'.format(new_agent))
+                    path = self.eval_path+'Agent_'+str(new_agent)
+                    self.agents[i] = Admin._load_agents(path)[0]
+                    self.evals[i].fill(0)
+                    self.eval_counts[i]=0
+                    self.io.send(True, dest=0, tag=Tags.io_learner_request)
+                    
+
+            #if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
+                #self.log('Sending Eval and updating most recent agent file path')
+                #self.ep_evals['agent_ids'] = self.agent_ids
+                #self.ep_evals['evals'] = self.evals
+                #self.ep_evals['path'] = self.eval_path
+                #self.meval.send(self.ep_evals,dest=0,tag=Tags.evals)
+                #self.agent_ids= self.meval.recv(None,source=MPI.ANY_SOURCE,tag=Tags.new_agents)[0]
+                #self.ep_evals['new_agent_ids'] = self.agent_ids
+                #self.io.send(self.ep_evals,dest=0,tag=Tags.io_evals_save,)
+                #self.agents = self.io.recv(None,source=0,tag=Tags.io_evals_save)
+                #self.evals.fill(0)
+                #self.eval_counts.fill(0)
+                #time.sleep(0.1)
 
 
 
@@ -184,10 +185,12 @@ class MPIEvaluation(Evaluation):
                 _ = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
 
     def _io_load_agents(self):
-        agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
-        self.io.send(agent_paths,dest=0,tag=Tags.io_load_agents)
+        #agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
+        _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
+        self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
         #self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
-        self.agents = self.io.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_load_agents)
 
 
         # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))

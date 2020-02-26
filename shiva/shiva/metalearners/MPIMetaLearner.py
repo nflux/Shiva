@@ -7,6 +7,7 @@ from shiva.core.admin import logger
 from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
 from shiva.helpers.misc import terminate_process
+from shiva.utils.Tags import Tags
 
 class MPIMetaLearner(MetaLearner):
     def __init__(self, configs):
@@ -16,6 +17,7 @@ class MPIMetaLearner(MetaLearner):
         self.launch()
 
     def launch(self):
+        self._launch_io_handler()
         self._launch_menvs()
         self._launch_learners()
         self.run()
@@ -24,6 +26,13 @@ class MPIMetaLearner(MetaLearner):
         while True:
             learner_specs = self.learners.gather(None, root=MPI.ROOT)
             self.log("Got Learners metrics {}".format(learner_specs))
+
+    def _launch_io_handler(self):
+        self.io = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/helpers/io_handler.py'], maxprocs=1)
+        self.io.send(self.configs,dest=0,tag=Tags.configs)
+        self.io_specs = self.io.recv(None, source = 0, tag=Tags.io_config)
+        self.configs['Environment']['menvs_io_port'] = self.io_specs['menvs_port']
+        self.configs['Learner']['learners_io_port'] = self.io_specs['learners_port']
 
 
     def _launch_menvs(self):

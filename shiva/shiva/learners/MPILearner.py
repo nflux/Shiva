@@ -117,6 +117,10 @@ class MPILearner(Learner):
                 self.update_num += 1
                 self.agents[0].step_count = self.step_count
                 self.agents[0].done_count = self.done_count
+                self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+
+                for ix in range(self.num_menvs):
+                    self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
                 self._io_save_pbt_agents()
                     #if self.save_flag:
@@ -125,8 +129,6 @@ class MPILearner(Learner):
                 if self.done_count % self.save_checkpoint_episodes == 0:
                     self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
                     #self.save_flag = False
-                    for ix in range(self.num_menvs):
-                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
                 #self.log("This is printing at 122")
             '''if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
@@ -363,18 +365,25 @@ class MPILearner(Learner):
         self.io_pbt_request['path'] = self.eval_path+'Agent_'
 
     def _io_checkpoint(self,checkpoint_num,function_only, use_temp_folder):
-        self.io_request['learner'] = self.id
-        self.io_request['checkpoint_num'] = checkpoint_num
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
+        _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
+        Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
+
+        #self.io_request['learner'] = self.id
+        #self.io_request['checkpoint_num'] = checkpoint_num
         #self.io_request['function_only'] = function_only
         #self.io_request['use_temp_folder'] = use_temp_folder
-        self.io_request['agents'] = self.agents
-        self.io_request['checkpoint_path'] = Admin.new_checkpoint_dir(self,checkpoint_num)
-        self.io_request['agent_dir'] = [Admin.get_new_agent_dir(self,agent) for agent in self.agents]
-        self.io.send(self.io_request,dest=0,tag=Tags.io_checkpoint_save)
+        #self.io_request['agents'] = self.agents
+        #self.io_request['checkpoint_path'] = Admin.new_checkpoint_dir(self,checkpoint_num)
+        #self.io_request['agent_dir'] = [Admin.get_new_agent_dir(self,agent) for agent in self.agents]
+        #self.io.send(self.io_request,dest=0,tag=Tags.io_checkpoint_save)
 
     def _io_save_pbt_agents(self):
-        self.io_pbt_request['agents'] = self.agents
-        self.io.send(self.io_pbt_request,dest=0,tag=Tags.io_pbt_save)
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
+        _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
+        self.save_pbt_agents
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
     def welch_T_Test(self,evals,evo_evals):
         t,p = stats.ttest_ind(evals, evo_evals, equal_var=False)
@@ -394,13 +403,20 @@ class MPILearner(Learner):
         # print('Finished t_test')
     def t_test(self,agent,evo_config):
         if evo_config['ranking'] > evo_config['evo_ranking']:
-            self.t_test_config['evals_path'] = self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy'
-            self.t_test_config['evo_evals_path'] = self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy'
-            self.t_test_config['evo_agent_path'] = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
-            self.io.send(self.t_test_config,dest=0,tag=Tags.io_evals_load)
-            self.evo_evals = self.io.recv(None,source=MPI.ANY_SOURCE, tag=Tags.io_evals_load)
+            #self.t_test_config['evals_path'] = self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy'
+            #self.t_test_config['evo_evals_path'] = self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy'
+            #self.t_test_config['evo_agent_path'] = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
+            #self.io.send(self.t_test_config,dest=0,tag=Tags.io_evals_load)
+            #self.evo_evals = self.io.recv(None,source=MPI.ANY_SOURCE, tag=Tags.io_evals_load)
+            self.io.send(True, dest=0, tag=Tags.io_learner_request)
+            _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
+            evals = np.load(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy')
+            evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy')
+            path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
+            evo_agent = Admin._load_agents(path)[0]
+            self.io.send(True, dest=0, tag=Tags.io_learner_request)
             if self.welch_T_Test(self.evo_evals['evals'],self.evo_evals['evo_evals']):
-                agent.copy_weights(self.evo_evals['evo_agent'])
+                agent.copy_weights(evo_agent)
 
 
 
@@ -413,8 +429,10 @@ class MPILearner(Learner):
 
     def truncation(self,agent,evo_config):
         path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
-        self.io.send(path,dest=0,tag=Tags.io_evo_load)
-        evo_agent = self.io.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_evo_load)
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
+        _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
+        evo_agent = Admin._load_agents(path)[0]
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
         agent.copy_weights(evo_agent)
 
     def perturb(self,agent):

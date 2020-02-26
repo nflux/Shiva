@@ -54,14 +54,14 @@ class PPOAgent(Agent):
             self.mu = DLN.DynamicLinearNetwork(self.network_input,self.network_output,net_config['mu'])
             #self.sigma = DLN.DynamicLinearNetwork(self.network_input,self.network_output,net_config['sigma'])
             #self.logstd = nn.Parameter(torch.zeros(self.network_output))
-            self.logstd = torch.zeros(self.network_output)
+            self.logstd = nn.Parameter(torch.zeros(1,self.network_output))
             self.critic = DLN.DynamicLinearNetwork(self.network_input,1,net_config['critic'])
             self.params= list(self.mu.parameters()) + list(self.critic.parameters())
             #self.actor_params = list(self.mu.parameters()) + list(self.sigma.parameters())
             #self.critic_params = list(self.critic.parameters())
             #self.actor_optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.actor_params, lr=agent_config['actor_learning_rate'])
             #self.critic_optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.critic_params, lr=agent_config['critic_learning_rate'])
-            self.optimizer = self.optimizer_function(params=self.params, lr=self.learning_rate)
+            self.optimizer = self.optimizer_function(params=self.parameters(), lr=self.learning_rate)
             #self.critic_optimizer = self.optimizer_function(params=self.critic_params, lr=self.critic_learning_rate)
 
         print('My Action Space is: {}'.format(self.action_space))
@@ -122,7 +122,8 @@ class PPOAgent(Agent):
         mu = self.mu(torch.tensor(observation).float()).squeeze(0).to(self.device)
         #sigma = self.sigma(observation).squeeze(0).to(self.device)
         #actions = Normal(mu,torch.abs(sigma)).sample()
-        actions = Normal(mu, self.logstd.exp()).sample()
+        log_std = self.logstd.expand_as(mu)
+        actions = Normal(mu, logstd.exp()).sample()
         #self.ou_noise.set_scale(0.8)
         #actions +=torch.tensor(self.ou_noise.noise()).float()
         actions = np.clip(actions,-1,1)
@@ -131,9 +132,10 @@ class PPOAgent(Agent):
     def get_continuous_logprobs(self,observation,action):
         action = torch.tensor(action).float().to(self.device)
         mu = self.mu(torch.tensor(observation).float()).squeeze(0).to(self.device)
+        logstd = self.logstd.expand_as(mu)
         #sigma = self.sigma(observation).squeeze(0).to(self.device)
         #dist = Normal(mu,torch.abs(sigma))
-        dist = Normal(mu,self.logstd.exp())
+        dist = Normal(mu logstd.exp())
         logprobs = dist.log_prob(action)
         return logprobs
 

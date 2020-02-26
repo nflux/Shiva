@@ -79,4 +79,3 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                 return torch.cat([self.softmax(a[:, :self.param_ix]), a[:, self.param_ix:]], dim=1)
             else:
                 return torch.cat([self.softmax(a[:self.param_ix]), a[self.param_ix:]], dim=0)
-

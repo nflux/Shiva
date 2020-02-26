@@ -90,6 +90,7 @@ class MPIPBTMetaLearner(MetaLearner):
 
     def _launch_io_handler(self):
         self.io = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/helpers/io_handler.py'], maxprocs=1)
+        self.io.send(self.configs,dest=0,tag=Tags.configs)
         self.io_specs = self.io.recv(None, source = 0, tag=Tags.io_config)
         self.configs['Environment']['menvs_io_port'] = self.io_specs['menvs_port']
         self.configs['Learner']['learners_io_port'] = self.io_specs['learners_port']
