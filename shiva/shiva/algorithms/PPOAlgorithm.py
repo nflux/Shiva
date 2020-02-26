@@ -52,17 +52,21 @@ class PPOAlgorithm(Algorithm):
 
         new_rewards = []
         advantage = []
-        delta= 0
+        delta = 0
         gae = 0
-        for i in reversed(range(len(rewards))):
-            if done_masks[i]:
-                delta = rewards[i]-values[i]
-                gae = delta
-            else:
-                delta = rewards[i] + self.gamma * next_values[i]  - values[i]
-                gae = delta + self.gamma * self.gae_lambda * gae
-            new_rewards.insert(0,gae+values[i])
-            advantage.insert(0,gae)
+        # Quick and dirty fix to get it to work
+        if len(rewards.shape) == 0:
+            pass
+        else:
+            for i in reversed(range(len(rewards))):
+                if done_masks[i]:
+                    delta = rewards[i]-values[i]
+                    gae = delta
+                else:
+                    delta = rewards[i] + self.gamma * next_values[i] - values[i]
+                    gae = delta + self.gamma * self.gae_lambda * gae
+                new_rewards.insert(0, gae+values[i])
+                advantage.insert(0, gae)
         #Format discounted rewards and advantages for torch use
         new_rewards = torch.tensor(new_rewards).float().to(self.device)
         advantage = torch.tensor(advantage).float().to(self.device)

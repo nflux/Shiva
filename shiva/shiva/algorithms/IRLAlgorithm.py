@@ -71,7 +71,7 @@ class IRLAlgorithm(Algorithm):
         self.state_action_space = self.acs_space + self.obs_space
         self.loss = 0
         self.expert = Admin._load_agent(self.expert_path)
-        self.expert_predictor = SupervisedNeuralNetwork(self.state_action_space, 1, configs[2]['expert_predictor'])
+        # self.expert_predictor = SupervisedNeuralNetwork(self.state_action_space, 1, configs[2]['expert_predictor'])
 
     def update(self, agent, buffer, step_n, episodic=False):
 
@@ -94,6 +94,11 @@ class IRLAlgorithm(Algorithm):
         # input()
 
         agent.optimizer.zero_grad()
+
+
+
+
+
 
         self.loss.backward()
         agent.optimizer.step()

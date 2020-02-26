@@ -17,21 +17,25 @@ class IRLAgent(Agent):
         self.reward = DynamicLinearNetwork(network_input, network_output, net_config['reward'])
         self.target_reward = copy.deepcopy(self.reward)
 
-        self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.policy.parameters(),
+        self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.reward.parameters(),
                                                                                   lr=self.learning_rate)
 
-    def get_reward(self, state_action_pairs,  step_n):
+    def get_reward(self, state, action):
         '''
-            Gets reward current reward function estimator
+            Gets reward from current reward function estimator
         '''
-        return self.reward(state_action_pairs)
+        action = torch.tensor(action).double()
+        print(state)
+        state_action = torch.cat([state, action], dim=0).double()
+        print(state_action)
+        return self.reward(state_action)
 
-    def get_reward_target(self, state_action_pairs):
+    def get_reward_target(self, state, action):
         '''
             Gets reward from target reward function estimator
             for Experimental Update
         '''
-        return self.target_reward(state_action_pairs)
+        return self.target_reward(state, action)
 
     def save(self, save_path, step):
         torch.save(self.reward, save_path + '/reward.pth')

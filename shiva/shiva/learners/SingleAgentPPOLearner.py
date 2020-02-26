@@ -38,7 +38,7 @@ class SingleAgentPPOLearner(Learner):
             if int(self.ep_count / self.configs['Algorithm']['update_episodes']) > self.update_count:
                 self.update_count += 1
                 #self.ep_count += 1
-                self.alg.update(self.agent,self.buffer, self.step_count)
+                self.alg.update(self.agent, self.buffer, self.step_count)
             self.checkpoint()
         del(self.queues)
         self.env.close()
@@ -77,12 +77,12 @@ class SingleAgentPPOLearner(Learner):
             next_observation, reward, done, more_data = self.env.step(action)
             self.rewards[0] += reward
             log_probs = self.agent.get_logprobs(observation,action)
-            exp = copy.deepcopy([ torch.tensor(observation.numpy()),
-                                  torch.tensor(action),
-                                  torch.tensor(reward),
-                                  torch.tensor(next_observation),
-                                  torch.tensor(int(done)),
-                                  torch.tensor(log_probs)])
+            exp = copy.deepcopy([torch.tensor(observation.numpy()),
+                                 torch.tensor(action),
+                                 torch.tensor(reward),
+                                 torch.tensor(next_observation),
+                                 torch.tensor(int(done)),
+                                 torch.tensor(log_probs)])
             if done:
                 self.ep_count += 1
                 #print('Episode: ', self.ep_count, ' reward: ', self.rewards[0])

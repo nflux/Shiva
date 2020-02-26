@@ -33,11 +33,10 @@ class IRLLearner(Learner):
             if self.using_buffer:
                 self.buffer = Admin._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent(self.get_new_agent_id())
+            self.agent = self.ppo_alg.create_agent()
             self.irl_agent = self.irl_alg.create_agent(0)
             if self.using_buffer:
-                self.buffer = self._create_buffer(self.env.observation_space,
-                                                 self.env.action_space['acs_space'] + self.env.action_space['param'])
+                self.buffer = self._create_buffer()
 
         print('Launch Successful.')
 
@@ -112,8 +111,14 @@ class IRLLearner(Learner):
         reward = self.irl_agent.get_reward(observation, action)
         log_probs = self.agent.get_logprobs(observation, action)
         self.rewards[0] += reward
-        t = [observation.numpy(), action, reward, next_observation, int(done), log_probs]
-        exp = copy.deepcopy(t)
+        exp = copy.deepcopy([
+                             torch.tensor(observation.numpy()),
+                             torch.tensor(action),
+                             torch.tensor(reward),
+                             torch.tensor(next_observation),
+                             torch.tensor(int(done)),
+                             torch.tensor(log_probs)
+                            ])
         if done:
             self.ep_count += 1
             print('Episode: ', self.ep_count, ' reward: ', self.rewards[0])
@@ -133,13 +138,8 @@ class IRLLearner(Learner):
         return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),
                                [self.configs['IRLAlgorithm'], self.configs['IRLAgent'], self.configs['IRLNetwork']])
 
-    def _create_buffer(self, obs_dim, ac_dim):
+    def _create_buffer(self):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'],
-                            self.env.num_left, obs_dim, ac_dim)
+        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'], 1,
+                            self.env.get_observation_space(), self.env.get_action_space()['acs_space'])
 
-    # May not be necessary
-    # def create_segment_buffer(self, obs_space, acs_space):
-    #     buffer_class = load_class('shiva.buffers', self.configs['SegmentBuffer']['type'])
-    #     return buffer_class(self.configs['SegmentBuffer']['capacity'], self.configs['SegmentBuffer']['batch_size'],
-    #                         self.env.num_left, obs_space, acs_space)
