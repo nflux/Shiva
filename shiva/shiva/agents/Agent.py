@@ -19,7 +19,7 @@ class Agent(object):
         '''
         {setattr(self, k, v) for k,v in agent_config.items()}
         self.id = id
-        self.role = agent_config['role'] if 'role' in agent_config else 'A' # use 'A' for the folder name when there's no role assigned
+        self.role = agent_config['role'] if 'role' in agent_config else 'Role' # use 'A' for the folder name when there's no role assigned
         self.obs_space = obs_space
         self.acs_space = acs_space
         try:
@@ -28,6 +28,9 @@ class Agent(object):
             self.log("No optimizer", to_print=True)
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    def reset_noise(self):
+        pass
 
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)

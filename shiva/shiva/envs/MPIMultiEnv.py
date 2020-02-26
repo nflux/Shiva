@@ -10,7 +10,7 @@ from shiva.envs.Environment import Environment
 from shiva.helpers.misc import terminate_process, flat_1d_list
 
 class MPIMultiEnv(Environment):
-
+    num_envs = False
     def __init__(self):
         self.meta = MPI.Comm.Get_parent()
         self.id = self.meta.Get_rank()
@@ -48,6 +48,7 @@ class MPIMultiEnv(Environment):
         except:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
 
+        self.log("{}".format([str(agent) for agent in self.agents]))
         while True:
             self._step_python()
             # self._step_numpy()
@@ -55,6 +56,8 @@ class MPIMultiEnv(Environment):
             '''TODO: after X amount of steps or dones, load new agents'''
             if self.step_count % self.episode_max_length == 0:
                 self.agents = self.load_agents()
+                for a in self.agents:
+                    a.reset_noise()
 
             # if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=info):
             #     learner_id = info.Get_source()
@@ -65,7 +68,7 @@ class MPIMultiEnv(Environment):
 
     def _step_python(self):
         self._obs_recv_buffer = self.envs.gather(None, root=MPI.ROOT)
-        # self.log("Obs Shape {}".format(self._obs_recv_buffer.shape))
+        # self.log("Obs Shape {}".format(np.array([self._obs_recv_buffer]).shape))
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         if 'Unity' in self.type:
@@ -90,9 +93,16 @@ class MPIMultiEnv(Environment):
                     role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count)
                     env_actions.append(role_actions)
                 actions.append(env_actions)
-        else:
-            assert True, 'Not implemented'
-            pass
+        elif 'Gym' in self.type:
+            actions = []
+            role_ix = 0
+            role_name = self.env_specs['roles'][role_ix]
+            agent_ix = self.role2agent[role_name]
+            for role_obs in self._obs_recv_buffer:
+                env_actions = []
+                role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count)
+                env_actions.append(role_actions)
+                actions.append(env_actions)
         self.actions = np.array(actions)
         # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions))
         self.envs.scatter(actions, root=MPI.ROOT)
@@ -118,10 +128,21 @@ class MPIMultiEnv(Environment):
                     env_actions.append(role_actions)
                 actions.append(env_actions)
             # actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
-        else:
-            # Gym
-            # same?
-            actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+        elif 'Gym' in self.type:
+            '''self._obs_recv_buffer receives data from many MPIEnv.py'''
+            actions = []
+            self.log(self._obs_recv_buffer)
+            for env_observations in self._obs_recv_buffer:
+                env_actions = []
+                for role_ix, role_name in enumerate(self.env_specs['roles']):
+                    role_actions = []
+                    role_obs = env_observations[role_ix]
+                    agent_ix = self.role2agent[role_name]
+                    # for o in role_obs:
+                    role_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count))
+                    env_actions.append(role_actions)
+                actions.append(env_actions)
+            # actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
 
         self.actions = np.array(actions)
         self.envs.scatter(actions, root=MPI.ROOT)

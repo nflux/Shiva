@@ -57,36 +57,35 @@ class DDPGAlgorithm(Algorithm):
         '''
             Updates starts here
         '''
-
+        self.agent = agent[0] if type(agent) == list else agent
         try:
             '''For MultiAgentTensorBuffer - 1 Agent only here'''
-            states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
+            states, actions, rewards, next_states, dones = buffer.sample(agent_id=self.agent.id, device=self.device)
             dones = dones.bool()
         except:
             states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+            # Send everything to gpu if available
+            # states = states.to(self.device)
+            # actions = actions.to(self.device)
+            # rewards = rewards.to(self.device)
+            # next_states = next_states.to(self.device)
+            dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
 
-        # Send everything to gpu if available
-        states = states.to(self.device)
-        actions = actions.to(self.device)
-        rewards = rewards.to(self.device)
-        next_states = next_states.to(self.device)
-        dones_mask = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
-
-        # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
-        # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape))
+        # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones))
+        print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones.shape))
 
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
             "acs_space config must be set to either discrete, continuous, or parameterized."
 
-        '''  yes its supposed to be
+        '''
             Training the Critic
         '''
     
         # Zero the gradient
-        agent.critic_optimizer.zero_grad()
+        self.agent.critic_optimizer.zero_grad()
 
         # The actions that target actor would do in the next state.
-        next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
+        next_state_actions_target = self.agent.target_actor(next_states.float(), gumbel=False)
 
         dims = len(next_state_actions_target.shape)
 
@@ -117,11 +116,11 @@ class DDPGAlgorithm(Algorithm):
 
         # The Q-value the target critic estimates for taking those actions in the next state.
         if dims == 3:
-            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )
+            Q_next_states_target = self.agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 2) )
         elif dims == 2:
-            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 1) )
+            Q_next_states_target = self.agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 1) )
         else:
-            Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
+            Q_next_states_target = self.agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
 
         # print('dones', dones.size())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
@@ -138,11 +137,11 @@ class DDPGAlgorithm(Algorithm):
         # Grab the discrete actions in the batch
         if dims == 3:
             # print(states.shape, actions.shape)
-            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], 2) )
+            Q_these_states_main = self.agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], 2) )
         elif dims == 2:
-            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 1) )
+            Q_these_states_main = self.agent.critic( torch.cat([states.float(), actions.float()], 1) )
         else:
-            Q_these_states_main = agent.critic( torch.cat([states.float(), actions.float()], 0) )
+            Q_these_states_main = self.agent.critic( torch.cat([states.float(), actions.float()], 0) )
 
         # Calculate the loss.
 
@@ -150,7 +149,7 @@ class DDPGAlgorithm(Algorithm):
         # Backward propogation!
         critic_loss.backward()
         # Update the weights in the direction of the gradient.
-        agent.critic_optimizer.step()
+        self.agent.critic_optimizer.step()
         # Save critic loss for tensorboard
         self.critic_loss = critic_loss
 
@@ -159,20 +158,20 @@ class DDPGAlgorithm(Algorithm):
         '''
 
         # Zero the gradient
-        agent.actor_optimizer.zero_grad()
+        self.agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
         if self.a_space == "discrete" or self.a_space == "parameterized":
-            current_state_actor_actions = agent.actor(states.float(), gumbel=True)
+            current_state_actor_actions = self.agent.actor(states.float(), gumbel=True)
         else:
-            current_state_actor_actions = agent.actor(states.float())
+            current_state_actor_actions = self.agent.actor(states.float())
 
         # Calculate Q value for taking those actions in those states'
         if dims == 3:
-            actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
+            actor_loss_value = self.agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 2) )
         elif dims == 2:
-            actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 1) )
+            actor_loss_value = self.agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 1) )
         else:
-            actor_loss_value = agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 0) )
+            actor_loss_value = self.agent.critic( torch.cat([states.float(), current_state_actor_actions.float()], 0) )
 
         # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using logs probabilities
         # penalty for going beyond the bounded interval
@@ -182,7 +181,7 @@ class DDPGAlgorithm(Algorithm):
         # Backward Propogation!
         actor_loss.backward()
         # Update the weights in the direction of the gradient.
-        agent.actor_optimizer.step()
+        self.agent.actor_optimizer.step()
         # Save actor loss for tensorboard
         self.actor_loss = actor_loss
 
@@ -191,20 +190,20 @@ class DDPGAlgorithm(Algorithm):
         '''
 
         # Update Target Actor
-        ac_state = agent.actor.state_dict()
-        tgt_ac_state = agent.target_actor.state_dict()
+        ac_state = self.agent.actor.state_dict()
+        tgt_ac_state = self.agent.target_actor.state_dict()
 
         for k, v in ac_state.items():
             tgt_ac_state[k] = v*self.tau + (1 - self.tau)*tgt_ac_state[k] 
-        agent.target_actor.load_state_dict(tgt_ac_state)
+        self.agent.target_actor.load_state_dict(tgt_ac_state)
 
         # Update Target Critic
-        ct_state = agent.critic.state_dict()
-        tgt_ct_state = agent.target_critic.state_dict()
+        ct_state = self.agent.critic.state_dict()
+        tgt_ct_state = self.agent.target_critic.state_dict()
 
         for k, v in ct_state.items():
             tgt_ct_state[k] =  v*self.tau + (1 - self.tau)*tgt_ct_state[k] 
-        agent.target_critic.load_state_dict(tgt_ct_state)
+        self.agent.target_critic.load_state_dict(tgt_ct_state)
 
         '''
             Hard Target Network Updates
@@ -218,9 +217,13 @@ class DDPGAlgorithm(Algorithm):
         #     for target_param,param in zip(agent.target_actor.parameters(), agent.actor.parameters()):
         #         target_param.data.copy_(param.data)
 
-    def create_agent(self, id=0):
-        self.agent = DDPGAgent(id, self.observation_space, self.action_space, self.configs['Agent'], self.configs['Network'])
+    def create_agent(self, id=None):
+        self.agent = DDPGAgent(self.id_generator(), self.observation_space, self.action_space, self.configs['Agent'], self.configs['Network'])
         return self.agent
+
+    def create_agent_of_role(self, role):
+        self.configs['Agent']['role'] = role
+        return self.create_agent()
 
     def set_action_space(self, action_space):
         if action_space['continuous'] == 0:
@@ -236,11 +239,11 @@ class DDPGAlgorithm(Algorithm):
         self.param = action_space['param']
 
 
-    def get_metrics(self, episodic=False):
+    def get_metrics(self, episodic=False, agent_id=None):
         if not episodic:
             metrics = [
-                # ('Algorithm/Actor_Loss', self.actor_loss),
-                # ('Algorithm/Critic_Loss', self.critic_loss)
+                ('Algorithm/Actor_Loss', self.actor_loss.item()),
+                ('Algorithm/Critic_Loss', self.critic_loss.item())
             ]
             # # not sure if I want this all of the time
             # for i, ac in enumerate(self.action_space['acs_space']):

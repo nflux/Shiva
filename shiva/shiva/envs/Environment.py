@@ -14,7 +14,9 @@ class Environment:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # normalization factors
-        self.norm_factor = 1
+        self.reward_factor = self.reward_factor if hasattr(self, 'reward_factor') else 1
+        self.max_reward = self.max_reward if hasattr(self, 'max_reward') else 1
+        self.min_reward = self.min_reward if hasattr(self, 'min_reward') else -1
 
 
     def step(self,actions):
@@ -68,4 +70,7 @@ class Environment:
         pass
 
     def normalize_reward(self, reward):
-        return self.norm_factor*(reward-self.min_reward)/(self.max_reward-self.min_reward)
+        return self.reward_factor*(reward-self.min_reward)/(self.max_reward-self.min_reward)
+
+    def _normalize_reward(self, reward):
+        return (self.b-self.a)*(reward-self.min)/(self.max-self.min)

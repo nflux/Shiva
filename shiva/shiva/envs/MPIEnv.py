@@ -60,8 +60,8 @@ class MPIEnv(Environment):
         self.observations = self.env.get_observations()
         self.menv.gather(self.observations, root=0)
         self.actions = self.menv.scatter(None, root=0)
-        self.log("Obs {} Act {}".format(self.observations, self.actions))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
+        self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards))
 
     def _step_numpy(self):
         self.observations = self.env.get_observations()
@@ -150,7 +150,7 @@ class MPIEnv(Environment):
                     'metrics': self.metrics
                 }
 
-                self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape, self.rewards_buffer.shape, self.next_observations_buffer.shape, self.done_buffer.shape))
+                # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape, self.rewards_buffer.shape, self.next_observations_buffer.shape, self.done_buffer.shape))
                 # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
                 # self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
 
@@ -161,25 +161,28 @@ class MPIEnv(Environment):
                 self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_rewards)
                 self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_next_observations)
                 self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
-        else:
-            assert 'NotRevised yet'
-            # Gym
-            learner_ix = 0
+        elif 'Gym' in self.type:
+            '''Assuming 1 Learner and 1 Role'''
+            learner_spec = self.learners_specs[0]
+            learner_ix = learner_spec['id']
+            role_ix = 0
 
             self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape,
                                                                                    self.trajectory_buffers[learner_ix].all_numpy())
-
+            self.metrics = metrics
             trajectory_info = {
                 'env_id': self.id,
-                'length': self.env.steps_per_episode,
+                'role': learner_spec['roles'],
+                # 'length': self.env.steps_per_episode,
+                'length_index': 0,  # trajectory length index on obs_shape
                 'obs_shape': self.observations_buffer.shape,
                 'acs_shape': self.actions_buffer.shape,
                 'rew_shape': self.rewards_buffer.shape,
                 'done_shape': self.done_buffer.shape,
-                'metrics': self.env.get_metrics(episodic=True)
+                'metrics': [self.metrics]
             }
 
-            # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
+            self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
             # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
             # self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
 
@@ -256,8 +259,8 @@ class MPIEnv(Environment):
             'observation_space': self.env.get_observation_space(),
             'action_space': self.env.get_action_space(),
             'num_agents': self.env.num_agents,
-            'roles': self.env.roles if hasattr(self.env, 'roles') else ['Agent_0'], # agents names given by the env - needs to be implemented by RoboCup
-            'num_instances_per_env': self.env.num_instances_per_env if hasattr(self.env, 'num_instances_per_env') else 1, # Unity case
+            'roles': self.env.roles,
+            'num_instances_per_env': self.env.num_instances_per_env,
             'learners_port': self.learners_port if hasattr(self, 'learners_port') else False
         }
 

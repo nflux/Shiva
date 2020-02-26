@@ -129,6 +129,8 @@ class DDPGAgent(Agent):
 
         return action[0]
 
+    def reset_noise(self):
+        self.ou_noise.reset()
 
     def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
         observation = torch.tensor(observation).to(self.device)

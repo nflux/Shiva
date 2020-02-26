@@ -35,11 +35,14 @@ class MPILearner(Learner):
         self.num_envs = self.configs['Environment']['num_envs']
         '''Assuming all MultiEnvs running have equal Specs in terms of Obs/Acs/Agents'''
         self.menvs_specs = self.configs['MultiEnv']
-        self.num_menvs = len(self.menvs_specs)
-        self.menv_port = self.menvs_specs[0]['port']
         self.env_specs = self.menvs_specs[0]['env_specs']
 
-        self.num_agents = len(self.roles) if hasattr(self, 'roles') else 1
+        self.num_menvs = len(self.menvs_specs)
+        self.menv_port = self.menvs_specs[0]['port']
+
+        if not hasattr(self, 'roles'):
+            self.roles = self.env_specs['roles'] # take all roles
+        self.num_agents = len(self.roles)
 
         self.observation_space = self.env_specs['observation_space']
         self.action_space = self.env_specs['action_space']
@@ -106,7 +109,6 @@ class MPILearner(Learner):
                     self.log("Got evolution config!")
                 ''''''
 
-            self.log("{}".format([str(a) for a in self.agents]))
             self.collect_metrics(episodic=True)
 
     def _receive_trajectory_numpy(self):
@@ -183,7 +185,7 @@ class MPILearner(Learner):
             'type': 'Learner',
             'id': self.id,
             'evaluate': self.evaluate,
-            'roles': self.roles if hasattr(self, 'roles') else False,
+            'roles': self.roles,
             'num_agents': self.num_agents,
             'update_num': self.update_num,
             'load_path': Admin.get_temp_directory(self),
@@ -195,7 +197,7 @@ class MPILearner(Learner):
             'type': 'Learner',
             'id': self.id,
             'evaluate': self.evaluate,
-            'roles': self.roles if hasattr(self, 'roles') else False,
+            'roles': self.roles,
             'num_agents': self.num_agents,
             'port': self.port,
             'menv_port': self.menv_port,
@@ -223,7 +225,7 @@ class MPILearner(Learner):
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         self.configs['Agent']['evaluate'] = self.evaluate
-        self.configs['Algorithm']['roles'] = self.roles
+        self.configs['Algorithm']['roles'] = self.roles if hasattr(self, 'roles') else []
         alg = algorithm_class(self.observation_space, self.action_space, self.configs)
         self.log("Algorithm created of type {}".format(algorithm_class ))
         return alg
@@ -231,7 +233,7 @@ class MPILearner(Learner):
     def create_buffer(self):
         # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        if hasattr(self, 'roles'):
+        if type(self.observation_space) == dict:
             '''Assuming roles with same obs/acs dim'''
             buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space[self.roles[0]], self.action_space[self.roles[0]]['acs_space'])
         else:

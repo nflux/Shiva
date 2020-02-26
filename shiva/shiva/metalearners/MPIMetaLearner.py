@@ -71,9 +71,6 @@ class MPIMetaLearner(MetaLearner):
                 learner_config = merge_dicts(self.configs, learner_config)
                 learner_config['Learner']['roles'] = learner_roles
                 self.learners_configs.append(learner_config)
-            # for config_path in list(self.learners_map.keys()):
-            #     learner_config = load_config_file_2_dict(config_path)
-            #     self.learners_configs.append(merge_dicts(self.configs, learner_config))
         elif 'Learner' in self.configs:
             self.learners_configs = [self.configs.copy() for _ in range(self.num_learners)]
         else:
