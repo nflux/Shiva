@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 class Environment:
     def __init__(self, configs):
@@ -12,6 +13,7 @@ class Environment:
         self.done_count = 0
         self.total_episodes_to_play = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
 
         # normalization factors
         self.reward_factor = self.reward_factor if hasattr(self, 'reward_factor') else 1

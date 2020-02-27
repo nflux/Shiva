@@ -1,6 +1,8 @@
 import numpy as np
 import copy
 import torch
+from collections.abc import Iterable
+
 from torch.nn.functional import softmax
 from shiva.utils import Noise as noise
 from shiva.helpers.calc_helper import np_softmax
@@ -17,7 +19,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
         super(MADDPGAlgorithm, self).__init__(observation_space, action_space, configs)
         self.actor_loss = [0 for _ in range(len(self.roles))]
         self.critic_loss = [0 for _ in range(len(self.roles))]
-        self.set_action_space(action_space)
+        self.set_spaces(observation_space, action_space)
         '''
             Agent 1 and 2
             - Make sure actions/obs per agent are in the same indices in the buffer - don't sure how (I'm sure they come in the same order.. could be double checked)
@@ -295,16 +297,26 @@ class MADDPGAlgorithm(DDPGAlgorithm):
         self.configs['Agent']['critic_input_size'] = self.critic_input_size
         return MADDPGAgent(self.id_generator(), self.observation_space[role], self.action_space[role], self.configs['Agent'], self.configs['Network'])
 
-    def set_action_space(self, role_action_space):
+    def set_spaces(self, observation_space, action_space):
+        if len(self.roles) == 1 and not isinstance(observation_space, Iterable):
+            self.observation_space = {}
+            self.observation_space[self.roles[0]] = observation_space
+        self.set_action_space(action_space)
+
+    def set_action_space(self, roles_action_space):
         self.action_space = {}
-        for role in list(role_action_space.keys()):
-            if role_action_space[role]['continuous'] == 0:
-                role_action_space[role]['type'] = 'discrete'
-            elif role_action_space[role]['discrete'] == 0:
-                role_action_space[role]['type'] = 'continuous'
+        for role in self.roles:
+            if role not in roles_action_space:
+                '''Here is DDPG collapse because we are running a Gym (or similar with single agent)'''
+                roles_action_space[role] = roles_action_space
+            self.log(role, roles_action_space)
+            if roles_action_space[role]['continuous'] == 0:
+                roles_action_space[role]['type'] = 'discrete'
+            elif roles_action_space[role]['discrete'] == 0:
+                roles_action_space[role]['type'] = 'continuous'
             else:
                 assert "Parametrized not supported yet"
-            self.action_space[role] = role_action_space[role]
+            self.action_space[role] = roles_action_space[role]
 
     def get_metrics(self, episodic, agent_id):
         if not episodic:
