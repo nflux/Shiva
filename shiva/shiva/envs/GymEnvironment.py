@@ -10,7 +10,10 @@ class GymEnvironment(Environment):
         super(GymEnvironment,self).__init__(configs)
         # self.env = gym.make(self.env_name).env
         self.env = gym.make(self.env_name)
-        np.random.seed(self.configs['Algorithm']['manual_seed'])
+        try:
+            np.random.seed(self.configs['Environment']['manual_seed'])
+        except:
+            np.random.seed(self.manual_seed)
         self.obs = self.env.reset()
         self.done = False
         self.action_space_continuous = None

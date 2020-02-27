@@ -12,6 +12,8 @@ class MPIMetaLearner(MetaLearner):
     def __init__(self, configs):
         super(MPIMetaLearner, self).__init__(configs, profile=False)
         self.configs = configs
+        self.configs['Algorithm']['manual_seed'] = np.random.randint(10000) if 'manual_seed' not in self.configs['Algorithm'] else self.configs['Algorithm']['manual_seed']
+        self.configs['Environment']['manual_seed'] = np.random.randint(10000) if 'manual_seed' not in self.configs['Environment'] else self.configs['Algorithm']['manual_seed']
         self._preprocess_config()
         self.launch()
 
