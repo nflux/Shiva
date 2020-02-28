@@ -54,6 +54,7 @@ class Agent(object):
 
         '''
         # assert False, "Method Not Implemented"
+        print(policy_name, policy_file)
         setattr(self, policy_name, torch.load(policy_file))
 
     def get_action(self, obs):

@@ -14,7 +14,7 @@ class IRLAgent(Agent):
 
         self.learning_rate = agent_config['learning_rate']
 
-        self.reward = DynamicLinearNetwork(network_input, network_output, net_config['reward'])
+        self.reward = DynamicLinearNetwork(network_input, network_output, net_config['reward']).float()
         self.target_reward = copy.deepcopy(self.reward)
 
         self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.reward.parameters(),
@@ -24,11 +24,8 @@ class IRLAgent(Agent):
         '''
             Gets reward from current reward function estimator
         '''
-        action = torch.tensor(action).double()
-        print(state)
-        state_action = torch.cat([state, action], dim=0).double()
-        print(state_action)
-        return self.reward(state_action)
+        state_action = torch.cat([state, action], dim=0).float()
+        return torch.clamp((self.reward(state_action.float())), -1, 5)
 
     def get_reward_target(self, state, action):
         '''

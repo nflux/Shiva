@@ -132,6 +132,7 @@ class TensorBufferLogProbs(ReplayBuffer):
             self.current_index = 0
             # self.size = self.max_size
 
+        # print(f"this is the reward we are trying to push {rew}")
 
         self.obs_buffer[self.current_index:self.current_index+nentries, :self.obs_dim] = obs
         self.acs_buffer[self.current_index:self.current_index+nentries, :self.acs_dim] = ac
@@ -164,11 +165,11 @@ class TensorBufferLogProbs(ReplayBuffer):
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
         return (
-                    cast_obs(self.obs_buffer[:self.current_index,:]),
-                    cast(self.acs_buffer[:self.current_index,:]),
-                    cast(self.rew_buffer[:self.current_index,:]).squeeze(),
-                    cast_obs(self.next_obs_buffer[:self.current_index,:]),
-                    cast(self.done_buffer[:self.current_index,:]).squeeze(),
+                    cast_obs(self.obs_buffer[:self.current_index, :]),
+                    cast(self.acs_buffer[:self.current_index, :]),
+                    cast(self.rew_buffer[:self.current_index, :]).squeeze(),
+                    cast_obs(self.next_obs_buffer[:self.current_index, :]),
+                    cast(self.done_buffer[:self.current_index, :]).squeeze(),
                     cast(self.log_probs_buffer[:self.current_index])
         )
 

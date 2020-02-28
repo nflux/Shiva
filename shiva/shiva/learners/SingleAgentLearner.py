@@ -9,7 +9,7 @@ from shiva.helpers.config_handler import load_class
 
 class SingleAgentLearner(Learner):
     def __init__(self, learner_id, config, port=None):
-        super(SingleAgentLearner ,self).__init__(learner_id, config, port)
+        super(SingleAgentLearner, self).__init__(learner_id, config, port)
 
     def run(self, train=True):
         self.step_count_per_run = 0

@@ -26,6 +26,7 @@ class DynamicLinearNetwork(torch.nn.Module):
     def forward(self, x):
         return self.net(x)
 
+
 class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
     def __init__(self, input_dim, output_dim, param_ix, config):
         '''

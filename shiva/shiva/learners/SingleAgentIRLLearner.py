@@ -7,25 +7,22 @@ from shiva.learners.Learner import Learner
 from shiva.helpers.config_handler import load_class
 
 
-class IRLLearner(Learner):
+class SingleAgentIRLLearner(Learner):
 
     def __init__(self, learner_id, config, port=None):
-        super(IRLLearner, self).__init__(learner_id, config, port)
+        super(SingleAgentIRLLearner, self).__init__(learner_id, config, port)
         self.update = False
         self.step_count = 0
         self.update_count = 0
         self.totalReward = 0
         self.ep_count = 0
+        self.episodic_reward = 0
         self.launch()
 
     def launch(self):
 
         self.env = self._create_environment()
-        self.ppo_alg = self._create_rl_algorithm()
-
-        # I don't think I need this anymore because the IRLAgent will predict the reward
-        # self.reward_predictor = self.create_reward_predictor(self.env.observation_space,
-        #                                                      self.env.action_space['acs_space'])
+        self.alg = self._create_rl_algorithm()
         self.irl_alg = self._create_irl_algorithm()
 
         if self.load_agents:
@@ -33,7 +30,7 @@ class IRLLearner(Learner):
             if self.using_buffer:
                 self.buffer = Admin._load_buffer(self.load_agents)
         else:
-            self.agent = self.ppo_alg.create_agent()
+            self.agent = self.alg.create_agent()
             self.irl_agent = self.irl_alg.create_agent(0)
             if self.using_buffer:
                 self.buffer = self._create_buffer()
@@ -46,6 +43,8 @@ class IRLLearner(Learner):
         # for self.ep_count in range(self.episodes):
         while not self.env.finished(self.episodes):
             self.env.reset()
+            self.episodic_reward = 0
+            self.step_count = 0
             # done = False
             # while not done:
             while not self.env.is_done():
@@ -53,23 +52,23 @@ class IRLLearner(Learner):
                 self.step()
                 self.step_count += 1
                 # metrics per step
-                self.collect_metrics()
+                # self.collect_metrics()
             self.ep_count += 1
             # metrics per episode
-            self.collect_metrics(True)
+            # self.collect_metrics(True)
             # print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
             print(self.ep_count)
             if int(self.ep_count / self.configs['Algorithm']['update_episodes']) > self.update_count \
                     and self.ep_count > self.configs['Algorithm']['update_episodes']:
-                # Use the data in the buffer before ppo clears the buffer
-                self.irl_alg.update(self.irl_agent, self.buffer)
-                self.ppo_alg.update(self.agent, self.buffer, self.step_count)
+                # Use the data in the buffer before PPO clears the buffer
+                self.irl_alg.update(self.irl_agent, self.buffer, self.step_count)
+                self.alg.update(self.agent, self.buffer, self.step_count)
                 self.update_count += 1
             # Burn in so the reward estimator gives rewards with some merit behind them
             elif int(self.ep_count / self.configs['Algorithm']['update_episodes']) > self.update_count:
-                self.irl_alg.update(self.irl_agent, self.segment_buffer)
+                self.irl_alg.update(self.irl_agent, self.buffer, self.step_count)
             self.checkpoint()
-        del self.queues
+        # del self.queues
         self.env.close()
 
     def step(self):
@@ -108,11 +107,11 @@ class IRLLearner(Learner):
         '''
         action = self.agent.get_action(observation)
         next_observation, _, done, more_data = self.env.step(action)
-        reward = self.irl_agent.get_reward(observation, action)
         log_probs = self.agent.get_logprobs(observation, action)
-        self.rewards[0] += reward
+        reward = self.irl_agent.get_reward(torch.tensor(observation).float(), torch.tensor(action).float())
+        self.episodic_reward += reward
         exp = copy.deepcopy([
-                             torch.tensor(observation.numpy()),
+                             torch.tensor(observation),
                              torch.tensor(action),
                              torch.tensor(reward),
                              torch.tensor(next_observation),
@@ -120,8 +119,7 @@ class IRLLearner(Learner):
                              torch.tensor(log_probs)
                             ])
         if done:
-            self.ep_count += 1
-            print('Episode: ', self.ep_count, ' reward: ', self.rewards[0])
+            print(f'Episode:  {self.ep_count}  Reward: {self.episodic_reward} Step Count {self.step_count}')
         self.buffer.push(exp)
 
     def _create_environment(self):

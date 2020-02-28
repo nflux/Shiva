@@ -76,7 +76,7 @@ class SingleAgentPPOLearner(Learner):
             action = self.agent.get_action(observation)
             next_observation, reward, done, more_data = self.env.step(action)
             self.rewards[0] += reward
-            log_probs = self.agent.get_logprobs(observation,action)
+            log_probs = self.agent.get_logprobs(observation, action)
             exp = copy.deepcopy([torch.tensor(observation.numpy()),
                                  torch.tensor(action),
                                  torch.tensor(reward),
