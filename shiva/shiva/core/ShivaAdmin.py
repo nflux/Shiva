@@ -192,7 +192,6 @@ class ShivaAdmin():
                 @value_x            Usually time
         '''
         if not self.need_to_save: return
-        print(self.writer)
         self.writer[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
 
     def save(self, caller) -> None:

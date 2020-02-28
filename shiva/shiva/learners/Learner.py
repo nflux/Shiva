@@ -44,8 +44,8 @@ class Learner(object):
                 self._collect_metrics('agent', episodic)
         elif hasattr(self, 'agents'):
             if type(self.agents) == list:
-                print("MultiAgents metrics are not yet implemented! 2")
-                return
+                # print("MultiAgents metrics are not yet implemented! 2")
+                self._collect_metrics('agents', episodic)
             else:
                 self._collect_metrics('agents', episodic)
         else:
@@ -65,6 +65,19 @@ class Learner(object):
             else:
                 for metric_name, y_val in metrics:
                     Admin.add_summary_writer(self, getattr(self, attr), metric_name, y_val, self.ep_count)
+        elif attr == 'agents':
+
+            metrics = self.get_metrics(episodic) + self.env.get_metrics(episodic)
+
+            if not episodic:
+                for i, agent in enumerate(self.agents):
+                    for metric_name, y_val in metrics:
+                        Admin.add_summary_writer(self, getattr(self, attr)[i], metric_name, y_val, self.step_count)
+            else:
+                for i, agent in enumerate(self.agents):
+                    for metric_name, y_val in metrics:
+                        Admin.add_summary_writer(self, getattr(self, attr)[i], metric_name, y_val, self.ep_count)
+
         else:
 
             metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)

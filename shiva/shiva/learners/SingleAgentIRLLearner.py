@@ -17,6 +17,7 @@ class SingleAgentIRLLearner(Learner):
         self.totalReward = 0
         self.ep_count = 0
         self.episodic_reward = 0
+        self.agents = []
         self.launch()
 
     def launch(self):
@@ -30,21 +31,20 @@ class SingleAgentIRLLearner(Learner):
             if self.using_buffer:
                 self.buffer = Admin._load_buffer(self.load_agents)
         else:
-            self.agent = self.alg.create_agent()
-            self.irl_agent = self.irl_alg.create_agent(0)
+            self.agents.append(self.alg.create_agent())
+            self.agents.append(self.irl_alg.create_agent())
             if self.using_buffer:
                 self.buffer = self._create_buffer()
 
         print('Launch Successful.')
 
-        self.run()
+        # self.run()
 
     def run(self):
         # for self.ep_count in range(self.episodes):
         while not self.env.finished(self.episodes):
             self.env.reset()
             self.episodic_reward = 0
-            self.step_count = 0
             # done = False
             # while not done:
             while not self.env.is_done():
@@ -52,21 +52,20 @@ class SingleAgentIRLLearner(Learner):
                 self.step()
                 self.step_count += 1
                 # metrics per step
-                # self.collect_metrics()
-            self.ep_count += 1
+                self.collect_metrics()
             # metrics per episode
-            # self.collect_metrics(True)
+            self.collect_metrics(True)
             # print('Episode {} complete!\tEpisodic reward: {} '.format(self.ep_count, self.env.get_reward_episode()))
             print(self.ep_count)
             if int(self.ep_count / self.configs['Algorithm']['update_episodes']) > self.update_count \
                     and self.ep_count > self.configs['Algorithm']['update_episodes']:
                 # Use the data in the buffer before PPO clears the buffer
-                self.irl_alg.update(self.irl_agent, self.buffer, self.step_count)
-                self.alg.update(self.agent, self.buffer, self.step_count)
+                self.irl_alg.update(self.agents[1], self.buffer, self.step_count)
+                self.alg.update(self.agents[0], self.buffer, self.step_count)
                 self.update_count += 1
             # Burn in so the reward estimator gives rewards with some merit behind them
             elif int(self.ep_count / self.configs['Algorithm']['update_episodes']) > self.update_count:
-                self.irl_alg.update(self.irl_agent, self.buffer, self.step_count)
+                self.irl_alg.update(self.agents[1], self.buffer, self.step_count)
             self.checkpoint()
         # del self.queues
         self.env.close()
@@ -105,22 +104,40 @@ class SingleAgentIRLLearner(Learner):
         '''
             Currently only supports Gym, if this is successful, it will be extended to RoboCup and Unity
         '''
-        action = self.agent.get_action(observation)
+        action = self.agents[0].get_action(observation)
         next_observation, _, done, more_data = self.env.step(action)
-        log_probs = self.agent.get_logprobs(observation, action)
-        reward = self.irl_agent.get_reward(torch.tensor(observation).float(), torch.tensor(action).float())
-        self.episodic_reward += reward
+        log_probs = self.agents[0].get_logprobs(observation, action)
+        self.reward = self.agents[1].get_reward(torch.tensor(observation).float(), torch.tensor(action).float())
+        self.episodic_reward += self.reward
         exp = copy.deepcopy([
                              torch.tensor(observation),
                              torch.tensor(action),
-                             torch.tensor(reward),
+                             torch.tensor(self.reward),
                              torch.tensor(next_observation),
                              torch.tensor(int(done)),
                              torch.tensor(log_probs)
                             ])
         if done:
-            print(f'Episode:  {self.ep_count}  Reward: {self.episodic_reward} Step Count {self.step_count}')
+            print(f'Episode:  {self.ep_count}  Reward: {self.episodic_reward} Step Count {self.env.steps_per_episode}')
+            self.ep_count += 1
         self.buffer.push(exp)
+
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+
+                ('Stepwise_Reward', self.reward),
+                ('IRL_Algorithm/Loss_per_Step', self.irl_alg.loss),
+                ('Algorithm/Loss_per_Step', self.alg.loss),
+                ('Algorithm/Policy_Loss_per_Step', self.alg.policy_loss),
+                ('Algorithm/Value_Loss_per_Step', self.alg.value_loss),
+                ('Algorithm/Entropy_Loss_per_Step', self.alg.entropy_loss),
+            ]
+        else:
+            metrics = [
+                ('Episodic_Reward', self.episodic_reward)
+            ]
+        return metrics
 
     def _create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])

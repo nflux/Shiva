@@ -110,11 +110,8 @@ class IRLAlgorithm(Algorithm):
             loss += abs(torch.argmax(actions[i]) - max(expert_action))
         return loss
 
-    def get_loss(self):
-        return self.loss
-
-    def create_agent(self, agent_id):
-        return IRLAgent(agent_id, self.obs_space, self.acs_space, self.configs[1], self.configs[2])
+    def create_agent(self):
+        return IRLAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1], self.configs[2])
 
     def get_metrics(self, episodic=False):
         if not episodic:
