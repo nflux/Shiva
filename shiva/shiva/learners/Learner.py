@@ -79,7 +79,6 @@ class Learner(object):
                         Admin.add_summary_writer(self, getattr(self, attr)[i], metric_name, y_val, self.ep_count)
 
         else:
-
             metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
 
             if not episodic:

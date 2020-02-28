@@ -87,13 +87,13 @@ class IRLAlgorithm(Algorithm):
         # print('from buffer:', states.shape, actions.shape '\n')
         # input()
 
-        agent.optimizer.zero_grad()
-
         self.loss = torch.tensor(self.get_heuristic_loss(states, actions), requires_grad=True)
 
         self.loss.backward()
 
         agent.optimizer.step()
+
+        agent.optimizer.zero_grad()
 
     def get_heuristic_loss(self, states, actions):
 
