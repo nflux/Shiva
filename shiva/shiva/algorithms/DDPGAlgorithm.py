@@ -57,6 +57,8 @@ class DDPGAlgorithm(Algorithm):
         '''
             Updates starts here
         '''
+        self.critic_learning_rate = agent.critic_learning_rate
+        self.actor_learning_rate = agent.actor_learning_rate
         for i in range(self.updates):
 
             try:
@@ -256,7 +258,9 @@ class DDPGAlgorithm(Algorithm):
         else:
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss.item()),
-                ('Algorithm/Critic_Loss', self.critic_loss.item())
+                ('Algorithm/Critic_Loss', self.critic_loss.item()),
+                ('Actor Learning Rate: ', self.actor_learning_rate),
+                ('Critic Learning Rate: ', self.critic_learning_rate)
             ]
         return metrics
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-import sys, traceback
+import sys, time,traceback
 import argparse
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
@@ -45,7 +45,7 @@ class MPIEvalEnv(Environment):
         # self.log("Waiting Eval flag to start")
         start_flag = self.eval.bcast(None, root=0)
         # self.log("Start collecting..")
-        
+
         self.run()
 
     def run(self):
@@ -55,6 +55,7 @@ class MPIEvalEnv(Environment):
         # self.log("Get here at 48")
 
         while True:
+            time.sleep(0.001)
             while self.env.start_env():
 
                 self._step_numpy()
@@ -106,20 +107,26 @@ class MPIEvalEnv(Environment):
                     self._send_eval_numpy(self.episode_rewards[i,:].sum(),i)
                     self.episode_rewards[i,:].fill(0)
                     self.reward_idxs[i] = 0
-                self.reward_idxs[i] += 1
+                else:
+                    self.reward_idxs[i] += 1
 
         elif 'Gym' in self.type:
             self.actions = self.eval.scatter(None, root=0)
             # self.log("Obs {} Act {}".format(self.observations, self.actions))
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions.tolist())
+            if self.env.done:
+                self._send_eval_numpy(self.env.reward_per_episode,0)
+                self.env.reset()
 
-            self.episode_rewards[self.reward_idxs] = self.rewards
-            if self.dones:
-                self._send_eval_numpy(self.episode_rewards.sum(),0)
-                self.episode_rewards.fill(0)
-                self.reward_idxs = 0
-            self.reward_idxs += 1
-        
+            #self.episode_rewards[self.reward_idxs] = self.rewards
+            #if self.dones:
+                #self.log('Dones: {}'.format(self.dones))
+                #self._send_eval_numpy(self.episode_rewards.sum(),0)
+                #self.episode_rewards.fill(0)
+                #self.reward_idxs = 0
+            #else:
+                #self.reward_idxs += 1
+
         elif 'RoboCup' in self.type:
             # self.log("Getting to 112")
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
@@ -137,12 +144,14 @@ class MPIEvalEnv(Environment):
                     self._send_eval_numpy(self.episode_rewards[i,:].sum(),i)
                     self.episode_rewards[i,:].fill(0)
                     self.reward_idxs[i] = 0
-                self.reward_idxs[i] += 1
+                else:
+                    self.reward_idxs[i] += 1
                 # self.log('Made it to 134')
 
     def _send_eval_numpy(self,episode_reward,agent_idx):
         '''Numpy approach'''
         self.eval.send(agent_idx, dest=0, tag=Tags.trajectory_info)
+        self.log('Eval Reward: {}'.format(episode_reward))
         self.eval.send(episode_reward, dest=0, tag = Tags.trajectory_eval)
 
     def create_buffers(self):
@@ -240,4 +249,3 @@ if __name__ == "__main__":
         print("Eval Env error:", traceback.format_exc())
     finally:
         terminate_process()
-    

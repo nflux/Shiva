@@ -1,4 +1,4 @@
-import sys
+import sys, time
 import logging
 import numpy as np
 from mpi4py import MPI
@@ -34,7 +34,10 @@ class MPIPBTMetaLearner(MetaLearner):
 
     def run(self):
 
+
         while True:
+            time.sleep(0.001)
+
             if self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings):
                 self.rankings = self.mevals.recv(None,source=MPI.ANY_SOURCE, tag=Tags.rankings)
                 self.rankings_size = len(self.rankings)

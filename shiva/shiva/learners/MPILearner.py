@@ -1,4 +1,4 @@
-import sys, traceback, os
+import sys, traceback, os, time
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
@@ -96,6 +96,7 @@ class MPILearner(Learner):
         # t0 = time.time()
         # n_episodes = 500
         while self.train:
+            time.sleep(0.001)
             # self._receive_trajectory_python_list()
             if 'RoboCup' in self.env_specs['type']:
                 self._robo_receive_trajectory_numpy()
@@ -325,8 +326,8 @@ class MPILearner(Learner):
         else:
             self.start_agent_idx = self.num_agents * self.id
             self.end_agent_idx = self.start_agent_idx + self.num_agents
-            #agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
-            agents = [self.alg.create_agent(self.id + i) for i in range(self.num_agents)]
+            agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
+            #agents = [self.alg.create_agent(self.id + i) for i in range(self.num_agents)]
             agent_ids = [agent.id for agent in agents]
         self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
         return agents, agent_ids
@@ -382,7 +383,7 @@ class MPILearner(Learner):
     def _io_save_pbt_agents(self):
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
-        self.save_pbt_agents
+        self.save_pbt_agents()
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
     def welch_T_Test(self,evals,evo_evals):
@@ -415,7 +416,7 @@ class MPILearner(Learner):
             path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
             evo_agent = Admin._load_agents(path)[0]
             self.io.send(True, dest=0, tag=Tags.io_learner_request)
-            if self.welch_T_Test(self.evo_evals['evals'],self.evo_evals['evo_evals']):
+            if self.welch_T_Test(evals,evo_evals):
                 agent.copy_weights(evo_agent)
 
 

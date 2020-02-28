@@ -85,11 +85,10 @@ class IOHandler(object):
 
     def service_eval_requests(self):
         if self.evals.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_eval_request):
-            if self.evals.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_eval_request):
-                _ = self.evals.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_eval_request,status=self.info)
-                source = self.info.Get_source()
-                self.evals.send(True, dest=source,tag=Tags.io_eval_request)
-                _ = self.evals.recv(None, source=source,tag=Tags.io_eval_request)
+            _ = self.evals.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_eval_request,status=self.info)
+            source = self.info.Get_source()
+            self.evals.send(True, dest=source,tag=Tags.io_eval_request)
+            _ = self.evals.recv(None, source=source,tag=Tags.io_eval_request)
 
 
     def log(self, msg, to_print=False):

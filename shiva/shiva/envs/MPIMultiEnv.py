@@ -57,6 +57,7 @@ class MPIMultiEnv(Environment):
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
         while True:
+            time.sleep(0.001)
             # self._step_python_list()
             self._step_numpy()
 

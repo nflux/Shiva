@@ -46,6 +46,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self._get_initial_evaluations()
 
         while True:
+            time.sleep(0.001)
             self._get_evaluations(True)
 
             if self.sort:
@@ -79,26 +80,26 @@ class MPIMultiEvaluationWrapper(Evaluation):
             'num_evals': self.num_evals
         }
 
-    #def _get_evaluations(self,sort):
-        #if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.agent_id):
-            #self.info = MPI.Status()
-            #agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.agent_id, status=self.info)
-            #env_source = self.info.Get_source()
-            #evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
-            #self.evaluations[agent_id] = evals.mean()
-            #elf.sort = sort
-            #print('Multi Evaluation has received evaluations!')
-            #elf.agent_selection(env_source)
-
     def _get_evaluations(self,sort):
-        if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag = Tags.evals):
-            evals = self.evals.recv(None,source=MPI.ANY_SOURCE,tag=Tags.evals,status=self.info)
-            eval_source = self.info.Get_source()
-            for i in range(len(evals['agent_ids'])):
-                self.evaluations[evals['agent_ids'][i]] = evals['evals'][i].mean()
-            self.sort=sort
+        if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evals):
+            agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
+            env_source = self.info.Get_source()
+            evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
+            self.evaluations[agent_id] = evals.mean()
+            self.sort = sort
             print('Multi Evaluation has received evaluations!')
-            self.agent_selection(eval_source)
+            self.agent_selection(env_source)
+
+    #def _get_evaluations(self,sort):
+        #if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag = Tags.evals):
+            #evals = self.evals.recv(None,source=MPI.ANY_SOURCE,tag=Tags.evals,status=self.info)
+            #eval_source = self.info.Get_source()
+            #self.log('Agent IDS: '.format(evals['agent_ids']))
+            #for i in range(len(evals['agent_ids'])):
+                #self.evaluations[evals['agent_ids'][i]] = evals['evals'][i].mean()
+            #self.sort=sort
+            #print('Multi Evaluation has received evaluations!')
+            #self.agent_selection(eval_source)
 
     def _get_initial_evaluations(self):
         while len(self.evaluations ) < self.num_agents:
