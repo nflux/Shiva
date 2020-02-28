@@ -24,7 +24,7 @@ class Environment:
         '''
         assert (n_episodes is not None), 'A @n_episodes is required to check if we are done running the Environment'
         return self.done_count >= n_episodes
-    
+
     def start_env(self):
         return True
 
@@ -68,4 +68,4 @@ class Environment:
         pass
 
     def normalize_reward(self, reward):
-        return (self.b-self.a)*(reward-self.min)/(self.max-self.min)
+        return self.reward_factor*(reward-self.min_reward)/(self.max_reward-self.min_reward)

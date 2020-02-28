@@ -178,4 +178,4 @@ class DDPGAgent(Agent):
 
 
     def __str__(self):
-        return 'DDPGAgent'
+        return '<DDPGAgent(id={}, steps={}, episodes={})>'.format(self.id, self.step_count, self.done_count)

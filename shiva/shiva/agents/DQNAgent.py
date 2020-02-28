@@ -89,7 +89,7 @@ class DQNAgent(Agent):
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
         for i in range(self.acs_space):
             act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device)
-            q_val = network(torch.cat([obs_v, act_v], dim=-1))
+            q_val = network(torch.cat([obs_v.float(), act_v.float()], dim=-1))
             if q_val > best_q:
                 best_q = q_val
                 best_act_v = act_v
@@ -135,4 +135,4 @@ class DQNAgent(Agent):
         print('Resampled')
 
     def __str__(self):
-        return 'DQNAgent'
+        return '<DQNAgent(id={}, steps={}, episodes={})>'.format(self.id, self.step_count, self.done_count)
