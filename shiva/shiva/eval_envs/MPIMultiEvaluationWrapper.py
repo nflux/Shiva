@@ -246,8 +246,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
             while (e < t):
                 if( e+1 != t):
                     breaker = TeamCompareProbability(sum(totalRewards[e]),sum(totalRewards[e+1]),r, scoreFactor)
-                    print("breaker", breaker)
-                    print("e", e)
+                    self.log("breaker", breaker)
+                    self.log("e", e)
                 if(breaker == False):
                     #Needs to Scramble and Restart Search. 
                     breaker = False
