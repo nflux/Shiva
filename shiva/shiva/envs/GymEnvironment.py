@@ -92,7 +92,7 @@ class GymEnvironment(Environment):
                 ('Env/Steps_Per_Episode', self.steps_per_episode)
             ]
 
-            print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
+            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
 
         return metrics
 

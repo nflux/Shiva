@@ -118,7 +118,7 @@ class SingleAgentIRLLearner(Learner):
                              torch.tensor(log_probs)
                             ])
         if done:
-            print(f'Episode:  {self.ep_count}  Reward: {self.episodic_reward} Step Count: {self.env.steps_per_episode}')
+            print(f'Episode:  {self.ep_count}  Episodic Reward: {self.episodic_reward} Step Count: {self.env.steps_per_episode}')
             self.ep_count += 1
         self.buffer.push(exp)
 
