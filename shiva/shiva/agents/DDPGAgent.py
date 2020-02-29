@@ -34,6 +34,8 @@ class DDPGAgent(Agent):
         self.continuous = acs_space['continuous']
         self.param = acs_space['discrete']
         self.acs_space = acs_space['acs_space']
+        self.step_count = 0
+        self.done_count = 0
 
         print(self.discrete, self.continuous, self.param, self.acs_space)
         print(obs_space)
@@ -178,4 +180,4 @@ class DDPGAgent(Agent):
 
 
     def __str__(self):
-        return 'DDPGAgent'
+        return '<DDPGAgent(id={}, steps={}, episodes={})>'.format(self.id, self.step_count, self.done_count)

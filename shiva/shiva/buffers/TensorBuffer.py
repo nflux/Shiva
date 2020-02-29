@@ -50,10 +50,10 @@ class MultiAgentTensorBuffer(ReplayBuffer):
 
         # if agent_id is None:
         return (
-            cast_obs(self.obs_buffer[inds, :, :]),
-            cast(self.acs_buffer[inds, :, :]),
-            cast(self.rew_buffer[inds, :, :]),
-            cast_obs(self.next_obs_buffer[inds, :, :]),
+            cast_obs(self.obs_buffer[inds, :, :].float()),
+            cast(self.acs_buffer[inds, :, :].float()),
+            cast(self.rew_buffer[inds, :, :].float()),
+            cast_obs(self.next_obs_buffer[inds, :, :].float()),
             cast(self.done_buffer[inds, :, :])
         )
         # else:

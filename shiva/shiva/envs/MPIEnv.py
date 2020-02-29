@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import time, subprocess
 import numpy as np
-import sys, traceback
+import sys, time, traceback
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 from mpi4py import MPI
@@ -20,6 +20,7 @@ class MPIEnv(Environment):
         self.menv = MPI.Comm.Get_parent()
         self.id = self.menv.Get_rank()
         self.launch()
+        self.done_count = 0
 
     def launch(self):
         # Receive Config from MultiEnv
@@ -43,12 +44,14 @@ class MPIEnv(Environment):
     def run(self):
         self.env.reset()
         while True:
+            time.sleep(0.001)
             while self.env.start_env():
                 self._step_numpy()
                 self._append_step()
                 if self.env.is_done():
                     self.print(self.env.get_metrics(episodic=True)) # print metrics
                     self._send_trajectory_numpy()
+                    self.log('Episode_count: {}'.format(self.done_count))
                     self.env.reset()
             # self.close()
 
@@ -140,6 +143,7 @@ class MPIEnv(Environment):
                 self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
                 self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix,tag=Tags.trajectory_next_observations)
                 self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=ix, tag=Tags.trajectory_dones)
+
         elif 'Gym' in self.type:
             # Gym/RoboCup
             self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = self.trajectory_buffers[0].all_numpy()
@@ -157,7 +161,7 @@ class MPIEnv(Environment):
             # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
             # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
             #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
-            self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
+            #self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
 
             self.learner.send(trajectory_info, dest=self.id, tag=Tags.trajectory_info)
             self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_observations)
@@ -190,6 +194,8 @@ class MPIEnv(Environment):
                 self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
                 self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_next_observations)
                 self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=ix, tag=Tags.trajectory_dones)
+
+        self.done_count +=1
 
 
         self.reset_buffers()

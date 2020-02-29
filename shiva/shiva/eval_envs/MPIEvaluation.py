@@ -46,8 +46,6 @@ class MPIEvaluation(Evaluation):
         # Give start flag!
         self.envs.bcast([True], root=MPI.ROOT)
 
-        self.log("Travis is so cool")
-
         self.run()
 
     def run(self):
@@ -58,7 +56,7 @@ class MPIEvaluation(Evaluation):
         if 'Unity' in self.env_specs['type']:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         elif 'Gym' in self.env_specs['type']:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'] ), dtype=np.float64)
         elif 'RoboCup' in self.env_specs['type']:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
@@ -70,6 +68,7 @@ class MPIEvaluation(Evaluation):
 
 
         while True:
+            time.sleep(0.001)
             self._receive_eval_numpy()
             # self.log("Jorge is so cool")
             self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
@@ -84,7 +83,8 @@ class MPIEvaluation(Evaluation):
             elif 'Gym' in self.env_specs['type']:
                 # Gym
                 # same?
-                actions = [ [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+                #actions = [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+                actions = [[agent.get_action(obs, self.step_count, False) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
                 self.actions = np.array(actions)
                 self.envs.scatter(self.actions, root=MPI.ROOT)
             elif 'RoboCup' in self.env_specs['type']:
@@ -95,40 +95,45 @@ class MPIEvaluation(Evaluation):
 
             # self.log("Getting here at 91")
 
-            #if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-                #print('Sending Eval and updating most recent agent file path ')
-                #self.io.send(range(self.agents_per_env, dest=0,tag=Tags.io_evals_save))
-
-                #for i in range(self.agents_per_env):
-                    #path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                    #self.meval.send(self.agent_ids[i],dest=0,tag=Tags.agent_id)
-                    #self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
+            if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
+                print('Sending Eval and updating most recent agent file path ')
+                for i in range(self.agents_per_env):
+                    self.log('agent_id: {}'.format(self.agent_ids[i]))
+                    path = self.eval_path+'Agent_'+str(self.agent_ids[i])
+                    self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
+                    self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
+                    self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
                     #self.ep_evals['path'] = path+'/episode_evaluations'
                     #self.ep_evals['evals'] = self.evals[i]
-                    #self.io.send(self.ep_evals,dest=0,tag=Tags.io_evals_save)
-                    #np.save(path+'/episode_evaluations',self.evals[i])
-                #self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
-                    #new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0]
-                    #self.agent_ids[i] = new_agent
-                    #print('New Eval Agent: {}'.format(new_agent))
-                    #path = self.eval_path+'Agent_'+str(new_agent)
-                    #self.agents[i] = Admin._load_agents(path)[0]
-                    #self.evals[i].fill(0)
-                    #self.eval_counts[i]=0
+                    self.io.send(True, dest=0, tag=Tags.io_eval_request)
+                    _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
+                    np.save(path+'/episode_evaluations',self.evals[i])
+                    self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
+                    new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
+                    self.agent_ids[i] = new_agent
+                    print('New Eval Agent: {}'.format(new_agent))
+                    path = self.eval_path+'Agent_'+str(new_agent)
+                    self.log('Path: {} '.format(path))
+                    self.agents[i] = Admin._load_agents(path)[0]
+                    self.log('Agent: {}'.format(str(self.agents[0])))
+                    self.evals[i].fill(0)
+                    self.eval_counts[i]=0
+                    self.io.send(True, dest=0, tag=Tags.io_eval_request)
 
-            if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-                self.log('Sending Eval and updating most recent agent file path')
-                self.ep_evals['agent_ids'] = self.agent_ids
-                self.ep_evals['evals'] = self.evals
-                self.ep_evals['path'] = self.eval_path
-                self.meval.send(self.ep_evals,dest=0,tag=Tags.evals)
-                self.agent_ids= self.meval.recv(None,source=MPI.ANY_SOURCE,tag=Tags.new_agents)[0]
-                self.ep_evals['new_agent_ids'] = self.agent_ids
-                self.io.send(self.ep_evals,dest=0,tag=Tags.io_evals_save,)
-                self.agents = self.io.recv(None,source=0,tag=Tags.io_evals_save)
-                self.evals.fill(0)
-                self.eval_counts.fill(0)
-                time.sleep(0.1)
+
+            #if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
+                #self.log('Sending Eval and updating most recent agent file path')
+                #self.ep_evals['agent_ids'] = self.agent_ids
+                #self.ep_evals['evals'] = self.evals
+                #self.ep_evals['path'] = self.eval_path
+                #self.meval.send(self.ep_evals,dest=0,tag=Tags.evals)
+                #self.agent_ids= self.meval.recv(None,source=MPI.ANY_SOURCE,tag=Tags.new_agents)[0]
+                #self.ep_evals['new_agent_ids'] = self.agent_ids
+                #self.io.send(self.ep_evals,dest=0,tag=Tags.io_evals_save,)
+                #self.agents = self.io.recv(None,source=0,tag=Tags.io_evals_save)
+                #self.evals.fill(0)
+                #self.eval_counts.fill(0)
+                #time.sleep(0.1)
 
 
 
@@ -164,7 +169,6 @@ class MPIEvaluation(Evaluation):
     def _receive_eval_numpy(self):
         '''Receive trajectory reward from each single  evaluation environment in self.envs process group'''
         '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
-
         if self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info):
             info = MPI.Status()
             agent_idx = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
@@ -178,16 +182,19 @@ class MPIEvaluation(Evaluation):
             if self.eval_counts[agent_idx] < self.eval_episodes:
                 evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
                 self.evals[agent_idx,self.eval_counts[agent_idx]] = evals
-                print('Eval: ', self.evals[agent_idx,self.eval_counts[agent_idx]])
+                print('Eval: {}'.format(evals))
                 self.eval_counts[agent_idx] += 1
             else:
                 _ = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
 
     def _io_load_agents(self):
-        agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
-        self.io.send(agent_paths,dest=0,tag=Tags.io_load_agents)
+        #agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
+        self.io.send(True, dest=0, tag=Tags.io_eval_request)
+        _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
+        self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
+        self.log('Agent: {}'.format(str(self.agents[0])))
+        self.io.send(True, dest=0, tag=Tags.io_eval_request)
         #self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
-        self.agents = self.io.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_load_agents)
 
 
         # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))

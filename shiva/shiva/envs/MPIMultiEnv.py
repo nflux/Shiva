@@ -57,6 +57,7 @@ class MPIMultiEnv(Environment):
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
         while True:
+            time.sleep(0.001)
             # self._step_python_list()
             self._step_numpy()
 
@@ -77,12 +78,15 @@ class MPIMultiEnv(Environment):
                     # self.update_nums[learner_id] = learner_spec['update_num']
 
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
-                self._io_load_agents()
-                 #learner_id = info.Get_source()
-                 #learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
+                #self._io_load_agents()
+                 learner_id = self.info.Get_source()
+                 learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
                  #'''Assuming 1 Agent per Learner'''
-                 #self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
-                #self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
+                 self.io.send(True, dest=0, tag=Tags.io_menv_request)
+                 _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
+                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
+                 self.io.send(True, dest=0, tag=Tags.io_menv_request)
+                 self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
         # self.close()
 
     def _step_numpy(self):
@@ -136,8 +140,10 @@ class MPIMultiEnv(Environment):
         '''
         #self.log("Got all Learners Specs\n\t{}".format(self.learners_specs))
         '''Assuming 1 Agent per Learner, we could break it with a star operation'''
-        self.io.send(self.learners_specs,dest=0,tag=Tags.io_load_agents)
-        self.agents = self.io.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_load_agents)
+        self.io.send(True, dest=0 , tag=Tags.io_menv_request)
+        _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
+        self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
+        self.io.send(True, dest=0, tag=Tags.io_menv_request)
         #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners

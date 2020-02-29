@@ -1,8 +1,8 @@
 import torch
 import torch.nn
 
-class Agent(object):
-    
+class Agent(torch.nn.Module):
+
     def __init__(self, id, obs_space, acs_space, agent_config, network_config):
         super(Agent, self).__init__()
         '''
@@ -70,7 +70,7 @@ class Agent(object):
         """
         for to_model, from_model in zip(to_model.parameters(), from_model.parameters()):
             to_model.data.copy_(from_model.data.clone())
-    
+
     @staticmethod
     def mod_lr(optim, lr):
         for g in optim.param_groups:

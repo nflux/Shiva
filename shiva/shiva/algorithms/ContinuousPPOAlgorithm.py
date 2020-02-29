@@ -88,7 +88,7 @@ class ContinuousPPOAlgorithm(Algorithm):
                 #Estmate means for approximated Normal Distributions
                 mu = agent.mu(states[indices[idx:idx+self.batch_size]].float()).squeeze(0)
                 #Log standard Deviations for estimated Normal Distributions
-                logstd = agent.logstd
+                logstd = agent.logstd.expand_as(mu)
                 self.logstd_mean = logstd.mean()
                 self.mu_mean = mu.mean()
                 #Formatting for Distribution
@@ -115,7 +115,7 @@ class ContinuousPPOAlgorithm(Algorithm):
 
         print('Done updating')
         #print(len(buffer))
-        #buffer.clear_buffer()
+        buffer.clear_buffer()
 
     def get_metrics(self, episodic=False):
         if not episodic:
