@@ -209,7 +209,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
                     self.status[x].append(1)
                     self.teams[x].append(agent[p])
                     self.agentID[x].append(p)
-                    self.totalRewards[x].append(rewards[p])
+                    #self.totalRewards[x].append(rewards[p])
+                    self.totalRewards[x].append(evaluations[agent[p]])
                 self.log('Team #: ', t)
                 teamCreated = True
                 t = t + 1
@@ -228,8 +229,9 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 self.log("Team Counter t:", t)
                 #self.log("Total ", totalRewards)
                 self.teams[t-1][ag] = (agent[k])
-                self.totalRewards[t-1][ag] = (rewards[k])
-                self.log("Total Rewards at the time", totalRewards)
+                # self.totalRewards[t-1][ag] = (rewards[k])
+                self.totalRewards[t-1][ag] = self.evaluations[agent[k]]
+                self.log("Total Rewards at the time", self.totalRewards)
                 self.agentID[t-1][ag] = k
                 self.assignedOrNot[p] = True
                 self.assignedOrNot[k] = True
@@ -243,7 +245,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 self.log("Original R", originalR)
                 self.log("Increase Rate", increaseRate)
                 self.log("Old R", r)
-                r = r + orignalR * increaseRate
+                r = r + self.orignalR * increaseRate
                 self.log("New R", r)
                 k = 0
             elif( (False in assignedOrNot) == False):
@@ -251,7 +253,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 self.log("Breaker Main", breaker)
             while (e < t):
                 if( e+1 != t):
-                    breaker = self.TeamCompareProbability(sum(totalRewards[e]),sum(totalRewards[e+1]),r, scoreFactor)
+                    breaker = self.TeamCompareProbability(sum(self.totalRewards[e]),sum(self.totalRewards[e+1]),r, scoreFactor)
                     self.log("breaker", breaker)
                     self.log("e", e)
                 if(breaker == False):
