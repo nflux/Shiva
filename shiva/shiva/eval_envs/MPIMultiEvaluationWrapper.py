@@ -43,7 +43,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.log('Initiate Matching Function Test')
         self.eloProbability(100,200,10)
         self.CalculateEloReward(100,.50,10,1)
-        self.Matcher(self.agents_ids, 100, 10, 10, 10)
+        # self.Matcher(self.agent_ids, 5, [0,1,2,3,4], 0.5, 100,.10)
+        agent = np.array([1,2,3,4])
+        reward = np.array([10,10,10,10,10])
+        self.Matcher(self.agent_ids, 1, reward, 0.50, 5,.10)
         self.log('End of Matching Function Test')
         self.run()
 
@@ -132,6 +135,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
     def eloProbability (self, rating1, rating2, n):
         self.probability = 1.0 * 1.0 / (1 + 1.0 * math.pow (10, 1.0 * (rating1 - rating2)))
         self.log("ELO Probability Score : {}", self.probability)
+        print("ELO Probability Score : ", self.probability)
         return self.probability
     
 
@@ -144,6 +148,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
     def CalculateEloReward(self, reward, eloProbability, k, w):
         self.reward = reward + k *(w - eloProbability)
         self.log('Elo Reward : {}', self.reward )
+        print('Elo Reward : ', self.reward )
         return self.reward
 
     # team1 - Average Reward for Team1 or Agent1
@@ -155,124 +160,169 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.log("Probability Calculation Done. Probability of Team2 wiining : {}", self.rating)
         return self.rating
 
+    # TeamCompare
+    # Requires minumum of Two Teams. 
+    # Assumes team1Rewards is summed.
+    # Assumes team2Rewards is summed.
+    # r: probability Threshold
+    # scoreFactor: The Constant Score.
+
+
+    def TeamCompareProbability(self,team1Rewards,team2Rewards, r, scoreFactor):
+        boolResult = False
+        prob = max(self.eloProbability(team1Rewards, team2Rewards, scoreFactor), self.eloProbability(team2Rewards, team1Rewards, scoreFactor))
+        if (prob <= r):
+            boolResult = True
+        else:
+            boolResult = False
+        return boolResult
+
+    
+
 # Using More of an ELO based matcher WITH RANDOM Generator instead of Ordinal.
 # Need to have Incremental differential range of ELO Ratings
-# EX: if agent ELO score is 100 incremental 10, would mean try to match with 90 or 110, but if not found increase another 10. 
+# EX: if agent ELO score or probability is 100 incremental 10, would mean try to match with 90 or 110, but if not found increase another 10. 
 # EX: Compare just the ELO Probability instead. 
 # Rewards contains the list of Rewards that Agent contains.
 # r = Probability Threshold of the winning versus lossing from the max of the two differences. 
 
-
-    def Matcher(self, agents, n, rewards, r, scoreFactor, increaseRate):
-        agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
-        if((len(agents) % n != 0)):
-            self.log("WARNING Not enough Agents to make the Request Teams. Skipping EloMatcher")
-            self.log ("CONSIDER using random matcher. ")
+# scoreFactor = constant Score that you can get. 
+    def Matcher(self,agents, n, rewards, r, scoreFactor,increaseScale):
+        if((len(agents) % n) != 0):
+            print("WARNING Not enough Agents to make the Request Teams. Skipping EloMatcher")
+            print("CONSIDER using random matcher. ")
             pass
-        self.random.seed()
-        self.teamCreated = False
-        self.rand = self.random.randrange(len(agents) - 1)
-        self.agentID = []
-        self.originalR = r
-        self.assignedOrNot = np.full(agents.shape, False)
-        self.log('Currently what is assigned or not', assignedOrNot)
+        
+        random.seed()
+        teamCreated = False
+        rand = random.randrange(len(agents) - 1)
+        self. agentID =[]
+        self.orignalR = r
+        self.assignedOrNot = np.full(agents.shape,False)
+        print(self.assignedOrNot)
         self.teams = []
         self.totalRewards = []
-        self.teamLength = len(agents)%n
-        # Breaks become false when Teams are made (INVERSE RESULT!!!!)
-        breaker = True
-        '''
-        p: Agent A to Match.
-        k: The rest of the Agents to try to match to.
-        t: The number of Teams that has been made. 
-        ag: Agent counter, to start when a new P has been assigned. 
-        '''
-        p = random.randrange(len(agents)-1)
+        self.teamLength = len(agents)/n
+        breaker = False
+        r = r
+        # p: Agent A To Match
+        # p = 0
+        p = random.randrange(len(agents) - 1)
+        # k: The Rest of the Agents to try to to match to 
         k = 0
+        # t: the Number of Teams that has been made. 
         t = 0
+        # ag: Agent counter
         ag = 1
-        while (breaker):
-            self.log("SUM", np.sum(assignedOrNot))
-              # Go to the Next P-Agent when it is assigned or not.
-            if (assignedOrNot[p]):
-                while(assignedOrNot[p] and False in assignedOrNot):
+        self.status = []
+        while (breaker == False):
+            print("SUM",np.sum(self.assignedOrNot))
+            
+            # Go to the Next P-agent when it is assigned or not.
+            if(self.assignedOrNot[p]):
+                while(self.assignedOrNot[p] and False in self.assignedOrNot):
+                    random.seed()
                     p = random.randrange(len(agents) - 1)
-                    self.log("Assigned Or Not" , assignedOrNot[p])
-            if(((np.sum(assignedOrNot) % n) == 0) and (t != n) and teamCreated == False ):
-                # Appends a New Team
+                    print("STATUS In Assigned Or Not", self.assignedOrNot)
+                    print("STATUS In Assigned Or Not on p", p)
+                    print("Assigned Or Not" , self.assignedOrNot[p])
+                    
+            if( ((np.sum(self.assignedOrNot) % n) == 0 ) and (t != n) and teamCreated == False):
+                # Append a New Team 
                 for x in range(t,t+1):
-                self.status.append([])
-                self.teams.append([])
-                self.agentID.append([])
-                self.totalRewards.append([])
-                for y in range (0, int(teamLength)):
-                    self.status[x].append(1)
-                    self.teams[x].append(agent[p])
-                    self.agentID[x].append(p)
-                    #self.totalRewards[x].append(rewards[p])
-                    self.totalRewards[x].append(evaluations[agent[p]])
-                self.log('Team #: ', t)
+                    self.status.append([])
+                    self.teams.append([])
+                    self.agentID.append([])
+                    self.totalRewards.append([])
+                    for y in range (0, int(self.teamLength)):
+                        self.status[x].append(1)
+                        self.teams[x].append(agents[p])
+                        self.agentID[x].append(p)
+                        self.totalRewards[x].append(rewards[p])
+                    
+                print("STATUS", self.status)
+    #             teams.append(agent[p])
+    #             agentID.append(p)
+    #             totalRewards.append(agent[p])
+                # Increment T-index to track how many teams have been have
+                # NOTE: May have one-off error. 
+                print("TEAM", t)
                 teamCreated = True
                 t = t + 1
                 ag = 1
-            if(k < len(agents) and assignedOrNot[p] == False):
-                probMatching = max(Probability(rewards[k], rewards[p], scoreFactor), Probability(rewards[p], rewards[k], scoreFactor))
-                self.log("Check Assignment status on Counter K:", k)
-            self.log("Counter k:", k)
-            self.log("Counter p:", p)
-            self.log("Counter t:", t)
-            self.log("Counter n:", n)
-            self.log("Counter r:", r)
-            self.log("Check assignment Status", assignedOrNot)
-            if(k != p and k< len(agents) and probMatching <= r and (assignedOrNot[k] == False)  and (assignedOrNot[p] == False)):
-                self.log("Reached To Assign a new Agent to a Team.")
-                self.log("Team Counter t:", t)
-                #self.log("Total ", totalRewards)
-                self.teams[t-1][ag] = (agent[k])
-                # self.totalRewards[t-1][ag] = (rewards[k])
-                self.totalRewards[t-1][ag] = self.evaluations[agent[k]]
-                self.log("Total Rewards at the time", self.totalRewards)
+            
+            if(k< len(agents) and self.assignedOrNot[p] == False):
+                print("K",k)
+                probMatching = max(self.eloProbability(rewards[k], rewards[p], scoreFactor), self.eloProbability(rewards[p], rewards[k], scoreFactor))
+            print("Counter K: ",k)
+            print("Counter P: ",p)
+            print("Counter T:" ,t)
+            print("Counter n:", n)
+            print("Counter r:", r)
+            print("Counter ag:", ag)
+            print(self.assignedOrNot)
+            if( ag != self.teamLength and k != p and k< len(agents) and probMatching <= r and (self.assignedOrNot[k] == False)  and (self.assignedOrNot[p] == False)):
+                print("Hello WORLD")
+                print(t)
+                print(self.totalRewards)
+                self.teams[t-1][ag] = (agents[k])
+                self.totalRewards[t-1][ag] = (rewards[k])
                 self.agentID[t-1][ag] = k
                 self.assignedOrNot[p] = True
                 self.assignedOrNot[k] = True
-                p = random.randrange(len(agents) - 1)
-                self.teamCreated = False
+                
+                p= random.randrange(len(agents) - 1)
+                teamCreated = False
                 k = 0
                 ag = ag + 1
-                # If It ran through the entire list of agents and no match is found expand probability of success number by factor of orignalR
-            elif ((assignedOrNot[p] == False) and k == len(agents)):
-                self.log("Increase R")
-                self.log("Original R", originalR)
-                self.log("Increase Rate", increaseRate)
-                self.log("Old R", r)
-                r = r + self.orignalR * increaseRate
-                self.log("New R", r)
+            # If It ran through the entire list of agents and no match is found expand probability of success number by factor of orignalR
+            
+            elif ((self.assignedOrNot[p] == False) and k == len(agents)):
+                print("Increase R")
+                r = r + self.orignalR *increaseScale
+                print("Increase R", r)
                 k = 0
-            elif( (False in assignedOrNot) == False):
+        # When the Number of Teams needed is met.
+            elif( (False in self.assignedOrNot) == False):
+    #             breaker = False
                 e = 0
-                self.log("Breaker Main", breaker)
-            while (e < t):
-                if( e+1 != t):
-                    breaker = self.TeamCompareProbability(sum(self.totalRewards[e]),sum(self.totalRewards[e+1]),r, scoreFactor)
-                    self.log("breaker", breaker)
-                    self.log("e", e)
-                if(breaker == False):
-                    #Needs to Scramble and Restart Search. 
-                    breaker = False
-                    e = t
-                    #OBTAIN UI
-                    #  return breaker  
-                    #  To be changed with Rescramble once reimplemented into pipeline. 
-                    return self.teams
-                    #   e = e + 1
-                else:
-                    print(self.teams)
-                    #   return breaker
-                e = e + 1
-        else:
+                print("breaker Main", breaker)
+                while (e < t):
+                    if( e+1 != t):
+                        breaker = self.TeamCompareProbability(sum(self.totalRewards[e]),sum(self.totalRewards[e+1]),r, scoreFactor)
+                        print("breaker", breaker)
+                        print("e", e)
+                    if(breaker == False):
+                        #Needs to Scramble and Restart Search. 
+                        breaker = False
+                        e = t
+                        #OBTAIN UI
+    #                     return breaker  
+    #  To be changed with Rescramble once reimplemented into pipeline. 
+                        return self.teams
+    #                 e = e + 1
+                    else:
+                        print(self.teams)
+    #                     return breaker
+                    e = e + 1
+            else:
             # Even if no agent is assigned move on to the next agent to check. 
-            k = k + 1
-`
+                k = k + 1
+    
+            
+                
+                
+
+        
+        # INSERT TEAM_MATCHING TEST HERE
+        
+        # IF MATCHING FAILS REMATCH. 
+        return self.teams
+            
+    #         rewardsAgent1 = calculateElo(rewards[p],probMatching, k , 1)
+    #         rewardsAgent2 = calculateElo(rewards)
+            
+        
     def close(self):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
