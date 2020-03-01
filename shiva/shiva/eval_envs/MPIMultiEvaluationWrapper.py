@@ -40,7 +40,11 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.agent_ids = self.meta.bcast(None,root=0)
         print('Agent IDS: ', self.agent_ids)
         self.initial_agent_selection()
-
+        self.log('Initiate Matching Function Test')
+        self.eloProbability(100,200,10)
+        self.CalculateEloReward(100,.50,10,1)
+        self.Matcher(self.agents_ids, 100, 10, 10, 10)
+        self.log('End of Matching Function Test')
         self.run()
 
     def run(self):
@@ -160,20 +164,21 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
 
     def Matcher(self, agents, n, rewards, r, scoreFactor, increaseRate):
+        agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
         if((len(agents) % n != 0)):
             self.log("WARNING Not enough Agents to make the Request Teams. Skipping EloMatcher")
             self.log ("CONSIDER using random matcher. ")
             pass
-        random.seed()
-        teamCreated = False
-        rand = random.randrange(len(agents) - 1)
-        agentID = []
-        originalR = r
-        assignedOrNot = np.full(agents.shape, False)
+        self.random.seed()
+        self.teamCreated = False
+        self.rand = self.random.randrange(len(agents) - 1)
+        self.agentID = []
+        self.originalR = r
+        self.assignedOrNot = np.full(agents.shape, False)
         self.log('Currently what is assigned or not', assignedOrNot)
-        teams = []
-        totalRewards = []
-        teamLength = len(agents)%n
+        self.teams = []
+        self.totalRewards = []
+        self.teamLength = len(agents)%n
         # Breaks become false when Teams are made (INVERSE RESULT!!!!)
         breaker = True
         '''
@@ -196,15 +201,15 @@ class MPIMultiEvaluationWrapper(Evaluation):
             if(((np.sum(assignedOrNot) % n) == 0) and (t != n) and teamCreated == False ):
                 # Appends a New Team
                 for x in range(t,t+1):
-                status.append([])
-                teams.append([])
-                agentID.append([])
-                totalRewards.append([])
+                self.status.append([])
+                self.teams.append([])
+                self.agentID.append([])
+                self.totalRewards.append([])
                 for y in range (0, int(teamLength)):
-                    status[x].append(1)
-                    teams[x].append(agent[p])
-                    agentID[x].append(p)
-                    totalRewards[x].append(rewards[p])
+                    self.status[x].append(1)
+                    self.teams[x].append(agent[p])
+                    self.agentID[x].append(p)
+                    self.totalRewards[x].append(rewards[p])
                 self.log('Team #: ', t)
                 teamCreated = True
                 t = t + 1
@@ -222,14 +227,14 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 self.log("Reached To Assign a new Agent to a Team.")
                 self.log("Team Counter t:", t)
                 #self.log("Total ", totalRewards)
-                teams[t-1][ag] = (agent[k])
-                totalRewards[t-1][ag] = (rewards[k])
-                 self.log("Total Rewards at the time", totalRewards)
-                agentID[t-1][ag] = k
-                assignedOrNot[p] = True
-                assignedOrNot[k] = True
+                self.teams[t-1][ag] = (agent[k])
+                self.totalRewards[t-1][ag] = (rewards[k])
+                self.log("Total Rewards at the time", totalRewards)
+                self.agentID[t-1][ag] = k
+                self.assignedOrNot[p] = True
+                self.assignedOrNot[k] = True
                 p = random.randrange(len(agents) - 1)
-                teamCreated = False
+                self.teamCreated = False
                 k = 0
                 ag = ag + 1
                 # If It ran through the entire list of agents and no match is found expand probability of success number by factor of orignalR
@@ -246,7 +251,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 self.log("Breaker Main", breaker)
             while (e < t):
                 if( e+1 != t):
-                    breaker = TeamCompareProbability(sum(totalRewards[e]),sum(totalRewards[e+1]),r, scoreFactor)
+                    breaker = self.TeamCompareProbability(sum(totalRewards[e]),sum(totalRewards[e+1]),r, scoreFactor)
                     self.log("breaker", breaker)
                     self.log("e", e)
                 if(breaker == False):
@@ -256,10 +261,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
                     #OBTAIN UI
                     #  return breaker  
                     #  To be changed with Rescramble once reimplemented into pipeline. 
-                    return teams
+                    return self.teams
                     #   e = e + 1
                 else:
-                    print(teams)
+                    print(self.teams)
                     #   return breaker
                 e = e + 1
         else:
