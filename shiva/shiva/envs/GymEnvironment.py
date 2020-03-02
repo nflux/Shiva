@@ -10,7 +10,7 @@ class GymEnvironment(Environment):
         super(GymEnvironment,self).__init__(configs)
         # self.env = gym.make(self.env_name).env
         self.env = gym.make(self.env_name)
-        np.random.seed(self.configs['Algorithm']['manual_seed'])
+        np.random.seed(self.manual_seed)
         self.obs = self.env.reset()
         self.done = False
         self.action_space_continuous = None
@@ -35,9 +35,11 @@ class GymEnvironment(Environment):
             }
             self.gymEnvType = 'continuous'
 
+        '''Set some attribute for Gym on MPI'''
+        self.num_agents = 1
+        self.roles = ['Agent_0']
+        self.num_instances_per_role = 1
         self.num_instances_per_env = 1
-        self.agent_groups = ['Agent']
-        self.num_agents = 1 # all Gym environments contain 1 agent
         self.agent_ids = [0]
 
         self.steps_per_episode = 0
@@ -66,6 +68,8 @@ class GymEnvironment(Environment):
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
         else:
             self.obs, self.reward_per_step, self.done, info = self.env.step([action[action4Gym.item()]])
+
+        self.rew = self.normalize_reward(self.reward_per_step) if self.normalize else self.reward_per_step
             
         self.load_viewer()
         '''
@@ -80,16 +84,13 @@ class GymEnvironment(Environment):
         self.steps_per_episode += 1
         self.step_count += 1
         self.done_count += 1 if self.done else 0
-        self.reward_per_episode += self.reward_per_step
-        self.reward_total += self.reward_per_step
+        self.reward_per_episode += self.rew
+        self.reward_total += self.rew
 
         # if self.action_space['discrete'] != 0:
         #     action = action2one_hot(self.action_space['discrete'], action4Gym)
 
-        if self.normalize:
-            return self.obs, self.normalize_reward(self.reward_per_step), self.done, {'raw_reward': self.reward_per_step, 'action': action}
-        else:
-            return self.obs, self.reward_per_step, self.done, {'raw_reward': self.reward_per_step, 'action': action}
+        return self.obs, self.rew, self.done, {'raw_reward': self.reward_per_step, 'action': action}
 
     def reset(self):
         self.steps_per_episode = 0

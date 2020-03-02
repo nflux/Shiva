@@ -82,10 +82,23 @@ def save_dict_2_config_file(config_dict: dict, file_path: str):
         assert False, "Not expecting a list"
     else:
         for section_name, attrs in config_dict.items():
-            if is_iterable(attrs) and '_filename_' != section_name:
-                config.add_section(section_name)
-                for attr_name, attr_val in attrs.items():
-                    config.set(section_name, attr_name, dtype_2_configstr(attr_val))
+            if '_filename_' != section_name:
+                if type(attrs) == dict:
+                    config.add_section(section_name)
+                    for attr_name, attr_val in attrs.items():
+                        config.set(section_name, attr_name, dtype_2_configstr(attr_val))
+                elif type(attrs) == list:
+                    # usually some MultiEnv scattering list data comes in here
+                    for at in attrs:
+                        if type(at) == dict:
+                            section_name = '-'.join([at['type'], str(at['id'])])
+                            config.add_section(section_name)
+                            for attr_name, attr_val in at.items():
+                                config.set(section_name, attr_name, dtype_2_configstr(attr_val))
+                        else:
+                            print("Couldn't save {}, expecting dict not {}".format(at, type(at)))
+                else:
+                    print("Couldn't save section {} with attr {}".format(section_name, attrs))
     with open(file_path, 'w') as configfile:
         config.write(configfile)
 

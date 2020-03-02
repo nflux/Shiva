@@ -56,9 +56,8 @@ class Learner(object):
 
     def _collect_metrics(self, agent_id, episodic):
         if hasattr(self, 'MULTI_ENV_FLAG'):
-            '''Assuming 1 Agent per Learner here'''
-            metrics = self.alg.get_metrics(episodic) + self.get_metrics(episodic)
-            self.log("{} at step {} / done {}".format(metrics, self.step_count, self.done_count))
+            metrics = self.alg.get_metrics(episodic, agent_id) + self.get_metrics(episodic, agent_id)
+            # self.log("{} - Shiva step {} / done {}".format(metrics, self.step_count, self.done_count)) # for debug
             if not episodic:
                 for m in metrics:
                     if type(m) == list:

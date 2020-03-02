@@ -14,8 +14,15 @@ class TD3Algorithm(Algorithm):
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
 
-        self.obs_space = observation_space
-        self.acs_space = action_space['acs_space']
+        if hasattr(self, 'roles'):
+            assert len(self.roles) == 1, "TD3 is not a multi-agent algorithm, received {} roles".format(self.roles)
+            self.configs['Agent']['role'] = self.roles[0]
+            self.obs_space = observation_space[self.roles[0]]
+            self.acs_space = action_space[self.roles[0]]['acs_space']
+        else:
+            self.obs_space = observation_space
+            self.acs_space = action_space['acs_space']
+
         # self.exploration_strategy = OU_Noise_Exploration(action_space, self.configs[0])
         # self.exploration_strategy_critic = Gaussian_Exploration(self.configs[0])
         # self.ou_noise = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
@@ -40,15 +47,18 @@ class TD3Algorithm(Algorithm):
         #     pass
 
         '''
-            Update starts here
+            Calculate deviation between critic and plot on Tensorboard
         '''
 
-        self.agent = agent
+        '''
+            Update starts here
+        '''
+        self.agent = agent[0] if type(agent) == list else agent
         for _ in range(self.update_iterations):
 
             try:
                 '''For MultiAgentTensorBuffer - 1 Agent only here'''
-                states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
+                states, actions, rewards, next_states, dones = buffer.sample(agent_id=self.agent.id, device=self.device)
                 # dones_mask = dones.bool()
                 dones_mask = dones.float()
             except:
@@ -155,18 +165,21 @@ class TD3Algorithm(Algorithm):
         #     self.action += self.ou_noise.noise()
         #     return self.action
 
-    def create_agent(self, id):
-        self.agent = TD3Agent(id, self.obs_space, self.acs_space, self.configs['Agent'], self.configs['Network'])
+    def create_agent(self):
+        self.agent = TD3Agent(self.id_generator(), self.obs_space, self.acs_space, self.configs['Agent'], self.configs['Network'])
         return self.agent
 
-    def get_metrics(self, episodic=False):
+    def create_agent_of_role(self, role):
+        return self.create_agent()
+
+    def get_metrics(self, episodic, agent_id):
         metrics = [
             ('Algorithm/Actor_Loss', self.actor_loss.item()),
             ('Algorithm/Critic_Loss', self.critic_loss_2.item()),
             ('Algorithm/Critic_2_Loss', self.critic_loss_2.item())
         ]
-        for i, ac in enumerate(self.agent.action):
-            metrics.append(('Agent/Actor_Output_' + str(i), ac))
+        # for i, ac in enumerate(self.agent.action):
+        #     metrics.append(('Agent/Actor_Output_' + str(i), ac))
         return metrics
         # if not episodic:
         #     metrics = [

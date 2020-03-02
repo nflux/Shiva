@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 class Environment:
     def __init__(self, configs):
@@ -12,6 +13,12 @@ class Environment:
         self.done_count = 0
         self.total_episodes_to_play = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
+
+        # normalization factors
+        self.reward_factor = self.reward_factor if hasattr(self, 'reward_factor') else 1
+        self.max_reward = self.max_reward if hasattr(self, 'max_reward') else 1
+        self.min_reward = self.min_reward if hasattr(self, 'min_reward') else -1
 
 
     def step(self,actions):
@@ -65,4 +72,7 @@ class Environment:
         pass
 
     def normalize_reward(self, reward):
+        return self.reward_factor*(reward-self.min_reward)/(self.max_reward-self.min_reward)
+
+    def _normalize_reward(self, reward):
         return (self.b-self.a)*(reward-self.min)/(self.max-self.min)

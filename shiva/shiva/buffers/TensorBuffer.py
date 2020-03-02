@@ -75,14 +75,14 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             self.done_buffer[:self.current_index, :, :]
         ]
 
-    def all_numpy(self, reshape_fn=None):
+    def all_numpy(self, astype=np.float64):
         '''For data passing'''
         return copy.deepcopy([
-            self.obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
-            self.acs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
-            self.rew_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
-            self.next_obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
-            self.done_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64)
+            self.obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
+            self.acs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
+            self.rew_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
+            self.next_obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
+            self.done_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype)
         ])
 
     def reset(self):

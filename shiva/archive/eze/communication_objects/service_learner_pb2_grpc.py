@@ -4,7 +4,6 @@ import grpc
 from shiva.core.communication_objects import configs_pb2 as shiva_dot_core_dot_communication__objects_dot_configs__pb2
 from shiva.core.communication_objects import helpers_pb2 as shiva_dot_core_dot_communication__objects_dot_helpers__pb2
 
-
 class LearnerStub(object):
   # missing associated documentation comment in .proto file
   pass

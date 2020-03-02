@@ -1,5 +1,7 @@
+import time
 import torch
 import torch.nn
+from shiva.core.admin import logger
 
 class Agent(object):
     
@@ -12,15 +14,25 @@ class Agent(object):
             act_dim
             policy = Neural Network Policy
             target_policy = Target Neural Network Policy
-            optimizer = Optimier Function
+            optimizer = Optimizer Function
             learning_rate = Learning Rate
         '''
         {setattr(self, k, v) for k,v in agent_config.items()}
+        self.id = id
+        self.step_count = 0
+        self.done_count = 0
+        self.role = agent_config['role'] if 'role' in agent_config else 'Role' # use 'A' for the folder name when there's no role assigned
         self.obs_space = obs_space
         self.acs_space = acs_space
-        self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
+        try:
+            self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
+        except:
+            self.log("No optimizer", to_print=True)
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    def reset_noise(self):
+        pass
 
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)
@@ -58,10 +70,15 @@ class Agent(object):
                 flag = False
             except:
                 # try again
+                time.sleep(0.25)
                 pass
 
     def get_action(self, obs):
         assert False, "Method Not Implemented"
+
+    def log(self, msg, to_print=False):
+        text = '{}\t{}'.format(self, msg)
+        logger.info(text, to_print)
 
     @staticmethod
     def copy_model_over(from_model, to_model):

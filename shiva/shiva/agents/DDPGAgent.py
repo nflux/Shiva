@@ -7,7 +7,7 @@ from torch.nn.functional import softmax
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.Agent import Agent
 from shiva.utils import Noise as noise
-from shiva.helpers.misc import action2one_hot
+from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 class DDPGAgent(Agent):
@@ -19,8 +19,6 @@ class DDPGAgent(Agent):
         except:
             torch.manual_seed(5)
             np.random.seed(5)
-
-        self.id = id
 
         '''
         
@@ -47,29 +45,36 @@ class DDPGAgent(Agent):
         else:
             # print("DDPG Agent, check if this makes sense for parameterized robocup")
             self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete+self.param, self.param, networks['actor'])
-
         self.target_actor = copy.deepcopy(self.actor)
 
-        self.critic = DynamicLinearNetwork(obs_space + self.acs_space, 1, networks['critic'])
+        if not hasattr(self, 'critic_input_size'):
+            self.critic_input_size = obs_space + self.acs_space
+
+        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
+        # Optimizers
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        try:
+            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        except:
+            pass
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
 
-
-    def get_action(self, observation, step_count, evaluate=False):
+    def get_action(self, observation, step_count, one_hot=True, evaluate=None):
+        if evaluate is not None:
+            self.evaluate = evaluate
         if self.action_space == 'discrete':
-            return self.get_discrete_action(observation, step_count, evaluate)
+            return self.get_discrete_action(observation, step_count, one_hot, self.evaluate)
         elif self.action_space == 'continuous':
-            return self.get_continuous_action(observation, step_count, evaluate)
+            return self.get_continuous_action(observation, step_count, self.evaluate)
         elif self.action_space == 'parameterized':
             assert "DDPG Parametrized NotImplemented"
             pass
-            return self.get_parameterized_action(observation, evaluate)
+            return self.get_parameterized_action(observation, self.evaluate)
 
-    def get_discrete_action(self, observation, step_count, evaluate):
+    def get_discrete_action(self, observation, step_count, one_hot, evaluate):
         if evaluate:
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
             # print("Agent Evaluate {}".format(action))
@@ -87,6 +92,8 @@ class DDPGAgent(Agent):
                 action = torch.abs(action)
                 action = action / action.sum()
                 # print("Net: {}".format(action))
+        if one_hot:
+            action = action2one_hot(action.shape[0], torch.argmax(action).item())
         return action.tolist()
 
     def get_continuous_action(self,observation, step_count, evaluate):
@@ -122,6 +129,8 @@ class DDPGAgent(Agent):
 
         return action[0]
 
+    def reset_noise(self):
+        self.ou_noise.reset()
 
     def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
         observation = torch.tensor(observation).to(self.device)
@@ -145,5 +154,5 @@ class DDPGAgent(Agent):
     #     self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
         
     def __str__(self):
-        return 'DDPGAgent'
+        return '<DDPGAgent(id={}, role={}, steps={}, episodes={})>'.format(self.id, self.role, self.step_count, self.done_count)
         

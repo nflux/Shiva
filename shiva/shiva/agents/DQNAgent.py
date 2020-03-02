@@ -49,7 +49,7 @@ class DQNAgent(Agent):
                 action = self.get_random_action()
                 # print("random act")
         else:
-            # print('action!'.format(obs, obs.shape))
+            # print('action! {} {}'.format(obs, obs.shape))
             action = self.find_best_action(self.policy, obs)
         # print("From DQAgent Acs {}".format(action))
         return action
@@ -97,7 +97,7 @@ class DQNAgent(Agent):
         obs_v = torch.tensor(observation).float().to(self.device)
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
         for i in range(self.acs_space):
-            act_v = action2one_hot_v(self.acs_space,i)
+            act_v = misc.action2one_hot_v(self.acs_space,i)
             q_val = self.policy(torch.cat([obs_v, act_v.to(self.device)]))
             if q_val > best_q:
                 best_q = q_val

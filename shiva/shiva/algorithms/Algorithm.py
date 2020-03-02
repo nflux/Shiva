@@ -1,5 +1,6 @@
-import numpy as np
 import torch
+import numpy as np
+from shiva.core.admin import logger
 
 class Algorithm():
     def __init__(self, obs_space, acs_space, configs):
@@ -23,6 +24,7 @@ class Algorithm():
         self.action_space = acs_space
         self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
         
     def update(self, agent, data, episodic=False):
         '''
@@ -69,3 +71,7 @@ class Algorithm():
 
     def get_agents(self):
         return self.agents
+
+    def log(self, msg, to_print=False):
+        text = '{}\t{}'.format(self, msg)
+        logger.info(text, to_print or self.configs['Admin']['print_debug'])

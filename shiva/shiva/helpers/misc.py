@@ -1,8 +1,10 @@
 import sys
+import time
 import traceback, warnings
 import numpy as np
 import torch
 import subprocess
+import platform
 
 def handle_package(package, class_name):
     '''
@@ -40,11 +42,17 @@ def warn_with_traceback(message, category, filename, lineno, file=None, line=Non
     traceback.print_stack(file=log)
     log.write(warnings.formatwarning(message, category, filename, lineno, line))
 
-
-def one_hot_from_logits(logits):
-    # print(logits.max(1, keepdim=True))
-    return (logits == logits.max(1, keepdim=True)[0]).float()
+def one_hot_from_logits(logits, dim=0):
+    return (logits == logits.max(1, keepdim=True)[dim]).float()
 
 def terminate_process():
-    cmd = 'pkill -e -f "python shiva"'
+    system = platform.system()
+    if system == 'Darwin':
+        cmd = "pkill -f 'Python shiva'"
+    else:
+        cmd = "pkill -e -f 'python shiva'"
+    time.sleep(1)
     subprocess.call(cmd, shell=True)
+
+def flat_1d_list(list):
+    return [item for sublist in list for item in sublist]

@@ -39,7 +39,8 @@ class ShivaAdmin():
         'summary':      'Tensorboards',
         'checkpoint':   'Ep{ep_num}',
         'learner_data': 'Learner_Data',
-        'agent':        'A{id}',
+        'agent':        '{id}-{role}',
+        'latest':      'temp'
     }
 
     def __init__(self, logger, config=None):
@@ -128,8 +129,8 @@ class ShivaAdmin():
             new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
             self._learner_dir[learner.id]['base'] = new_dir
             self._learner_dir[learner.id]['checkpoint'] = [] # keep track of each checkpoint directory
-            temp_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], 'temp') )
-            self._learner_dir[learner.id]['temp'] = temp_dir
+            latest_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['latest']), overwrite=True )
+            self._learner_dir[learner.id]['latest'] = latest_dir
             new_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['summary']) )
             self._learner_dir[learner.id]['summary'] = new_dir
             self._agent_dir[learner.id] = {}
@@ -154,11 +155,11 @@ class ShivaAdmin():
         # create checkpoint folder
         self.use_temp_folder = use_temp_folder
         if self.use_temp_folder:
-            checkpoint_dir = self._learner_dir[learner.id]['temp']
+            checkpoint_dir = self._learner_dir[learner.id]['latest']
         else:
             checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ))
         self._learner_dir[learner.id]['checkpoint'].append(checkpoint_dir)
-        # self._save_learner(learner, checkpoint_num)
+        self._save_learner(learner, checkpoint_num)
         self._save_learner_agents(learner, checkpoint_num)
 
     def get_last_checkpoint(self, learner):
@@ -170,7 +171,7 @@ class ShivaAdmin():
 
     def get_temp_directory(self, learner):
         assert learner.id in self._learner_dir, "Learner was not profiled by ShivaAdmin, try calling Admin.add_learner_profile at initialization "
-        return self._learner_dir[learner.id]['temp']
+        return self._learner_dir[learner.id]['latest']
 
     def _add_agent_checkpoint(self, learner, agent):
         '''
@@ -182,7 +183,7 @@ class ShivaAdmin():
                 @agent              Agent instance ref to be saved
         '''
         if not self.need_to_save: return
-        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id)) ) )
+        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ), overwrite=self.use_temp_folder )
         if agent.id not in self._agent_dir[learner.id]:
             self._agent_dir[learner.id][agent.id] = []
         self._agent_dir[learner.id][agent.id].append(new_dir)
@@ -198,7 +199,7 @@ class ShivaAdmin():
         '''
         self._add_agent_checkpoint(learner, agent)
         if self.use_temp_folder:
-            return os.path.join(self._learner_dir[learner.id]['temp'], self.__folder_name__['agent'].format(id=str(agent.id)))
+            return os.path.join(self._learner_dir[learner.id]['latest'], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) )
         else:
             return self._agent_dir[learner.id][agent.id][-1]
 
@@ -212,7 +213,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         if agent.id not in self.writer[learner.id]:
-            new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['summary'], self.__folder_name__['agent'].format(id=str(agent.id)) ) )
+            new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['summary'], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ) )
             self.writer[learner.id][agent.id] = SummaryWriter(
                 logdir = new_dir,
                 # filename_suffix = '-' + self.__folder_name__['agent'].format(id=str(agent.id))
@@ -288,7 +289,7 @@ class ShivaAdmin():
         # except AttributeError:
         #     self._save_learner(self.caller.learner)
 
-    def _save_learner(self, learner=None) -> None:
+    def _save_learner(self, learner=None, checkpoint_num=None) -> None:
         '''
             Mechanics of saving a Learner
                 1.  Pickles the Learner class
@@ -298,13 +299,16 @@ class ShivaAdmin():
             Input
                 @learner        Learner instance we want to save
         '''
+        if self.use_temp_folder:
+            # no need to save Learner data when using temp folder
+            return
         learner = self.caller if learner is None else learner
         self.add_learner_profile(learner) # will only add if was not profiled before
         # save learner pickle
         learner_data_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['learner_data']) )
         fh.save_pickle_obj(learner, os.path.join(learner_data_dir, 'learner_cls.pickle'))
         # save buffer
-        fh.save_pickle_obj(learner.buffer, os.path.join(learner_data_dir, 'buffer_cls.pickle'))
+        # fh.save_pickle_obj(learner.buffer, os.path.join(learner_data_dir, 'buffer_cls.pickle'))
         # save learner current config status
         if type(learner.configs) == dict:
             cf = learner.configs
@@ -441,7 +445,7 @@ class ShivaAdmin():
                     this_agent_policies.append(pols)
                     policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
                     _new_agent.load_net(policy_name, pols)
-            self.log("Loading Agent {} with {} networks".format(agent_pickle.replace(os.getcwd(), ''), len(this_agent_policies)), to_print=True)
+            self.log("Load {} {} with {} networks".format(str(_new_agent), agent_pickle.replace(os.getcwd(), ''), len(this_agent_policies)), to_print=True)
             agents.append(_new_agent)
         return agents
 
@@ -490,3 +494,7 @@ class ShivaAdmin():
 ###########################################################################
 #         
 ###########################################################################
+
+class ShivaAdmin2(ShivaAdmin):
+    def __init__(self, *args, **kwargs):
+        super(ShivaAdmin2, self).__init__(*args, **kwargs)
