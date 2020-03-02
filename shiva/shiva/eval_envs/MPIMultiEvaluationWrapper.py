@@ -196,9 +196,14 @@ class MPIMultiEvaluationWrapper(Evaluation):
         random.seed()
         teamCreated = False
         rand = random.randrange(len(agents) - 1)
-        self. agentID =[]
+        self.agentID =[]
         self.orignalR = r
         self.assignedOrNot = np.full(agents.shape,False)
+        self.agentIDDict= {}
+        for x in agents :
+            self.agentIDDict.update({x : False})
+       
+        #TODO Replace assignedOrNot with a Dictionary. 
         print(self.assignedOrNot)
         self.teams = []
         self.totalRewards = []
@@ -271,6 +276,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 self.teams[t-1][ag] = (agents[k])
                 self.totalRewards[t-1][ag] = (rewards[k])
                 self.agentID[t-1][ag] = k
+                self.agentIDDict[agents[p]] = True
+                self.agentIDDict[agents[k]] = True
                 self.assignedOrNot[p] = True
                 self.assignedOrNot[k] = True
                 
@@ -285,6 +292,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 print(t)
                 print(self.totalRewards)
                 self.assignedOrNot[p] = True
+                self.agentIDDict[agents[p]] = True
                 p= random.randrange(len(agents))
                 teamCreated = False
                 k = 0
@@ -295,6 +303,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 print(t)
                 print(self.totalRewards)
                 self.assignedOrNot[p] = True
+                self.agentIDDict[agents[p]] = True
                 p= random.randrange(len(agents))
                 teamCreated = False
                 k = 0
@@ -315,6 +324,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
                         breaker = self.TeamCompareProbability(sum(self.totalRewards[e]),sum(self.totalRewards[e+1]),r, scoreFactor)
                         print("breaker", breaker)
                         print("e", e)
+                        print("FINAL Assigned OR Not", self.assignedOrNot)
+                        print("FINAL DICT Assigned Or Not",self.agentIDDict )
                     if(breaker == False):
                         #Needs to Scramble and Restart Search. 
                         breaker = False
@@ -322,9 +333,13 @@ class MPIMultiEvaluationWrapper(Evaluation):
                         #OBTAIN UI
     #                     return breaker  
     #  To be changed with Rescramble once reimplemented into pipeline. 
+                        print("FINAL Assigned OR Not", self.assignedOrNot)
+                        print("FINAL DICT Assigned Or Not",self.agentIDDict )
                         return self.teams
     #                 e = e + 1
                     else:
+                        print("FINAL Assigned OR Not", self.assignedOrNot)
+                        print("FINAL DICT Assigned Or Not",self.agentIDDict )
                         print(self.teams)
     #                     return breaker
                     e = e + 1
@@ -334,16 +349,14 @@ class MPIMultiEvaluationWrapper(Evaluation):
     
             
                 
-                
 
         
-        # INSERT TEAM_MATCHING TEST HERE
-        
         # IF MATCHING FAILS REMATCH. 
+        print("FINAL Assigned OR Not", self.assignedOrNot)
+        print("FINAL DICT Assigned Or Not",self.agentIDDict )
         return self.teams
             
-    #         rewardsAgent1 = calculateElo(rewards[p],probMatching, k , 1)
-    #         rewardsAgent2 = calculateElo(rewards)
+
             
         
     def close(self):
