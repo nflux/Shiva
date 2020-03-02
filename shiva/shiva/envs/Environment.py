@@ -15,6 +15,12 @@ class Environment:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
 
+        # for previous versions support on attribute names
+        if not hasattr(self, 'num_instances') and not hasattr(self, 'num_envs'):
+            self.num_envs = 1
+        if hasattr(self, 'num_instances') and not hasattr(self, 'num_envs'):
+            self.num_envs = self.num_instances
+
         # normalization factors
         self.reward_factor = self.reward_factor if hasattr(self, 'reward_factor') else 1
         self.max_reward = self.max_reward if hasattr(self, 'max_reward') else 1
