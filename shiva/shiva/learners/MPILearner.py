@@ -101,71 +101,70 @@ class MPILearner(Learner):
                     Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
 
                 '''Send Updated Agents to Meta'''
-                # self.log("Sending metrics to Meta")
-                self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
-                '''Check for Evolution Configs'''
-                if self.meta.Iprobe(source=0, tag=Tags.evolution):
-                    evolution_config = self.learners.recv(None, source=0, tag=Tags.evolution)  # block statement
-                    self.log("Got evolution config!")
+                # # self.log("Sending metrics to Meta")
+                # self.meta.gather(self._get_learner_state(), root=0) # send for evaluation
+                # '''Check for Evolution Configs'''
+                # if self.meta.Iprobe(source=0, tag=Tags.evolution):
+                #     evolution_config = self.learners.recv(None, source=0, tag=Tags.evolution)  # block statement
+                #     self.log("Got evolution config!")
                 ''''''
-
             self.collect_metrics(episodic=True)
 
     def _receive_trajectory_numpy(self):
         '''Receive trajectory from each single environment in self.envs process group'''
-
         info = MPI.Status()
-        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
-        self.log("{}".format(self.traj_info))
-        env_source = info.Get_source()
+        if self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info):
+            self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
+            self.log("{}".format(self.traj_info))
+            env_source = info.Get_source()
 
-        self.metrics_env = self.traj_info['metrics']
-        traj_length_index = self.traj_info['length_index']
-        traj_length = self.traj_info['obs_shape'][traj_length_index]
-        role = self.traj_info['role']
-        assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
+            self.metrics_env = self.traj_info['metrics']
+            traj_length_index = self.traj_info['length_index']
+            traj_length = self.traj_info['obs_shape'][traj_length_index]
+            role = self.traj_info['role']
+            assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
 
-        observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
-        self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
-        # self.log("Got Obs shape {}".format(observations.shape))
+            observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+            self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
+            # self.log("Got Obs shape {}".format(observations.shape))
 
-        actions = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
-        self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
-        # self.log("Got Acs shape {}".format(actions.shape))
+            actions = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
+            self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
+            # self.log("Got Acs shape {}".format(actions.shape))
 
-        rewards = np.empty(self.traj_info['rew_shape'], dtype=np.float64)
-        self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
-        # self.log("Got Rewards shape {}".format(rewards.shape))
+            rewards = np.empty(self.traj_info['rew_shape'], dtype=np.float64)
+            self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
+            # self.log("Got Rewards shape {}".format(rewards.shape))
 
-        next_observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
-        self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
-        # self.log("Got Next Obs shape {}".format(next_observations.shape))
+            next_observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+            self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
+            # self.log("Got Next Obs shape {}".format(next_observations.shape))
 
-        dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
-        self.envs.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
-        # self.log("Got Dones shape {}".format(dones.shape))
+            dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
+            self.envs.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
+            # self.log("Got Dones shape {}".format(dones.shape))
 
-        self.step_count += traj_length
-        self.done_count += 1
-        self.steps_per_episode = traj_length
-        self.reward_per_episode = sum(rewards)
+            self.step_count += traj_length
+            self.done_count += 1
+            self.steps_per_episode = traj_length
+            self.reward_per_episode = sum(rewards)
 
-        # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-        # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-        # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
-        # self.log("From Env received Rew {}\n".format(rewards))
+            # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
+            # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+            # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
+            # self.log("From Env received Rew {}\n".format(rewards))
 
-        '''Assuming roles with same acs/obs dimension'''
-        exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.roles), observations.shape[-1]),
-                                     torch.from_numpy(actions).reshape(traj_length, len(self.roles), actions.shape[-1]),
-                                     torch.from_numpy(rewards).reshape(traj_length, len(self.roles), rewards.shape[-1]),
-                                     torch.from_numpy(next_observations).reshape(traj_length, len(self.roles), next_observations.shape[-1]),
-                                     torch.from_numpy(dones).reshape(traj_length, len(self.roles), dones.shape[-1])
-                                     )))
+            '''Assuming roles with same acs/obs dimension'''
+            exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.roles), observations.shape[-1]),
+                                         torch.from_numpy(actions).reshape(traj_length, len(self.roles), actions.shape[-1]),
+                                         torch.from_numpy(rewards).reshape(traj_length, len(self.roles), rewards.shape[-1]),
+                                         torch.from_numpy(next_observations).reshape(traj_length, len(self.roles), next_observations.shape[-1]),
+                                         torch.from_numpy(dones).reshape(traj_length, len(self.roles), dones.shape[-1])
+                                         )))
 
-        self.buffer.push(exp)
+            self.buffer.push(exp)
 
-        # self.close()
+            # self.close()
 
     def _connect_menvs(self):
         # Connect with MultiEnv
@@ -220,6 +219,7 @@ class MPILearner(Learner):
             self.log("{} agents created of type {}".format(len(agents), str(agents[0])))
         else:
             assert "Some error on creating agents"
+        self.metrics_env = {agent.id:[] for agent in agents}
         return agents
 
     def create_algorithm(self):

@@ -43,11 +43,15 @@ class MADDPGAlgorithm(DDPGAlgorithm):
             self.target_critic = copy.deepcopy(self.critic)
             self.optimizer_function = getattr(torch.optim, self.optimizer_function)
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
-            self.update = self.update_permutes
+            self._update = self.update_permutes
         elif self.method == "critics":
-            self.update = self.update_critics
+            self._update = self.update_critics
         else:
             assert "MADDPG Method {} is not implemented".format(self.method)
+
+    def update(self, agents, buffer, step_count, episodic):
+        for _ in range(self.update_iterations):
+            self._update(agents, buffer, step_count, episodic)
 
     def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
