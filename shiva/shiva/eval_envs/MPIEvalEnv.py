@@ -135,7 +135,7 @@ class MPIEvalEnv(Environment):
             # self.log('Made it to 124')
             self.actions = recv_action
             # self.log("The action is {}".format(self.actions.shape))
-            self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions, is_eval=True)
+            self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
             # self.log('Made it to 127 {}'.format(self.rewards))
 
             for i in range(len(self.rewards)):

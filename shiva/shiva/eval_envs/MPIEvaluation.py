@@ -108,7 +108,7 @@ class MPIEvaluation(Evaluation):
                     self.io.send(True, dest=0, tag=Tags.io_eval_request)
                     _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
                     np.save(path+'/episode_evaluations',self.evals[i])
-                    self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
+                    # self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
                     new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
                     self.agent_ids[i] = new_agent
                     print('New Eval Agent: {}'.format(new_agent))

@@ -321,7 +321,7 @@ class rc_env:
 
 
     def Step(self, left_actions=[], right_actions=[], left_options=[],
-            right_options=[], left_actions_OH = [], right_actions_OH = [], eval_flag=False):
+            right_options=[], left_actions_OH = [], right_actions_OH = []):
         '''
             Description
                 Method for the agents to take a single step in the environment.
@@ -354,15 +354,8 @@ class rc_env:
         [self.Queue_action(i,self.left_base,left_actions[i],left_options) for i in range(len(left_actions))]
         [self.Queue_action(j,self.right_base,right_actions[j],right_options) for j in range(len(right_actions))]
 
-        if eval_flag:
-            print("Getting here at holy guacamole")
-
         self.sync_after_queue.wait()
-        if eval_flag:
-            print("Getting here at holy moly")
         self.sync_before_step.wait()
-        if eval_flag:
-            print("Getting here at holy cow")
 
         return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
