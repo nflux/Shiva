@@ -203,11 +203,13 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.teams = []
         self.totalRewards = []
         self.teamLength = len(agents)/n
+        print("n :", n)
+        print("Length of Agents ", len(agents) )
         breaker = False
         r = r
         # p: Agent A To Match
         # p = 0
-        p = random.randrange(len(agents) - 1)
+        p = random.randrange(len(agents))
         # k: The Rest of the Agents to try to to match to 
         k = 0
         # t: the Number of Teams that has been made. 
@@ -222,7 +224,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             if(self.assignedOrNot[p]):
                 while(self.assignedOrNot[p] and False in self.assignedOrNot):
                     random.seed()
-                    p = random.randrange(len(agents) - 1)
+                    p = random.randrange(len(agents))
                     print("STATUS In Assigned Or Not", self.assignedOrNot)
                     print("STATUS In Assigned Or Not on p", p)
                     print("Assigned Or Not" , self.assignedOrNot[p])
@@ -260,9 +262,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
             print("Counter n:", n)
             print("Counter r:", r)
             print("Counter ag:", ag)
+            print("Team Length", self.teamLength)
             print(self.assignedOrNot)
-            if( ag != self.teamLength and k != p and k< len(agents) and probMatching <= r and (self.assignedOrNot[k] == False)  and (self.assignedOrNot[p] == False)):
-                print("Hello WORLD")
+            if( self.teamLength > 1 and k != p and k< len(agents) and probMatching <= r and (self.assignedOrNot[k] == False)  and (self.assignedOrNot[p] == False)):
+                print("Hello WORLD1")
                 print(t)
                 print(self.totalRewards)
                 self.teams[t-1][ag] = (agents[k])
@@ -271,11 +274,31 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 self.assignedOrNot[p] = True
                 self.assignedOrNot[k] = True
                 
-                p= random.randrange(len(agents) - 1)
+                
+                p= random.randrange(len(agents))
                 teamCreated = False
                 k = 0
                 ag = ag + 1
             # If It ran through the entire list of agents and no match is found expand probability of success number by factor of orignalR
+            elif( 1 == self.teamLength and k< len(agents)  and  (self.assignedOrNot[p] == False)):
+                print("Hello WORLD2")
+                print(t)
+                print(self.totalRewards)
+                self.assignedOrNot[p] = True
+                p= random.randrange(len(agents))
+                teamCreated = False
+                k = 0
+                ag = ag + 1
+
+            elif(  k != p and k< len(agents)  and  (self.assignedOrNot[p] == False) and p == len(agents)-1 and (self.teamLength % 2 != 0)):
+                print("Hello WORLD3")
+                print(t)
+                print(self.totalRewards)
+                self.assignedOrNot[p] = True
+                p= random.randrange(len(agents))
+                teamCreated = False
+                k = 0
+                ag = ag + 1
             
             elif ((self.assignedOrNot[p] == False) and k == len(agents)):
                 print("Increase R")
