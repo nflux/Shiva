@@ -248,9 +248,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                         self.totalRewards[x].append(rewards[p])
                     
                 print("STATUS", self.status)
-    #             teams.append(agent[p])
-    #             agentID.append(p)
-    #             totalRewards.append(agent[p])
+
                 # Increment T-index to track how many teams have been have
                 # NOTE: May have one-off error. 
                 print("TEAM", t)
