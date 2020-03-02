@@ -20,6 +20,7 @@ class MPIMultiEnv(Environment):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEnv, self).__init__(self.configs)
+        self._connect_io_handler()
         self.log("Received config with {} keys".format(len(self.configs.keys())))
         # Open Port for Learners
         self.port = MPI.Open_port(MPI.INFO_NULL)
@@ -158,8 +159,11 @@ class MPIMultiEnv(Environment):
         self.log("Got {} EnvSpecs".format(len(envs_spec)))
 
     def load_agents(self):
-        '''Load path is fixed'''
-        return flat_1d_list([Admin._load_agents(learner_spec['load_path']) for learner_spec in self.learners_specs])
+        self.io.send(True, dest=0, tag=Tags.io_menv_request)
+        _ = self.io.recv(None, source=0, tag=Tags.io_menv_request)
+        agents = flat_1d_list([Admin._load_agents(learner_spec['load_path']) for learner_spec in self.learners_specs])
+        self.io.send(True, dest=0, tag=Tags.io_menv_request)
+        return agents
 
     def _receive_learner_spec(self, learner_ix):
         learner_spec = self.learners.recv(None, source=learner_ix, tag=Tags.specs)
@@ -217,6 +221,11 @@ class MPIMultiEnv(Environment):
             'num_envs': self.num_envs,
             'num_learners': self.num_learners
         }
+
+    def _connect_io_handler(self):
+        self.log('Sending IO Connectiong Request')
+        self.io = MPI.COMM_WORLD.Connect(self.menvs_io_port, MPI.INFO_NULL)
+        self.log('IOHandler connected')
 
     def close(self):
         comm = MPI.Comm.Get_parent()

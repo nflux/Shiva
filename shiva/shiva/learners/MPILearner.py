@@ -23,6 +23,7 @@ class MPILearner(Learner):
         self.configs = self.meta.scatter(None, root=0)
         # print("Config {}".format(self.configs))
         super(MPILearner, self).__init__(self.id, self.configs)
+        self._connect_io_handler()
         self.log("Received config with {} keys".format(len(self.configs.keys())))
         Admin.init(self.configs['Admin'])
         Admin.add_learner_profile(self, function_only=True)
@@ -90,15 +91,16 @@ class MPILearner(Learner):
                 for ix in range(len(self.agents)):
                     self.agents[ix].step_count = self.step_count
                     self.agents[ix].done_count = self.done_count
-                # self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-                Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
                 '''No need to send message to MultiEnv'''
                 # for ix in range(self.num_menvs):
                 #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
                 if self.done_count % self.save_checkpoint_episodes == 0:
-                    Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
+                    # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True)
+                    self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
                 '''Send Updated Agents to Meta'''
                 # # self.log("Sending metrics to Meta")
@@ -240,6 +242,20 @@ class MPILearner(Learner):
             buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
         self.log("Buffer created of type {}".format(buffer_class))
         return buffer
+
+    def _connect_io_handler(self):
+        self.log('Sending IO Connectiong Request')
+        self.io = MPI.COMM_WORLD.Connect(self.learners_io_port, MPI.INFO_NULL)
+        self.log('IOHandler connected')
+        # self.io_request = dict()
+        # self.io_pbt_request = dict()
+        # self.io_pbt_request['path'] = self.eval_path+'Agent_'
+
+    def _io_checkpoint(self, checkpoint_num, function_only, use_temp_folder):
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
+        _ = self.io.recv(None, source=0, tag=Tags.io_learner_request)
+        Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
+        self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
     def close(self):
         comm = MPI.Comm.Get_parent()

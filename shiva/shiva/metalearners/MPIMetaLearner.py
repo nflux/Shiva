@@ -5,6 +5,7 @@ from mpi4py import MPI
 
 from shiva.core.admin import logger
 from shiva.metalearners.MetaLearner import MetaLearner
+from shiva.utils.Tags import Tags
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
 from shiva.helpers.misc import terminate_process
 
@@ -16,6 +17,7 @@ class MPIMetaLearner(MetaLearner):
         self.launch()
 
     def launch(self):
+        self._launch_io_handler()
         self._launch_menvs()
         self._launch_learners()
         self.run()
@@ -24,6 +26,22 @@ class MPIMetaLearner(MetaLearner):
         while True:
             learner_specs = self.learners.gather(None, root=MPI.ROOT)
             self.log("Got Learners metrics {}".format(learner_specs))
+
+    def _launch_io_handler(self):
+        self.io = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/helpers/io_handler.py'], maxprocs=1)
+        self.io.send(self.configs, dest=0, tag=Tags.configs)
+        self.io_specs = self.io.recv(None, source=0, tag=Tags.io_config)
+        if 'Learner' in self.configs:
+            self.configs['Environment']['menvs_io_port'] = self.io_specs['menvs_port']
+            self.configs['Learner']['learners_io_port'] = self.io_specs['learners_port']
+            # self.configs['Evaluation']['evals_io_port'] = self.io_specs['evals_port']
+        else:
+            '''With the learners_map, self.configs['Leraner'] dict doesn't exist yet - will try some approaches here'''
+            self.configs['IOHandler'] = {}
+            self.configs['Environment']['menvs_io_port'] = self.io_specs['menvs_port']
+            self.configs['IOHandler']['menvs_io_port'] = self.io_specs['menvs_port']
+            self.configs['IOHandler']['learners_io_port'] = self.io_specs['learners_port']
+            # self.configs['IOHandler']['evals_io_port'] = self.io_specs['evals_port']
 
     def _launch_menvs(self):
         self.menv_configs = self._get_menv_configs()
@@ -70,6 +88,7 @@ class MPIMetaLearner(MetaLearner):
                 learner_config = load_config_file_2_dict(config_path)
                 learner_config = merge_dicts(self.configs, learner_config)
                 learner_config['Learner']['roles'] = learner_roles
+                learner_config['Learner']['learners_io_port'] = self.configs['IOHandler']['learners_io_port']
                 self.learners_configs.append(learner_config)
         elif 'Learner' in self.configs:
             self.learners_configs = [self.configs.copy() for _ in range(self.num_learners)]
@@ -78,6 +97,8 @@ class MPIMetaLearner(MetaLearner):
         return self.learners_configs
 
     def _preprocess_config(self):
+        if not hasattr(self, 'pbt'):
+            self.configs['MetaLearner']['pbt'] = False
         if hasattr(self, 'learners_map'):
             # calculate number of learners using the learners_map dict
             self.num_learners = len(set(self.learners_map.keys()))
@@ -95,6 +116,5 @@ class MPIMetaLearner(MetaLearner):
 
     def close(self):
         '''Send message to childrens'''
-        #
         self.menvs.Disconnect()
         self.learners.Disconnect()
