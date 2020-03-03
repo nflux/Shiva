@@ -36,17 +36,22 @@ class DDPGAgent(Agent):
         
         if self.continuous == 0:
             self.action_space = 'discrete'
-            # print(self.action_space)
-            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete, self.param, networks['actor'])
+            actor_input = obs_space
+            actor_output = self.discrete
+            self.get_action = self.get_discrete_action
         elif self.discrete == 0:
             self.action_space = 'continuous'
-            # print(self.action_space)
-            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.continuous, self.param, networks['actor'])
+            actor_input = obs_space
+            actor_output = self.continuous
+            self.get_action = self.get_continuous_action
         else:
-            # print("DDPG Agent, check if this makes sense for parameterized robocup")
-            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete+self.param, self.param, networks['actor'])
-        self.target_actor = copy.deepcopy(self.actor)
+            self.action_space = 'parametrized'
+            actor_input = obs_space
+            actor_output = self.discrete + self.param
+            self.get_action = self.get_parameterized_action
 
+        self.actor = SoftMaxHeadDynamicLinearNetwork(actor_input, actor_output, self.param, networks['actor'])
+        self.target_actor = copy.deepcopy(self.actor)
         if not hasattr(self, 'critic_input_size'):
             self.critic_input_size = obs_space + self.acs_space
 
@@ -62,20 +67,20 @@ class DDPGAgent(Agent):
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
 
-    def get_action(self, observation, step_count, one_hot=True, evaluate=None):
-        if evaluate is not None:
-            self.evaluate = evaluate
-        if self.action_space == 'discrete':
-            return self.get_discrete_action(observation, step_count, one_hot, self.evaluate)
-        elif self.action_space == 'continuous':
-            return self.get_continuous_action(observation, step_count, self.evaluate)
-        elif self.action_space == 'parameterized':
-            assert "DDPG Parametrized NotImplemented"
-            pass
-            return self.get_parameterized_action(observation, self.evaluate)
+    # def _get_action(self, observation, step_count, one_hot=True, evaluate=None):
+    #     if evaluate is not None:
+    #         self.evaluate = evaluate
+    #     if self.action_space == 'discrete':
+    #         return self.get_discrete_action(observation, step_count, one_hot, self.evaluate)
+    #     elif self.action_space == 'continuous':
+    #         return self.get_continuous_action(observation, step_count, self.evaluate)
+    #     elif self.action_space == 'parameterized':
+    #         assert "DDPG Parametrized NotImplemented"
+    #         pass
+    #         return self.get_parameterized_action(observation, self.evaluate)
 
-    def get_discrete_action(self, observation, step_count, one_hot, evaluate):
-        if evaluate:
+    def get_discrete_action(self, observation, step_count, one_hot=True, evaluate=False):
+        if self.evaluate:
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
             # print("Agent Evaluate {}".format(action))
         else:
@@ -97,7 +102,7 @@ class DDPGAgent(Agent):
         return action.tolist()
 
     def get_continuous_action(self,observation, step_count, evaluate):
-        if evaluate:
+        if self.evaluate:
             observation = torch.tensor(observation).float().to(self.device)
             action = self.actor(observation)
         else:
@@ -116,8 +121,8 @@ class DDPGAgent(Agent):
 
         return action.tolist()
 
-    def get_parameterized_action(self, observation, step_count, evaluate):
-        if evaluate:
+    def get_parameterized_action(self, observation, step_count, evaluate=False):
+        if self.evaluate:
             observation = torch.tensor(observation).to(self.device)
             action = self.actor(observation.float())           
         else:

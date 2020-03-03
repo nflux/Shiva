@@ -23,7 +23,7 @@ class IOHandler(object):
         self.specs = self._get_io_specs()
         self.log('Opened Ports: {}'.format(self.specs))
         self.meta.send(self.specs,dest=0,tag=Tags.io_config)
-        self.log('Sent Meta my specs')
+        # self.log('Sent Meta my specs')
         self._connect_ports()
         self.log('Ports have been connected')
         self.info = MPI.Status()
@@ -69,26 +69,25 @@ class IOHandler(object):
 
     def service_learner_requests(self):
         if self.learners.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_learner_request):
-            _ = self.learners.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_learner_request,status=self.info)
+            _ = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_learner_request, status=self.info)
             source = self.info.Get_source()
-            self.learners.send(True, dest=source,tag=Tags.io_learner_request)
-            _ = self.learners.recv(None, source=source,tag=Tags.io_learner_request)
+            self.learners.send(True, dest=source, tag=Tags.io_learner_request)
+            _ = self.learners.recv(None, source=source, tag=Tags.io_learner_request)
 
     def service_menv_requests(self):
-        if self.menvs.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_menv_request):
-            if self.menvs.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_menv_request):
-                self.menvs.recv(None  ,source=MPI.ANY_SOURCE,tag=Tags.io_menv_request,status=self.info)
-                source = self.info.Get_source()
-                self.menvs.send(True, dest=source,tag=Tags.io_menv_request)
-                _ = self.menvs.recv(None, source=source,tag=Tags.io_menv_request)
+        if self.menvs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.io_menv_request):
+            self.menvs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_menv_request, status=self.info)
+            source = self.info.Get_source()
+            self.menvs.send(True, dest=source,tag=Tags.io_menv_request)
+            _ = self.menvs.recv(None, source=source, tag=Tags.io_menv_request)
 
 
     def service_eval_requests(self):
-        if self.evals.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_eval_request):
-            _ = self.evals.recv(None,source=MPI.ANY_SOURCE,tag=Tags.io_eval_request,status=self.info)
+        if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.io_eval_request):
+            _ = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_eval_request, status=self.info)
             source = self.info.Get_source()
-            self.evals.send(True, dest=source,tag=Tags.io_eval_request)
-            _ = self.evals.recv(None, source=source,tag=Tags.io_eval_request)
+            self.evals.send(True, dest=source, tag=Tags.io_eval_request)
+            _ = self.evals.recv(None, source=source, tag=Tags.io_eval_request)
 
 
     def log(self, msg, to_print=False):

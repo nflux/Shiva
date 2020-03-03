@@ -43,13 +43,15 @@ class MPIMultiEnv(Environment):
         self.log(self.env_specs)
         info = MPI.Status()
 
-        '''Note: all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI'''
+        '''
+            Check if we can do a numpy step instead of python list
+            If obs dimensions for all roles are the same, then we can do MPI
+        '''
         try:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         except:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
 
-        self.log("{}".format([str(agent) for agent in self.agents]))
         while True:
             self._step_python()
             # self._step_numpy()
@@ -113,7 +115,7 @@ class MPIMultiEnv(Environment):
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
 
-        self.log("{}\n{}\n{}\n{}".format([str(a) for a in self.agents], self.role2agent, self.envs_role2learner, self._obs_recv_buffer))
+        # self.log("{}\n{}\n{}\n{}".format([str(a) for a in self.agents], self.role2agent, self.envs_role2learner, self._obs_recv_buffer))
 
         if 'Unity' in self.type or 'Particle' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
@@ -161,9 +163,29 @@ class MPIMultiEnv(Environment):
     def load_agents(self):
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
         _ = self.io.recv(None, source=0, tag=Tags.io_menv_request)
-        agents = flat_1d_list([Admin._load_agents(learner_spec['load_path']) for learner_spec in self.learners_specs])
+        agents = self.agents
+        for learner_spec in self.learners_specs:
+            '''Need to load ONLY the agents that are not being evaluated'''
+            if not learner_spec['evaluate']:
+                learner_agents = Admin._load_agents(learner_spec['load_path'])
+                for a in learner_agents:
+                    agents[self.env_specs['roles'].index(a.role)] = a
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
+        # self.log("Loading {}".format([str(agent) for agent in agents]))
         return agents
+
+    def load_agents_init(self):
+        self.io.send(True, dest=0, tag=Tags.io_menv_request)
+        _ = self.io.recv(None, source=0, tag=Tags.io_menv_request)
+        agents = [i for i in range(len(self.env_specs['roles']))]
+        for learner_spec in self.learners_specs:
+            learner_agents = Admin._load_agents(learner_spec['load_path'])
+            for a in learner_agents:
+                agents[self.env_specs['roles'].index(a.role)] = a
+        self.io.send(True, dest=0, tag=Tags.io_menv_request)
+        # self.log("Loading Init {}".format([str(agent) for agent in agents]))
+        return agents
+        # return flat_1d_list([Admin._load_agents(learner_spec['load_path']) for learner_spec in self.learners_specs])
 
     def _receive_learner_spec(self, learner_ix):
         learner_spec = self.learners.recv(None, source=learner_ix, tag=Tags.specs)
@@ -182,7 +204,7 @@ class MPIMultiEnv(Environment):
             self._receive_learner_spec(ix)
         self.log("Got {} Learners: {}".format(len(self.learners_specs), self.learners_specs))
 
-        self.agents = self.load_agents()
+        self.agents = self.load_agents_init()
 
         '''Create Role->AgentIX mapping'''
         self.role2agent = {}
