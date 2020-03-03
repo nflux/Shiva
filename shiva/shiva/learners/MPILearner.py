@@ -22,6 +22,7 @@ class MPILearner(Learner):
         # Receive Config from Meta
         self.configs = self.meta.scatter(None, root=0)
         # print("Config {}".format(self.configs))
+        self.set_default_configs()
         super(MPILearner, self).__init__(self.id, self.configs)
         self._connect_io_handler()
         self.log("Received config with {} keys".format(len(self.configs.keys())))
@@ -71,12 +72,11 @@ class MPILearner(Learner):
         self.update_num = 0
         self.steps_per_episode = 0
         self.reward_per_episode = 0
-        self.train = True
 
         # '''Used for calculating collection time'''
         # t0 = time.time()
         # n_episodes = 500
-        while self.train:
+        while True:
             self._receive_trajectory_numpy()
 
             # '''Used for calculating collection time'''
@@ -222,11 +222,13 @@ class MPILearner(Learner):
         else:
             assert "Some error on creating agents"
         self.metrics_env = {agent.id:[] for agent in agents}
+
+        for _agent in agents:
+            _agent.evaluate = True
         return agents
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
-        self.configs['Agent']['evaluate'] = self.evaluate
         self.configs['Algorithm']['roles'] = self.roles if hasattr(self, 'roles') else []
         alg = algorithm_class(self.observation_space, self.action_space, self.configs)
         self.log("Algorithm created of type {}".format(algorithm_class ))
@@ -250,6 +252,10 @@ class MPILearner(Learner):
         # self.io_request = dict()
         # self.io_pbt_request = dict()
         # self.io_pbt_request['path'] = self.eval_path+'Agent_'
+
+    def set_default_configs(self):
+        if not hasattr(self, 'evaluate'):
+            self.configs['Learner']['evaluate'] = False
 
     def _io_checkpoint(self, checkpoint_num, function_only, use_temp_folder):
         self.io.send(True, dest=0, tag=Tags.io_learner_request)

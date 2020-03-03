@@ -61,7 +61,7 @@ class MPIEnv(Environment):
         self.menv.gather(self.observations, root=0)
         self.actions = self.menv.scatter(None, root=0)
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-        self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards))
+        # self.print("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards))
 
     def _step_numpy(self):
         self.observations = self.env.get_observations()
@@ -267,6 +267,10 @@ class MPIEnv(Environment):
     def close(self):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
+
+    def print(self, msg, to_print=False):
+        text = "{}\t\t\t{}".format(str(self), msg)
+        print(text)
 
     def log(self, msg, to_print=False):
         text = "{}\t\t\t{}".format(str(self), msg)

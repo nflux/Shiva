@@ -86,11 +86,10 @@ class MADDPGAlgorithm(DDPGAlgorithm):
         # self.log("States from Buff {}".format(bf_rewards.reshape(1, -1)))
         '''Do all permutations of experiences to concat for the 1 single critic'''
         possible_permutations = set(permutations(np.arange(len(agents))))
-        # self.log("will update with {} different permutations".format(len(possible_permutations)))
+        self.log('Updating {} on permutations {}'.format([str(agent) for agent in agents], possible_permutations))
         for perms_ix, perms in enumerate(possible_permutations):
             agent_ix = perms[0]
             agent = agents[agent_ix]
-            self.log('Updating {} on permutation #{} -> {}'.format(agent, perms_ix, perms))
             permutate_f = partial(_permutate, p=perms, dim=0)
             states = permutate_f(bf_states.to(self.device))
             actions = permutate_f(bf_actions.to(self.device))
