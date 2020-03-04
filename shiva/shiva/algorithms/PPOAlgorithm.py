@@ -45,10 +45,9 @@ class PPOAlgorithm(Algorithm):
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
         done_masks = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
-        #Calculate approximated state values and next state values using the critic
+        # Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float()).to(self.device)
         next_values = agent.critic(next_states.float()).to(self.device)
-
 
         new_rewards = []
         advantage = []
@@ -67,36 +66,36 @@ class PPOAlgorithm(Algorithm):
                     gae = delta + self.gamma * self.gae_lambda * gae
                 new_rewards.insert(0, gae+values[i])
                 advantage.insert(0, gae)
-        #Format discounted rewards and advantages for torch use
+        # Format discounted rewards and advantages for torch use
         new_rewards = torch.tensor(new_rewards).float().to(self.device)
         advantage = torch.tensor(advantage).float().to(self.device)
-        #Normalize the advantages
+        # Normalize the advantages
         advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
-        #Calculate log probabilites of the old policy for the policy objective
+        # Calculate log probabilites of the old policy for the policy objective
         if type(logprobs) == np.ndarray:
             old_log_probs = torch.from_numpy(logprobs).float().detach().to(self.device)
         else:
             old_log_probs = logprobs.clone().detach().to(self.device)
 
-        #Update model weights for a configurable amount of epochs
+        # Update model weights for a configurable amount of epochs
         for epoch in range(self.configs[0]['update_epochs']):
             values = agent.critic(states.float()).to(self.device)
-            #Calculate Discounted Rewards and Advantages using the General Advantage Equation
+            # Calculate Discounted Rewards and Advantages using the General Advantage Equation
 
-            #Calculate log probabilites of the new policy for the policy objective
+            # Calculate log probabilites of the new policy for the policy objective
             current_action_probs = self.softmax(agent.actor(states.float()))
             # print(current_action_probs)
             dist2 = Categorical(current_action_probs)
             log_probs = dist2.log_prob(actions)
-            #Use entropy to encourage further exploration by limiting how sure
-            #the policy is of a particular action
+            # Use entropy to encourage further exploration by limiting how sure
+            # the policy is of a particular action
             entropy = dist2.entropy()
-            #Find the ratio (pi_new / pi_old)
+            # Find the ratio (pi_new / pi_old)
             ratios = torch.exp(log_probs - old_log_probs)
-            #Calculate objective functions
+            # Calculate objective functions
             surr1 = ratios * advantage
             surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage
-            #Zero Optimizer, Calculate Losses, Backpropagate Gradients
+            # Zero Optimizer, Calculate Losses, Backpropagate Gradients
             agent.optimizer.zero_grad()
             self.policy_loss = -torch.min(surr1,surr2).mean()
             self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()

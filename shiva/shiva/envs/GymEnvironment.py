@@ -34,11 +34,13 @@ class GymEnvironment(Environment):
 
         self.last_action = None
 
-    def step(self, action, discrete_select='argmax'):
+    def step(self, action, discrete_select='argmax', device='cpu'):
         self.acs = action
         # print(self.action_space_continuous)
 
         if discrete_select == 'argmax':
+            if type(action) == torch.Tensor:
+                action = action.cpu().numpy()
             action4Gym = np.argmax(action) if self.action_space_continuous is None else action
         elif discrete_select == 'sample':
             # print(action)

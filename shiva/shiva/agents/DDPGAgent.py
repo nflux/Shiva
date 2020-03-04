@@ -59,8 +59,9 @@ class DDPGAgent(Agent):
             else:
                 self.ou_noise.set_scale(self.training_noise)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-                action = torch.tensor(action.cpu().numpy() + self.ou_noise.noise())
-                action = softmax(action)
+                action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+                action = torch.abs(action)
+                action = action / action.sum()
 
                 # lets test when we dont softmax here, so far it seems okay, maybe a little less stable than without it
                 # action = softmax(action)

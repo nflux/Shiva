@@ -17,13 +17,11 @@ class SingleAgentLearner(Learner):
             self.env.reset()
             while not self.env.is_done():
                 self.step()
-                # self.alg.update(self.agent, self.buffer, self.env.step_count)
+                self.alg.update(self.agent, self.buffer, self.env.step_count)
                 self.collect_metrics()
                 if self.is_multi_process_cutoff(): return None # PBT Cutoff
                 else: continue
-            self.alg.update(self.agent, self.buffer, self.env.step_count)
-            self.collect_metrics()
-            self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
+            # self.alg.update(self.agent, self.buffer, self.env.step_count, episodic=True)
             self.collect_metrics(episodic=True)
             self.checkpoint()
             print('Episode {} complete on {} steps!\tEpisodic reward: {} '.format(self.env.done_count, self.env.steps_per_episode, self.env.reward_per_episode))
@@ -48,12 +46,14 @@ class SingleAgentLearner(Learner):
                                                 torch.from_numpy(next_observation), torch.from_numpy(np.array([done])).bool()))))
         else:
             action = self.agent.get_action(observation, self.env.step_count)
-            next_observation, reward, done, more_data = self.env.step(action, device=self.device)
-            t = [observation, more_data['action'], reward, next_observation, int(done)]
-            # print(action)
-            # input()
-            exp = copy.deepcopy(t)
-            self.buffer.append(exp)
+            next_observation, reward, done, more_data = self.env.step(action, discrete_select=self.select, device=self.device)
+            exp = copy.deepcopy([torch.tensor(observation),
+                                 torch.tensor(more_data['action']),
+                                 torch.tensor(reward),
+                                 torch.tensor(next_observation),
+                                 torch.tensor(int(done))
+                                 ])
+            self.buffer.push(exp)
         """"""
 
 
@@ -79,7 +79,10 @@ class SingleAgentLearner(Learner):
 
     def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
+        if 'Gym' in self.configs['Environment']['type']:
+            return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, obs_dim, ac_dim)
+        else:
+            return buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
 
     def launch(self):
         self.env = self.create_environment()

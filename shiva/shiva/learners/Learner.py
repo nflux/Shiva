@@ -80,7 +80,6 @@ class Learner(object):
 
         else:
             metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
-
             if not episodic:
                 for metric_name, y_val in metrics:
                     Admin.add_summary_writer(self, getattr(self, attr), metric_name, y_val, self.env.step_count)

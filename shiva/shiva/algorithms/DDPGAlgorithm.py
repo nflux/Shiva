@@ -108,15 +108,15 @@ class DDPGAlgorithm(Algorithm):
         else:
             Q_next_states_target = agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
 
-        print('dones', dones.size())
+        # print('dones', dones.size())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones] = 0.0
         # Use the Bellman equation.
         y_i = rewards.unsqueeze(dim=-1) + self.gamma * Q_next_states_target
 
         # Get Q values of the batch from states and actions.
-        # if self.a_space == 'discrete':
-        #     actions = one_hot_from_logits(actions)
+        if self.a_space == 'discrete':
+            actions = one_hot_from_logits(actions)
             # print(actions)
 
         # Grab the discrete actions in the batch
@@ -208,16 +208,16 @@ class DDPGAlgorithm(Algorithm):
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
-                # ('Algorithm/Actor_Loss', self.actor_loss),
-                # ('Algorithm/Critic_Loss', self.critic_loss)
+                ('Algorithm/Actor_Loss', self.actor_loss),
+                ('Algorithm/Critic_Loss', self.critic_loss)
             ]
             # # not sure if I want this all of the time
             # for i, ac in enumerate(self.action_space['acs_space']):
             #     metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
         else:
             metrics = [
-                ('Algorithm/Actor_Loss', self.actor_loss),
-                ('Algorithm/Critic_Loss', self.critic_loss)                
+                # ('Algorithm/Actor_Loss', self.actor_loss),
+                # ('Algorithm/Critic_Loss', self.critic_loss)
             ]
         return metrics
 
