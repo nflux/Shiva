@@ -25,6 +25,7 @@ class Algorithm():
         self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
+        self.num_updates = 0
         
     def update(self, agent, data, episodic=False):
         '''
@@ -39,6 +40,9 @@ class Algorithm():
                 None
         '''
         assert "Method Not Implemented"
+
+    def get_num_updates(self):
+        return self.num_updates
 
     def get_action(self, agent, observation):
         '''

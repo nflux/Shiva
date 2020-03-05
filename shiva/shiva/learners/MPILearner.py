@@ -69,7 +69,7 @@ class MPILearner(Learner):
         self.log("Waiting for trajectories..")
         self.step_count = 0
         self.done_count = 0
-        self.update_num = 0
+        self.num_updates = 0
         self.steps_per_episode = 0
         self.reward_per_episode = 0
 
@@ -87,10 +87,11 @@ class MPILearner(Learner):
 
             if not self.evaluate and len(self.buffer) > self.buffer.batch_size and (self.done_count % self.episodes_to_update == 0):
                 self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
-                self.update_num += 1
+                self.num_updates = self.alg.get_num_updates()
                 for ix in range(len(self.agents)):
                     self.agents[ix].step_count = self.step_count
                     self.agents[ix].done_count = self.done_count
+                    self.agents[ix].num_updates = self.num_updates
                 # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
                 self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
@@ -188,7 +189,7 @@ class MPILearner(Learner):
             'evaluate': self.evaluate,
             'roles': self.roles,
             'num_agents': self.num_agents,
-            'update_num': self.update_num,
+            'num_updates': self.num_updates,
             'load_path': Admin.get_temp_directory(self),
             'metrics': {}
         }
@@ -210,7 +211,9 @@ class MPILearner(Learner):
 
     def create_agents(self):
         if self.load_agents:
+            self.log("Loading.. {}".format(self.load_agents))
             agents = Admin._load_agents(self.load_agents, absolute_path=False)
+            self.log("{} agents loaded".format([str(a) for a in agents]))
         if hasattr(self, 'roles'):
             self.agents_dict = {role:self.alg.create_agent_of_role(role) for ix, role in enumerate(self.roles)}
             self.log(self.agents_dict)
@@ -224,7 +227,7 @@ class MPILearner(Learner):
         self.metrics_env = {agent.id:[] for agent in agents}
 
         for _agent in agents:
-            _agent.evaluate = True
+            _agent.evaluate = self.evaluate
         return agents
 
     def create_algorithm(self):

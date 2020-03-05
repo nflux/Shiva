@@ -54,6 +54,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
     def update(self, agents, buffer, step_count, episodic):
         for _ in range(self.update_iterations):
             self._update(agents, buffer, step_count, episodic)
+        self.num_updates += self.update_iterations
 
     def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
@@ -210,7 +211,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
         #         # Ezequiel: curious if here is doing a second softmax?
         #         bf_actions[:, ix, :] = softmax(bf_actions[:, ix, :])
 
-        self.log("States from Buff {}".format(rewards.reshape(1, -1)))
+        # self.log("States from Buff {}".format(rewards.reshape(1, -1)))
         for agent_ix, agent in enumerate(agents):
             batch_size, num_agents, obs_dim = states.shape
             _, _, acs_dim = actions.shape
@@ -314,7 +315,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
             if role not in roles_action_space:
                 '''Here is DDPG collapse because we are running a Gym (or similar with single agent)'''
                 roles_action_space[role] = roles_action_space
-            self.log(role, roles_action_space)
+            # self.log(role, roles_action_space)
             if roles_action_space[role]['continuous'] == 0:
                 roles_action_space[role]['type'] = 'discrete'
             elif roles_action_space[role]['discrete'] == 0:
