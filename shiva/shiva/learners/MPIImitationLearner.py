@@ -67,7 +67,7 @@ class MPIImitationLearner(Learner):
 
         # Initialize inter components
         self.alg = self.create_algorithm()
-        self.buffer = self.create_buffer()
+        self.super_buffer, self.buffer = self.create_buffer()
         self.agents, self.agent_ids = self.create_agents()
         if self.pbt:
             self.create_pbt_dirs()
@@ -277,10 +277,12 @@ class MPIImitationLearner(Learner):
 
     def create_buffer(self):
         # TensorBuffer
-        buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], 1, self.observation_space, self.action_space['acs_space'])
-        self.log("Buffer created of type {}".format(buffer_class))
-        return buffer
+        super_buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type1'])
+        dagger_buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type2'])
+        super_buffer = super_buffer_class(self.configs['Buffer']['super_capacity'], self.configs['Buffer']['super_batch_size'], 1, self.observation_space, self.action_space['acs_space'])
+        dagger_buffer = dagger_buffer_class(self.configs['Buffer']['dagger_capacity'], self.configs['Buffer']['dagger_batch_size'], 1, self.observation_space, self.action_space['acs_space'])
+        self.log("Buffer created of type {}".format(super_buffer_class))
+        return super_buffer, dagger_buffer
 
     def save_pbt_agents(self):
         for agent in self.agents:
