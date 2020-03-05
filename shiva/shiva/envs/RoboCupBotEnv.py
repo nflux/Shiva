@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-import os, subprocess, time, signal, argparse, configparser, ast
+import os, subprocess, time, signal
+import argparse, configparser, ast
+import random
 
 import robocup.HFO.hfo as hfo
 
@@ -35,6 +37,7 @@ class RoboCupBotEnv:
         {setattr(self, k, v) for k,v in config.items()}
         self.viewer = None
         self.port = port
+        self.seed = random.randint(0, 10000)
 
     # found from https://github.com/openai/gym-soccer/blob/master/gym_soccer/envs/soccer_env.py
     def _start_hfo_server(self):
@@ -94,6 +97,7 @@ class RoboCupBotEnv:
             self._start_viewer()
         
         while True:
+            # time.sleep(0.001)
             pass
 
 if __name__ == "__main__":

@@ -10,9 +10,6 @@ from torch.distributions import Categorical
 class RoboCupTwoSidedEnvironment(Environment):
     def __init__(self, config):
         super(RoboCupTwoSidedEnvironment, self).__init__(config)
-        np.random.seed(self.seed)
-        torch.manual_seed(self.seed)
-        # self.port = port
         self.env = rc_env(config)
         self.env.launch()
 

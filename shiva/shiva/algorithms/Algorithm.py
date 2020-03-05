@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import random
 
 class Algorithm():
     def __init__(self, obs_space, acs_space, configs):
@@ -23,9 +24,11 @@ class Algorithm():
         self.action_space = acs_space
         self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        torch.manual_seed(self.manual_seed)
-        np.random.seed(self.manual_seed)
-        
+        random_seed = random.randint(0, 10000)
+        torch.manual_seed(random_seed)
+        np.random.seed(random_seed)
+        random.seed(random_seed)
+
     def update(self, agent, data, episodic=False):
         '''
             Updates the agents network using the data

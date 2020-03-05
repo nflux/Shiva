@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import random
 
 class Environment:
     def __init__(self, configs):
@@ -13,8 +14,11 @@ class Environment:
         self.done_count = 0
         self.total_episodes_to_play = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        torch.manual_seed(self.manual_seed)
-        np.random.seed(self.manual_seed)
+        random_seed = random.randint(0, 10000)
+        torch.manual_seed(random_seed)
+        np.random.seed(random_seed)
+        random.seed(random_seed)
+        self.seed = random.randint(0, 10000)
 
 
     def step(self,actions):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import time, subprocess
 import numpy as np
-import sys, time, traceback
+import sys, traceback
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 from mpi4py import MPI
@@ -228,6 +228,19 @@ class MPIEnv(Environment):
         # initiate env from the config
         self.env = self.create_environment()
 
+        time.sleep(3)
+
+        cmd = [os.getcwd() + '/shiva/envs/RoboCupBotEnv.py', '-p', str(self.imit_port), '-s', str()]
+        self.bot_process = subprocess.Popen(cmd, shell=False)
+
+        while True:
+            try:
+                self.comm = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.comm.connect(('127.0.0.1', self.imit_port+3))
+                break
+            except:
+                time.sleep(0.1)
+
     def _connect_learners(self):
         #self.log("Waiting Learners info")
         self.learners_specs = self.menv.bcast(None, root=0) # Wait until Learners info arrives from MultiEnv
@@ -240,6 +253,7 @@ class MPIEnv(Environment):
 
     def create_environment(self):
         self.configs['Environment']['port'] += (self.id * 10)
+        self.imit_port = self.configs['Environment']['port'] + 3
         self.configs['Environment']['worker_id'] = self.id * 11
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
