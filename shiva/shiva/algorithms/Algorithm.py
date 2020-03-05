@@ -23,6 +23,8 @@ class Algorithm():
         self.action_space = acs_space
         self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
         
     def update(self, agent, data, episodic=False):
         '''

@@ -97,7 +97,7 @@ class RoboCupTwoSidedEnvironment(Environment):
             # act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
             left_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in left_actions]
             right_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in right_actions]
-        elif discrete_select == 'imit_discrete':
+        elif discrete_select == 'imit':
             act_choice = actions[0]
             # action = action2one_hot(self.acs_discrete, action.item())
             # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
@@ -129,12 +129,6 @@ class RoboCupTwoSidedEnvironment(Environment):
                 else:
                     self.right_actions[a] = 2
                     self.kicks += 1
-            
-            # if is_eval:
-            #     print("Ez is even cooler")
-            #     print("Daniel left {}, right {}, left_op {}, right_op {}".format(self.left_actions, self.right_actions, self.left_action_option, self.right_action_option))
-            # else:
-            #     print("Ez left {}, right {}, left_op {}, right_op {}".format(self.left_actions, self.right_actions, self.left_action_option, self.right_action_option))
 
             self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
                                                                     left_options=self.left_action_option, right_options=self.right_action_option)
