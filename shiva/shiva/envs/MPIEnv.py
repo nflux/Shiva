@@ -44,7 +44,7 @@ class MPIEnv(Environment):
     def run(self):
         self.env.reset()
         while True:
-            time.sleep(0.001)
+            time.sleep(0.1)
             while self.env.start_env():
                 self._step_numpy()
                 self._append_step()
@@ -197,9 +197,8 @@ class MPIEnv(Environment):
 
         self.done_count +=1
 
-
+        time.sleep(1)
         self.reset_buffers()
-        # time.sleep(5)
 
     def create_buffers(self):
         if 'Unity' in self.type:
@@ -227,6 +226,7 @@ class MPIEnv(Environment):
     def _launch_env(self):
         # initiate env from the config
         self.env = self.create_environment()
+
 
     def _connect_learners(self):
         #self.log("Waiting Learners info")

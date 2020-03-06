@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
 from mpi4py import MPI
 import numpy as np
-import pandas as pd
+
 
 from shiva.core.admin import logger
 from shiva.eval_envs.Evaluation import Evaluation

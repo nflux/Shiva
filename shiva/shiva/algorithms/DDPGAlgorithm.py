@@ -50,17 +50,17 @@ class DDPGAlgorithm(Algorithm):
 
         agent.ou_noise.reset()
 
-        if step_count < self.agent.exploration_steps:
-            '''
-                Don't update during exploration!
-            '''
-            return
+        #if step_count < self.agent.exploration_steps:
+            #return
 
         '''
             Updates starts here
         '''
         self.critic_learning_rate = agent.critic_learning_rate
         self.actor_learning_rate = agent.actor_learning_rate
+        print('Algorithm Actor Learning Rate{}'.format(self.actor_learning_rate))
+        print('Algorithm Critic Learning Rate{}'.format(self.critic_learning_rate))
+        print('Updates: {}'.format(self.updates))
         for i in range(self.updates):
 
             # try:
@@ -77,11 +77,7 @@ class DDPGAlgorithm(Algorithm):
             # rewards = rewards.squeeze(1).to(self.device)
             # next_states = next_states.squeeze(1).to(self.device)
             # dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
-            #print('States: {} \n States Size: {}'.format(states,states.size()))
-            #print('Actions: {} \n Actions Size: {}'.format(actions,actions.size()))
-            #print('Rewards: {} \n Rewards Size: {}'.format(rewards,rewards.size()))
-            #print('Next States: {} \n Next States Size: {}'.format(next_states,next_states.size()))
-            #print('Dones: {} \n Dones Size: {}'.format(dones,dones.size()))
+
 
 
             # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))

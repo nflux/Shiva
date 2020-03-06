@@ -16,6 +16,8 @@ class GymEnvironment(Environment):
         self.action_space_continuous = None
         self.action_space_discrete = None
         self.observation_space = self.set_observation_space()
+        #self.seed = np.random.randint(0, 10000)
+        #self.env.seed(self.seed)
 
         if self.action_space == "discrete":
             self.action_space = {
