@@ -211,10 +211,9 @@ class MPILearner(Learner):
 
     def create_agents(self):
         if self.load_agents:
-            self.log("Loading.. {}".format(self.load_agents))
             agents = Admin._load_agents(self.load_agents, absolute_path=False)
             self.log("{} agents loaded".format([str(a) for a in agents]))
-        if hasattr(self, 'roles'):
+        elif hasattr(self, 'roles'):
             self.agents_dict = {role:self.alg.create_agent_of_role(role) for ix, role in enumerate(self.roles)}
             self.log(self.agents_dict)
             agents = list(self.agents_dict.values())
@@ -249,7 +248,7 @@ class MPILearner(Learner):
         return buffer
 
     def _connect_io_handler(self):
-        self.log('Sending IO Connectiong Request')
+        # self.log('Sending IO Connectiong Request')
         self.io = MPI.COMM_WORLD.Connect(self.learners_io_port, MPI.INFO_NULL)
         self.log('IOHandler connected')
         # self.io_request = dict()
