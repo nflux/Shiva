@@ -15,12 +15,12 @@ class DDPGAgent(Agent):
     def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
         self.agent_config = agent_config
-        try:
-            torch.manual_seed(self.manual_seed)
-            np.random.seed(self.manual_seed)
-        except:
-            torch.manual_seed(5)
-            np.random.seed(5)
+        # try:
+        #     torch.manual_seed(self.manual_seed)
+        #     np.random.seed(self.manual_seed)
+        # except:
+        #     torch.manual_seed(5)
+        #     np.random.seed(5)
 
         self.id = id
 
@@ -32,7 +32,7 @@ class DDPGAgent(Agent):
         '''
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']
-        self.param = acs_space['discrete']
+        self.param = acs_space['param']
         self.acs_space = acs_space['acs_space']
         self.step_count = 0
         self.done_count = 0

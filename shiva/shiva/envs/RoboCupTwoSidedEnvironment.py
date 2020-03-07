@@ -94,12 +94,9 @@ class RoboCupTwoSidedEnvironment(Environment):
             # act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
             left_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in left_actions]
             right_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in right_actions]
-        elif discrete_select == 'imit':
-            act_choice = actions[0]
-            # action = action2one_hot(self.acs_discrete, action.item())
-            # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
-
-        # self.left_actions = act_choice.unsqueeze(dim=-1)
+        elif discrete_select == 'supervised':
+            left_act_choice = [la for la in left_actions]
+            right_act_choice = [ra for ra in right_actions]
 
         if self.action_level == 'discretized':
             self.left_action_option = left_act_choice

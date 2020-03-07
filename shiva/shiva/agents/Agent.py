@@ -1,5 +1,6 @@
 import torch
 import torch.nn
+import numpy as np
 
 class Agent(torch.nn.Module):
 
@@ -21,6 +22,9 @@ class Agent(torch.nn.Module):
         self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
+
 
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)

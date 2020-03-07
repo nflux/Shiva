@@ -89,86 +89,79 @@ class MPIImitationLearner(Learner):
         self.update_num = 0
         self.steps_per_episode = 0
         self.reward_per_episode = 0
-        self.train = True
+        self.dagger = True
         self.save_flag = True
 
-        # '''Used for calculating collection time'''
-        # t0 = time.time()
-        # n_episodes = 500
         while self.train:
-            time.sleep(0.001)
+            while not self.dagger:
+                time.sleep(0.001)
+                self._receive_super_trajectory_numpy()
 
-            self._receive_trajectory_numpy()
+                self.log('Episodes collected: {}'.format(self.done_count))
 
-            self.log('Episodes collected: {}'.format(self.done_count))
-
-            # '''Used for calculating collection time'''
-            # if self.done_count == n_episodes:
-            #     t1 = time.time()
-            #     self.log("Collected {} episodes in {} seconds".format(n_episodes, (t1-t0)))
-            #     exit()
-
-
-            '''Change freely condition when to update'''
-            if self.done_count % self.episodes_to_update == 0:
-                self.alg.update(self.agents[0], self.buffer, self.step_count, episodic=True)
-                self.update_num += 1
-                self.agents[0].step_count = self.step_count
-                self.agents[0].done_count = self.done_count
-                self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                '''Change freely condition when to update'''
+                if self.done_count % self.episodes_to_update == 0:
+                    self.alg.super_update(self.agents[0], self.buffer, self.step_count, episodic=True)
+                    self.update_num += 1
+                    self.agents[0].step_count = self.step_count
+                    self.agents[0].done_count = self.done_count
+                    self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
                 for ix in range(self.num_menvs):
                     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+                
+                self.collect_metrics(episodic=True)
+            
+            while self.dagger:
+                time.sleep(0.001)
+                self._receive_dagger_trajectory_numpy()
 
-                if self.pbt:
-                    self._io_save_pbt_agents()
-                    #if self.save_flag:
-                        # self.log("MPI LEARNER SAVED THE AGENT")
-                        #Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                if self.done_count % self.save_checkpoint_episodes == 0:
-                    self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
-                    #self.save_flag = False
+                '''Change freely condition when to update'''
+                if self.done_count % self.episodes_to_update == 0:
+                    self.alg.dagger_update(self.agents[0], self.buffer, self.step_count, episodic=True)
+                    self.update_num += 1
+                    self.agents[0].step_count = self.step_count
+                    self.agents[0].done_count = self.done_count
+                    self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
-                #self.log("This is printing at 122")
-            '''if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.save_agents):
-                self.save_flag = self.menv.recv(source=MPI.ANY_SOURCE, tag=Tags.save_agents)'''
-
-                #self.log("Sending Agent Step # {} to all MultiEnvs".format(self.step_count))
-                # Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-
-                # for ix in range(self.num_menvs):
-                #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
-
-            if self.done_count % self.evolution_episodes == 0 and self.pbt:
-                self.log('Requesting evolution config')
-                self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
-
-            if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config):
-                '''Assumes one agent'''
-                for agent in self.agents:
-                    self.log("Before the recv evo config")
-                    self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
-                    self.log('Received evolution config')
-                    if self.evolution_config['evolution'] == False:
-                        continue
-                    setattr(self, 'exploitation', self.evolution_config['exploitation'])
-                    setattr(self, 'exploration', self.evolution_config['exploration'])
-                    self.log('Starting Evolution')
-                    self.exploitation = getattr(self, self.exploitation)
-                    self.exploration = getattr(self, self.exploration)
-                    self.exploitation(agent,self.evolution_config)
-                    self.exploration(agent)
-
-                    #self.save_pbt_agents()
                     for ix in range(self.num_menvs):
                         self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
+                    if self.pbt:
+                        self._io_save_pbt_agents()
 
-                    self.log('Evolution Complete')
+                    if self.done_count % self.save_checkpoint_episodes == 0:
+                        self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
-            self.collect_metrics(episodic=True)
+                if self.done_count % self.evolution_episodes == 0 and self.pbt:
+                    self.log('Requesting evolution config')
+                    self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
 
-    def _receive_trajectory_numpy(self):
+                if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config):
+                    '''Assumes one agent'''
+                    for agent in self.agents:
+                        self.log("Before the recv evo config")
+                        self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
+                        self.log('Received evolution config')
+                        if self.evolution_config['evolution'] == False:
+                            continue
+                        setattr(self, 'exploitation', self.evolution_config['exploitation'])
+                        setattr(self, 'exploration', self.evolution_config['exploration'])
+                        self.log('Starting Evolution')
+                        self.exploitation = getattr(self, self.exploitation)
+                        self.exploration = getattr(self, self.exploration)
+                        self.exploitation(agent,self.evolution_config)
+                        self.exploration(agent)
+
+                        #self.save_pbt_agents()
+                        for ix in range(self.num_menvs):
+                            self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+
+                        self.log('Evolution Complete')
+
+                self.collect_metrics(episodic=True)
+
+    def _receive_super_trajectory_numpy(self):
         '''Receive trajectory from each single environment in self.envs process group'''
         '''Assuming 1 Agent here (no support for MADDPG), may need to iterate thru all the indexes of the @traj'''
 
@@ -179,6 +172,7 @@ class MPIImitationLearner(Learner):
         '''Assuming 1 Agent here'''
         self.metrics_env = self.traj_info['metrics']
         traj_length = self.traj_info['length']
+        self.dagger = self.traj_info['super_done']
 
         #self.log("{}".format(self.traj_info))
 
@@ -217,6 +211,61 @@ class MPIImitationLearner(Learner):
                                      torch.from_numpy(next_observations),
                                      torch.from_numpy(dones)
                                      )))
+        self.super_buffer.push(exp)
+    
+    def _receive_dagger_trajectory_numpy(self):
+        '''Receive trajectory from each single environment in self.envs process group'''
+        '''Assuming 1 Agent here (no support for MADDPG), may need to iterate thru all the indexes of the @traj'''
+
+        info = MPI.Status()
+        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
+        env_source = info.Get_source()
+
+        '''Assuming 1 Agent here'''
+        self.metrics_env = self.traj_info['metrics']
+        traj_length = self.traj_info['length']
+
+        #self.log("{}".format(self.traj_info))
+
+        observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+        self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
+        # self.log("Got Obs shape {}".format(observations.shape))
+
+        actions = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
+        self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
+        # self.log("Got Acs shape {}".format(actions.shape))
+
+        rewards = np.empty(self.traj_info['rew_shape'], dtype=np.float64)
+        self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
+        # self.log("Got Rewards shape {}".format(rewards.shape))
+
+        next_observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+        self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
+        # self.log("Got Next Obs shape {}".format(next_observations.shape))
+
+        dones = np.empty(self.traj_info['done_shape'], dtype=np.bool)
+        self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
+        # self.log("Got Dones shape {}".format(dones.shape))
+
+        expert_actions = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+        self.envs.Recv([expert_actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_expert_actions)
+
+        self.step_count += traj_length
+        self.done_count += 1
+        self.steps_per_episode = traj_length
+        self.reward_per_episode = sum(rewards)
+
+        # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
+        # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+        # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
+
+        exp = list(map(torch.clone, (torch.from_numpy(observations),
+                                     torch.from_numpy(actions),
+                                     torch.from_numpy(rewards) ,
+                                     torch.from_numpy(next_observations),
+                                     torch.from_numpy(dones),
+                                     torch.from_numpy(expert_actions)
+                                     )))
         self.buffer.push(exp)
 
     def _connect_menvs(self):
@@ -251,6 +300,7 @@ class MPIImitationLearner(Learner):
             'port': self.port,
             'menv_port': self.menv_port,
             'load_path': Admin.get_temp_directory(self),
+            'super_ep': self.super_ep
         }
 
     def get_metrics(self, episodic=False):

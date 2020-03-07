@@ -384,7 +384,7 @@ class rc_env:
         '''
         Descritize a parameterized action
         '''
-        act_choice = torch.argmax(action[:self.num_actions])
+        act_choice = np.argmax(action[:self.num_actions])
         params = action[self.num_actions:]
 
         if act_choice == 0: # Dash

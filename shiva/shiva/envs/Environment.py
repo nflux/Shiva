@@ -18,7 +18,6 @@ class Environment:
         torch.manual_seed(random_seed)
         np.random.seed(random_seed)
         random.seed(random_seed)
-        self.seed = random.randint(0, 10000)
 
 
     def step(self,actions):

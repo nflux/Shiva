@@ -194,13 +194,13 @@ class ImitationAlgorithm(Algorithm):
 class ImitationRoboCupAlgorithm(Algorithm):
     def __init__(self, observation_space, action_space, configs):
         super(ImitationRoboCupAlgorithm, self).__init__(observation_space, action_space, configs)
-        self.discrete = action_space['acs_space']
-        self.param = action_space['param']
+        self.action_space = action_space
         self.loss = 0
+        self.actor_learning_rate = 0
     
-    def supervised_update(self, agent, minibatch, step_n):
+    def supervised_update(self, agent, buffer, step_n):
 
-        states, actions, rewards, next_states, dones = minibatch
+        states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
 
         # zero optimizer
         agent.actor_optimizer.zero_grad()
@@ -216,33 +216,48 @@ class ImitationRoboCupAlgorithm(Algorithm):
         self.loss.backward()
         agent.actor_optimizer.step()
     
-    def dagger_update(self, imitation_agent, minibatch, step_n):
+    def dagger_update(self, agent, buffer, step_n):
 
-        states, actions, rewards, next_states, dones, expert_actions = minibatch
+        self.actor_learning_rate = agent.actor_learning_rate
+
+        states, actions, rewards, next_states, dones, expert_actions = buffer.sample(device=self.device)
 
         # zero optimizer
-        imitation_agent.actor_optimizer.zero_grad()
+        agent.actor_optimizer.zero_grad()
 
-        action_prob_dist = imitation_agent.actor(states)
+        action_prob_dist = agent.actor(states)
         # print('before', action_prob_dist)
 
         if (len(actions.shape) > 1):
-            action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[len(actions.shape)-1])
+            action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[-1])
         else:
             action_prob_dist = action_prob_dist.view(actions.shape[0])
-        
-        # print('after', action_prob_dist)
-        # print('exper', expert_actions)
 
         #calculate loss based on loss functions dictated in the configs
         self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
         # print('Dagger_loss:', self.loss)
         self.loss.backward()
-        imitation_agent.actor_optimizer.step()
+        agent.actor_optimizer.step()
 
     def create_agent(self):
-        new_agent = DDPGAgent(self.id_generator(),self.observation_space,self.discrete+self.param,self.discrete,self.configs[1],self.configs[2])
+        new_agent = DDPGAgent(self.id_generator(),self.observation_space,self.action_space,self.configs['Agent'],self.configs['Network'])
         return new_agent
+    
+    def get_metrics(self, episodic=False):
+        if not episodic:
+            metrics = [
+                # ('Algorithm/Actor_Loss', self.actor_loss),
+                # ('Algorithm/Critic_Loss', self.critic_loss)
+            ]
+            # # not sure if I want this all of the time
+            # for i, ac in enumerate(self.action_space['acs_space']):
+            #     metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
+        else:
+            metrics = [
+                ('Algorithm/Actor_Loss', self.loss.item()),
+                ('Actor Learning Rate: ', self.actor_learning_rate),)
+            ]
+        return metrics
     
     def get_loss(self):
         return self.loss
