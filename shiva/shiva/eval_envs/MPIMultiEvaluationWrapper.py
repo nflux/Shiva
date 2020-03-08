@@ -118,11 +118,15 @@ class MPIMultiEvaluationWrapper(Evaluation):
             #print('Multi Evaluations: ',self.evaluations)
 
     def initial_agent_selection(self):
+        reward = np.array([10,10,10,10,10])
+        # self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
+        # dictionaryAgents = self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
+        # for x in range(dictionaryAgents):
+        #     print("X Agents:" dictionaryAgents[x])
         for i in range(self.num_evals):
             self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))[0]
             print('Selected Evaluation Agents for Environment {}: {}'.format(i, self.agent_sel))
             self.evals.send(self.agent_sel,dest=i,tag=Tags.new_agents)
-
 
     #Agent Selection currently randomly Selects an agent. 
     def agent_selection(self,env_rank):
@@ -240,7 +244,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                     print("STATUS In Assigned Or Not on p", p)
                     print("Assigned Or Not" , self.assignedOrNot[p])
                     
-            if( ((np.sum(self.assignedOrNot) % n) == 0 ) and (t != n) and teamCreated == False):
+            if( ( ((np.sum(self.assignedOrNot) % self.teamLength) == 0 )) and (t != n) and teamCreated == False):
                 # Append a New Team 
                 for x in range(t,t+1):
                     self.status.append([])
@@ -294,6 +298,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 # print(self.totalRewards)
                 self.assignedOrNot[p] = True
                 self.agentIDDict[agents[p]] = True
+                # self.teams[t-1][ag] = (agents[p])
                 p= random.randrange(len(agents))
                 teamCreated = False
                 k = 0
@@ -306,6 +311,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 # print(self.totalRewards)
                 self.assignedOrNot[p] = True
                 self.agentIDDict[agents[p]] = True
+                self.teams[t-1][ag] = (agents[p])
                 p= random.randrange(len(agents))
                 teamCreated = False
                 k = 0
@@ -329,16 +335,19 @@ class MPIMultiEvaluationWrapper(Evaluation):
                         print("e", e)
                         print("FINAL Assigned OR Not", self.assignedOrNot)
                         print("FINAL DICT Assigned Or Not",self.agentIDDict )
-                    if(breaker == False):
+                    if(breaker == False and n != 1):
                         #Needs to Scramble and Restart Search. 
                         # breaker = False
                         localE = e
-                        while(e < (localE + 1)):
+                        while(e < (localE + 1) and n != 1):
                             i = 0
                             while(i< len(self.teams[e])):
                                 self.assignedOrNot[self.teams[e][i]] = False
                                 i = i + 1
-                            self.teams.pop(e)
+                            print("POP Confirmed")
+                            # self.teams.pop(e)
+                            # self.teams.remove(e)
+                            del self.teams[e]
                             e = e + 1
                             ag = 1
                             t = t - 1
@@ -369,6 +378,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         # IF MATCHING FAILS REMATCH. 
         print("FINAL Assigned OR Not", self.assignedOrNot)
         print("FINAL DICT Assigned Or Not",self.agentIDDict )
+        print("THE FINAL TEAMS", self.teams)
         return self.teams
             
 
