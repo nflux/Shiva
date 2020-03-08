@@ -119,6 +119,7 @@ class MPIEvaluation(Evaluation):
                     self.evals[i].fill(0)
                     self.eval_counts[i]=0
                     self.io.send(True, dest=0, tag=Tags.io_eval_request)
+                time.sleep(0.1)
 
 
             #if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:

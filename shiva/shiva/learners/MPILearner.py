@@ -142,7 +142,7 @@ class MPILearner(Learner):
                 # for ix in range(self.num_menvs):
                 #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
-            if self.done_count % self.evolution_episodes == 0 and self.pbt:
+            if self.done_count % self.evolution_episodes == 0 and self.pbt and (self.done_count >= self.initial_evolution_episodes):
                 self.log('Requesting evolution config')
                 self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
 

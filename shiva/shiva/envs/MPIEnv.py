@@ -197,7 +197,7 @@ class MPIEnv(Environment):
 
         self.done_count +=1
 
-        time.sleep(1)
+        time.sleep(.5)
         self.reset_buffers()
 
     def create_buffers(self):

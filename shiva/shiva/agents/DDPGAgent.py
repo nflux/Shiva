@@ -21,7 +21,7 @@ class DDPGAgent(Agent):
         except:
             #torch.manual_seed(5)
             #np.random.seed(5)
-            self.seed = np.random.randint(0, 10000)
+            self.seed = np.random.randint(0, 100)
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
@@ -78,6 +78,7 @@ class DDPGAgent(Agent):
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
+
 
 
     def get_action(self, observation, step_count, evaluate=False):
@@ -178,14 +179,22 @@ class DDPGAgent(Agent):
     def perturb_hyperparameters(self,perturb_factor):
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor
         self.critic_learning_rate = self.critic_learning_rate * perturb_factor
-        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        for param_group in self.actor_optimizer.param_groups:
+            param_group['lr'] = self.actor_learning_rate
+        for param_group in self.critic_optimizer.param_groups:
+            param_group['lr'] = self.critic_learning_rate
+        #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
     def resample_hyperparameters(self):
         self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        for param_group in self.actor_optimizer.param_groups:
+            param_group['lr'] = self.actor_learning_rate
+        for param_group in self.critic_optimizer.param_groups:
+            param_group['lr'] = self.critic_learning_rate
+        #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
 
     def __str__(self):
