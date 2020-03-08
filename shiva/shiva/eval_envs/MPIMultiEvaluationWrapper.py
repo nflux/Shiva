@@ -40,6 +40,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.agent_ids = self.meta.bcast(None,root=0)
         print('Agent IDS: ', self.agent_ids)
         self.initial_agent_selection()
+
+        # THE START OF INITIATE MATCHING FUNCTION PIPELINE TEST
         self.log('Initiate Matching Function Test')
         self.eloProbability(100,200,10)
         self.CalculateEloReward(100,.50,10,1)
@@ -48,6 +50,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
         reward = np.array([10,10,10,10,10])
         self.Matcher(self.agent_ids, 1, reward, 0.50, 5,.10)
         self.log('End of Matching Function Test')
+
+        # THE END OF MATCHING FUNCTION PIPELINE TEST
         self.run()
 
     def run(self):
@@ -214,12 +218,12 @@ class MPIMultiEvaluationWrapper(Evaluation):
         r = r
         # p: Agent A To Match
         # p = 0
-        p = random.randrange(len(agents))
         # k: The Rest of the Agents to try to to match to 
-        k = 0
         # t: the Number of Teams that has been made. 
-        t = 0
         # ag: Agent counter
+        p = random.randrange(len(agents))
+        k = 0
+        t = 0
         ag = 1
         self.status = []
         while (breaker == False):
