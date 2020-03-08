@@ -198,16 +198,16 @@ class ImitationRoboCupAlgorithm(Algorithm):
         self.loss = 0
         self.actor_learning_rate = 0
     
-    def supervised_update(self, agent, buffer, step_n):
+    def supervised_update(self, agent, buffer, step_n, episodic=False):
 
         states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
 
         # zero optimizer
         agent.actor_optimizer.zero_grad()
 
-        action_prob_dist = agent.actor(states)
+        action_prob_dist = agent.actor(states.float())
 
-        actions = actions.detach()
+        actions = actions.detach().float()
 
         action_prob_dist = action_prob_dist.view(actions.shape)
 
@@ -216,7 +216,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
         self.loss.backward()
         agent.actor_optimizer.step()
     
-    def dagger_update(self, agent, buffer, step_n):
+    def dagger_update(self, agent, buffer, step_n, episodic=False):
 
         self.actor_learning_rate = agent.actor_learning_rate
 
@@ -225,7 +225,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
         # zero optimizer
         agent.actor_optimizer.zero_grad()
 
-        action_prob_dist = agent.actor(states)
+        action_prob_dist = agent.actor(states.float())
         # print('before', action_prob_dist)
 
         if (len(actions.shape) > 1):
@@ -234,7 +234,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
             action_prob_dist = action_prob_dist.view(actions.shape[0])
 
         #calculate loss based on loss functions dictated in the configs
-        self.loss = self.loss_calc(action_prob_dist, expert_actions).to(self.device)
+        self.loss = self.loss_calc(action_prob_dist, expert_actions.float()).to(self.device)
         # print('Dagger_loss:', self.loss)
         self.loss.backward()
         agent.actor_optimizer.step()

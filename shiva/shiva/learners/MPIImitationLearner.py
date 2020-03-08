@@ -90,7 +90,7 @@ class MPIImitationLearner(Learner):
         self.steps_per_episode = 0
         self.reward_per_episode = 0
         self.train = True
-        self.dagger = True
+        self.dagger = False
         self.save_flag = True
 
         while self.train:
@@ -102,7 +102,7 @@ class MPIImitationLearner(Learner):
 
                 '''Change freely condition when to update'''
                 if self.done_count % self.episodes_to_update == 0:
-                    self.alg.super_update(self.agents[0], self.buffer, self.step_count, episodic=True)
+                    self.alg.supervised_update(self.agents[0], self.super_buffer, self.step_count, episodic=True)
                     self.update_num += 1
                     self.agents[0].step_count = self.step_count
                     self.agents[0].done_count = self.done_count
@@ -248,7 +248,7 @@ class MPIImitationLearner(Learner):
         self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
         # self.log("Got Dones shape {}".format(dones.shape))
 
-        expert_actions = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+        expert_actions = np.empty(self.traj_info['expert_shape'], dtype=np.float64)
         self.envs.Recv([expert_actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_expert_actions)
 
         self.step_count += traj_length
