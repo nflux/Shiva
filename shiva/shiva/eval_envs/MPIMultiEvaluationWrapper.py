@@ -46,9 +46,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.eloProbability(100,200,10)
         self.CalculateEloReward(100,.50,10,1)
         # self.Matcher(self.agent_ids, 5, [0,1,2,3,4], 0.5, 100,.10)
-        agent = np.array([1,2,3,4])
         reward = np.array([10,10,10,10,10])
-        self.Matcher(self.agent_ids, 1, reward, 0.50, 5,.10)
+        self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
         self.log('End of Matching Function Test')
 
         # THE END OF MATCHING FUNCTION PIPELINE TEST
@@ -69,7 +68,6 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
                 print('Sent rankings to Meta')
                 self.sort = False
-
 
         self.close()
 
@@ -173,8 +171,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
 
     def TeamCompareProbability(self,team1Rewards,team2Rewards, r, scoreFactor):
-        boolResult = False
+        # boolResult = False
         prob = max(self.eloProbability(team1Rewards, team2Rewards, scoreFactor), self.eloProbability(team2Rewards, team1Rewards, scoreFactor))
+        print("TeamCompareProbability r: ",r)
+        print("TeamCompareProbability prob: ", prob)
         if (prob <= r):
             boolResult = True
         else:
@@ -188,9 +188,11 @@ class MPIMultiEvaluationWrapper(Evaluation):
 # EX: if agent ELO score or probability is 100 incremental 10, would mean try to match with 90 or 110, but if not found increase another 10. 
 # EX: Compare just the ELO Probability instead. 
 # Rewards contains the list of Rewards that Agent contains.
+# n = The number of Teams to create and divide among.
 # r = Probability Threshold of the winning versus lossing from the max of the two differences. 
-
 # scoreFactor = constant Score that you can get. 
+# increaseScale = the Rate of an increasing scale increases r at a rate. 
+
     def Matcher(self,agents, n, rewards, r, scoreFactor,increaseScale):
         if((len(agents) % n) != 0):
             print("WARNING Not enough Agents to make the Request Teams. Skipping EloMatcher")
@@ -246,12 +248,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
                     self.agentID.append([])
                     self.totalRewards.append([])
                     for y in range (0, int(self.teamLength)):
-                        self.status[x].append(1)
                         self.teams[x].append(agents[p])
                         self.agentID[x].append(p)
                         self.totalRewards[x].append(rewards[p])
                     
-                print("STATUS", self.status)
 
                 # Increment T-index to track how many teams have been have
                 # NOTE: May have one-off error. 
@@ -273,8 +273,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
             print(self.assignedOrNot)
             if( self.teamLength > 1 and k != p and k< len(agents) and probMatching <= r and (self.assignedOrNot[k] == False)  and (self.assignedOrNot[p] == False)):
                 print("Hello WORLD1")
-                print(t)
-                print(self.totalRewards)
+                # print(t)
+                # print(self.totalRewards)
                 self.teams[t-1][ag] = (agents[k])
                 self.totalRewards[t-1][ag] = (rewards[k])
                 self.agentID[t-1][ag] = k
@@ -282,17 +282,16 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 self.agentIDDict[agents[k]] = True
                 self.assignedOrNot[p] = True
                 self.assignedOrNot[k] = True
-                
-                
                 p= random.randrange(len(agents))
                 teamCreated = False
                 k = 0
                 ag = ag + 1
-            # If It ran through the entire list of agents and no match is found expand probability of success number by factor of orignalR
+
+
             elif( 1 == self.teamLength and k< len(agents)  and  (self.assignedOrNot[p] == False)):
                 print("Hello WORLD2")
-                print(t)
-                print(self.totalRewards)
+                # print(t)
+                # print(self.totalRewards)
                 self.assignedOrNot[p] = True
                 self.agentIDDict[agents[p]] = True
                 p= random.randrange(len(agents))
@@ -300,10 +299,11 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 k = 0
                 ag = ag + 1
 
-            elif(  k != p and k< len(agents)  and  (self.assignedOrNot[p] == False) and p == len(agents)-1 and (self.teamLength % 2 != 0)):
+            # If the Number of teams is an Odd Number
+            elif(  k != p and k< len(agents)  and  (self.assignedOrNot[p] == False) and np.sum(self.assignedOrNot) < len(agents) and (self.teamLength % 2 != 0)):
                 print("Hello WORLD3")
-                print(t)
-                print(self.totalRewards)
+                # print(t)
+                # print(self.totalRewards)
                 self.assignedOrNot[p] = True
                 self.agentIDDict[agents[p]] = True
                 p= random.randrange(len(agents))
@@ -311,6 +311,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 k = 0
                 ag = ag + 1
             
+            # If It ran through the entire list of agents and no match is found expand probability of success number by factor of orignalR
             elif ((self.assignedOrNot[p] == False) and k == len(agents)):
                 print("Increase R")
                 r = r + self.orignalR *increaseScale
@@ -330,23 +331,27 @@ class MPIMultiEvaluationWrapper(Evaluation):
                         print("FINAL DICT Assigned Or Not",self.agentIDDict )
                     if(breaker == False):
                         #Needs to Scramble and Restart Search. 
-                        breaker = False
+                        # breaker = False
                         localE = e
                         while(e < (localE + 1)):
                             i = 0
                             while(i< len(self.teams[e])):
                                 self.assignedOrNot[self.teams[e][i]] = False
                                 i = i + 1
+                            self.teams.pop(e)
                             e = e + 1
-
+                            ag = 1
+                            t = t - 1
                         #OBTAIN UI
     #                   return breaker  
     #  To be changed with Rescramble once reimplemented into pipeline. 
                         print("FINAL Assigned OR Not", self.assignedOrNot)
                         print("FINAL DICT Assigned Or Not",self.agentIDDict )
                         e = t
-                        # return self.teams
-    #                 e = e + 1
+                        
+                    if(n == 1):
+                        breaker = True
+
                     else:
                         print("FINAL Assigned OR Not", self.assignedOrNot)
                         print("FINAL DICT Assigned Or Not",self.agentIDDict )
