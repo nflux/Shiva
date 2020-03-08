@@ -181,6 +181,15 @@ class rc_env:
         self.left_agent_possesion = ['N'] * self.num_left
         self.right_agent_possesion = ['N'] * self.num_right
 
+        self.min_player_distance_to_ball = 10000
+        self.first_kick = False
+        self.initial_distance_to_opp_goal = None
+        self.initial_distance_to_own_goal = None
+        self.min_distance_to_opp_goal = None
+        self.min_distance_to_own_goal = None
+        self.inv_steps_to_goal = 0
+        self.inv_steps_to_kick = 0
+
     def set_observation_indexes(self):
 
         if self.feature_level == 'low':
@@ -535,6 +544,14 @@ class rc_env:
 
                     # Break if episode done
                     if self.d == True:
+                        self.min_player_distance_to_ball = 10000
+                        self.first_kick = False
+                        self.initial_distance_to_opp_goal = None
+                        self.initial_distance_to_own_goal = None
+                        self.min_distance_to_opp_goal = None
+                        self.min_distance_to_own_goal = None
+                        self.inv_steps_to_goal = 0
+                        self.inv_steps_to_kick = 0
                         break
             if self.close:
                 break
@@ -612,6 +629,7 @@ class rc_env:
         reward=0.0
         team_reward = 0.0
         goal_points = 10.0
+
         #---------------------------
         global possession_side
         if self.d:
@@ -718,6 +736,7 @@ class rc_env:
             # print(self.left_agent_possesion)
             if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
+                self.first_kick = True
                 reward += 1
                 team_reward += 1.5
 
@@ -916,3 +935,19 @@ class rc_env:
 
     def prox_2_dist(self, prox):
         return (prox+.8)/1.8
+
+
+    def set_lowest_player_distance_to_ball(self,obs):
+        if self.distance_to_ball(obs) < self.min_player_distance_to_ball:
+            self.min_player_distance_to_ball = self.distance_to_ball(obs)
+
+    def distance_to_opp_goal(self,obs):
+        goal_center_x = -1.0
+        goal_center_y = 0.0
+
+    def get_eval_metrics(self,obs):
+        metrics = dict()
+        metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball
+        metrics['first_kick'] = self.first_kick
+
+        return metrics

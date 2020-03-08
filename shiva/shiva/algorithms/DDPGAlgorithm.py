@@ -48,7 +48,7 @@ class DDPGAlgorithm(Algorithm):
         #     agent.ou_noise.reset()
         #     # return
 
-        #agent.ou_noise.reset()
+        agent.ou_noise.reset()
 
         #if step_count < self.agent.exploration_steps:
             #return
