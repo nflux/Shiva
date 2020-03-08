@@ -60,15 +60,15 @@ class DDPGAgent(Agent):
         self.critic = DynamicLinearNetwork(obs_space + self.acs_space, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
-        if agent_config['lr_range']:
-            #self.actor_learning_rate = random.uniform(agent_config['actor_learning_rate'][0],agent_config['actor_learning_rate'][1])
-            #self.critic_learning_rate = random.uniform(agent_config['critic_learning_rate'][0],agent_config['critic_learning_rate'][1])
+            #print('Critic LR: {}'.format(self.critic_learning_rate))
+            #print('Actor LR: {}'.format(self.actor_learning_rate))
+            self.critic_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
+            self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
             #print('Agent {}: Actor Learning Rate{}'.format(self.id,self.actor_learning_rate))
             #print('Agent {}: Critic Learning Rate{}'.format(self.id,self.critic_learning_rate))
-            self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
-            self.critic_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
-            #print('Actor LR: {}'.format(self.actor_learning_rate))
-            #print('Critic LR: {}'.format(self.critic_learning_rate))
+            #self.critic_learning_rate = random.uniform(agent_config['critic_learning_rate'][0],agent_config['critic_learning_rate'][1])
+            #self.actor_learning_rate = random.uniform(agent_config['actor_learning_rate'][0],agent_config['actor_learning_rate'][1])
+        if agent_config['lr_range']:
             self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
         else:
