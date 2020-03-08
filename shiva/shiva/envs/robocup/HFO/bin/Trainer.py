@@ -15,7 +15,7 @@ class DoneError(Exception):
 class Trainer(object):
   """ Trainer is responsible for setting up the players and game.
   """
-  def __init__(self, args, server_port=6001, coach_port=6002, is_learner=False, run_bots=False):
+  def __init__(self, args, server_port=6001, coach_port=6002, is_learner=False):
     self._serverPort = server_port  # The port the server is listening on
     self._coachPort = coach_port # The coach port to talk with the server
     self._isLearner = is_learner
@@ -23,7 +23,6 @@ class Trainer(object):
       self.train_type = 'Learner'
     else:
       self.train_type = 'Bot'
-    self._runBots = run_bots
     self._logDir = args.logDir # Directory to store logs
     self._record = args.record # Record states + actions
     self._numOffense = args.offenseAgents + args.offenseNPCs # Number offensive players

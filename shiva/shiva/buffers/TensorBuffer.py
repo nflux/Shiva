@@ -151,7 +151,7 @@ class MultiAgentDaggerTensorBuffer(ReplayBuffer):
             self.rew_buffer[:self.current_index, :, :],
             self.next_obs_buffer[:self.current_index, :, :],
             self.done_buffer[:self.current_index, :, :],
-            self.expert_acs_buffer[inds, :, :]
+            self.expert_acs_buffer[:self.current_index, :, :]
         ]
 
     def all_numpy(self, reshape_fn=None):
@@ -162,7 +162,7 @@ class MultiAgentDaggerTensorBuffer(ReplayBuffer):
             self.rew_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
             self.next_obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64),
             self.done_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.bool),
-            self.expert_acs_buffer[inds, :, :].cpu().detach().numpy().astype(np.float64)
+            self.expert_acs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(np.float64)
         ])
 
     def agent_numpy(self, agent_id, reshape_fn=None):
@@ -173,7 +173,7 @@ class MultiAgentDaggerTensorBuffer(ReplayBuffer):
             self.rew_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
             self.next_obs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
             self.done_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
-            self.expert_acs_buffer[inds, agent_id, :].cpu().detach().numpy()
+            self.expert_acs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy()
         ]
 
     def reset(self):

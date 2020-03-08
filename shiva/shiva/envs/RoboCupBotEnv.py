@@ -96,7 +96,8 @@ class RoboCupBotEnv:
             self._start_viewer()
         
         while True:
-            time.sleep(0.001)
+            pass
+            # time.sleep(0.001)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

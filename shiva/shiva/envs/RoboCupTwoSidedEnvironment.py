@@ -127,7 +127,7 @@ class RoboCupTwoSidedEnvironment(Environment):
             self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
                                                                     left_options=self.left_action_option, right_options=self.right_action_option)
             
-            actions_v = [action2one_hot(self.action_space['acs_space'], act) for act in left_act_choice]
+            # actions_v = [action2one_hot(self.action_space['acs_space'], act) for act in left_act_choice]
         else:
             self.left_actions = left_act_choice
             self.left_action_option = [a[self.action_space['acs_space']:] for a in left_actions]
@@ -136,7 +136,7 @@ class RoboCupTwoSidedEnvironment(Environment):
 
             self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
                                                                                                          left_options=self.left_action_option, right_options=self.right_action_option)
-            actions_v = [np.array([action2one_hot(self.action_space['acs_space'], act), op]) for act, op in zip(left_act_choice, self.left_action_option)]
+            # actions_v = [np.array([action2one_hot(self.action_space['acs_space'], act), op]) for act, op in zip(left_act_choice, self.left_action_option)]
 
         if collect:
             self.collect_metrics()
@@ -144,7 +144,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.obs = self.left_obs.tolist()+self.right_obs.tolist()
         self.rews = self.left_rews.tolist()+self.right_rews.tolist()
         
-        return self.obs, self.rews, self.done, {'raw_reward': self.left_rews, 'action': actions_v}
+        return self.obs, self.rews, self.done, {'raw_reward': self.left_rews}
 
     def get_observations(self):
         return self.obs

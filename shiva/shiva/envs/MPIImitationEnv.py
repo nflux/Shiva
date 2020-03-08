@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import time, subprocess
+import time, subprocess, socket
 import numpy as np
 import os, sys, traceback
 import random
@@ -113,10 +113,10 @@ class MPIRoboCupImitationEnv(Environment):
         '''
 
         self.send_imit_obs_msgs()
-        self.bot_action = self.recv_imit_acs_msgs()
+        self.actions = self.recv_imit_acs_msgs()
         self.observations = np.array(self.observations, dtype=np.float64)
 
-        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.bot_action, discrete_select='supervised')
+        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions, discrete_select='supervised')
 
     def _dagger_step_numpy(self):
         self.observations = self.env.get_observations()
@@ -148,7 +148,8 @@ class MPIRoboCupImitationEnv(Environment):
                                         torch.tensor([self.actions], dtype=torch.float64),
                                         torch.tensor([self.rewards], dtype=torch.float64).unsqueeze(dim=-1),
                                         torch.tensor([self.next_observations], dtype=torch.float64),
-                                        torch.tensor([self.dones], dtype=torch.bool).unsqueeze(dim=-1)
+                                        torch.tensor([self.dones], dtype=torch.bool).unsqueeze(dim=-1),
+                                        torch.tensor([self.bot_action], dtype=torch.float64)
                                         )))
         self.dagger_trajectory_buffer.push(exp)
 

@@ -388,16 +388,16 @@ class rc_env:
         params = action[self.num_actions:]
 
         if act_choice == 0: # Dash
-            power = params[0].clamp(-1,1)*100
-            degree = params[1].clamp(-1,1)*180
-            return self.REVERSE_ACTION_DICT[act_choice.item()][((self.pow_step*torch.round(power/self.pow_step)).item(), (self.degree_step*torch.round(degree/self.degree_step)).item())]
+            power = params[0].clip(-1,1)*100
+            degree = params[1].clip(-1,1)*180
+            return self.REVERSE_ACTION_DICT[act_choice][((self.pow_step*np.round(power/self.pow_step)), (self.degree_step*np.round(degree/self.degree_step)))]
         elif act_choice == 1: # Turn
-            degree = params[2].clamp(-1,1)*180
-            return self.REVERSE_ACTION_DICT[act_choice.item()][((self.degree_step*torch.round(degree/self.degree_step)).item(),)]
+            degree = params[2].clip(-1,1)*180
+            return self.REVERSE_ACTION_DICT[act_choice][((self.degree_step*np.round(degree/self.degree_step)),)]
         else: # Kick
-            power = ((params[3].clamp(-1,1) + 1)/2)*100
-            degree = params[4].clamp(-1,1)*180
-            return self.REVERSE_ACTION_DICT[act_choice.item()][((self.pow_step*torch.round(power/self.pow_step)).item(), (self.degree_step*torch.round(degree/self.degree_step)).item())]
+            power = ((params[3].clip(-1,1) + 1)/2)*100
+            degree = params[4].clip(-1,1)*180
+            return self.REVERSE_ACTION_DICT[act_choice][((self.pow_step*np.round(power/self.pow_step)), (self.degree_step*np.round(degree/self.degree_step)))]
 
     def get_valid_discrete_value(self, agentID, base):
         if self.left_base == base:
