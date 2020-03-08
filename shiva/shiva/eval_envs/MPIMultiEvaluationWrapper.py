@@ -331,13 +331,21 @@ class MPIMultiEvaluationWrapper(Evaluation):
                     if(breaker == False):
                         #Needs to Scramble and Restart Search. 
                         breaker = False
-                        e = t
+                        localE = e
+                        while(e < (localE + 1)):
+                            i = 0
+                            while(i< len(self.teams[e])):
+                                self.assignedOrNot[self.teams[e][i]] = False
+                                i = i + 1
+                            e = e + 1
+
                         #OBTAIN UI
-    #                     return breaker  
+    #                   return breaker  
     #  To be changed with Rescramble once reimplemented into pipeline. 
                         print("FINAL Assigned OR Not", self.assignedOrNot)
                         print("FINAL DICT Assigned Or Not",self.agentIDDict )
-                        return self.teams
+                        e = t
+                        # return self.teams
     #                 e = e + 1
                     else:
                         print("FINAL Assigned OR Not", self.assignedOrNot)
