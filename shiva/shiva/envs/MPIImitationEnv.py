@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import time, subprocess
 import numpy as np
-import sys, traceback
+import os, sys, traceback
 import random
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
@@ -26,7 +26,7 @@ class MPIRoboCupImitationEnv(Environment):
     def launch(self):
         # Receive Config from MultiEnv
         self.configs = self.menv.bcast(None, root=0)
-        super(MPIEnv, self).__init__(self.configs)
+        super(MPIRoboCupImitationEnv, self).__init__(self.configs)
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self._launch_env()
         # Check in and send single env specs with MultiEnv
@@ -35,6 +35,7 @@ class MPIRoboCupImitationEnv(Environment):
         # Check-in with MultiEnv that successfully connected with Learner
         self.menv.gather(self._get_env_state(), root=0)
         self.create_buffers()
+        self._launch_bot_env()
         # Wait for flag to start running
         #self.log("Waiting MultiEnv flag to start")
         start_flag = self.menv.bcast(None, root=0)
@@ -239,10 +240,9 @@ class MPIRoboCupImitationEnv(Environment):
     def _launch_env(self):
         # initiate env from the config
         self.env = self.create_environment()
-
-        time.sleep(6)
-
-        cmd = [os.getcwd() + '/shiva/envs/RoboCupBotEnv.py', '-p', str(self.imit_port), '-s', str(self.imit_seed)]
+    
+    def _launch_bot_env(self):
+        cmd = [os.getcwd() + '/shiva/envs/RoboCupBotEnv.py', '-p', str(self.imit_port), '-s', str(self.bot_seed)]
         self.bot_process = subprocess.Popen(cmd, shell=False)
 
         while True:
@@ -267,8 +267,8 @@ class MPIRoboCupImitationEnv(Environment):
     def create_environment(self):
         self.configs['Environment']['port'] += (self.id * 10)
         self.configs['Environment']['seed'] = random.randint(0, 10000)
-        self.imit_seed = self.configs['Environment']['seed']
         self.imit_port = self.configs['Environment']['port'] + 3
+        self.bot_seed = self.configs['Environment']['seed']
         self.configs['Environment']['worker_id'] = self.id * 11
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
@@ -336,7 +336,7 @@ class MPIRoboCupImitationEnv(Environment):
 
 if __name__ == "__main__":
     try:
-        env = MPIEnv()
+        env = MPIRoboCupImitationEnv()
     except Exception as e:
         print("Env error:", traceback.format_exc())
     finally:

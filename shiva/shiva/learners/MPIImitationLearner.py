@@ -23,7 +23,7 @@ class MPIImitationLearner(Learner):
     def launch(self):
         # Receive Config from Meta
         self.configs = self.meta.scatter(None, root=0)
-        super(MPILearner, self).__init__(self.id, self.configs)
+        super(MPIImitationLearner, self).__init__(self.id, self.configs)
         self._connect_io_handler()
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
 
@@ -89,6 +89,7 @@ class MPIImitationLearner(Learner):
         self.update_num = 0
         self.steps_per_episode = 0
         self.reward_per_episode = 0
+        self.train = True
         self.dagger = True
         self.save_flag = True
 
@@ -453,7 +454,7 @@ class MPIImitationLearner(Learner):
 
 if __name__ == "__main__":
     try:
-        l = MPILearner()
+        l = MPIImitationLearner()
     except Exception as e:
         print("Learner error:", traceback.format_exc())
     finally:

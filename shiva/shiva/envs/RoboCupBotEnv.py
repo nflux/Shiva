@@ -44,12 +44,12 @@ class RoboCupBotEnv:
         cmd = hfo.get_hfo_path() + \
                 " --headless --seed %i --frames-per-trial %i --untouched-time %i --offense-agents %i"\
                 " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
-                " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
+                " --port %i --offense-on-ball %i --ball-x-min %f"\
                 " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
                 " --logs-dir %s --message-size 256 --tackle-cycles 1 --no-offside --offside-area-size 0"\
                 % (self.seed, self.fpt, self.untouched_time, self.leftagents,
                     self.rightagents, self.leftbots, self.rightbots, self.port,
-                    self.offense_on_ball, self.seed, self.ball_x_min, self.ball_x_max,
+                    self.offense_on_ball, self.ball_x_min, self.ball_x_max,
                     self.ball_y_min, self.ball_y_max, self.log_dir)
         
         if self.leftbots > 0:   cmd += " --offense-team %s" \

@@ -541,46 +541,45 @@ class rc_env:
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def _start_hfo_server(self):
-            '''
-                Description
-                    Runs the HFO command to pass parameters to the server.
-                    Refer to `HFO/bin/HFO` to see how these params are added.
-            '''
-            cmd = self.hfo_path + \
-                  " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
-                  " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
-                  " --port %i --offense-on-ball %i --ball-x-min %f"\
-                  " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --logs-dir %s --seed %i --message-size 256"\
-                  % (self.ep_length, self.untouched, self.num_left,
-                     self.num_right, self.num_l_bot, self.num_r_bot, self.port,
-                     self.offense_ball, self.ball_x_min, self.ball_x_max,
-                     self.ball_y_min, self.ball_y_max, self.rc_log, self.seed)
-            #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
-            if self.num_l_bot > 0:   cmd += " --offense-team %s" \
-                % (self.left_bin)
-            if self.num_r_bot > 0:   cmd += " --defense-team %s" \
-                % (self.right_bin)
-            if not self.sync_mode:      cmd += " --no-sync"
-            if self.fullstate:          cmd += " --fullstate"
-            if self.determ:      cmd += " --deterministic"
-            if self.verbose:            cmd += " --verbose"
-            if not self.rcss_log:  cmd += " --no-logging"
-            if self.hfo_log:       cmd += " --hfo-logging"
-            if self.record_lib:             cmd += " --record"
-            if self.record_serv:      cmd += " --logs-gen-pt"
-            if self.run_imit:         cmd += " --run-bots"
-            if self.init_env:
-                cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
-                        " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
-                        " --change-balls-x %f --change-balls-y %f --control-rand-init"\
-                        % (self.agents_x_min, self.agents_x_max, self.agents_y_min, self.agents_y_max,
-                            self.change_every_x, self.change_agents_x, self.change_agents_y,
-                            self.change_ball_x, self.change_ball_y)
+        '''
+            Description
+                Runs the HFO command to pass parameters to the server.
+                Refer to `HFO/bin/HFO` to see how these params are added.
+        '''
+        cmd = self.hfo_path + \
+                " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i"\
+                " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
+                " --port %i --offense-on-ball %i --ball-x-min %f"\
+                " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
+                " --logs-dir %s --seed %i --message-size 256 --tackle-cycles 1 --no-offside --offside-area-size 0"\
+                % (self.ep_length, self.untouched, self.num_left,
+                    self.num_right, self.num_l_bot, self.num_r_bot, self.port,
+                    self.offense_ball, self.ball_x_min, self.ball_x_max,
+                    self.ball_y_min, self.ball_y_max, self.rc_log, self.seed)
+        #Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
+        if self.num_l_bot > 0:   cmd += " --offense-team %s" \
+            % (self.left_bin)
+        if self.num_r_bot > 0:   cmd += " --defense-team %s" \
+            % (self.right_bin)
+        if not self.sync_mode:      cmd += " --no-sync"
+        if self.fullstate:          cmd += " --fullstate"
+        if self.determ:      cmd += " --deterministic"
+        if self.verbose:            cmd += " --verbose"
+        if not self.rcss_log:  cmd += " --no-logging"
+        if self.hfo_log:       cmd += " --hfo-logging"
+        if self.record_lib:             cmd += " --record"
+        if self.record_serv:      cmd += " --logs-gen-pt"
+        if self.init_env:
+            cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
+                    " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\
+                    " --change-balls-x %f --change-balls-y %f --control-rand-init"\
+                    % (self.agents_x_min, self.agents_x_max, self.agents_y_min, self.agents_y_max,
+                        self.change_every_x, self.change_agents_x, self.change_agents_y,
+                        self.change_ball_x, self.change_ball_y)
 
-            print('Starting server with command: %s' % cmd)
-            self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-            time.sleep(6) # Wait for server to startup before connecting a player
+        print('Starting server with command: %s' % cmd)
+        self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
+        time.sleep(6) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         '''

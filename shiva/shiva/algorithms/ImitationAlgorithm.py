@@ -239,8 +239,8 @@ class ImitationRoboCupAlgorithm(Algorithm):
         self.loss.backward()
         agent.actor_optimizer.step()
 
-    def create_agent(self):
-        new_agent = DDPGAgent(self.id_generator(),self.observation_space,self.action_space,self.configs['Agent'],self.configs['Network'])
+    def create_agent(self, id):
+        new_agent = DDPGAgent(id,self.observation_space,self.action_space,self.configs['Agent'],self.configs['Network'])
         return new_agent
     
     def get_metrics(self, episodic=False):
@@ -255,7 +255,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
         else:
             metrics = [
                 ('Algorithm/Actor_Loss', self.loss.item()),
-                ('Actor Learning Rate: ', self.actor_learning_rate),)
+                ('Actor Learning Rate: ', self.actor_learning_rate)
             ]
         return metrics
     
