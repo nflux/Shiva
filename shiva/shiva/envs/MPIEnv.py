@@ -44,9 +44,9 @@ class MPIEnv(Environment):
     def run(self):
         self.env.reset()
         while True:
-            time.sleep(0.001)
+            time.sleep(0.1)
             while self.env.start_env():
-                self._step_numpy()
+                self._step_python()
                 self._append_step()
                 if self.env.is_done():
                     self.print(self.env.get_metrics(episodic=True)) # print metrics
@@ -54,6 +54,13 @@ class MPIEnv(Environment):
                     self.log('Episode_count: {}'.format(self.done_count))
                     self.env.reset()
             # self.close()
+
+    def _step_python(self):
+        self.observations = self.env.get_observations()
+        self.menv.gather(self.observations, root=0)
+        self.actions = self.menv.scatter(None, root=0)
+        self.log('Actions: {}'.format(self.actions))
+        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
     def _step_numpy(self):
         self.observations = self.env.get_observations()
@@ -73,20 +80,24 @@ class MPIEnv(Environment):
         # self.log("Obs {} Act {}".format(self.observations, self.actions))
         # self.log("Act {}".format(self.actions))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
+        self.log('The Dones look like this: {}'.format(self.dones))
 
         # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.reward).shape, np.array(self.done).shape))
         # self.log("Actual types: {} {} {} {} {}".format(type(self.observations), type(self.actions), type(self.next_observations), type(self.reward), type(self.done)))
 
     def _append_step(self):
-        if 'Unity' in self.type:
-            for ix, buffer in enumerate(self.trajectory_buffers):
+        if 'Unity' in self.type or 'Particle' in self.type:
+            # for ix, buffer in enumerate(self.trajectory_buffers):
+            for ix, role in enumerate(self.env.roles):
+                '''Order is maintained, each ix is for each Agent Role'''
                 exp = list(map(torch.clone, (torch.tensor([self.observations[ix]]),
                                              torch.tensor([self.actions[ix]]),
                                              torch.tensor([self.rewards[ix]]).unsqueeze(dim=-1),
                                              torch.tensor([self.next_observations[ix]]),
                                              torch.tensor([self.dones[ix]], dtype=torch.bool).unsqueeze(dim=-1)
                                              )))
-                buffer.push(exp)
+                # buffer.push(exp)
+                self.trajectory_buffers[ix].push(exp)
         elif 'Gym' in self.type:
             # Gym/RoboCup
             exp = list(map(torch.clone, (torch.from_numpy(self.observations).unsqueeze(dim=0),
@@ -118,7 +129,7 @@ class MPIEnv(Environment):
 
     def _send_trajectory_numpy(self):
         if 'Unity' in self.type:
-            for ix in range(len(self.env.agent_groups)):
+            for ix in range(len(self.env.roles)):
                 self.log("This is the ix {}".format(ix))
                 '''Assuming 1 Agent per Learner, no support for MADDPG here'''
                 self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape, self.trajectory_buffers[ix].all_numpy())
@@ -197,9 +208,8 @@ class MPIEnv(Environment):
 
         self.done_count +=1
 
-
+        time.sleep(.5)
         self.reset_buffers()
-        # time.sleep(5)
 
     def create_buffers(self):
         if 'Unity' in self.type:
@@ -209,10 +219,10 @@ class MPIEnv(Environment):
                 (Unity is a bit different due to the multi-instance per single environment)
             '''
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
-                                                              self.env.num_instances_per_group[group],
-                                                              self.env.observation_space[group],
-                                                              self.env.action_space[group]['acs_space']) \
-                                       for i, group in enumerate(self.env.agent_groups) ]
+                                                              self.env.num_instances_per_role[role],
+                                                              self.env.observation_space[role],
+                                                              self.env.action_space[role]['acs_space']) \
+                                       for i, role in enumerate(self.env.roles) ]
         else:
             # Gym/RoboCup
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
@@ -227,6 +237,7 @@ class MPIEnv(Environment):
     def _launch_env(self):
         # initiate env from the config
         self.env = self.create_environment()
+
 
     def _connect_learners(self):
         #self.log("Waiting Learners info")

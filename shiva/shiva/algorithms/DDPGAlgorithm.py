@@ -18,6 +18,8 @@ class DDPGAlgorithm(Algorithm):
         self.actor_loss = torch.tensor(0)
         self.critic_loss = torch.tensor(0)
         self.set_action_space(action_space)
+        self.critic_learning_rate = 0
+        self.actor_learning_rate = 0
 
     def update(self, agent, buffer, step_count, episodic=False):
         '''
@@ -46,25 +48,24 @@ class DDPGAlgorithm(Algorithm):
         #     agent.ou_noise.reset()
         #     # return
 
-        # agent.ou_noise.reset()
+        agent.ou_noise.reset()
 
-        # if step_count < self.agent.exploration_steps:
-        #     '''
-        #         Don't update during exploration!
-        #     '''
-        #     return
+        #if step_count < self.agent.exploration_steps:
+            #return
 
         '''
             Updates starts here
         '''
         self.critic_learning_rate = agent.critic_learning_rate
         self.actor_learning_rate = agent.actor_learning_rate
+
+
         for i in range(self.updates):
 
             try:
-                '''For MultiAgentTensorBuffer - 1 Agent only here'''
-                states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
-                dones = dones.bool()
+                 '''For MultiAgentTensorBuffer - 1 Agent only here'''
+                 states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
+                 dones = dones.bool()
             except:
                 states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
                 dones = dones.byte()
@@ -75,11 +76,7 @@ class DDPGAlgorithm(Algorithm):
             rewards = rewards.squeeze(1).to(self.device)
             next_states = next_states.squeeze(1).to(self.device)
             dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
-            #print('States: {} \n States Size: {}'.format(states,states.size()))
-            #print('Actions: {} \n Actions Size: {}'.format(actions,actions.size()))
-            #print('Rewards: {} \n Rewards Size: {}'.format(rewards,rewards.size()))
-            #print('Next States: {} \n Next States Size: {}'.format(next_states,next_states.size()))
-            #print('Dones: {} \n Dones Size: {}'.format(dones,dones.size()))
+
 
 
             # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))

@@ -96,12 +96,12 @@ class MPILearner(Learner):
         # t0 = time.time()
         # n_episodes = 500
         while self.train:
-            time.sleep(0.001)
+            #time.sleep(0.001)
             # self._receive_trajectory_python_list()
-            if 'RoboCup' in self.env_specs['type']:
-                self._robo_receive_trajectory_numpy()
-            else:
-                self._receive_trajectory_numpy()
+            # if 'RoboCup' in self.env_specs['type']:
+            #     self._robo_receive_trajectory_numpy()
+            # else:
+            self._receive_trajectory_numpy()
 
             self.log('Episodes collected: {}'.format(self.done_count))
 
@@ -114,7 +114,7 @@ class MPILearner(Learner):
 
             '''Change freely condition when to update'''
             if self.done_count % self.episodes_to_update == 0:
-                self.alg.update(self.agents[0], self.buffer, self.done_count, episodic=True)
+                self.alg.update(self.agents[0], self.buffer, self.step_count, episodic=True)
                 self.update_num += 1
                 self.agents[0].step_count = self.step_count
                 self.agents[0].done_count = self.done_count
@@ -123,7 +123,8 @@ class MPILearner(Learner):
                 for ix in range(self.num_menvs):
                     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
-                self._io_save_pbt_agents()
+                if self.pbt:
+                    self._io_save_pbt_agents()
                     #if self.save_flag:
                         # self.log("MPI LEARNER SAVED THE AGENT")
                         #Admin.checkpoint(self, checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
@@ -141,7 +142,7 @@ class MPILearner(Learner):
                 # for ix in range(self.num_menvs):
                 #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
-            if self.done_count % self.evolution_episodes == 0:
+            if self.done_count % self.evolution_episodes == 0 and self.pbt and (self.done_count >= self.initial_evolution_episodes):
                 self.log('Requesting evolution config')
                 self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
 
@@ -167,8 +168,6 @@ class MPILearner(Learner):
 
 
                     self.log('Evolution Complete')
-
-
 
             self.collect_metrics(episodic=True)
 
@@ -223,64 +222,64 @@ class MPILearner(Learner):
                                      )))
         self.buffer.push(exp)
 
-    def _robo_receive_trajectory_numpy(self):
-        '''Receive trajectory from each single environment in self.envs process group'''
-        '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
+    # def _robo_receive_trajectory_numpy(self):
+    #     '''Receive trajectory from each single environment in self.envs process group'''
+    #     '''Assuming 1 Agent here, may need to iterate thru all the indexes of the @traj'''
 
-        info = MPI.Status()
-        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
-        env_source = info.Get_source()
+    #     info = MPI.Status()
+    #     self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
+    #     env_source = info.Get_source()
 
-        '''Assuming 1 Agent here'''
-        self.metrics_env = self.traj_info['metrics']
-        traj_length = self.traj_info['length']
+    #     '''Assuming 1 Agent here'''
+    #     self.metrics_env = self.traj_info['metrics']
+    #     traj_length = self.traj_info['length']
 
-        '''
-            Ideas to optimize -> needs some messages that are not multidimensional
-                - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional)
-        '''
+    #     '''
+    #         Ideas to optimize -> needs some messages that are not multidimensional
+    #             - Concat Observations and Next_Obs into 1 message (the concat won't be multidimensional)
+    #     '''
 
-        observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
-        self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
-        # self.log("Got Obs shape {}".format(observations.shape))
+    #     observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
+    #     self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
+    #     # self.log("Got Obs shape {}".format(observations.shape))
 
-        actions = np.zeros([traj_length, self.num_agents, self.action_space['acs_space']], dtype=np.float64)
-        self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
-        # self.log("Got Acs shape {}".format(actions.shape))
+    #     actions = np.zeros([traj_length, self.num_agents, self.action_space['acs_space']], dtype=np.float64)
+    #     self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
+    #     # self.log("Got Acs shape {}".format(actions.shape))
 
-        rewards = np.zeros([traj_length, self.num_agents, 1], dtype=np.float64)
-        self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
-        # self.log("Got Rewards shape {}".format(rewards.shape))
+    #     rewards = np.zeros([traj_length, self.num_agents, 1], dtype=np.float64)
+    #     self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
+    #     # self.log("Got Rewards shape {}".format(rewards.shape))
 
-        next_observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
-        self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
-        # self.log("Got Next Obs shape {}".format(next_observations.shape))
+    #     next_observations = np.zeros([traj_length, self.num_agents, self.observation_space], dtype=np.float64)
+    #     self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
+    #     # self.log("Got Next Obs shape {}".format(next_observations.shape))
 
-        '''are dones even needed? It's obviously a trajectory...'''
-        '''Yes dones are needed for PPO when it calculates episode returns'''
-        dones = np.zeros([traj_length, self.num_agents, 1], dtype=np.bool)
-        self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
-        # self.log("Got Dones shape {}".format(dones.shape))
+    #     '''are dones even needed? It's obviously a trajectory...'''
+    #     '''Yes dones are needed for PPO when it calculates episode returns'''
+    #     dones = np.zeros([traj_length, self.num_agents, 1], dtype=np.bool)
+    #     self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
+    #     # self.log("Got Dones shape {}".format(dones.shape))
 
-        self.step_count += traj_length
-        self.done_count += 1
-        self.steps_per_episode = traj_length
-        self.reward_per_episode = sum(rewards)
+    #     self.step_count += traj_length
+    #     self.done_count += 1
+    #     self.steps_per_episode = traj_length
+    #     self.reward_per_episode = sum(rewards)
 
-        # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+    #     # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
 
-        # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-        # self.log("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-        # self.log("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
+    #     # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
+    #     # self.log("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+    #     # self.log("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
 
-        exp = list(map(torch.clone, (torch.from_numpy(observations),
-                                     torch.from_numpy(actions),
-                                     torch.from_numpy(rewards),
-                                     torch.from_numpy(next_observations),
-                                     torch.from_numpy(dones)
-                                     )))
+    #     exp = list(map(torch.clone, (torch.from_numpy(observations),
+    #                                  torch.from_numpy(actions),
+    #                                  torch.from_numpy(rewards),
+    #                                  torch.from_numpy(next_observations),
+    #                                  torch.from_numpy(dones)
+    #                                  )))
 
-        self.buffer.push(exp)
+    #     self.buffer.push(exp)
 
     def _connect_menvs(self):
         # Connect with MultiEnv
