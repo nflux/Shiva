@@ -181,15 +181,6 @@ class rc_env:
         self.left_agent_possesion = ['N'] * self.num_left
         self.right_agent_possesion = ['N'] * self.num_right
 
-        self.min_player_distance_to_ball = 10000
-        self.first_kick = False
-        self.initial_distance_to_opp_goal = None
-        self.initial_distance_to_own_goal = None
-        self.min_distance_to_opp_goal = None
-        self.min_distance_to_own_goal = None
-        self.inv_steps_to_goal = 0
-        self.inv_steps_to_kick = 0
-
     def set_observation_indexes(self):
 
         if self.feature_level == 'low':
@@ -330,7 +321,7 @@ class rc_env:
 
 
     def Step(self, left_actions=[], right_actions=[], left_options=[],
-            right_options=[], left_actions_OH = [], right_actions_OH = []):
+            right_options=[], left_actions_OH = [], right_actions_OH = [], eval_flag=False):
         '''
             Description
                 Method for the agents to take a single step in the environment.
@@ -363,8 +354,15 @@ class rc_env:
         [self.Queue_action(i,self.left_base,left_actions[i],left_options) for i in range(len(left_actions))]
         [self.Queue_action(j,self.right_base,right_actions[j],right_options) for j in range(len(right_actions))]
 
+        if eval_flag:
+            print("Getting here at holy guacamole")
+
         self.sync_after_queue.wait()
+        if eval_flag:
+            print("Getting here at holy moly")
         self.sync_before_step.wait()
+        if eval_flag:
+            print("Getting here at holy cow")
 
         return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
@@ -544,14 +542,6 @@ class rc_env:
 
                     # Break if episode done
                     if self.d == True:
-                        self.min_player_distance_to_ball = 10000
-                        self.first_kick = False
-                        self.initial_distance_to_opp_goal = None
-                        self.initial_distance_to_own_goal = None
-                        self.min_distance_to_opp_goal = None
-                        self.min_distance_to_own_goal = None
-                        self.inv_steps_to_goal = 0
-                        self.inv_steps_to_kick = 0
                         break
             if self.close:
                 break
@@ -597,7 +587,7 @@ class rc_env:
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-            time.sleep(6) # Wait for server to startup before connecting a player
+            time.sleep(3) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         '''
@@ -629,7 +619,6 @@ class rc_env:
         reward=0.0
         team_reward = 0.0
         goal_points = 10.0
-
         #---------------------------
         global possession_side
         if self.d:
@@ -736,7 +725,6 @@ class rc_env:
             # print(self.left_agent_possesion)
             if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
-                self.first_kick = True
                 reward += 1
                 team_reward += 1.5
 
@@ -935,19 +923,3 @@ class rc_env:
 
     def prox_2_dist(self, prox):
         return (prox+.8)/1.8
-
-
-    def set_lowest_player_distance_to_ball(self,obs):
-        if self.distance_to_ball(obs) < self.min_player_distance_to_ball:
-            self.min_player_distance_to_ball = self.distance_to_ball(obs)
-
-    def distance_to_opp_goal(self,obs):
-        goal_center_x = -1.0
-        goal_center_y = 0.0
-
-    def get_eval_metrics(self,obs):
-        metrics = dict()
-        metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball
-        metrics['first_kick'] = self.first_kick
-
-        return metrics

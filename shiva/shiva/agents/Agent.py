@@ -21,6 +21,7 @@ class Agent(torch.nn.Module):
         self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.eloReward = 0
 
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)

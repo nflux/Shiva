@@ -19,11 +19,8 @@ class DDPGAgent(Agent):
             torch.manual_seed(self.manual_seed)
             np.random.seed(self.manual_seed)
         except:
-            #torch.manual_seed(5)
-            #np.random.seed(5)
-            self.seed = np.random.randint(0, 100)
-            torch.manual_seed(self.seed)
-            np.random.seed(self.seed)
+            torch.manual_seed(5)
+            np.random.seed(5)
 
         self.id = id
 
@@ -39,6 +36,9 @@ class DDPGAgent(Agent):
         self.acs_space = acs_space['acs_space']
         self.step_count = 0
         self.done_count = 0
+
+        print(self.discrete, self.continuous, self.param, self.acs_space)
+        print(obs_space)
 
         if self.continuous == 0:
             self.action_space = 'discrete'
@@ -57,10 +57,9 @@ class DDPGAgent(Agent):
         self.critic = DynamicLinearNetwork(obs_space + self.acs_space, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
-        
-        if agent_config['lr_range']:
-            self.critic_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
-            self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
+        if isinstance(agent_config['actor_learning_rate'],list):
+            self.actor_learning_rate = random.uniform(agent_config['actor_learning_rate'][0],agent_config['actor_learning_rate'][1])
+            self.critic_learning_rate = random.uniform(agent_config['critic_learning_rate'][0],agent_config['critic_learning_rate'][1])
             self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
         else:
@@ -70,7 +69,6 @@ class DDPGAgent(Agent):
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
-
 
 
     def get_action(self, observation, step_count, evaluate=False):
@@ -171,22 +169,14 @@ class DDPGAgent(Agent):
     def perturb_hyperparameters(self,perturb_factor):
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor
         self.critic_learning_rate = self.critic_learning_rate * perturb_factor
-        for param_group in self.actor_optimizer.param_groups:
-            param_group['lr'] = self.actor_learning_rate
-        for param_group in self.critic_optimizer.param_groups:
-            param_group['lr'] = self.critic_learning_rate
-        #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
     def resample_hyperparameters(self):
-        self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        for param_group in self.actor_optimizer.param_groups:
-            param_group['lr'] = self.actor_learning_rate
-        for param_group in self.critic_optimizer.param_groups:
-            param_group['lr'] = self.critic_learning_rate
-        #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        self.actor_learning_rate = random.uniform(self.agent_config['actor_learning_rate'][0],self.agent_config['actor_learning_rate'][1])
+        self.critic_learning_rate = random.uniform(self.agent_config['critic_learning_rate'][0],self.agent_config['critic_learning_rate'][1])
+        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
 
     def __str__(self):
