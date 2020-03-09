@@ -32,7 +32,6 @@ class MPIMultiEvaluationWrapper(Evaluation):
         super(MPIMultiEvaluationWrapper, self).__init__(self.configs)
         self._launch_evals()
         self.num_envs = self.configs['Environment']['num_instances']
-        print("Numver of Environments", self.num_envs)
         self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self.rankings = np.zeros(self.num_agents)
@@ -40,7 +39,6 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.info = MPI.Status()
         self.log("This at 35 is not printed")
         self.agent_ids = self.meta.bcast(None,root=0)
-        print('Agent IDS: ', self.agent_ids)
         self.initial_agent_selection()
 
         # THE START OF INITIATE MATCHING FUNCTION PIPELINE TEST
@@ -121,71 +119,73 @@ class MPIMultiEvaluationWrapper(Evaluation):
             #print('Multi Evaluations: ',self.evaluations)
 
     def initial_agent_selection(self):
-        # reward = np.full(self.configs['Environment']['num_instances'],10)
-        # ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,.5, 5,.10)
-        # # dictionaryAgents = self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
-        # for x in range(len(ag)):
-        #     print("X Agents:", ag[x])
-        #     if( len(ag) == 1):
-        #         self.agent_sel = [ag[x]]
-        #     else :    
-        #         self.agent_sel = ag[x]
-        #     print('Selected Evaluation Agents for Environment {}: {}'.format(x, self.agent_sel))
-        #     self.evals.send(self.agent_sel,dest=x,tag=Tags.new_agents)
-        for i in range(self.num_evals):
-            self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))[0]
-            print('Selected Evaluation Agents for Environment {}: {}'.format(i, self.agent_sel))
-            self.evals.send(self.agent_sel,dest=i,tag=Tags.new_agents)
+
+        # System Using Team Matching 
+        reward = np.full(self.configs['Environment']['num_instances'],10)
+        ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,.5, 5,.10)
+        # dictionaryAgents = self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
+        for x in range(len(ag)):
+            print("X Agents:", ag[x])
+            # if( len(ag) == 1):
+            #     self.agent_sel = [ag[x]]
+            # else :    
+            #     self.agent_sel = ag[x]
+            self.agent_sel = ag[x]
+            print('Selected Evaluation Agents for Environment {}: {}'.format(x, self.agent_sel))
+            self.evals.send(self.agent_sel,dest=x,tag=Tags.new_agents)
+
+        # Randomly selecting Agents
+        # for i in range(self.num_evals):
+        #     self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))[0]
+        #     print('Selected Evaluation Agents for Environment {}: {}'.format(i, self.agent_sel))
+        #     self.evals.send(self.agent_sel,dest=i,tag=Tags.new_agents)
 
     #Agent Selection currently randomly Selects an agent. 
     def agent_selection(self,env_rank):
+
+
+        #Randomly Selects and Agent
         self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
         print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
         self.evals.send(self.agent_sel,dest=env_rank,tag=Tags.new_agents)
-        # reward = np.full(self.configs['Environment']['num_instances'],10)
-        # ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,.5, 5,.10)
-        # # dictionaryAgents = self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
-        # for x in range(len(ag)):
-        #     print("X Agents:", ag[x])
-        #     if( len(ag) == 1):
-        #         self.agent_sel = [ag[x]]
-        #     else :    
-        #         self.agent_sel = ag[x]
-        #     print('Selected Evaluation Agents for Environment {}: {}'.format(x, self.agent_sel))
-        #     self.evals.send(self.agent_sel,dest=x,tag=Tags.new_agents)
-
+        
+'''
     # rating1 - Score for average Agent/Team1
     # rating2 - Score for Agent/Team2
     # n - Determine How large the score it would take to effect the overall score
     # Probability of rating2 
+'''
     def eloProbability (self, rating1, rating2, n):
         self.probability = 1.0 * 1.0 / (1 + 1.0 * math.pow (10, 1.0 * (rating1 - rating2)))
         self.log("ELO Probability Score : {}", self.probability)
         print("ELO Probability Score : ", self.probability)
         return self.probability
     
-
+'''
     # reward - A current Agent/Team's average Reward 
     # Elo Probability - A Current Agent/Team's Probability Reward
     # K - some kind of constant
     # w - 1 when A Team/Agent had won
     # w - 0.5 when A Team/Agent had Tied
     # w - 0 when A Team/ Agent had Lost
+'''
     def CalculateEloReward(self, reward, eloProbability, k, w):
         self.reward = reward + k *(w - eloProbability)
         self.log('Elo Reward : {}', self.reward )
         print('Elo Reward : ', self.reward )
         return self.reward
-
+'''
     # team1 - Average Reward for Team1 or Agent1
     # team2 - Average Reward for Team2 or Agent2
     # n - How high a constant n, should be to make a significant change to a team's score
     # The Probability of Team2 winning.
+'''
     def TeamEloRating(self, team1, team2, n):
         self.rating = self.eloProbability(team1, team2, n)
         self.log("Probability Calculation Done. Probability of Team2 wiining : {}", self.rating)
         return self.rating
 
+'''
     # TeamCompare
     # Requires minumum of Two Teams. 
     # Assumes team1Rewards is summed.
@@ -193,7 +193,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
     # r: probability Threshold
     # scoreFactor: The Constant Score.
 
-
+'''
     def TeamCompareProbability(self,team1Rewards,team2Rewards, r, scoreFactor):
         # boolResult = False
         prob = max(self.eloProbability(team1Rewards, team2Rewards, scoreFactor), self.eloProbability(team2Rewards, team1Rewards, scoreFactor))
@@ -207,6 +207,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     
 
+'''
 # Using More of an ELO based matcher WITH RANDOM Generator instead of Ordinal.
 # Need to have Incremental differential range of ELO Ratings
 # EX: if agent ELO score or probability is 100 incremental 10, would mean try to match with 90 or 110, but if not found increase another 10. 
@@ -215,7 +216,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
 # n = The number of Teams to create and divide among.
 # r = Probability Threshold of the winning versus lossing from the max of the two differences. 
 # scoreFactor = constant Score that you can get. 
-# increaseScale = the Rate of an increasing scale increases r at a rate. 
+# increaseScale = the Rate of an increasing scale increases r at a rate.
+# ''' 
 
     def Matcher(self,agents, n, rewards, r, scoreFactor,increaseScale):
         if((len(agents) % n) != 0):
