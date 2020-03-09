@@ -321,7 +321,7 @@ class rc_env:
 
 
     def Step(self, left_actions=[], right_actions=[], left_options=[],
-            right_options=[], left_actions_OH = [], right_actions_OH = []):
+            right_options=[], left_actions_OH = [], right_actions_OH = [], eval_flag=False):
         '''
             Description
                 Method for the agents to take a single step in the environment.
@@ -354,8 +354,15 @@ class rc_env:
         [self.Queue_action(i,self.left_base,left_actions[i],left_options) for i in range(len(left_actions))]
         [self.Queue_action(j,self.right_base,right_actions[j],right_options) for j in range(len(right_actions))]
 
+        if eval_flag:
+            print("Getting here at holy guacamole")
+
         self.sync_after_queue.wait()
+        if eval_flag:
+            print("Getting here at holy moly")
         self.sync_before_step.wait()
+        if eval_flag:
+            print("Getting here at holy cow")
 
         return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
@@ -484,23 +491,13 @@ class rc_env:
             rews = self.right_rewards
 
         ep_num = 0
-        while True:
-            while self.start:
+        while(True):
+            while(self.start):
                 ep_num += 1
                 j = 0 # j to maximum episode length
 
                 obs_prev[agent_ID] = envs[agent_ID].getState() # Get initial state
                 obs[agent_ID] = envs[agent_ID].getState() # Get initial state
-
-                self.min_player_distance_to_ball = 10000
-                self.first_kick = False
-                self.goal_scored = False
-                self.initial_distance_to_opp_goal = None
-                self.initial_distance_to_own_goal = None
-                self.min_distance_to_opp_goal = None
-                self.min_distance_to_own_goal = None
-                self.inv_steps_to_goal = 0
-                self.inv_steps_to_kick = 0
 
                 # self.been_kicked_left = False
                 # self.been_kicked_right = False
@@ -590,7 +587,7 @@ class rc_env:
 
             print('Starting server with command: %s' % cmd)
             self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-            time.sleep(6) # Wait for server to startup before connecting a player
+            time.sleep(3) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         '''
@@ -622,7 +619,6 @@ class rc_env:
         reward=0.0
         team_reward = 0.0
         goal_points = 10.0
-
         #---------------------------
         global possession_side
         if self.d:
@@ -632,9 +628,7 @@ class rc_env:
                 if s=='Goal_By_Left' and self.left_agent_possesion[agentID] == 'L':
                     reward+= goal_points
                 elif s=='Goal_By_Left':
-
                     reward+= goal_points # teammates get 10% of pointsssss
-                    self.goal_score = True
                     print("GOAL!")
                 elif s=='Goal_By_Right':
                     reward+=-goal_points
@@ -717,11 +711,6 @@ class rc_env:
             reward -= 0.1
             # print("agent is getting penalized for kicking when not kickable")
 
-        if not self.first_kick:
-            self.inv_steps_to_kick += 1
-        else:
-            pass
-
 
         # it looks like this is broken for discretized as well
         # so its not getting any rewards for kicking
@@ -736,7 +725,6 @@ class rc_env:
             # print(self.left_agent_possesion)
             if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
-                self.first_kick = True
                 reward += 1
                 team_reward += 1.5
 
@@ -885,12 +873,10 @@ class rc_env:
         '''
             Reward agent for maximizing it's proximity to the ball
         '''
+        # reward += team_obs[agentID][self.ball_proximity]
 
-        self.set_lowest_ball_distance_to_own_goal(team_obs[agentID])
-        self.set_lowest_player_distance_to_ball(team_obs[agentID])
-        self.set_lowest_player_distance_to_goal(team_obs[agentID])
-
-
+        # print(team_obs[agentID][self.ball_x])
+        # print(team_obs[agentID][self.ball_y])
         return reward
         # rew_percent = 1.0*max(0,(self.reward_anneal - ep_num))/self.reward_anneal
         # return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
@@ -935,37 +921,5 @@ class rc_env:
         ball_distance_to_goal = math.sqrt(relative_x**2 + relative_y**2)
         return ball_distance_to_goal
 
-    def ball_distance_to_own_goal(self, obs):
-        # my own goal
-        goal_center_x = -1.0
-        goal_center_y = 0.0
-        relative_x = obs[self.ball_x] - goal_center_x
-        relative_y = obs[self.ball_y] - goal_center_y
-        ball_distance_to_goal = math.sqrt(relative_x**2 + relative_y**2)
-        return ball_distance_to_goal
-
-
     def prox_2_dist(self, prox):
         return (prox+.8)/1.8
-
-    def set_lowest_player_distance_to_ball(self, obs):
-        if self.distance_to_ball(obs) < self.min_player_distance_to_ball:
-            self.min_player_distance_to_ball = self.distance_to_ball(obs)
-
-    def set_lowest_player_distance_to_goal(self, obs):
-        if self.min_distance_to_opp_goal > self.ball_distance_to_goal(obs):
-            self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
-
-    def set_lowest_ball_distance_to_own_goal(self, obs):
-        if self.min_distance_to_own_goal > self.ball_distance_to_own_goal(obs):
-            self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
-
-    def get_eval_metrics(self, obs):
-        metrics = dict()
-        metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball
-        metrics['first_kick'] = self.first_kick
-        metrics['distance_to_opp_goal'] = self.min_distance_to_opp_goal
-        metrics['distance_to_own_goal'] = self.min_distance_to_own_goal
-        metrics['inv_steps_to_goal'] = self.inv_steps_to_goal
-        metrics['inv_steps_to_kick'] = self.inv_steps_to_kick
-        return metrics
