@@ -38,6 +38,7 @@ class MPIEvaluation(Evaluation):
         print('Agent IDs: ', self.agent_ids)
         print('Agent Sel: ', self.agent_sel)
         self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
+        self_evals_list = [[None]*self.eval_episodes]*len(self.agent_ids)
         self.ep_evals = dict()
         self.eval_counts = np.zeros(len(self.agent_ids),dtype=int)
         self._io_load_agents()
@@ -102,7 +103,10 @@ class MPIEvaluation(Evaluation):
                     path = self.eval_path+'Agent_'+str(self.agent_ids[i])
                     self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
                     self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
-                    self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
+                    if 'RoboCup' in self.configs['type']:
+                        self.meval.send(self.evals_list[i], dest=0, tag=Tags.evals)
+                    else:
+                        self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
                     #self.ep_evals['path'] = path+'/episode_evaluations'
                     #self.ep_evals['evals'] = self.evals[i]
                     self.io.send(True, dest=0, tag=Tags.io_eval_request)
@@ -181,10 +185,15 @@ class MPIEvaluation(Evaluation):
                     - Concat
                     '''
             if self.eval_counts[agent_idx] < self.eval_episodes:
-                evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
-                self.evals[agent_idx,self.eval_counts[agent_idx]] = evals
-                print('Eval: {}'.format(evals))
-                self.eval_counts[agent_idx] += 1
+
+                if 'RoboCup' in self.configs['type']:
+                    evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
+                    self.evals_list[agent_idx, self.eval_counts[agent_idx]] = evals
+                    self.eval_counts[agent_idx] += 1
+                else:
+                    evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
+                    self.evals[agent_idx, self.eval_counts[agent_idx]] = evals
+                    self.eval_counts[agent_idx] += 1
             else:
                 _ = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
 

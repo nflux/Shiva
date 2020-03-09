@@ -138,21 +138,29 @@ class MPIEvalEnv(Environment):
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
             # self.log('Made it to 127 {}'.format(self.rewards))
 
-            for i in range(len(self.rewards)):
-                self.episode_rewards[i,self.reward_idxs[i]] = self.rewards[i]
-                if self.dones:
-                    self._send_eval_numpy(self.episode_rewards[i,:].sum(),i)
-                    self.episode_rewards[i,:].fill(0)
-                    self.reward_idxs[i] = 0
-                else:
-                    self.reward_idxs[i] += 1
+            # for i in range(len(self.rewards)):
+            #     self.episode_rewards[i, self.reward_idxs[i]] = self.rewards[i]
+            #     if self.dones:
+            #         self._send_eval_numpy(self.episode_rewards[i, :].sum(), i)
+            #         self.episode_rewards[i, :].fill(0)
+            #         self.reward_idxs[i] = 0
+            #     else:
+            #         self.reward_idxs[i] += 1
+
+            if self.dones:
+                self._send_eval_numpy(self.env.get_metrics())
+                # self.episode_rewards[i, :].fill(0)
+                # self.reward_idxs[i] = 0
+            # else:
+                # self.reward_idxs[i] += 1
+
                 # self.log('Made it to 134')
 
-    def _send_eval_numpy(self,episode_reward,agent_idx):
+    def _send_eval_numpy(self, episode_reward, agent_idx):
         '''Numpy approach'''
         self.eval.send(agent_idx, dest=0, tag=Tags.trajectory_info)
         self.log('Eval Reward: {}'.format(episode_reward))
-        self.eval.send(episode_reward, dest=0, tag = Tags.trajectory_eval)
+        self.eval.send(episode_reward, dest=0, tag=Tags.trajectory_eval)
 
     def create_buffers(self):
         if 'Unity' in self.type:

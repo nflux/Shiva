@@ -80,7 +80,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             'num_evals': self.num_evals
         }
 
-    def _get_evaluations(self,sort):
+    def _get_evaluations(self, sort):
         if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evals):
             agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
             env_source = self.info.Get_source()
