@@ -108,8 +108,8 @@ class MPIImitationLearner(Learner):
                     self.agents[0].done_count = self.done_count
                     self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
-                for ix in range(self.num_menvs):
-                    self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+                    for ix in range(self.num_menvs):
+                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
                 
                 self.collect_metrics(episodic=True)
             

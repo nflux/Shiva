@@ -200,6 +200,8 @@ class ImitationRoboCupAlgorithm(Algorithm):
     
     def supervised_update(self, agent, buffer, step_n, episodic=False):
 
+        self.actor_learning_rate = agent.actor_learning_rate
+
         states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
 
         # zero optimizer
