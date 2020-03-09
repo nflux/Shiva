@@ -96,15 +96,16 @@ class MPIRoboCupImitationEnv(Environment):
 
     def recv_imit_acs_msgs(self):
         acs_msg = self.comm.recv(8192)
+        acs_msg = str(acs_msg)[2:].split(' ')[:-1]
 
-        acs_msg = str(acs_msg).split(' ')[1:-1]
         action = np.array(list(map(lambda x: float(x), acs_msg)), dtype=np.float64)
+        actions_per_agent = len(action)//self.env.num_agents
 
         if self.action_level == 'discretized':
             # print('desc action', self.descritize_action(action))
-            return np.array([self.descritize_action(action)], dtype=np.float64)
+            return np.array([self.descritize_action(action[actions_per_agent*i:actions_per_agent+(actions_per_agent*i)]) for i in range(self.env.num_agents)], dtype=np.float64)
         else:
-            return action
+            return np.array([action[actions_per_agent*i:actions_per_agent+(actions_per_agent*i)] for i in range(self.env.num_agents)], dtype=np.float64)
     
     def _super_step_numpy(self):
         self.observations = self.env.get_observations()
@@ -114,6 +115,7 @@ class MPIRoboCupImitationEnv(Environment):
 
         self.send_imit_obs_msgs()
         self.actions = self.recv_imit_acs_msgs()
+        # self.log("This is the actions {}".format(self.actions))
         self.observations = np.array(self.observations, dtype=np.float64)
 
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions, discrete_select='supervised')
@@ -136,7 +138,7 @@ class MPIRoboCupImitationEnv(Environment):
 
     def _super_append_step(self):
         exp = list(map(torch.clone, (torch.tensor([self.observations], dtype=torch.float64),
-                                        torch.tensor([self.actions], dtype=torch.float64),
+                                        torch.tensor([self.actions], dtype=torch.float64).unsqueeze(dim=-1),
                                         torch.tensor([self.rewards], dtype=torch.float64).unsqueeze(dim=-1),
                                         torch.tensor([self.next_observations], dtype=torch.float64),
                                         torch.tensor([self.dones], dtype=torch.bool).unsqueeze(dim=-1)
@@ -149,7 +151,7 @@ class MPIRoboCupImitationEnv(Environment):
                                         torch.tensor([self.rewards], dtype=torch.float64).unsqueeze(dim=-1),
                                         torch.tensor([self.next_observations], dtype=torch.float64),
                                         torch.tensor([self.dones], dtype=torch.bool).unsqueeze(dim=-1),
-                                        torch.tensor([self.bot_action], dtype=torch.float64)
+                                        torch.tensor([self.bot_action], dtype=torch.float64).unsqueeze(dim=-1)
                                         )))
         self.dagger_trajectory_buffer.push(exp)
 
@@ -225,12 +227,12 @@ class MPIRoboCupImitationEnv(Environment):
         self.super_trajectory_buffer = MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
                                                             self.env.num_agents,
                                                             self.env.observation_space,
-                                                            self.env.action_space['acs_space'])
+                                                            1)
         
         self.dagger_trajectory_buffer = MultiAgentDaggerTensorBuffer(self.episode_max_length, self.episode_max_length,
                                                             self.env.num_agents,
                                                             self.env.observation_space,
-                                                            self.env.action_space['acs_space'])
+                                                            self.env.action_space['acs_space'],1)
 
     def super_reset_buffer(self):
         self.super_trajectory_buffer.reset()

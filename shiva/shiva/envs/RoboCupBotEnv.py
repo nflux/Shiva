@@ -75,7 +75,7 @@ class RoboCupBotEnv:
 
         print('Starting server with command: %s' % cmd)
         self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-        time.sleep(1) # Wait for server to startup before connecting a player
+        time.sleep(6) # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         """

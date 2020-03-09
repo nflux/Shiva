@@ -209,7 +209,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
 
         actions = actions.detach().float()
 
-        action_prob_dist = action_prob_dist.view(actions.shape)
+        # action_prob_dist = action_prob_dist.view(actions.shape)
 
         self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
         # print('super_loss:', self.loss)
@@ -228,10 +228,12 @@ class ImitationRoboCupAlgorithm(Algorithm):
         action_prob_dist = agent.actor(states.float())
         # print('before', action_prob_dist)
 
-        if (len(actions.shape) > 1):
-            action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[-1])
-        else:
-            action_prob_dist = action_prob_dist.view(actions.shape[0])
+        # print("This is the expert in dagger", expert_actions.shape)
+
+        # if (len(actions.shape) > 1):
+        #     action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[-1])
+        # else:
+        #     action_prob_dist = action_prob_dist.view(actions.shape[0])
 
         #calculate loss based on loss functions dictated in the configs
         self.loss = self.loss_calc(action_prob_dist, expert_actions.float()).to(self.device)

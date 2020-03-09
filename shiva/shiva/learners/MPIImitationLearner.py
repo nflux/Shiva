@@ -330,8 +330,8 @@ class MPIImitationLearner(Learner):
         # TensorBuffer
         super_buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type1'])
         dagger_buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type2'])
-        super_buffer = super_buffer_class(self.configs['Buffer']['super_capacity'], self.configs['Buffer']['super_batch_size'], 1, self.observation_space, self.action_space['acs_space'])
-        dagger_buffer = dagger_buffer_class(self.configs['Buffer']['dagger_capacity'], self.configs['Buffer']['dagger_batch_size'], 1, self.observation_space, self.action_space['acs_space'])
+        super_buffer = super_buffer_class(self.configs['Buffer']['super_capacity'], self.configs['Buffer']['super_batch_size'], 1, self.observation_space, 1)
+        dagger_buffer = dagger_buffer_class(self.configs['Buffer']['dagger_capacity'], self.configs['Buffer']['dagger_batch_size'], 1, self.observation_space, self.action_space['acs_space'], 1)
         self.log("Buffer created of type {}".format(super_buffer_class))
         return super_buffer, dagger_buffer
 

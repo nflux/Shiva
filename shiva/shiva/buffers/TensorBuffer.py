@@ -97,8 +97,9 @@ class MultiAgentTensorBuffer(ReplayBuffer):
 
 class MultiAgentDaggerTensorBuffer(ReplayBuffer):
 
-    def __init__(self, max_size, batch_size, num_agents, obs_dim, acs_dim):
+    def __init__(self, max_size, batch_size, num_agents, obs_dim, acs_dim, expert_ac_dim):
         super(MultiAgentDaggerTensorBuffer, self).__init__(max_size, batch_size, num_agents, obs_dim, acs_dim)
+        self.expert_ac_dim = expert_ac_dim
         self.reset()
 
     def push(self, exps):
@@ -122,7 +123,7 @@ class MultiAgentDaggerTensorBuffer(ReplayBuffer):
         self.rew_buffer[self.current_index:self.current_index + nentries, :, :] = rew
         self.done_buffer[self.current_index:self.current_index + nentries, :, :] = done
         self.next_obs_buffer[self.current_index:self.current_index + nentries, :, :] = next_obs
-        self.expert_acs_buffer[self.current_index:self.current_index+nentries, :self.acs_dim] = exp_ac
+        self.expert_acs_buffer[self.current_index:self.current_index+nentries, :, :] = exp_ac
 
         if self.size < self.max_size:
             self.size += nentries
@@ -183,7 +184,7 @@ class MultiAgentDaggerTensorBuffer(ReplayBuffer):
         self.rew_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.float64, requires_grad=False)
         self.next_obs_buffer = torch.zeros((self.max_size, self.num_agents, self.obs_dim), dtype=torch.float64, requires_grad=False)
         self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.bool, requires_grad=False)
-        self.expert_acs_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), dtype=torch.float64, requires_grad=False)
+        self.expert_acs_buffer = torch.zeros((self.max_size, self.num_agents, self.expert_ac_dim), dtype=torch.float64, requires_grad=False)
         self.current_index = 0
         self.size = 0
 
