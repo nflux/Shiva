@@ -31,6 +31,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEvaluationWrapper, self).__init__(self.configs)
         self._launch_evals()
+        self.num_envs = self.configs['Environment']['num_instances']
+        print("Numver of Environments", self.num_envs)
         self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self.rankings = np.zeros(self.num_agents)
@@ -42,13 +44,14 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.initial_agent_selection()
 
         # THE START OF INITIATE MATCHING FUNCTION PIPELINE TEST
-        self.log('Initiate Matching Function Test')
-        self.eloProbability(100,200,10)
-        self.CalculateEloReward(100,.50,10,1)
-        # self.Matcher(self.agent_ids, 5, [0,1,2,3,4], 0.5, 100,.10)
-        reward = np.array([10,10,10,10,10])
-        self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
-        self.log('End of Matching Function Test')
+        # self.log('Initiate Matching Function Test')
+        # self.eloProbability(100,200,10)
+        # self.CalculateEloReward(100,.50,10,1)
+        # # self.Matcher(self.agent_ids, 5, [0,1,2,3,4], 0.5, 100,.10)
+        # reward = np.array([10,10,10,10,10])
+        # lists = self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
+        # print("SELF MATCHER", lists[1])
+        # self.log('End of Matching Function Test')
 
         # THE END OF MATCHING FUNCTION PIPELINE TEST
         self.run()
@@ -118,11 +121,17 @@ class MPIMultiEvaluationWrapper(Evaluation):
             #print('Multi Evaluations: ',self.evaluations)
 
     def initial_agent_selection(self):
-        reward = np.array([10,10,10,10,10])
-        # self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
-        # dictionaryAgents = self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
-        # for x in range(dictionaryAgents):
-        #     print("X Agents:" dictionaryAgents[x])
+        # reward = np.full(self.configs['Environment']['num_instances'],10)
+        # ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,.5, 5,.10)
+        # # dictionaryAgents = self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
+        # for x in range(len(ag)):
+        #     print("X Agents:", ag[x])
+        #     if( len(ag) == 1):
+        #         self.agent_sel = [ag[x]]
+        #     else :    
+        #         self.agent_sel = ag[x]
+        #     print('Selected Evaluation Agents for Environment {}: {}'.format(x, self.agent_sel))
+        #     self.evals.send(self.agent_sel,dest=x,tag=Tags.new_agents)
         for i in range(self.num_evals):
             self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))[0]
             print('Selected Evaluation Agents for Environment {}: {}'.format(i, self.agent_sel))
@@ -133,6 +142,17 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
         print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
         self.evals.send(self.agent_sel,dest=env_rank,tag=Tags.new_agents)
+        # reward = np.full(self.configs['Environment']['num_instances'],10)
+        # ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,.5, 5,.10)
+        # # dictionaryAgents = self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
+        # for x in range(len(ag)):
+        #     print("X Agents:", ag[x])
+        #     if( len(ag) == 1):
+        #         self.agent_sel = [ag[x]]
+        #     else :    
+        #         self.agent_sel = ag[x]
+        #     print('Selected Evaluation Agents for Environment {}: {}'.format(x, self.agent_sel))
+        #     self.evals.send(self.agent_sel,dest=x,tag=Tags.new_agents)
 
     # rating1 - Score for average Agent/Team1
     # rating2 - Score for Agent/Team2
@@ -205,7 +225,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         
         random.seed()
         teamCreated = False
-        rand = random.randrange(len(agents) - 1)
+        # rand = random.randrange(len(agents) - 1)
         self.agentID =[]
         self.orignalR = r
         self.assignedOrNot = np.full(agents.shape,False)
