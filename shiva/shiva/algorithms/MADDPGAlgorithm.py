@@ -52,13 +52,15 @@ class MADDPGAlgorithm(DDPGAlgorithm):
             assert "MADDPG Method {} is not implemented".format(self.method)
 
     def update(self, agents, buffer, step_count, episodic):
+        self.log("Start update # {}".format(self.num_updates))
         for _ in range(self.update_iterations):
             self._update(agents, buffer, step_count, episodic)
+        self.num_updates += self.update_iterations
 
     def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
         dones = bf_dones.bool()
-        # self.log("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
+        # self.log("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states, bf_actions, bf_rewards, bf_next_states, dones))
         # self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape))
         # self.log("FROM BUFFER Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.dtype, bf_actions.dtype, bf_rewards.dtype, bf_next_states.dtype, bf_dones.dtype))
 
@@ -86,7 +88,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
         # self.log("States from Buff {}".format(bf_rewards.reshape(1, -1)))
         '''Do all permutations of experiences to concat for the 1 single critic'''
         possible_permutations = set(permutations(np.arange(len(agents))))
-        self.log('Updating {} on permutations {}'.format([str(agent) for agent in agents], possible_permutations))
+        # self.log('Updating {} on permutations {}'.format([str(agent) for agent in agents], possible_permutations))
         for perms_ix, perms in enumerate(possible_permutations):
             agent_ix = perms[0]
             agent = agents[agent_ix]
@@ -210,7 +212,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
         #         # Ezequiel: curious if here is doing a second softmax?
         #         bf_actions[:, ix, :] = softmax(bf_actions[:, ix, :])
 
-        self.log("States from Buff {}".format(rewards.reshape(1, -1)))
+        # self.log("States from Buff {}".format(rewards.reshape(1, -1)))
         for agent_ix, agent in enumerate(agents):
             batch_size, num_agents, obs_dim = states.shape
             _, _, acs_dim = actions.shape
@@ -314,7 +316,7 @@ class MADDPGAlgorithm(DDPGAlgorithm):
             if role not in roles_action_space:
                 '''Here is DDPG collapse because we are running a Gym (or similar with single agent)'''
                 roles_action_space[role] = roles_action_space
-            self.log(role, roles_action_space)
+            # self.log(role, roles_action_space)
             if roles_action_space[role]['continuous'] == 0:
                 roles_action_space[role]['type'] = 'discrete'
             elif roles_action_space[role]['discrete'] == 0:
