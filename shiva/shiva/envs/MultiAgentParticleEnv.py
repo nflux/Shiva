@@ -129,7 +129,7 @@ class MultiAgentParticleEnv(Environment):
         return actions
 
     def get_action_space_from_env(self, agent_action_space):
-        '''All Action Spaces are Discrete - unless new environment is implemented'''
+        '''All Action Spaces are Discrete - unless new environment is created by us'''
         if self.env.discrete_action_space:
             action_space = {
                 'discrete': agent_action_space.n,

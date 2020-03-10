@@ -11,7 +11,7 @@ class Scenario(BaseScenario):
         num_good_agents = 1
         num_adversaries = 3
         num_agents = num_adversaries + num_good_agents
-        num_landmarks = 2
+        num_landmarks = 4
         # add agents
         world.agents = [Agent() for i in range(num_agents)]
         for i, agent in enumerate(world.agents):
@@ -115,7 +115,7 @@ class Scenario(BaseScenario):
     def adversary_reward(self, agent, world):
         # Adversaries are rewarded for collisions with agents
         rew = 0
-        shape = False
+        shape = True
         agents = self.good_agents(world)
         adversaries = self.adversaries(world)
         if shape:  # reward can optionally be shaped (decreased reward for increased distance from agents)
