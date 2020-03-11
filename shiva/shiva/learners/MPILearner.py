@@ -256,7 +256,8 @@ class MPILearner(Learner):
         # self.io_pbt_request['path'] = self.eval_path+'Agent_'
 
     def set_default_configs(self):
-        if not hasattr(self, 'evaluate'):
+        assert 'Learner' in self.configs, 'No Learner config found on {}'.format(self.configs)
+        if not hasattr(self.configs['Learner'], 'evaluate'):
             self.configs['Learner']['evaluate'] = False
 
     def _io_checkpoint(self, checkpoint_num, function_only, use_temp_folder):
