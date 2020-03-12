@@ -21,6 +21,7 @@ class Agent(object):
         self.id = id
         self.step_count = 0
         self.done_count = 0
+        self.num_updates = 0
         self.role = agent_config['role'] if 'role' in agent_config else 'Role' # use 'A' for the folder name when there's no role assigned
         self.obs_space = obs_space
         self.acs_space = acs_space

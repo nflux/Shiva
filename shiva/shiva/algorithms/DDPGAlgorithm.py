@@ -15,22 +15,16 @@ class DDPGAlgorithm(Algorithm):
                 C              Number of iterations before the target network is updated
         '''
         super(DDPGAlgorithm, self).__init__(observation_space, action_space, configs)
+        if hasattr(self, 'roles'):
+            assert len(self.roles), "Single role is allowed for {}".format(str(self))
+            self.action_space = self.action_space[self.roles[0]]
+            self.observation_space = self.observation_space[self.roles[0]]
+
         self.actor_loss = torch.tensor(0)
         self.critic_loss = torch.tensor(0)
-        self.set_action_space(action_space)
+        self.set_action_space()
 
     def update(self, agent, buffer, step_count, episodic=False):
-        '''
-            @buffer         buffer is a reference
-        '''
-        # if episodic:
-        #     '''
-        #         DDPG updates at every step. This avoids doing an extra update at the end of an episode
-        #         But it does reset the noise after an episode
-        #     '''
-        #     agent.ou_noise.reset()
-        #     return
-
         '''
             DDPG updates every episode. This avoids doing an extra update at the end of an episode
             But it does reset the noise after an episode.
@@ -38,25 +32,8 @@ class DDPGAlgorithm(Algorithm):
             For Multi-Environment scenarios, the agent whose noise is being reset is not the agent inside
             the multi environment instances, as such, 
         '''
-        # if episodic:
-            
-        #     agent.ou_noise.reset()
-            
-        # else:
-        #     agent.ou_noise.reset()
-        #     # return
+        self.num_updates += 1
 
-        # agent.ou_noise.reset()
-
-        # if step_count < self.agent.exploration_steps:
-        #     '''
-        #         Don't update during exploration!
-        #     '''
-        #     return
-
-        '''
-            Updates starts here
-        '''
         self.agent = agent[0] if type(agent) == list else agent
         try:
             '''For MultiAgentTensorBuffer - 1 Agent only here'''
@@ -64,15 +41,10 @@ class DDPGAlgorithm(Algorithm):
             dones = dones.bool()
         except:
             states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
-            # Send everything to gpu if available
-            # states = states.to(self.device)
-            # actions = actions.to(self.device)
-            # rewards = rewards.to(self.device)
-            # next_states = next_states.to(self.device)
             dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
 
         # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones))
-        print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones.shape))
+        # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones.shape))
 
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
             "acs_space config must be set to either discrete, continuous, or parameterized."
@@ -225,18 +197,18 @@ class DDPGAlgorithm(Algorithm):
         self.configs['Agent']['role'] = role
         return self.create_agent()
 
-    def set_action_space(self, action_space):
-        if action_space['continuous'] == 0:
+    def set_action_space(self):
+        if self.action_space['continuous'] == 0:
             self.a_space = 'discrete'
 
-        elif action_space['discrete'] == 0:
+        elif self.action_space['discrete'] == 0:
             self.a_space = 'continuous'
         else:
             assert "Parametrized not supported yet"
-        self.continuous = action_space['continuous']
-        self.acs_space = action_space['acs_space']
-        self.discrete = action_space['discrete']
-        self.param = action_space['param']
+        self.continuous = self.action_space['continuous']
+        self.acs_space = self.action_space['acs_space']
+        self.discrete = self.action_space['discrete']
+        self.param = self.action_space['param']
 
 
     def get_metrics(self, episodic=False, agent_id=None):
@@ -256,4 +228,4 @@ class DDPGAlgorithm(Algorithm):
         return metrics
 
     def __str__(self):
-        return 'DDPGAlgorithm'
+        return '<DDPGAlgorithm(num_updates={})>'.format(self.num_updates)
