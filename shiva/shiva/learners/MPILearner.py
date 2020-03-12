@@ -233,7 +233,7 @@ class MPILearner(Learner):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         self.configs['Algorithm']['roles'] = self.roles if hasattr(self, 'roles') else []
         alg = algorithm_class(self.observation_space, self.action_space, self.configs)
-        self.log("Algorithm created of type {}".format(algorithm_class ))
+        self.log("Algorithm created of type {}".format(algorithm_class))
         return alg
 
     def create_buffer(self):

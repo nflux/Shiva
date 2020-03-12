@@ -159,5 +159,5 @@ class DDPGAgent(Agent):
     #     self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
         
     def __str__(self):
-        return '<DDPGAgent(id={}, role={}, steps={}, episodes={})>'.format(self.id, self.role, self.step_count, self.done_count)
+        return '<DDPGAgent(id={}, role={}, steps={}, episodes={}, num_updates={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates)
         
