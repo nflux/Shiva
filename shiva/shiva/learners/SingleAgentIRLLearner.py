@@ -112,7 +112,7 @@ class SingleAgentIRLLearner(Learner):
         exp = copy.deepcopy([
                              torch.tensor(observation),
                              torch.tensor(action),
-                             torch.tensor(self.reward),
+                             torch.tensor(self.reward).view(-1, 1),
                              torch.tensor(next_observation),
                              torch.tensor(int(done)),
                              torch.tensor(log_probs)

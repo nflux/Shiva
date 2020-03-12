@@ -78,34 +78,48 @@ class IRLAlgorithm(Algorithm):
 
         if episodic:
             '''
-                DQN updates at every timestep, here we avoid doing an extra update after the episode terminates
+                IRL updates at every step, here we avoid doing an extra update after the episode terminates
             '''
             return
 
-        states, actions, _, _, _, _ = buffer.full_buffer()
+        states, actions, _, _, _, _ = buffer.full_buffer(device=self.device)
 
         # print('from buffer:', states.shape, actions.shape '\n')
         # input()
 
-        self.loss = torch.tensor(self.get_heuristic_loss(states, actions), requires_grad=True)
+        self.loss = 0
 
-        self.loss.backward()
+        for state, action in zip(states, actions):
+            agent.optimizer.zero_grad()
+            expert_action = torch.tensor(self.expert.agent.get_action(state))
+            expert_reward = agent.get_reward(state, expert_action)
+            agent_reward = agent.get_reward(state, action)
 
-        agent.optimizer.step()
+            self.loss = (torch.exp(expert_reward) / torch.exp(agent_reward))
 
-        agent.optimizer.zero_grad()
+            # if torch.all(torch.eq(action, expert_action)):
+            #     """ Expert Action and Agent Action were the same """
+            #     self.loss = -(torch.exp(expert_reward) / torch.exp(agent_reward))
+            # else:
+            #     """ Expert Action and Agent Action were different """
+            #     self.loss = (torch.exp(expert_reward) / torch.exp(agent_reward))
+
+            agent.optimizer.step()
+            self.loss.backward()
 
     def get_heuristic_loss(self, states, actions):
 
-        '''
+        """
 
             This function will use the expert to identify whether actions were expert actions given the state
 
-        '''
+        """
 
         loss = 0
 
         for i in range(len(actions)):
+            # this seems suspicious, why am I calling expert.agent.get_action?
+            # I think it should be self.expert.get_action(states[i])
             expert_action = torch.tensor(self.expert.agent.get_action(states[i]))
             loss += abs(torch.argmax(actions[i]) - max(expert_action))
         return loss

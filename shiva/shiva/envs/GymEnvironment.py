@@ -86,7 +86,7 @@ class GymEnvironment(Environment):
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
-                ('Reward/Per_Step', self.reward_per_step)
+                # ('Reward/Per_Step', self.reward_per_step)
             ]
         else:
             metrics = [
