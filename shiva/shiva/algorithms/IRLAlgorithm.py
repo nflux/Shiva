@@ -88,24 +88,25 @@ class IRLAlgorithm(Algorithm):
         # input()
 
         self.loss = 0
+        agent.optimizer.zero_grad()
 
         for state, action in zip(states, actions):
-            agent.optimizer.zero_grad()
             expert_action = torch.tensor(self.expert.agent.get_action(state))
-            expert_reward = agent.get_reward(state, expert_action)
+            # expert_reward = agent.get_reward(state, expert_action)
+            expert_reward = torch.tensor([5.0])
             agent_reward = agent.get_reward(state, action)
 
-            self.loss = (torch.exp(expert_reward) / torch.exp(agent_reward))
+            # self.loss += -(torch.exp(expert_reward) / torch.exp(agent_reward))
 
-            # if torch.all(torch.eq(action, expert_action)):
-            #     """ Expert Action and Agent Action were the same """
-            #     self.loss = -(torch.exp(expert_reward) / torch.exp(agent_reward))
-            # else:
-            #     """ Expert Action and Agent Action were different """
-            #     self.loss = (torch.exp(expert_reward) / torch.exp(agent_reward))
+            if torch.all(torch.eq(action, expert_action)):
+                """ Expert Action and Agent Action were the same """
+                self.loss += -(torch.exp(expert_reward) / torch.exp(agent_reward))
+            else:
+                """ Expert Action and Agent Action were different """
+                self.loss += (torch.exp(expert_reward) / torch.exp(agent_reward))
 
-            agent.optimizer.step()
-            self.loss.backward()
+        agent.optimizer.step()
+        self.loss.backward()
 
     def get_heuristic_loss(self, states, actions):
 
