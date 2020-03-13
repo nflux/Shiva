@@ -1,4 +1,4 @@
-import sys, traceback, os, time
+import sys, traceback, os, time, pickle
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
@@ -386,8 +386,11 @@ class MPILearner(Learner):
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
     def welch_T_Test(self,evals,evo_evals):
-        t,p = stats.ttest_ind(evals, evo_evals, equal_var=False)
-        return p < self.p_value
+        if 'RoboCup' in self.configs['Environment']['type']:
+            return True
+        else:
+            t,p = stats.ttest_ind(evals, evo_evals, equal_var=False)
+            return p < self.p_value
 
     def _t_test(self,agent,evo_config):
         # print('Starting t_test')
@@ -410,9 +413,16 @@ class MPILearner(Learner):
             #self.evo_evals = self.io.recv(None,source=MPI.ANY_SOURCE, tag=Tags.io_evals_load)
             self.io.send(True, dest=0, tag=Tags.io_learner_request)
             _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
-            evals = np.load(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy')
-            evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy')
             path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
+            if 'RoboCup' in self.configs['Environment']['type']:
+                with open(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.data','rb') as file_handler:
+                    evals = np.array(pickle.load(file_handler))
+                with open(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.data','rb') as file_handler:
+                    evo_evals = np.array(pickle.load(file_handler))
+            else :
+                evals = np.load(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy')
+                evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy')
+            #path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
             evo_agent = Admin._load_agents(path)[0]
             self.io.send(True, dest=0, tag=Tags.io_learner_request)
             if self.welch_T_Test(evals,evo_evals):

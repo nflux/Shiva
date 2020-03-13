@@ -30,6 +30,9 @@ class MPIPBTMetaLearner(MetaLearner):
         self._launch_menvs()
         self._launch_learners()
         self._launch_mevals()
+        self.rankings_size = self.configs['Evaluation']['num_agents']
+        self.bottom_20 = int(self.rankings_size * .80)
+        self.top_20 = int(self.rankings_size * .20)
         self.run()
 
     def run(self):
@@ -40,9 +43,9 @@ class MPIPBTMetaLearner(MetaLearner):
 
             if self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings):
                 self.rankings = self.mevals.recv(None,source=MPI.ANY_SOURCE, tag=Tags.rankings)
-                self.rankings_size = len(self.rankings)
-                self.bottom_20 = int(self.rankings_size * .80)
-                self.top_20 = int(self.rankings_size * .20)
+                #self.rankings_size = len(self.rankings)
+                #self.bottom_20 = int(self.rankings_size * .80)
+                #self.top_20 = int(self.rankings_size * .20)
                 self.log('MetaLearner Rankings: {}'.format(self.rankings))
 
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution) and hasattr(self, 'rankings'):

@@ -964,8 +964,8 @@ class rc_env:
         metrics = dict()
         metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball
         metrics['first_kick'] = self.first_kick
+        metrics['inv_steps_to_kick'] = self.inv_steps_to_kick
         metrics['distance_to_opp_goal'] = self.min_distance_to_opp_goal
         metrics['distance_to_own_goal'] = self.min_distance_to_own_goal
         metrics['inv_steps_to_goal'] = self.inv_steps_to_goal
-        metrics['inv_steps_to_kick'] = self.inv_steps_to_kick
         return metrics

@@ -4,6 +4,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
 from mpi4py import MPI
 import numpy as np
+import pandas as pd
 
 
 from shiva.core.admin import logger
@@ -31,12 +32,22 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self._launch_evals()
         self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
-        self.rankings = np.zeros(self.num_agents)
+        #self.rankings = np.zeros(self.num_agents)
         self.evaluations = dict()
         self.info = MPI.Status()
         self.log("This at 35 is not printed")
         self.agent_ids = self.meta.bcast(None,root=0)
         print('Agent IDS: ', self.agent_ids)
+        if 'RoboCup' in self.env_specs['type']:
+            self.evaluations = pd.DataFrame(index = np.arange(0,self.num_agents),columns = self.eval_events+'total_score')
+            self.rankings = np.zeros(self.num_agents)
+            self._sort_evals = getattr(self, '_sort_robocup')
+            self._get_evaluations = getattr(self,'_get_robocup_evaluations')
+        else:
+            self.evaluations = dict()
+            self.rankings = np.zeros(self.num_agents)
+            self._sort_evals = getattr(self,'_sort_simple')
+            self._get_evaluations = getattr(self,'_get_simple_evaluations')
         self.initial_agent_selection()
 
         self.run()
@@ -50,12 +61,13 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self._get_evaluations(True)
 
             if self.sort:
-                self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__,reverse=True))
-                print('Rankings: ', self.rankings)
-                print('Rankings type: ', type(self.rankings))
-                self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
-                print('Sent rankings to Meta')
-                self.sort = False
+                self.sort_evals
+                #self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__,reverse=True))
+                #print('Rankings: ', self.rankings)
+                #print('Rankings type: ', type(self.rankings))
+                #self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
+                #print('Sent rankings to Meta')
+                #self.sort = False
 
 
         self.close()
@@ -80,15 +92,49 @@ class MPIMultiEvaluationWrapper(Evaluation):
             'num_evals': self.num_evals
         }
 
-    def _get_evaluations(self, sort):
+    def _get_simple_evaluations(self, sort):
         if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evals):
             agent_id = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
             env_source = self.info.Get_source()
             evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
             self.evaluations[agent_id] = evals.mean()
             self.sort = sort
-            print('Multi Evaluation has received evaluations!')
+            self.log('Multi Evaluation has received evaluations!')
             self.agent_selection(env_source)
+
+    def _get_robocup_evaluations(self,sort):
+        if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag = Tags.evals):
+            agent_id = self.evals.recv(None, source = MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
+            env_source = self.info.Get_source()
+            evals = self.evals.recv(None, source=en_source, tag=Tags.evals)
+            #evals['agent_id'] = agent_id
+            self.evaluations.loc[i,self.eval_events] = evals
+            self.sort = sort
+            self.log('Multi Evaluation has received evaluations')
+            self.agent_selection(env_source)
+
+
+    def _sort_simple(self):
+        self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__,reverse=True))
+        self.log('Rankings: {}'.format(self.rankings)))
+        self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
+        self.log('Sent rankings to Meta')
+        self.sort = False
+
+    def _sort_robocup(self):
+        self.evaluations['total_score'] = 0
+        #self.evaluations= self.evaluations.rename_axis('agent_ids').reset_index()
+        for i,col in enumerate(self.eval_events):
+            self.evaluations.sort(by=col,inplace=True)
+            self.evaluations['total_score'] += np.array(self.evaluations.index) * self.eval_weights[i]
+
+        self.evaluations.sort(by='total_score',ascending=False,inplace=True)
+        self.rankings = np.array(self.evaluations.index)
+        self.evaluations.sort_index(inplace=True)
+        self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
+        self.log('Sent rankings to Meta')
+        self.sort = False
+
 
     #def _get_evaluations(self,sort):
         #if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag = Tags.evals):

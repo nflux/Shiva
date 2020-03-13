@@ -148,7 +148,7 @@ class MPIEvalEnv(Environment):
             #         self.reward_idxs[i] += 1
 
             if self.dones:
-                self._send_eval_numpy(self.env.get_metrics())
+                self._send_eval_numpy(self.env.get_eval_metrics())
                 # self.episode_rewards[i, :].fill(0)
                 # self.reward_idxs[i] = 0
             # else:

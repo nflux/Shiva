@@ -1,4 +1,4 @@
-import sys, time, traceback
+import sys, time, traceback, pickle
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
@@ -37,8 +37,12 @@ class MPIEvaluation(Evaluation):
         self.agent_ids = [id for id in self.agent_sel]
         print('Agent IDs: ', self.agent_ids)
         print('Agent Sel: ', self.agent_sel)
-        self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
-        self_evals_list = [[None]*self.eval_episodes]*len(self.agent_ids)
+        #self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
+        if 'RoboCup' in self.env_specs['type']:
+            self.evals_list = [[None]*self.eval_episodes]*len(self.agent_ids)
+            self.send_eval_update_agents = getattr(self, 'send_robocup_eval_update_agents')
+        else:
+            self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
         self.ep_evals = dict()
         self.eval_counts = np.zeros(len(self.agent_ids),dtype=int)
         self._io_load_agents()
@@ -97,33 +101,34 @@ class MPIEvaluation(Evaluation):
             # self.log("Getting here at 91")
 
             if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-                print('Sending Eval and updating most recent agent file path ')
-                for i in range(self.agents_per_env):
-                    self.log('agent_id: {}'.format(self.agent_ids[i]))
-                    path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                    self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
-                    self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
-                    if 'RoboCup' in self.configs['type']:
-                        self.meval.send(self.evals_list[i], dest=0, tag=Tags.evals)
-                    else:
-                        self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
-                    #self.ep_evals['path'] = path+'/episode_evaluations'
-                    #self.ep_evals['evals'] = self.evals[i]
-                    self.io.send(True, dest=0, tag=Tags.io_eval_request)
-                    _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
-                    np.save(path+'/episode_evaluations',self.evals[i])
-                    # self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
-                    new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
-                    self.agent_ids[i] = new_agent
-                    print('New Eval Agent: {}'.format(new_agent))
-                    path = self.eval_path+'Agent_'+str(new_agent)
-                    self.log('Path: {} '.format(path))
-                    self.agents[i] = Admin._load_agents(path)[0]
-                    self.log('Agent: {}'.format(str(self.agents[0])))
-                    self.evals[i].fill(0)
-                    self.eval_counts[i]=0
-                    self.io.send(True, dest=0, tag=Tags.io_eval_request)
-                time.sleep(0.1)
+                self.send_eval_update_agents()
+                #print('Sending Eval and updating most recent agent file path ')
+                #for i in range(self.agents_per_env):
+                    #self.log('agent_id: {}'.format(self.agent_ids[i]))
+                    #path = self.eval_path+'Agent_'+str(self.agent_ids[i])
+                    #self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
+                    #self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
+                    #if 'RoboCup' in self.configs['type']:
+                        #self.meval.send(self.evals_list[i], dest=0, tag=Tags.evals)
+                    #else:
+                        #self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
+                    ##self.ep_evals['path'] = path+'/episode_evaluations'
+                    ##self.ep_evals['evals'] = self.evals[i]
+                    #self.io.send(True, dest=0, tag=Tags.io_eval_request)
+                    #_ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
+                    #np.save(path+'/episode_evaluations',self.evals[i])
+                    ## self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
+                    #new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
+                    #self.agent_ids[i] = new_agent
+                    #print('New Eval Agent: {}'.format(new_agent))
+                    #path = self.eval_path+'Agent_'+str(new_agent)
+                    #self.log('Path: {} '.format(path))
+                    #self.agents[i] = Admin._load_agents(path)[0]
+                    #self.log('Agent: {}'.format(str(self.agents[0])))
+                    #self.evals[i].fill(0)
+                    #self.eval_counts[i]=0
+                    #self.io.send(True, dest=0, tag=Tags.io_eval_request)
+                #time.sleep(0.1)
 
 
             #if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
@@ -170,6 +175,63 @@ class MPIEvaluation(Evaluation):
             'env_specs': self.env_specs,
             'num_envs': self.num_envs
         }
+
+    def send_eval_update_agents(self):
+        if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
+            print('Sending Eval and updating most recent agent file path ')
+            for i in range(self.agents_per_env):
+                self.log('agent_id: {}'.format(self.agent_ids[i]))
+                path = self.eval_path+'Agent_'+str(self.agent_ids[i])
+                self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
+                self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
+                self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
+                #self.ep_evals['path'] = path+'/episode_evaluations'
+                #self.ep_evals['evals'] = self.evals[i]
+                self.io.send(True, dest=0, tag=Tags.io_eval_request)
+                _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
+                np.save(path+'/episode_evaluations',self.evals[i])
+                # self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
+                new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
+                self.agent_ids[i] = new_agent
+                print('New Eval Agent: {}'.format(new_agent))
+                path = self.eval_path+'Agent_'+str(new_agent)
+                self.log('Path: {} '.format(path))
+                self.agents[i] = Admin._load_agents(path)[0]
+                self.log('Agent: {}'.format(str(self.agents[0])))
+                self.evals[i].fill(0)
+                self.eval_counts[i]=0
+                self.io.send(True, dest=0, tag=Tags.io_eval_request)
+            time.sleep(0.1)
+
+
+    def send_robocup_eval_update_agents(self):
+        if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
+            print('Sending Eval and updating most recent agent file path ')
+            for i in range(self.agents_per_env):
+                self.log('agent_id: {}'.format(self.agent_ids[i]))
+                path = self.eval_path+'Agent_'+str(self.agent_ids[i])
+                self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
+                self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
+                self.meval.send(self.evals_list[i], dest=0, tag=Tags.evals)
+                #self.ep_evals['path'] = path+'/episode_evaluations'
+                #self.ep_evals['evals'] = self.evals[i]
+                self.io.send(True, dest=0, tag=Tags.io_eval_request)
+                _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
+                #np.save(path+'/episode_evaluations',self.evals[i])
+                with open(path+'/episode_evaluations.data','wb') as file_handler:
+                    pickle.dump(self.evals_list,file_handler)
+                # self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
+                new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
+                self.agent_ids[i] = new_agent
+                print('New Eval Agent: {}'.format(new_agent))
+                path = self.eval_path+'Agent_'+str(new_agent)
+                self.log('Path: {} '.format(path))
+                self.agents[i] = Admin._load_agents(path)[0]
+                self.log('Agent: {}'.format(str(self.agents[0])))
+                self.evals_list = [[None]*self.eval_episodes]*len(self.agent_ids)
+                self.eval_counts[i]=0
+                self.io.send(True, dest=0, tag=Tags.io_eval_request)
+            time.sleep(0.1)
 
     def _receive_eval_numpy(self):
         '''Receive trajectory reward from each single  evaluation environment in self.envs process group'''
