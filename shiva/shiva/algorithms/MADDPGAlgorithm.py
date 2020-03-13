@@ -7,14 +7,14 @@ from torch.nn.functional import softmax
 from shiva.utils import Noise as noise
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.MADDPGAgent import MADDPGAgent
-from shiva.algorithms.DDPGAlgorithm import DDPGAlgorithm
+from shiva.algorithms.Algorithm import Algorithm
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork
 from shiva.helpers.misc import one_hot_from_logits
 
 from itertools import permutations
 from functools import partial
 
-class MADDPGAlgorithm(DDPGAlgorithm):
+class MADDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):
         super(MADDPGAlgorithm, self).__init__(observation_space, action_space, configs)
         self.actor_loss = [0 for _ in range(len(self.roles))]
@@ -297,6 +297,9 @@ class MADDPGAlgorithm(DDPGAlgorithm):
             for k, v in ct_state.items():
                 tgt_ct_state[k] = v * self.tau + (1 - self.tau) * tgt_ct_state[k]
             agent.target_critic.load_state_dict(tgt_ct_state)
+
+    def create_agent(self, id=None):
+        assert 'NotImplemented - should be creating all Roles agents at once'
 
     def create_agent_of_role(self, role):
         assert role in self.roles, "Invalid given role, got {} expected of {}".format(role, self.roles)
