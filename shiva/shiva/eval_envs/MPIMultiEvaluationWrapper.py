@@ -38,8 +38,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.log("This at 35 is not printed")
         self.agent_ids = self.meta.bcast(None,root=0)
         print('Agent IDS: ', self.agent_ids)
-        if 'RoboCup' in self.env_specs['type']:
-            self.evaluations = pd.DataFrame(index = np.arange(0,self.num_agents),columns = self.eval_events+'total_score')
+        if 'RoboCup' in self.configs['Environment']['type']:
+            self.evaluations = pd.DataFrame(index = np.arange(0,self.num_agents),columns = self.eval_events+['total_score'])
             self.rankings = np.zeros(self.num_agents)
             self._sort_evals = getattr(self, '_sort_robocup')
             self._get_evaluations = getattr(self,'_get_robocup_evaluations')
@@ -116,7 +116,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     def _sort_simple(self):
         self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__,reverse=True))
-        self.log('Rankings: {}'.format(self.rankings)))
+        self.log('Rankings: {}'.format(self.rankings))
         self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
         self.log('Sent rankings to Meta')
         self.sort = False

@@ -46,7 +46,7 @@ class MPIEnv(Environment):
         while True:
             time.sleep(0.1)
             while self.env.start_env():
-                self._step_python()
+                self._step_numpy()
                 self._append_step()
                 if self.env.is_done():
                     self.print(self.env.get_metrics(episodic=True)) # print metrics

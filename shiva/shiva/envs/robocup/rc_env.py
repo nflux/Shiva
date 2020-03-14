@@ -350,13 +350,14 @@ class rc_env:
 
         # for i in range(self.num_right):
         #     self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
-
+        print('Here in the step function')
         [self.Queue_action(i,self.left_base,left_actions[i],left_options) for i in range(len(left_actions))]
-        [self.Queue_action(j,self.right_base,right_actions[j],right_options) for j in range(len(right_actions))]
-
+        #[self.Queue_action(j,self.right_base,right_actions[j],right_options) for j in range(len(right_actions))]
+        
         self.sync_after_queue.wait()
+        print('In Between')
         self.sync_before_step.wait()
-
+        print('About to return from rc_env')
         return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
     def Queue_action(self,agent_id,base,action,options):

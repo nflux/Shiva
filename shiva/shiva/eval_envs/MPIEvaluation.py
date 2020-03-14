@@ -50,7 +50,7 @@ class MPIEvaluation(Evaluation):
 
         # Give start flag!
         self.envs.bcast([True], root=MPI.ROOT)
-
+        self.log('Eval Envs have been told to start!')
         self.run()
 
     def run(self):
