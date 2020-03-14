@@ -248,8 +248,8 @@ class MPIEvaluation(Evaluation):
                     '''
             if self.eval_counts[agent_idx] < self.eval_episodes:
 
-                if 'RoboCup' in self.configs['type']:
-                    evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
+                if 'RoboCup' in self.env_specs['type']:
+                    self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
                     self.evals_list[agent_idx, self.eval_counts[agent_idx]] = evals
                     self.eval_counts[agent_idx] += 1
                 else:

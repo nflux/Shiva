@@ -136,7 +136,7 @@ class MPIEvalEnv(Environment):
             self.log('Made it to 124')
             self.actions = recv_action
             self.log("The action is {}".format(self.actions.shape))
-            self.next_observations, self.rewards,_,_, self.dones, _ = self.env.step(self.actions)
+            self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
             self.log('Made it to 127 {}'.format(self.rewards))
 
             # for i in range(len(self.rewards)):
@@ -149,7 +149,7 @@ class MPIEvalEnv(Environment):
             #         self.reward_idxs[i] += 1
 
             if self.dones:
-                self._send_eval_numpy(self.env.get_eval_metrics(),0)
+                self._send_eval_numpy(self.env.env.get_eval_metrics(),0)
                 # self.episode_rewards[i, :].fill(0)
                 # self.reward_idxs[i] = 0
             # else:

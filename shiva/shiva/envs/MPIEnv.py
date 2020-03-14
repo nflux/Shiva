@@ -80,7 +80,7 @@ class MPIEnv(Environment):
         # self.log("Obs {} Act {}".format(self.observations, self.actions))
         # self.log("Act {}".format(self.actions))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-        self.log('The Dones look like this: {}'.format(self.dones))
+       # self.log('The Dones look like this: {}'.format(self.dones))
 
         # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.reward).shape, np.array(self.done).shape))
         # self.log("Actual types: {} {} {} {} {}".format(type(self.observations), type(self.actions), type(self.next_observations), type(self.reward), type(self.done)))
