@@ -12,7 +12,7 @@ class Environment:
         self.done_count = 0
         self.total_episodes_to_play = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+        
 
     def step(self,actions):
         pass

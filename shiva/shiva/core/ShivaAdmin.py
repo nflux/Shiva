@@ -1,6 +1,7 @@
 import os
 import configparser
 import inspect
+import numpy as np
 from tensorboardX import SummaryWriter
 
 import shiva.helpers.dir_handler as dh
@@ -225,7 +226,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         # self.log("{} {} {} {} {}".format(learner.id, agent, scalar_name, value_y, value_x) )
-        if type(agent) == int:
+        if type(agent) == np.int64:
             '''Agent ID was sent'''
             self.writer[learner.id][agent].add_scalar(scalar_name, value_y, value_x)
         else:

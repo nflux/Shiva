@@ -39,7 +39,7 @@ class MPIEvaluation(Evaluation):
         print('Agent Sel: ', self.agent_sel)
         #self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
         if 'RoboCup' in self.env_specs['type']:
-            self.evals_list = [[None]*self.eval_episodes]*len(self.agent_ids)
+            self.evals_list = [[None]*self.eval_episodes]*self.agents_per_env
             self.send_eval_update_agents = getattr(self, 'send_robocup_eval_update_agents')
         else:
             self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
@@ -56,6 +56,7 @@ class MPIEvaluation(Evaluation):
     def run(self):
         self.step_count = 0
         info = MPI.Status()
+                
 
         # self.log("Get here 53")
         if 'Unity' in self.env_specs['type']:
@@ -73,6 +74,7 @@ class MPIEvaluation(Evaluation):
 
 
         while True:
+            #self.log('Device: {}'.format(self.agents[0].device))
             time.sleep(0.001)
             self._receive_eval_numpy()
             # self.log("Jorge is so cool")
@@ -250,9 +252,9 @@ class MPIEvaluation(Evaluation):
 
                 if 'RoboCup' in self.env_specs['type']:
                     evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
-                    self.log('Agent IDX: {}'.format(agent_idx))
-                    self.log('Eval Counts: {}'.format(self.eval_counts[agent_idx]))
-                    self.evals_list[self.eval_counts[agent_idx]] = evals
+                    #self.log('Agent IDX: {}'.format(agent_idx))
+                    #self.log('Eval Counts: {}'.format(self.eval_counts[agent_idx]))
+                    self.evals_list[agent_idx][self.eval_counts[agent_idx]] = evals
                     self.eval_counts[agent_idx] += 1
                 else:
                     evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
@@ -268,6 +270,7 @@ class MPIEvaluation(Evaluation):
         self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
         self.log('Agent: {}'.format(str(self.agents[0])))
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
+
         #self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
 
 
