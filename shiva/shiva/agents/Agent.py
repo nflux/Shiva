@@ -64,6 +64,7 @@ class Agent(torch.nn.Module):
     def get_action(self, obs):
         assert False, "Method Not Implemented"
 
+    # Probably Not Needed Subject to Removal
     def get_elo(self):
         return self.eloReward
 

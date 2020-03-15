@@ -128,7 +128,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
         # System Using Team Matching 
         reward = np.full(self.configs['Environment']['num_instances'],10)
-        ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,.5, 5,.10)
+        for x in range(len(self.agent_ids)):
+            reward[x] = self.agents[self.agent_ids[x]].eloReward
+        ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,self.configs['Matchmaker']['probability'], self.configs['Matchmaker']['constant'],self.configs['Matchmaker']['scaler'])
+        
         # dictionaryAgents = self.Matcher(self.agent_ids, 5, reward,.5, 5,.10)
         for x in range(len(ag)):
             print("X Agents:", ag[x])
@@ -150,7 +153,9 @@ class MPIMultiEvaluationWrapper(Evaluation):
     def agent_selection(self,env_rank):
 
         reward = np.full(self.configs['Environment']['num_instances'],10)
-        ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,.5, 5,.10)
+        for x in range(len(self.agent_ids)):
+            reward[x] = self.agents[self.agent_ids[x]].eloReward
+        ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,self.configs['Matchmaker']['probability'], self.configs['Matchmaker']['constant'],self.configs['Matchmaker']['scaler'])
         if(len(ag[0]) == 1):
             self.agent_sel = [ag[random.randrange(len(ag))]]
         else:
