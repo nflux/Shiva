@@ -39,6 +39,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.info = MPI.Status()
         self.log("This at 35 is not printed")
         self.agent_ids = self.meta.bcast(None,root=0)
+        self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
+        # self.io = MPI.COMM_WORLD.Connect(self.evals_io_port, MPI.INFO_NULL)
+        # self._io_load_agents()
+        print("AGENT HELLO WORLD", self.agents[0].eloReward)
         self.initial_agent_selection()
 
         # THE START OF INITIATE MATCHING FUNCTION PIPELINE TEST
@@ -82,6 +86,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
         #self.log('Eval specs received')
         assert len(eval_spec) == self.num_evals, "Not all Evaluations checked in.."
         self.eval_specs = eval_spec[0] # set self attr only 1 of them
+
+
 
 
     def _get_meval_specs(self):
@@ -145,10 +151,11 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
         reward = np.full(self.configs['Environment']['num_instances'],10)
         ag = self.Matcher(self.agent_ids, self.configs['Environment']['num_instances'], reward,.5, 5,.10)
-        if(len(ag == 1)):
+        if(len(ag[0]) == 1):
             self.agent_sel = [ag[random.randrange(len(ag))]]
         else:
             self.agent_sel = ag[random.randrange(len(ag))]
+        # self.agent_sel = [ag[random.randrange(len(ag))]]
         #Randomly Selects and Agent
         #self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
         print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))

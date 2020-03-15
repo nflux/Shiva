@@ -64,6 +64,9 @@ class Agent(torch.nn.Module):
     def get_action(self, obs):
         assert False, "Method Not Implemented"
 
+    def get_elo(self):
+        return self.eloReward
+
     @staticmethod
     def copy_model_over(from_model, to_model):
         """
