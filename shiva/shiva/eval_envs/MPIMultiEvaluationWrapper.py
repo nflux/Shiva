@@ -61,7 +61,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self._get_evaluations(True)
 
             if self.sort:
-                self.sort_evals
+                self._sort_evals()
                 #self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__,reverse=True))
                 #print('Rankings: ', self.rankings)
                 #print('Rankings type: ', type(self.rankings))
@@ -106,9 +106,9 @@ class MPIMultiEvaluationWrapper(Evaluation):
         if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag = Tags.evals):
             agent_id = self.evals.recv(None, source = MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
             env_source = self.info.Get_source()
-            evals = self.evals.recv(None, source=en_source, tag=Tags.evals)
+            evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
             #evals['agent_id'] = agent_id
-            self.evaluations.loc[i,self.eval_events] = evals
+            self.evaluations.loc[agent_id,self.eval_events] = evals
             self.sort = sort
             self.log('Multi Evaluation has received evaluations')
             self.agent_selection(env_source)
@@ -122,14 +122,19 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.sort = False
 
     def _sort_robocup(self):
+        #self.log('Robocup Sort!')
         self.evaluations['total_score'] = 0
         #self.evaluations= self.evaluations.rename_axis('agent_ids').reset_index()
         for i,col in enumerate(self.eval_events):
-            self.evaluations.sort(by=col,inplace=True)
+            #self.log('enumerating events')
+            self.evaluations.sort_values(by=col,inplace=True)
+            #self.log('sorting')
             self.evaluations['total_score'] += np.array(self.evaluations.index) * self.eval_weights[i]
-
-        self.evaluations.sort(by='total_score',ascending=False,inplace=True)
+            #self.log('setting total scores')
+        self.evaluations.sort_values(by='total_score',ascending=False,inplace=True)
+        #self.log('Sorting Total Scores')
         self.rankings = np.array(self.evaluations.index)
+        self.log('Rankings: {}'.format(self.rankings))
         self.evaluations.sort_index(inplace=True)
         self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
         self.log('Sent rankings to Meta')

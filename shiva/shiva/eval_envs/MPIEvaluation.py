@@ -210,7 +210,7 @@ class MPIEvaluation(Evaluation):
             for i in range(self.agents_per_env):
                 self.log('agent_id: {}'.format(self.agent_ids[i]))
                 path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
+                self.log('Sending Evaluations to MultiEval: {}'.format(self.evals_list[i]))
                 self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
                 self.meval.send(self.evals_list[i], dest=0, tag=Tags.evals)
                 #self.ep_evals['path'] = path+'/episode_evaluations'
@@ -249,8 +249,10 @@ class MPIEvaluation(Evaluation):
             if self.eval_counts[agent_idx] < self.eval_episodes:
 
                 if 'RoboCup' in self.env_specs['type']:
-                    self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
-                    self.evals_list[agent_idx, self.eval_counts[agent_idx]] = evals
+                    evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
+                    self.log('Agent IDX: {}'.format(agent_idx))
+                    self.log('Eval Counts: {}'.format(self.eval_counts[agent_idx]))
+                    self.evals_list[self.eval_counts[agent_idx]] = evals
                     self.eval_counts[agent_idx] += 1
                 else:
                     evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)

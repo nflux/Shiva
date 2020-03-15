@@ -49,20 +49,20 @@ class MPIEvalEnv(Environment):
         self.run()
 
     def run(self):
-        self.log("Get here at 45")
+       # self.log("Get here at 45")
         self.env.reset()
 
-        self.log("Get here at 48")
+        #self.log("Get here at 48")
 
         while True:
            # time.sleep(0.001)
-            self.log('While True')
+           # self.log('While True')
             while self.env.start_env():
-                self.log('Env start')
+               # self.log('Env start')
                 self._step_numpy()
-                self.log('After step')
+               # self.log('After step')
                 if self.env.is_done():
-                    self.log('Env is done')
+                   # self.log('Env is done')
                     self.env.reset()
 
                 if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
@@ -93,7 +93,7 @@ class MPIEvalEnv(Environment):
         '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
                                     --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
         '''
-        self.log("Hello Josh")
+        #self.log("Hello Josh")
         send_obs_buffer = np.array(self.observations, dtype=np.float64)
         self.eval.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
 
@@ -131,13 +131,13 @@ class MPIEvalEnv(Environment):
         elif 'RoboCup' in self.type:
             # self.log("Getting to 112")
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
-            self.log("The recv action {}".format(recv_action.shape))
+            #self.log("The recv action {}".format(recv_action.shape))
             self.eval.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
-            self.log('Made it to 124')
+            #self.log('Made it to 124')
             self.actions = recv_action
-            self.log("The action is {}".format(self.actions.shape))
+            #self.log("The action is {}".format(self.actions.shape))
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-            self.log('Made it to 127 {}'.format(self.rewards))
+            #self.log('Made it to 127 {}'.format(self.rewards))
 
             # for i in range(len(self.rewards)):
             #     self.episode_rewards[i, self.reward_idxs[i]] = self.rewards[i]
