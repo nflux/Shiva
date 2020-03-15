@@ -121,7 +121,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
 
     def _sort_simple(self):
-        self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__,reverse=True))
+        self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__, reverse=True))
         self.log('Rankings: {}'.format(self.rankings))
         self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
         self.log('Sent rankings to Meta')
