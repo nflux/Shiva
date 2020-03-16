@@ -104,18 +104,24 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     def _get_robocup_evaluations(self,sort):
         if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag = Tags.evals):
+            temp = np.zeros(len(self.eval_events))
             agent_id = self.evals.recv(None, source = MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
             env_source = self.info.Get_source()
             evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
             #evals['agent_id'] = agent_id
-            self.evaluations.loc[agent_id,self.eval_events] = evals
+            keys = evals[0].keys()
+            for i in range(len(evals)):
+                for j,key in enumerate(keys):
+                    temp[j] += evals[i][key]
+            averages = temp/len(evals)
+            self.evaluations.loc[agent_id,self.eval_events] = averages
             self.sort = sort
             self.log('Multi Evaluation has received evaluations')
             self.agent_selection(env_source)
 
 
     def _sort_simple(self):
-        self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__,reverse=True))
+        self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__, reverse=True))
         self.log('Rankings: {}'.format(self.rankings))
         self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
         self.log('Sent rankings to Meta')

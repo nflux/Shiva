@@ -11,6 +11,7 @@ from shiva.utils import Noise as noise
 from shiva.helpers.misc import action2one_hot
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
+
 class DDPGAgent(Agent):
     def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
@@ -19,11 +20,14 @@ class DDPGAgent(Agent):
             torch.manual_seed(self.manual_seed)
             np.random.seed(self.manual_seed)
         except:
-            #torch.manual_seed(5)
-            #np.random.seed(5)
+            # torch.manual_seed(5)
+            # np.random.seed(5)
             self.seed = np.random.randint(0, 100)
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
+
+            self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
+            self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
 
         self.id = id
 
@@ -57,7 +61,6 @@ class DDPGAgent(Agent):
         self.critic = DynamicLinearNetwork(obs_space + self.acs_space, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
-        
         if agent_config['lr_range']:
             self.critic_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
             self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
@@ -70,8 +73,6 @@ class DDPGAgent(Agent):
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
-
-
 
     def get_action(self, observation, step_count, evaluate=False):
         if self.action_space == 'discrete':
@@ -89,13 +90,16 @@ class DDPGAgent(Agent):
             # print("Agent Evaluate {}".format(action))
         else:
             if step_count < self.exploration_steps:
-                self.ou_noise.set_scale(self.exploration_noise)
+                self.ou_noise.set_scale(self.noise_scale)
                 action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
                 # print("Random: {}".format(action))
+            elif np.random.uniform(0, 1) < self.epsilon:
+                action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
+                action = softmax(torch.from_numpy(action), dim=-1)
             else:
-                self.ou_noise.set_scale(self.training_noise)
+                self.ou_noise.set_scale(self.noise_scale)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
                 action = torch.abs(action)
@@ -103,14 +107,14 @@ class DDPGAgent(Agent):
                 # print("Net: {}".format(action))
         return action.tolist()
 
-    def get_continuous_action(self,observation, step_count, evaluate):
+    def get_continuous_action(self, observation, step_count, evaluate):
         if evaluate:
             observation = torch.tensor(observation).float().to(self.device)
             action = self.actor(observation)
         else:
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.exploration_noise)
-                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+                action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
                 action += self.ou_noise.noise()
                 action = softmax(torch.from_numpy(action))
 
@@ -136,7 +140,6 @@ class DDPGAgent(Agent):
 
         return action[0]
 
-
     def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
         observation = torch.tensor(observation).to(self.device)
         action = self.actor(observation.float())
@@ -158,7 +161,7 @@ class DDPGAgent(Agent):
     #     self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
     #     self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
 
-    def copy_weights(self,evo_agent):
+    def copy_weights(self, evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
         self.actor_optimizer = copy.deepcopy(evo_agent.actor_optimizer)
@@ -167,6 +170,8 @@ class DDPGAgent(Agent):
         self.target_actor = copy.deepcopy(evo_agent.target_actor)
         self.critic = copy.deepcopy(evo_agent.critic)
         self.target_critic = copy.deepcopy(evo_agent.target_critic)
+        self.epsilon = evo_agent.epsilon
+        self.noise_scale = evo_agent.noise_scale
 
     def perturb_hyperparameters(self,perturb_factor):
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor
@@ -187,7 +192,6 @@ class DDPGAgent(Agent):
             param_group['lr'] = self.critic_learning_rate
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
-
 
     def __str__(self):
         return '<DDPGAgent(id={}, steps={}, episodes={})>'.format(self.id, self.step_count, self.done_count)
