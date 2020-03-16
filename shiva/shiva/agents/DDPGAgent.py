@@ -91,9 +91,6 @@ class DDPGAgent(Agent):
         if evaluate:
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
             # print("Agent Evaluate {}".format(action))
-        elif np.random.uniform(0, 1) < self.epsilon:
-            action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
-            action = softmax(torch.from_numpy(action), dim=-1)
         else:
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.noise_scale)
@@ -101,6 +98,9 @@ class DDPGAgent(Agent):
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
                 # print("Random: {}".format(action))
+            elif np.random.uniform(0, 1) < self.epsilon:
+                action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
+                action = softmax(torch.from_numpy(action), dim=-1)
             else:
                 self.ou_noise.set_scale(self.noise_scale)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()

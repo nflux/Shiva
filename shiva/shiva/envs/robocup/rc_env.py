@@ -502,13 +502,15 @@ class rc_env:
                 obs_prev[agent_ID] = envs[agent_ID].getState()  # Get initial state
                 obs[agent_ID] = envs[agent_ID].getState()  # Get initial state
 
-                self.min_player_distance_to_ball = 10000
+                self.initial_distance_to_ball = self.distance_to_ball(obs[agent_ID])
+                self.min_player_distance_to_ball = self.distance_to_ball(obs[agent_ID])
                 self.first_kick = False
+                self.goal = False
                 self.goal_scored = False
-                self.initial_distance_to_opp_goal = float("inf") 
-                self.initial_distance_to_own_goal = float("inf")
-                self.min_distance_to_opp_goal = float("inf")
-                self.min_distance_to_own_goal = float("inf")
+                self.initial_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])
+                self.initial_distance_to_own_goal = self.ball_distance_to_own_goal(obs[agent_ID])
+                self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])
+                self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs[agent_ID])
                 self.inv_steps_to_goal = 0
                 self.inv_steps_to_kick = 0
 
@@ -555,7 +557,11 @@ class rc_env:
 
                     # Break if episode done
                     if self.d == True:
+
                         break
+                if not self.goal:
+                    self.inv_steps_to_goal = self.ep_length
+
             if self.close:
                 break
 
@@ -641,14 +647,17 @@ class rc_env:
 
                 if s == 'Goal_By_Left' and self.left_agent_possesion[agentID] == 'L':
                     reward += goal_points
+                    # goal flag
+                    self.goal = True
                 elif s == 'Goal_By_Left':
-
                     reward += goal_points  # teammates get 10% of pointsssss
                     self.goal_score = True
                     print("GOAL!")
                 elif s == 'Goal_By_Right':
                     reward += -goal_points
                 elif s == 'OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
+                    # set the kicks
+                    self.inv_steps_to_goal = self.ep_length
                     reward += -0.5
                 elif s == 'CapturedByLeftGoalie':
                     reward += goal_points / 5.0
@@ -898,6 +907,8 @@ class rc_env:
         self.set_lowest_player_distance_to_ball(team_obs[agentID])
         self.set_lowest_player_distance_to_goal(team_obs[agentID])
 
+        self.inv_steps_to_goal += 1
+
         return reward
         # rew_percent = 1.0*max(0,(self.reward_anneal - ep_num))/self.reward_anneal
         # return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
@@ -960,34 +971,29 @@ class rc_env:
         return ball_distance_to_goal
 
     def prox_2_dist(self, prox):
-        
         return (prox + .8) / 1.8
 
     def set_lowest_player_distance_to_ball(self, obs):
         
         if self.distance_to_ball(obs) < self.min_player_distance_to_ball:
             self.min_player_distance_to_ball = self.distance_to_ball(obs)
-        
 
     def set_lowest_player_distance_to_goal(self, obs):
         
         if self.min_distance_to_opp_goal > self.ball_distance_to_goal(obs):
             self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
-        
 
     def set_lowest_ball_distance_to_own_goal(self, obs):
         
         if self.min_distance_to_own_goal > self.ball_distance_to_own_goal(obs):
             self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
-        
 
     def get_eval_metrics(self):
         metrics = dict()
-        metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball
-        metrics['first_kick'] = self.first_kick
-        metrics['inv_steps_to_kick'] = self.inv_steps_to_kick
-        metrics['distance_to_opp_goal'] = self.min_distance_to_opp_goal
-        metrics['distance_to_own_goal'] = self.min_distance_to_own_goal
-        metrics['inv_steps_to_goal'] = self.inv_steps_to_goal
+        metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball / self.initial_distance_to_ball
+        metrics['inv_steps_to_kick'] = float(self.inv_steps_to_kick) / float(self.untouched)
+        metrics['distance_to_opp_goal'] = 1 - (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
+        metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
+        metrics['inv_steps_to_goal'] = float(self.inv_steps_to_goal) / float(self.ep_length)
         return metrics
     
