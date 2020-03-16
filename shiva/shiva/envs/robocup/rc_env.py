@@ -396,8 +396,8 @@ class rc_env:
             power = params[0].clamp(-1, 1) * 100
             degree = params[1].clamp(-1, 1) * 180
             return self.REVERSE_ACTION_DICT[act_choice.item()][(
-            (self.pow_step * torch.round(power / self.pow_step)).item(),
-            (self.degree_step * torch.round(degree / self.degree_step)).item())]
+                (self.pow_step * torch.round(power / self.pow_step)).item(),
+                (self.degree_step * torch.round(degree / self.degree_step)).item())]
         elif act_choice == 1:  # Turn
             degree = params[2].clamp(-1, 1) * 180
             return self.REVERSE_ACTION_DICT[act_choice.item()][
@@ -406,8 +406,8 @@ class rc_env:
             power = ((params[3].clamp(-1, 1) + 1) / 2) * 100
             degree = params[4].clamp(-1, 1) * 180
             return self.REVERSE_ACTION_DICT[act_choice.item()][(
-            (self.pow_step * torch.round(power / self.pow_step)).item(),
-            (self.degree_step * torch.round(degree / self.degree_step)).item())]
+                (self.pow_step * torch.round(power / self.pow_step)).item(),
+                (self.degree_step * torch.round(degree / self.degree_step)).item())]
 
     def get_valid_discrete_value(self, agentID, base):
         if self.left_base == base:
@@ -430,18 +430,15 @@ class rc_env:
             action_params = self.right_action_option
 
         if ac_index == 0:  # dash power, degree
-
             dash_power = action_params[agentID][0].clip(-1, 1) * 100
             dash_degree = action_params[agentID][1].clip(-1, 1) * 180
             return (dash_power, dash_degree)
 
         elif ac_index == 1:  # turn degree
-
             turn_degree = action_params[agentID][2].clip(-1, 1) * 180
             return (turn_degree,)
 
         elif ac_index == 2:  # kick power, degree
-
             kick_power = ((action_params[agentID][3].clip(-1, 1) + 1) / 2) * 100
             kick_degree = action_params[agentID][4].clip(-1, 1) * 180
             return (kick_power, kick_degree)
@@ -504,9 +501,9 @@ class rc_env:
 
                 self.initial_distance_to_ball = self.distance_to_ball(obs[agent_ID])
                 self.min_player_distance_to_ball = self.distance_to_ball(obs[agent_ID])
-                self.first_kick = False
                 self.goal = False
                 self.goal_scored = False
+                self.first_kick = False
                 self.initial_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])
                 self.initial_distance_to_own_goal = self.ball_distance_to_own_goal(obs[agent_ID])
                 self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])

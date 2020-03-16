@@ -69,7 +69,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         return self.env.checkGoal()
 
     def step(self, actions, discrete_select='sample', collect=True):
-        '''
+        """
             Input
                 @actions
                 @discrete_select        Specify how to choose the discrete action taken
@@ -86,21 +86,38 @@ class RoboCupTwoSidedEnvironment(Environment):
                                             action_taken        useful if discrete_select == 'sample'
                                         ]
 
-        '''
+        """
         left_actions = actions[:self.num_left]
         right_actions = actions[self.num_left:]
+
+        # Action Masking
+
+        """ When the ball is not kickable lets mask all the kicking actions! """
+
+        for a in range(left_actions.shape[0]):
+            if not self.env.left_kickable[a]:
+                left_actions[a, self.env.turn_idx:] = 0
+                left_actions[a, :self.env.turn_idx] = left_actions[a, :self.env.turn_idx] / left_actions[a, :self.env.turn_idx].sum()
+
+        for a in range(right_actions.shape[0]):
+            if not self.env.right_kickable[a]:
+                right_actions[a, self.env.turn_idx:] = 0
+                right_actions[a, :self.env.turn_idx] = right_actions[a, :self.env.turn_idx] / right_actions[a, :self.env.turn_idx].sum()
+
+        """ End of masking """
 
         if discrete_select == 'argmax':
             left_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in left_actions]
             right_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in right_actions]
         elif discrete_select == 'sample':
+            print(left_actions)
             # act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
             left_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in left_actions]
             right_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in right_actions]
         elif discrete_select == 'imit_discrete':
             act_choice = actions[0]
             # action = action2one_hot(self.acs_discrete, action.item())
-            # act_choice = np.random.choice(self.action_space['discrete'], p=actions[:self.action_space['discrete']])
+            # act_choice = np.random.choice(self.action_space['discreleft_actions = left_actions[a, self.env.turn_idx:]/left_actions[a, self.env.turn_idx:].sum()te'], p=actions[:self.action_space['discrete']])
 
         # self.left_actions = act_choice.unsqueeze(dim=-1)
 
@@ -135,7 +152,8 @@ class RoboCupTwoSidedEnvironment(Environment):
             #     print("Daniel left {}, right {}, left_op {}, right_op {}".format(self.left_actions, self.right_actions, self.left_action_option, self.right_action_option))
             # else:
             #     print("Ez left {}, right {}, left_op {}, right_op {}".format(self.left_actions, self.right_actions, self.left_action_option, self.right_action_option))
-
+            # certainly:
+            #     print("that Jorge is really something")
             self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
                                                                     left_options=self.left_action_option, right_options=self.right_action_option)
             
