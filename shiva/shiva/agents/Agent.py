@@ -21,7 +21,7 @@ class Agent(torch.nn.Module):
         self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        
+
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)
 
@@ -54,7 +54,7 @@ class Agent(torch.nn.Module):
         flag = True
         while flag:
             try:
-                setattr(self, policy_name, torch.load(policy_file))
+                setattr(self, policy_name, torch.load(policy_file,map_location=torch.device('cpu')))
                 flag = False
             except:
                 # try again

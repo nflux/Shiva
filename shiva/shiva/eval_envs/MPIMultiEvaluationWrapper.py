@@ -104,17 +104,25 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     def _get_robocup_evaluations(self,sort):
         if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag = Tags.evals):
-            temp = np.zeros(len(self.eval_events))
+            #temp = np.zeros(len(self.eval_events))
             agent_id = self.evals.recv(None, source = MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
             env_source = self.info.Get_source()
             evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
             #evals['agent_id'] = agent_id
             keys = evals[0].keys()
             for i in range(len(evals)):
-                for j,key in enumerate(keys):
-                    temp[j] += evals[i][key]
-            averages = temp/len(evals)
-            self.evaluations.loc[agent_id,self.eval_events] = averages
+                averages = dict()
+                for key in keys:
+                    if key in averages:
+                        averages[key] += averages[key]+ ( (evals[i][key] - averages[key])/i)
+                    else:
+                        averages[key] = evals[i][key]
+
+            #for i in range(len(evals)):
+                #for j,key in enumerate(keys):
+                    #temp[j] += evals[i][key]
+            #averages = temp/len(evals)
+            self.evaluations.loc[agent_id,keys] = averages
             self.sort = sort
             self.log('Multi Evaluation has received evaluations')
             self.agent_selection(env_source)
@@ -129,16 +137,17 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     def _sort_robocup(self):
         #self.log('Robocup Sort!')
-        self.evaluations['total_score'] = 0
+        #self.evaluations['total_score'] = 0
         #self.evaluations= self.evaluations.rename_axis('agent_ids').reset_index()
-        for i,col in enumerate(self.eval_events):
+        #for i,col in enumerate(self.eval_events):
             #self.log('enumerating events')
-            self.evaluations.sort_values(by=col,inplace=True)
+            #self.evaluations.sort_values(by=col,inplace=True)
             #self.log('sorting')
-            self.evaluations['total_score'] += np.array(self.evaluations.index) * self.eval_weights[i]
+            #self.evaluations['total_score'] += np.array(self.evaluations.index) * self.eval_weights[i]
             #self.log('setting total scores')
-        self.evaluations.sort_values(by='total_score',ascending=False,inplace=True)
+        #self.evaluations.sort_values(by='total_score',ascending=False,inplace=True)
         #self.log('Sorting Total Scores')
+        self.evaluations.sort_values(by=self.eval_events)
         self.rankings = np.array(self.evaluations.index)
         self.log('Rankings: {}'.format(self.rankings))
         self.evaluations.sort_index(inplace=True)
