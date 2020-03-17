@@ -3,6 +3,7 @@ import configparser
 import inspect
 import numpy as np
 from tensorboardX import SummaryWriter
+import torch
 
 import shiva.helpers.dir_handler as dh
 import shiva.helpers.file_handler as fh
@@ -456,6 +457,8 @@ class ShivaAdmin():
                 # this_agent_policies.append(pols)
                 policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
                 _new_agent.load_net(policy_name, pols)
+                _new_agent.device = torch.device('cpu')     
+              
         return _new_agent
 
     def _load_buffer(self, path) -> list:

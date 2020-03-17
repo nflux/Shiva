@@ -60,6 +60,10 @@ class Agent(torch.nn.Module):
                 # try again
                 pass
 
+    def reset_device(self):
+        self.device = torch.device("cpu")
+
+
     def get_action(self, obs):
         assert False, "Method Not Implemented"
 

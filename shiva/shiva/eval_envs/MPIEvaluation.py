@@ -1,4 +1,4 @@
-import sys, time, traceback, pickle
+import sys, time, traceback, pickle,torch
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
@@ -25,6 +25,7 @@ class MPIEvaluation(Evaluation):
         # Receive Config from MultiEvalWrapper
         self.configs = self.meval.bcast(None, root=0)
         super(MPIEvaluation, self).__init__(self.configs)
+        self.device = torch.device('cpu')
         self.log('Attempting to Connect to IO Handler')
         self.io = MPI.COMM_WORLD.Connect(self.evals_io_port, MPI.INFO_NULL)
         self.log('Connected to IO Handler')
@@ -84,18 +85,18 @@ class MPIEvaluation(Evaluation):
             self.step_count  += self.env_specs['num_instances_per_env'] * self.num_envs
 
             if 'Unity' in self.env_specs['type']:
-                actions = [ [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+                actions = [ [ [self.agents[ix].get_action(o, self.step_count,self.device, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
                 self.actions = np.array(actions)
                 self.envs.scatter(self.actions, root=MPI.ROOT)
             elif 'Gym' in self.env_specs['type']:
                 # Gym
                 # same?
                 #actions = [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
-                actions = [[agent.get_action(obs, self.step_count, False) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+                actions = [[agent.get_action(obs, self.step_count,self.device, False) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
                 self.actions = np.array(actions)
                 self.envs.scatter(self.actions, root=MPI.ROOT)
             elif 'RoboCup' in self.env_specs['type']:
-                actions = [[agent.get_action(obs, self.step_count, False) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+                actions = [[agent.get_action(obs, self.step_count, self.device,False) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
                 actions = np.array(actions, dtype=np.float64)
                 # self.log("The actions shape {}".format(actions.shape))
                 self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
