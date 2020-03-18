@@ -110,7 +110,7 @@ class MPIPBTMetaLearner(MetaLearner):
 
     def _launch_learners(self):
         self.learners_configs = self._get_learners_configs()
-        self.learners = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/learners/MPILearner.py'], maxprocs=self.num_learners)
+        self.learners = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/learners/MPIImitationLearner.py'], maxprocs=self.num_learners)
         self.learners.scatter(self.learners_configs, root=MPI.ROOT)
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
         self.agent_ids = self.learners.gather(None, root=MPI.ROOT)
