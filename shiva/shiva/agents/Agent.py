@@ -58,7 +58,10 @@ class Agent(torch.nn.Module):
         flag = True
         while flag:
             try:
-                setattr(self, policy_name, torch.load(policy_file))
+                model = getattr(self, policy_name)
+                loaded_model = torch.load(policy_file)
+                model.load_state_dict(loaded_model['state_dict'])
+                setattr(self, policy_name, model)
                 flag = False
             except:
                 # try again
