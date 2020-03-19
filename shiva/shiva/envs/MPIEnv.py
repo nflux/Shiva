@@ -181,7 +181,7 @@ class MPIEnv(Environment):
             self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
             self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
         elif 'RoboCup' in self.type:
-            for ix in range(self.num_learners):
+            for ix in range(self.configs['Evaluation']['agents_per_env']):   
                 self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._robo_reshape, self.trajectory_buffers[0].agent_numpy(ix))
 
                 trajectory_info = {
@@ -199,16 +199,15 @@ class MPIEnv(Environment):
                 #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
                 # self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
 
-                self.learner.send(trajectory_info, dest=ix, tag=Tags.trajectory_info)
-                self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_observations)
-                self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_actions)
-                self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_rewards)
-                self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix, tag=Tags.trajectory_next_observations)
-                self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=ix, tag=Tags.trajectory_dones)
+                self.learner.send(trajectory_info, dest=self.id, tag=Tags.trajectory_info)
+                self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_observations)
+                self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_actions)
+                self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_rewards)
+                self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
+                self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
 
         self.done_count +=1
 
-        time.sleep(.5)
         self.reset_buffers()
 
     def create_buffers(self):

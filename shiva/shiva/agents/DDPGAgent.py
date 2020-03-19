@@ -25,6 +25,10 @@ class DDPGAgent(Agent):
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
+
+        self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
+        self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
+        
         self.id = id
 
         '''
@@ -89,13 +93,16 @@ class DDPGAgent(Agent):
             # print("Agent Evaluate {}".format(action))
         else:
             if step_count < self.exploration_steps:
-                self.ou_noise.set_scale(self.exploration_noise)
+                self.ou_noise.set_scale(self.noise_scale)
                 action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
                 # print("Random: {}".format(action))
+            elif np.random.uniform(0, 1) < self.epsilon:
+                action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
+                action = softmax(torch.from_numpy(action), dim=-1)
             else:
-                self.ou_noise.set_scale(self.training_noise)
+                self.ou_noise.set_scale(self.noise_scale)
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
                 action = torch.abs(action)
@@ -167,6 +174,8 @@ class DDPGAgent(Agent):
         self.target_actor = copy.deepcopy(evo_agent.target_actor)
         self.critic = copy.deepcopy(evo_agent.critic)
         self.target_critic = copy.deepcopy(evo_agent.target_critic)
+        self.epsilon = evo_agent.epsilon
+        self.noise_scale = evo_agent.noise_scale
 
     def perturb_hyperparameters(self,perturb_factor):
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor

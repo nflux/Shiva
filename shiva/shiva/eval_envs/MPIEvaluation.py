@@ -39,7 +39,7 @@ class MPIEvaluation(Evaluation):
         print('Agent Sel: ', self.agent_sel)
         #self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
         if 'RoboCup' in self.env_specs['type']:
-            self.evals_list = [[None]*self.eval_episodes]*len(self.agent_ids)
+            self.evals_list = [[None]*self.eval_episodes] * self.agents_per_env
             self.send_eval_update_agents = getattr(self, 'send_robocup_eval_update_agents')
         else:
             self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
@@ -250,9 +250,9 @@ class MPIEvaluation(Evaluation):
 
                 if 'RoboCup' in self.env_specs['type']:
                     evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
-                    self.log('Agent IDX: {}'.format(agent_idx))
-                    self.log('Eval Counts: {}'.format(self.eval_counts[agent_idx]))
-                    self.evals_list[self.eval_counts[agent_idx]] = evals
+                    #self.log('Agent IDX: {}'.format(agent_idx))
+                    #self.log('Eval Counts: {}'.format(self.eval_counts[agent_idx]))
+                    self.evals_list[agent_idx][self.eval_counts[agent_idx]] = evals
                     self.eval_counts[agent_idx] += 1
                 else:
                     evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)

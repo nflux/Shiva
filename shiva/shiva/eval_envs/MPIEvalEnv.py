@@ -61,9 +61,9 @@ class MPIEvalEnv(Environment):
                # self.log('Env start')
                 self._step_numpy()
                # self.log('After step')
-                if self.env.is_done():
+                #if self.env.is_done():
                    # self.log('Env is done')
-                    self.env.reset()
+                    #self.env.reset()
 
                 if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
                     _ = self.eval.recv(None, source=0 , tag=Tags.clear_buffers)
@@ -150,6 +150,7 @@ class MPIEvalEnv(Environment):
 
             if self.dones:
                 self._send_eval_numpy(self.env.env.get_eval_metrics(),0)
+                self.env.reset()
                 # self.episode_rewards[i, :].fill(0)
                 # self.reward_idxs[i] = 0
             # else:
@@ -211,7 +212,7 @@ class MPIEvalEnv(Environment):
 
 
     def create_environment(self):
-        self.configs['Environment']['port'] += 100 +(self.id * 10)
+        self.configs['Environment']['port'] += 500 +np.random.randint(0,1500)
         self.configs['Environment']['worker_id'] = 100 * (self.id * 22)
         # self.configs['Environment']['rc_log'] = 'rc_eval_log'
         # self.configs['Environment']['server_addr'] = self.eval.Get_attr(MPI.HOST)

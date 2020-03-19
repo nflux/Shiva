@@ -502,16 +502,17 @@ class rc_env:
                 obs_prev[agent_ID] = envs[agent_ID].getState()  # Get initial state
                 obs[agent_ID] = envs[agent_ID].getState()  # Get initial state
 
-                self.min_player_distance_to_ball = 10000
+                self.initial_distance_to_ball = self.distance_to_ball(obs[agent_ID])
+                self.min_player_distance_to_ball = self.distance_to_ball(obs[agent_ID])
                 self.first_kick = False
+                self.goal = False
                 self.goal_scored = False
-                self.initial_distance_to_opp_goal = float("inf") 
-                self.initial_distance_to_own_goal = float("inf")
-                self.min_distance_to_opp_goal = float("inf")
-                self.min_distance_to_own_goal = float("inf")
+                self.initial_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])
+                self.initial_distance_to_own_goal = self.ball_distance_to_own_goal(obs[agent_ID])
+                self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])
+                self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs[agent_ID])
                 self.inv_steps_to_goal = 0
                 self.inv_steps_to_kick = 0
-
                 # self.been_kicked_left = False
                 # self.been_kicked_right = False
                 while j < ep_length:
@@ -549,6 +550,11 @@ class rc_env:
                         base,
                         ep_num
                     )  # update reward
+
+                    if self.id == True:
+                        if not self.goal:
+                            self.inv_steps_to_goal = self.ep_length
+                        self.eval_metrics = self.get_eval_metrics()
 
                     j += 1
                     self.sync_before_step.wait()
@@ -641,6 +647,8 @@ class rc_env:
 
                 if s == 'Goal_By_Left' and self.left_agent_possesion[agentID] == 'L':
                     reward += goal_points
+                    #goal flag
+                    self.goal = True
                 elif s == 'Goal_By_Left':
 
                     reward += goal_points  # teammates get 10% of pointsssss
@@ -649,6 +657,8 @@ class rc_env:
                 elif s == 'Goal_By_Right':
                     reward += -goal_points
                 elif s == 'OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
+                    # Set the kicks
+                    self.inv_steps_to_goal = self.ep_length
                     reward += -0.5
                 elif s == 'CapturedByLeftGoalie':
                     reward += goal_points / 5.0
@@ -897,6 +907,8 @@ class rc_env:
         self.set_lowest_ball_distance_to_own_goal(team_obs[agentID])
         self.set_lowest_player_distance_to_ball(team_obs[agentID])
         self.set_lowest_player_distance_to_goal(team_obs[agentID])
+        
+        self.inv_steps_to_goal += 1
 
         return reward
         # rew_percent = 1.0*max(0,(self.reward_anneal - ep_num))/self.reward_anneal

@@ -82,6 +82,8 @@ def save_dict_2_config_file(config_dict: dict, file_path: str):
         assert False, "Not expecting a list"
     else:
         for section_name, attrs in config_dict.items():
+            if type(attrs) == list:
+                attrs = attrs[0]
             if is_iterable(attrs) and '_filename_' != section_name:
                 config.add_section(section_name)
                 for attr_name, attr_val in attrs.items():
