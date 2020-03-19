@@ -153,6 +153,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.evaluations.sort_index(inplace=True)
         self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
         self.log('Sent rankings to Meta')
+        self.log('Current Rankings DataFrame: {}'.format(self.evaluations))
         self.sort = False
 
 

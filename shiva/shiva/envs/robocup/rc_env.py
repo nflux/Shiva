@@ -327,7 +327,7 @@ class rc_env:
             return self.right_rewards[agent_id]
 
     def Step(self, left_actions=[], right_actions=[], left_options=[],
-             right_options=[], left_actions_OH=[], right_actions_OH=[]):
+             right_options=[], left_actions_OH=[], right_actions_OH=[],evaluate=False):
         '''
             Description
                 Method for the agents to take a single step in the environment.
@@ -356,13 +356,16 @@ class rc_env:
 
         # for i in range(self.num_right):
         #     self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
-        
+
         [self.Queue_action(i, self.left_base, left_actions[i], left_options) for i in range(len(left_actions))]
         [self.Queue_action(j, self.right_base, right_actions[j], right_options) for j in range(len(right_actions))]
 
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
-        return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
+        if evaluate:
+            return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status, self.get_eval_metrics
+        else:
+            return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
     def Queue_action(self, agent_id, base, action, options):
         '''
@@ -549,15 +552,16 @@ class rc_env:
                         ep_num
                     )  # update reward
 
+                    if self.d == True:
+                        if not self.goal:
+                            self.inv_steps_to_goal = self.ep_length
+
                     j += 1
                     self.sync_before_step.wait()
 
                     # Break if episode done
                     if self.d == True:
-
                         break
-                if not self.goal:
-                    self.inv_steps_to_goal = self.ep_length
 
             if self.close:
                 break
@@ -917,11 +921,11 @@ class rc_env:
     '''
 
     def get_kickable_status(self, agentID, env):
-        
+
         ball_kickable = False
         ball_kickable = env.isKickable()
         # print("no implementation")
-        
+
         return ball_kickable
 
     def closest_player_to_ball(self, team_obs, num_agents):
@@ -939,58 +943,58 @@ class rc_env:
         return ball_distance, closest_player_index
 
     def distance_to_ball(self, obs):
-        
+
         relative_x = obs[self.x] - obs[self.ball_x]
         relative_y = obs[self.y] - obs[self.ball_y]
         ball_distance = math.sqrt(relative_x ** 2 + relative_y ** 2)
-        
+
         return ball_distance
 
     def ball_distance_to_goal(self, obs):
-        
+
         goal_center_x = 1.0
         goal_center_y = 0.0
         relative_x = obs[self.ball_x] - goal_center_x
         relative_y = obs[self.ball_y] - goal_center_y
         ball_distance_to_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
-        
+
         return ball_distance_to_goal
 
     def ball_distance_to_own_goal(self, obs):
-        
+
         # my own goal
         goal_center_x = -1.0
         goal_center_y = 0.0
         relative_x = obs[self.ball_x] - goal_center_x
         relative_y = obs[self.ball_y] - goal_center_y
-        ball_distance_to_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
-        
-        return ball_distance_to_goal
+        ball_distance_to_own_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
+
+        return ball_distance_to_own_goal
 
     def prox_2_dist(self, prox):
         return (prox + .8) / 1.8
 
     def set_lowest_player_distance_to_ball(self, obs):
-        
+
         if self.distance_to_ball(obs) < self.min_player_distance_to_ball:
             self.min_player_distance_to_ball = self.distance_to_ball(obs)
 
-    def set_lowest_player_distance_to_goal(self, obs):
-        
+    def set_lowest_ball_distance_to_goal(self, obs):
+
         if self.min_distance_to_opp_goal > self.ball_distance_to_goal(obs):
             self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
 
     def set_lowest_ball_distance_to_own_goal(self, obs):
-        
+
         if self.min_distance_to_own_goal > self.ball_distance_to_own_goal(obs):
             self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
 
     def get_eval_metrics(self):
         metrics = dict()
         metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball / self.initial_distance_to_ball
-        metrics['inv_steps_to_kick'] = float(self.inv_steps_to_kick) / float(self.untouched)
-        metrics['distance_to_opp_goal'] = 1 - (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
+        metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.untouched))
+        metrics['distance_to_opp_goal'] = (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
         metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
-        metrics['inv_steps_to_goal'] = float(self.inv_steps_to_goal) / float(self.ep_length)
+        metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length))
+
         return metrics
-    

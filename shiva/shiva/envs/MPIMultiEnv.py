@@ -145,8 +145,8 @@ class MPIMultiEnv(Environment):
         _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
         self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
-        print('This Agent is on cuda: {}'.format((next(self.agents[0].parameters()).device)))
-        print('The device attribute of this agent is: {}'.format(self.agents[0].device))
+        print('This Agent is on cuda: {}'.format((next(self.agents[0].actor.parameters()).device)))
+        print('The device attribute of this agent is: {}'.format(self.agents[0].actor.device))
        #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners
