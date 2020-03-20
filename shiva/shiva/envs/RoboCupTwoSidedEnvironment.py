@@ -87,9 +87,22 @@ class RoboCupTwoSidedEnvironment(Environment):
                                         ]
 
         '''
-        print('Actions Size: {}'.format(actions.size))
         left_actions = actions[:self.num_left]
         right_actions = actions[self.num_left:]
+
+        """ When the ball is not kickable lets mask all the kicking actions! """
+
+        for a in range(left_actions.shape[0]):
+            if not self.env.left_kickable[a]:
+                left_actions[a, self.env.turn_idx:] = 0
+                left_actions[a, :self.env.turn_idx] = left_actions[a, :self.env.turn_idx] / left_actions[a, :self.env.turn_idx].sum()
+
+        for a in range(right_actions.shape[0]):
+            if not self.env.right_kickable[a]:
+                right_actions[a, self.env.turn_idx:] = 0
+                right_actions[a, :self.env.turn_idx] = right_actions[a, :self.env.turn_idx] / right_actions[a, :self.env.turn_idx].sum()
+
+        """ End of masking """
 
         if discrete_select == 'argmax':
             left_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in left_actions]

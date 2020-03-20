@@ -82,18 +82,18 @@ class MPIEvaluation(Evaluation):
             self.step_count  += self.env_specs['num_instances_per_env'] * self.num_envs
 
             if 'Unity' in self.env_specs['type']:
-                actions = [ [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+                actions = [ [ [self.agents[ix].get_action(o, self.step_count, True) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
                 self.actions = np.array(actions)
                 self.envs.scatter(self.actions, root=MPI.ROOT)
             elif 'Gym' in self.env_specs['type']:
                 # Gym
                 # same?
                 #actions = [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
-                actions = [[agent.get_action(obs, self.step_count, False) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+                actions = [[agent.get_action(obs, self.step_count, True) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
                 self.actions = np.array(actions)
                 self.envs.scatter(self.actions, root=MPI.ROOT)
             elif 'RoboCup' in self.env_specs['type']:
-                actions = [[agent.get_action(obs, self.step_count, False) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+                actions = [[agent.get_action(obs, self.step_count, True) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
                 actions = np.array(actions, dtype=np.float64)
                 # self.log("The actions shape {}".format(actions.shape))
                 self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)

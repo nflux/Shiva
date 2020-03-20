@@ -90,6 +90,10 @@ class DDPGAgent(Agent):
     def get_discrete_action(self, observation, step_count, evaluate):
         if evaluate:
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+            self.ou_noise.set_scale(self.noise_scale)
+            action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+            action = torch.abs(action)
+            action = action / action.sum()
             # print("Agent Evaluate {}".format(action))
         else:
             if step_count < self.exploration_steps:
@@ -184,6 +188,9 @@ class DDPGAgent(Agent):
             param_group['lr'] = self.actor_learning_rate
         for param_group in self.critic_optimizer.param_groups:
             param_group['lr'] = self.critic_learning_rate
+
+        self.epsilon *= perturb_factor
+        self.noise_scale *= perturb_factor
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
@@ -194,6 +201,8 @@ class DDPGAgent(Agent):
             param_group['lr'] = self.actor_learning_rate
         for param_group in self.critic_optimizer.param_groups:
             param_group['lr'] = self.critic_learning_rate
+        self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
+        self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 

@@ -734,10 +734,10 @@ class rc_env:
             reward -= 0.1
             # print("agent is getting penalized for kicking when not kickable")
 
-        if not self.first_kick:
-            self.inv_steps_to_kick += 1
-        else:
-            pass
+        #if not self.first_kick:
+        #    self.inv_steps_to_kick += 1
+        #else:
+        #    pass
 
         # it looks like this is broken for discretized as well
         # so its not getting any rewards for kicking
@@ -902,6 +902,9 @@ class rc_env:
             Reward agent for maximizing it's proximity to the ball
         '''
 
+        if not self.first_kick:
+            self.inv_steps_to_kick += 1
+
         self.set_lowest_ball_distance_to_own_goal(team_obs[agentID])
         self.set_lowest_player_distance_to_ball(team_obs[agentID])
         self.set_lowest_ball_distance_to_goal(team_obs[agentID])
@@ -1007,7 +1010,7 @@ class rc_env:
     def get_eval_metrics(self):
         metrics = dict()
         metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball / self.initial_distance_to_ball
-        metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.untouched))
+        metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.ep_length))
         metrics['distance_to_opp_goal'] = (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
         metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
         metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length))

@@ -60,8 +60,8 @@ class DDPGAlgorithm(Algorithm):
         '''
         self.critic_learning_rate = agent.critic_learning_rate
         self.actor_learning_rate = agent.actor_learning_rate
-        #self.exploration_epsilon = agent.epsilon
-        #self.noise_scale = agent.noise_scale
+        self.exploration_epsilon = agent.epsilon
+        self.noise_scale = agent.noise_scale
 
         for i in range(self.updates):
 
@@ -260,9 +260,9 @@ class DDPGAlgorithm(Algorithm):
                 ('Algorithm/Actor_Loss', self.actor_loss.item()),
                 ('Algorithm/Critic_Loss', self.critic_loss.item()),
                 ('Actor Learning Rate: ', self.actor_learning_rate),
-                ('Critic Learning Rate: ', self.critic_learning_rate)
-                #('Agent Exploration Epsilon: ', self.exploration_epsilon),
-                #('Agent Noise Scale: ', self.noise_scale)
+                ('Critic Learning Rate: ', self.critic_learning_rate),
+                ('Agent Exploration Epsilon: ', self.exploration_epsilon),
+                ('Agent Noise Scale: ', self.noise_scale)
             ]
         return metrics
 

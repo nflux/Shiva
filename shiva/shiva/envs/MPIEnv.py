@@ -44,7 +44,7 @@ class MPIEnv(Environment):
     def run(self):
         self.env.reset()
         while True:
-            time.sleep(0.1)
+            time.sleep(0.0001)
             while self.env.start_env():
                 self._step_numpy()
                 self._append_step()
