@@ -327,7 +327,7 @@ class rc_env:
             return self.right_rewards[agent_id]
 
     def Step(self, left_actions=[], right_actions=[], left_options=[],
-             right_options=[], left_actions_OH=[], right_actions_OH=[]):
+             right_options=[], left_actions_OH=[], right_actions_OH=[],evaluate=False):
         '''
             Description
                 Method for the agents to take a single step in the environment.
@@ -362,7 +362,10 @@ class rc_env:
 
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
-        return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
+        if evaluate:
+            return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status, self.eval_metrics
+        else:
+            return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
     def Queue_action(self, agent_id, base, action, options):
         '''
@@ -480,7 +483,7 @@ class rc_env:
         config_dir = hfo.get_config_path()
         envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                        server_port=port, server_addr='localhost', team_name=base,
-                                       play_goalie=goalie, record_dir=self.rc_log + '/')
+                                       play_goalie=goalie, record_dir=self.rc_log + '/')                               
 
         if base == 'base_left':
             obs_prev = self.left_obs_previous
@@ -493,6 +496,9 @@ class rc_env:
             actions = self.right_actions
             rews = self.right_rewards
 
+        obs[agent_ID] = envs[agent_ID].getState()
+        self.set_initial_metrics(obs[agent_ID])
+        self.eval_metrics = self.get_eval_metrics()
         ep_num = 0
         while True:
             while self.start:
@@ -502,17 +508,7 @@ class rc_env:
                 obs_prev[agent_ID] = envs[agent_ID].getState()  # Get initial state
                 obs[agent_ID] = envs[agent_ID].getState()  # Get initial state
 
-                self.initial_distance_to_ball = self.distance_to_ball(obs[agent_ID])
-                self.min_player_distance_to_ball = self.distance_to_ball(obs[agent_ID])
-                self.first_kick = False
-                self.goal = False
-                self.goal_scored = False
-                self.initial_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])
-                self.initial_distance_to_own_goal = self.ball_distance_to_own_goal(obs[agent_ID])
-                self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])
-                self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs[agent_ID])
-                self.inv_steps_to_goal = 0
-                self.inv_steps_to_kick = 0
+                self.set_initial_metrics(obs[agent_ID])
                 # self.been_kicked_left = False
                 # self.been_kicked_right = False
                 while j < ep_length:
@@ -551,12 +547,14 @@ class rc_env:
                         ep_num
                     )  # update reward
 
-                    if self.id == True:
+                    if self.d == True:
                         if not self.goal:
                             self.inv_steps_to_goal = self.ep_length
                         self.eval_metrics = self.get_eval_metrics()
 
+                    
                     j += 1
+
                     self.sync_before_step.wait()
 
                     # Break if episode done
@@ -906,7 +904,7 @@ class rc_env:
 
         self.set_lowest_ball_distance_to_own_goal(team_obs[agentID])
         self.set_lowest_player_distance_to_ball(team_obs[agentID])
-        self.set_lowest_player_distance_to_goal(team_obs[agentID])
+        self.set_lowest_ball_distance_to_goal(team_obs[agentID])
         
         self.inv_steps_to_goal += 1
 
@@ -967,9 +965,9 @@ class rc_env:
         goal_center_y = 0.0
         relative_x = obs[self.ball_x] - goal_center_x
         relative_y = obs[self.ball_y] - goal_center_y
-        ball_distance_to_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
+        ball_distance_to_own_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
         
-        return ball_distance_to_goal
+        return ball_distance_to_own_goal
 
     def prox_2_dist(self, prox):
         
@@ -981,7 +979,7 @@ class rc_env:
             self.min_player_distance_to_ball = self.distance_to_ball(obs)
         
 
-    def set_lowest_player_distance_to_goal(self, obs):
+    def set_lowest_ball_distance_to_goal(self, obs):
         
         if self.min_distance_to_opp_goal > self.ball_distance_to_goal(obs):
             self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
@@ -993,13 +991,25 @@ class rc_env:
             self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
         
 
+    def set_initial_metrics(self,obs):
+        self.initial_distance_to_ball = self.distance_to_ball(obs)
+        self.min_player_distance_to_ball = self.distance_to_ball(obs)
+        self.goal = False
+        self.goal_scored = False
+        self.first_kick = False
+        self.initial_distance_to_opp_goal = self.ball_distance_to_goal(obs)
+        self.initial_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
+        self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
+        self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
+        self.inv_steps_to_goal = 0
+        self.inv_steps_to_kick = 0
+    
     def get_eval_metrics(self):
         metrics = dict()
-        metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball
-        metrics['first_kick'] = self.first_kick
-        metrics['inv_steps_to_kick'] = self.inv_steps_to_kick
-        metrics['distance_to_opp_goal'] = self.min_distance_to_opp_goal
-        metrics['distance_to_own_goal'] = self.min_distance_to_own_goal
-        metrics['inv_steps_to_goal'] = self.inv_steps_to_goal
+        metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball / self.initial_distance_to_ball
+        metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.untouched))
+        metrics['distance_to_opp_goal'] = (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
+        metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
+        metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length))
         return metrics
     
