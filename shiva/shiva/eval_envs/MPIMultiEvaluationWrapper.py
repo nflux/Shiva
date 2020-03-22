@@ -428,13 +428,13 @@ class MPIMultiEvaluationWrapper(Evaluation):
         # teamNewBravoRewards = CalculateEloReward(teamBravoRewards, teamBravoProbabilityWin, k ,wBravo)
 
 
-        for x in range(len(teamAlpha)):s
-            self.teamAlphaRewards[x] = self.calculateEloReward(teamAlphaRewards, self.teamAlphaProbabilityWin, k, wAlpha)
+        for x in range(len(teamAlpha)):
+            self.teamAlphaRewards[x] = self.calculateEloReward(teamAlphaRewards[x], self.teamAlphaProbabilityWin, k, wAlpha)
             #self.agents[teamAlpha[x]].eloReward = calculateEloReward(teamAlphaRewards, teamAlphaProbabilityWin, k, wAlpha)
 
         for y in range(len(teamBravo)):
-            self.teamBravoRewards[y] = self.calculateEloReward(teamAlphaRewards, self.teamAlphaProbabilityWin,k, wBravo)
-            #self.agents[teamAlpha[y]].eloReward = calculateEloReward(teamAlphaRewards, teamAlphaProbabilityWin, k, wAlpha)
+            self.teamBravoRewards[y] = self.calculateEloReward(teamBravoRewards[x], self.teamBravoProbabilityWin,k, wBravo)
+            #self.agents[teamBravo[y]].eloReward = calculateEloReward(self.agents[teamBravo[y]], teamAlphaProbabilityWin, k, wAlpha)
 
         return self.teamAlphaRewards, self.teamBravoRewards
         #return  teamAlpha, teamBravo
