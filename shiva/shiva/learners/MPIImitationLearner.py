@@ -177,6 +177,7 @@ class MPIImitationLearner(Learner):
         self.metrics_env = self.traj_info['metrics']
         traj_length = self.traj_info['length']
         self.dagger = self.traj_info['super_done']
+        # self.log("This is dagger {}".format(self.dagger))
 
         #self.log("{}".format(self.traj_info))
 

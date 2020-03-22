@@ -175,6 +175,13 @@ class RoboCupEnvironment(Environment):
         self.steps_per_episode = 0
         self.done = False
     
+    def get_goal_percentage(self):
+        return np.array([[(self.goal_ctr/(self.done_count+1))*100.0]])
+
+    def reset_goal_ctr(self):
+        self.done_count = 0
+        self.goal_ctr = 0
+    
     def collect_metrics(self):
         '''
         Metrics collection
@@ -202,7 +209,7 @@ class RoboCupEnvironment(Environment):
                 ('Turns_per_Episode', self.turns),
                 ('Dashes_per_Episode', self.dashes),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode),
-                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/self.done_count)*100.0)
+                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/(self.done_count+1))*100.0)
             ]
 
             print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))

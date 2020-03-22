@@ -53,10 +53,12 @@ class rc_env:
 
             self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
             dash_power_discretization = np.linspace(-100,100,21, dtype=np.float64).tolist()
+            dash_degree_discretization = np.linspace(-180,180,9, dtype=np.float64).tolist()
             power_discretization = np.linspace(0,100,21, dtype=np.float64).tolist()
-            degree_discretization = np.linspace(-180,180,17, dtype=np.float64).tolist()
+            degree_discretization = np.linspace(-180,180,33, dtype=np.float64).tolist()
 
             self.dash_pow_step = dash_power_discretization[1] - dash_power_discretization[0]
+            self.dash_degree_step = dash_degree_discretization[1] - dash_degree_discretization[0]
             self.pow_step = power_discretization[1]-power_discretization[0]
             self.degree_step = degree_discretization[1]-degree_discretization[0]
 
@@ -70,7 +72,7 @@ class rc_env:
             rev_ctr = 0
             turn_dict = kick_dict = {}
             for dash_power in dash_power_discretization:
-                for dash_degree in degree_discretization:
+                for dash_degree in dash_degree_discretization:
                     self.ACTION_DICT[dis_ctr] = (dash_power, dash_degree)
                     dis_ctr += 1
 
@@ -392,7 +394,7 @@ class rc_env:
         if act_choice == 0: # Dash
             power = params[0].clip(-1,1)*100
             degree = params[1].clip(-1,1)*180
-            return self.REVERSE_ACTION_DICT[act_choice][((self.dash_pow_step*np.round(power/self.dash_pow_step)), (self.degree_step*np.round(degree/self.degree_step)))]
+            return self.REVERSE_ACTION_DICT[act_choice][((self.dash_pow_step*np.round(power/self.dash_pow_step)), (self.dash_degree_step*np.round(degree/self.dash_degree_step)))]
         elif act_choice == 1: # Turn
             degree = params[2].clip(-1,1)*180
             return self.REVERSE_ACTION_DICT[act_choice][((self.degree_step*np.round(degree/self.degree_step)),)]

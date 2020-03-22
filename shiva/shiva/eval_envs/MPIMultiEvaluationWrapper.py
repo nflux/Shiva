@@ -51,10 +51,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
             if self.sort:
                 self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__,reverse=True))
-                print('Rankings: ', self.rankings)
-                print('Rankings type: ', type(self.rankings))
+                # print('Rankings: ', self.rankings)
+                # print('Rankings type: ', type(self.rankings))
                 self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
-                print('Sent rankings to Meta')
+                # print('Sent rankings to Meta')
                 self.sort = False
 
 
@@ -62,7 +62,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     def _launch_evals(self):
         # Spawn Single Environments
-        self.evals = MPI.COMM_WORLD.Spawn(sys.executable, args=['shiva/eval_envs/MPIEvaluation.py'], maxprocs=self.num_evals)
+        self.evals = MPI.COMM_WORLD.Spawn(sys.executable, args=['shiva/eval_envs/MPIImitEvaluation.py'], maxprocs=self.num_evals)
         self.evals.bcast(self.configs, root=MPI.ROOT)  # Send them the Config
         #self.log('Eval configs sent')
         eval_spec = self.evals.gather(None, root=MPI.ROOT)  # Wait for Eval Specs ()
@@ -87,7 +87,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
             self.evaluations[agent_id] = evals.mean()
             self.sort = sort
-            print('Multi Evaluation has received evaluations!')
+            # print('Multi Evaluation has received evaluations!')
             self.agent_selection(env_source)
 
     #def _get_evaluations(self,sort):
@@ -114,7 +114,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     def agent_selection(self,env_rank):
         self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
-        print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
+        # print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
         self.evals.send(self.agent_sel,dest=env_rank,tag=Tags.new_agents)
 
 

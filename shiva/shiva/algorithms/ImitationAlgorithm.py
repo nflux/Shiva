@@ -202,46 +202,48 @@ class ImitationRoboCupAlgorithm(Algorithm):
 
         self.actor_learning_rate = agent.actor_learning_rate
 
-        states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+        for i in range(self.updates):
+            states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
 
-        # zero optimizer
-        agent.actor_optimizer.zero_grad()
+            # zero optimizer
+            agent.actor_optimizer.zero_grad()
 
-        action_prob_dist = agent.actor(states.float())
+            action_prob_dist = agent.actor(states.float())
 
-        actions = actions.detach().float()
+            actions = actions.detach().float()
 
-        # action_prob_dist = action_prob_dist.view(actions.shape)
+            # action_prob_dist = action_prob_dist.view(actions.shape)
 
-        self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
-        # print('super_loss:', self.loss)
-        self.loss.backward()
-        agent.actor_optimizer.step()
+            self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
+            # print('super_loss:', self.loss)
+            self.loss.backward()
+            agent.actor_optimizer.step()
     
     def dagger_update(self, agent, buffer, step_n, episodic=False):
 
         self.actor_learning_rate = agent.actor_learning_rate
+        
+        for i in range(self.updates):
+            states, actions, rewards, next_states, dones, expert_actions = buffer.sample(device=self.device)
 
-        states, actions, rewards, next_states, dones, expert_actions = buffer.sample(device=self.device)
+            # zero optimizer
+            agent.actor_optimizer.zero_grad()
 
-        # zero optimizer
-        agent.actor_optimizer.zero_grad()
+            action_prob_dist = agent.actor(states.float())
+            # print('before', action_prob_dist)
 
-        action_prob_dist = agent.actor(states.float())
-        # print('before', action_prob_dist)
+            # print("This is the expert in dagger", expert_actions.shape)
 
-        # print("This is the expert in dagger", expert_actions.shape)
+            # if (len(actions.shape) > 1):
+            #     action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[-1])
+            # else:
+            #     action_prob_dist = action_prob_dist.view(actions.shape[0])
 
-        # if (len(actions.shape) > 1):
-        #     action_prob_dist = action_prob_dist.view(actions.shape[0],actions.shape[-1])
-        # else:
-        #     action_prob_dist = action_prob_dist.view(actions.shape[0])
-
-        #calculate loss based on loss functions dictated in the configs
-        self.loss = self.loss_calc(action_prob_dist, expert_actions.float()).to(self.device)
-        # print('Dagger_loss:', self.loss)
-        self.loss.backward()
-        agent.actor_optimizer.step()
+            #calculate loss based on loss functions dictated in the configs
+            self.loss = self.loss_calc(action_prob_dist, expert_actions.float()).to(self.device)
+            # print('Dagger_loss:', self.loss)
+            self.loss.backward()
+            agent.actor_optimizer.step()
 
     def create_agent(self, id):
         new_agent = DDPGAgent(id,self.observation_space,self.action_space,self.configs['Agent'],self.configs['Network'])
