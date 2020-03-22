@@ -168,7 +168,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
 
         
-    def eloProbability (self, rating1, rating2, n):
+    def eloProbability (self, rating1, rating2):
         self.probability = 1.0 * 1.0 / (1 + 1.0 * math.pow (10, 1.0 * (rating1 - rating2)))
         self.log("ELO Probability Score : {}", self.probability)
         print("ELO Probability Score : ", self.probability)
@@ -200,8 +200,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
     # n - How high a constant n, should be to make a significant change to a team's score
     # The Probability of Team2 winning.
 
-    def TeamEloRating(self, team1, team2, n):
-        self.rating = self.eloProbability(team1, team2, n)
+    def TeamEloRating(self, team1, team2):
+        self.rating = self.eloProbability(team1, team2)
         self.log("Probability Calculation Done. Probability of Team2 wiining : {}", self.rating)
         return self.rating
 
@@ -420,6 +420,25 @@ class MPIMultiEvaluationWrapper(Evaluation):
         print("FINAL DICT Assigned Or Not",self.agentIDDict )
         print("THE FINAL TEAMS", self.teams)
         return self.teams
+
+    def eloRewarder(self, teamAlpha, teamAlphaRewards, teamBravo, teamBravoRewards, k, wAlpha, wBravo):
+        self.teamAlphaProbabilityWin = self.TeamEloRating(teamBravoRewards, teamAlphaRewards)
+        self.teamBravoProbabilityWin = self.TeamEloRating(teamAlphaRewards, teamBravoRewards)
+        # teamNewAlphaRewards = calculateEloReward(teamAlphaRewards,teamAlphaProbabilityWin, k, wAlpha)
+        # teamNewBravoRewards = CalculateEloReward(teamBravoRewards, teamBravoProbabilityWin, k ,wBravo)
+
+
+        for x in range(len(teamAlpha)):s
+            self.teamAlphaRewards[x] = self.calculateEloReward(teamAlphaRewards, self.teamAlphaProbabilityWin, k, wAlpha)
+            #self.agents[teamAlpha[x]].eloReward = calculateEloReward(teamAlphaRewards, teamAlphaProbabilityWin, k, wAlpha)
+
+        for y in range(len(teamBravo)):
+            self.teamBravoRewards[y] = self.calculateEloReward(teamAlphaRewards, self.teamAlphaProbabilityWin,k, wBravo)
+            #self.agents[teamAlpha[y]].eloReward = calculateEloReward(teamAlphaRewards, teamAlphaProbabilityWin, k, wAlpha)
+
+        return self.teamAlphaRewards, self.teamBravoRewards
+        #return  teamAlpha, teamBravo
+
             
 
             
