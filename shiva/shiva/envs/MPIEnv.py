@@ -170,7 +170,7 @@ class MPIEnv(Environment):
             self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
             self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
         elif 'RoboCup' in self.type:
-            for ix in range(self.num_learners):
+            for ix in range(self.num_agents):
                 self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._robo_reshape, self.trajectory_buffers[0].agent_numpy(ix))
 
                 trajectory_info = {
@@ -227,6 +227,7 @@ class MPIEnv(Environment):
     def _launch_env(self):
         # initiate env from the config
         self.env = self.create_environment()
+        self.num_agents = self.env.num_agents
 
     def _connect_learners(self):
         #self.log("Waiting Learners info")

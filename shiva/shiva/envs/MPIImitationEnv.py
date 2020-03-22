@@ -161,7 +161,7 @@ class MPIRoboCupImitationEnv(Environment):
         return np.reshape(arr, (traj, 1, dim))
 
     def _send_super_trajectory_numpy(self):
-        for ix in range(self.num_learners):
+        for ix in range(self.num_agents):
             self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._robo_reshape, self.super_trajectory_buffer.agent_numpy(ix))
 
             trajectory_info = {
@@ -192,7 +192,7 @@ class MPIRoboCupImitationEnv(Environment):
         self.super_reset_buffer()
     
     def _send_dagger_trajectory_numpy(self):
-        for ix in range(self.num_learners):
+        for ix in range(self.num_agents):
             self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer, self.expert_actions_buffer = map(self._robo_reshape, self.dagger_trajectory_buffer.agent_numpy(ix))
 
             trajectory_info = {
@@ -243,6 +243,7 @@ class MPIRoboCupImitationEnv(Environment):
     def _launch_env(self):
         # initiate env from the config
         self.env = self.create_environment()
+        self.num_agents = self.env.num_agents
     
     def _launch_bot_env(self):
         cmd = [os.getcwd() + '/shiva/envs/RoboCupBotEnv.py', '-p', str(self.imit_port), '-s', str(self.bot_seed)]

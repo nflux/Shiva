@@ -34,7 +34,6 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.rankings = np.zeros(self.num_agents)
         self.evaluations = dict()
         self.info = MPI.Status()
-        self.log("This at 35 is not printed")
         self.agent_ids = self.meta.bcast(None,root=0)
         print('Agent IDS: ', self.agent_ids)
         self.initial_agent_selection()
