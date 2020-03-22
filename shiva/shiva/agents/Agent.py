@@ -3,8 +3,8 @@ import torch
 import torch.nn
 from shiva.core.admin import logger
 
-class Agent(object):
-    
+class Agent(torch.nn.Module):
+
     def __init__(self, id, obs_space, acs_space, agent_config, network_config):
         super(Agent, self).__init__()
         '''
@@ -67,12 +67,16 @@ class Agent(object):
         flag = True
         while flag:
             try:
-                setattr(self, policy_name, torch.load(policy_file))
+                setattr(self, policy_name, torch.load(policy_file,map_location=torch.device('cpu')))
                 flag = False
             except:
                 # try again
                 time.sleep(0.25)
                 pass
+
+    def reset_device(self):
+        self.device = torch.device("cpu")
+
 
     def get_action(self, obs):
         assert False, "Method Not Implemented"
@@ -88,7 +92,7 @@ class Agent(object):
         """
         for to_model, from_model in zip(to_model.parameters(), from_model.parameters()):
             to_model.data.copy_(from_model.data.clone())
-    
+
     @staticmethod
     def mod_lr(optim, lr):
         for g in optim.param_groups:

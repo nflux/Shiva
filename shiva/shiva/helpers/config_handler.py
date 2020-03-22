@@ -35,13 +35,13 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
 
         Converts a config file into a meaninful dictionary
             DataTypes that reads
-            
+
                 lists of the format [20,30,10], both integers and floats
                 floats when a . is found
                 booleans valid by configparser .getboolean()
                 integer
                 strings
-                
+
     '''
     parser = configparser.ConfigParser()
     parser.read(_FILENAME)
@@ -82,6 +82,7 @@ def save_dict_2_config_file(config_dict: dict, file_path: str):
         assert False, "Not expecting a list"
     else:
         for section_name, attrs in config_dict.items():
+# <<<<<<< HEAD
             if '_filename_' != section_name:
                 if type(attrs) == dict:
                     config.add_section(section_name)
@@ -99,6 +100,14 @@ def save_dict_2_config_file(config_dict: dict, file_path: str):
                             print("Couldn't save {}, expecting dict not {}".format(at, type(at)))
                 else:
                     print("Couldn't save section {} with attr {}".format(section_name, attrs))
+# =======
+#             if type(attrs) == list:
+#                 attrs = attrs[0]
+#             if is_iterable(attrs) and '_filename_' != section_name:
+#                 config.add_section(section_name)
+#                 for attr_name, attr_val in attrs.items():
+#                     config.set(section_name, attr_name, dtype_2_configstr(attr_val))
+# >>>>>>> robocup-pbt-mpi
     with open(file_path, 'w') as configfile:
         config.write(configfile)
 

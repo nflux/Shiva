@@ -17,7 +17,7 @@ class rc_env:
     '''
         Description
             Class to run the RoboCup Environment. This class runs each agent on
-            its own thread and uses Barriers to make the agents run 
+            its own thread and uses Barriers to make the agents run
             synchronously ergo take an action together at each timestep.
 
         Inputs
@@ -25,14 +25,13 @@ class rc_env:
             @port       Required for the robocup server
     '''
 
-    def __init__(self, config, port=None):
+    def __init__(self, config):
 
         if 'MetaLearner' in config:
             {setattr(self, k, v) for k, v in config['Environment'].items()}
         else:
             {setattr(self, k, v) for k, v in config.items()}
 
-        self.port = port
         self.hfo_path = hfo.get_hfo_path()
         # self.seed = np.random.randint(1000)
         self.viewer = None
@@ -41,79 +40,23 @@ class rc_env:
         self.right_action_option = None
 
         if self.action_level == 'low':
-            #                   pow,deg   deg       deg         pow,deg    
+            #                   pow,deg   deg       deg         pow,deg
             # self.action_list = [hfo.DASH, hfo.TURN, hfo.TACKLE, hfo.KICK]
             self.action_list = [hfo_env.DASH, hfo_env.TURN, hfo_env.KICK]
             self.kick_actions = [hfo_env.KICK]  # actions that require the ball to be kickable
             self.acs_dim = len(self.action_list)
             self.acs_param_dim = 5  # 2 for dash and kick 1 for turn and tackle
-            self.left_action_option = np.asarray([[0.0] * self.acs_param_dim for i in range(self.num_left)])
+            self.left_action_option = np.asarray([[0.0] * self.acs_param_dim for i in range(self.num_left)],
+                                                 dtype=np.float64)
             # self.left_actions_OH = np.empty([self.num_left, 8],dtype=float)
-            self.right_action_option = np.asarray([[0.0] * self.acs_param_dim for i in range(self.num_right)])
+            self.right_action_option = np.asarray([[0.0] * self.acs_param_dim for i in range(self.num_right)],
+                                                  dtype=np.float64)
             # self.right_actions_OH = np.empty([self.num_right, 8],dtype=float)
         elif self.action_level == 'discretized':
 
-            self.action_list = [hfo_env.DASH , hfo_env.TURN , hfo_env.KICK]
-            # self.action_list = [hfo_env.TURN , hfo_env.KICK]
-            # self.action_list = [hfo_env.DASH, hfo_env.KICK]
-            # self.action_list = [hfo_env.DASH]
-            # self.action_list = [hfo_env.TURN]
-            # self.action_list = [hfo_env.KICK]
-
-            # Experiment 1 Success
-            # self.ACTION_DICT = {
-            #                     0 : (100,45),  # Kick 0 Backward
-            #                     1 : (100,0)      # Kick 100 Forward
-            #                    }
-
-            # Experiment 2 Success
-            # self.ACTION_DICT = {
-            #                     # 0 : (10,), # turn
-            #                     0 : (0,0),  # Kick 0   Forward
-            #                     1 : (25,0), # Kick 25  Forward
-            #                     2 : (100,0) # Kick 100 Forward
-            #                    }
-
-            # Experiment 3 Success
-            # self.ACTION_DICT = {
-            #     0: (10, 0),  # Dash 10  Forward
-            #     1: (20, 0),  # Dash 20  Forward
-            #     2: (0, 0),   # Kick 0   Forward
-            #     3: (25, 0),  # Kick 25  Forward
-            #     4: (100, 0)  # Kick 100 Forward
-            # }
-
-            # self.ACTION_DICT = {
-            #     0: (10, 0),  # Dash 10  Forward
-            #     1: (20, 0)  # Dash 20  Forward
-            # }
-
-            # Experiment 4
-            self.ACTION_DICT = {
-                                0: (10, 0),         # Dash 10  Forward  Maybe the move is to remove this but then I fear the agent might over step and not be able stop for the ball, unless
-                                                    # dashing power equates to speed? or is it distance traveled per dash dictated by power? are they the same thing?
-                                1: (25, 0),         # Dash 25  Forward
-                                2: (100, 0),        # Dash 100 Forward
-                                3: (-22.5,),        # Turn left 22.5 degrees
-                                4: (22.5,),         # Turn right 22.5 degrees
-                                5: (100, -22.5),    # Kick 25  Forward
-                                6: (100, 0),        # Kick 100 Forward
-                                7: (100, 22.5)      # Kick 100 Forward
-                               }
-
-            # For testing rewards with HPI
-            # self.ACTION_DICT = {
-            #                     0 : (10,0),  # dash forward
-            #                     1 : (-22.5), # turn left (0,10)
-            #                     2 : (22.5),  # turn right
-            #                     3 : (50,0)   # kick straight ahead
-            #                    }
-
-            self.dash_idx = 3
-            self.turn_idx = 5
-
-            power_discretization = np.linspace(0, 100, (100 / self.pow_coef + 1)).tolist()
-            degree_discretization = np.linspace(-180, 180, (360 / self.ang_coef + 1)).tolist()
+            self.action_list = [hfo_env.DASH, hfo_env.TURN, hfo_env.KICK]
+            power_discretization = np.linspace(0, 100, 21, dtype=np.float64).tolist()
+            degree_discretization = np.linspace(-180, 180, 17, dtype=np.float64).tolist()
 
             self.pow_step = power_discretization[1] - power_discretization[0]
             self.degree_step = degree_discretization[1] - degree_discretization[0]
@@ -122,40 +65,36 @@ class rc_env:
             # self.DASH_TABLE = []
             # self.KICK_TABLE = []
             # self.TURN_TABLE = self.degree_discretization
-            # self.ACTION_DICT = {}
-            # self.REVERSE_ACTION_DICT = {}
-            # dis_ctr = 0
-            # rev_ctr = 0
-            # turn_dict = kick_dict = {}
-            # for dash_power in power_discretization:
-            #     for dash_degree in degree_discretization:
-            #         self.ACTION_DICT[dis_ctr] = (dash_power, dash_degree)
-            #         dis_ctr += 1
+            self.ACTION_DICT = {}
+            self.REVERSE_ACTION_DICT = {}
+            dis_ctr = 0
+            rev_ctr = 0
+            turn_dict = kick_dict = {}
+            for dash_power in power_discretization:
+                for dash_degree in degree_discretization:
+                    self.ACTION_DICT[dis_ctr] = (dash_power, dash_degree)
+                    dis_ctr += 1
 
-            # self.dash_idx = dis_ctr
-            # self.dash_idx = 2
+            self.dash_idx = dis_ctr
 
-            # self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(self.ACTION_DICT.values(), self.ACTION_DICT.keys()))
-            # rev_ctr += 1
-            # for turn_degree in degree_discretization:
-            #     turn_dict[dis_ctr] = (turn_degree,)
-            #     self.ACTION_DICT[dis_ctr] = (turn_degree,)
-            #     dis_ctr += 1
+            self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(self.ACTION_DICT.values(), self.ACTION_DICT.keys()))
+            rev_ctr += 1
+            for turn_degree in degree_discretization:
+                turn_dict[dis_ctr] = (turn_degree,)
+                self.ACTION_DICT[dis_ctr] = (turn_degree,)
+                dis_ctr += 1
 
-            # self.turn_idx = dis_ctr
-            # self.turn_idx = 0
+            self.turn_idx = dis_ctr
 
-            # self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(turn_dict.values(), turn_dict.keys()))
-            # rev_ctr += 1
+            self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(turn_dict.values(), turn_dict.keys()))
+            rev_ctr += 1
+            for kick_power in power_discretization:
+                for kick_degree in degree_discretization:
+                    kick_dict[dis_ctr] = (kick_power, kick_degree)
+                    self.ACTION_DICT[dis_ctr] = (kick_power, kick_degree)
+                    dis_ctr += 1
 
-            # for kick_power in power_discretization:
-            #     for kick_degree in degree_discretization:
-            #         kick_dict[dis_ctr] = (kick_power, kick_degree)
-            #         self.ACTION_DICT[dis_ctr] = (kick_power, kick_degree)
-            #         dis_ctr += 1
-
-            # self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(kick_dict.values(), kick_dict.keys()))
-
+            self.REVERSE_ACTION_DICT[rev_ctr] = dict(zip(kick_dict.values(), kick_dict.keys()))
             # for a in range(len(self.action_list)):
             #     if a == 0:
             #         self.ACTION_DICT[a] = dash_dict
@@ -175,11 +114,8 @@ class rc_env:
             # self.ACTION_MATRIX = self.DASH_TABLE + self.TURN_TABLE + self.KICK_TABLE
             # self.kick_actions = self.KICK_TABLE
 
-            # print(self.dash_idx, self.turn_idx)
-
-            # # self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
-            # self.acs_dim =  dis_ctr
-            self.acs_dim = 8
+            # self.acs_dim = len(self.DASH_TABLE) + len(self.TURN_TABLE) + len(self.KICK_TABLE)
+            self.acs_dim = dis_ctr
             self.acs_param_dim = 0
 
         elif self.action_level == 'high':
@@ -212,7 +148,7 @@ class rc_env:
         self.d = 0
         # flag to wait for all the agents to load
         self.start = False
-        # flag to help shut down the environment
+
         self.close = False
 
         # Various Barriers to keep all agents actions in sync
@@ -222,20 +158,20 @@ class rc_env:
         self.sync_at_reward = threading.Barrier(self.num_left + self.num_right)
 
         # Left side actions, obs, rewards
-        self.left_actions = np.array([0] * self.num_left)
-        self.left_obs = np.ones([self.num_left, self.left_features], dtype=float)
-        self.left_obs_previous = np.ones([self.num_left, self.left_features], dtype=float)
-        self.left_rewards = np.zeros(self.num_left)
+        self.left_actions = np.array([0] * self.num_left, dtype=int)
+        self.left_obs = np.zeros([self.num_left, self.left_features], dtype=np.float64)
+        self.left_obs_previous = np.zeros([self.num_left, self.left_features], dtype=np.float64)
+        self.left_rewards = np.zeros(self.num_left, dtype=np.float64)
         self.left_kickable = [0] * self.num_left
         self.left_agent_possession = ['N'] * self.num_left
         self.left_passer = [0] * self.num_left
         self.left_lost_possession = [0] * self.num_left
 
         # Right side actions, obs, rewards
-        self.right_actions = np.array([0] * self.num_right)
-        self.right_obs = np.empty([self.num_right, self.right_features], dtype=float)
-        self.right_obs_previous = np.empty([self.num_right, self.right_features], dtype=float)
-        self.right_rewards = np.zeros(self.num_right)
+        self.right_actions = np.array([0] * self.num_right, dtype=int)
+        self.right_obs = np.zeros([self.num_right, self.right_features], dtype=np.float64)
+        self.right_obs_previous = np.zeros([self.num_right, self.right_features], dtype=np.float64)
+        self.right_rewards = np.zeros(self.num_right, dtype=np.float64)
         self.right_kickable = [0] * self.num_right
         self.right_agent_possession = ['N'] * self.num_right
         self.right_passer = [0] * self.num_right
@@ -246,6 +182,7 @@ class rc_env:
         self.right_base = 'base_right'
 
         self.left_agent_possesion = ['N'] * self.num_left
+        self.right_agent_possesion = ['N'] * self.num_right
 
     def set_observation_indexes(self):
 
@@ -307,7 +244,7 @@ class rc_env:
                                                                 False, i, self.ep_length, self.action_level,
                                                                 self.left_envs,))
             t.start()
-            time.sleep(1.5)
+            time.sleep(3)
 
         for i in range(self.num_right):
             print("Connecting player %i" % i, "on rightonent %s to the server" % self.right_base)
@@ -320,10 +257,13 @@ class rc_env:
                                                                 False, i, self.ep_length, self.action_level,
                                                                 self.right_envs,))
             t.start()
-            time.sleep(1.5)
+            time.sleep(3)
 
         print("All players connected to server")
         self.start = True
+
+    def start_env(self):
+        return self.start
 
     def Observation(self, agent_id, side):
         '''
@@ -337,7 +277,6 @@ class rc_env:
         '''
 
         if side == 'left':
-            # print("inside rc_env",self.left_obs[agent_id])
             return self.left_obs[agent_id]
         elif side == 'right':
             return self.right_obs[agent_id]
@@ -388,7 +327,7 @@ class rc_env:
             return self.right_rewards[agent_id]
 
     def Step(self, left_actions=[], right_actions=[], left_options=[],
-             right_options=[], left_actions_OH=[], right_actions_OH=[]):
+             right_options=[], left_actions_OH=[], right_actions_OH=[],evaluate=False):
         '''
             Description
                 Method for the agents to take a single step in the environment.
@@ -397,14 +336,14 @@ class rc_env:
                 the agents together before taking a step and returning
                 the values. Thus the while loop in connect will start another
                 iteration.
-            
+
             Inputs
                 @left_actions list of left actions
                 @right_actions list of right actions
                 @left_params list of params corresponding to each action
                 @right_params similar to left_params
                 @*_OH one-hot-encoded actions
-            
+
             Returns
                 Observations
                 Rewards
@@ -423,13 +362,15 @@ class rc_env:
 
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
+        if evaluate:
+            return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status, self.get_eval_metrics
+        else:
+            return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
-        return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
-
-    def Queue_action(self, agent_id, base, action, options=[]):
+    def Queue_action(self, agent_id, base, action, options):
         '''
             Description
-                Queue up the actions and params for the agents before 
+                Queue up the actions and params for the agents before
                 taking a step in the environment.
         '''
 
@@ -438,10 +379,9 @@ class rc_env:
             if self.action_level == 'low':
                 for p in range(options.shape[1]):
                     self.left_action_option[agent_id][p] = options[agent_id][p]
-            # i was thinking that maybe I could choose the action here        
+            # i was thinking that maybe I could choose the action here
             elif self.action_level == 'discretized':
-                for op in options:
-                    self.left_action_option[agent_id] = op
+                self.left_action_option[agent_id] = options[agent_id]
         else:
             self.right_actions[agent_id] = action
             if self.action_level == 'low':
@@ -459,8 +399,8 @@ class rc_env:
             power = params[0].clamp(-1, 1) * 100
             degree = params[1].clamp(-1, 1) * 180
             return self.REVERSE_ACTION_DICT[act_choice.item()][(
-            (self.pow_step * torch.round(power / self.pow_step)).item(),
-            (self.degree_step * torch.round(degree / self.degree_step)).item())]
+                (self.pow_step * torch.round(power / self.pow_step)).item(),
+                (self.degree_step * torch.round(degree / self.degree_step)).item())]
         elif act_choice == 1:  # Turn
             degree = params[2].clamp(-1, 1) * 180
             return self.REVERSE_ACTION_DICT[act_choice.item()][
@@ -469,8 +409,8 @@ class rc_env:
             power = ((params[3].clamp(-1, 1) + 1) / 2) * 100
             degree = params[4].clamp(-1, 1) * 180
             return self.REVERSE_ACTION_DICT[act_choice.item()][(
-            (self.pow_step * torch.round(power / self.pow_step)).item(),
-            (self.degree_step * torch.round(degree / self.degree_step)).item())]
+                (self.pow_step * torch.round(power / self.pow_step)).item(),
+                (self.degree_step * torch.round(degree / self.degree_step)).item())]
 
     def get_valid_discrete_value(self, agentID, base):
         if self.left_base == base:
@@ -478,27 +418,13 @@ class rc_env:
         else:
             discrete_action = self.right_action_option[agentID]
 
-        # if 0 <= int(action_params[agentID][0]) <= 188:
-        #     return self.ACTION_MATRIX[int(action_params[agentID][0])]
-        # elif 189 <= int(action_params[agentID][0]) <= 197:
-        #     return (self.ACTION_MATRIX[int(action_params[agentID][0])],)
-        # else:
-        #     return self.ACTION_MATRIX[int(action_params[agentID][0])]
-        # print('action', self.ACTION_DICT[discrete_action])
-        # print('discrete action', discrete_action)
-        return self.ACTION_DICT[discrete_action.item()]
-        # if 189 <= discrete_action <= 197:
-        #     # Turn
-        #     return (self.ACTION_MATRIX[discrete_action],)
-        # else:
-        #     # Dash and Kick
-        #     return self.ACTION_MATRIX[discrete_action]
+        return self.ACTION_DICT[discrete_action]
 
     # takes param index (0-4)
     def get_valid_scaled_param(self, agentID, ac_index, base):
         '''
             Description
-            
+
         '''
 
         if self.left_base == base:
@@ -507,18 +433,15 @@ class rc_env:
             action_params = self.right_action_option
 
         if ac_index == 0:  # dash power, degree
-
             dash_power = action_params[agentID][0].clip(-1, 1) * 100
             dash_degree = action_params[agentID][1].clip(-1, 1) * 180
             return (dash_power, dash_degree)
 
         elif ac_index == 1:  # turn degree
-
             turn_degree = action_params[agentID][2].clip(-1, 1) * 180
             return (turn_degree,)
 
         elif ac_index == 2:  # kick power, degree
-
             kick_power = ((action_params[agentID][3].clip(-1, 1) + 1) / 2) * 100
             kick_degree = action_params[agentID][4].clip(-1, 1) * 180
             return (kick_power, kick_degree)
@@ -533,7 +456,7 @@ class rc_env:
             recieve a new observation, world status, and reward then start
             all over again. The world status dictates if the done flag
             should change.
-            
+
         Inputs
             feat_lvl: Feature level to use. ('high', 'low', 'simple')
             base: Which base to launch agent to. ('base_left', 'base_right)
@@ -555,10 +478,9 @@ class rc_env:
             feat_lvl = hfo_env.SIMPLE_LEVEL_FEATURE_SET
 
         config_dir = hfo.get_config_path()
-        recorder_dir = 'log/'
         envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                        server_port=port, server_addr='localhost', team_name=base,
-                                       play_goalie=goalie, record_dir=recorder_dir)
+                                       play_goalie=goalie, record_dir=self.rc_log + '/')
 
         if base == 'base_left':
             obs_prev = self.left_obs_previous
@@ -572,13 +494,25 @@ class rc_env:
             rews = self.right_rewards
 
         ep_num = 0
-        while (True):
-            while (self.start):
+        while True:
+            while self.start:
                 ep_num += 1
                 j = 0  # j to maximum episode length
 
                 obs_prev[agent_ID] = envs[agent_ID].getState()  # Get initial state
                 obs[agent_ID] = envs[agent_ID].getState()  # Get initial state
+
+                self.initial_distance_to_ball = self.distance_to_ball(obs[agent_ID])
+                self.min_player_distance_to_ball = self.distance_to_ball(obs[agent_ID])
+                self.goal = False
+                self.goal_scored = False
+                self.first_kick = False
+                self.initial_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])
+                self.initial_distance_to_own_goal = self.ball_distance_to_own_goal(obs[agent_ID])
+                self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs[agent_ID])
+                self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs[agent_ID])
+                self.inv_steps_to_goal = 0
+                self.inv_steps_to_kick = 0
 
                 # self.been_kicked_left = False
                 # self.been_kicked_right = False
@@ -596,15 +530,6 @@ class rc_env:
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID, a, base))
                     elif act_lvl == 'discretized':
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID, base))
-                        # t = self.left_action_option[agent_ID][0]
-                        # # print("t right before .act():",t)
-
-                        # if 0 <= t <= 188:
-                        #     envs[agent_ID].act(0, *self.get_valid_scaled_param(agent_ID, a, base))
-                        # elif 189 <= t <= 197:
-                        #     envs[agent_ID].act(1, *self.get_valid_scaled_param(agent_ID, a, base))
-                        # else:
-                        #     envs[agent_ID].act(3, *self.get_valid_scaled_param(agent_ID, a, base))
 
                     self.sync_at_status.wait()
 
@@ -627,32 +552,37 @@ class rc_env:
                         ep_num
                     )  # update reward
 
+                    if self.d == True:
+                        if not self.goal:
+                            self.inv_steps_to_goal = self.ep_length
+
                     j += 1
                     self.sync_before_step.wait()
 
                     # Break if episode done
                     if self.d == True:
                         break
+
             if self.close:
                 break
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     def _start_hfo_server(self):
         '''
-                Description
-                    Runs the HFO command to pass parameters to the server. 
-                    Refer to `HFO/bin/HFO` to see how these params are added.
-            '''
+            Description
+                Runs the HFO command to pass parameters to the server.
+                Refer to `HFO/bin/HFO` to see how these params are added.
+        '''
         cmd = self.hfo_path + \
               " --headless --frames-per-trial %i --untouched-time %i --offense-agents %i" \
               " --defense-agents %i --offense-npcs %i --defense-npcs %i" \
               " --port %i --offense-on-ball %i --seed %i --ball-x-min %f" \
               " --ball-x-max %f --ball-y-min %f --ball-y-max %f" \
-              " --log-dir %s --seed %i --message-size 256" \
+              " --logs-dir %s --seed %i --message-size 256" \
               % (self.ep_length, self.untouched, self.num_left,
                  self.num_right, self.num_l_bot, self.num_r_bot, self.port,
                  self.offense_ball, self.seed, self.ball_x_min, self.ball_x_max,
-                 self.ball_y_min, self.ball_y_max, self.log, self.seed)
+                 self.ball_y_min, self.ball_y_max, self.rc_log, self.seed)
         # Adds the binaries when offense and defense npcs are in play, must be changed to add agent vs binary npc
         if self.num_l_bot > 0:   cmd += " --offense-team %s" \
                                         % (self.left_bin)
@@ -665,7 +595,7 @@ class rc_env:
         if not self.rcss_log:  cmd += " --no-logging"
         if self.hfo_log:       cmd += " --hfo-logging"
         if self.record_lib:             cmd += " --record"
-        if self.record_serv:      cmd += " --log-gen-pt"
+        if self.record_serv:      cmd += " --logs-gen-pt"
         if self.run_imit:         cmd += " --run-bots"
         if self.init_env:
             cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f" \
@@ -677,7 +607,7 @@ class rc_env:
 
         print('Starting server with command: %s' % cmd)
         self.server_process = subprocess.Popen(cmd.split(' '), shell=False)
-        time.sleep(3)  # Wait for server to startup before connecting a player
+        time.sleep(6)  # Wait for server to startup before connecting a player
 
     def _start_viewer(self):
         '''
@@ -701,14 +631,15 @@ class rc_env:
 
             Input
                 s           world status message
-                agentId     
+                agentId
                 base        left_base or right_base
                 ep_num      episode number
-            
+
         '''
         reward = 0.0
         team_reward = 0.0
-        goal_points = 200.0
+        goal_points = 10.0
+
         # ---------------------------
         global possession_side
         if self.d:
@@ -717,12 +648,17 @@ class rc_env:
 
                 if s == 'Goal_By_Left' and self.left_agent_possesion[agentID] == 'L':
                     reward += goal_points
+                    # goal flag
+                    self.goal = True
                 elif s == 'Goal_By_Left':
                     reward += goal_points  # teammates get 10% of pointsssss
+                    self.goal_score = True
                     print("GOAL!")
                 elif s == 'Goal_By_Right':
                     reward += -goal_points
                 elif s == 'OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
+                    # set the kicks
+                    self.inv_steps_to_goal = self.ep_length
                     reward += -0.5
                 elif s == 'CapturedByLeftGoalie':
                     reward += goal_points / 5.0
@@ -746,7 +682,6 @@ class rc_env:
                     reward += 0  # -goal_points/4.0
 
                 possession_side = 'N'
-                self.right_agent_possesion = ['N'] * self.num_right
                 return reward
 
         if self.left_base == base:
@@ -797,28 +732,31 @@ class rc_env:
         # just check for the value inside of action list
         # if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
 
-        # -1 per timestep for being alive
-        reward -= 1
-
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
-            # reward -= 1
-            pass
+            reward -= 0.1
             # print("agent is getting penalized for kicking when not kickable")
 
+        if not self.first_kick:
+            self.inv_steps_to_kick += 1
+        else:
+            pass
+
         # it looks like this is broken for discretized as well
-        # so its not getting any rewards for kicking 
+        # so its not getting any rewards for kicking
         # print(self.action_list)
         # print(self.kick_actions)
         # input()
-        # if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:    
+        # if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:
         if self.action_list[team_actions[agentID]] == 3 and kickable:
 
-            # if True:        
+            # if True:
             # if self.num_right > 0:
             # print(self.left_agent_possesion)
-            if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
+            if (np.array(self.left_agent_possesion) == 'N').all() and (
+                    np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
-                reward += 10 #
+                self.first_kick = True
+                reward += 1
                 team_reward += 1.5
 
             # set initial ball position after kick
@@ -909,7 +847,7 @@ class rc_env:
         # all agents rewarded for closer to ball
         # dist_cur = self.distance_to_ball(team_obs[agentID])
         # dist_prev = self.distance_to_ball(team_obs_previous[agentID])
-        # d = (0.5)*(dist_prev - dist_cur) # if cur > prev --> +   
+        # d = (0.5)*(dist_prev - dist_cur) # if cur > prev --> +
         # if delta > 0:
         #     reward  += delta
         #     team_reward += delta
@@ -919,22 +857,13 @@ class rc_env:
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
         if agentID == closest_agent:
             delta = (distance_prev - distance_cur) * 1.0
-            # pass
-            if delta >= 0:
-            # if True:
+            # if delta > 0:
+            if True:
                 team_reward += delta
-                reward += delta * 5.0
-            # else:
-            # reward += delta * 2.5
-            # print("distance to ball reward", delta*5)
-            # print(distance_cur, delta)
-            # passs
-
-
-            # elif not ball_in_motion:
-            #     pass
-            else:
-                reward += delta * 2.5
+                reward += delta * 5
+                # print("distance to ball reward")
+                # print(distance_cur, delta)
+                pass
 
         ##################################################################################
 
@@ -946,13 +875,11 @@ class rc_env:
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
                 delta = (2 * self.num_left) * (r_prev - r) * 1.0
-                # if True:
-                if delta >= 0:
-                    reward += delta * 10.0
+                if True:
+                    # if delta > 0:
+                    reward += delta * 10
                     team_reward += delta
-                # else:
-                #     reward += delta * 2.5
-                    # print("ball distance to goal reward.", delta*10)
+                    # print("ball distance to goal reward.")
                     # pass
 
         # base right kicks
@@ -971,15 +898,18 @@ class rc_env:
             if True:
                 # if delta > 0:
                 # reward += delta
-                # team_reward += delta  
+                # team_reward += delta
                 pass
         '''
             Reward agent for maximizing it's proximity to the ball
         '''
-        # reward += team_obs[agentID][self.ball_proximity]
 
-        # print(team_obs[agentID][self.ball_x])
-        # print(team_obs[agentID][self.ball_y])
+        self.set_lowest_ball_distance_to_own_goal(team_obs[agentID])
+        self.set_lowest_player_distance_to_ball(team_obs[agentID])
+        self.set_lowest_player_distance_to_goal(team_obs[agentID])
+
+        self.inv_steps_to_goal += 1
+
         return reward
         # rew_percent = 1.0*max(0,(self.reward_anneal - ep_num))/self.reward_anneal
         # return ((1.0 - rew_percent)*team_reward) + (reward * rew_percent)
@@ -991,9 +921,11 @@ class rc_env:
     '''
 
     def get_kickable_status(self, agentID, env):
+
         ball_kickable = False
         ball_kickable = env.isKickable()
         # print("no implementation")
+
         return ball_kickable
 
     def closest_player_to_ball(self, team_obs, num_agents):
@@ -1007,9 +939,11 @@ class rc_env:
             if temp_distance < ball_distance:
                 closest_player_index = i
                 ball_distance = temp_distance
+
         return ball_distance, closest_player_index
 
     def distance_to_ball(self, obs):
+
         relative_x = obs[self.x] - obs[self.ball_x]
         relative_y = obs[self.y] - obs[self.ball_y]
         ball_distance = math.sqrt(relative_x ** 2 + relative_y ** 2)
@@ -1017,12 +951,50 @@ class rc_env:
         return ball_distance
 
     def ball_distance_to_goal(self, obs):
+
         goal_center_x = 1.0
         goal_center_y = 0.0
         relative_x = obs[self.ball_x] - goal_center_x
         relative_y = obs[self.ball_y] - goal_center_y
         ball_distance_to_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
+
         return ball_distance_to_goal
+
+    def ball_distance_to_own_goal(self, obs):
+
+        # my own goal
+        goal_center_x = -1.0
+        goal_center_y = 0.0
+        relative_x = obs[self.ball_x] - goal_center_x
+        relative_y = obs[self.ball_y] - goal_center_y
+        ball_distance_to_own_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
+
+        return ball_distance_to_own_goal
 
     def prox_2_dist(self, prox):
         return (prox + .8) / 1.8
+
+    def set_lowest_player_distance_to_ball(self, obs):
+
+        if self.distance_to_ball(obs) < self.min_player_distance_to_ball:
+            self.min_player_distance_to_ball = self.distance_to_ball(obs)
+
+    def set_lowest_ball_distance_to_goal(self, obs):
+
+        if self.min_distance_to_opp_goal > self.ball_distance_to_goal(obs):
+            self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
+
+    def set_lowest_ball_distance_to_own_goal(self, obs):
+
+        if self.min_distance_to_own_goal > self.ball_distance_to_own_goal(obs):
+            self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
+
+    def get_eval_metrics(self):
+        metrics = dict()
+        metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball / self.initial_distance_to_ball
+        metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.untouched))
+        metrics['distance_to_opp_goal'] = (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
+        metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
+        metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length))
+
+        return metrics

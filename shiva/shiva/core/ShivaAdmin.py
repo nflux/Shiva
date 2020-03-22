@@ -1,7 +1,9 @@
 import os
 import configparser
 import inspect
+import numpy as np
 from tensorboardX import SummaryWriter
+import torch
 
 import shiva.helpers.dir_handler as dh
 import shiva.helpers.file_handler as fh
@@ -9,7 +11,7 @@ import shiva.helpers.config_handler as ch
 import shiva.helpers.misc as misc
 
 ###################################################################################
-# 
+#
 #   ShivaAdmin
 #       This administrator class is a filing helper for the Shiva framework
 #
@@ -27,7 +29,7 @@ import shiva.helpers.misc as misc
 #            save =              True                   Saving option
 #            traceback =         True                   Debugging traceback option
 #            directory =         { 'runs': '/runs' }    Dictionary of folders where data will be stored
-#         
+#
 ###################################################################################
 
 class ShivaAdmin():
@@ -75,7 +77,7 @@ class ShivaAdmin():
 
     def __str__(self):
         return "<ShivaAdmin>"
-    
+
     def _set_dirs_attrs(self) -> None:
         '''
             Set self attributes for accessing directories
@@ -94,7 +96,6 @@ class ShivaAdmin():
             This method would be called by a Meta Learner in order to add himself
             Is needed in order to keep track of the Meta Learner directory.
             Creates a folder for it if save flag is True.
-
             Input
                 @meta_learner       Meta Learner instance to be filed
                 @folder_name              String to use as the folder name
@@ -110,7 +111,6 @@ class ShivaAdmin():
         '''
             Needed to keep track of the Learner and it's directory.
             Creates a folder for it if save flag is True.
-
             Input
                 @learner            Learner instance to be saved
                 @function_only      When we only want to use this functionality without profiling, used for distributed processes but running locally
@@ -142,7 +142,6 @@ class ShivaAdmin():
                 1. Adds Learner profile if not existing
                 2. Creates a directory for the new checkpoint
                 3. Saves current state of agents, learner and config in checkpoint folder
-
             Input
                 @learner            Learner instance
                 @checkpoint_num     Optional checkpoint number given, used for distributed processes scenario and running locally
@@ -177,7 +176,6 @@ class ShivaAdmin():
         '''
             Creates the corresponding folder for the agent checkpoint
             Instantiates the Tensorboard SummaryWriter if doesn't exists
-
             Input
                 @learner            Learner instance ref owner of the Agent
                 @agent              Agent instance ref to be saved
@@ -192,7 +190,6 @@ class ShivaAdmin():
     def get_new_agent_dir(self, learner, agent) -> str:
         '''
             Creates a new checkpoint directory for the agent and returns it
-
             Input
                 @learner            Learner instance owner of the Agent
                 @agent              Agent instance
@@ -206,7 +203,6 @@ class ShivaAdmin():
     def init_summary_writer(self, learner, agent) -> None:
         '''
             Instantiates the SummaryWriter for the given agent
-
             Input
                 @learner            Learner instance owner of the Agent
                 @agent              Agent who we want to records the metrics
@@ -222,7 +218,6 @@ class ShivaAdmin():
     def add_summary_writer(self, learner, agent, scalar_name, value_y, value_x) -> None:
         '''
             Adds a metric to the tensorboard of the given agent
-
             Input
                 @learner            Learner instance owner of the agent
                 @agent              Agent who we want to add, or agent_id
@@ -232,7 +227,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         # self.log("{} {} {} {} {}".format(learner.id, agent, scalar_name, value_y, value_x) )
-        if type(agent) == int:
+        if type(agent) == np.int64:
             '''Agent ID was sent'''
             self.writer[learner.id][agent].add_scalar(scalar_name, value_y, value_x)
         else:
@@ -242,10 +237,9 @@ class ShivaAdmin():
         '''
             This procedure is for the MetaLearner (or Learner) to save all it's configurations and agents
             If a MetaLearner is the caller, the saving will cascade along all the Learner that it has, and all the agents inside the Learner
-            
+
             Requirement
                 The caller, before saving, must have added his profile, if not, an error will be thrown
-
             Input
                 @caller             Either a MetaLearner or Learner instance
         '''
@@ -295,7 +289,6 @@ class ShivaAdmin():
                 1.  Pickles the Learner class
                 2.  Pickles the Buffer
                 3.  Saves the Learners config
-
             Input
                 @learner        Learner instance we want to save
         '''
@@ -324,7 +317,6 @@ class ShivaAdmin():
             This procedure is it's own function because is used in other parts of the code
             If attribute learner.agents is a valid attribute, saves them (if iterable) or assumes is 1 agent
             If attribute learner.agents is not valid, will try with learner.agent
-
             Input
                 @learner            Learner instance who contains the agents
                 @checkpoint_num     Checkpoint numbered used, if not given, will try to grab learner.env.get_current_step()
@@ -351,7 +343,6 @@ class ShivaAdmin():
             Mechanics of saving an individual Agent
                 1-  Pickles the agent object and save attributes
                 2-  Uses the save() method from the Agent class because Agents could have diff network structures
-
             Input
                 @learner        Learner who owns the agent
                 @agent          Agent we want to save
@@ -390,7 +381,7 @@ class ShivaAdmin():
         '''
             TODO
                 Implement once needed in order to see what's the best approach
-                
+
             Returns
                 MetaLearner instance
         '''
@@ -400,11 +391,9 @@ class ShivaAdmin():
     def _load_learner(self, path: str, includeAgents: bool=True) -> object:
         '''
             DO WE REALLY NEED THIS?
-
             Input
                 @path               Path to the Learner episode
                 @includeAgents      Boolean if want to include the agents in the returned Learner
-
             Returns
                 Learner instance
         '''
@@ -424,7 +413,6 @@ class ShivaAdmin():
         '''
             For a given @path, the procedure will walk recursively over all the folders inside the @path
             And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
-
             Input
                 @path       Path where the agents files will be located
         '''
@@ -453,7 +441,6 @@ class ShivaAdmin():
         '''
             For a given @path, the procedure will walk recursively over all the folders inside the @path
             And find all the agent_cls.pickle and policy.pth files to load a SINGLE AGENT
-
             InputW
                 @path       Path where the agents files will be located
         '''
@@ -470,12 +457,13 @@ class ShivaAdmin():
                 # this_agent_policies.append(pols)
                 policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
                 _new_agent.load_net(policy_name, pols)
+                _new_agent.device = torch.device('cpu')     
+              
         return _new_agent
 
     def _load_buffer(self, path) -> list:
         '''
             For now, we have only 1 buffer per learner
-
             Input
                 @path       Learner path
         '''
@@ -489,10 +477,8 @@ class ShivaAdmin():
     def log(self, msg, to_print=False):
         text = "Admin\t\t{}".format(msg)
         self.logger.info(text, to_print or self.print_debug)
-    
 
-###########################################################################
-#         
+
 ###########################################################################
 
 class ShivaAdmin2(ShivaAdmin):

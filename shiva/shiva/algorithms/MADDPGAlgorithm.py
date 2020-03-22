@@ -92,6 +92,7 @@ class MADDPGAlgorithm(Algorithm):
         for perms_ix, perms in enumerate(possible_permutations):
             agent_ix = perms[0]
             agent = agents[agent_ix]
+
             permutate_f = partial(_permutate, p=perms, dim=0)
             states = permutate_f(bf_states.to(self.device))
             actions = permutate_f(bf_actions.to(self.device))
@@ -298,14 +299,15 @@ class MADDPGAlgorithm(Algorithm):
                 tgt_ct_state[k] = v * self.tau + (1 - self.tau) * tgt_ct_state[k]
             agent.target_critic.load_state_dict(tgt_ct_state)
 
-    def create_agent(self, id=None):
-        assert 'NotImplemented - should be creating all Roles agents at once'
+    def create_agent(self, id):
+        assert 'NotImplemented - this method could be creating all Roles agents at once'
 
-    def create_agent_of_role(self, role):
+    def create_agent_of_role(self, id, role):
         assert role in self.roles, "Invalid given role, got {} expected of {}".format(role, self.roles)
         self.configs['Agent']['role'] = role
         self.configs['Agent']['critic_input_size'] = self.critic_input_size
-        return MADDPGAgent(self.id_generator(), self.observation_space[role], self.action_space[role], self.configs['Agent'], self.configs['Network'])
+        self.agentCount += 1
+        return MADDPGAgent(id, self.observation_space[role], self.action_space[role], self.configs['Agent'], self.configs['Network'])
 
     def set_spaces(self, observation_space, action_space):
         if len(self.roles) == 1 and not isinstance(observation_space, Iterable):
@@ -340,4 +342,4 @@ class MADDPGAlgorithm(Algorithm):
         return metrics
 
     def __str__(self):
-        return '<MADDPGAlgorithm(n_agents={}, method={})>'.format(self.agentCount, self.method)
+        return '<MADDPGAlgorithm(n_agents={}, num_updates={}, method={})>'.format(self.agentCount, self.num_updates, self.method)

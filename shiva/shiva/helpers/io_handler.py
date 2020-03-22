@@ -9,10 +9,7 @@ import shiva.helpers.file_handler as fh
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin
 
-
-
 class IOHandler(object):
-
     def __init__(self):
         self.meta = MPI.Comm.Get_parent()
         self.configs = self.meta.recv(None,source=0,tag=Tags.configs)
@@ -31,17 +28,12 @@ class IOHandler(object):
         self.run()
 
     def run(self):
-
         while True:
             time.sleep(0.001)
             self.service_learner_requests()
             self.service_menv_requests()
             if self.configs['MetaLearner']['pbt']:
                 self.service_eval_requests()
-
-
-
-
 
     def _get_io_specs(self):
         if self.configs['MetaLearner']['pbt']:
@@ -56,7 +48,6 @@ class IOHandler(object):
             'menvs_port': self.menvs_port,
             }
 
-
     def _connect_ports(self):
         self.menvs = MPI.COMM_WORLD.Accept(self.menvs_port)
         self.log('MEnv Port Connected')
@@ -65,7 +56,6 @@ class IOHandler(object):
         if self.configs['MetaLearner']['pbt']:
             self.evals = MPI.COMM_WORLD.Accept(self.evals_port)
             self.log('Evals Port Connected')
-
 
     def service_learner_requests(self):
         if self.learners.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.io_learner_request):
@@ -81,7 +71,6 @@ class IOHandler(object):
             self.menvs.send(True, dest=source,tag=Tags.io_menv_request)
             _ = self.menvs.recv(None, source=source, tag=Tags.io_menv_request)
 
-
     def service_eval_requests(self):
         if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.io_eval_request):
             _ = self.evals.recv(None, source=MPI.ANY_SOURCE, tag=Tags.io_eval_request, status=self.info)
@@ -89,17 +78,14 @@ class IOHandler(object):
             self.evals.send(True, dest=source, tag=Tags.io_eval_request)
             _ = self.evals.recv(None, source=source, tag=Tags.io_eval_request)
 
-
     def log(self, msg, to_print=False):
         text = 'IOHandler: {}'.format(msg)
         logger.info(text, True)
-
-
 
 if __name__ == "__main__":
     try:
         IOHandler()
     except Exception as e:
-        print("Eval Wrapper error:", traceback.format_exc())
+        print("IOHandler error: ", traceback.format_exc())
     finally:
         terminate_process()

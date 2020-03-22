@@ -8,6 +8,7 @@ from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.utils.Tags import Tags
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
 from shiva.helpers.misc import terminate_process
+from shiva.utils.Tags import Tags
 
 class MPIMetaLearner(MetaLearner):
     def __init__(self, configs):

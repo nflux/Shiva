@@ -17,9 +17,9 @@ class PPOAlgorithm(Algorithm):
         super(PPOAlgorithm, self).__init__(obs_space,acs_space,configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
-        self.epsilon_clip = configs[0]['epsilon_clip']
-        self.gamma = configs[0]['gamma']
-        self.gae_lambda = configs[0]['lambda']
+        #self.epsilon_clip = configs[0]['epsilon_clip']
+        #self.gamma = configs[0]['gamma']
+        #self.gae_lambda = configs[0]['lambda']
         self.policy_loss = 0
         self.value_loss = 0
         self.entropy_loss = 0
@@ -29,7 +29,7 @@ class PPOAlgorithm(Algorithm):
         self.softmax = Softmax(dim=-1)
 
 
-    def update(self, agent,buffer, step_count):
+    def update(self, agent,buffer, step_count,episodic=False):
         '''
             Getting a Batch from the Replay Buffer
         '''
@@ -37,17 +37,18 @@ class PPOAlgorithm(Algorithm):
         minibatch = buffer.full_buffer()
 
         # Batch of Experiences
-        states, actions, rewards, next_states, dones,logprobs = minibatch
+        states, actions, rewards, next_states, done_masks,logprobs = minibatch
 
         # Make everything a tensor and send to gpu if available
-        states = torch.tensor(states).to(self.device)
+        '''states = torch.tensor(states).to(self.device)
         actions = torch.tensor(np.argmax(actions, axis=-1)).to(self.device).long()
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        done_masks = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)
+        done_masks = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)'''
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float()).to(self.device)
         next_values = agent.critic(next_states.float()).to(self.device)
+        actions = torch.argmax(actions,dim=1)
 
 
         new_rewards = []
@@ -75,7 +76,7 @@ class PPOAlgorithm(Algorithm):
             old_log_probs = logprobs.clone().detach().to(self.device)
 
         #Update model weights for a configurable amount of epochs
-        for epoch in range(self.configs[0]['update_epochs']):
+        for epoch in range(self.update_epochs):
             values = agent.critic(states.float()).to(self.device)
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
 
@@ -95,7 +96,7 @@ class PPOAlgorithm(Algorithm):
             #Zero Optimizer, Calculate Losses, Backpropagate Gradients
             agent.optimizer.zero_grad()
             self.policy_loss = -torch.min(surr1,surr2).mean()
-            self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
+            self.entropy_loss = -(self.beta*entropy).mean()
             self.value_loss = self.loss_calc(values, new_rewards.unsqueeze(dim=-1))
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
             self.loss.backward()
@@ -115,8 +116,8 @@ class PPOAlgorithm(Algorithm):
             metrics = []
         return metrics
 
-    def create_agent(self):
-        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_space, self.configs[1],self.configs[2])
+    def create_agent(self,id=0):
+        self.agent = PPOAgent(id, self.obs_space, self.acs_space, self.configs['Agent'],self.configs['Network'])
         return self.agent
 
     def __str__(self):

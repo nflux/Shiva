@@ -512,7 +512,7 @@ class Trainer(object):
         else offense_unums[-self._offenseAgents:]
       defense_unums = sorted(self._defenseOrder[: self._numDefense])
       sorted_defense_agent_unums = \
-        defense_unums[1:self._defenseAgents+1] if self._agentPlayGoalie \
+        defense_unums[:self._defenseAgents] if self._agentPlayGoalie \
         else defense_unums[-self._defenseAgents:]
 
       # Launch offense

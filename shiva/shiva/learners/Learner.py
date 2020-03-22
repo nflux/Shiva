@@ -19,8 +19,8 @@ class Learner(object):
 
     def __getstate__(self):
         d = dict(self.__dict__)
-        attributes_to_ignore = ['env', 'envs', 'eval', 'queue', 'queues','miniBuffer']
-        return []
+        attributes_to_ignore = ['env', 'envs', 'eval', 'queue', 'queues', 'miniBuffer']
+        return [] # Ezequiel: Unsure who added this but needs documentation - maybe because we don't need anything when save/loading the Learner?
         for t in d:
             if t not in attributes_to_ignore:
                 # print(t)
@@ -56,8 +56,13 @@ class Learner(object):
 
     def _collect_metrics(self, agent_id, episodic):
         if hasattr(self, 'MULTI_ENV_FLAG'):
-            metrics = self.alg.get_metrics(episodic, agent_id) + self.get_metrics(episodic, agent_id)
-            # self.log("{} - Shiva step {} / done {}".format(metrics, self.step_count, self.done_count)) # for debug
+            try:
+                metrics = self.alg.get_metrics(episodic, agent_id) + self.get_metrics(episodic, agent_id)
+                # self.log("{} at step {} / done {}".format(metrics, self.step_count, self.done_count))
+            except:
+                '''Assuming 1 Agent per Learner here'''
+                metrics = self.alg.get_metrics(episodic) + self.get_metrics(episodic)
+                # self.log("{} at step {} / done {}".format(metrics, self.step_count, self.done_count))
             if not episodic:
                 for m in metrics:
                     if type(m) == list:

@@ -1,4 +1,4 @@
-import sys, time, traceback, subprocess
+import sys, time, traceback, subprocess, torch
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import numpy as np
@@ -20,11 +20,18 @@ class MPIMultiEnv(Environment):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEnv, self).__init__(self.configs)
+# <<<<<<< HEAD
         self._connect_io_handler()
         self.log("Received config with {} keys".format(len(self.configs.keys())))
+# =======
+        self.device = torch.device('cpu')
+        # self.io = MPI.COMM_WORLD.Connect(self.menvs_io_port, MPI.INFO_NULL)
+        # self.info = MPI.Status()
+        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
+# >>>>>>> robocup-pbt-mpi
         # Open Port for Learners
         self.port = MPI.Open_port(MPI.INFO_NULL)
-        self.log("Open port {}".format(self.port))
+        #self.log("Open port {}".format(self.port))
 
         '''Set self attrs from Config'''
         self.num_learners = self.configs['MetaLearner']['num_learners']
@@ -41,16 +48,19 @@ class MPIMultiEnv(Environment):
         self.step_count = 0
         self.done_count = 0
         self.log(self.env_specs)
-        info = MPI.Status()
+        self.saving = [True] * self.num_learners
 
         '''
             Check if we can do a numpy step instead of python list
             If obs dimensions for all roles are the same, then we can do MPI
         '''
-        try:
+
+        if 'Unity' in self.type:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
-        except:
+        elif 'Gym' in self.type:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
+        elif 'RoboCup' in self.type:
+            self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
         while True:
             self._step_python()
@@ -61,13 +71,6 @@ class MPIMultiEnv(Environment):
                 self.agents = self.load_agents()
                 for a in self.agents:
                     a.reset_noise()
-
-            # if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=info):
-            #     learner_id = info.Get_source()
-            #     learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
-            #     '''Assuming 1 Agent per Learner'''
-            #     self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
-            #     self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
 
     def _step_python(self):
         self._obs_recv_buffer = self.envs.gather(None, root=MPI.ROOT)
@@ -107,16 +110,18 @@ class MPIMultiEnv(Environment):
                 env_actions.append(role_actions)
                 actions.append(env_actions)
         self.actions = np.array(actions)
-        # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions))
+        self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions))
         self.envs.scatter(actions, root=MPI.ROOT)
 
     def _step_numpy(self):
+        '''
+            For Numpy step, is required that
+            - all agents observations are the same shape
+            - all agents actions are the same shape
+        '''
         self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
-
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
-
         # self.log("{}\n{}\n{}\n{}".format([str(a) for a in self.agents], self.role2agent, self.envs_role2learner, self._obs_recv_buffer))
-
         if 'Unity' in self.type or 'Particle' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
             actions = []
@@ -146,14 +151,16 @@ class MPIMultiEnv(Environment):
                     env_actions.append(role_actions)
                 actions.append(env_actions)
             # actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
-
-        self.actions = np.array(actions)
-        self.envs.scatter(actions, root=MPI.ROOT)
+        elif 'RoboCup' in self.type:
+            actions = [[agent.get_action(obs, self.step_count,self.device) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+            actions = np.array(actions)
+            # self.log("The actions shape {}".format(actions))
+            self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
         # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions))
 
     def _launch_envs(self):
         # Spawn Single Environments
-        self.envs = MPI.COMM_WORLD.Spawn(sys.executable, args=['shiva/envs/MPIEnv.py'], maxprocs=self.num_envs)
+        self.envs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIEnv.py'], maxprocs=self.num_envs)
         self.envs.bcast(self.configs, root=MPI.ROOT)  # Send them the Config
         envs_spec = self.envs.gather(None, root=MPI.ROOT)  # Wait for Env Specs (obs, acs spaces) for Learners
         assert len(envs_spec) == self.num_envs, "Not all Environments checked in.."
@@ -199,6 +206,7 @@ class MPIMultiEnv(Environment):
         self.learners = MPI.COMM_WORLD.Accept(self.port) # Wait until check in learners, create comm
         # Get LearnersSpecs to load agents and start running
         self.learners_specs = []
+# <<<<<<< HEAD
         self.log("Expecting {} Learners".format(self.num_learners))
         for ix in range(self.num_learners):
             self._receive_learner_spec(ix)
@@ -213,6 +221,29 @@ class MPIMultiEnv(Environment):
                 if role == agent.role:
                     self.role2agent[role] = ix
                     break
+# =======
+#         #self.log("Expecting {} learners".format(self.num_learners))
+#         for i in range(self.num_learners):
+#             '''Learner IDs are inserted in order :)'''
+#             learner_spec = self.learners.recv(None, source=i, tag=Tags.specs)
+#             self.learners_specs.append(learner_spec)
+#             #self.log("Received Learner {}".format(learner_spec['id']))
+#
+#         '''
+#             TODO
+#                 - Assuming one learner above
+#                 - load centralized/decentralized agents using the config
+#         '''
+#         #self.log("Got all Learners Specs\n\t{}".format(self.learners_specs))
+#         '''Assuming 1 Agent per Learner, we could break it with a star operation'''
+#         self.io.send(True, dest=0 , tag=Tags.io_menv_request)
+#         _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
+#         self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
+#         self.io.send(True, dest=0, tag=Tags.io_menv_request)
+#         print('This Agent is on cuda: {}'.format((next(self.agents[0].actor.parameters()).device)))
+#         print('The device attribute of this agent is: {}'.format(self.agents[0].actor.device))
+#        #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
+# >>>>>>> robocup-pbt-mpi
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
@@ -244,10 +275,19 @@ class MPIMultiEnv(Environment):
             'num_learners': self.num_learners
         }
 
+# <<<<<<< HEAD
     def _connect_io_handler(self):
         self.log('Sending IO Connectiong Request')
         self.io = MPI.COMM_WORLD.Connect(self.menvs_io_port, MPI.INFO_NULL)
         self.log('IOHandler connected')
+# =======
+#     def _io_load_agents(self):
+#         learner_id = self.info.Get_source()
+#         learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
+#         '''Assuming 1 Agent per Learner'''
+#         self.io.send(learner_spec, dest=0, tag=Tags.io_checkpoint_load)
+#         self.agents[learner_id] = self.io.recv(None, source=MPI.ANY_SOURCE,tag=Tags.io_checkpoint_load)
+# >>>>>>> robocup-pbt-mpi
 
     def close(self):
         comm = MPI.Comm.Get_parent()
