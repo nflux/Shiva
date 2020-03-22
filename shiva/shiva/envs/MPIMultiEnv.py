@@ -1,4 +1,4 @@
-import sys, time, traceback, subprocess
+import sys, time, traceback, subprocess, torch
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import numpy as np
@@ -20,6 +20,7 @@ class MPIMultiEnv(Environment):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEnv, self).__init__(self.configs)
+        self.device = torch.device('cpu')
         self.io = MPI.COMM_WORLD.Connect(self.menvs_io_port, MPI.INFO_NULL)
         self.info = MPI.Status()
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
@@ -57,7 +58,7 @@ class MPIMultiEnv(Environment):
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
         while True:
-            time.sleep(0.0001)
+            time.sleep(0.001)
             # self._step_python_list()
             self._step_numpy()
 
@@ -96,17 +97,17 @@ class MPIMultiEnv(Environment):
 
         if 'Unity' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
-            actions = [[[self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+            actions = [[[self.agents[ix].get_action(o, self.step_count, self.device, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
             actions = np.array(actions)
             self.envs.scatter(actions, root=MPI.ROOT)
         elif 'Gym' in self.type:
             # Gym
             # same?
-            actions = [[[self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+            actions = [[[self.agents[ix].get_action(o, self.step_count,self.device,  self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
             actions = np.array(actions)
             self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
         elif 'RoboCup' in self.type:
-            actions = [[agent.get_action(obs, self.step_count) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+            actions = [[agent.get_action(obs, self.step_count,self.device) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
             actions = np.array(actions)
             # self.log("The actions shape {}".format(actions))
             self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
@@ -144,7 +145,7 @@ class MPIMultiEnv(Environment):
         _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
         self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
-        #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
+       #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)

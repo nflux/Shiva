@@ -68,7 +68,7 @@ class RoboCupTwoSidedEnvironment(Environment):
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, actions, discrete_select='sample', collect=True,evaluate=False):
+    def step(self, actions, discrete_select='argmax', collect=True,evaluate=False):
         '''
             Input
                 @actions

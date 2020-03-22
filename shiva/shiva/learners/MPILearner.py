@@ -96,7 +96,7 @@ class MPILearner(Learner):
         # t0 = time.time()
         # n_episodes = 500
         while self.train:
-            #time.sleep(0.001)
+            time.sleep(0.001)
             # self._receive_trajectory_python_list()
             # if 'RoboCup' in self.env_specs['type']:
             #     self._robo_receive_trajectory_numpy()

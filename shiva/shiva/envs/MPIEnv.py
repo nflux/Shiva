@@ -44,7 +44,7 @@ class MPIEnv(Environment):
     def run(self):
         self.env.reset()
         while True:
-            time.sleep(0.0001)
+            time.sleep(0.001)
             while self.env.start_env():
                 self._step_numpy()
                 self._append_step()
@@ -73,7 +73,9 @@ class MPIEnv(Environment):
         if 'Gym' in self.type or 'RoboCup' in self.type:
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
             self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
-            self.actions = recv_action
+            self.actions = recv_action 
+            #if self.id == 0:
+                #self.log('Actions: {}'.format(self.actions))
         elif 'Unity':
             self.actions = self.menv.scatter(None, root=0)
 

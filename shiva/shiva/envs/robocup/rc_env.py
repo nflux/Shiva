@@ -706,9 +706,9 @@ class rc_env:
 
         # so this appears to be working, maybe just because the agent doesn't really have to run to it
         # will verify after I fix HPI
-        if team_obs[agentID][self.stamina] < 0.0:  # LOW STAMINA
-            reward -= 1
-            team_reward -= 1
+        #if team_obs[agentID][self.stamina] < 0.0:  # LOW STAMINA
+            #reward -= 1
+            #team_reward -= 1
             # print("agent is getting penalized for having low stamina")
 
         ############ Kicked Ball #################
@@ -738,7 +738,9 @@ class rc_env:
         #    self.inv_steps_to_kick += 1
         #else:
         #    pass
-
+        if kickable and not self.first_kickable:
+            reward += 1
+            team_reward += 1.5
         # it looks like this is broken for discretized as well
         # so its not getting any rewards for kicking
         # print(self.action_list)
@@ -754,8 +756,7 @@ class rc_env:
                     np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
                 self.first_kick = True
-                reward += 1
-                team_reward += 1.5
+                
 
             # set initial ball position after kick
             if self.left_base == base:

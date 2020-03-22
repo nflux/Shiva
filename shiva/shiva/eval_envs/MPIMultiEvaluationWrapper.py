@@ -57,7 +57,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self._get_initial_evaluations()
 
         while True:
-            time.sleep(0.001)
+            time.sleep(0.1)
             self._get_evaluations(True)
 
             if self.sort:
@@ -109,11 +109,11 @@ class MPIMultiEvaluationWrapper(Evaluation):
             evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
             #evals['agent_id'] = agent_id
             keys = evals[0].keys()
+            averages = dict()
             for i in range(len(evals)):
-                averages = dict()
                 for key in keys:
-                    if key in averages:
-                        averages[key] += averages[key]+ ( (evals[i][key] - averages[key])/i)
+                    if key in averages.keys():
+                        averages[key] = averages[key] + ( (evals[i][key] - averages[key])/i)
                     else:
                         averages[key] = evals[i][key]
             self.evaluations.loc[agent_id,keys] = averages

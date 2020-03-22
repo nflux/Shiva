@@ -73,7 +73,7 @@ class MPIEvaluation(Evaluation):
 
 
         while True:
-            time.sleep(0.001)
+            time.sleep(0.01)
             self._receive_eval_numpy()
             # self.log("Jorge is so cool")
             self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
