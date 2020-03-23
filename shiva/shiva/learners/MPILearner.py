@@ -29,15 +29,13 @@ class MPILearner(Learner):
         self.log("Received config with {} keys".format(len(self.configs.keys())))
         Admin.init(self.configs['Admin'])
         Admin.add_learner_profile(self, function_only=True)
-        #print('This is my Admin object: {}'.format(Admin))
         # Open Port for Single Environments
         self.port = MPI.Open_port(MPI.INFO_NULL)
-        #self.log("Open port {}".format(str(self.port)))
 
         # Set some self attributes from received Config (it should have MultiEnv data!)
         self.MULTI_ENV_FLAG = True
         self.num_envs = self.configs['Environment']['num_envs']
-        '''Assuming all MultiEnvs running have equal Specs in terms of Obs/Acs/Agents'''
+        '''Assuming all Environments running are of the same type'''
         self.menvs_specs = self.configs['MultiEnv']
         self.env_specs = self.menvs_specs[0]['env_specs']
 
@@ -67,7 +65,7 @@ class MPILearner(Learner):
         # self.log("Got MultiEnvSpecs {}".format(self.menvs_specs))
         self.log("Obs space {} / Action space {}".format(self.observation_space, self.action_space))
 
-        self.t_test_config = dict()
+        # self.t_test_config = dict()
 
         # Check in with Meta
         self.meta.gather(self._get_learner_specs(), root=0)
@@ -227,7 +225,6 @@ class MPILearner(Learner):
         # Accept Single Env Connection
         #self.log("Expecting connection from {} Envs @ {}".format(self.num_envs, self.port))
         self.envs = MPI.COMM_WORLD.Accept(self.port)
-
 
     def _get_learner_state(self):
         return {

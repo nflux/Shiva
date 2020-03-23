@@ -93,7 +93,6 @@ class MPIEvalEnv(Environment):
         '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
                                     --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
         '''
-        #self.log("Hello Josh")
         send_obs_buffer = np.array(self.observations, dtype=np.float64)
         self.eval.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
 
@@ -183,7 +182,6 @@ class MPIEvalEnv(Environment):
             self.episode_rewards = np.zeros((self.num_agents,self.episode_max_length))
             self.reward_idxs = dict()
             for i in range(self.num_agents): self.reward_idxs[i] = 0
-
 
     def reset_buffers(self):
         if 'Unity' in self.type:
