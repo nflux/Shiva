@@ -68,8 +68,8 @@ class RoboCupTwoSidedEnvironment(Environment):
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, actions, discrete_select='sample', collect=True, evaluate=False):
-        """
+    def step(self, actions, discrete_select='argmax', collect=True,evaluate=False):
+        '''
             Input
                 @actions
                 @discrete_select        Specify how to choose the discrete action taken
@@ -89,8 +89,6 @@ class RoboCupTwoSidedEnvironment(Environment):
         """
         left_actions = actions[:self.num_left]
         right_actions = actions[self.num_left:]
-
-        # Action Masking
 
         """ When the ball is not kickable lets mask all the kicking actions! """
 
@@ -157,6 +155,15 @@ class RoboCupTwoSidedEnvironment(Environment):
             self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _, self.eval_metrics = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
                                                                     left_options=self.left_action_option, right_options=self.right_action_option,evaluate)
 
+            #self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
+            #                                                        left_options=self.left_action_option, right_options=self.right_action_option,evaluate=evaluate)
+            if evaluate:
+                self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _, self.eval_metrics = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
+                                                                    left_options=self.left_action_option, right_options=self.right_action_option,evaluate=evaluate)
+            else:
+                self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
+                                                                    left_options=self.left_action_option, right_options=self.right_action_option)
+
             actions_v = [action2one_hot(self.action_space['acs_space'], act) for act in left_act_choice]
         else:
             self.left_actions = left_act_choice
@@ -164,8 +171,8 @@ class RoboCupTwoSidedEnvironment(Environment):
             self.right_actions = right_act_choice
             self.right_action_option = [a[self.action_space['acs_space']:] for a in right_actions]
 
-            self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _, self.eval_metrics = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
-                                                                                                         left_options=self.left_action_option, right_options=self.right_action_option,evaluate)
+            self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
+                                                                                                         left_options=self.left_action_option, right_options=self.right_action_option,evaluate=evaluate)
             actions_v = [np.array([action2one_hot(self.action_space['acs_space'], act), op]) for act, op in zip(left_act_choice, self.left_action_option)]
 
         if collect:
@@ -173,6 +180,7 @@ class RoboCupTwoSidedEnvironment(Environment):
 
         self.obs = self.left_obs.tolist()+self.right_obs.tolist()
         self.rews = self.left_rews.tolist()+self.right_rews.tolist()
+
 
         if evaluate:
             return self.obs, self.rews, self.done, {'raw_reward': self.left_rews, 'action': actions_v}, self.eval_metrics

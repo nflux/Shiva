@@ -108,6 +108,7 @@ def save_dict_2_config_file(config_dict: dict, file_path: str):
 #                 for attr_name, attr_val in attrs.items():
 #                     config.set(section_name, attr_name, dtype_2_configstr(attr_val))
 # >>>>>>> robocup-pbt-mpi
+
     with open(file_path, 'w') as configfile:
         config.write(configfile)
 

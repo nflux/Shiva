@@ -47,17 +47,19 @@ class MPIEnv(Environment):
             pass
 
         while True:
-            self._step_python()
-            # self._step_numpy()
-            self._append_step()
-            if self.env.is_done():
-                self._send_trajectory_numpy()
-                self.env.reset()
-            '''Check if there a new Role->LearnerID mapping'''
-            # if self.menv.Iprobe():
-            #     '''Receive message'''
-            #     '''Clear the buffer'''
-            #     pass
+            time.sleep(0.001)
+            while self.env.start_env():
+                self._step_python()
+                # self._step_numpy()
+                self._append_step()
+                if self.env.is_done():
+                    self._send_trajectory_numpy()
+                    self.env.reset()
+                '''Check if there a new Role->LearnerID mapping'''
+                # if self.menv.Iprobe():
+                #     '''Receive message'''
+                #     '''Clear the buffer'''
+                #     pass
 
     def _step_python(self):
         self.observations = self.env.get_observations()
@@ -77,7 +79,9 @@ class MPIEnv(Environment):
         if 'Gym' in self.type or 'RoboCup' in self.type:
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
             self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
-            self.actions = recv_action
+            self.actions = recv_action 
+            #if self.id == 0:
+                #self.log('Actions: {}'.format(self.actions))
         elif 'Unity':
             self.actions = self.menv.scatter(None, root=0)
 

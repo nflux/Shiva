@@ -48,7 +48,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.log('MultiEvalWrapper is running')
         self._get_initial_evaluations()
         while True:
-            time.sleep(0.001)
+            time.sleep(0.1)
             self._get_evaluations(True)
             if self.sort:
                 self._sort_evals()
@@ -73,19 +73,16 @@ class MPIMultiEvaluationWrapper(Evaluation):
             agent_id = self.evals.recv(None, source = MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
             env_source = self.info.Get_source()
             evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
+            #evals['agent_id'] = agent_id
             keys = evals[0].keys()
+            averages = dict()
             for i in range(len(evals)):
-                averages = dict()
                 for key in keys:
-                    if key in averages:
-                        averages[key] += averages[key]+ ( (evals[i][key] - averages[key])/i)
+                    if key in averages.keys():
+                        averages[key] = averages[key] + ( (evals[i][key] - averages[key])/i)
                     else:
                         averages[key] = evals[i][key]
-            # for i in range(len(evals)):
-            #     for j,key in enumerate(keys):
-            #         temp[j] += evals[i][key]
-            # averages = temp/len(evals)
-            self.evaluations.loc[agent_id, keys] = averages
+            self.evaluations.loc[agent_id,keys] = averages
             self.sort = sort
             self.log('Multi Evaluation has received evaluations')
             self.agent_selection(env_source)
@@ -99,20 +96,22 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.sort = False
 
     def _sort_robocup(self):
-        # self.log('Robocup Sort!')
-        # self.evaluations['total_score'] = 0
-        # self.evaluations= self.evaluations.rename_axis('agent_ids').reset_index()
-        # for i,col in enumerate(self.eval_events):
-        #     self.log('enumerating events')
-        #     self.evaluations.sort_values(by=col,inplace=True)
-        #     self.log('sorting')
-        #     self.evaluations['total_score'] += np.array(self.evaluations.index) * self.eval_weights[i]
-        #     self.log('setting total scores')
-        # self.evaluations.sort_values(by='total_score',ascending=False,inplace=True)
-        # self.log('Sorting Total Scores')
-        self.evaluations.sort_values(by=self.eval_events)
+        #self.log('Robocup Sort!')
+        #self.evaluations['total_score'] = 0
+        #self.evaluations= self.evaluations.rename_axis('agent_ids').reset_index()
+        #for i,col in enumerate(self.eval_events):
+            #self.log('enumerating events')
+            #self.evaluations.sort_values(by=col,inplace=True)
+            #self.log('sorting')
+            #self.evaluations['total_score'] += np.array(self.evaluations.index) * self.eval_weights[i]
+            #self.log('setting total scores')
+        #self.evaluations.sort_values(by='total_score',ascending=False,inplace=True)
+        #self.log('Sorting Total Scores')
+        self.evaluations.sort_values(by=self.eval_events, ascending=self.sort_ascending, inplace=True)
+        #self.evaluations.sort_values(by=self.eval_events,inplace=True)
         self.rankings = np.array(self.evaluations.index)
         self.log('Rankings: {}'.format(self.rankings))
+        self.log('Current Rankings DataFrame: {}'.format(self.evaluations))
         self.evaluations.sort_index(inplace=True)
         self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
         self.log('Sent rankings to Meta')

@@ -20,18 +20,12 @@ class MPIMultiEnv(Environment):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEnv, self).__init__(self.configs)
-# <<<<<<< HEAD
         self._connect_io_handler()
         self.log("Received config with {} keys".format(len(self.configs.keys())))
-# =======
         self.device = torch.device('cpu')
-        # self.io = MPI.COMM_WORLD.Connect(self.menvs_io_port, MPI.INFO_NULL)
-        # self.info = MPI.Status()
-        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
-# >>>>>>> robocup-pbt-mpi
         # Open Port for Learners
         self.port = MPI.Open_port(MPI.INFO_NULL)
-        #self.log("Open port {}".format(self.port))
+        # self.log("Open port {}".format(self.port))
 
         '''Set self attrs from Config'''
         self.num_learners = self.configs['MetaLearner']['num_learners']
@@ -153,10 +147,11 @@ class MPIMultiEnv(Environment):
             # actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
         elif 'RoboCup' in self.type:
             actions = [[agent.get_action(obs, self.step_count,self.device) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
-            actions = np.array(actions)
             # self.log("The actions shape {}".format(actions))
-            self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
+
+        actions = np.array(actions)
         # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions))
+        self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
     def _launch_envs(self):
         # Spawn Single Environments
@@ -195,7 +190,7 @@ class MPIMultiEnv(Environment):
         # return flat_1d_list([Admin._load_agents(learner_spec['load_path']) for learner_spec in self.learners_specs])
 
     def _receive_learner_spec(self, learner_ix):
-        learner_spec = self.learners.recv(None, source=learner_ix, tag=Tags.specs)
+        learner_spec = self.learners.recv(None, source=learner_ix, tag=Tags.specs) # blocking statement
         if learner_ix <= len(self.learners_specs) - 1:
             self.learners_specs[learner_ix] = learner_spec
         else:
@@ -206,7 +201,6 @@ class MPIMultiEnv(Environment):
         self.learners = MPI.COMM_WORLD.Accept(self.port) # Wait until check in learners, create comm
         # Get LearnersSpecs to load agents and start running
         self.learners_specs = []
-# <<<<<<< HEAD
         self.log("Expecting {} Learners".format(self.num_learners))
         for ix in range(self.num_learners):
             self._receive_learner_spec(ix)
@@ -221,36 +215,13 @@ class MPIMultiEnv(Environment):
                 if role == agent.role:
                     self.role2agent[role] = ix
                     break
-# =======
-#         #self.log("Expecting {} learners".format(self.num_learners))
-#         for i in range(self.num_learners):
-#             '''Learner IDs are inserted in order :)'''
-#             learner_spec = self.learners.recv(None, source=i, tag=Tags.specs)
-#             self.learners_specs.append(learner_spec)
-#             #self.log("Received Learner {}".format(learner_spec['id']))
-#
-#         '''
-#             TODO
-#                 - Assuming one learner above
-#                 - load centralized/decentralized agents using the config
-#         '''
-#         #self.log("Got all Learners Specs\n\t{}".format(self.learners_specs))
-#         '''Assuming 1 Agent per Learner, we could break it with a star operation'''
-#         self.io.send(True, dest=0 , tag=Tags.io_menv_request)
-#         _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
-#         self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
-#         self.io.send(True, dest=0, tag=Tags.io_menv_request)
-#         print('This Agent is on cuda: {}'.format((next(self.agents[0].actor.parameters()).device)))
-#         print('The device attribute of this agent is: {}'.format(self.agents[0].actor.device))
-#        #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
-# >>>>>>> robocup-pbt-mpi
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
         '''Need match making process here'''
         self.envs_role2learner =  self.get_envs_role2learner()
         self.envs.scatter(self.envs_role2learner, root=MPI.ROOT)
-        # Get signal from single env that they have connected with Learner
+        '''Get signal from single env that they have connected with Learner'''
         envs_states = self.envs.gather(None, root=MPI.ROOT)
         # self.log(envs_status)
 
@@ -275,19 +246,10 @@ class MPIMultiEnv(Environment):
             'num_learners': self.num_learners
         }
 
-# <<<<<<< HEAD
     def _connect_io_handler(self):
-        self.log('Sending IO Connectiong Request')
+        # self.log('Sending IO Connectiong Request')
         self.io = MPI.COMM_WORLD.Connect(self.menvs_io_port, MPI.INFO_NULL)
         self.log('IOHandler connected')
-# =======
-#     def _io_load_agents(self):
-#         learner_id = self.info.Get_source()
-#         learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
-#         '''Assuming 1 Agent per Learner'''
-#         self.io.send(learner_spec, dest=0, tag=Tags.io_checkpoint_load)
-#         self.agents[learner_id] = self.io.recv(None, source=MPI.ANY_SOURCE,tag=Tags.io_checkpoint_load)
-# >>>>>>> robocup-pbt-mpi
 
     def close(self):
         comm = MPI.Comm.Get_parent()

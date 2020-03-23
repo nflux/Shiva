@@ -363,7 +363,11 @@ class rc_env:
         self.sync_after_queue.wait()
         self.sync_before_step.wait()
         if evaluate:
+<<<<<<< HEAD
             return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status, self.get_eval_metrics
+=======
+            return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status, self.eval_metrics
+>>>>>>> robocup-mpi-pbt
         else:
             return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status
 
@@ -480,7 +484,7 @@ class rc_env:
         config_dir = hfo.get_config_path()
         envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                        server_port=port, server_addr='localhost', team_name=base,
-                                       play_goalie=goalie, record_dir=self.rc_log + '/')
+                                       play_goalie=goalie, record_dir=self.rc_log + '/')                               
 
         if base == 'base_left':
             obs_prev = self.left_obs_previous
@@ -493,6 +497,9 @@ class rc_env:
             actions = self.right_actions
             rews = self.right_rewards
 
+        obs[agent_ID] = envs[agent_ID].getState()
+        self.set_initial_metrics(obs[agent_ID])
+        self.eval_metrics = self.get_eval_metrics()
         ep_num = 0
         while True:
             while self.start:
@@ -502,6 +509,7 @@ class rc_env:
                 obs_prev[agent_ID] = envs[agent_ID].getState()  # Get initial state
                 obs[agent_ID] = envs[agent_ID].getState()  # Get initial state
 
+<<<<<<< HEAD
                 self.initial_distance_to_ball = self.distance_to_ball(obs[agent_ID])
                 self.min_player_distance_to_ball = self.distance_to_ball(obs[agent_ID])
                 self.goal = False
@@ -514,6 +522,9 @@ class rc_env:
                 self.inv_steps_to_goal = 0
                 self.inv_steps_to_kick = 0
 
+=======
+                self.set_initial_metrics(obs[agent_ID])
+>>>>>>> robocup-mpi-pbt
                 # self.been_kicked_left = False
                 # self.been_kicked_right = False
                 while j < ep_length:
@@ -555,8 +566,15 @@ class rc_env:
                     if self.d == True:
                         if not self.goal:
                             self.inv_steps_to_goal = self.ep_length
+<<<<<<< HEAD
 
+=======
+                        self.eval_metrics = self.get_eval_metrics()
+
+                    
+>>>>>>> robocup-mpi-pbt
                     j += 1
+
                     self.sync_before_step.wait()
 
                     # Break if episode done
@@ -648,7 +666,11 @@ class rc_env:
 
                 if s == 'Goal_By_Left' and self.left_agent_possesion[agentID] == 'L':
                     reward += goal_points
+<<<<<<< HEAD
                     # goal flag
+=======
+                    #goal flag
+>>>>>>> robocup-mpi-pbt
                     self.goal = True
                 elif s == 'Goal_By_Left':
                     reward += goal_points  # teammates get 10% of pointsssss
@@ -657,7 +679,11 @@ class rc_env:
                 elif s == 'Goal_By_Right':
                     reward += -goal_points
                 elif s == 'OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
+<<<<<<< HEAD
                     # set the kicks
+=======
+                    # Set the kicks
+>>>>>>> robocup-mpi-pbt
                     self.inv_steps_to_goal = self.ep_length
                     reward += -0.5
                 elif s == 'CapturedByLeftGoalie':
@@ -708,9 +734,9 @@ class rc_env:
 
         # so this appears to be working, maybe just because the agent doesn't really have to run to it
         # will verify after I fix HPI
-        if team_obs[agentID][self.stamina] < 0.0:  # LOW STAMINA
-            reward -= 1
-            team_reward -= 1
+        #if team_obs[agentID][self.stamina] < 0.0:  # LOW STAMINA
+            #reward -= 1
+            #team_reward -= 1
             # print("agent is getting penalized for having low stamina")
 
         ############ Kicked Ball #################
@@ -736,11 +762,13 @@ class rc_env:
             reward -= 0.1
             # print("agent is getting penalized for kicking when not kickable")
 
-        if not self.first_kick:
-            self.inv_steps_to_kick += 1
-        else:
-            pass
-
+        #if not self.first_kick:
+        #    self.inv_steps_to_kick += 1
+        #else:
+        #    pass
+        if kickable and not self.first_kickable:
+            reward += 1
+            team_reward += 1.5
         # it looks like this is broken for discretized as well
         # so its not getting any rewards for kicking
         # print(self.action_list)
@@ -756,8 +784,7 @@ class rc_env:
                     np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
                 self.first_kick = True
-                reward += 1
-                team_reward += 1.5
+                
 
             # set initial ball position after kick
             if self.left_base == base:
@@ -904,9 +931,14 @@ class rc_env:
             Reward agent for maximizing it's proximity to the ball
         '''
 
+        if not self.first_kick:
+            self.inv_steps_to_kick += 1
+
         self.set_lowest_ball_distance_to_own_goal(team_obs[agentID])
         self.set_lowest_player_distance_to_ball(team_obs[agentID])
-        self.set_lowest_player_distance_to_goal(team_obs[agentID])
+        self.set_lowest_ball_distance_to_goal(team_obs[agentID])
+        
+        self.inv_steps_to_goal += 1
 
         self.inv_steps_to_goal += 1
 
@@ -968,7 +1000,11 @@ class rc_env:
         relative_x = obs[self.ball_x] - goal_center_x
         relative_y = obs[self.ball_y] - goal_center_y
         ball_distance_to_own_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> robocup-mpi-pbt
         return ball_distance_to_own_goal
 
     def prox_2_dist(self, prox):
@@ -980,7 +1016,11 @@ class rc_env:
             self.min_player_distance_to_ball = self.distance_to_ball(obs)
 
     def set_lowest_ball_distance_to_goal(self, obs):
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> robocup-mpi-pbt
         if self.min_distance_to_opp_goal > self.ball_distance_to_goal(obs):
             self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
 
@@ -989,12 +1029,32 @@ class rc_env:
         if self.min_distance_to_own_goal > self.ball_distance_to_own_goal(obs):
             self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
 
+    def set_initial_metrics(self,obs):
+        self.initial_distance_to_ball = self.distance_to_ball(obs)
+        self.min_player_distance_to_ball = self.distance_to_ball(obs)
+        self.goal = False
+        self.goal_scored = False
+        self.first_kick = False
+        self.initial_distance_to_opp_goal = self.ball_distance_to_goal(obs)
+        self.initial_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
+        self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
+        self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
+        self.inv_steps_to_goal = 0
+        self.inv_steps_to_kick = 0
+    
     def get_eval_metrics(self):
         metrics = dict()
         metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball / self.initial_distance_to_ball
+<<<<<<< HEAD
         metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.untouched))
         metrics['distance_to_opp_goal'] = (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
         metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
         metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length))
 
+=======
+        metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.ep_length))
+        metrics['distance_to_opp_goal'] = (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
+        metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
+        metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length))
+>>>>>>> robocup-mpi-pbt
         return metrics

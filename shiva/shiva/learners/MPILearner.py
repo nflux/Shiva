@@ -99,8 +99,9 @@ class MPILearner(Learner):
         # t0 = time.time()
         # n_episodes = 500
         while True:
+            time.sleep(0.001)
             self.receive_trajectory_numpy()
-
+            self._receive_trajectory_numpy()
             self.log('Episodes collected: {}'.format(self.done_count))
             # '''Used for calculating collection time'''
             # if self.done_count == n_episodes:

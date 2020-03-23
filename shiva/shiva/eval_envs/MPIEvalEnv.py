@@ -55,31 +55,22 @@ class MPIEvalEnv(Environment):
         #self.log("Get here at 48")
 
         while True:
-           # time.sleep(0.001)
-           # self.log('While True')
+            time.sleep(0.01)
             while self.env.start_env():
-               # self.log('Env start')
                 self._step_numpy()
-               # self.log('After step')
-               # if self.env.is_done():
-                   # self.log('Env is done')
-                   # self.env.reset()
-
+                # self.log('After step')
+                # if self.env.is_done():
+                #     self.log('Env is done')
+                #     self.env.reset()
                 if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
                     _ = self.eval.recv(None, source=0 , tag=Tags.clear_buffers)
                     self.reset_buffers()
                     print('Buffers have been reset')
-
-
-
-
-                '''Come back to this for emptying old evaluations when a new agent is Loaded
-
-                    if self.eval.bcast(None,root=0):
-                    self._clear_buffers()
-                    self.debug('Buffer has been cleared')
-                    self.env.reset()'''
-
+                # '''Come back to this for emptying old evaluations when a new agent is Loaded'''
+                # if self.eval.bcast(None,root=0):
+                #     self._clear_buffers()
+                #     self.debug('Buffer has been cleared')
+                #     self.env.reset()
             self.close()
 
     def _unity_reshape(self, arr):
@@ -130,14 +121,12 @@ class MPIEvalEnv(Environment):
         elif 'RoboCup' in self.type:
             # self.log("Getting to 112")
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
-            #self.log("The recv action {}".format(recv_action.shape))
+            # self.log("The recv action {}".format(recv_action.shape))
             self.eval.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
-            #self.log('Made it to 124')
+            # self.log('Made it to 124')
             self.actions = recv_action
-            #self.log("The action is {}".format(self.actions.shape))
-            self.next_observations, self.rewards, self.dones, _  self.metrics = self.env.step(self.actions,evaluate=True)
-            #self.log('Made it to 127 {}'.format(self.rewards))
-
+            # self.log("The action is {}".format(self.actions.shape))
+            self.next_observations, self.rewards, self.dones, _, self.metrics = self.env.step(self.actions,evaluate=True)
             # for i in range(len(self.rewards)):
             #     self.episode_rewards[i, self.reward_idxs[i]] = self.rewards[i]
             #     if self.dones:
@@ -148,14 +137,14 @@ class MPIEvalEnv(Environment):
             #         self.reward_idxs[i] += 1
 
             if self.dones:
-                self._send_eval_numpy(metrics,0)
+                self._send_eval_numpy(self.metrics,0)
                 self.env.reset()
-                # self.episode_rewards[i, :].fill(0)
-                # self.reward_idxs[i] = 0
+            #     self.episode_rewards[i, :].fill(0)
+            #     self.reward_idxs[i] = 0
             # else:
-                # self.reward_idxs[i] += 1
-
-                # self.log('Made it to 134')
+            #     self.reward_idxs[i] += 1
+            #
+            #     self.log('Made it to 134')
 
     def _send_eval_numpy(self, episode_reward, agent_idx):
         '''Numpy approach'''

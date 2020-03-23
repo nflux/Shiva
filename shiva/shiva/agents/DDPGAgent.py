@@ -26,8 +26,20 @@ class DDPGAgent(Agent):
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
+<<<<<<< HEAD
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
+=======
+
+        self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
+        self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
+        
+        self.id = id
+
+        '''
+
+            Maybe do something like
+>>>>>>> robocup-mpi-pbt
 
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']
@@ -86,7 +98,16 @@ class DDPGAgent(Agent):
 
     def get_discrete_action(self, observation, step_count, evaluate,device):
         if evaluate:
+<<<<<<< HEAD
             action = self.actor(torch.tensor(observation).to(device).float()).detach()
+=======
+            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+            self.ou_noise.set_scale(self.noise_scale)
+            action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+            action = torch.abs(action)
+            action = action / action.sum()
+            # print("Agent Evaluate {}".format(action))
+>>>>>>> robocup-mpi-pbt
         else:
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.noise_scale)
@@ -99,7 +120,11 @@ class DDPGAgent(Agent):
                 action = softmax(torch.from_numpy(action), dim=-1)
             else:
                 self.ou_noise.set_scale(self.noise_scale)
+<<<<<<< HEAD
                 action = self.actor(torch.tensor(observation).to(device).float()).detach()
+=======
+                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+>>>>>>> robocup-mpi-pbt
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
                 action = torch.abs(action)
                 action = action / action.sum()
@@ -184,6 +209,9 @@ class DDPGAgent(Agent):
             param_group['lr'] = self.actor_learning_rate
         for param_group in self.critic_optimizer.param_groups:
             param_group['lr'] = self.critic_learning_rate
+
+        self.epsilon *= perturb_factor
+        self.noise_scale *= perturb_factor
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
@@ -194,6 +222,8 @@ class DDPGAgent(Agent):
             param_group['lr'] = self.actor_learning_rate
         for param_group in self.critic_optimizer.param_groups:
             param_group['lr'] = self.critic_learning_rate
+        self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
+        self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 

@@ -25,6 +25,7 @@ class DDPGAlgorithm(Algorithm):
         self.set_action_space()
         self.critic_learning_rate = 0
         self.actor_learning_rate = 0
+<<<<<<< HEAD
         assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", "acs_space config must be set to either discrete, continuous, or parameterized."
 
     def update(self, agents, buffer, step_count, episodic):
@@ -42,6 +43,10 @@ class DDPGAlgorithm(Algorithm):
         except:
             states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
             dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
+=======
+        self.exploration_epsilon = 0
+        self.noise_scale = 0
+>>>>>>> robocup-mpi-pbt
 
         # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones))
         # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones.shape))
@@ -62,9 +67,75 @@ class DDPGAlgorithm(Algorithm):
         '''
             Training the Critic
         '''
+<<<<<<< HEAD
     
         # Zero the gradient
         self.agent.critic_optimizer.zero_grad()
+=======
+        self.critic_learning_rate = agent.critic_learning_rate
+        self.actor_learning_rate = agent.actor_learning_rate
+        self.exploration_epsilon = agent.epsilon
+        self.noise_scale = agent.noise_scale
+
+        for i in range(self.updates):
+
+            try:
+                 '''For MultiAgentTensorBuffer - 1 Agent only here'''
+                 states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
+                 dones = dones.bool()
+            except:
+                states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+                dones = dones.byte()
+
+            # Send everything to gpu if available
+            states = states.squeeze(1).to(self.device)
+            actions = actions.squeeze(1).to(self.device)
+            rewards = rewards.squeeze(1).to(self.device)
+            next_states = next_states.squeeze(1).to(self.device)
+            dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
+
+
+
+            # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
+            # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape))
+
+            assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
+                "acs_space config must be set to either discrete, continuous, or parameterized."
+
+            '''  yes its supposed to be
+                Training the Critic
+            '''
+
+            # Zero the gradient
+            agent.critic_optimizer.zero_grad()
+
+            # The actions that target actor would do in the next state.
+            next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
+
+            dims = len(next_state_actions_target.shape)
+
+            if self.a_space == "discrete" or self.a_space == "parameterized":
+
+                # Grab the discrete actions in the batch
+                # generate a tensor of one hot encodings of the argmax of each discrete action tensors
+                # concat the discrete and parameterized actions back together
+
+                if dims == 3:
+                    discrete_actions = next_state_actions_target[:,:,:self.discrete].squeeze(dim=1)
+                    one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions).unsqueeze(dim=1)
+                    next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,self.discrete:]], dim=2)
+
+                elif dims == 2:
+                    discrete_actions = next_state_actions_target[:,:self.discrete]
+                    one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
+                    next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,self.discrete:]], dim=1)
+                else:
+                    discrete_actions = next_state_actions_target[:self.discrete]
+                    one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
+                    next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[self.discrete:]], dim=0)
+
+
+>>>>>>> robocup-mpi-pbt
 
         # The actions that target actor would do in the next state.
         next_state_actions_target = self.agent.target_actor(next_states.float(), gumbel=False)
@@ -214,8 +285,15 @@ class DDPGAlgorithm(Algorithm):
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss.item()),
                 ('Algorithm/Critic_Loss', self.critic_loss.item()),
+<<<<<<< HEAD
                 ('Agent/Actor_Learning_Rate: ', self.actor_learning_rate),
                 ('Agent/Critic_Learning_Rate: ', self.critic_learning_rate)
+=======
+                ('Actor Learning Rate: ', self.actor_learning_rate),
+                ('Critic Learning Rate: ', self.critic_learning_rate),
+                ('Agent Exploration Epsilon: ', self.exploration_epsilon),
+                ('Agent Noise Scale: ', self.noise_scale)
+>>>>>>> robocup-mpi-pbt
             ]
         return metrics
 
