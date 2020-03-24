@@ -260,7 +260,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
             #     metrics.append(('Agent/Actor_Output_'+str(i), self.action[i]))
         else:
             metrics = [
-                ('Algorithm/Actor_Loss', self.loss.item()),
+                ('Algorithm/Actor_Loss', self.loss),
                 ('Actor Learning Rate: ', self.actor_learning_rate)
             ]
         return metrics
