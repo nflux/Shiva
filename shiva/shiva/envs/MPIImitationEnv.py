@@ -20,6 +20,7 @@ class MPIRoboCupImitationEnv(Environment):
     def __init__(self):
         self.menv = MPI.Comm.Get_parent()
         self.id = self.menv.Get_rank()
+        self.super_ep = 0
         self.launch()
         self.done_count = 0
 
@@ -65,20 +66,22 @@ class MPIRoboCupImitationEnv(Environment):
                 self.dagger_run()
     
     def supervised_run(self):
-        for self.super_ep in range(self.supervised_episodes):
-            while not self.env.is_done():
-                time.sleep(0.001)
-                self._super_step_numpy()
-                self._super_append_step()
+        while self.super_ep < self.supervised_episodes:
+            # time.sleep(0.001)
+            self._super_step_numpy()
+            self._super_append_step()
             
-            self.print(self.env.get_metrics(episodic=True)) # print metrics
-            self._send_super_trajectory_numpy()
-            # self.log('Episode_count: {}'.format(self.done_count))
-            self.env.reset()
+            if self.env.is_done():
+                self.print(self.env.get_metrics(episodic=True)) # print metrics
+                self.super_ep += 1
+                self._send_super_trajectory_numpy()
+                # self.log('Episode_count: {}'.format(self.done_count))
+                self.env.reset()
+                time.sleep(0.1)
     
     def dagger_run(self):
         while True:
-            time.sleep(0.001)
+            # time.sleep(0.01)
             self._dagger_step_numpy()
             self._dagger_append_step()
 
@@ -87,6 +90,7 @@ class MPIRoboCupImitationEnv(Environment):
                 self._send_dagger_trajectory_numpy()
                 # self.log('Episode_count: {}'.format(self.done_count))
                 self.env.reset()
+                time.sleep(0.1)
 
     def descritize_action(self, action):
         return self.env.descritize_action(action)
@@ -103,6 +107,7 @@ class MPIRoboCupImitationEnv(Environment):
 
         if self.action_level == 'discretized':
             # print('desc action', self.descritize_action(action))
+            # self.log("Received action {} {}".format(actions_per_agent, action))
             return np.array([self.descritize_action(action[actions_per_agent*i:actions_per_agent+(actions_per_agent*i)]) for i in range(self.env.num_agents)], dtype=np.float64)
         else:
             return np.array([action[actions_per_agent*i:actions_per_agent+(actions_per_agent*i)] for i in range(self.env.num_agents)], dtype=np.float64)
@@ -171,7 +176,7 @@ class MPIRoboCupImitationEnv(Environment):
                 'acs_shape': self.actions_buffer.shape,
                 'rew_shape': self.rewards_buffer.shape,
                 'done_shape': self.done_buffer.shape,
-                'super_done': True if self.super_ep >= (self.supervised_episodes-1) else False,
+                'super_done': False if self.super_ep < self.supervised_episodes else True,
                 'metrics': self.env.get_metrics(episodic=True)
             }
 

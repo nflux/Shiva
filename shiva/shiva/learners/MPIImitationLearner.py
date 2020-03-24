@@ -176,7 +176,10 @@ class MPIImitationLearner(Learner):
         '''Assuming 1 Agent here'''
         self.metrics_env = self.traj_info['metrics']
         traj_length = self.traj_info['length']
-        self.dagger = self.traj_info['super_done']
+        try:
+            self.dagger = self.traj_info['super_done']
+        except:
+            self.log("This is the traj_info {}".format(self.traj_info))
         # self.log("This is dagger {}".format(self.dagger))
 
         #self.log("{}".format(self.traj_info))

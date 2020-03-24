@@ -127,7 +127,8 @@ class MPIImitEvalEnv(Environment):
 
 
     def create_environment(self):
-        self.configs['Environment']['port'] += 100 +(self.id * 10)
+        # self.configs['Environment']['port'] += 100 +(self.id * 10)
+        self.configs['Environment']['port'] += 500 + np.random.randint(0,1500)
         self.configs['Environment']['worker_id'] = 100 * (self.id * 22)
         # self.configs['Environment']['rc_log'] = 'rc_eval_log'
         # self.configs['Environment']['server_addr'] = self.eval.Get_attr(MPI.HOST)
