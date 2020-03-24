@@ -55,14 +55,14 @@ class MPIImitEvalEnv(Environment):
         # self.log("Get here at 48")
 
         while True:
-            time.sleep(0.001)
+            # time.sleep(0.001)
             while self.env.start_env():
 
                 self._step_numpy()
 
                 if self.env.is_done():
-
                     self.env.reset()
+                    time.sleep(0.1)
 
                 if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
                     _ = self.eval.recv(None, source=0 , tag=Tags.clear_buffers)

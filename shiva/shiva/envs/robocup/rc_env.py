@@ -55,7 +55,7 @@ class rc_env:
             dash_power_discretization = np.linspace(-100,100,21, dtype=np.float64).tolist()
             dash_degree_discretization = np.linspace(-180,180,9, dtype=np.float64).tolist()
             power_discretization = np.linspace(0,100,21, dtype=np.float64).tolist()
-            degree_discretization = np.linspace(-180,180,33, dtype=np.float64).tolist()
+            degree_discretization = np.linspace(-180,180,17, dtype=np.float64).tolist()
 
             self.dash_pow_step = dash_power_discretization[1] - dash_power_discretization[0]
             self.dash_degree_step = dash_degree_discretization[1] - dash_degree_discretization[0]
