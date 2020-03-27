@@ -33,7 +33,7 @@ class IOHandler(object):
     def run(self):
 
         while True:
-            time.sleep(0.001)
+            time.sleep(0.00001)
             self.service_learner_requests()
             self.service_menv_requests()
             if self.configs['MetaLearner']['pbt']:

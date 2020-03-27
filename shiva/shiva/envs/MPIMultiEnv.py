@@ -56,9 +56,13 @@ class MPIMultiEnv(Environment):
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
         elif 'RoboCup' in self.type:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
-
+        
+        #start = time.time()
         while True:
-            time.sleep(0.001)
+            #if time.time() - start >= 5:
+                #self.log('MultiEnv is still running')
+                #start = time.time()
+            time.sleep(0.00001)
             # self._step_python_list()
             self._step_numpy()
 
@@ -91,8 +95,9 @@ class MPIMultiEnv(Environment):
         # self.close()
 
     def _step_numpy(self):
+        #self.log('Waiting for observations')
         self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
-
+        #self.log('Received observations')
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
 
         if 'Unity' in self.type:
@@ -107,9 +112,11 @@ class MPIMultiEnv(Environment):
             actions = np.array(actions)
             self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
         elif 'RoboCup' in self.type:
+            #self.log('Getting Actions')
             actions = [[agent.get_action(obs, self.step_count,self.device) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
             actions = np.array(actions)
             # self.log("The actions shape {}".format(actions))
+            #self.log('Sent Actions')
             self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
 

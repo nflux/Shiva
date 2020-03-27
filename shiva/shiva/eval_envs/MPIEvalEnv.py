@@ -56,10 +56,10 @@ class MPIEvalEnv(Environment):
 
         #while True:
         while True:
-            time.sleep(0.01)
            # self.log('While True')
             while self.env.start_env():
                # self.log('Env start')
+                time.sleep(0.001)
                 self._step_numpy()
                # self.log('After step')
                 #if self.env.is_done():

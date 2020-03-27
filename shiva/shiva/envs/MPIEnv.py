@@ -28,6 +28,7 @@ class MPIEnv(Environment):
         super(MPIEnv, self).__init__(self.configs)
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self._launch_env()
+        self.env.env.env_id = self.id #Using for troubleshooting rc_env
         # Check in and send single env specs with MultiEnv
         self.menv.gather(self._get_env_specs(), root=0)
         self._connect_learners()
@@ -43,9 +44,13 @@ class MPIEnv(Environment):
 
     def run(self):
         self.env.reset()
+        #start = time.time()
         while True:
-            time.sleep(0.001)
             while self.env.start_env():
+                #if time.time() - start >= 5:
+                    #self.log('Env is still running')
+                    #start = time.time()
+                time.sleep(0.00001)
                 self._step_numpy()
                 self._append_step()
                 if self.env.is_done():
@@ -63,16 +68,20 @@ class MPIEnv(Environment):
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
     def _step_numpy(self):
+        #self.log('Getting Observation')
         self.observations = self.env.get_observations()
         '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
                                     --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
         '''
         self.observations = np.array(self.observations, dtype=np.float64)
+        #self.log('Sending Observations')
         self.menv.Gather([self.observations, MPI.DOUBLE], None, root=0)
-
+        #self.log('Sent Observations')
         if 'Gym' in self.type or 'RoboCup' in self.type:
+            #self.log('Waiting for actions')
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
             self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
+            #self.log('Received Actions')
             self.actions = recv_action 
             #if self.id == 0:
                 #self.log('Actions: {}'.format(self.actions))
@@ -81,13 +90,16 @@ class MPIEnv(Environment):
 
         # self.log("Obs {} Act {}".format(self.observations, self.actions))
         # self.log("Act {}".format(self.actions))
-        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
+        #self.log('Stepping')
+        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions,learn=True)
+        #self.log('Finished stepping')
        # self.log('The Dones look like this: {}'.format(self.dones))
 
         # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.reward).shape, np.array(self.done).shape))
         # self.log("Actual types: {} {} {} {} {}".format(type(self.observations), type(self.actions), type(self.next_observations), type(self.reward), type(self.done)))
 
     def _append_step(self):
+        #self.log('Appending step')
         if 'Unity' in self.type or 'Particle' in self.type:
             # for ix, buffer in enumerate(self.trajectory_buffers):
             for ix, role in enumerate(self.env.roles):
@@ -117,8 +129,8 @@ class MPIEnv(Environment):
                                             torch.tensor([self.dones], dtype=torch.bool).unsqueeze(dim=-1)
                                             )))
             self.trajectory_buffers[0].push(exp)
-
-
+        #self.log('Appended step')
+        
     def _unity_reshape(self, arr):
         '''Unity reshape of the data - concat all agents trajectories'''
         traj_length, num_agents, dim = arr.shape
@@ -130,6 +142,7 @@ class MPIEnv(Environment):
         return np.reshape(arr, (traj, 1, dim))
 
     def _send_trajectory_numpy(self):
+        #self.log('Sending Trajectory')
         if 'Unity' in self.type:
             for ix in range(len(self.env.roles)):
                 self.log("This is the ix {}".format(ix))
@@ -209,7 +222,7 @@ class MPIEnv(Environment):
                 self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
 
         self.done_count +=1
-
+        #self.log('Sent Trajectory')
         self.reset_buffers()
 
     def create_buffers(self):

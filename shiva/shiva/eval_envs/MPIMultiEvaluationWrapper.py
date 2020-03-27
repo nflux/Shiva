@@ -43,6 +43,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self.rankings = np.zeros(self.num_agents)
             self._sort_evals = getattr(self, '_sort_robocup')
             self._get_evaluations = getattr(self,'_get_robocup_evaluations')
+            self._set_pandas()
         else:
             self.evaluations = dict()
             self.rankings = np.zeros(self.num_agents)
@@ -57,7 +58,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self._get_initial_evaluations()
 
         while True:
-            time.sleep(0.1)
+            time.sleep(0.001)
             self._get_evaluations(True)
 
             if self.sort:
@@ -179,7 +180,11 @@ class MPIMultiEvaluationWrapper(Evaluation):
         print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
         self.evals.send(self.agent_sel,dest=env_rank,tag=Tags.new_agents)
 
-
+    def _set_pandas(self):
+        pd.set_option('display.max_rows',None)
+        pd.set_option('display.max_columns',None)
+        pd.set_option('display.width',None)
+        pd.set_option('display.max_colwidth',-1)
 
     def close(self):
         comm = MPI.Comm.Get_parent()

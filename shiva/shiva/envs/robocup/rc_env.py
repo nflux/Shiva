@@ -356,12 +356,20 @@ class rc_env:
 
         # for i in range(self.num_right):
         #     self.right_actions_OH[i] = misc.zero_params(right_actions_OH[i].reshape(-1))
-        
+        #if not evaluate:
+            #print('Rc_Env: Before Queue')
         [self.Queue_action(i, self.left_base, left_actions[i], left_options) for i in range(len(left_actions))]
+        #if not evaluate:
+            #print('Rc_Env: Between Queue')
         [self.Queue_action(j, self.right_base, right_actions[j], right_options) for j in range(len(right_actions))]
-
+        #if not evaluate:
+            #print('Rc_Env: After Queue')
         self.sync_after_queue.wait()
+        #if not evaluate:
+            #print('Rc_Env: After first Sync')
         self.sync_before_step.wait()
+        #if not evaluate:
+            #print('Rc_Env: After Second Sync')
         if evaluate:
             return self.left_obs, self.left_rewards, self.right_obs, self.right_rewards, self.d, self.world_status, self.eval_metrics
         else:
@@ -515,7 +523,7 @@ class rc_env:
 
                     self.sync_after_queue.wait()
 
-                    # take the action
+                    #print('Connect: After sync after queue wait')                    # take the action
                     a = actions[agent_ID]
 
                     if act_lvl == 'high':
@@ -525,28 +533,28 @@ class rc_env:
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID, a, base))
                     elif act_lvl == 'discretized':
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID, base))
-
+                    #print('Connect: After sync at status wait')
                     self.sync_at_status.wait()
 
                     obs_prev[agent_ID] = obs[agent_ID]
                     self.world_status = envs[agent_ID].step()  # update world
                     obs[agent_ID] = envs[agent_ID].getState()  # update obs after all agents have acted
                     # obs[agent_ID] = actions_OH[agent_ID]
-
+                    #print('Connect: Before sync at reward wait')
                     self.sync_at_reward.wait()
-
+                    #print('Connect: After sync at reward wait')
                     if self.world_status == hfo_env.IN_GAME:
                         self.d = 0
                     else:
                         self.d = 1
-
+                    #print('Connect: Before getReward')
                     rews[agent_ID] = self.getReward(
                         envs[agent_ID].statusToString(self.world_status),
                         agent_ID,
                         base,
                         ep_num
                     )  # update reward
-
+                    #print('Connect: Before eval metrics are set')
                     if self.d == True:
                         if not self.goal:
                             self.inv_steps_to_goal = self.ep_length
@@ -554,7 +562,7 @@ class rc_env:
 
                     
                     j += 1
-
+                    #print('Connect: After j+=1')
                     self.sync_before_step.wait()
 
                     # Break if episode done
@@ -639,6 +647,7 @@ class rc_env:
 
         # ---------------------------
         global possession_side
+        #print('RC_Env {}: After global possesion side'.format(self.env_id))
         if self.d:
             if self.left_base == base:
                 # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
@@ -692,6 +701,7 @@ class rc_env:
             env = self.left_envs[agentID]
             kickable = self.left_kickable[agentID]
             self.left_kickable[agentID] = self.get_kickable_status(agentID, env)
+            #print('RC_Env {}: Self left get kickable'.format(self.env_id))
         else:
             team_actions = self.right_actions
             team_obs = self.right_obs
@@ -728,30 +738,44 @@ class rc_env:
         # this won't work because of the changes I made, I'd have to get the action inside of action_list somehow
         # i dont think i should murder myself trying to get this perfect, as long as it gets rewards for the current possible actions
         # just check for the value inside of action list
+        
         # if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
-
+        #print('RC_Env {}: Penalizing for kicking when not kickable'.format(self.env_id))
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
             reward -= 0.1
+        #print('RC_Env {}: Penalized for kicking when not kickable'.format(self.env_id))
             # print("agent is getting penalized for kicking when not kickable")
 
         #if not self.first_kick:
         #    self.inv_steps_to_kick += 1
         #else:
         #    pass
-        if kickable and not self.first_kickable:
+        
+        #print('RC_Env {}: Reward for first time ball is kickable'.format(self.env_id))
+        #print('RC_Env {} Reward: {} '.format(self.env_id,reward+1))
+        #print('RC_Env {} Team Reward: {} '.format(self.env_id,team_reward+1))
+        #print('RC_Env {} kickable {} '.format(self.env_id,kickable))
+        #print('RC_Env {} first kickable {} '.format(self.env_id,self.first_kickable))
+        if self.get_kickable_status(agentID, env) and not self.first_kickable:
             reward += 1
             team_reward += 1.5
+            self.first_kickable = True
+
+        #print('RC_Env {}: Rewarded for first time ball is kickable'.format(self.env_id))
+        
         # it looks like this is broken for discretized as well
         # so its not getting any rewards for kicking
         # print(self.action_list)
         # print(self.kick_actions)
         # input()
         # if self.action_list[team_actions[agentID]] in self.kick_actions and kickable:
+        #print('RC_Env {}: If kicked'.format(self.env_id))
         if self.action_list[team_actions[agentID]] == 3 and kickable:
 
             # if True:
             # if self.num_right > 0:
             # print(self.left_agent_possesion)
+            #print('RC_Env {}: If first kick'.format(self.env_id))
             if (np.array(self.left_agent_possesion) == 'N').all() and (
                     np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
@@ -759,6 +783,7 @@ class rc_env:
                 
 
             # set initial ball position after kick
+            #print('set initial ball position after kick')
             if self.left_base == base:
                 self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
                 self.BL_ball_pos_y = team_obs[agentID][self.ball_y]
@@ -767,13 +792,14 @@ class rc_env:
                 self.BR_ball_pos_y = team_obs[agentID][self.ball_y]
 
             # track ball delta in between kicks
+            #print('track ball delta in between kicks')
             if self.left_base == base:
                 self.BL_ball_pos_x = team_obs[agentID][self.ball_x]
                 self.BL_ball_pos_y = team_obs[agentID][self.ball_y]
             else:
                 self.BR_ball_pos_x = team_obs[agentID][self.ball_x]
                 self.BR_ball_pos_y = team_obs[agentID][self.ball_y]
-
+            #print('New X and Y')
             new_x = team_obs[agentID][self.ball_x]
             new_y = team_obs[agentID][self.ball_y]
 
@@ -785,10 +811,11 @@ class rc_env:
                 ball_delta = math.sqrt((self.BR_ball_pos_x - new_x) ** 2 + (self.BR_ball_pos_y - new_y) ** 2)
                 self.BR_ball_pos_x = new_x
                 self.BR_ball_pos_y = new_y
-
+            #print('Pass Reward')
             self.pass_reward = ball_delta * 5.0
 
             #     ######## Pass Receiver Reward #########
+            #print('Pass Receiver Reward')
             if self.left_base == base:
                 if (np.array(self.left_agent_possesion) == 'L').any():
                     prev_poss = (np.array(self.left_agent_possesion) == 'L').argmax()
@@ -810,6 +837,7 @@ class rc_env:
                         self.pass_reward = 0
 
                 #         ###### Change Possession Reward #######
+                #print('Change possession reward')
                 self.left_agent_possesion = ['N'] * self.num_left
                 self.right_agent_possesion = ['N'] * self.num_right
                 self.left_agent_possesion[agentID] = 'L'
@@ -854,20 +882,22 @@ class rc_env:
         ####################### Rewards the closest player to ball for advancing toward ball ############
         distance_cur, closest_agent = self.closest_player_to_ball(team_obs, num_ag)
         distance_prev, _ = self.closest_player_to_ball(team_obs_previous, num_ag)
+        #print('RC_Env {}: Closest Agent'.format(self.env_id))
         if agentID == closest_agent:
             delta = (distance_prev - distance_cur) * 1.0
             # if delta > 0:
+            #print('RC_Env {}: Distance to ball reward'.format(self.env_id))
             if True:
                 team_reward += delta
                 reward += delta * 5
                 # print("distance to ball reward")
                 # print(distance_cur, delta)
-                pass
 
         ##################################################################################
 
         ####################### reduce ball distance to goal ##################
         # base left kicks
+        #print('Base Left Kicks')
         r = self.ball_distance_to_goal(team_obs[agentID])
         r_prev = self.ball_distance_to_goal(team_obs_previous[agentID])
         if ((self.left_base == base) and possession_side == 'L'):
@@ -902,14 +932,15 @@ class rc_env:
         '''
             Reward agent for maximizing it's proximity to the ball
         '''
-
+        #print('RC_Env {}: Increment inv steps to kick'.format(self.env_id))
         if not self.first_kick:
             self.inv_steps_to_kick += 1
-
+        #print('RC_Env {}: Set distances'.format(self.env_id))
         self.set_lowest_ball_distance_to_own_goal(team_obs[agentID])
         self.set_lowest_player_distance_to_ball(team_obs[agentID])
         self.set_lowest_ball_distance_to_goal(team_obs[agentID])
-        
+
+        #print('RC_Env {}: increment inv steps to goal'.format(self.env_id))
         self.inv_steps_to_goal += 1
 
         return reward
@@ -1001,6 +1032,7 @@ class rc_env:
         self.goal = False
         self.goal_scored = False
         self.first_kick = False
+        self.first_kickable = False
         self.initial_distance_to_opp_goal = self.ball_distance_to_goal(obs)
         self.initial_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
         self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
@@ -1011,7 +1043,7 @@ class rc_env:
     def get_eval_metrics(self):
         metrics = dict()
         metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball / self.initial_distance_to_ball
-        metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.ep_length))
+        metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.ep_length)) if self.first_kick else 0
         metrics['distance_to_opp_goal'] = (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
         metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
         metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length))

@@ -23,7 +23,11 @@ class Algorithm():
         self.action_space = acs_space
         self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        
+        self.seed = np.random.randint(0, 100)
+        torch.manual_seed(self.seed)
+        np.random.seed(self.seed)
+
+
     def update(self, agent, data, episodic=False):
         '''
             Updates the agents network using the data

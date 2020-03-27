@@ -91,12 +91,13 @@ class MPILearner(Learner):
         self.reward_per_episode = 0
         self.train = True
         self.save_flag = True
+        start = time.time()
 
         # '''Used for calculating collection time'''
         # t0 = time.time()
         # n_episodes = 500
         while self.train:
-            time.sleep(0.001)
+            time.sleep(0.00001)
             # self._receive_trajectory_python_list()
             # if 'RoboCup' in self.env_specs['type']:
             #     self._robo_receive_trajectory_numpy()
@@ -141,6 +142,10 @@ class MPILearner(Learner):
 
                 # for ix in range(self.num_menvs):
                 #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+
+            #if time.time() - start >= 5:
+                #self.log('Learner is still running')
+                #start = time.time()
 
             if self.done_count % self.evolution_episodes == 0 and self.pbt and (self.done_count >= self.initial_evolution_episodes):
                 self.log('Requesting evolution config')

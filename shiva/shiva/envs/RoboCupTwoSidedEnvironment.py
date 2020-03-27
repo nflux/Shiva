@@ -10,8 +10,11 @@ from torch.distributions import Categorical
 class RoboCupTwoSidedEnvironment(Environment):
     def __init__(self, config):
         super(RoboCupTwoSidedEnvironment, self).__init__(config)
-        np.random.seed(self.seed)
+        #np.random.seed(self.seed)
+        #torch.manual_seed(self.seed)
+        self.seed = np.random.randint(0, 100)
         torch.manual_seed(self.seed)
+        np.random.seed(self.seed)
         # self.port = port
         self.env = rc_env(config)
         self.env.launch()
@@ -68,7 +71,7 @@ class RoboCupTwoSidedEnvironment(Environment):
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, actions, discrete_select='argmax', collect=True,evaluate=False):
+    def step(self, actions, discrete_select='argmax', collect=True,evaluate=False,learn=False):
         '''
             Input
                 @actions
@@ -87,6 +90,8 @@ class RoboCupTwoSidedEnvironment(Environment):
                                         ]
 
         '''
+        #if learn:
+            #print('RoboTwo: Stepping')
         left_actions = actions[:self.num_left]
         right_actions = actions[self.num_left:]
 
@@ -105,7 +110,11 @@ class RoboCupTwoSidedEnvironment(Environment):
         """ End of masking """
 
         if discrete_select == 'argmax':
+            #if learn:
+                #print('Selecting Argmax')
             left_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in left_actions]
+            #if learn:
+                #print('Got Argmax')
             right_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in right_actions]
         elif discrete_select == 'sample':
             # act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
@@ -156,9 +165,12 @@ class RoboCupTwoSidedEnvironment(Environment):
                 self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _, self.eval_metrics = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
                                                                     left_options=self.left_action_option, right_options=self.right_action_option,evaluate=evaluate)
             else:
+                #if learn:
+                    #print('Stepping through rc_env')
                 self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
                                                                     left_options=self.left_action_option, right_options=self.right_action_option)
-
+                #if learn:
+                    #print('Stepped through rc_env')
             actions_v = [action2one_hot(self.action_space['acs_space'], act) for act in left_act_choice]
         else:
             self.left_actions = left_act_choice

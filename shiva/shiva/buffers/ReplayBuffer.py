@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 class ReplayBuffer(object):
 
@@ -11,6 +12,9 @@ class ReplayBuffer(object):
         self.obs_dim = obs_dim
         self.acs_dim = acs_dim
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.seed = np.random.randint(0, 100)
+        torch.manual_seed(self.seed)
+        np.random.seed(self.seed)
 
     def __len__(self):
         return self.size
