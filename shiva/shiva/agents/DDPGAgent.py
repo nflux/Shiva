@@ -28,7 +28,9 @@ class DDPGAgent(Agent):
 
         self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
         self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-        
+        if self.rewards: # Flag saying whether use are optimizing reward functions with PBT
+            self.set_reward_factors()
+
         self.id = id
 
         '''
@@ -169,6 +171,11 @@ class DDPGAgent(Agent):
     #     self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
     #     self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
 
+    def set_reward_factors(self):
+        self.reward_factors = dict()
+        for reward in self.reward_events:
+            self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
+
     def copy_weights(self,evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
@@ -180,6 +187,7 @@ class DDPGAgent(Agent):
         self.target_critic = copy.deepcopy(evo_agent.target_critic)
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
+        self.reward_factors = evo_agent.reward_factors
 
     def perturb_hyperparameters(self,perturb_factor):
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor
@@ -191,6 +199,9 @@ class DDPGAgent(Agent):
 
         self.epsilon *= perturb_factor
         self.noise_scale *= perturb_factor
+        if self.rewards:
+            for reward in self.reward_factors:
+                self.reward_factors[reward] *= perturb_factor
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
@@ -203,8 +214,77 @@ class DDPGAgent(Agent):
             param_group['lr'] = self.critic_learning_rate
         self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
         self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
+        if self.rewards:
+            for reward in self.reward_factors:
+                self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+
+    def robocup_exploration(self,evo_agent):
+        perturb_prob = 1 / self.num_adaptable_params
+        resample_prob = 1 / perturb_prob
+        keep_prob = 1 - perturb_prob - resample_prob
+        options = ['pass','resample','perturb']
+        option_probs = [keep_prob,resample_prob,perturb_prob]
+
+        choice = np.random.choice(options,size = self.num_adaptable_params,p=option_probs)
+        if choice[0] == 'resample':
+            self.resample_actor_learning_rate()
+        elif choice[0] == 'perturb':
+            self.perturb_actor_learning_rate()
+
+        if choice[1] =='resample':
+            self.resample_critic_learning_rate()
+        elif choice[1] == 'perturb':
+            self.perturb_critic_learning_rate()
+
+        if choice[2] == 'resample':
+            self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
+        elif choice[2] == 'perturb':
+            perturb_factor = np.random.choice([0.8,1.2])
+            self.epsilon *= perturb_factor
+
+        if choice[3] == 'resample':
+            self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
+        elif choice[3] == 'perturb':
+            perturb_factor = np.random.choice([0.8,1.2])
+            self.noise_scale *= perturb_factor
+
+        self.reward_exploration(choice[4:]) 
+
+    def resample_actor_learning_rate(self):
+        self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+        for param_group in self.actor_optimizer.param_groups:
+            param_group['lr'] = self.actor_learning_rate
+
+    def perturb_actor_learning_rate(self):
+        perturb_factor = np.random.choice([0.8,1.2])
+        self.actor_learning_rate = self.actor_learning_rate * perturb_factor
+        for param_group in self.actor_optimizer.param_groups:
+            param_group['lr'] = self.actor_learning_rate
+
+    
+    def resample_critic_learning_rate(self):
+        self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+        for param_group in self.critic_optimizer.param_groups:
+            param_group['lr'] = self.critic_learning_rate
+
+    def perturb_critic_learning_rate(self):
+        perturb_factor = np.random.choice([0.8,1.2])
+        self.critic_learning_rate = self.critic_learning_rate * perturb_factor
+        for param_group in self.critic_optimizer.param_groups:
+            param_group['lr'] = self.critic_learning_rate
+
+
+    def reward_exploration(self,choices):
+        for i,reward in enumerate(self.reward_factors.keys()):
+            if choices[i] == 'resample':
+                self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
+            elif choices[i] == 'perturb':
+                perturb_factor = np.random.choice([0.8,1.2])
+                self.reward_factors[reward] *= perturb_factor
+
+
 
 
     def __str__(self):

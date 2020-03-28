@@ -35,6 +35,9 @@ class MPIEnv(Environment):
         # Check-in with MultiEnv that successfully connected with Learner
         self.menv.gather(self._get_env_state(), root=0)
         self.create_buffers()
+
+        if 'RoboCup' in self.type:
+            self.set_reward_factors()
         # Wait for flag to start running
         #self.log("Waiting MultiEnv flag to start")
         start_flag = self.menv.bcast(None, root=0)
@@ -51,6 +54,8 @@ class MPIEnv(Environment):
                     #self.log('Env is still running')
                     #start = time.time()
                 time.sleep(0.00001)
+                if 'RoboCup' in self.type:
+                    self.reset_reward_factors()
                 self._step_numpy()
                 self._append_step()
                 if self.env.is_done():
@@ -286,6 +291,15 @@ class MPIEnv(Environment):
             'num_instances_per_env': self.env.num_instances_per_env if hasattr(self.env, 'num_instances_per_env') else 1, # Unity case
             'learners_port': self.learners_port if hasattr(self, 'learners_port') else False
         }
+
+    def set_reward_factors(self):
+        self.reward_factors = self.menv.scatter(None,root=0)
+        self.env.env.set_agent_rewards(self.reward_factors)
+        
+    def reset_reward_factors(self):
+        if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents):
+            self.reward_factors = self.menv.recv(None,source=0,tag=Tags.new_agents)
+            self.env.env.set_agent_rewards(self.reward_factors)
 
     def close(self):
         comm = MPI.Comm.Get_parent()

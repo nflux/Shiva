@@ -644,6 +644,12 @@ class rc_env:
         reward = 0.0
         team_reward = 0.0
         goal_points = 10.0
+        out_of_bounds_points = -0.5
+        first_kickable_points = 1.0
+        pass_points = 5.0
+        distance_to_ball_points = 5.0
+        ball_distance_to_goal_points= 10.0
+        low_stamina_points = -1.0
 
         # ---------------------------
         global possession_side
@@ -653,12 +659,12 @@ class rc_env:
                 # ------- If done with episode, don't calculate other rewards (reset of positioning messes with deltas) ----
 
                 if s == 'Goal_By_Left' and self.left_agent_possesion[agentID] == 'L':
-                    reward += goal_points
+                    reward += (goal_points * self.goal_factor)
                     #goal flag
                     self.goal = True
                 elif s == 'Goal_By_Left':
 
-                    reward += goal_points  # teammates get 10% of pointsssss
+                    reward += (goal_points * self.goal_factor)   # teammates get 10% of pointsssss
                     self.goal_score = True
                     print("GOAL!")
                 elif s == 'Goal_By_Right':
@@ -666,7 +672,7 @@ class rc_env:
                 elif s == 'OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
                     # Set the kicks
                     self.inv_steps_to_goal = self.ep_length
-                    reward += -0.5
+                    reward += (out_of_bounds_points * self.out_of_bouds_factor)
                 elif s == 'CapturedByLeftGoalie':
                     reward += goal_points / 5.0
                 elif s == 'CapturedByRightGoalie':
@@ -682,7 +688,7 @@ class rc_env:
                 elif s == 'Goal_By_Left':
                     reward += -goal_points
                 elif s == 'OutOfBounds' and self.right_agent_possesion[agentID] == 'R':
-                    reward += -0.5
+                    reward += out_of_bounds_points
                 elif s == 'CapturedByRightGoalie':
                     reward += goal_points / 5.0
                 elif s == 'CapturedByLeftGoalie':
@@ -716,9 +722,9 @@ class rc_env:
 
         # so this appears to be working, maybe just because the agent doesn't really have to run to it
         # will verify after I fix HPI
-        #if team_obs[agentID][self.stamina] < 0.0:  # LOW STAMINA
-            #reward -= 1
-            #team_reward -= 1
+        if team_obs[agentID][self.stamina] < 0.0:  # LOW STAMINA
+            reward -= (low_stamina_points * self.low_stamina_factor)
+            team_reward -= 1
             # print("agent is getting penalized for having low stamina")
 
         ############ Kicked Ball #################
@@ -757,7 +763,7 @@ class rc_env:
         #print('RC_Env {} kickable {} '.format(self.env_id,kickable))
         #print('RC_Env {} first kickable {} '.format(self.env_id,self.first_kickable))
         if self.get_kickable_status(agentID, env) and not self.first_kickable:
-            reward += 1
+            reward += (first_kickable_points * self.first_kickable_factor)
             team_reward += 1.5
             self.first_kickable = True
 
@@ -812,7 +818,7 @@ class rc_env:
                 self.BR_ball_pos_x = new_x
                 self.BR_ball_pos_y = new_y
             #print('Pass Reward')
-            self.pass_reward = ball_delta * 5.0
+            self.pass_reward = ball_delta * pass_points
 
             #     ######## Pass Receiver Reward #########
             #print('Pass Receiver Reward')
@@ -889,7 +895,7 @@ class rc_env:
             #print('RC_Env {}: Distance to ball reward'.format(self.env_id))
             if True:
                 team_reward += delta
-                reward += delta * 5
+                reward += delta * (distance_to_ball_points * self.distance_to_ball_factor)
                 # print("distance to ball reward")
                 # print(distance_cur, delta)
 
@@ -906,7 +912,7 @@ class rc_env:
                 delta = (2 * self.num_left) * (r_prev - r) * 1.0
                 if True:
                     # if delta > 0:
-                    reward += delta * 10
+                    reward += delta * (ball_distance_to_goal_points * self.ball_distance_to_goal_factor)
                     team_reward += delta
                     # print("ball distance to goal reward.")
                     # pass
@@ -1048,4 +1054,12 @@ class rc_env:
         metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
         metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length))
         return metrics
+
+    def set_agent_rewards(self,reward_factors):
+        self.goal_factor = reward_factors['goal']
+        self.distance_to_ball_factor = reward_factors['distance_to_ball']
+        self.ball_distance_to_goal_factor = reward_factors['ball_distance_to_goal']
+        self.out_of_bouds_factor = reward_factors['out_of_bounds']
+        self.low_stamina_factor = reward_factors['low_stamina']
+        self.first_kickable_factor = reward_factors['first_kickable']
     

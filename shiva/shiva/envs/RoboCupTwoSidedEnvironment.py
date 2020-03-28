@@ -55,6 +55,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.turns = 0
         self.dashes = 0
         self.goal_ctr = 0
+        self.goal = 0
     
     def start_env(self):
         return self.env.start_env()
@@ -245,6 +246,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.done_count += 1 if self.done else 0
         self.reward_per_episode += sum(self.rews)
         self.goal_ctr += 1 if self.isGoal() else 0
+        self.goal = 1 if self.isGoal() else 0
 
     def get_metrics(self, episodic=False):
         if not episodic:
@@ -258,7 +260,8 @@ class RoboCupTwoSidedEnvironment(Environment):
                 ('Turns_per_Episode', self.turns),
                 ('Dashes_per_Episode', self.dashes),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode),
-                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/(self.done_count+1))*100.0)
+                ('Goal_Percentage/Per_Episodes', (self.goal_ctr/(self.done_count+1))*100.0),
+                ('Goal_Scored', self.goal)
             ]
 
             # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))

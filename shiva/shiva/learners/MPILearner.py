@@ -160,7 +160,10 @@ class MPILearner(Learner):
                     if self.evolution_config['evolution'] == False:
                         continue
                     setattr(self, 'exploitation', self.evolution_config['exploitation'])
-                    setattr(self, 'exploration', self.evolution_config['exploration'])
+                    if 'RoboCup' in self.configs['Environment']['type']:
+                        setattr(self,'exploration','robocup_exploration')
+                    else:
+                        setattr(self, 'exploration', self.evolution_config['exploration'])
                     self.log('Starting Evolution')
                     self.exploitation = getattr(self, self.exploitation)
                     self.exploration = getattr(self, self.exploration)
@@ -459,6 +462,9 @@ class MPILearner(Learner):
     def resample(self,agent):
         # print('Resampling')
         agent.resample_hyperparameters()
+
+    def robocup_exploration(self,agent):
+        agent.robocup_exploration()
 
     def exploitation(self):
         pass
