@@ -95,10 +95,11 @@ class MPIImitationLearner(Learner):
 
         while self.train:
             while not self.dagger:
+                self.log("Supervised Learning")
                 time.sleep(0.001)
                 self._receive_super_trajectory_numpy()
 
-                self.log('Episodes collected: {}'.format(self.done_count))
+                # self.log('Episodes collected: {}'.format(self.done_count))
 
                 '''Change freely condition when to update'''
                 if self.done_count % self.episodes_to_update == 0:
@@ -117,6 +118,7 @@ class MPIImitationLearner(Learner):
                 self.collect_metrics(episodic=True)
             
             while self.dagger:
+                self.log("Dagger Learning")
                 time.sleep(0.001)
                 self._receive_dagger_trajectory_numpy()
 
@@ -138,20 +140,20 @@ class MPIImitationLearner(Learner):
                         self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
                 if self.done_count % self.evolution_episodes == 0 and self.pbt:
-                    self.log('Requesting evolution config')
+                    # self.log('Requesting evolution config')
                     self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
 
                 if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config):
                     '''Assumes one agent'''
                     for agent in self.agents:
-                        self.log("Before the recv evo config")
+                        # self.log("Before the recv evo config")
                         self.evolution_config = self.meta.recv(None, source=0, tag=Tags.evolution_config)  # block statement
-                        self.log('Received evolution config')
+                        # self.log('Received evolution config')
                         if self.evolution_config['evolution'] == False:
                             continue
                         setattr(self, 'exploitation', self.evolution_config['exploitation'])
                         setattr(self, 'exploration', self.evolution_config['exploration'])
-                        self.log('Starting Evolution')
+                        # self.log('Starting Evolution')
                         self.exploitation = getattr(self, self.exploitation)
                         self.exploration = getattr(self, self.exploration)
                         self.exploitation(agent,self.evolution_config)
@@ -161,7 +163,7 @@ class MPIImitationLearner(Learner):
                         for ix in range(self.num_menvs):
                             self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
-                        self.log('Evolution Complete')
+                        # self.log('Evolution Complete')
 
                 self.collect_metrics(episodic=True)
 
@@ -176,10 +178,7 @@ class MPIImitationLearner(Learner):
         '''Assuming 1 Agent here'''
         self.metrics_env = self.traj_info['metrics']
         traj_length = self.traj_info['length']
-        try:
-            self.dagger = self.traj_info['super_done']
-        except:
-            self.log("This is the traj_info {}".format(self.traj_info))
+        self.dagger = self.traj_info['super_done']
         # self.log("This is dagger {}".format(self.dagger))
 
         #self.log("{}".format(self.traj_info))
@@ -324,7 +323,7 @@ class MPIImitationLearner(Learner):
             agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
             #agents = [self.alg.create_agent(self.id + i) for i in range(self.num_agents)]
             agent_ids = [agent.id for agent in agents]
-        self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
+        # self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
         return agents, agent_ids
 
     def create_algorithm(self):
@@ -446,9 +445,9 @@ class MPIImitationLearner(Learner):
         self.menv.Disconnet()
         comm.Disconnect()
 
-    def log(self, msg, to_print=False):
+    def log(self, msg):
         text = 'Learner {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+        logger.info(text, self.configs['Admin']['print_debug'])
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

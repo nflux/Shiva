@@ -176,7 +176,7 @@ class IOHandler(object):
             np.save(save_path+'/episode_evaluations',ep_evals['evals'][i])
         self.evals.send(agents,dest=source,tag=Tags.io_evals_save)
 
-    def log(self, msg, to_print=False):
+    def log(self, msg):
         text = 'IOHandler: {}'.format(msg)
         logger.info(text, True)
 

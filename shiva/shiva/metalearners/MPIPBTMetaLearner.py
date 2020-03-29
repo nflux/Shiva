@@ -36,32 +36,33 @@ class MPIPBTMetaLearner(MetaLearner):
 
 
         while True:
-            time.sleep(0.001)
+            time.sleep(0.1)
+            self.log("Logging here")
 
             if self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings):
                 self.rankings = self.mevals.recv(None,source=MPI.ANY_SOURCE, tag=Tags.rankings)
                 self.rankings_size = len(self.rankings)
                 self.bottom_20 = int(self.rankings_size * .80)
                 self.top_20 = int(self.rankings_size * .20)
-                self.log('MetaLearner Rankings: {}'.format(self.rankings))
+                # self.log('MetaLearner Rankings: {}'.format(self.rankings))
 
             if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution) and hasattr(self, 'rankings'):
-                self.log('MetaLearner Received evolution request')
+                # self.log('MetaLearner Received evolution request')
                 info = MPI.Status()
                 agent_nums = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evolution,status=self.info)  # block statement
-                self.log("After getting the agent nums")
+                # self.log("After getting the agent nums")
                 learner_source = self.info.Get_source()
                 for agent_id in agent_nums:
                     evo = dict()
-                    print('Current Agent Ranking: ', np.where(self.rankings == agent_id)[0])
+                    # print('Current Agent Ranking: ', np.where(self.rankings == agent_id)[0])
                     ranking = np.where(self.rankings == agent_id)[0]
                     evo['agent_id'] = agent_id
                     if ranking <= self.top_20:
                         evo['evolution'] = False
-                        print('Do Not Evolve')
+                        # print('Do Not Evolve')
                         self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
                     elif self.top_20  < ranking < self.bottom_20:
-                        print('Middle of the Pack: {}'.format(learner_source))
+                        # print('Middle of the Pack: {}'.format(learner_source))
                         evo['evolution'] = True
                         evo['agent'] = agent_id
                         evo['ranking'] = ranking
@@ -71,7 +72,7 @@ class MPIPBTMetaLearner(MetaLearner):
                         evo['exploration'] = np.random.choice(['perturb', 'resample'])
                         self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
                     else:
-                        print('You suck')
+                        # print('You suck')
                         evo['evolution'] = True
                         evo['agent'] = agent_id
                         evo['ranking'] = ranking
@@ -162,9 +163,9 @@ class MPIPBTMetaLearner(MetaLearner):
             # num_learners is explicitely in the config
             pass
 
-    def log(self, msg, to_print=False):
+    def log(self, msg):
         text = "Meta\t\t{}".format(msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+        logger.info(text, self.configs['Admin']['print_debug'])
 
     def close(self):
         self.menvs.Disconnect()

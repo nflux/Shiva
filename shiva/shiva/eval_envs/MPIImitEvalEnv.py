@@ -67,7 +67,7 @@ class MPIImitEvalEnv(Environment):
                 if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
                     _ = self.eval.recv(None, source=0 , tag=Tags.clear_buffers)
                     self.env.reset_goal_ctr()
-                    print('Goal ctr has been reset')
+                    # print('Goal ctr has been reset')
 
 
 
@@ -117,7 +117,7 @@ class MPIImitEvalEnv(Environment):
     def _send_eval_numpy(self,value, agent_idx):
         '''Numpy approach'''
         self.eval.send(agent_idx, dest=0, tag=Tags.trajectory_info)
-        self.log('Eval Value: {}'.format(value))
+        # self.log('Eval Value: {}'.format(value))
         self.eval.send(value, dest=0, tag = Tags.trajectory_eval)
 
     def _launch_env(self):
@@ -158,9 +158,9 @@ class MPIImitEvalEnv(Environment):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def log(self, msg, to_print=False):
+    def log(self, msg):
         text = 'Evaluation Environment {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+        logger.info(text, self.configs['Admin']['print_debug'])
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

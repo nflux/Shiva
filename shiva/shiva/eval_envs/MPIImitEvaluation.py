@@ -162,7 +162,7 @@ class MPIImitEvaluation(Evaluation):
             if self.eval_counts[agent_idx] < self.eval_episodes:
                 evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
                 self.evals[agent_idx,self.eval_counts[agent_idx]] = evals
-                print('Eval: {}'.format(evals))
+                # print('Eval: {}'.format(evals))
                 self.eval_counts[agent_idx] += 1
             else:
                 _ = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
@@ -172,7 +172,7 @@ class MPIImitEvaluation(Evaluation):
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
         self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
-        self.log('Agent: {}'.format(str(self.agents[0])))
+        # self.log('Agent: {}'.format(str(self.agents[0])))
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         #self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
 
@@ -187,9 +187,9 @@ class MPIImitEvaluation(Evaluation):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def log(self, msg, to_print=False):
+    def log(self, msg):
         text = 'Eval {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+        logger.info(text, self.configs['Admin']['print_debug'])
 
     def show_comms(self):
         self.debug("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

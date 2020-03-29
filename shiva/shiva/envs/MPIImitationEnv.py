@@ -72,7 +72,7 @@ class MPIRoboCupImitationEnv(Environment):
             self._super_append_step()
             
             if self.env.is_done():
-                self.print(self.env.get_metrics(episodic=True)) # print metrics
+                # self.print(self.env.get_metrics(episodic=True)) # print metrics
                 self.super_ep += 1
                 self._send_super_trajectory_numpy()
                 # self.log('Episode_count: {}'.format(self.done_count))
@@ -86,7 +86,7 @@ class MPIRoboCupImitationEnv(Environment):
             self._dagger_append_step()
 
             if self.env.is_done():
-                self.print(self.env.get_metrics(episodic=True)) # print metrics
+                # self.print(self.env.get_metrics(episodic=True)) # print metrics
                 self._send_dagger_trajectory_numpy()
                 # self.log('Episode_count: {}'.format(self.done_count))
                 self.env.reset()
@@ -313,9 +313,9 @@ class MPIRoboCupImitationEnv(Environment):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def log(self, msg, to_print=False):
+    def log(self, msg):
         text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+        logger.info(text, self.configs['Admin']['print_debug'])
 
     def print(self, msg):
         text = "Env {}/{}\t\t{}".format(self.id, MPI.COMM_WORLD.Get_size(), msg)

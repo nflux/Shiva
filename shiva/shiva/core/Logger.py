@@ -1,5 +1,5 @@
 from datetime import datetime
-import logging
+from loguru import logger
 import os
 
 class Logger(object):
@@ -9,20 +9,19 @@ class Logger(object):
         folder = os.path.join("./logs", str(now.year), now.strftime("%B"))
         self.check_create_directory(folder)
         filename = os.path.join(folder, str(now.day) + '.log')
-        logging.basicConfig(filename=filename, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
-        logging.info("**************************** " + current_time + " ****************************")
+        logger.add(filename, enqueue=True, backtrace=True, diagnose=True)
 
     def info(self, msg, to_print=False):
-        logging.info(msg)
+        logger.debug(msg)
         if to_print:
             print(msg)
 
-    def error(self, msg):
-        logging.error(msg, exc_info=True)
+    def exception(self, msg):
+        logger.exception(msg)
 
     def close(self):
-        logging.info("Closing logs")
-        logging.info("******************************************************************************")
+        logger.info("Closing logs")
+        logger.info("******************************************************************************")
 
     def check_create_directory(self, _dir):
         '''

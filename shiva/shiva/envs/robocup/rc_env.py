@@ -625,7 +625,7 @@ class rc_env:
                     reward+= goal_points
                 elif s=='Goal_By_Left':
                     reward+= goal_points # teammates get 10% of pointsssss
-                    print("GOAL!")
+                    # print("GOAL!")
                 elif s=='Goal_By_Right':
                     reward+=-goal_points
                 elif s=='OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
@@ -720,7 +720,7 @@ class rc_env:
             # if self.num_right > 0:
             # print(self.left_agent_possesion)
             if (np.array(self.left_agent_possesion) == 'N').all() and (np.array(self.right_agent_possesion) == 'N').all():
-                print("First Kick")
+                # print("First Kick")
                 reward += 1
                 team_reward += 1.5
 

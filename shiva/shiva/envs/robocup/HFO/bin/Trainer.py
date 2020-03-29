@@ -297,8 +297,8 @@ class Trainer(object):
       self._done = True
     if endOfTrial:
       self._numTrials += 1
-      print(self.train_type, 'EndOfTrial: LG:%d RG:%d / BCLG:%d BCRG:%d Trials:%d Frame:%d Event:%s'%\
-        (self._numGoalsByLeft, self._numGoalsByRight, self._numBallsCapturedByLG, self._numBallsCapturedByRG, self._numTrials, self._frame, event))
+      # print(self.train_type, 'EndOfTrial: LG:%d RG:%d / BCLG:%d BCRG:%d Trials:%d Frame:%d Event:%s'%\
+      #   (self._numGoalsByLeft, self._numGoalsByRight, self._numBallsCapturedByLG, self._numBallsCapturedByRG, self._numTrials, self._frame, event))
       self._numFrames += self._frame - self._lastTrialStart
       self._lastTrialStart = self._frame
       self.getConnectedPlayers()

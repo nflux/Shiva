@@ -91,9 +91,9 @@ class IOHandler(object):
             _ = self.evals.recv(None, source=source,tag=Tags.io_eval_request)
 
 
-    def log(self, msg, to_print=False):
-        text = 'IOHandler: {}'.format(msg)
-        logger.info(text, True)
+    def log(self, msg):
+        text = 'IO Handler {}\t{}'.format(MPI.COMM_WORLD.Get_size(), msg)
+        logger.info(text, self.configs['Admin']['print_debug'])
 
 
 

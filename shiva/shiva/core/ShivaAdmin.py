@@ -104,7 +104,7 @@ class ShivaAdmin():
             folder_name = self.__folder_name__['metalearner'].format(algorithm=meta_learner.config['Algorithm']['type'], env=meta_learner.config['Environment']['env_name'])
         new_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, folder_name), overwrite=overwrite)
         self._meta_learner_dir = new_dir
-        self.log("New MetaLearner @ {}".format(self._meta_learner_dir), to_print=True)
+        # self.log("New MetaLearner @ {}".format(self._meta_learner_dir), to_print=True)
 
     def add_learner_profile(self, learner, function_only=False) -> None:
         '''
@@ -491,7 +491,7 @@ class ShivaAdmin():
         assert len(agent_pickle) > 0, "No agent found in {}".format(path)
         assert len(agent_pickle) == 1, "Multiple agent_cls.pickles found. Try using shiva._load_agents()"
         agent_pickle = agent_pickle[0]
-        self.log("Loading Agent..\n\t{} with {} networks\n".format(agent_pickle, len(agent_policy)), to_print=True)
+        # self.log("Loading Agent..\n\t{} with {} networks\n".format(agent_pickle, len(agent_policy)), to_print=True)
         _new_agent = fh.load_pickle_obj(agent_pickle)
         this_agent_folder = agent_pickle.replace('agent_cls.pickle', '')
         for pols in agent_policy:
@@ -511,13 +511,13 @@ class ShivaAdmin():
 
         buffer_pickle = dh.find_pattern_in_path(path, 'buffer_cls.pickle')
         assert len(buffer_pickle) > 0, "No buffer found in {}".format(path)
-        self.log("Loading Buffer..", to_print=True)
+        # self.log("Loading Buffer..", to_print=True)
         self.log("\t{}\n".format(buffer_pickle[0]))
         return fh.load_pickle_obj(buffer_pickle[0])
 
-    def log(self, msg, to_print=False):
+    def log(self, msg):
         text = "Admin\t\t{}".format(msg)
-        self.logger.info(text, to_print or self.print_debug)
+        self.logger.info(text, self.print_debug)
 
 
 ###########################################################################

@@ -82,9 +82,9 @@ class MPIMetaLearner(MetaLearner):
             # num_learners is explicitely in the config
             pass
 
-    def log(self, msg, to_print=False):
+    def log(self, msg):
         text = "Meta\t\t{}".format(msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+        logger.info(text, self.configs['Admin']['print_debug'])
 
     def close(self):
         '''Send message to childrens'''

@@ -100,7 +100,7 @@ class MPIEvaluation(Evaluation):
                 for i in range(self.agents_per_env):
                     self.log('agent_id: {}'.format(self.agent_ids[i]))
                     path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                    self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
+                    # self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
                     self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
                     self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
                     #self.ep_evals['path'] = path+'/episode_evaluations'
@@ -111,9 +111,9 @@ class MPIEvaluation(Evaluation):
                     # self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
                     new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
                     self.agent_ids[i] = new_agent
-                    print('New Eval Agent: {}'.format(new_agent))
+                    # print('New Eval Agent: {}'.format(new_agent))
                     path = self.eval_path+'Agent_'+str(new_agent)
-                    self.log('Path: {} '.format(path))
+                    # self.log('Path: {} '.format(path))
                     self.agents[i] = Admin._load_agents(path)[0]
                     self.log('Agent: {}'.format(str(self.agents[0])))
                     self.evals[i].fill(0)
@@ -122,7 +122,7 @@ class MPIEvaluation(Evaluation):
 
                 for i in range(self.num_envs):
                     self.envs.send([True],dest=i,tag=Tags.clear_buffers)
-                print("Agents have been told to clear buffers for new agents")
+                # print("Agents have been told to clear buffers for new agents")
 
         self.close()
 
@@ -161,7 +161,7 @@ class MPIEvaluation(Evaluation):
             if self.eval_counts[agent_idx] < self.eval_episodes:
                 evals = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
                 self.evals[agent_idx,self.eval_counts[agent_idx]] = evals
-                print('Eval: {}'.format(evals))
+                # print('Eval: {}'.format(evals))
                 self.eval_counts[agent_idx] += 1
             else:
                 _ = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
@@ -171,7 +171,7 @@ class MPIEvaluation(Evaluation):
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
         self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
-        self.log('Agent: {}'.format(str(self.agents[0])))
+        # self.log('Agent: {}'.format(str(self.agents[0])))
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         #self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
 
@@ -186,9 +186,9 @@ class MPIEvaluation(Evaluation):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def log(self, msg, to_print=False):
+    def log(self, msg):
         text = 'Eval {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+        logger.info(text, self.configs['Admin']['print_debug'])
 
     def show_comms(self):
         self.debug("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
