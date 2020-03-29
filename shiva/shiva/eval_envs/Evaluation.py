@@ -1,13 +1,9 @@
 class Evaluation(object):
-    def __init__(self,
-                configs: 'whole config passed'
-    ):
-
-        if 'MetaLearner' in configs:
-            {setattr(self, k, v) for k,v in configs['Evaluation'].items()}
+    def __init__(self, configs: 'whole config passed'):
+        if 'Evaluation' in configs:
+            {setattr(self, k, v) for k, v in configs['Evaluation'].items()}
         else:
-            {setattr(self, k, v) for k,v in configs.items()}
-        # self._create_eval_envs()
+            {setattr(self, k, v) for k, v in configs.items()}
 
     def evaluate_agents(self):
         '''

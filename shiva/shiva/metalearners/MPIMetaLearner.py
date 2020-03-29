@@ -54,7 +54,6 @@ class MPIMetaLearner(MetaLearner):
     def _launch_learners(self):
         self.learners_configs = self._get_learners_configs()
         self.learners = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/learners/MPILearner.py'], maxprocs=self.num_learners)
-        # self.log("Scattering {}".format(self.learners_configs))
         self.learners.scatter(self.learners_configs, root=MPI.ROOT)
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
         self.log("Got {} LearnerSpecs".format(len(learners_specs)))

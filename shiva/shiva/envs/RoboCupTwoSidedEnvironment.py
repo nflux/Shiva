@@ -86,7 +86,7 @@ class RoboCupTwoSidedEnvironment(Environment):
                                             action_taken        useful if discrete_select == 'sample'
                                         ]
 
-        """
+        '''
         left_actions = actions[:self.num_left]
         right_actions = actions[self.num_left:]
 
@@ -153,9 +153,9 @@ class RoboCupTwoSidedEnvironment(Environment):
             # certainly:
             #     print("that Jorge is really something")
             self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _, self.eval_metrics = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
-                                                                    left_options=self.left_action_option, right_options=self.right_action_option,evaluate)
+                                                                    left_options=self.left_action_option, right_options=self.right_action_option,evaluate=evaluate)
 
-            #self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
+            #self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
             #                                                        left_options=self.left_action_option, right_options=self.right_action_option,evaluate=evaluate)
             if evaluate:
                 self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _, self.eval_metrics = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
@@ -171,7 +171,7 @@ class RoboCupTwoSidedEnvironment(Environment):
             self.right_actions = right_act_choice
             self.right_action_option = [a[self.action_space['acs_space']:] for a in right_actions]
 
-            self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
+            self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
                                                                                                          left_options=self.left_action_option, right_options=self.right_action_option,evaluate=evaluate)
             actions_v = [np.array([action2one_hot(self.action_space['acs_space'], act), op]) for act, op in zip(left_act_choice, self.left_action_option)]
 

@@ -30,21 +30,17 @@ class MPIEnv(Environment):
         self._launch_env()
         # Check in and send single env specs with MultiEnv
         self.menv.gather(self._get_env_specs(), root=0)
+
         self._connect_learners()
         self.create_buffers()
-        # Wait for flag to start running
-        #self.log("Waiting MultiEnv flag to start")
-        start_flag = self.menv.bcast(None, root=0)
-        #self.log("Start collecting..")
 
+        # Wait for flag to start running
+        start_flag = self.menv.bcast(None, root=0)
+        self.log("Start collecting..")
         self.run()
 
     def run(self):
         self.env.reset()
-
-        '''Need to wait for any initialization overhead of the environment (Robocup)'''
-        while not self.env.start_env():
-            pass
 
         while True:
             time.sleep(0.001)
@@ -80,21 +76,14 @@ class MPIEnv(Environment):
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
             self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
             self.actions = recv_action 
-            #if self.id == 0:
-                #self.log('Actions: {}'.format(self.actions))
         elif 'Unity':
             self.actions = self.menv.scatter(None, root=0)
 
-        # self.log("Obs {} Act {}".format(self.observations, self.actions))
-        # self.log("Act {}".format(self.actions))
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-       # self.log('The Dones look like this: {}'.format(self.dones))
-
-        # self.log("Step shape\tObs {}\tAcs {}\tNextObs {}\tReward {}\tDones{}".format(np.array(self.observations).shape, np.array(self.actions).shape, np.array(self.next_observations).shape, np.array(self.reward).shape, np.array(self.done).shape))
-        # self.log("Actual types: {} {} {} {} {}".format(type(self.observations), type(self.actions), type(self.next_observations), type(self.reward), type(self.done)))
+        self.log("Obs {} Act {}".format(self.observations, self.actions))
 
     def _append_step(self):
-        if 'Unity' in self.type or 'Particle' in self.type:
+        if 'Unity' in self.type or 'ParticleEnv' in self.type:
             # for ix, buffer in enumerate(self.trajectory_buffers):
             for ix, role in enumerate(self.env.roles):
                 '''Order is maintained, each ix is for each Agent Role'''
@@ -269,8 +258,13 @@ class MPIEnv(Environment):
 
     def _launch_env(self):
         # initiate env from the config
-        self.env = self.create_environment()
-
+        try:
+            self.configs['Environment']['port'] += (self.id * 10)
+            self.configs['Environment']['worker_id'] = self.id * 11
+        except:
+            pass
+        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
+        self.env = env_class(self.configs)
 
     def _connect_learners(self):
         self.log("Waiting LearnersSpecs from the MultiEnv")
@@ -284,15 +278,6 @@ class MPIEnv(Environment):
         self.log("Connected with {} learners on port {}".format(self.num_learners, self.learners_port))
         # Check-in with MultiEnv that we successfully connected with Learner/s
         self.menv.gather(self._get_env_state(), root=0)
-
-    def create_environment(self):
-        try:
-            self.configs['Environment']['port'] += (self.id * 10)
-            self.configs['Environment']['worker_id'] = self.id * 11
-        except:
-            pass
-        env_class = load_class('shiva.envs', self.configs['Environment']['type'])
-        return env_class(self.configs)
 
     def _get_env_state(self, traj=[]):
         return {
@@ -325,7 +310,7 @@ class MPIEnv(Environment):
         logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def __str__(self):
-        return "<Env(id={})>".format(self.id, MPI.COMM_WORLD.Get_size())
+        return "<Env(id={})>".format(self.id)
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

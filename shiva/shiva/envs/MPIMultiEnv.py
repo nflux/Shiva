@@ -49,10 +49,10 @@ class MPIMultiEnv(Environment):
             If obs dimensions for all roles are the same, then we can do MPI
         '''
 
-        if 'Unity' in self.type:
+        if 'Unity' in self.type or 'ParticleEnv' in self.type:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         elif 'Gym' in self.type:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'] ), dtype=np.float64)
         elif 'RoboCup' in self.type:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
@@ -72,6 +72,7 @@ class MPIMultiEnv(Environment):
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         if 'Unity' in self.type:
+            # N sets of Roles
             actions = []
             for env_observations in self._obs_recv_buffer:
                 env_actions = []
@@ -84,6 +85,7 @@ class MPIMultiEnv(Environment):
                     env_actions.append(role_actions)
                 actions.append(env_actions)
         elif 'Particle' in self.type:
+            # 1 set of Roles
             actions = []
             for env_observations in self._obs_recv_buffer:
                 env_actions = []
@@ -94,6 +96,7 @@ class MPIMultiEnv(Environment):
                     env_actions.append(role_actions)
                 actions.append(env_actions)
         elif 'Gym' in self.type:
+            # No Roles
             actions = []
             role_ix = 0
             role_name = self.env_specs['roles'][role_ix]
@@ -103,8 +106,10 @@ class MPIMultiEnv(Environment):
                 role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count)
                 env_actions.append(role_actions)
                 actions.append(env_actions)
+
         self.actions = np.array(actions)
-        self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions))
+        # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions))
+        # self.log("Step {}".format(self.step_count))
         self.envs.scatter(actions, root=MPI.ROOT)
 
     def _step_numpy(self):
@@ -201,20 +206,13 @@ class MPIMultiEnv(Environment):
         self.learners = MPI.COMM_WORLD.Accept(self.port) # Wait until check in learners, create comm
         # Get LearnersSpecs to load agents and start running
         self.learners_specs = []
-        self.log("Expecting {} Learners".format(self.num_learners))
+        # self.log("Expecting {} Learners".format(self.num_learners))
         for ix in range(self.num_learners):
             self._receive_learner_spec(ix)
-        self.log("Got {} Learners: {}".format(len(self.learners_specs), self.learners_specs))
+        self.log("Got {} Learners".format(len(self.learners_specs)))
 
         self.agents = self.load_agents_init()
-
-        '''Create Role->AgentIX mapping'''
-        self.role2agent = {}
-        for role in self.env_specs['roles']:
-            for ix, agent in enumerate(self.agents):
-                if role == agent.role:
-                    self.role2agent[role] = ix
-                    break
+        self.role2agent = self.get_role2agent()
 
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
@@ -225,8 +223,20 @@ class MPIMultiEnv(Environment):
         envs_states = self.envs.gather(None, root=MPI.ROOT)
         # self.log(envs_status)
 
+    def get_role2agent(self):
+        '''Create Role->AgentIX mapping'''
+        self.role2agent = {}
+        for role in self.env_specs['roles']:
+            for ix, agent in enumerate(self.agents):
+                if role == agent.role:
+                    self.role2agent[role] = ix
+                    break
+        return self.role2agent
+
     def get_envs_role2learner(self):
-        '''Assuming every Environment will have the same Role->Learner mapping - TODO: match making process for random/unique combinations'''
+        ''' Assuming every Environment will have the same Role->Learner mapping -
+            TODO: match making process for random/unique combinations for training
+        '''
         self.role2learner = {}
         for role in self.env_specs['roles']:
             for learner_spec in self.learners_specs:

@@ -17,8 +17,10 @@ from functools import partial
 class MADDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):
         super(MADDPGAlgorithm, self).__init__(observation_space, action_space, configs)
-        self.actor_loss = [0 for _ in range(len(self.roles))]
-        self.critic_loss = [0 for _ in range(len(self.roles))]
+        # self.actor_loss = [0 for _ in range(len(self.roles))]
+        # self.critic_loss = [0 for _ in range(len(self.roles))]
+        self.actor_loss = {}
+        self.critic_loss = {}
         self.set_spaces(observation_space, action_space)
         '''
             Agent 1 and 2
@@ -52,7 +54,8 @@ class MADDPGAlgorithm(Algorithm):
             assert "MADDPG Method {} is not implemented".format(self.method)
 
     def update(self, agents, buffer, step_count, episodic):
-        self.log("Start update # {}".format(self.num_updates))
+        # self.log("Start update # {}".format(self.num_updates))
+        self.agents = agents
         for _ in range(self.update_iterations):
             self._update(agents, buffer, step_count, episodic)
         self.num_updates += self.update_iterations
@@ -136,7 +139,7 @@ class MADDPGAlgorithm(Algorithm):
             # Update the weights in the direction of the gradient.
             self.critic_optimizer.step()
             # Tensorboard
-            self.critic_loss[agent_ix] = critic_loss.item()
+            self.critic_loss[agent.id] = critic_loss.item()
 
             '''
                 Training the Actors
@@ -172,7 +175,7 @@ class MADDPGAlgorithm(Algorithm):
             # Update the weights in the direction of the gradient.
             agent.actor_optimizer.step()
             # Save actor loss for tensorboard
-            self.actor_loss[agent_ix] = actor_loss.item()
+            self.actor_loss[agent.id] = actor_loss.item()
 
         '''
             After all Actor updates, soft update Target Networks
@@ -214,7 +217,7 @@ class MADDPGAlgorithm(Algorithm):
         #         bf_actions[:, ix, :] = softmax(bf_actions[:, ix, :])
 
         # self.log("States from Buff {}".format(rewards.reshape(1, -1)))
-        for agent_ix, agent in enumerate(agents):
+        for agent_ix, agent in enumerate(self.agents):
             batch_size, num_agents, obs_dim = states.shape
             _, _, acs_dim = actions.shape
 
@@ -248,7 +251,7 @@ class MADDPGAlgorithm(Algorithm):
             # Update the weights in the direction of the gradient.
             agent.critic_optimizer.step()
             # Save for tensorboard
-            self.critic_loss[agent_ix] = agent_critic_loss.item()
+            self.critic_loss[agent.id] = agent_critic_loss.item()
 
             '''
                 Training the Actors
@@ -277,7 +280,7 @@ class MADDPGAlgorithm(Algorithm):
             # Update the weights in the direction of the gradient.
             agent.actor_optimizer.step()
             # Save actor loss for tensorboard
-            self.actor_loss[agent_ix] = actor_loss.item()
+            self.actor_loss[agent.id] = actor_loss.item()
 
         '''
             After all Actor updates, soft update Target Networks
@@ -307,6 +310,8 @@ class MADDPGAlgorithm(Algorithm):
         self.configs['Agent']['role'] = role
         self.configs['Agent']['critic_input_size'] = self.critic_input_size
         self.agentCount += 1
+        self.actor_loss[id] = 0
+        self.critic_loss[id] = 0
         return MADDPGAgent(id, self.observation_space[role], self.action_space[role], self.configs['Agent'], self.configs['Network'])
 
     def set_spaces(self, observation_space, action_space):
@@ -337,7 +342,8 @@ class MADDPGAlgorithm(Algorithm):
         else:
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss[agent_id]),
-                ('Algorithm/Critic_Loss', self.critic_loss[agent_id])
+                ('Algorithm/Critic_Loss', self.critic_loss[agent_id]),
+                ('Agent/MADDPG/Critic_Learning_Rate', self.critic_learning_rate),
             ]
         return metrics
 

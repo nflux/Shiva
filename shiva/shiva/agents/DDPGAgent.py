@@ -26,20 +26,9 @@ class DDPGAgent(Agent):
             torch.manual_seed(self.seed)
             np.random.seed(self.seed)
 
-<<<<<<< HEAD
+        if hasattr(self, 'epsilon_range'):
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-=======
-
-        self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
-        self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-        
-        self.id = id
-
-        '''
-
-            Maybe do something like
->>>>>>> robocup-mpi-pbt
 
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']
@@ -64,50 +53,41 @@ class DDPGAgent(Agent):
             actor_output = self.discrete + self.param
             self.get_action = self.get_parameterized_action
 
+        if agent_config['lr_range']:
+            self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0], agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
+            self.critic_learning_rate = np.random.uniform(agent_config['lr_uniform'][0], agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
+        else:
+            self.actor_learning_rate = agent_config['actor_learning_rate']
+            self.critic_learning_rate = agent_config['critic_learning_rate']
+
         self.actor = SoftMaxHeadDynamicLinearNetwork(actor_input, actor_output, self.param, networks['actor'])
         self.target_actor = copy.deepcopy(self.actor)
 
         if not hasattr(self, 'critic_input_size'):
             self.critic_input_size = obs_space + self.acs_space
 
-        '''If want to save memory on an MADDPG run, put networks inside if statement'''
+        '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
         self.critic = DynamicLinearNetwork(self.critic_input_size, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
-        # Optimizers
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        try:
-            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
-        except:
-            pass
+        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
 
-        if agent_config['lr_range']:
-            self.critic_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
-            self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
-            self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
-        else:
-            self.actor_learning_rate = agent_config['actor_learning_rate']
-            self.critic_learning_rate = agent_config['critic_learning_rate']
-            self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+    def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
 
-        self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
-
-    def get_discrete_action(self, observation, step_count, evaluate,device):
         if evaluate:
-<<<<<<< HEAD
-            action = self.actor(torch.tensor(observation).to(device).float()).detach()
-=======
+# <<<<<<< HEAD
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            self.ou_noise.set_scale(self.noise_scale)
-            action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-            action = torch.abs(action)
-            action = action / action.sum()
-            # print("Agent Evaluate {}".format(action))
->>>>>>> robocup-mpi-pbt
+# =======
+#             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+#             self.ou_noise.set_scale(self.noise_scale)
+#             action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+#             action = torch.abs(action)
+#             action = action / action.sum()
+#             # print("Agent Evaluate {}".format(action))
+# >>>>>>> robocup-mpi-pbt
         else:
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.noise_scale)
@@ -120,11 +100,11 @@ class DDPGAgent(Agent):
                 action = softmax(torch.from_numpy(action), dim=-1)
             else:
                 self.ou_noise.set_scale(self.noise_scale)
-<<<<<<< HEAD
-                action = self.actor(torch.tensor(observation).to(device).float()).detach()
-=======
+# <<<<<<< HEAD
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
->>>>>>> robocup-mpi-pbt
+# =======
+#                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+# >>>>>>> robocup-mpi-pbt
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
                 action = torch.abs(action)
                 action = action / action.sum()

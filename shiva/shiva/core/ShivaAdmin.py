@@ -227,11 +227,7 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         # self.log("{} {} {} {} {}".format(learner.id, agent, scalar_name, value_y, value_x) )
-<<<<<<< HEAD
-        if type(agent) == np.int64:
-=======
         if type(agent) == np.int64 or type(agent) == int:
->>>>>>> robocup-mpi-pbt
             '''Agent ID was sent'''
             self.writer[learner.id][agent].add_scalar(scalar_name, value_y, value_x)
         else:
@@ -460,13 +456,8 @@ class ShivaAdmin():
             if this_agent_folder in pols:
                 # this_agent_policies.append(pols)
                 policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
-<<<<<<< HEAD
                 _new_agent.load_net(policy_name, pols)
-                _new_agent.device = torch.device('cpu')     
-=======
-                _new_agent.load_net(policy_name, pols)    
->>>>>>> robocup-mpi-pbt
-              
+                _new_agent.device = torch.device('cpu')
         return _new_agent
 
     def _load_buffer(self, path) -> list:
@@ -484,16 +475,7 @@ class ShivaAdmin():
 
     def log(self, msg, to_print=False):
         text = "Admin\t\t{}".format(msg)
-        self.logger.info(text, to_print or self.print_debug)
-
+        # self.logger.info(text, to_print or self.print_debug)
+        self.logger.info(text, False)
 
 ###########################################################################
-<<<<<<< HEAD
-=======
-#
-###########################################################################
->>>>>>> robocup-mpi-pbt
-
-class ShivaAdmin2(ShivaAdmin):
-    def __init__(self, *args, **kwargs):
-        super(ShivaAdmin2, self).__init__(*args, **kwargs)
