@@ -96,7 +96,7 @@ class MPIImitationLearner(Learner):
         while self.train:
             while not self.dagger:
                 self.log("Supervised Learning")
-                time.sleep(0.001)
+                time.sleep(0.00001)
                 self._receive_super_trajectory_numpy()
 
                 # self.log('Episodes collected: {}'.format(self.done_count))
@@ -119,7 +119,7 @@ class MPIImitationLearner(Learner):
             
             while self.dagger:
                 self.log("Dagger Learning")
-                time.sleep(0.001)
+                time.sleep(0.00001)
                 self._receive_dagger_trajectory_numpy()
 
                 '''Change freely condition when to update'''

@@ -77,7 +77,7 @@ class MPIRoboCupImitationEnv(Environment):
                 self._send_super_trajectory_numpy()
                 # self.log('Episode_count: {}'.format(self.done_count))
                 self.env.reset()
-                time.sleep(0.1)
+                time.sleep(0.01)
     
     def dagger_run(self):
         while True:
@@ -90,7 +90,7 @@ class MPIRoboCupImitationEnv(Environment):
                 self._send_dagger_trajectory_numpy()
                 # self.log('Episode_count: {}'.format(self.done_count))
                 self.env.reset()
-                time.sleep(0.1)
+                time.sleep(0.01)
 
     def descritize_action(self, action):
         return self.env.descritize_action(action)
