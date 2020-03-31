@@ -208,6 +208,11 @@ class MPIEvalEnv(Environment):
         # initiate env from the config
         self.env = self.create_environment()
         self.num_agents = self.env.num_agents
+        if 'RoboCup' in self.type:
+            self.reward_factors = dict()
+            for reward in self.configs['Agent']['reward_events']:
+                self.reward_factors[reward] = 1
+            self.env.env.set_agent_rewards(self.reward_factors)
 
 
     def create_environment(self):

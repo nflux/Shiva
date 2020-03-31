@@ -245,8 +245,9 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.step_count += 1
         self.done_count += 1 if self.done else 0
         self.reward_per_episode += sum(self.rews)
-        self.goal_ctr += 1 if self.isGoal() else 0
-        self.goal = 1 if self.isGoal() else 0
+        if self.isGoal():
+            self.goal_ctr += 1
+            self.goal = 1
 
     def get_metrics(self, episodic=False):
         if not episodic:

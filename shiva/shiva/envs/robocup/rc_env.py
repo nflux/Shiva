@@ -723,7 +723,7 @@ class rc_env:
         # so this appears to be working, maybe just because the agent doesn't really have to run to it
         # will verify after I fix HPI
         if team_obs[agentID][self.stamina] < 0.0:  # LOW STAMINA
-            reward -= (low_stamina_points * self.low_stamina_factor)
+            reward += (low_stamina_points * self.low_stamina_factor)
             team_reward -= 1
             # print("agent is getting penalized for having low stamina")
 
@@ -762,7 +762,7 @@ class rc_env:
         #print('RC_Env {} Team Reward: {} '.format(self.env_id,team_reward+1))
         #print('RC_Env {} kickable {} '.format(self.env_id,kickable))
         #print('RC_Env {} first kickable {} '.format(self.env_id,self.first_kickable))
-        if self.get_kickable_status(agentID, env) and not self.first_kickable:
+        if self.left_kickable[agentID]  and not self.first_kickable:
             reward += (first_kickable_points * self.first_kickable_factor)
             team_reward += 1.5
             self.first_kickable = True
@@ -1050,9 +1050,9 @@ class rc_env:
         metrics = dict()
         metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball / self.initial_distance_to_ball
         metrics['inv_steps_to_kick'] = 1.0 - (float(self.inv_steps_to_kick) / float(self.ep_length)) if self.first_kick else 0
-        metrics['distance_to_opp_goal'] = (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal)
-        metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal
-        metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length))
+        metrics['distance_to_opp_goal'] = (self.min_distance_to_opp_goal / self.initial_distance_to_opp_goal) if self.first_kick else 1
+        metrics['distance_to_own_goal'] = self.min_distance_to_own_goal / self.initial_distance_to_own_goal if self.first_kick else 1
+        metrics['inv_steps_to_goal'] = 1.0 - (float(self.inv_steps_to_goal) / float(self.ep_length)) if self.goal else 0
         return metrics
 
     def set_agent_rewards(self,reward_factors):

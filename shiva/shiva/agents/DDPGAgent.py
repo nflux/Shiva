@@ -220,12 +220,13 @@ class DDPGAgent(Agent):
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
-    def robocup_exploration(self,evo_agent):
+    def robocup_exploration(self):
         perturb_prob = 1 / self.num_adaptable_params
-        resample_prob = 1 / perturb_prob
+        resample_prob =  perturb_prob / 10
         keep_prob = 1 - perturb_prob - resample_prob
         options = ['pass','resample','perturb']
-        option_probs = [keep_prob,resample_prob,perturb_prob]
+        option_probs = [keep_prob,resample_prob,perturb_prob] 
+        print('Option Probs: {}'.format(option_probs))
 
         choice = np.random.choice(options,size = self.num_adaptable_params,p=option_probs)
         if choice[0] == 'resample':
