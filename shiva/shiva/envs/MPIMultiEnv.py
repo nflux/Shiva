@@ -26,7 +26,9 @@ class MPIMultiEnv(Environment):
 
     def launch(self):
         self._connect_io_handler()
-        self.device = torch.device('cpu')
+
+        # self.device = torch.device('cpu')
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         # Open Port (for Learners)
         self.port = MPI.Open_port(MPI.INFO_NULL)
@@ -148,7 +150,7 @@ class MPIMultiEnv(Environment):
                 actions.append(env_actions)
             # actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
         elif 'RoboCup' in self.type:
-            actions = [[agent.get_action(obs, self.step_count,self.device) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+            actions = [[agent.get_action(obs, self.step_count, self.device) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
 
         actions = np.array(actions)
         self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions), verbose_level=3)
@@ -199,6 +201,8 @@ class MPIMultiEnv(Environment):
             if not learner_spec['evaluate']:
                 learner_agents = Admin._load_agents(learner_spec['load_path'])
                 for a in learner_agents:
+                    '''Force Agent to use self.device'''
+                    a.device = self.device
                     agents[self.env_specs['roles'].index(a.role)] = a
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
         self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)

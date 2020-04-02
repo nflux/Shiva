@@ -24,6 +24,10 @@ class MPIEvaluation(Evaluation):
         Admin.init(self.configs)
 
         self._connect_io_handler()
+
+        # self.device = torch.device('cpu')
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
         self._launch_envs()
         self.meval.gather(self._get_eval_specs(), root=0) # checkin with MultiEvalWrapper
 
@@ -200,6 +204,7 @@ class MPIEvaluation(Evaluation):
         self.role2agent = {}
         for role in self.env_specs['roles']:
             for ix, agent in enumerate(self.agents):
+                agent.device = self.device
                 if role == agent.role:
                     self.role2agent[role] = ix
                     break

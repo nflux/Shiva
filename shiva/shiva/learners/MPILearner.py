@@ -106,7 +106,7 @@ class MPILearner(Learner):
         self.last_metric_received = None
         for comm in self.envs:
             self.receive_trajectory_numpy(comm)
-        if self.last_metric_received is not None and self.done_count % 20 == 0:
+        if self.last_metric_received is not None: # and self.done_count % 20 == 0:
             self.log("{}".format(self.last_metric_received), verbose_level=1)
 
     def receive_trajectory_numpy(self, env_comm):
@@ -215,7 +215,7 @@ class MPILearner(Learner):
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
                 self.evolution_config = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)  # block statement
                 self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=1)
-                return
+                
                 for evol_config in self.evolution_config:
                     agent = self.get_agent_of_id(evol_config['agent_id'])
                     if evol_config['evolution'] == False:

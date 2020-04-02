@@ -28,7 +28,8 @@ class MPIPBTMetaLearner(MetaLearner):
         self.run()
 
     def run(self):
-        self.start_evals_flag = False # Evaluations will start once 1 Learner asks for evolution configs
+        self.start_evals_flag = True # If False, evaluations will start once 1 Learner asks for evolution configs
+
         self.review_training_matches() # send first match
         while True:
             time.sleep(self.configs['Admin']['time_sleep']['MetaLearner'])

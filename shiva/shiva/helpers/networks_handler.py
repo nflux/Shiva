@@ -67,5 +67,5 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
         except TypeError:
             net_layers.append(output_function())
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    return nn.Sequential(*net_layers).to(device)
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    return nn.Sequential(*net_layers)#.to(device)
