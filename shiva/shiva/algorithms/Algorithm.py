@@ -41,6 +41,9 @@ class Algorithm():
         '''
         assert "Method Not Implemented"
 
+    def evolve(self):
+        raise NotImplemented
+
     def get_num_updates(self):
         return self.num_updates
 
@@ -76,6 +79,8 @@ class Algorithm():
     def get_agents(self):
         return self.agents
 
-    def log(self, msg, to_print=False):
-        text = '{}\t{}'.format(self, msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['Algorithm']:
+            text = '{}\t{}'.format(self, msg)
+            logger.info(text, to_print or self.configs['Admin']['print_debug'])

@@ -20,7 +20,7 @@ class Tags(IntEnum):
     trajectory_eval = 8
     new_agents_request=9
     new_agents = 10
-    clear_buffers=11
+    clear_buffers = 11
     #For updated rankings
     rankings = 12
     new_pbt_agents = 13

@@ -1,6 +1,6 @@
 import torch
 
-from shiva.core.admin import Admin
+from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_class
 
 class Learner(object):
@@ -75,6 +75,7 @@ class Learner(object):
 
     def _add_summary_writer(self, agent_id, metrics):
         for m in metrics:
+            # self.log("Agent {}, Metric {}".format(agent_id, m))
             if type(m) == list:
                 '''Is a list of set metrics'''
                 for metric_name, y_val in m:
@@ -94,28 +95,23 @@ class Learner(object):
                 self.checkpoints_made += 1
 
     def update(self):
-        assert 'Not implemented'
-        pass
+        raise NotImplemented
 
     def step(self):
-        assert 'Not implemented'
-        pass
+        raise NotImplemented
 
     def create_environment(self):
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
 
     def get_agents(self):
-        assert 'Not implemented'
-        pass
+        raise NotImplemented
 
     def get_algorithm(self):
-        assert 'Not implemented'
-        pass
+        raise NotImplemented
 
     def launch(self):
-        assert 'Not implemented'
-        pass
+        raise NotImplemented
 
     def save(self):
         Admin.save(self)
@@ -134,3 +130,9 @@ class Learner(object):
         id = self.agentCount
         self.agentCount +=1
         return id
+
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['Learner']:
+            text = '{}\t\t{}'.format(str(self), msg)
+            logger.info(text, to_print=to_print or self.configs['Admin']['print_debug'])

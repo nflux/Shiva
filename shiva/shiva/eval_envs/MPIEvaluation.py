@@ -1,11 +1,9 @@
 import sys, time, traceback, pickle,torch
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
-import logging
 from mpi4py import MPI
 import numpy as np
 
-from shiva.core.admin import logger
 from shiva.eval_envs.Evaluation import Evaluation
 from shiva.helpers.misc import terminate_process, flat_1d_list
 from shiva.utils.Tags import Tags
@@ -23,15 +21,17 @@ class MPIEvaluation(Evaluation):
         # Receive Config from MultiEvalWrapper
         self.configs = self.meval.bcast(None, root=0)
         super(MPIEvaluation, self).__init__(self.configs)
-        self.io = MPI.COMM_WORLD.Connect(self.evals_io_port, MPI.INFO_NULL)
+        Admin.init(self.configs)
 
+        self._connect_io_handler()
         self._launch_envs()
         self.meval.gather(self._get_eval_specs(), root=0) # checkin with MultiEvalWrapper
 
+        '''Set functions and data structures'''
         if 'RoboCup' in self.env_specs['type']:
             self.agent_sel = self.meval.recv(None, source=0, tag=Tags.new_agents)
             self._io_load_agents()
-            self.log("Got Agents {}".format([str(a) for a in self.agents]))
+            self.log("Got Agents {}".format([str(a) for a in self.agents]), verbose_level=1)
             self.agent_ids = [id for id in self.agent_sel]
             print('Agent IDs: ', self.agent_ids)
             print('Agent Sel: ', self.agent_sel)
@@ -40,8 +40,10 @@ class MPIEvaluation(Evaluation):
             self._receive_eval = self._receive_eval_numpy
             self.ep_evals = dict()
             self.eval_counts = np.zeros(len(self.agent_ids), dtype=int)
-        elif 'Unity' in self.configs['Environment']['type'] or 'ParticleEnv' in self.configs['Environment']['type']:
-            self._receive_new_match()
+        elif 'Gym' in self.configs['Environment']['type'] \
+                or 'Unity' in self.configs['Environment']['type'] \
+                or 'ParticleEnv' in self.configs['Environment']['type']:
+            self._receive_new_match() # receive first match
             self._receive_eval = self._receive_roles_evals
             self.done_evaluating = self.done_evaluating_roles
             self.send_eval_update_agents = self.send_roles_eval_update_agents
@@ -52,7 +54,7 @@ class MPIEvaluation(Evaluation):
 
         # Give start flag!
         self.envs.bcast([True], root=MPI.ROOT)
-        self.log('Eval Envs have been told to start!')
+        self.log('Eval Envs have been told to start!', verbose_level=1)
         self.run()
 
     def run(self):
@@ -67,7 +69,7 @@ class MPIEvaluation(Evaluation):
 
 
         while True:
-            time.sleep(0.01)
+            time.sleep(self.configs['Admin']['time_sleep']['Evaluation'])
             self._receive_eval()
             self._step_python()
             # self._step_numpy()
@@ -80,8 +82,6 @@ class MPIEvaluation(Evaluation):
 
     def _step_python(self):
         self._obs_recv_buffer = self.envs.gather(None, root=MPI.ROOT)
-        # self.log("Obs Shape {}".format(np.array([self._obs_recv_buffer]).shape))
-
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         if 'Unity' in self.env_specs['type']:
             actions = []
@@ -116,8 +116,7 @@ class MPIEvaluation(Evaluation):
                 env_actions.append(role_actions)
                 actions.append(env_actions)
         self.actions = np.array(actions)
-        # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions))
-        # self.log("Step {}".format(self.step_count))
+        self.log("Step {} Obs {} Acs {}".format(self.step_count, self._obs_recv_buffer, actions), verbose_level=2)
         self.envs.scatter(actions, root=MPI.ROOT)
 
     def _step_numpy(self):
@@ -144,7 +143,7 @@ class MPIEvaluation(Evaluation):
     '''
 
     def done_evaluating_roles(self):
-        return self.eval_counts >= self.eval_episodes
+        return len(self.eval_metrics) >= self.eval_episodes
 
     def _receive_roles_evals(self):
         '''Receive metrics after every episode from each Environment'''
@@ -152,16 +151,18 @@ class MPIEvaluation(Evaluation):
             env_source = self.info.Get_source()
             env_metrics = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
             self.eval_metrics.append(env_metrics)
-            self.eval_counts += 1
-            self.log("Got Metrics {}".format(env_metrics))
+            self.log("Got Metrics {}".format(env_metrics), verbose_level=2)
 
     def send_roles_eval_update_agents(self):
         '''Do averaging of metrics across all metrics received, then send'''
         evals = {role:{} for role in self.roles}
         metrics_received = []
+
+        # rename metric
         metric_conversion = {
             'reward_per_episode': 'Average_Reward'
         }
+        self.log("To summarize {}".format(self.eval_metrics), verbose_level=2)
 
         for episode_metric in self.eval_metrics:
             for metric_name, role_values in episode_metric.items():
@@ -180,16 +181,19 @@ class MPIEvaluation(Evaluation):
                 del evals[role][metric_name]
 
         self.meval.send(evals, dest=0, tag=Tags.evals)
-        self.log("Sent Tags.evals {}".format(evals))
+        self.log("Sent Tags.evals {}".format(evals), verbose_level=2)
         self._receive_new_match()
 
     def _receive_new_match(self):
-        '''Wait until we get new match'''
-        self.role2id = self.meval.recv(None, source=0, tag=Tags.new_agents)
-        self.agent_ids = [self.role2id[role] for role in self.roles] # keep same order of the self.roles list
-        self._io_load_agents()
+        '''Is a blocking function - chances are that there will be a message'''
+        # self.role2id = self.meval.recv(None, source=0, tag=Tags.new_agents)
+        self.role2learner_spec = self.meval.recv(None, source=0, tag=Tags.new_agents)
+        self.log("Received Match {}".format(self.role2learner_spec), verbose_level=3)
+        '''Assuming a Learner has 1 Agent per Role'''
+        self.agent_ids = [self.role2learner_spec[role]['role2ids'][role][0] for role in self.roles] # keep same order of the self.roles list
+        self.agents = self.load_agents(self.role2learner_spec)
         self.role2agent = self.get_role2agent()
-        self.log("Got match for: {}".format(self.agent_ids))
+        self.log("Got match for: {}".format(self.agent_ids), verbose_level=2)
 
     def get_role2agent(self):
         '''Create Role->AgentIX mapping'''
@@ -200,6 +204,32 @@ class MPIEvaluation(Evaluation):
                     self.role2agent[role] = ix
                     break
         return self.role2agent
+
+    def load_agents(self, role2learner_spec=None):
+        if role2learner_spec is None:
+            role2learner_spec = self.role2learner_spec
+        self.io.send(True, dest=0, tag=Tags.io_eval_request)
+        _ = self.io.recv(None, source=0, tag=Tags.io_eval_request)
+        agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
+
+        for role, learner_spec in role2learner_spec.items():
+            '''Need to load ONLY the agents that are not being evaluated'''
+            if not learner_spec['evaluate']:
+
+                # Useful when loading all Learners agents
+                # learner_agents = Admin._load_agents(learner_spec['load_path'])
+                # for a in learner_agents:
+                #     agents[self.env_specs['roles'].index(a.role)] = a
+
+                # Here when loading individual Agents
+                '''Assuming Learner has 1 Agent per Role'''
+                agent_id = learner_spec['role2ids'][role][0]
+                agent = Admin._load_agent_of_id(learner_spec['load_path'], agent_id)
+                agents[self.env_specs['roles'].index(agent.role)] = agent
+
+        self.io.send(True, dest=0, tag=Tags.io_eval_request)
+        self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
+        return agents
 
     '''
         Single Agent Methods
@@ -297,7 +327,7 @@ class MPIEvaluation(Evaluation):
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
         self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
-        self.log('Load {}'.format([str(a) for a in self.agents]))
+        self.log('Load {}'.format([str(a) for a in self.agents]), verbose_level=1)
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
 
     def _launch_envs(self):
@@ -305,9 +335,12 @@ class MPIEvaluation(Evaluation):
         self.envs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/eval_envs/MPIEvalEnv.py'], maxprocs=self.num_envs)
         self.envs.bcast(self.configs, root=MPI.ROOT)  # Send them the Config
         envs_spec = self.envs.gather(None, root=MPI.ROOT)  # Wait for Env Specs (obs, acs spaces)
-        # self.log('Got specs')
         assert len(envs_spec) == self.num_envs, "Not all Environments checked in.."
         self.env_specs = envs_spec[0] # set self attr only 1 of them
+
+    def _connect_io_handler(self):
+        self.io = MPI.COMM_WORLD.Connect(self.evals_io_port, MPI.INFO_NULL)
+        self.log('Connected with IOHandler', verbose_level=2)
 
     def _get_eval_specs(self):
         return {
@@ -320,10 +353,6 @@ class MPIEvaluation(Evaluation):
     def close(self):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
-
-    def log(self, msg, to_print=False):
-        text = "{}\t{}".format(str(self), msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def __str__(self):
         return "<Eval(id={})>".format(self.id)

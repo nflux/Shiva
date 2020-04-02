@@ -29,17 +29,22 @@ class MPIMultiEvaluationWrapper(Evaluation):
         super(MPIMultiEvaluationWrapper, self).__init__(self.configs)
         self._launch_evals()
         self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
-        self.log("Got config and evaluating Agent IDS: {}".format(self.agent_ids))
+        self.log("Got config and evaluating Agent IDS: {}".format(self.agent_ids), verbose_level=1)
 
+        '''Set functions and data structures'''
         if 'RoboCup' in self.configs['Environment']['type']:
             self.evaluations = pd.DataFrame(index=np.arange(0, self.num_agents), columns=self.eval_events+['total_score'])
             self.rankings = np.zeros(self.num_agents)
             self._sort_evals = getattr(self, '_sort_robocup')
             self._get_evaluations = getattr(self, '_get_robocup_evaluations')
-        elif 'Unity' in self.configs['Environment']['type'] or 'ParticleEnv' in self.configs['Environment']['type']:
+        elif 'Gym' in self.configs['Environment']['type'] \
+                or 'Unity' in self.configs['Environment']['type'] \
+                or 'ParticleEnv' in self.configs['Environment']['type']:
             '''Here Evaluation metrics are hardcoded'''
-            self.evaluations = pd.DataFrame(index=[id for id in self.agent_ids], columns=['Role', 'Average_Reward'])
+            self.evaluations = pd.DataFrame(index=[id for id in self.agent_ids], columns=['Learner_ID', 'Role', 'Average_Reward'])
+            self.evaluations['Learner_ID'] = self.evaluations.index.map(self.get_learner_id)
             self.evaluations['Role'] = self.evaluations.index.map(self.get_role)
+            self.evaluations['Learner_ID'] = self.evaluations.index.map(self.get_learner_id)
             self.rankings = {role:[] for role in self.roles}
             self.current_matches = {eval_id:{} for eval_id in range(self.num_evals)}
             self._sort_evals = self._sort_roles
@@ -52,15 +57,17 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self._sort_evals = getattr(self, '_sort_simple')
             self._get_evaluations = getattr(self, '_get_simple_evaluations')
 
+        self.log("Waiting start flag..", verbose_level=1)
+        start_flag = self.meta.bcast(None, root=0)
+        self.log("Start running..!!", verbose_level=1)
         self.run()
 
     def run(self):
-        self.log('MultiEvalWrapper start Running')
         self.initial_agent_selection()
         self._get_initial_evaluations()
 
         while True:
-            time.sleep(0.1)
+            time.sleep(self.configs['Admin']['time_sleep']['EvalWrapper'])
             self._get_evaluations(sort=True)
             if self.sort:
                 self._sort_evals()
@@ -88,25 +95,30 @@ class MPIMultiEvaluationWrapper(Evaluation):
             * other approach, could be of creating a pool of possible matches (both with pairs and/or broken pairs) and grab a random one from the pool
         '''
         match = {}
-        self.restrict_pairs_proba = 1
-        restrict_pairs = lambda: np.random.uniform() < self.restrict_pairs_proba
+        # self.restrict_pairs_proba = 1
+        # restrict_pairs = lambda: np.random.uniform() < self.restrict_pairs_proba
         is_full = lambda x: len(self.roles) == len(x.keys())
         for role in self.roles:
             agent_id = np.random.choice(self.role2ids[role])
-            match[role] = agent_id
-            if restrict_pairs():  # probability function
-                pair_bool, pairs = self.has_pair(agent_id, role)
-                if pair_bool:
-                    for pair_role, pair_id in pairs.items():
-                        '''Assuming that Learners have only 1 Agent per Role'''
-                        match[pair_role] = pair_id[0]
-                if is_full(match):
-                    break
+            if role in match:
+                continue
+
+            # match[role] = agent_id
+            # match[role] = {'learner_id': self.get_learner_id(agent_id), 'agent_id': agent_id}
+            match[role] = self.get_learner_spec(agent_id)
+
+            pair_bool, pairs = self.has_pair(agent_id, role)
+            '''Force pairs to play together'''
+            if pair_bool:
+                for pair_role, pair_id in pairs.items():
+                    match[pair_role] = pair_id[0] # Assuming that Learners have only 1 Agent per Role
+            if is_full(match):
+                break
         return match
 
     def has_pair(self, agent_id, role):
         has = False
-        for l_spec in self.learner_specs:
+        for l_spec in self.learners_specs:
             if agent_id in l_spec['agent_ids'] and len(l_spec['agent_ids']) > 1:
                 for l_roles in l_spec['roles']:
                     if role != l_roles:
@@ -129,29 +141,39 @@ class MPIMultiEvaluationWrapper(Evaluation):
             '''Update internal dataframe @self.evaluations'''
             for role, metrics in evals.items():
                 # @metrics has only 'Average_Reward' for now
-                agent_id = eval_match[role]
+                '''Assuming a Learner has 1 Agent per Role'''
+                agent_id = eval_match[role]['role2ids'][role][0]
                 for metric_name, value in metrics.items():
                     self.evaluations.at[agent_id, metric_name] = value
             self.sort = sort
             self.ready = True
             self._send_new_match(eval_id)
-            self.log("\nGot Tags.evals {} for match {}".format(evals, eval_match))
+            self.log("\nGot Evals {} for match {}".format(evals, eval_match), verbose_level=2)
 
     def _sort_roles(self):
         '''Sort Evaluations and updates MetaLearner'''
         '''Assuming 1 evaluation metric: Average Reward'''
         self.evaluations.sort_values(by=['Role', 'Average_Reward'], ascending=False, inplace=True)
-
         for role in self.roles:
             self.rankings[role] = self.evaluations[self.evaluations['Role']==role].index.tolist()
         self.meta.send(self.rankings, dest=0, tag=Tags.rankings)
-        self.log("\n{}\n{}".format(self.evaluations, self.rankings))
+        self.log("Rankings\n{}".format(self.evaluations), verbose_level=1)
         self.sort = False
 
     def get_role(self, agent_id):
         for role, role_agent_ids in self.role2ids.items():
             if agent_id in role_agent_ids:
                 return role
+
+    def get_learner_id(self, agent_id):
+        for spec in self.learners_specs:
+            if agent_id in spec['agent_ids']:
+                return spec['id']
+
+    def get_learner_spec(self, agent_id):
+        for spec in self.learners_specs:
+            if agent_id in spec['agent_ids']:
+                return spec
 
     '''
         Single Agent Methods
@@ -168,7 +190,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
             self.evaluations[agent_id] = evals.mean()
             self.sort = sort
-            self.log('Multi Evaluation has received evaluations!')
+            self.log('Multi Evaluation has received evaluations!', verbose_level=2)
             self.agent_selection(env_source)
 
     def _get_robocup_evaluations(self, sort):
@@ -187,14 +209,14 @@ class MPIMultiEvaluationWrapper(Evaluation):
                         averages[key] = evals[i][key]
             self.evaluations.loc[agent_id,keys] = averages
             self.sort = sort
-            self.log('Multi Evaluation has received evaluations')
+            self.log('Multi Evaluation has received evaluations', verbose_level=2)
             self.agent_selection(env_source)
 
     def _sort_simple(self):
         self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__, reverse=True))
-        self.log('Rankings: {}'.format(self.rankings))
-        self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
-        self.log('Sent rankings to Meta')
+        self.log('Rankings:\n{}'.format(self.rankings), verbose_level=1)
+        self.meta.send(self.rankings, dest=0, tag=Tags.rankings)
+        self.log('Sent rankings to Meta', verbose_level=2)
         self.sort = False
 
     def _sort_robocup(self):
@@ -212,12 +234,12 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.evaluations.sort_values(by=self.eval_events, ascending=self.sort_ascending, inplace=True)
         # self.evaluations.sort_values(by=self.eval_events,inplace=True)
         self.rankings = np.array(self.evaluations.index)
-        self.log('Rankings: {}'.format(self.rankings))
-        self.log('Current Rankings DataFrame: {}'.format(self.evaluations))
+        self.log('Rankings: {}'.format(self.rankings), verbose_level=2)
+        self.log('Current Rankings DataFrame: {}'.format(self.evaluations), verbose_level=1)
         self.evaluations.sort_index(inplace=True)
-        self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
-        self.log('Sent rankings to Meta')
-        self.log('Current Rankings DataFrame: {}'.format(self.evaluations))
+        self.meta.send(self.rankings, dest=0, tag=Tags.rankings)
+        self.log('Sent rankings to Meta', verbose_level=2)
+        self.log('Current Rankings DataFrame: {}'.format(self.evaluations), verbose_level=2)
         self.sort = False
 
 
@@ -238,7 +260,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         eval_specs = self.evals.gather(None, root=MPI.ROOT)
         assert len(eval_specs) == self.num_evals, "Not all Evaluations checked in.."
         self.eval_specs = eval_specs[0] # set self attr only 1 of them
-        self.log("Got EvaluationSpecs {}".format(self.eval_specs))
+        self.log("Got EvaluationSpecs {}".format(self.eval_specs), verbose_level=1)
 
     def _get_meval_specs(self):
         return {
@@ -252,9 +274,11 @@ class MPIMultiEvaluationWrapper(Evaluation):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def log(self, msg, to_print=False):
-        text = "{}\t{}".format(str(self), msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['EvalWrapper']:
+            text = "{}\t{}".format(str(self), msg)
+            logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def __str__(self):
         return "<MultiEval(id={})>".format(self.id)

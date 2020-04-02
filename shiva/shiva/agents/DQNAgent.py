@@ -42,7 +42,8 @@ class DQNAgent(Agent):
             obs = torch.tensor(obs).float()
         if evaluate:
             return self.find_best_action(self.policy, obs)
-        if step_n < self.exploration_steps or random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
+        # if step_n < self.exploration_steps or random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n * self.epsilon_decay)):
+        if step_n < self.exploration_steps or self.is_e_greedy(step_n):
             '''Random action or e-greedy exploration'''
             # check if obs is a batch!
             if len(obs.shape) > 1:

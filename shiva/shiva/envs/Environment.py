@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from shiva.core.admin import logger
 
 class Environment:
     def __init__(self, configs):
@@ -84,3 +85,9 @@ class Environment:
 
     def _normalize_reward(self, reward):
         return (self.b-self.a)*(reward-self.min)/(self.max-self.min)
+
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['Env']:
+            text = "{}\t\t\t{}".format(str(self), msg)
+            logger.info(text, to_print or self.configs['Admin']['print_debug'])

@@ -4,9 +4,6 @@ from shiva.agents.DDPGAgent import DDPGAgent
 class MADDPGAgent(DDPGAgent):
     def __init__(self, id: int, obs_space: int, acs_space: dict, agent_config: dict, networks: dict):
         super(MADDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
-        self.step_count = 0
-        self.done_count = 0
-        self.num_updates = 0
 
     def save(self, save_path, step):
         torch.save(self.actor, save_path + '/actor.pth')
@@ -17,4 +14,4 @@ class MADDPGAgent(DDPGAgent):
         # torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
 
     def __str__(self):
-        return '<MADDPGAgent(id={}, role={}, steps={}, episodes={}, update={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates)
+        return '<MADDPGAgent(id={}, role={}, steps={}, episodes={}, num_updates={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates)

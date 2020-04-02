@@ -2,6 +2,7 @@ import shiva.helpers.misc as misc
 import torch
 import torch.nn as nn
 
+
 def parse_functions(package, funcs_str):
     '''
         Input

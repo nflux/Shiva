@@ -6,8 +6,6 @@ from shiva.helpers import networks_handler as nh
 class DynamicLinearNetwork(torch.nn.Module):
     def __init__(self, input_dim, output_dim, config):
         super(DynamicLinearNetwork, self).__init__()
-        torch.manual_seed(5)
-
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # print(config)
         self.config = config
@@ -36,8 +34,6 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                 @config
         '''
         super(SoftMaxHeadDynamicLinearNetwork, self).__init__()
-        torch.manual_seed(5)
-
         self.config = config
         self.param_ix = param_ix
         self.gumbel = partial(torch.nn.functional.gumbel_softmax, tau=1, hard=True, dim=-1)

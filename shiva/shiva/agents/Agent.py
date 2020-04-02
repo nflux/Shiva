@@ -1,6 +1,7 @@
 import time
 import torch
 import torch.nn
+import random
 from shiva.core.admin import logger
 
 class Agent(torch.nn.Module):
@@ -38,48 +39,42 @@ class Agent(torch.nn.Module):
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)
 
-    # def save(self, save_path, step):
-    #     '''
-    #         Do something like
-    #             torch.save(self.policy, save_path + '/policy.pth')
-    #             torch.save(self.critic, save_path + '/critic.pth')
-    #         Or as many policies the Agent has
+    def instantiate_networks(self):
+        raise NotImplemented
 
-    #         Important:
-    #             Maintain the .pth file name to have the same name as the Agent attribute
-    #     '''
-    #     assert False, "Method Not Implemented"
+    def save(self, save_path, step):
+        '''
+            During saving maintain the .pth file name to have the same name as the Agent attribute
+                torch.save(self.policy, save_path + '/policy.pth')
+                torch.save(self.critic, save_path + '/critic.pth')
+        '''
+        raise NotImplemented
 
     def load_net(self, policy_name, policy_file):
-        '''
-            TBD
-            Load as many policies the Agent needs (actor, critic, target, etc...) on the agents folder @load_path
+        setattr(self, policy_name, torch.load(policy_file, map_location=torch.device('cpu')))
+        # flag = True
+        # while flag:
+        #     try:
+        #         setattr(self, policy_name, torch.load(policy_file, map_location=torch.device('cpu')))
+        #         flag = False
+        #     except:
+        #         # try again
+        #         time.sleep(0.25)
+        #         pass
 
-            Do something like
-                self.policy = torch.load(load_path)
-            OR maybe even better:
-                setattr(self, policy_name, torch.load(policy_file))
-
-            Possible approach:
-            - ShivaAdmin finds the policies saved for the Agent and calls this method that many times
-
-        '''
-        flag = True
-        while flag:
-            try:
-                setattr(self, policy_name, torch.load(policy_file,map_location=torch.device('cpu')))
-                flag = False
-            except:
-                # try again
-                time.sleep(0.25)
-                pass
+    def load_state_dict(self, policy_name, state_dict_path):
+        net = getattr(self, policy_name)
+        net.load_state_dict(torch.load(state_dict_path))
 
     def reset_device(self):
         self.device = torch.device("cpu")
 
 
     def get_action(self, obs):
-        assert False, "Method Not Implemented"
+        raise NotImplemented
+
+    def get_metrics(self):
+        raise NotImplemented
 
     def log(self, msg, to_print=False):
         text = '{}\t{}'.format(self, msg)
@@ -98,9 +93,3 @@ class Agent(torch.nn.Module):
         for g in optim.param_groups:
             # print(g['lr'])
             g['lr'] = lr
-
-    # def save(self, save_path, step_count):
-    #     torch.save(self, save_path + 'agent.pth')
-
-    # def load(self, save_path):
-    #     self = torch.load(save_path + 'agent.pth')

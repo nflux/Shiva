@@ -42,7 +42,7 @@ class GymEnvironment(Environment):
         self.roles = ['Agent_0']
         self.num_instances_per_role = 1
         self.num_instances_per_env = 1
-        self.agent_ids = [0]
+        # self.agent_ids = [0]
 
         self.steps_per_episode = 0
         self.step_count = 0
@@ -101,21 +101,18 @@ class GymEnvironment(Environment):
         self.done = False
         self.obs = self.env.reset()
 
-    def get_metrics(self, episodic=False):
+    def get_metrics(self, episodic):
         if not episodic:
             metrics = [
-                ('Reward/Per_Step', self.reward_per_step)
+                ('Reward/Per_Step', self.reward_per_step),
             ]
         else:
             metrics = [
                 ('Reward/Per_Episode', self.reward_per_episode),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
-            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
-
-            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
-
-        return metrics
+        return [metrics] # single role metrics!
+        # return metrics
 
     def is_done(self):
         return self.done
@@ -167,8 +164,10 @@ class GymEnvironment(Environment):
         '''
         return self.reward_per_episode
 
-    def get_reward_episode(self):
-        return self.reward_episode
+    def get_reward_episode(self, roles=False):
+        if roles:
+            return {self.roles[0]:self.reward_per_episode}
+        return self.reward_per_episode
 
     def load_viewer(self):
         if self.render:

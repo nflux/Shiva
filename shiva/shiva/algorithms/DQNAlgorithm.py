@@ -21,7 +21,7 @@ class DQNAlgorithm(Algorithm):
         self.loss = torch.tensor([0])
 
     def update(self, agents, buffer, step_count, episodic):
-        self.log("Start update # {}".format(self.num_updates))
+        # self.log("Start update # {}".format(self.num_updates))
         for _ in range(self.update_iterations):
             self._update(agents, buffer, step_count, episodic)
         self.num_updates += self.update_iterations
@@ -211,9 +211,9 @@ class DQNAlgorithm(Algorithm):
         self.agent = DQNAgent(id, self.obs_space, self.acs_space, self.configs['Agent'], self.configs['Network'])
         return self.agent
 
-    def create_agent_of_role(self, role):
+    def create_agent_of_role(self, id, role):
         self.configs['Agent']['role'] = role
-        return self.create_agent()
+        return self.create_agent(id)
 
     def get_metrics(self, episodic=False, agent_id=0):
         if not episodic:

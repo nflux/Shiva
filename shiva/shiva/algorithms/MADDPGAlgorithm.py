@@ -8,6 +8,7 @@ from shiva.utils import Noise as noise
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.MADDPGAgent import MADDPGAgent
 from shiva.algorithms.Algorithm import Algorithm
+from shiva.helpers.networks_helper import perturb_optimizer
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork
 from shiva.helpers.misc import one_hot_from_logits
 
@@ -38,23 +39,27 @@ class MADDPGAlgorithm(Algorithm):
                 Critic would think they are just one agent but looking at many datapoints (each agent is a diff datapoint)
                 Agents should have the same Action Space
         '''
-        if not hasattr(self, 'update_iterations'):
-            self.update_iterations = 1
         self.critic_input_size = sum([self.action_space[role]['acs_space'] for role in self.roles]) + sum([self.observation_space[role] for role in self.roles])
+
         if self.method == "permutations":
             '''Single Local Critic'''
             self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.configs['Network']['critic'])
             self.target_critic = copy.deepcopy(self.critic)
             self.optimizer_function = getattr(torch.optim, self.optimizer_function)
-            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.configs['Agent']['critic_learning_rate'])
             self._update = self.update_permutes
         elif self.method == "critics":
             self._update = self.update_critics
         else:
             assert "MADDPG Method {} is not implemented".format(self.method)
 
+        if not hasattr(self, 'update_iterations'):
+            self.update_iterations = 1
+        if self.configs['MetaLearner']['pbt']:
+            self.resample_hyperparameters()
+
     def update(self, agents, buffer, step_count, episodic):
-        # self.log("Start update # {}".format(self.num_updates))
+        self.log("", verbose_level=1)
         self.agents = agents
         for _ in range(self.update_iterations):
             self._update(agents, buffer, step_count, episodic)
@@ -64,7 +69,7 @@ class MADDPGAlgorithm(Algorithm):
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
         dones = bf_dones.bool()
         # self.log("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states, bf_actions, bf_rewards, bf_next_states, dones))
-        # self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape))
+        self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape), verbose_level=3)
         # self.log("FROM BUFFER Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.dtype, bf_actions.dtype, bf_rewards.dtype, bf_next_states.dtype, bf_dones.dtype))
 
         '''Transform buffer actions to a one hot or softmax if needed'''
@@ -203,7 +208,7 @@ class MADDPGAlgorithm(Algorithm):
         dones_mask = torch.tensor(dones[:, 0, 0], dtype=torch.bool).view(-1, 1).to(self.device)
         # dones = dones.bool()
         # self.log("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
-        # self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape))
+        # self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape), verbose_level=3)
         # self.log("FROM BUFFER Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.dtype, bf_actions.dtype, bf_rewards.dtype, bf_next_states.dtype, bf_dones.dtype))
 
         '''Transform buffer actions to a one hot or softmax if needed'''
@@ -302,7 +307,27 @@ class MADDPGAlgorithm(Algorithm):
                 tgt_ct_state[k] = v * self.tau + (1 - self.tau) * tgt_ct_state[k]
             agent.target_critic.load_state_dict(tgt_ct_state)
 
-    def create_agent(self, id):
+    def evolve(self, evol_config):
+        pass
+
+    def clone_to_agent(self, agent):
+        agent.critic = copy.deepcopy(self.critic)
+        agent.critic_optimizer.load_state_dict(self.critic_optimizer.state_dict())
+
+    def copy_weight_from_agent(self, evo_agent):
+        self.critic = copy.deepcopy(evo_agent.critic)
+        self.critic_learning_rate = evo_agent.critic_learning_rate
+        self.critic_optimizer = copy.deepcopy(evo_agent.critic_optimizer)
+
+    def perturb_hyperparameters(self, perturb_factor):
+        self.critic_learning_rate = self.critic_learning_rate * perturb_factor
+        self.critic_optimizer = perturb_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+
+    def resample_hyperparameters(self):
+        self.critic_learning_rate = np.random.uniform(self.configs['Agent']['lr_uniform'][0], self.configs['Agent']['lr_uniform'][1]) / np.random.choice(self.configs['Agent']['lr_factors'])
+        self.critic_optimizer = perturb_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+
+    def create_agents(self):
         assert 'NotImplemented - this method could be creating all Roles agents at once'
 
     def create_agent_of_role(self, id, role):
@@ -326,7 +351,6 @@ class MADDPGAlgorithm(Algorithm):
             if role not in roles_action_space:
                 '''Here is DDPG collapse because we are running a Gym (or similar with single agent)'''
                 roles_action_space[role] = roles_action_space
-            # self.log(role, roles_action_space)
             if roles_action_space[role]['continuous'] == 0:
                 roles_action_space[role]['type'] = 'discrete'
             elif roles_action_space[role]['discrete'] == 0:
@@ -342,9 +366,10 @@ class MADDPGAlgorithm(Algorithm):
         else:
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss[agent_id]),
-                ('Algorithm/Critic_Loss', self.critic_loss[agent_id]),
-                ('Agent/MADDPG/Critic_Learning_Rate', self.critic_learning_rate),
+                ('Algorithm/Critic_Loss', self.critic_loss[agent_id])
             ]
+            # if self.configs['MetaLearner']['pbt']:
+            #     metrics += [('Agent/MADDPG/Critic_Learning_Rate', self.critic_learning_rate)]
         return metrics
 
     def __str__(self):

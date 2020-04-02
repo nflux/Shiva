@@ -27,6 +27,7 @@ def make_dir_timestamp(new_folder: str, create_new_timestamp_folder=False, name_
         new_folder = os.path.join(new_folder, tmpst)
     else:
         new_folder = new_folder + '-' + tmpst
+    new_folder = new_folder.replace(':', '')
     return make_dir(new_folder, overwrite=overwrite)
 
 def find_pattern_in_path(path, pattern):

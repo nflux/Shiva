@@ -168,6 +168,9 @@ class MultiAgentParticleEnv(Environment):
     def get_rewards(self):
         return list(self.rewards.values())
 
+    def get_reward_episode(self, roles=True):
+        return self.reward_per_episode
+
     def display(self):
         if self.render:
             self.env.render()
