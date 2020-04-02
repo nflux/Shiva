@@ -204,7 +204,6 @@ class MPIEvaluation(Evaluation):
         self.role2agent = {}
         for role in self.env_specs['roles']:
             for ix, agent in enumerate(self.agents):
-                agent.device = self.device
                 if role == agent.role:
                     self.role2agent[role] = ix
                     break
@@ -230,6 +229,7 @@ class MPIEvaluation(Evaluation):
                 '''Assuming Learner has 1 Agent per Role'''
                 agent_id = learner_spec['role2ids'][role][0]
                 agent = Admin._load_agent_of_id(learner_spec['load_path'], agent_id)
+                agent.to_device(self.device)
                 agents[self.env_specs['roles'].index(agent.role)] = agent
 
         self.io.send(True, dest=0, tag=Tags.io_eval_request)

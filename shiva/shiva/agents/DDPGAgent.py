@@ -75,6 +75,13 @@ class DDPGAgent(Agent):
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
+    def to_device(self, device):
+        self.device = device
+        self.actor.to(self.device)
+        self.target_actor.to(self.device)
+        self.critic.to(self.device)
+        self.target_critic.to(self.device)
+
     def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
         self.ou_noise.set_scale(self.noise_scale)
         if evaluate:

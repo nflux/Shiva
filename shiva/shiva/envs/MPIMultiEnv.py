@@ -202,7 +202,7 @@ class MPIMultiEnv(Environment):
                 learner_agents = Admin._load_agents(learner_spec['load_path'])
                 for a in learner_agents:
                     '''Force Agent to use self.device'''
-                    a.device = self.device
+                    a.to_device(self.device)
                     agents[self.env_specs['roles'].index(a.role)] = a
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
         self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
