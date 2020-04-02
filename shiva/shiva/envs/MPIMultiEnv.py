@@ -27,8 +27,10 @@ class MPIMultiEnv(Environment):
     def launch(self):
         self._connect_io_handler()
 
-        # self.device = torch.device('cpu')
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        if hasattr(self, 'device') and self.device == 'gpu':
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = torch.device('cpu')
 
         # Open Port (for Learners)
         self.port = MPI.Open_port(MPI.INFO_NULL)
@@ -274,7 +276,7 @@ class MPIMultiEnv(Environment):
             logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def __str__(self):
-        return "<MultiEnv(id={}, num_envs={})>".format(self.id, self.num_envs)
+        return "<MultiEnv(id={}, num_envs={}, device={})>".format(self.id, self.num_envs, self.device)
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

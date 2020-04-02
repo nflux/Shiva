@@ -13,7 +13,6 @@ class Environment:
         self.step_count = 0
         self.done_count = 0
         self.total_episodes_to_play = None
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
 
         # for previous versions support on attribute names

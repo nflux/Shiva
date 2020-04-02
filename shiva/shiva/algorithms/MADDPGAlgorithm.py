@@ -43,7 +43,7 @@ class MADDPGAlgorithm(Algorithm):
 
         if self.method == "permutations":
             '''Single Local Critic'''
-            self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.configs['Network']['critic'])
+            self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.configs['Network']['critic']).to(self.device)
             self.target_critic = copy.deepcopy(self.critic)
             self.optimizer_function = getattr(torch.optim, self.optimizer_function)
             self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.configs['Agent']['critic_learning_rate'])

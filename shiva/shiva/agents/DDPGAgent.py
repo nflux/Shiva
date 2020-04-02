@@ -68,9 +68,9 @@ class DDPGAgent(Agent):
 
     def instantiate_networks(self):
         self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor']).to(self.device)
-        self.target_actor = copy.deepcopy(self.actor).to(self.device)
+        self.target_actor = copy.deepcopy(self.actor)
         '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
-        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.networks_config['critic'])
+        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.networks_config['critic']).to(self.device)
         self.target_critic = copy.deepcopy(self.critic)
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)

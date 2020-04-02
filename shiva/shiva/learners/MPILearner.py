@@ -213,6 +213,7 @@ class MPILearner(Learner):
                 self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution) # ask for evolution configs
 
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
+                self.log("Trying to get evo", verbose_level=1)
                 self.evolution_config = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)  # block statement
                 self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=1)
                 
@@ -277,6 +278,7 @@ class MPILearner(Learner):
         self.role2ids = {role:[] for role in self.roles}
         self.id2role = {}
         for _agent in agents:
+            _agent.to_device(self.alg.device)
             _agent.evaluate = self.evaluate
             self.role2ids[_agent.role] += [_agent.id]
             self.id2role[_agent.id] = _agent.role
