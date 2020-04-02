@@ -201,6 +201,7 @@ class MPIEnv(Environment):
             self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
             self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
         elif 'RoboCup' in self.type:
+            #self.log('Sending Trajectory')
             for ix in range(self.configs['Evaluation']['agents_per_env']):   
                 self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._robo_reshape, self.trajectory_buffers[0].agent_numpy(ix))
 
@@ -218,14 +219,19 @@ class MPIEnv(Environment):
                 # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
                 #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
                 # self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
-
+                #self.log('Just Before Sending')
                 self.learner.send(trajectory_info, dest=self.id, tag=Tags.trajectory_info)
+                #self.log('Sent trajectory info')
                 self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_observations)
+                #self.log('Sent Obs')
                 self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_actions)
+                #self.log('Sent Acs')
                 self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_rewards)
+                #self.log('Sent Rews')
                 self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
+                #self.log('Sent Next Obs')
                 self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
-
+        #self.log('Sent Trajectory')
         self.done_count +=1
         #self.log('Sent Trajectory')
         self.reset_buffers()

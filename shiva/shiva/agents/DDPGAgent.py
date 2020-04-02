@@ -90,30 +90,30 @@ class DDPGAgent(Agent):
             return self.get_parameterized_action(observation, evaluate)
 
     def get_discrete_action(self, observation, step_count, evaluate):
-        if evaluate:
-            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+        #if evaluate:
+            #action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+            #self.ou_noise.set_scale(self.noise_scale)
+            #action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+            #action = torch.abs(action)
+            #action = action / action.sum()
+            # print("Agent Evaluate {}".format(action))
+        #else:
+        if step_count < self.exploration_steps:
             self.ou_noise.set_scale(self.noise_scale)
+            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+            action = torch.from_numpy(action + self.ou_noise.noise())
+            action = softmax(action, dim=-1)
+            # print("Random: {}".format(action))
+        elif np.random.uniform(0, 1) < self.epsilon:
+            action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
+            action = softmax(torch.from_numpy(action), dim=-1)
+        else:
+            self.ou_noise.set_scale(self.noise_scale)
+            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
             action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
             action = torch.abs(action)
             action = action / action.sum()
-            # print("Agent Evaluate {}".format(action))
-        else:
-            if step_count < self.exploration_steps:
-                self.ou_noise.set_scale(self.noise_scale)
-                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
-                action = torch.from_numpy(action + self.ou_noise.noise())
-                action = softmax(action, dim=-1)
-                # print("Random: {}".format(action))
-            elif np.random.uniform(0, 1) < self.epsilon:
-                action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
-                action = softmax(torch.from_numpy(action), dim=-1)
-            else:
-                self.ou_noise.set_scale(self.noise_scale)
-                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-                action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-                action = torch.abs(action)
-                action = action / action.sum()
-                # print("Net: {}".format(action))
+            # print("Net: {}".format(action))
         return action.tolist()
 
     def get_continuous_action(self,observation, step_count, evaluate):

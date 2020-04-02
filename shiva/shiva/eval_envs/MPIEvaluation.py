@@ -151,7 +151,7 @@ class MPIEvaluation(Evaluation):
 
                 for i in range(self.num_envs):
                     self.envs.send([True],dest=i,tag=Tags.clear_buffers)
-                print("Agents have been told to clear buffers for new agents")
+                #print("Agents have been told to clear buffers for new agents")
 
 
 
@@ -178,11 +178,11 @@ class MPIEvaluation(Evaluation):
 
     def send_eval_update_agents(self):
         if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-            print('Sending Eval and updating most recent agent file path ')
+            #print('Sending Eval and updating most recent agent file path ')
             for i in range(self.agents_per_env):
-                self.log('agent_id: {}'.format(self.agent_ids[i]))
+                #self.log('agent_id: {}'.format(self.agent_ids[i]))
                 path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
+                #self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
                 self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
                 self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
                 #self.ep_evals['path'] = path+'/episode_evaluations'
@@ -195,9 +195,9 @@ class MPIEvaluation(Evaluation):
                 self.agent_ids[i] = new_agent
                 print('New Eval Agent: {}'.format(new_agent))
                 path = self.eval_path+'Agent_'+str(new_agent)
-                self.log('Path: {} '.format(path))
+                #self.log('Path: {} '.format(path))
                 self.agents[i] = Admin._load_agents(path)[0]
-                self.log('Agent: {}'.format(str(self.agents[0])))
+                #self.log('Agent: {}'.format(str(self.agents[0])))
                 self.evals[i].fill(0)
                 self.eval_counts[i]=0
                 self.io.send(True, dest=0, tag=Tags.io_eval_request)
@@ -206,11 +206,11 @@ class MPIEvaluation(Evaluation):
 
     def send_robocup_eval_update_agents(self):
         if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-            print('Sending Eval and updating most recent agent file path ')
+            #print('Sending Eval and updating most recent agent file path ')
             for i in range(self.agents_per_env):
-                self.log('agent_id: {}'.format(self.agent_ids[i]))
+                #self.log('agent_id: {}'.format(self.agent_ids[i]))
                 path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                self.log('Sending Evaluations to MultiEval: {}'.format(self.evals_list[i]))
+                #self.log('Sending Evaluations to MultiEval: {}'.format(self.evals_list[i]))
                 self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
                 self.meval.send(self.evals_list[i], dest=0, tag=Tags.evals)
                 #self.ep_evals['path'] = path+'/episode_evaluations'
@@ -223,11 +223,11 @@ class MPIEvaluation(Evaluation):
                 # self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
                 new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
                 self.agent_ids[i] = new_agent
-                print('New Eval Agent: {}'.format(new_agent))
+                #print('New Eval Agent: {}'.format(new_agent))
                 path = self.eval_path+'Agent_'+str(new_agent)
-                self.log('Path: {} '.format(path))
+                #self.log('Path: {} '.format(path))
                 self.agents[i] = Admin._load_agents(path)[0]
-                self.log('Agent: {}'.format(str(self.agents[0])))
+                #self.log('Agent: {}'.format(str(self.agents[0])))
                 self.evals_list = [[None]*self.eval_episodes]*len(self.agent_ids)
                 self.eval_counts[i]=0
                 self.io.send(True, dest=0, tag=Tags.io_eval_request)
@@ -266,7 +266,7 @@ class MPIEvaluation(Evaluation):
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
         self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
-        self.log('Agent: {}'.format(str(self.agents[0])))
+        #self.log('Agent: {}'.format(str(self.agents[0])))
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         #self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
 

@@ -645,6 +645,7 @@ class rc_env:
         team_reward = 0.0
         goal_points = 10.0
         out_of_bounds_points = -0.5
+        first_kick_points = 2.0
         first_kickable_points = 1.0
         pass_points = 5.0
         distance_to_ball_points = 5.0
@@ -672,7 +673,7 @@ class rc_env:
                 elif s == 'OutOfBounds' and self.left_agent_possesion[agentID] == 'L':
                     # Set the kicks
                     self.inv_steps_to_goal = self.ep_length
-                    reward += (out_of_bounds_points * self.out_of_bouds_factor)
+                    reward += (out_of_bounds_points * self.out_of_bounds_factor)
                 elif s == 'CapturedByLeftGoalie':
                     reward += goal_points / 5.0
                 elif s == 'CapturedByRightGoalie':
@@ -786,6 +787,8 @@ class rc_env:
                     np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
                 self.first_kick = True
+                reward += (first_kick_points * self.first_kick_factor) 
+                team_reward += 1.5
                 
 
             # set initial ball position after kick
@@ -1061,5 +1064,6 @@ class rc_env:
         self.ball_distance_to_goal_factor = reward_factors['ball_distance_to_goal']
         self.out_of_bouds_factor = reward_factors['out_of_bounds']
         self.low_stamina_factor = reward_factors['low_stamina']
+        self.first_kick_factor = reward_factors['first_kick'] 
         self.first_kickable_factor = reward_factors['first_kickable']
     

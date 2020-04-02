@@ -69,7 +69,7 @@ class MPIEvalEnv(Environment):
                 if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
                     _ = self.eval.recv(None, source=0 , tag=Tags.clear_buffers)
                     self.reset_buffers()
-                    print('Buffers have been reset')
+                    #print('Buffers have been reset')
 
 
 
@@ -160,7 +160,7 @@ class MPIEvalEnv(Environment):
     def _send_eval_numpy(self, episode_reward, agent_idx):
         '''Numpy approach'''
         self.eval.send(agent_idx, dest=0, tag=Tags.trajectory_info)
-        self.log('Eval Reward: {}'.format(episode_reward))
+        #self.log('Eval Reward: {}'.format(episode_reward))
         self.eval.send(episode_reward, dest=0, tag=Tags.trajectory_eval)
 
     def create_buffers(self):
