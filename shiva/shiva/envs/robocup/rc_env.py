@@ -645,12 +645,12 @@ class rc_env:
         team_reward = 0.0
         goal_points = 10.0
         out_of_bounds_points = -0.5
-        first_kick_points = 2.0
-        first_kickable_points = 1.0
+        first_kick_points = 3.0
+        first_kickable_points = 2.0
         pass_points = 5.0
-        distance_to_ball_points = 5.0
-        ball_distance_to_goal_points= 10.0
-        low_stamina_points = -1.0
+        distance_to_ball_points = 2.0
+        ball_distance_to_goal_points= 3.0
+        low_stamina_points = -0.01
 
         # ---------------------------
         global possession_side
@@ -1062,7 +1062,7 @@ class rc_env:
         self.goal_factor = reward_factors['goal']
         self.distance_to_ball_factor = reward_factors['distance_to_ball']
         self.ball_distance_to_goal_factor = reward_factors['ball_distance_to_goal']
-        self.out_of_bouds_factor = reward_factors['out_of_bounds']
+        self.out_of_bounds_factor = reward_factors['out_of_bounds']
         self.low_stamina_factor = reward_factors['low_stamina']
         self.first_kick_factor = reward_factors['first_kick'] 
         self.first_kickable_factor = reward_factors['first_kickable']

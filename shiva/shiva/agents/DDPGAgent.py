@@ -222,7 +222,7 @@ class DDPGAgent(Agent):
 
     def robocup_exploration(self):
         perturb_prob = 1 / self.num_adaptable_params
-        resample_prob =  perturb_prob / 10
+        resample_prob = 1 / self.num_adaptable_params
         keep_prob = 1 - perturb_prob - resample_prob
         options = ['pass','resample','perturb']
         option_probs = [keep_prob,resample_prob,perturb_prob] 

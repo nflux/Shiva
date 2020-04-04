@@ -31,8 +31,8 @@ class MPIPBTMetaLearner(MetaLearner):
         self._launch_learners()
         self._launch_mevals()
         self.rankings_size = self.configs['Evaluation']['num_agents']
-        self.bottom_20 = int(self.rankings_size * .80)
-        self.top_20 = int(self.rankings_size * .20)
+        self.bottom_20 = int(self.rankings_size * .60)
+        self.top_20 = int(self.rankings_size * .40)
         self.run()
 
     def run(self):
@@ -59,22 +59,23 @@ class MPIPBTMetaLearner(MetaLearner):
                     print('Current Agent Ranking: ', np.where(self.rankings == agent_id)[0])
                     ranking = np.where(self.rankings == agent_id)[0]
                     evo['agent_id'] = agent_id
-                    if ranking <= self.top_20:
+                    if ranking < self.top_20:
                         evo['evolution'] = False
                         print('Do Not Evolve')
                         self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
-                    elif self.top_20  < ranking < self.bottom_20:
+                    elif self.top_20  <= ranking < self.bottom_20:
                         print('Middle of the Pack: {}'.format(learner_source))
                         evo['evolution'] = True
                         evo['agent'] = agent_id
                         evo['ranking'] = ranking
-                        evo['evo_agent'] = self.rankings[np.random.choice(range(self.bottom_20))]
+                        #evo['evo_agent'] = self.rankings[np.random.choice(range(self.bottom_20))]
+                        evo['evo_agent'] = agent_id
                         evo['evo_ranking']= np.where(self.rankings == evo['evo_agent'])
                         evo['exploitation'] = 't_test'
                         evo['exploration'] = np.random.choice(['perturb', 'resample'])
                         self.learners.send(evo,dest=learner_source,tag=Tags.evolution_config)
                     else:
-                        print('You suck')
+                        print('Bottom Performer')
                         evo['evolution'] = True
                         evo['agent'] = agent_id
                         evo['ranking'] = ranking
