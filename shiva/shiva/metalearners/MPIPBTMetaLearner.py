@@ -28,7 +28,8 @@ class MPIPBTMetaLearner(MetaLearner):
         self.run()
 
     def run(self):
-        self.start_evals_flag = False # Evaluations will start once 1 Learner asks for evolution configs
+        self.start_evals_flag = False
+
         self.review_training_matches() # send first match
         while True:
             time.sleep(self.configs['Admin']['time_sleep']['MetaLearner'])
@@ -40,14 +41,17 @@ class MPIPBTMetaLearner(MetaLearner):
         Roles Evolution
     '''
 
+    def start_evals(self):
+        self.start_evals_flag = True
+        self.mevals.bcast(True, root=MPI.ROOT)
+
     def _roles_evolve(self):
         '''Evolve only if we received Rankings'''
         if self.pbt and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution, status=self.info):
 
             if not self.start_evals_flag:
                 # Enable evaluations to start!
-                self.start_evals_flag = True
-                self.mevals.bcast(True, root=MPI.ROOT)
+                self.start_evals()
                 return
 
             learner_spec = self.learners.recv(None, source=self.info.Get_source(), tag=Tags.evolution)

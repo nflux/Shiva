@@ -14,4 +14,4 @@ class MADDPGAgent(DDPGAgent):
         # torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
 
     def __str__(self):
-        return '<MADDPGAgent(id={}, role={}, steps={}, episodes={}, num_updates={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates)
+        return '<MADDPGAgent(id={}, role={}, steps={}, episodes={}, num_updates={}, device={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates, self.device)

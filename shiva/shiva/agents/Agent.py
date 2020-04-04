@@ -51,7 +51,7 @@ class Agent(torch.nn.Module):
         raise NotImplemented
 
     def load_net(self, policy_name, policy_file):
-        setattr(self, policy_name, torch.load(policy_file, map_location=torch.device('cpu')))
+        setattr(self, policy_name, torch.load(policy_file))
         # flag = True
         # while flag:
         #     try:

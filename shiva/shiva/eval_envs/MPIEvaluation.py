@@ -24,6 +24,12 @@ class MPIEvaluation(Evaluation):
         Admin.init(self.configs)
 
         self._connect_io_handler()
+
+        if hasattr(self, 'device') and self.device == 'gpu':
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = torch.device('cpu')
+
         self._launch_envs()
         self.meval.gather(self._get_eval_specs(), root=0) # checkin with MultiEvalWrapper
 
@@ -210,8 +216,8 @@ class MPIEvaluation(Evaluation):
             role2learner_spec = self.role2learner_spec
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         _ = self.io.recv(None, source=0, tag=Tags.io_eval_request)
-        agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
 
+        agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
         for role, learner_spec in role2learner_spec.items():
             '''Need to load ONLY the agents that are not being evaluated'''
             if not learner_spec['evaluate']:
@@ -225,6 +231,7 @@ class MPIEvaluation(Evaluation):
                 '''Assuming Learner has 1 Agent per Role'''
                 agent_id = learner_spec['role2ids'][role][0]
                 agent = Admin._load_agent_of_id(learner_spec['load_path'], agent_id)
+                agent.to_device(self.device)
                 agents[self.env_specs['roles'].index(agent.role)] = agent
 
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
@@ -355,7 +362,7 @@ class MPIEvaluation(Evaluation):
         comm.Disconnect()
 
     def __str__(self):
-        return "<Eval(id={})>".format(self.id)
+        return "<Eval(id={}, device={})>".format(self.id, self.device)
 
     def show_comms(self):
         self.debug("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

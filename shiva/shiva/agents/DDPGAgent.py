@@ -67,13 +67,20 @@ class DDPGAgent(Agent):
         self.instantiate_networks()
 
     def instantiate_networks(self):
-        self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor'])
+        self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor']).to(self.device)
         self.target_actor = copy.deepcopy(self.actor)
         '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
-        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.networks_config['critic'])
+        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.networks_config['critic']).to(self.device)
         self.target_critic = copy.deepcopy(self.critic)
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+
+    def to_device(self, device):
+        self.device = device
+        self.actor.to(self.device)
+        self.target_actor.to(self.device)
+        self.critic.to(self.device)
+        self.target_critic.to(self.device)
 
     def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
         self.ou_noise.set_scale(self.noise_scale)
@@ -223,4 +230,4 @@ class DDPGAgent(Agent):
         ]
 
     def __str__(self):
-        return '<DDPGAgent(id={}, role={}, steps={}, episodes={}, num_updates={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates)
+        return '<DDPGAgent(id={}, role={}, steps={}, episodes={}, num_updates={}, device={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates, self.device)
