@@ -98,7 +98,7 @@ class MPIImitEvalEnv(Environment):
         # self.log('Made it to 124')
         self.actions = recv_action
         # self.log("The action is {}".format(self.actions.shape))
-        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
+        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions, discrete_select='argmax')
         # self.log('Made it to 127 {}'.format(self.rewards))
 
         if self.dones:
