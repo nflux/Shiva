@@ -43,7 +43,7 @@ class MPIImitEvalEnv(Environment):
         # self.create_buffers()
         # Wait for flag to start running
         # self.log("Waiting Eval flag to start")
-        start_flag = self.eval.bcast(None, root=0)
+        self.start_flag = self.eval.bcast(None, root=0)
         # self.log("Start collecting..")
 
         self.run()
@@ -65,6 +65,7 @@ class MPIImitEvalEnv(Environment):
 
                 if self.eval.Iprobe(source=MPI.ANY_SOURCE,tag=Tags.clear_buffers):
                     _ = self.eval.recv(None, source=0 , tag=Tags.clear_buffers)
+                    self.log("The goal percentage for eval is {}".format(self.env.get_goal_percentage()))
                     self.env.reset_goal_ctr()
                     # print('Goal ctr has been reset')
 

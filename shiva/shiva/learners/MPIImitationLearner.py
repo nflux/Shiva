@@ -95,8 +95,7 @@ class MPIImitationLearner(Learner):
 
         while self.train:
             while not self.dagger:
-                self.log("Supervised Learning")
-                time.sleep(0.00001)
+                time.sleep(0.0001)
                 self._receive_super_trajectory_numpy()
 
                 # self.log('Episodes collected: {}'.format(self.done_count))
@@ -108,6 +107,7 @@ class MPIImitationLearner(Learner):
                     self.agents[0].step_count = self.step_count
                     self.agents[0].done_count = self.done_count
                     self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                    self.log("The loss for supervised is {}".format(self.alg.get_loss()))
 
                     for ix in range(self.num_menvs):
                         self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
@@ -118,8 +118,7 @@ class MPIImitationLearner(Learner):
                 self.collect_metrics(episodic=True)
             
             while self.dagger:
-                self.log("Dagger Learning")
-                time.sleep(0.00001)
+                time.sleep(0.0001)
                 self._receive_dagger_trajectory_numpy()
 
                 '''Change freely condition when to update'''
@@ -129,6 +128,7 @@ class MPIImitationLearner(Learner):
                     self.agents[0].step_count = self.step_count
                     self.agents[0].done_count = self.done_count
                     self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+                    self.log("The loss for dagger is {}".format(self.alg.get_loss()))
 
                     for ix in range(self.num_menvs):
                         self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
@@ -138,8 +138,13 @@ class MPIImitationLearner(Learner):
 
                     if self.done_count % self.save_checkpoint_episodes == 0:
                         self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
+                
+                if self.done_count < self.initial_evolution_episodes and self.done_count % self.configs['Agent']['lr_decay_every'] == 0:
+                    lr = max(self.agents[0].actor_learning_rate-self.agents[0].lr_decay, self.agents[0].lr_end)
+                    self.agents[0].actor_learning_rate = lr
+                    self.agents[0].mod_lr(self.agents[0].actor_optimizer, self.agents[0].actor_learning_rate)
 
-                if self.done_count % self.evolution_episodes == 0 and self.pbt:
+                if self.done_count >= self.initial_evolution_episodes and self.done_count % self.evolution_episodes == 0 and self.pbt:
                     # self.log('Requesting evolution config')
                     self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
 
@@ -320,7 +325,7 @@ class MPIImitationLearner(Learner):
         else:
             self.start_agent_idx = self.num_agents * self.id
             self.end_agent_idx = self.start_agent_idx + self.num_agents
-            agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
+            agents = [self.alg.create_agent(ix, self.id) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
             #agents = [self.alg.create_agent(self.id + i) for i in range(self.num_agents)]
             agent_ids = [agent.id for agent in agents]
         # self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))

@@ -210,11 +210,12 @@ class ImitationRoboCupAlgorithm(Algorithm):
 
             action_prob_dist = agent.actor(states.float())
 
-            actions = actions.detach().float()
+            actions = actions.detach().long()
 
             # action_prob_dist = action_prob_dist.view(actions.shape)
 
-            self.loss = self.loss_calc(action_prob_dist, actions).to(self.device)
+            self.loss = self.loss_calc(action_prob_dist.squeeze_(), actions.squeeze_()).to(self.device)
+            # print("The loss is", self.loss)
             # print('super_loss:', self.loss)
             self.loss.backward()
             agent.actor_optimizer.step()
@@ -240,13 +241,14 @@ class ImitationRoboCupAlgorithm(Algorithm):
             #     action_prob_dist = action_prob_dist.view(actions.shape[0])
 
             #calculate loss based on loss functions dictated in the configs
-            self.loss = self.loss_calc(action_prob_dist, expert_actions.float()).to(self.device)
+            self.loss = self.loss_calc(action_prob_dist.squeeze_(), expert_actions.squeeze_().long()).to(self.device)
+            # print("The loss is", self.loss)
             # print('Dagger_loss:', self.loss)
             self.loss.backward()
             agent.actor_optimizer.step()
 
-    def create_agent(self, id):
-        new_agent = DDPGAgent(id,self.observation_space,self.action_space,self.configs['Agent'],self.configs['Network'])
+    def create_agent(self, id, lr_id):
+        new_agent = DDPGAgent(id,self.observation_space,self.action_space,self.configs['Agent'],self.configs['Network'], lr_id)
         return new_agent
     
     def get_metrics(self, episodic=False):

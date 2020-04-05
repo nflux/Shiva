@@ -10,7 +10,7 @@ from shiva.core.admin import logger
 from shiva.eval_envs.Evaluation import Evaluation
 from shiva.helpers.misc import terminate_process
 from shiva.utils.Tags import Tags
-from shiva.core.admin import Admin
+# from shiva.core.admin import Admin
 from shiva.envs.Environment import Environment
 
 # logging.basicConfig(level=logging.INFO)

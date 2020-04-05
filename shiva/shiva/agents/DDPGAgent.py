@@ -12,7 +12,7 @@ from shiva.helpers.misc import action2one_hot
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 class DDPGAgent(Agent):
-    def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict):
+    def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict, lr_id: int):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
         self.agent_config = agent_config
         # try:
@@ -57,16 +57,22 @@ class DDPGAgent(Agent):
         self.critic = DynamicLinearNetwork(obs_space + self.acs_space, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
-        if isinstance(agent_config['actor_learning_rate'],list):
-            self.actor_learning_rate = random.uniform(agent_config['actor_learning_rate'][0],agent_config['actor_learning_rate'][1])
-            self.critic_learning_rate = random.uniform(agent_config['critic_learning_rate'][0],agent_config['critic_learning_rate'][1])
-            self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
-        else:
-            self.actor_learning_rate = agent_config['actor_learning_rate']
-            self.critic_learning_rate = agent_config['critic_learning_rate']
-            self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        # if isinstance(agent_config['actor_learning_rate'],list):
+        #     self.actor_learning_rate = random.uniform(agent_config['actor_learning_rate'][0],agent_config['actor_learning_rate'][1])
+        #     self.critic_learning_rate = random.uniform(agent_config['critic_learning_rate'][0],agent_config['critic_learning_rate'][1])
+        #     self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        #     self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        # else:
+        #     self.actor_learning_rate = agent_config['actor_learning_rate']
+        #     self.critic_learning_rate = agent_config['critic_learning_rate']
+        #     self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        #     self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
+        
+        print("The Learner id is", lr_id)
+        self.actor_learning_rate = agent_config['init_actor_learning_rate'][lr_id]
+        self.critic_learning_rate = agent_config['init_critic_learning_rate'][lr_id]
+        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
+        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
         self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
 
@@ -135,10 +141,12 @@ class DDPGAgent(Agent):
         return action[0]
 
 
-    def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
-        observation = torch.tensor(observation).to(self.device)
-        action = self.actor(observation.float())
-        return action[0]
+    def get_imitation_action(self, observation: np.ndarray, step_count, evaluate=False) -> np.ndarray:
+        if evaluate:
+            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+        else:
+            action = self.actor(torch.tensor(observation).to(self.device).float())
+        return action.tolist()
 
     def save(self, save_path, step):
         torch.save({'state_dict': self.actor.state_dict()}, save_path + '/actor.pth')

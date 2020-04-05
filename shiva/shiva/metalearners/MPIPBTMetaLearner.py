@@ -29,15 +29,22 @@ class MPIPBTMetaLearner(MetaLearner):
         self._launch_io_handler()
         self._launch_menvs()
         self._launch_learners()
-        self._launch_mevals()
-        self.run()
+        if self.pbt:
+            self._launch_mevals()
+            self.run_with_pbt()
+        else:
+            self.run_no_pbt()
+    
+    def run_no_pbt(self):
+        while True:
+            time.sleep(0.3)
+            self.log("Iter at Meta")
 
-    def run(self):
-
+    def run_with_pbt(self):
 
         while True:
-            time.sleep(0.1)
-            self.log("Logging here")
+            time.sleep(0.35)
+            self.log("Iter at Meta")
 
             if self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings):
                 self.rankings = self.mevals.recv(None,source=MPI.ANY_SOURCE, tag=Tags.rankings)
@@ -98,7 +105,8 @@ class MPIPBTMetaLearner(MetaLearner):
         self.io_specs = self.io.recv(None, source = 0, tag=Tags.io_config)
         self.configs['Environment']['menvs_io_port'] = self.io_specs['menvs_port']
         self.configs['Learner']['learners_io_port'] = self.io_specs['learners_port']
-        self.configs['Evaluation']['evals_io_port'] = self.io_specs['evals_port']
+        if self.pbt:
+            self.configs['Evaluation']['evals_io_port'] = self.io_specs['evals_port']
 
 
 

@@ -184,7 +184,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.done = False
     
     def get_goal_percentage(self):
-        return np.array([[(self.goal_ctr/(self.done_count+1))*100.0]])
+        return (self.goal_ctr/(self.done_count+1))*100.0
 
     def reset_goal_ctr(self):
         self.done_count = 0
