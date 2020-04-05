@@ -195,8 +195,10 @@ class MPIMultiEnv(Environment):
     def load_agents(self, role2learner_spec=None):
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
+
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
         _ = self.io.recv(None, source=0, tag=Tags.io_menv_request)
+
         agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
         for role, learner_spec in role2learner_spec.items():
             '''Need to load ONLY the agents that are not being evaluated'''
@@ -206,6 +208,7 @@ class MPIMultiEnv(Environment):
                     '''Force Agent to use self.device'''
                     a.to_device(self.device)
                     agents[self.env_specs['roles'].index(a.role)] = a
+
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
         self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
         return agents

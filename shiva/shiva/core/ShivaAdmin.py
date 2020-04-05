@@ -325,21 +325,40 @@ class ShivaAdmin():
         try:
             if type(learner.agents) == list:
                 for agent in learner.agents:
-                    self._save_agent(learner, agent, checkpoint_num)
+                    self._save_agent_state_(learner, agent, checkpoint_num)
             else:
-                self._save_agent(learner, learner.agents, checkpoint_num)
+                self._save_agent_state_(learner, learner.agents, checkpoint_num)
         except AttributeError: # when learner has only 1 agent
             try:
                 if type(learner.agent) == list:
                     for agent in learner.agent:
-                        self._save_agent(learner, agent, checkpoint_num)
+                        self._save_agent_state_(learner, agent, checkpoint_num)
                 else:
-                    self._save_agent(learner, learner.agent, checkpoint_num)
+                    self._save_agent_state_(learner, learner.agent, checkpoint_num)
             except AttributeError:
                 # self.log(learner)
                 assert False, "Couldn't find the Learners agent/s..."
 
-    def _save_agent(self, learner, agent, checkpoint_num=None):
+    # def _save_agent(self, learner, agent, checkpoint_num=None):
+    #     '''
+    #         Mechanics of saving an individual Agent
+    #             1-  Pickles the agent object and save attributes
+    #             2-  Uses the save() method from the Agent class because Agents could have diff network structures
+    #         Input
+    #             @learner        Learner who owns the agent
+    #             @agent          Agent we want to save
+    #     '''
+    #     if not self.need_to_save: return
+    #     agent_path = self.get_new_agent_dir(learner, agent)
+    #     fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
+    #     if checkpoint_num is None:
+    #         try:
+    #             checkpoint_num = learner.env.done_count
+    #         except:
+    #             checkpoint_num = learner.done_count
+    #     agent.save(agent_path, checkpoint_num)
+
+    def _save_agent_state_(self, learner, agent, checkpoint_num=None):
         '''
             Mechanics of saving an individual Agent
                 1-  Pickles the agent object and save attributes
@@ -350,41 +369,72 @@ class ShivaAdmin():
         '''
         if not self.need_to_save: return
         agent_path = self.get_new_agent_dir(learner, agent)
-        fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
-        if checkpoint_num is None:
-            try:
-                checkpoint_num = learner.env.done_count
-            except:
-                checkpoint_num = learner.done_count
-        agent.save(agent_path, checkpoint_num)
+        agent.save_state_dict(agent_path)
 
     '''
         LOAD METHODS
     '''
 
-    def load(self, caller, id=None):
-        '''
-            TODO
-                I don't see a point of having this function for now
-                I guess will have the specific implementations as below
-                To think about..
-        '''
-        self.caller = caller
-        self.id = id
-        if 'metalearner' in inspect.getfile(caller.__class__).lower():
-            self._load_meta_learner()
-        elif 'learner' in inspect.getfile(caller.__class__).lower():
-            self._load_learner()
-        else:
-            assert False, '{} loading error'.format(self)
-
-    def _load_meta_learner(self):
-        raise NotImplemented
-
-    def _load_learner(self, path: str, includeAgents: bool=True) -> object:
-        raise NotImplemented
-
     def _load_agents(self, path, absolute_path=True) -> list:
+        return self._load_agents_states(path, absolute_path=absolute_path)
+    #     '''
+    #         For a given @path, the procedure will walk recursively over all the folders inside the @path
+    #         And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
+    #         Input
+    #             @path       Path where the agents files will be located
+    #     '''
+    #     if not absolute_path:
+    #         path = '/'.join([self.base_url, path])
+    #     agents = []
+    #     agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
+    #     agents_policies = dh.find_pattern_in_path(path, '.pth')
+    #     assert len(agents_pickles) > 0, "No agents found in {}".format(path)
+    #     for agent_pickle in agents_pickles:
+    #         _new_agent = self.__load_agent_from_dir__(agent_pickle, agents_policies)
+    #         agents.append(_new_agent)
+    #     return agents
+
+    def _load_agent_of_id(self, path, agent_id, absolute_path=True):
+        return self._load_agents_states(path, agent_id, absolute_path)
+        # if not absolute_path:
+        #     path = '/'.join([self.base_url, path])
+        # agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
+        # agents_policies = dh.find_pattern_in_path(path, '.pth')
+        # assert len(agents_pickles) > 0, "No agents founds in {}".format(path)
+        # found = False
+        # for agent_pickle_dir in agents_pickles:
+        #     parse_path = lambda x: os.path.normpath(x).split(os.sep)
+        #     path_to_file = parse_path(agent_pickle_dir)
+        #     agent_folder_name = path_to_file[-2]
+        #     possible_name = str(agent_id)+'-'
+        #     if possible_name in agent_folder_name:
+        #         found, file_dir = True, agent_pickle_dir
+        #         break
+        # assert found, "Wrong directory given {}".format(path)
+        # return self.__load_agent_from_dir__(agent_pickle_dir, agents_policies)
+
+    # def __load_agent_from_dir__(self, agent_pickle_dir, agents_policies_dir):
+    #     '''This does the actual mechanics of loading - low level'''
+    #     _new_agent = fh.load_pickle_obj(agent_pickle_dir)
+    #     _new_agent.instantiate_networks()
+    #     this_agent_folder = agent_pickle_dir.replace('agent_cls.pickle', '')
+    #     this_agent_policies = []
+    #     # find this agents corresponding policies
+    #     for pols in agents_policies_dir:
+    #         if this_agent_folder in pols:
+    #             this_agent_policies.append(pols)
+    #             policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
+    #             _new_agent.load_net(policy_name, pols)
+    #             # _new_agent.load_state_dict(policy_name, pols)
+    #     self.log("Load {} {} with {} networks".format(str(_new_agent), agent_pickle_dir.replace(os.getcwd(), ''), len(this_agent_policies)), to_print=True, verbose_level=1)
+    #     return _new_agent
+
+
+    '''
+        States Handling of Agents
+    '''
+
+    def _load_agents_states(self, path, agent_id=None, absolute_path=True) -> list:
         '''
             For a given @path, the procedure will walk recursively over all the folders inside the @path
             And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
@@ -394,72 +444,30 @@ class ShivaAdmin():
         if not absolute_path:
             path = '/'.join([self.base_url, path])
         agents = []
-        agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
-        agents_policies = dh.find_pattern_in_path(path, '.pth')
-        assert len(agents_pickles) > 0, "No agents found in {}".format(path)
-        for agent_pickle in agents_pickles:
-            _new_agent = self.__load_agent_from_dir__(agent_pickle, agents_policies)
+        agents_states = dh.find_pattern_in_path(path, '{id}.state'.format(id=agent_id if agent_id is not None else ''))
+        assert len(agents_states) > 0, "No agents found in {} with agent_id {}".format(path, agent_id)
+        for state_dict in agents_states:
+            agent_state_dict = torch.load(state_dict)
+            _new_agent = self.__create_agent_from_state_dict__(agent_state_dict)
             agents.append(_new_agent)
         return agents
 
-    def _load_agent_of_id(self, path, agent_id, absolute_path=True):
-        if not absolute_path:
-            path = '/'.join([self.base_url, path])
-        agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
-        agents_policies = dh.find_pattern_in_path(path, '.pth')
-        assert len(agents_pickles) > 0, "No agents founds in {}".format(path)
-        found = False
-        for agent_pickle_dir in agents_pickles:
-            parse_path = lambda x: os.path.normpath(x).split(os.sep)
-            path_to_file = parse_path(agent_pickle_dir)
-            agent_folder_name = path_to_file[-2]
-            possible_name = str(agent_id)+'-'
-            if possible_name in agent_folder_name:
-                found, file_dir = True, agent_pickle_dir
-                break
-        assert found, "Wrong directory given {}".format(path)
-        return self.__load_agent_from_dir__(agent_pickle_dir, agents_policies)
-
-
-    def __load_agent_from_dir__(self, agent_pickle_dir, agents_policies_dir):
+    def __create_agent_from_state_dict__(self, state_dict):
         '''This does the actual mechanics of loading - low level'''
-        _new_agent = fh.load_pickle_obj(agent_pickle_dir)
-        _new_agent.instantiate_networks()
-        this_agent_folder = agent_pickle_dir.replace('agent_cls.pickle', '')
-        this_agent_policies = []
-        # find this agents corresponding policies
-        for pols in agents_policies_dir:
-            if this_agent_folder in pols:
-                this_agent_policies.append(pols)
-                policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
-                _new_agent.load_net(policy_name, pols)
-                # _new_agent.load_state_dict(policy_name, pols)
-        self.log("Load {} {} with {} networks".format(str(_new_agent), agent_pickle_dir.replace(os.getcwd(), ''), len(this_agent_policies)), to_print=True, verbose_level=1)
+        _new_agent_class = ch.load_class(state_dict['class_module'], state_dict['class_name'])
+        _new_agent = _new_agent_class(*state_dict['inits'])
+        _new_agent = self.__load_agent_states__(_new_agent, state_dict)
+        self.log("Loaded {}".format(str(_new_agent)), to_print=True, verbose_level=1)
         return _new_agent
 
-
-    # def _load_agent(self, path) -> list:
-    #     '''
-    #         For a given @path, the procedure will walk recursively over all the folders inside the @path
-    #         And find all the agent_cls.pickle and policy.pth files to load a SINGLE AGENT
-    #         InputW
-    #             @path       Path where the agents files will be located
-    #     '''
-    #     agent_pickle = dh.find_pattern_in_path(path, 'agent_cls.pickle')
-    #     agent_policy = dh.find_pattern_in_path(path, '.pth')
-    #     assert len(agent_pickle) > 0, "No agent found in {}".format(path)
-    #     assert len(agent_pickle) == 1, "Multiple agent_cls.pickles found. Try using shiva._load_agents()"
-    #     agent_pickle = agent_pickle[0]
-    #     self.log("Loading Agent..\n\t{} with {} networks\n".format(agent_pickle, len(agent_policy)), to_print=True)
-    #     _new_agent = fh.load_pickle_obj(agent_pickle)
-    #     this_agent_folder = agent_pickle.replace('agent_cls.pickle', '')
-    #     for pols in agent_policy:
-    #         if this_agent_folder in pols:
-    #             # this_agent_policies.append(pols)
-    #             policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
-    #             _new_agent.load_net(policy_name, pols)
-    #             # _new_agent.device = torch.device('cpu')
-    #     return _new_agent
+    def __load_agent_states__(self, agent, state_dict):
+        '''Assuming @agent has all the attributes already and @state_dict contains expected keys for that @agent'''
+        for net_name in agent.net_names:
+            net = getattr(agent, net_name)
+            net.load_state_dict(state_dict[net_name])
+        for attr in agent.state_attrs:
+            setattr(agent, attr, state_dict[attr])
+        return agent
 
     def _load_buffer(self, path) -> list:
         '''

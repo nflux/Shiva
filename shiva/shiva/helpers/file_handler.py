@@ -19,13 +19,8 @@ def load_pickle_obj(filename):
         Input
             @filename   Absolute path to the file
     '''
-    flag = True
-    while flag:
-        try:
-            with open(filename, 'rb') as handle:
-                return pickle.load(handle)
-        except:
-            pass
+    with open(filename, 'rb') as handle:
+        return pickle.load(handle)
 
 def save_to_json(data, filename):
     '''

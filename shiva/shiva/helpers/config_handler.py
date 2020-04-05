@@ -23,6 +23,8 @@ def load_class(module_path, file_name) -> object:
         module = import_module(module_path)
         cls = getattr(module, class_name)
     else:
+        # this works for importing examples such as
+        #       from shiva.agents.DDPGAgent import DDPGAgent
         module_name = module_path + '.' + file_name
         module = import_module(module_name)
         cls = getattr(module, file_name)
