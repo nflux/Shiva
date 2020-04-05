@@ -1,4 +1,5 @@
 import sys, traceback, os, time
+import subprocess
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch
@@ -86,6 +87,7 @@ class MPIImitationLearner(Learner):
         #self.log("Waiting for trajectories..")
         self.step_count = 0
         self.done_count = 0
+        self.dagger_count = 0
         self.update_num = 0
         self.steps_per_episode = 0
         self.reward_per_episode = 0
@@ -139,10 +141,14 @@ class MPIImitationLearner(Learner):
                     if self.done_count % self.save_checkpoint_episodes == 0:
                         self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
                 
-                if self.done_count < self.initial_evolution_episodes and self.done_count % self.configs['Agent']['lr_decay_every'] == 0:
-                    lr = max(self.agents[0].actor_learning_rate-self.agents[0].lr_decay, self.agents[0].lr_end)
-                    self.agents[0].actor_learning_rate = lr
+                if self.done_count < self.initial_evolution_episodes and self.dagger_count % self.configs['Agent']['lr_decay_every'] == 0:
+                    lr = self.configs['Agent']['init_actor_learning_rate'][self.agents[0].id] - (self.dagger_count * self.agents[0].lr_decay)
+                    self.agents[0].actor_learning_rate = max(lr, self.agents[0].lr_end)
+                    self.log('The agents new lr {}'.format(self.agents[0].actor_learning_rate))
                     self.agents[0].mod_lr(self.agents[0].actor_optimizer, self.agents[0].actor_learning_rate)
+                elif self.done_count >= self.initial_evolution_episodes:
+                    cmd = 'pkill python'
+                    subprocess.call(cmd, shell=False)
 
                 if self.done_count >= self.initial_evolution_episodes and self.done_count % self.evolution_episodes == 0 and self.pbt:
                     # self.log('Requesting evolution config')
@@ -264,6 +270,7 @@ class MPIImitationLearner(Learner):
 
         self.step_count += traj_length
         self.done_count += 1
+        self.dagger_count += 1
         self.steps_per_episode = traj_length
         self.reward_per_episode = sum(rewards)
 
@@ -325,7 +332,7 @@ class MPIImitationLearner(Learner):
         else:
             self.start_agent_idx = self.num_agents * self.id
             self.end_agent_idx = self.start_agent_idx + self.num_agents
-            agents = [self.alg.create_agent(ix, self.id) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
+            agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
             #agents = [self.alg.create_agent(self.id + i) for i in range(self.num_agents)]
             agent_ids = [agent.id for agent in agents]
         # self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))

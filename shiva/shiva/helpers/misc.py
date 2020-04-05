@@ -47,4 +47,4 @@ def one_hot_from_logits(logits):
 
 def terminate_process():
     cmd = 'pkill -e -f "python shiva"'
-    subprocess.call(cmd, shell=True)
+    subprocess.call(cmd, shell=False)

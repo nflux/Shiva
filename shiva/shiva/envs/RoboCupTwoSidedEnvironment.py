@@ -91,9 +91,11 @@ class RoboCupTwoSidedEnvironment(Environment):
             left_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in left_actions]
             right_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in right_actions]
         elif discrete_select == 'sample':
-            # act_choice = Categorical(actions[:self.action_space['acs_space']]).sample()
+            # act_choice = Categorical(a[:self.action_space['discrete']]).sample().cpu().data.numpy()
             left_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in left_actions]
             right_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in right_actions]
+            # left_act_choice = [Categorical(a[:self.action_space['discrete']]).sample().cpu().data.numpy() for a in left_actions]
+            # right_act_choice = [Categorical(a[:self.action_space['discrete']]).sample().cpu().data.numpy() for a in right_actions]
         elif discrete_select == 'supervised':
             left_act_choice = [la for la in left_actions]
             right_act_choice = [ra for ra in right_actions]
