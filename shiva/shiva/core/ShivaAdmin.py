@@ -456,18 +456,10 @@ class ShivaAdmin():
         '''This does the actual mechanics of loading - low level'''
         _new_agent_class = ch.load_class(state_dict['class_module'], state_dict['class_name'])
         _new_agent = _new_agent_class(*state_dict['inits'])
-        _new_agent = self.__load_agent_states__(_new_agent, state_dict)
+        _new_agent.load_state_dict(state_dict)
+        # _new_agent = self.__load_agent_states__(_new_agent, state_dict)
         self.log("Loaded {}".format(str(_new_agent)), to_print=True, verbose_level=1)
         return _new_agent
-
-    def __load_agent_states__(self, agent, state_dict):
-        '''Assuming @agent has all the attributes already and @state_dict contains expected keys for that @agent'''
-        for net_name in agent.net_names:
-            net = getattr(agent, net_name)
-            net.load_state_dict(state_dict[net_name])
-        for attr in agent.state_attrs:
-            setattr(agent, attr, state_dict[attr])
-        return agent
 
     def _load_buffer(self, path) -> list:
         '''

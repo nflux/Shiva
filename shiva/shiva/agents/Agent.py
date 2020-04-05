@@ -72,6 +72,14 @@ class Agent:
         filename = save_path + self.save_filename.format(id=self.id)
         torch.save(dict, filename)
 
+    def load_state_dict(self, state_dict):
+        '''Assuming @agent has all the attributes already and @state_dict contains expected keys for that @agent'''
+        for net_name in self.net_names:
+            net = getattr(self, net_name)
+            net.load_state_dict(state_dict[net_name])
+        for attr in self.state_attrs:
+            setattr(self, attr, state_dict[attr])
+
     def get_action(self, obs):
         raise NotImplemented
 
