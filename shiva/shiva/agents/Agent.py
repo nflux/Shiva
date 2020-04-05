@@ -4,9 +4,8 @@ import torch.nn
 import random
 from shiva.core.admin import logger
 
-class Agent(torch.nn.Module):
-
-    def __init__(self, id, obs_space, acs_space, agent_config, network_config):
+class Agent:
+    def __init__(self, id, obs_space, acs_space, agent_config, networks_config):
         super(Agent, self).__init__()
         '''
         Base Attributes of Agent
@@ -20,6 +19,8 @@ class Agent(torch.nn.Module):
         '''
         {setattr(self, k, v) for k,v in agent_config.items()}
         self.id = id
+        self.agent_config = agent_config
+        self.networks_config = networks_config
         self.step_count = 0
         self.done_count = 0
         self.num_updates = 0
@@ -32,6 +33,9 @@ class Agent(torch.nn.Module):
             self.log("No optimizer", to_print=True)
         self.policy = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role']
+        self.save_filename = "{id}.state"
 
     def reset_noise(self):
         pass
@@ -52,23 +56,21 @@ class Agent(torch.nn.Module):
 
     def load_net(self, policy_name, policy_file):
         setattr(self, policy_name, torch.load(policy_file))
-        # flag = True
-        # while flag:
-        #     try:
-        #         setattr(self, policy_name, torch.load(policy_file, map_location=torch.device('cpu')))
-        #         flag = False
-        #     except:
-        #         # try again
-        #         time.sleep(0.25)
-        #         pass
 
-    def load_state_dict(self, policy_name, state_dict_path):
-        net = getattr(self, policy_name)
-        net.load_state_dict(torch.load(state_dict_path))
-
-    def reset_device(self):
-        self.device = torch.device("cpu")
-
+    def save_state_dict(self, save_path):
+        assert hasattr(self, 'net_names'), "Need this attribute to save"
+        dict = {}
+        # save networks
+        for net_name in self.net_names:
+            net = getattr(self, net_name)
+            dict[net_name] = net.state_dict()
+        # save other state attributes
+        for attr in self.state_attrs:
+            dict[attr] = getattr(self, attr)
+        dict['class_module'], dict['class_name'] = self.get_module_and_classname()
+        dict['inits'] = (self.id, self.obs_space, self.acs_space, self.agent_config, self.networks_config)
+        filename = save_path + self.save_filename.format(id=self.id)
+        torch.save(dict, filename)
 
     def get_action(self, obs):
         raise NotImplemented

@@ -16,8 +16,6 @@ from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHea
 class DDPGAgent(Agent):
     def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
-        self.agent_config = agent_config
-        self.networks_config = networks
         try:
             self.seed = self.manual_seed
             torch.manual_seed(self.manual_seed)
@@ -30,10 +28,6 @@ class DDPGAgent(Agent):
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']
         self.param = acs_space['discrete']
-        self.acs_space = acs_space['acs_space']
-        self.step_count = 0
-        self.done_count = 0
-        self.num_updates = 0
 
         if self.continuous == 0:
             self.action_space = 'discrete'
@@ -54,19 +48,21 @@ class DDPGAgent(Agent):
         if self.pbt:
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-            self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0], agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
-            self.critic_learning_rate = np.random.uniform(agent_config['lr_uniform'][0], agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
+            self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+            self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         else:
-            self.actor_learning_rate = agent_config['actor_learning_rate']
-            self.critic_learning_rate = agent_config['critic_learning_rate']
+            self.actor_learning_rate = self.agent_config['actor_learning_rate']
+            self.critic_learning_rate = self.agent_config['critic_learning_rate']
 
         if 'MADDPG' not in str(self):
-            self.critic_input_size = obs_space + self.acs_space
+            self.critic_input_size = obs_space + self.actor_output
 
-        self.ou_noise = noise.OUNoise(self.acs_space, self.noise_scale)
+        self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
         self.instantiate_networks()
 
     def instantiate_networks(self):
+        self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
+
         self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor']).to(self.device)
         self.target_actor = copy.deepcopy(self.actor)
         '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
@@ -101,13 +97,13 @@ class DDPGAgent(Agent):
 # >>>>>>> robocup-mpi-pbt
         else:
             if step_count < self.exploration_steps or self.is_e_greedy(step_count):
-                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+                action = np.array([np.random.uniform(0,1) for _ in range(self.actor_output)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
                 # print("Random: {}".format(action))
             # elif np.random.uniform(0, 1) < self.epsilon:
             # elif self.is_e_greedy(step_count):
-            #     action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
+            #     action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
             #     action = softmax(torch.from_numpy(action), dim=-1)
             else:
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
@@ -129,7 +125,7 @@ class DDPGAgent(Agent):
         # else:
         #     if step_count < self.exploration_steps:
         #         self.ou_noise.set_scale(self.exploration_noise)
-        #         action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
+        #         action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
         #         action += self.ou_noise.noise()
         #         action = softmax(torch.from_numpy(action))
         #     else:
@@ -161,21 +157,13 @@ class DDPGAgent(Agent):
         action = self.actor(observation.float())
         return action[0]
 
-    def save(self, save_path, step):
-        torch.save(self.actor, save_path + '/actor.pth')
-        torch.save(self.target_actor, save_path + '/target_actor.pth')
-        torch.save(self.critic, save_path + '/critic.pth')
-        torch.save(self.target_critic, save_path + '/target_critic.pth')
-        torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
-        torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
-
-    def save_state_dicts(self, save_path):
-        torch.save(self.actor.state_dict(), save_path+'/actor.pth')
-        torch.save(self.target_actor.state_dict(), save_path + '/target_actor.pth')
-        torch.save(self.critic.state_dict(), save_path + '/critic.pth')
-        torch.save(self.target_critic.state_dict(), save_path + '/target_critic.pth')
-        torch.save(self.actor_optimizer.state_dict(), save_path + '/actor_optimizer.pth')
-        torch.save(self.critic_optimizer.state_dict(), save_path + '/critic_optimizer.pth')
+    # def save(self, save_path, step):
+    #     torch.save(self.actor, save_path + '/actor.pth')
+    #     torch.save(self.target_actor, save_path + '/target_actor.pth')
+    #     torch.save(self.critic, save_path + '/critic.pth')
+    #     torch.save(self.target_critic, save_path + '/target_critic.pth')
+    #     torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
+    #     torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
 
     def copy_weights(self, evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
@@ -202,8 +190,8 @@ class DDPGAgent(Agent):
         self.noise_scale *= perturb_factor
 
     def resample_hyperparameters(self):
-        self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+        self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+        self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         # for param_group in self.actor_optimizer.param_groups:
         #     param_group['lr'] = self.actor_learning_rate
         # for param_group in self.critic_optimizer.param_groups:
@@ -228,6 +216,9 @@ class DDPGAgent(Agent):
             ('Agent/{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate),
             ('Agent/{}/Critic_Learning_Rate'.format(self.role), self.critic_learning_rate),
         ]
+
+    def get_module_and_classname(self):
+        return ('shiva.agents', 'DDPGAgent.DDPGAgent')
 
     def __str__(self):
         return '<DDPGAgent(id={}, role={}, steps={}, episodes={}, num_updates={}, device={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates, self.device)

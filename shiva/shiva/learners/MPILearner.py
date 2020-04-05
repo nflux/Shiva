@@ -172,22 +172,18 @@ class MPILearner(Learner):
         if not self.evaluate \
                 and (self.done_count % self.episodes_to_update == 0) \
                 and len(self.buffer) > self.buffer.batch_size:
-            if self.num_updates % 100 == 0:
-                self.log("Update {}".format(self.num_updates), verbose_level=1)
+
             self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
             self.num_updates = self.alg.get_num_updates()
-            # for agent in self.agents:
-            #     agent.step_count = self.step_count
-            #     agent.done_count = self.done_count
-            #     agent.num_updates = self.num_updates
             for ix in range(len(self.agents)):
                 self.agents[ix].step_count = self.step_count
                 self.agents[ix].done_count = self.done_count
                 self.agents[ix].num_updates = self.num_updates
+
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
             self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
-            '''No need to send message to MultiEnv for now'''
+            '''No need to send message to MultiEnv for now, they have the learner_spec['load_path'] for all Learners'''
             # for ix in range(self.num_menvs):
             #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
             '''No more PBT directory - it's shared with the MultiEnv directory'''
@@ -213,7 +209,6 @@ class MPILearner(Learner):
                 self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution) # ask for evolution configs
 
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
-                self.log("Trying to get evo", verbose_level=1)
                 self.evolution_config = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)  # block statement
                 self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=1)
                 
@@ -380,7 +375,7 @@ class MPILearner(Learner):
                 evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy')
 
             # evo_agent = Admin._load_agents(path)[0]
-            evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent'])
+            evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent'])[0]
 
             self.io.send(True, dest=0, tag=Tags.io_learner_request)
             if self.welch_T_Test(evals, evo_evals):
@@ -392,7 +387,7 @@ class MPILearner(Learner):
         # print('Truncating')
         # path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
         # evo_agent = Admin._load_agents(path)[0]
-        evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent'])
+        evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent'])[0]
 
         agent.copy_weights(evo_agent)
         self.alg.copy_weight_from_agent(evo_agent)
@@ -404,7 +399,7 @@ class MPILearner(Learner):
         _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
         # path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
         # evo_agent = Admin._load_agents(path)[0]
-        evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent'])
+        evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent'])[0]
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
         agent.copy_weights(evo_agent)

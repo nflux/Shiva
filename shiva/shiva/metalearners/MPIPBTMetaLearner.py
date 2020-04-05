@@ -93,7 +93,7 @@ class MPIPBTMetaLearner(MetaLearner):
                         agent_evo['exploration'] = np.random.choice(['perturb', 'resample'])
                     roles_evo.append(agent_evo)
 
-                self.log("Sending Evo {}".format(roles_evo), verbose_level=1)
+                self.log("Sending Evo {}".format(roles_evo), verbose_level=2)
                 self.learners.send(roles_evo, dest=self.info.Get_source(), tag=Tags.evolution_config)
                 # self.evols_sent[learner_spec['id']] = True
                 delattr(self, 'rankings')

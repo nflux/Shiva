@@ -230,7 +230,7 @@ class MPIEvaluation(Evaluation):
                 # Here when loading individual Agents
                 '''Assuming Learner has 1 Agent per Role'''
                 agent_id = learner_spec['role2ids'][role][0]
-                agent = Admin._load_agent_of_id(learner_spec['load_path'], agent_id)
+                agent = Admin._load_agent_of_id(learner_spec['load_path'], agent_id)[0]
                 agent.to_device(self.device)
                 agents[self.env_specs['roles'].index(agent.role)] = agent
 
