@@ -43,11 +43,11 @@ class DDPGAgent(Agent):
         if self.continuous == 0:
             self.action_space = 'discrete'
             # print(self.action_space)
-            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete, self.param, networks['actor'])
+            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete, self.discrete, networks['actor'])
         elif self.discrete == 0:
             self.action_space = 'continuous'
             # print(self.action_space)
-            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.continuous, self.param, networks['actor'])
+            self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.continuous, self.continuous, networks['actor'])
         else:
             print("DDPG Agent, check if this makes sense for parameterized robocup")
             self.actor = SoftMaxHeadDynamicLinearNetwork(obs_space,self.discrete+self.param, self.param, networks['actor'])

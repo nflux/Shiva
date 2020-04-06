@@ -92,6 +92,7 @@ class RoboCupTwoSidedEnvironment(Environment):
             right_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in right_actions]
         elif discrete_select == 'sample':
             # act_choice = Categorical(a[:self.action_space['discrete']]).sample().cpu().data.numpy()
+            # print("The actions in RoboCup", left_actions)
             left_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in left_actions]
             right_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in right_actions]
             # left_act_choice = [Categorical(a[:self.action_space['discrete']]).sample().cpu().data.numpy() for a in left_actions]
