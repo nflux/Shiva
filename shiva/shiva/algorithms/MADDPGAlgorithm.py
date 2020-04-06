@@ -310,10 +310,6 @@ class MADDPGAlgorithm(Algorithm):
     def evolve(self, evol_config):
         pass
 
-    def clone_to_agent(self, agent):
-        agent.critic = copy.deepcopy(self.critic)
-        agent.critic_optimizer.load_state_dict(self.critic_optimizer.state_dict())
-
     def copy_weight_from_agent(self, evo_agent):
         self.critic = copy.deepcopy(evo_agent.critic)
         self.critic_learning_rate = evo_agent.critic_learning_rate

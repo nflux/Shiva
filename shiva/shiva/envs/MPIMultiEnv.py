@@ -203,7 +203,7 @@ class MPIMultiEnv(Environment):
         for role, learner_spec in role2learner_spec.items():
             '''Need to load ONLY the agents that are not being evaluated'''
             if not learner_spec['evaluate']:
-                learner_agents = Admin._load_agents(learner_spec['load_path'])
+                learner_agents = Admin._load_agents(learner_spec['load_path'], device=self.device)
                 for a in learner_agents:
                     '''Force Agent to use self.device'''
                     a.to_device(self.device)
@@ -292,6 +292,8 @@ if __name__ == "__main__":
     try:
         menv = MPIMultiEnv()
     except Exception as e:
-        print("MultiEnv error:", traceback.format_exc())
+        msg = "<MultiEnv(id={}) error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
+        print(msg)
+        logger.info(msg, True)
     finally:
         terminate_process()

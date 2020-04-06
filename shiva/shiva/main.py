@@ -1,5 +1,5 @@
 import sys, os, argparse, traceback
-from shiva.core.admin import Admin
+from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_config_file_2_dict, load_class
 from shiva.helpers.misc import terminate_process
 
@@ -18,6 +18,8 @@ metalearner_class = load_class("shiva.metalearners", main_dict['MetaLearner']['t
 try:
     meta = metalearner_class(main_dict)
 except Exception as e:
-    print("Meta error:", traceback.format_exc())
+    msg = "<Meta> error: {}".format(traceback.format_exc())
+    print(msg)
+    logger.info(msg, True)
 finally:
     terminate_process()

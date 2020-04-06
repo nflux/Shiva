@@ -349,6 +349,8 @@ if __name__ == "__main__":
     try:
         env = MPIEnv()
     except Exception as e:
-        print("Env error:", traceback.format_exc())
+        msg = "<Env(id={}) error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
+        print(msg)
+        logger.info(msg, True)
     finally:
         terminate_process()

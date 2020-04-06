@@ -92,7 +92,6 @@ class MPILearner(Learner):
         # t0 = time.time()
         # n_episodes = 500
         while True:
-            # time.sleep(0.001)
             self.check_incoming_trajectories()
             # '''Used for calculating collection time'''
             # if self.done_count == n_episodes:
@@ -258,7 +257,7 @@ class MPILearner(Learner):
         self.new_agents_ids = np.arange(self.start_agent_idx, self.start_agent_idx + self.num_agents)
 
         if self.load_agents:
-            agents = Admin._load_agents(self.load_agents, absolute_path=False)
+            agents = Admin._load_agents(self.load_agents, absolute_path=False, device=self.alg.device) # the alg determines the device
             # self.agent_ids = [a.id for a in agents]
             self.log("{} agents loaded".format([str(a) for a in agents]), verbose_level=1)
         elif hasattr(self, 'roles') and len(self.roles) > 0:
@@ -350,13 +349,13 @@ class MPILearner(Learner):
     #     if evo_config['ranking'] > evo_config['evo_ranking']:
     #         # print('Ranking > Evo_Ranking')
     #         evals = np.load(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy')
-    #         evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy')
+    #         evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])+'/episode_evaluations.npy')
     #         if self.welch_T_Test(evals, evo_evals):
-    #             path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
-    #             evo_agent = Admin._load_agents(path)[0]
+    #             path = self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])
+    #             evo_agent_id = Admin._load_agents(path)[0]
     #
-    #             agent.copy_weights(evo_agent)
-    #             self.alg.copy_weight_from_agent(evo_agent)
+    #             agent.copy_weights(evo_agent_id)
+    #             self.alg.copy_weight_from_agent(evo_agent_id)
     #             self.save_central_critic(agent)
 
     def t_test(self, agent, evo_config):
@@ -364,46 +363,51 @@ class MPILearner(Learner):
             self.io.send(True, dest=0, tag=Tags.io_learner_request)
             _ = self.io.recv(None, source=0, tag=Tags.io_learner_request)
 
-            path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
-            if 'RoboCup' in self.configs['Environment']['type']:
-                with open(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.data','rb') as file_handler:
-                    evals = np.array(pickle.load(file_handler))
-                with open(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.data','rb') as file_handler:
-                    evo_evals = np.array(pickle.load(file_handler))
-            else :
-                evals = np.load(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy')
-                evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent'])+'/episode_evaluations.npy')
+            path = self.eval_path + 'Agent_' + str(evo_config['agent_id'])
+            evo_path = self.eval_path + 'Agent_'+str(evo_config['evo_agent_id'])
 
-            # evo_agent = Admin._load_agents(path)[0]
-            evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent'])[0]
+            if 'RoboCup' in self.configs['Environment']['type']:
+                with open(self.eval_path+'Agent_'+str(evo_config['agent_id'])+'/episode_evaluations.data','rb') as file_handler:
+                    evals = np.array(pickle.load(file_handler))
+                with open(self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])+'/episode_evaluations.data','rb') as file_handler:
+                    evo_evals = np.array(pickle.load(file_handler))
+            else:
+                with open(path + '_episode_evaluations.data', 'rb') as file_handler:
+                    evals = np.array(pickle.load(file_handler))
+                with open(evo_path + '_episode_evaluations.data', 'rb') as file_handler:
+                    evo_evals = np.array(pickle.load(file_handler))
+
+            # evo_agent_id = Admin._load_agents(path)[0]
+            evo_agent_id = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
 
             self.io.send(True, dest=0, tag=Tags.io_learner_request)
+
             if self.welch_T_Test(evals, evo_evals):
-                agent.copy_weights(evo_agent)
-                self.alg.copy_weight_from_agent(evo_agent)
+                agent.copy_weights(evo_agent_id)
+                self.alg.copy_weight_from_agent(evo_agent_id)
                 self.save_central_critic(agent)
 
     def _truncation(self, agent, evo_config):
         # print('Truncating')
-        # path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
-        # evo_agent = Admin._load_agents(path)[0]
-        evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent'])[0]
+        # path = self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])
+        # evo_agent_id = Admin._load_agents(path)[0]
+        evo_agent_id = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
 
-        agent.copy_weights(evo_agent)
-        self.alg.copy_weight_from_agent(evo_agent)
+        agent.copy_weights(evo_agent_id)
+        self.alg.copy_weight_from_agent(evo_agent_id)
         self.save_central_critic(agent)
         # print('Truncated')
 
     def truncation(self, agent, evo_config):
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
-        # path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
-        # evo_agent = Admin._load_agents(path)[0]
-        evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent'])[0]
+        # path = self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])
+        # evo_agent_id = Admin._load_agents(path)[0]
+        evo_agent_id = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
-        agent.copy_weights(evo_agent)
-        self.alg.copy_weight_from_agent(evo_agent)
+        agent.copy_weights(evo_agent_id)
+        self.alg.copy_weight_from_agent(evo_agent_id)
         self.save_central_critic(agent)
 
     def perturb(self, agent):
@@ -502,6 +506,8 @@ if __name__ == "__main__":
     try:
         l = MPILearner()
     except Exception as e:
-        print("Learner error:", traceback.format_exc())
+        msg = "<Learner(id={})> error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
+        print(msg)
+        logger.info(msg, True)
     finally:
         terminate_process()

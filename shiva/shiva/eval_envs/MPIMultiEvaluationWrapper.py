@@ -42,6 +42,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 or 'ParticleEnv' in self.configs['Environment']['type']:
             '''Here Evaluation metrics are hardcoded'''
             self.evaluations = pd.DataFrame(index=[id for id in self.agent_ids], columns=['Learner_ID', 'Role', 'Average_Reward'])
+            self.evaluations.index.name = "Agent_ID"
             self.evaluations['Learner_ID'] = self.evaluations.index.map(self.get_learner_id)
             self.evaluations['Role'] = self.evaluations.index.map(self.get_role)
             self.evaluations['Learner_ID'] = self.evaluations.index.map(self.get_learner_id)
@@ -98,13 +99,18 @@ class MPIMultiEvaluationWrapper(Evaluation):
         # self.restrict_pairs_proba = 1
         # restrict_pairs = lambda: np.random.uniform() < self.restrict_pairs_proba
         is_full = lambda x: len(self.roles) == len(x.keys())
+        agents_without_evaluations = self.evaluations[self.evaluations['Average_Reward'].isna()].index.tolist()
+        agents_without_evaluations = list( set(agents_without_evaluations) - set(self.get_agents_currently_being_evaluated()) )
         for role in self.roles:
-            agent_id = np.random.choice(self.role2ids[role])
             if role in match:
+                # role was filled by a companion of a random chosen agent
                 continue
 
-            # match[role] = agent_id
-            # match[role] = {'learner_id': self.get_learner_id(agent_id), 'agent_id': agent_id}
+            agent_id = np.random.choice(self.role2ids[role])
+            if len(agents_without_evaluations) > 0:
+                # there's at least 1 agent thas hasn't been evaluated!
+                agent_id = np.random.choice(agents_without_evaluations)
+
             match[role] = self.get_learner_spec(agent_id)
 
             pair_bool, pairs = self.has_pair(agent_id, role)
@@ -115,6 +121,13 @@ class MPIMultiEvaluationWrapper(Evaluation):
             if is_full(match):
                 break
         return match
+
+    def get_agents_currently_being_evaluated(self):
+        ret = []
+        for eval_id, match in self.current_matches.items():
+            for role, learner_spec in match.items():
+                ret += learner_spec['role2ids'][role][0]
+        return ret
 
     def has_pair(self, agent_id, role):
         has = False
@@ -156,6 +169,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.evaluations.sort_values(by=['Role', 'Average_Reward'], ascending=False, inplace=True)
         for role in self.roles:
             self.rankings[role] = self.evaluations[self.evaluations['Role']==role].index.tolist()
+
         self.meta.send(self.rankings, dest=0, tag=Tags.rankings)
         self.log("Rankings\n{}".format(self.evaluations), verbose_level=1)
         self.sort = False
@@ -292,6 +306,8 @@ if __name__ == "__main__":
     try:
         MPIMultiEvaluationWrapper()
     except Exception as e:
-        print("Eval Wrapper error:", traceback.format_exc())
+        msg = "<MultiEval(id={})> error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
+        print(msg)
+        logger.info(msg, True)
     finally:
         terminate_process()
