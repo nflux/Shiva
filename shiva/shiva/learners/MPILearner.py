@@ -456,7 +456,6 @@ class MPILearner(Learner):
 
     def perturb(self,agent):
         # print('Pertubing')
-        perturb_factor = np.random.choice([0.8,1.2])
         agent.perturb_hyperparameters(perturb_factor)
         # print('Finished Pertubing')
 

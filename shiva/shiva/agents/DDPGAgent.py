@@ -63,7 +63,7 @@ class DDPGAgent(Agent):
         self.critic = DynamicLinearNetwork(obs_space + self.acs_space, 1, networks['critic'])
         self.target_critic = copy.deepcopy(self.critic)
 
-        
+
         if agent_config['lr_range']:
             self.critic_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
             self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
@@ -190,6 +190,7 @@ class DDPGAgent(Agent):
         self.reward_factors = evo_agent.reward_factors
 
     def perturb_hyperparameters(self,perturb_factor):
+        perturb_factor = np.random.choice(self.perturb_factors)
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor
         self.critic_learning_rate = self.critic_learning_rate * perturb_factor
         for param_group in self.actor_optimizer.param_groups:
@@ -225,7 +226,7 @@ class DDPGAgent(Agent):
         resample_prob = 1 / self.num_adaptable_params
         keep_prob = 1 - perturb_prob - resample_prob
         options = ['pass','resample','perturb']
-        option_probs = [keep_prob,resample_prob,perturb_prob] 
+        option_probs = [keep_prob,resample_prob,perturb_prob]
         print('Option Probs: {}'.format(option_probs))
 
         choice = np.random.choice(options,size = self.num_adaptable_params,p=option_probs)
@@ -242,16 +243,16 @@ class DDPGAgent(Agent):
         if choice[2] == 'resample':
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
         elif choice[2] == 'perturb':
-            perturb_factor = np.random.choice([0.8,1.2])
+            perturb_factor = np.random.choice(self.perturb_factors)
             self.epsilon *= perturb_factor
 
         if choice[3] == 'resample':
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
         elif choice[3] == 'perturb':
-            perturb_factor = np.random.choice([0.8,1.2])
+            perturb_factor = np.random.choice(self.perturb_factors)
             self.noise_scale *= perturb_factor
 
-        self.reward_exploration(choice[4:]) 
+        self.reward_exploration(choice[4:])
 
     def resample_actor_learning_rate(self):
         self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
@@ -259,19 +260,19 @@ class DDPGAgent(Agent):
             param_group['lr'] = self.actor_learning_rate
 
     def perturb_actor_learning_rate(self):
-        perturb_factor = np.random.choice([0.8,1.2])
+        perturb_factor = np.random.choice(self.perturb_factors)
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor
         for param_group in self.actor_optimizer.param_groups:
             param_group['lr'] = self.actor_learning_rate
 
-    
+
     def resample_critic_learning_rate(self):
         self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         for param_group in self.critic_optimizer.param_groups:
             param_group['lr'] = self.critic_learning_rate
 
     def perturb_critic_learning_rate(self):
-        perturb_factor = np.random.choice([0.8,1.2])
+        perturb_factor = np.random.choice(self.perturb_factors)
         self.critic_learning_rate = self.critic_learning_rate * perturb_factor
         for param_group in self.critic_optimizer.param_groups:
             param_group['lr'] = self.critic_learning_rate
@@ -282,7 +283,7 @@ class DDPGAgent(Agent):
             if choices[i] == 'resample':
                 self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
             elif choices[i] == 'perturb':
-                perturb_factor = np.random.choice([0.8,1.2])
+                perturb_factor = np.random.choice(self.perturb_factors)
                 self.reward_factors[reward] *= perturb_factor
 
 
