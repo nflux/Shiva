@@ -53,8 +53,6 @@ class MPIEvaluation(Evaluation):
             self._receive_eval = self._receive_roles_evals
             self.done_evaluating = self.done_evaluating_roles
             self.send_eval_update_agents = self.send_roles_eval_update_agents
-            self.eval_metrics = []
-            self.eval_counts = 0
         else:
             assert False, "Environment type not able to evaluate"
 
@@ -184,6 +182,10 @@ class MPIEvaluation(Evaluation):
         for role in self.roles:
             for metric_name in metrics_received:
                 evals[role][metric_conversion[metric_name]] = np.mean(evals[role][metric_name])
+                path = self.eval_path + 'Agent_' + str(self.agents[self.role2agent[role]].id)
+                with open(path + '_episode_evaluations.data', 'wb+') as file_handler:
+                    pickle.dump(evals[role][metric_name], file_handler)
+                self.log("Saved Evals {}".format(evals[role][metric_name]), verbose_level=3)
                 del evals[role][metric_name]
 
         self.meval.send(evals, dest=0, tag=Tags.evals)
@@ -199,10 +201,11 @@ class MPIEvaluation(Evaluation):
         self.agent_ids = [self.role2learner_spec[role]['role2ids'][role][0] for role in self.roles] # keep same order of the self.roles list
         self.agents = self.load_agents(self.role2learner_spec)
         self.role2agent = self.get_role2agent()
+        self.eval_metrics = []
         self.log("Got match for: {}".format(self.agent_ids), verbose_level=2)
 
     def get_role2agent(self):
-        '''Create Role->AgentIX mapping'''
+        '''Create mapping of Role->Agent_index in self.agents list'''
         self.role2agent = {}
         for role in self.env_specs['roles']:
             for ix, agent in enumerate(self.agents):
@@ -230,7 +233,7 @@ class MPIEvaluation(Evaluation):
                 # Here when loading individual Agents
                 '''Assuming Learner has 1 Agent per Role'''
                 agent_id = learner_spec['role2ids'][role][0]
-                agent = Admin._load_agent_of_id(learner_spec['load_path'], agent_id)[0]
+                agent = Admin._load_agent_of_id(learner_spec['load_path'], agent_id, device=self.device)[0]
                 agent.to_device(self.device)
                 agents[self.env_specs['roles'].index(agent.role)] = agent
 
@@ -369,11 +372,12 @@ class MPIEvaluation(Evaluation):
         self.debug("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
         self.debug("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
 
-
 if __name__ == "__main__":
     try:
-        MPIEvaluation()
+        eval = MPIEvaluation()
     except Exception as e:
-        print("Eval error:", traceback.format_exc())
+        msg = "<Eval(id={})> error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
+        print(msg)
+        logger.info(msg, True)
     finally:
         terminate_process()

@@ -45,7 +45,7 @@ class DDPGAgent(Agent):
             self.actor_output = self.discrete + self.param
             self.get_action = self.get_parameterized_action
 
-        if self.pbt:
+        if hasattr(self, 'lr_range') and self.lr_range:
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
             self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
@@ -63,10 +63,10 @@ class DDPGAgent(Agent):
     def instantiate_networks(self):
         self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
 
-        self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor']).to(self.device)
+        self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor'])
         self.target_actor = copy.deepcopy(self.actor)
         '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
-        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.networks_config['critic']).to(self.device)
+        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.networks_config['critic'])
         self.target_critic = copy.deepcopy(self.critic)
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
@@ -170,12 +170,13 @@ class DDPGAgent(Agent):
         self.critic_learning_rate = evo_agent.critic_learning_rate
         self.actor_optimizer = copy.deepcopy(evo_agent.actor_optimizer)
         self.critic_optimizer = copy.deepcopy(evo_agent.critic_optimizer)
-        self.actor = copy.deepcopy(evo_agent.actor)
-        self.target_actor = copy.deepcopy(evo_agent.target_actor)
-        self.critic = copy.deepcopy(evo_agent.critic)
-        self.target_critic = copy.deepcopy(evo_agent.target_critic)
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
+
+        self.actor.load_state_dict(evo_agent.actor.to(self.device).state_dict())
+        self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
+        self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
+        self.target_critic.load_state_dict(evo_agent.target_critic.to(self.device).state_dict())
 
     def perturb_hyperparameters(self, perturb_factor):
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor

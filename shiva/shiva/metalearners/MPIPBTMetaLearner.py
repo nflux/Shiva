@@ -73,22 +73,22 @@ class MPIPBTMetaLearner(MetaLearner):
                     elif self.top_20[role]  < ranking < self.bottom_20[role]:
                         # Middle of the Pack
                         agent_evo['evolution'] = True
-                        agent_evo['evo_agent'] = self.rankings[role][ np.random.choice(range(self.bottom_20[role])) ]
-                        agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent'])['load_path']
-                        # agent_evo['evo_ranking']= np.where(self.rankings[role] == agent_evo['evo_agent'])
-                        agent_evo['evo_ranking'] = self.rankings[role].index(agent_evo['evo_agent'])
+                        agent_evo['evo_agent_id'] = self.rankings[role][ np.random.choice(range(self.bottom_20[role])) ]
+                        agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent_id'])['load_path']
+                        # agent_evo['evo_ranking']= np.where(self.rankings[role] == agent_evo['evo_agent_id'])
+                        agent_evo['evo_ranking'] = self.rankings[role].index(agent_evo['evo_agent_id'])
                         agent_evo['exploitation'] = 't_test'
                         agent_evo['exploration'] = np.random.choice(['perturb', 'resample'])
                     else:
                         # You suck
                         agent_evo['evolution'] = True
                         if not self.top_20[role] == 0:
-                            agent_evo['evo_agent'] = self.rankings[role][ np.random.choice(range(self.top_20[role])) ]
+                            agent_evo['evo_agent_id'] = self.rankings[role][ np.random.choice(range(self.top_20[role])) ]
                         else:
-                            agent_evo['evo_agent'] = self.rankings[role][0]
-                        agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent'])['load_path']
-                        # agent_evo['evo_ranking'] = np.where(self.rankings[role] == agent_evo['evo_agent'])
-                        agent_evo['evo_ranking'] = self.rankings[role].index(agent_evo['evo_agent'])
+                            agent_evo['evo_agent_id'] = self.rankings[role][0]
+                        agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent_id'])['load_path']
+                        # agent_evo['evo_ranking'] = np.where(self.rankings[role] == agent_evo['evo_agent_id'])
+                        agent_evo['evo_ranking'] = self.rankings[role].index(agent_evo['evo_agent_id'])
                         agent_evo['exploitation'] = 'truncation'
                         agent_evo['exploration'] = np.random.choice(['perturb', 'resample'])
                     roles_evo.append(agent_evo)
@@ -234,14 +234,14 @@ class MPIPBTMetaLearner(MetaLearner):
         if self.pbt:
             if hasattr(self, 'learners_map'):
                 self.rankings_size = {role:len(self.role2ids[role]) for role in self.roles} # total population for each role
-                self.bottom_20 = {role:int(self.rankings_size[role] * .50) for role in self.roles}
-                self.top_20 = {role:int(self.rankings_size[role] * .50) for role in self.roles}
+                self.top_20 = {role:int(self.rankings_size[role] * self.configs['Evaluation']['expert_population']) for role in self.roles}
+                self.bottom_20 = {role:int(self.rankings_size[role] * (1-self.configs['Evaluation']['expert_population'])) for role in self.roles}
                 self.evolve = self._roles_evolve
                 self.evols_sent = {l_spec['id']:False for l_spec in self.learners_specs}
             else:
                 self.rankings_size = self.configs['Evaluation']['num_agents']
-                self.bottom_20 = int(self.rankings_size * .80)
-                self.top_20 = int(self.rankings_size * .20)
+                self.bottom_20 = int(self.rankings_size * (1-self.configs['Evaluation']['expert_population']))
+                self.top_20 = int(self.rankings_size * self.configs['Evaluation']['expert_population'])
                 self.evolve = self._single_agent_evolve
             self.mevals = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/eval_envs/MPIMultiEvaluationWrapper.py'], maxprocs=self.num_mevals)
             self.mevals.bcast(self.configs, root=MPI.ROOT)

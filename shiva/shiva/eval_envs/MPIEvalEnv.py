@@ -186,6 +186,8 @@ if __name__ == "__main__":
     try:
         env = MPIEvalEnv()
     except Exception as e:
-        print("Eval Env error:", traceback.format_exc())
+        msg = "<EvalEnv(id={})> error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
+        print(msg)
+        logger.info(msg, True)
     finally:
         terminate_process()

@@ -32,7 +32,7 @@ class Agent:
         except:
             self.log("No optimizer", to_print=True)
         self.policy = None
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role']
         self.save_filename = "{id}.state"
@@ -44,6 +44,9 @@ class Agent:
         return "<{}:id={}>".format(self.__class__, self.id)
 
     def instantiate_networks(self):
+        raise NotImplemented
+
+    def to_device(self):
         raise NotImplemented
 
     def save(self, save_path, step):
@@ -69,7 +72,7 @@ class Agent:
             dict[attr] = getattr(self, attr)
         dict['class_module'], dict['class_name'] = self.get_module_and_classname()
         dict['inits'] = (self.id, self.obs_space, self.acs_space, self.agent_config, self.networks_config)
-        filename = save_path + self.save_filename.format(id=self.id)
+        filename = save_path + '/' + self.save_filename.format(id=self.id)
         torch.save(dict, filename)
 
     def load_state_dict(self, state_dict):

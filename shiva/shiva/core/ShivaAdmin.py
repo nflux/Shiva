@@ -375,8 +375,8 @@ class ShivaAdmin():
         LOAD METHODS
     '''
 
-    def _load_agents(self, path, absolute_path=True) -> list:
-        return self._load_agents_states(path, absolute_path=absolute_path)
+    def _load_agents(self, path, absolute_path=True, device=torch.device('cpu')) -> list:
+        return self._load_agents_states(path, absolute_path=absolute_path, device=device)
     #     '''
     #         For a given @path, the procedure will walk recursively over all the folders inside the @path
     #         And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
@@ -394,8 +394,8 @@ class ShivaAdmin():
     #         agents.append(_new_agent)
     #     return agents
 
-    def _load_agent_of_id(self, path, agent_id, absolute_path=True):
-        return self._load_agents_states(path, agent_id, absolute_path)
+    def _load_agent_of_id(self, path, agent_id, absolute_path=True, device=torch.device('cpu')):
+        return self._load_agents_states(path, agent_id, absolute_path, device=device)
         # if not absolute_path:
         #     path = '/'.join([self.base_url, path])
         # agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
@@ -434,7 +434,7 @@ class ShivaAdmin():
         States Handling of Agents
     '''
 
-    def _load_agents_states(self, path, agent_id=None, absolute_path=True) -> list:
+    def _load_agents_states(self, path, agent_id=None, absolute_path=True, device=torch.device('cpu')) -> list:
         '''
             For a given @path, the procedure will walk recursively over all the folders inside the @path
             And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
@@ -447,7 +447,7 @@ class ShivaAdmin():
         agents_states = dh.find_pattern_in_path(path, '{id}.state'.format(id=agent_id if agent_id is not None else ''))
         assert len(agents_states) > 0, "No agents found in {} with agent_id {}".format(path, agent_id)
         for state_dict in agents_states:
-            agent_state_dict = torch.load(state_dict)
+            agent_state_dict = torch.load(state_dict, map_location=device)
             _new_agent = self.__create_agent_from_state_dict__(agent_state_dict)
             agents.append(_new_agent)
         return agents
