@@ -93,8 +93,11 @@ class RoboCupTwoSidedEnvironment(Environment):
         elif discrete_select == 'sample':
             # act_choice = Categorical(a[:self.action_space['discrete']]).sample().cpu().data.numpy()
             # print("The actions in RoboCup", left_actions)
-            left_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in left_actions]
-            right_act_choice = [np.random.choice(self.action_space['discrete'], p=a[:self.action_space['discrete']]) for a in right_actions]
+            left_act_choice = [np.random.choice(self.action_space['discrete'], 
+                                p=torch.nn.functional.softmax(torch.from_numpy(a[:self.action_space['discrete']]), dim=-1).numpy()) for a in left_actions]
+            right_act_choice = [np.random.choice(self.action_space['discrete'], 
+                                p=torch.nn.functional.softmax(torch.from_numpy(a[:self.action_space['discrete']]), dim=-1).numpy()) for a in right_actions]
+            # print("This is the choice", left_act_choice)
             # left_act_choice = [Categorical(a[:self.action_space['discrete']]).sample().cpu().data.numpy() for a in left_actions]
             # right_act_choice = [Categorical(a[:self.action_space['discrete']]).sample().cpu().data.numpy() for a in right_actions]
         elif discrete_select == 'supervised':

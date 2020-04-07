@@ -263,7 +263,7 @@ class ImitationRoboCupAlgorithm(Algorithm):
         else:
             metrics = [
                 ('Algorithm/Actor_Loss', self.loss),
-                ('Actor Learning Rate: ', self.actor_learning_rate)
+                ('Actor_Learning_Rate: ', self.actor_learning_rate)
             ]
         return metrics
     

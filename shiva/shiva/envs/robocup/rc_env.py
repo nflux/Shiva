@@ -238,7 +238,7 @@ class rc_env:
             print("Connecting player %i" % i , "on left %s to the server" % self.left_base)
             if i == 0:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.left_base,
-                                                self.goalie,i,self.ep_length,self.action_level,self.left_envs,))
+                                                self.left_goalie,i,self.ep_length,self.action_level,self.left_envs,))
             else:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.left_base,
                                                 False,i,self.ep_length,self.action_level,self.left_envs,))
@@ -249,7 +249,7 @@ class rc_env:
             print("Connecting player %i" % i , "on rightonent %s to the server" % self.right_base)
             if i == 0:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.right_base,
-                                                self.goalie,i,self.ep_length,self.action_level,self.right_envs,))
+                                                self.right_goalie,i,self.ep_length,self.action_level,self.right_envs,))
             else:
                 t = threading.Thread(target=self.connect, args=(self.port,self.feature_level, self.right_base,
                                                 False,i,self.ep_length,self.action_level,self.right_envs,))
