@@ -11,6 +11,8 @@
 #include <iostream>
 #include <stdarg.h>
 #include <agent.h>
+#define _USE_MATH_DEFINES
+#include <cmath>
 #include <rcsc/common/basic_client.h>
 #include <rcsc/player/player_config.h>
 #include <rcsc/player/world_model.h>
@@ -154,22 +156,6 @@ status_t HFOEnvironment::step() {
   return status;
 }
 
-double HFOEnvironment::getBallX() {
-  return agent->world().ball().pos().x;
-}
-
-double HFOEnvironment::getBallY() {
-  return agent->world().ball().pos().y;
-}
-
-double HFOEnvironment::getBallVelX() {
-  return agent->world().ball().vel().x;
-}
-
-double HFOEnvironment::getBallVelY() {
-  return agent->world().ball().vel().y;
-}
-
 const int HFOEnvironment::side() {
   if(agent->world().self().side() == rcsc::LEFT)
     return 1;
@@ -177,24 +163,43 @@ const int HFOEnvironment::side() {
     return -1;
 }
 
+double HFOEnvironment::getBallX() {
+  return side() * agent->world().ball().pos().x;
+}
+
+double HFOEnvironment::getBallY() {
+  return side() * agent->world().ball().pos().y;
+}
+
+double HFOEnvironment::getBallVelX() {
+  return side() * agent->world().ball().vel().x;
+}
+
+double HFOEnvironment::getBallVelY() {
+  return side() * agent->world().ball().vel().y;
+}
+
 double HFOEnvironment::getSelfX() {
-  return agent->world().self().pos().x;
+  return side() * agent->world().self().pos().x;
 }
 
 double HFOEnvironment::getSelfY() {
-  return agent->world().self().pos().y;
+  return side() * agent->world().self().pos().y;
 }
 
 double HFOEnvironment::getSelfAng() {
-  return agent->world().self().body().radian();
+  if(agent->world().self().side() == rcsc::LEFT)
+    return agent->world().self().body().radian();
+  else
+    return M_PI + agent->world().self().body().radian();
 }
 
 double HFOEnvironment::getSelfVelX() {
-  return agent->world().self().vel().x;
+  return side() * agent->world().self().vel().x;
 }
 
 double HFOEnvironment::getSelfVelY() {
-  return agent->world().self().vel().y;
+  return side() * agent->world().self().vel().y;
 }
 
 double HFOEnvironment::getStamina() {

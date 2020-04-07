@@ -85,7 +85,7 @@ class RoboCupTwoSidedEnvironment(Environment):
 
         '''
         left_actions = actions[:self.num_left]
-        right_actions = actions[self.num_left:]
+        right_actions = actions[self.num_left:self.num_left+self.num_right]
 
         if discrete_select == 'argmax':
             left_act_choice = [np.argmax(a[:self.action_space['acs_space']]) for a in left_actions]

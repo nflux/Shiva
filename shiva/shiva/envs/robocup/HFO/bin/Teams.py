@@ -63,7 +63,7 @@ class Agent2d(Team):
     if record:
       options += ' --record'
     offenseOrder =  [11,2,3,4,5,6,7,8,9,10,1]
-    defenseOrder =  [1,2,3,4,5,6,7,8,9,10,11]
+    defenseOrder =  [2,1,3,4,5,6,7,8,9,10,11]
     super(Agent2d, self).__init__(name, binaryPath, libDir, options,
                                   offenseOrder, defenseOrder)
 
@@ -128,7 +128,7 @@ class Helios18(Team):
               % (baseDir, host, name, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir,
                  baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, baseDir, port)
     offenseOrder =  [11,2,3,4,5,6,7,8,9,10,1]
-    defenseOrder =  [11,2,3,4,5,6,7,8,9,10,1]
+    defenseOrder =  [2,11,3,4,5,6,7,8,9,10,1]
     super(Helios18, self).__init__(name, binaryPath, libDir, options,
                                  offenseOrder, defenseOrder)
   def launch_npc(self, player_num):

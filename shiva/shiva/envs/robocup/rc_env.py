@@ -280,10 +280,10 @@ class rc_env:
 
     def getImitObsMsg(self):
         obsMsg = ""
-        obsMsg += str(self.left_envs[0].getBallX()) + " "
-        obsMsg += str(self.left_envs[0].getBallY()) + " "
-        obsMsg += str(self.left_envs[0].getBallVelX()) + " "
-        obsMsg += str(self.left_envs[0].getBallVelY()) + " "
+        obsMsg += str(self.right_envs[0].getBallX()) + " "
+        obsMsg += str(self.right_envs[0].getBallY()) + " "
+        obsMsg += str(self.right_envs[0].getBallVelX()) + " "
+        obsMsg += str(self.right_envs[0].getBallVelY()) + " "
 
         for env in self.left_envs:
             obsMsg += str(env.side()) + " "
@@ -295,15 +295,15 @@ class rc_env:
             obsMsg += str(env.getSelfVelY()) + " "
             obsMsg += str(env.getStamina()) + " "
 
-        # for env in self.right_envs:
-        #     obsMsg += str(env.side()) + " "
-        #     obsMsg += str(env.getUnum()) + " "
-        #     obsMsg += str(env.getSelfX()) + " "
-        #     obsMsg += str(env.getSelfY()) + " "
-        #     obsMsg += str(env.getSelfAng()) + " "
-        #     obsMsg += str(env.getSelfVelX()) + " "
-        #     obsMsg += str(env.getSelfVelY()) + " "
-        #     obsMsg += str(env.getStamina()) + " "
+        for env in self.right_envs:
+            obsMsg += str(env.side()) + " "
+            obsMsg += str(env.getUnum()) + " "
+            obsMsg += str(env.getSelfX()) + " "
+            obsMsg += str(env.getSelfY()) + " "
+            obsMsg += str(env.getSelfAng()) + " "
+            obsMsg += str(env.getSelfVelX()) + " "
+            obsMsg += str(env.getSelfVelY()) + " "
+            obsMsg += str(env.getStamina()) + " "
 
         return str(obsMsg).encode("utf-8")
 
@@ -511,9 +511,16 @@ class rc_env:
                         # without tackle
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID,a,base))
                     elif act_lvl == 'discretized':
-                        envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID,base))
+                        try:
+                            envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID,base))
+                        except:
+                            print("This is valid", self.get_valid_discrete_value(agent_ID,base))
+                            print("Error is here")
 
+                    print("Before sync status")
                     self.sync_at_status.wait()
+
+                    print("Not passing act")
 
                     obs_prev[agent_ID] = obs[agent_ID]
                     self.world_status = envs[agent_ID].step() # update world
@@ -599,7 +606,7 @@ class rc_env:
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 
     def checkGoal(self):
-        return self.left_envs[0].statusToString(self.world_status) == 'Goal_By_Left'
+        return self.right_envs[0].statusToString(self.world_status) == 'Goal_By_Right'
 
     def getReward(self, s, agentID, base, ep_num):
         '''
