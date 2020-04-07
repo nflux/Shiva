@@ -130,7 +130,7 @@ class DDPGAgent(Agent):
             else:
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-                action = action / action.sum()
+                # action = action / action.sum()
         return action.tolist()
 
     def get_parameterized_action(self, observation, step_count, evaluate=False):
@@ -172,8 +172,8 @@ class DDPGAgent(Agent):
         self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
         self.target_critic.load_state_dict(evo_agent.target_critic.to(self.device).state_dict())
-        self.actor_optimizer.load_state_dict(evo_agent.actor_optimizer.to(self.device).state_dict())
-        self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.to(self.device).state_dict())
+        self.actor_optimizer.load_state_dict(evo_agent.actor_optimizer.state_dict())
+        self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
 
     def perturb_hyperparameters(self, perturb_factor):
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor

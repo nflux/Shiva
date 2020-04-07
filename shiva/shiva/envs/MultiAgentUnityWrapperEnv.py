@@ -104,8 +104,8 @@ class MultiAgentUnityWrapperEnv(Environment):
         self.done_count += sum(sum(self.dones[role]) for role in self.roles)
         for role in self.roles:
             # in case there's asymetric environment
-            self.reward_per_step[role] += sum(self.rewards[role]) / self.BatchedStepResult[role].n_agents()
-            self.reward_per_episode[role] += sum(self.rewards[role]) / self.BatchedStepResult[role].n_agents()
+            self.reward_per_step[role] += sum(self.rewards[role]) / self.num_instances_per_role[role]
+            self.reward_per_episode[role] += sum(self.rewards[role]) / self.num_instances_per_role[role]
             self.reward_total[role] += self.reward_per_episode[role]
 
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
@@ -123,7 +123,7 @@ class MultiAgentUnityWrapperEnv(Environment):
         else:
             metrics = [
                 ('Reward/Per_Episode', self.reward_per_episode[role]),
-                ('Agent/Steps_Per_Episode', self.steps_per_episode)
+                ('Agent/Steps_Per_Episode', self.steps_per_episode / self.num_instances_per_env)
             ]
         return metrics
 
@@ -176,6 +176,11 @@ class MultiAgentUnityWrapperEnv(Environment):
 
     def get_actions(self):
         return list(self.actions.values())
+
+    def get_reward_episode(self, roles=False):
+        if roles:
+            return {role: self.reward_per_episode[role] for role in self.roles}
+        return self.reward_per_episode
 
     def get_rewards(self):
         return list(self.rewards.values())

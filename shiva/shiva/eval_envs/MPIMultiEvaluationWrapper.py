@@ -5,7 +5,7 @@ import logging
 from mpi4py import MPI
 import numpy as np
 import pandas as pd
-
+pd.set_option('max_columns', 3)
 
 from shiva.core.admin import logger
 from shiva.eval_envs.Evaluation import Evaluation
