@@ -356,8 +356,8 @@ class MPILearner(Learner):
     def save_pbt_agents(self):
         for agent in self.agents:
             agent_path = self.eval_path+'Agent_'+str(agent.id)
-            agent.save(agent_path,0)
-            fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
+            agent.save_state_dict(agent_path)
+            #fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
 
     def create_pbt_dirs(self):
         for agent in self.agents:

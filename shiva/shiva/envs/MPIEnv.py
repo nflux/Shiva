@@ -87,7 +87,7 @@ class MPIEnv(Environment):
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
             self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
             #self.log('Received Actions')
-            self.actions = recv_action 
+            self.actions = recv_action
             #if self.id == 0:
                 #self.log('Actions: {}'.format(self.actions))
         elif 'Unity':
@@ -96,7 +96,7 @@ class MPIEnv(Environment):
         # self.log("Obs {} Act {}".format(self.observations, self.actions))
         # self.log("Act {}".format(self.actions))
         #self.log('Stepping')
-        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions,learn=True)
+        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
         #self.log('Finished stepping')
        # self.log('The Dones look like this: {}'.format(self.dones))
 
@@ -135,7 +135,7 @@ class MPIEnv(Environment):
                                             )))
             self.trajectory_buffers[0].push(exp)
         #self.log('Appended step')
-        
+
     def _unity_reshape(self, arr):
         '''Unity reshape of the data - concat all agents trajectories'''
         traj_length, num_agents, dim = arr.shape
@@ -202,7 +202,7 @@ class MPIEnv(Environment):
             self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
         elif 'RoboCup' in self.type:
             #self.log('Sending Trajectory')
-            for ix in range(self.configs['Evaluation']['agents_per_env']):   
+            for ix in range(self.configs['Evaluation']['agents_per_env']):
                 self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._robo_reshape, self.trajectory_buffers[0].agent_numpy(ix))
 
                 trajectory_info = {
@@ -301,7 +301,7 @@ class MPIEnv(Environment):
     def set_reward_factors(self):
         self.reward_factors = self.menv.scatter(None,root=0)
         self.env.env.set_agent_rewards(self.reward_factors)
-        
+
     def reset_reward_factors(self):
         if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents):
             self.reward_factors = self.menv.recv(None,source=0,tag=Tags.new_agents)

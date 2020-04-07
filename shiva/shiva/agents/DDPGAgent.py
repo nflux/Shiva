@@ -124,12 +124,12 @@ class DDPGAgent(Agent):
                 self.ou_noise.set_scale(self.noise_scale)
             else:
                 self.ou_noise.set_scale(self.exploration_noise)
-            action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+            action = np.array([np.random.uniform(0,1) for _ in range(self.actor_output)])
             action = torch.from_numpy(action + self.ou_noise.noise())
             action = softmax(action, dim=-1)
             # print("Random: {}".format(action))
         elif hasattr(self, 'epsilon') and (np.random.uniform(0, 1) < self.epsilon):
-            action = np.array([np.random.uniform(0, 1) for _ in range(self.acs_space)])
+            action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
             action = softmax(torch.from_numpy(action), dim=-1)
         else:
             if hasattr(self,'noise_scale'):
@@ -138,7 +138,7 @@ class DDPGAgent(Agent):
                 self.ou_noise.set_scale(self.training_noise)
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
             action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-            action = torch.clip(action, 0,1)
+            action = torch.clamp(action, 0,1)
             action = action / action.sum()
             # print("Net: {}".format(action))
         return action.tolist()
@@ -150,7 +150,7 @@ class DDPGAgent(Agent):
         else:
             if step_count < self.exploration_steps:
                 self.ou_noise.set_scale(self.exploration_noise)
-                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_space)])
+                action = np.array([np.random.uniform(0,1) for _ in range(self.actor_output)])
                 action += self.ou_noise.noise()
                 action = softmax(torch.from_numpy(action))
 

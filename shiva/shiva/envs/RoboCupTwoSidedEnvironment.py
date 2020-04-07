@@ -56,23 +56,23 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.dashes = 0
         self.goal_ctr = 0
         self.goal = 0
-    
+
     def start_env(self):
         return self.env.start_env()
-    
+
     def isImit(self):
         return self.run_imit
-    
+
     def isDescritized(self):
         return self.action_level == 'discretized'
-    
+
     def descritize_action(self, action):
         return self.env.descritize_action(action)
-    
+
     def isGoal(self):
         return self.env.checkGoal()
 
-    def step(self, actions, discrete_select='argmax', collect=True,evaluate=False,learn=False):
+    def step(self, actions, discrete_select='argmax', collect=True,evaluate=False):
         '''
             Input
                 @actions
@@ -142,7 +142,7 @@ class RoboCupTwoSidedEnvironment(Environment):
                 else:
                     self.left_actions[a] = 2
                     self.kicks += 1
-            
+
             for a in range(self.num_right):
                 if 0 <= self.right_action_option[a] < self.env.dash_idx:
                     self.right_actions[a] = 0
@@ -153,14 +153,14 @@ class RoboCupTwoSidedEnvironment(Environment):
                 else:
                     self.right_actions[a] = 2
                     self.kicks += 1
-            
+
             # if is_eval:
             #     print("Ez is even cooler")
             #     print("Daniel left {}, right {}, left_op {}, right_op {}".format(self.left_actions, self.right_actions, self.left_action_option, self.right_action_option))
             # else:
             #     print("Ez left {}, right {}, left_op {}, right_op {}".format(self.left_actions, self.right_actions, self.left_action_option, self.right_action_option))
 
-            #self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
+            #self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
             #                                                        left_options=self.left_action_option, right_options=self.right_action_option,evaluate=evaluate)
             if evaluate:
                 self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _, self.eval_metrics = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
@@ -179,13 +179,13 @@ class RoboCupTwoSidedEnvironment(Environment):
             self.right_actions = right_act_choice
             self.right_action_option = [a[self.action_space['acs_space']:] for a in right_actions]
 
-            self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions, 
+            self.left_obs, self.left_rews, self.right_obs, self.right_rews, self.done, _ = self.env.Step(left_actions=self.left_actions, right_actions=self.right_actions,
                                                                                                          left_options=self.left_action_option, right_options=self.right_action_option,evaluate=evaluate)
             actions_v = [np.array([action2one_hot(self.action_space['acs_space'], act), op]) for act, op in zip(left_act_choice, self.left_action_option)]
 
         if collect:
             self.collect_metrics()
-        
+
         self.obs = self.left_obs.tolist()+self.right_obs.tolist()
         self.rews = self.left_rews.tolist()+self.right_rews.tolist()
 
@@ -203,7 +203,7 @@ class RoboCupTwoSidedEnvironment(Environment):
 
     # def get_action_space(self):
     #     return self._action_space
-    
+
     def get_imit_obs_msg(self):
         return self.env.getImitObsMsg()
 
@@ -231,7 +231,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.reward_per_episode = 0
         self.steps_per_episode = 0
         self.done = False
-    
+
     def collect_metrics(self):
         '''
         Metrics collection
@@ -247,7 +247,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.reward_per_episode += sum(self.rews)
         if self.isGoal():
             self.goal_ctr += 1
-            self.goal = 1 
+            self.goal = 1
         else:
             self.goal = 0
 
@@ -313,7 +313,7 @@ class HumanPlayerInterface():
 
     def robocup_action(self, action, obs):
 
-        # obs.shape, 
+        # obs.shape,
         # print(obs[0, 17])
         print("(x,y):", obs[0,4], obs[0, 5])
 

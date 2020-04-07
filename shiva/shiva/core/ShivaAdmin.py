@@ -58,6 +58,7 @@ class ShivaAdmin():
         '''
         self.configs = configs
         self.logger.configs = configs
+        print('Shiva Configs: ',self.configs)
         if 'Admin' in configs:
             {setattr(self, k, v) for k, v in configs['Admin'].items()}
             self.need_to_save = self.configs['Admin']['save']
