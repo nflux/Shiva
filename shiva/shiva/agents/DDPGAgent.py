@@ -83,7 +83,7 @@ class DDPGAgent(Agent):
         if evaluate:
 # <<<<<<< HEAD
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            action = torch.from_numpy(action.cpu().numpy())
+            # action = torch.from_numpy(action.cpu().numpy()) ?
             '''???'''
             action = torch.abs(action)
             action = action / action.sum()
@@ -117,24 +117,21 @@ class DDPGAgent(Agent):
         # until this point the action was a tensor, we are returning a python list - needs to be checked.
         return action.tolist()
 
-    def get_continuous_action(self,observation, step_count, evaluate):
-        raise NotImplemented
-        # if self.evaluate:
-        #     observation = torch.tensor(observation).float().to(self.device)
-        #     action = self.actor(observation)
-        # else:
-        #     if step_count < self.exploration_steps:
-        #         self.ou_noise.set_scale(self.exploration_noise)
-        #         action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
-        #         action += self.ou_noise.noise()
-        #         action = softmax(torch.from_numpy(action))
-        #     else:
-        #         observation = torch.tensor(observation).float().to(self.device)
-        #         action = self.actor(observation)
-        #         self.ou_noise.set_scale(self.training_noise)
-        #         action += torch.tensor(self.ou_noise.noise()).float().to(self.device)
-        #         action = action/action.sum()
-        # return action.tolist()
+    def get_continuous_action(self, observation, step_count, evaluate=False, *args, **kwargs):
+        self.ou_noise.set_scale(self.noise_scale)
+        if evaluate:
+            observation = torch.tensor(observation).to(self.device).float()
+            action = self.actor(observation)
+        else:
+            if step_count < self.exploration_steps or self.is_e_greedy(step_count):
+                action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
+                action = torch.from_numpy(action + self.ou_noise.noise())
+                action = softmax(action, dim=-1)
+            else:
+                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+                action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+                action = action / action.sum()
+        return action.tolist()
 
     def get_parameterized_action(self, observation, step_count, evaluate=False):
         raise NotImplemented
@@ -168,8 +165,6 @@ class DDPGAgent(Agent):
     def copy_weights(self, evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
-        self.actor_optimizer = copy.deepcopy(evo_agent.actor_optimizer)
-        self.critic_optimizer = copy.deepcopy(evo_agent.critic_optimizer)
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
 
@@ -177,6 +172,8 @@ class DDPGAgent(Agent):
         self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
         self.target_critic.load_state_dict(evo_agent.target_critic.to(self.device).state_dict())
+        self.actor_optimizer.load_state_dict(evo_agent.actor_optimizer.to(self.device).state_dict())
+        self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.to(self.device).state_dict())
 
     def perturb_hyperparameters(self, perturb_factor):
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor
