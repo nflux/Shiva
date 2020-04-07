@@ -1,3 +1,5 @@
+from shiva.core.admin import Admin, logger
+
 class Evaluation(object):
     def __init__(self,
                 configs: 'whole config passed'

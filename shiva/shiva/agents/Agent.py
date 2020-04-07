@@ -1,5 +1,6 @@
 import torch
 import torch.nn
+from shiva.core.admin import Admin, logger
 
 class Agent(torch.nn.Module):
 

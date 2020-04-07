@@ -99,8 +99,8 @@ class MPIMultiEnv(Environment):
                  self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'],device=self.device)[0]
                  self.io.send(True, dest=0, tag=Tags.io_menv_request)
                  for a in learner_agents:
-                              '''Force Agent to use self.device'''
-                              a.to_device(self.device)
+                     '''Force Agent to use self.device'''
+                     a.to_device(self.device)
                  if 'RoboCup' in self.type:
                     self.envs.send(self.agents[learner_id].reward_factors,dest=learner_id,tag=Tags.new_agents)
                  self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))

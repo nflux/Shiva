@@ -1,4 +1,4 @@
-from shiva.core.admin import Admin
+from shiva.core.admin import Admin, logger
 
 class MetaLearner(object):
     def __init__(self, config, profile=True):

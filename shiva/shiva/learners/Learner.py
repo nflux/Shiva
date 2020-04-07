@@ -1,6 +1,6 @@
 import torch
 
-from shiva.core.admin import Admin
+from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_class
 
 class Learner(object):

@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from shiva.core.admin import Admin, logger
 
 class Algorithm():
     def __init__(self, obs_space, acs_space, configs):
