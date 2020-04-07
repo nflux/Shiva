@@ -25,10 +25,12 @@ class MPIEvaluation(Evaluation):
         # Receive Config from MultiEvalWrapper
         self.configs = self.meval.bcast(None, root=0)
         super(MPIEvaluation, self).__init__(self.configs)
-        self.log('Attempting to Connect to IO Handler')
-        self.io = MPI.COMM_WORLD.Connect(self.evals_io_port, MPI.INFO_NULL)
-        self.log('Connected to IO Handler')
+        self._connect_io_handler()
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
+        if hasattr(self, 'device') and self.device == 'gpu':
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = torch.device('cpu')
 
         self._launch_envs()
         self.meval.gather(self._get_eval_specs(), root=0) # checkin with MultiEvalWrapper
@@ -201,7 +203,7 @@ class MPIEvaluation(Evaluation):
                 self.evals[i].fill(0)
                 self.eval_counts[i]=0
                 self.io.send(True, dest=0, tag=Tags.io_eval_request)
-            time.sleep(0.1)
+            time.sleep(0.001)
 
 
     def send_robocup_eval_update_agents(self):
@@ -222,16 +224,17 @@ class MPIEvaluation(Evaluation):
                     pickle.dump(self.evals_list,file_handler)
                 # self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
                 new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
-                self.agent_ids[i] = new_agent
                 #print('New Eval Agent: {}'.format(new_agent))
                 path = self.eval_path+'Agent_'+str(new_agent)
                 #self.log('Path: {} '.format(path))
-                self.agents[i] = Admin._load_agents(path)[0]
+                self.agents[i] = Admin._load_agents(path,device=self.device)[0]
                 #self.log('Agent: {}'.format(str(self.agents[0])))
+                self.io.send(True, dest=0, tag=Tags.io_eval_request)
+                self.agents[i].to_device(self.device)
                 self.evals_list = [[None]*self.eval_episodes]*len(self.agent_ids)
                 self.eval_counts[i]=0
-                self.io.send(True, dest=0, tag=Tags.io_eval_request)
-            time.sleep(0.1)
+                self.agent_ids[i] = new_agent
+            time.sleep(0.001)
 
     def _receive_eval_numpy(self):
         '''Receive trajectory reward from each single  evaluation environment in self.envs process group'''
@@ -265,9 +268,11 @@ class MPIEvaluation(Evaluation):
         #agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
-        self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
+        self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id),device=self.device)[0] for agent_id in self.agent_ids]
         #self.log('Agent: {}'.format(str(self.agents[0])))
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
+        for agent in self.agents:
+            agent.to_device(self.device)
         #self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
 
 
@@ -275,7 +280,9 @@ class MPIEvaluation(Evaluation):
         # self.debug("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
         # self.debug("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
 
-
+    def _connect_io_handler(self):
+        self.io = MPI.COMM_WORLD.Connect(self.evals_io_port, MPI.INFO_NULL)
+        self.log('Connected with IOHandler')
 
     def close(self):
         comm = MPI.Comm.Get_parent()

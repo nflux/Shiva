@@ -14,15 +14,18 @@ class MPIMultiEnv(Environment):
     def __init__(self):
         self.meta = MPI.Comm.Get_parent()
         self.id = self.meta.Get_rank()
+        self.info = MPI.Status()
         self.launch()
 
     def launch(self):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEnv, self).__init__(self.configs)
-        self.device = torch.device('cpu')
+        if hasattr(self, 'device') and self.device == 'gpu':
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = torch.device('cpu')
         self.io = MPI.COMM_WORLD.Connect(self.menvs_io_port, MPI.INFO_NULL)
-        self.info = MPI.Status()
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         # Open Port for Learners
         self.port = MPI.Open_port(MPI.INFO_NULL)
@@ -60,7 +63,7 @@ class MPIMultiEnv(Environment):
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
         elif 'RoboCup' in self.type:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
-        
+
         #start = time.time()
         while True:
             #if time.time() - start >= 5:
@@ -93,8 +96,11 @@ class MPIMultiEnv(Environment):
                  #'''Assuming 1 Agent per Learner'''
                  self.io.send(True, dest=0, tag=Tags.io_menv_request)
                  _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
-                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
+                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'],device=self.device)[0]
                  self.io.send(True, dest=0, tag=Tags.io_menv_request)
+                 for a in learner_agents:
+                              '''Force Agent to use self.device'''
+                              a.to_device(self.device)
                  if 'RoboCup' in self.type:
                     self.envs.send(self.agents[learner_id].reward_factors,dest=learner_id,tag=Tags.new_agents)
                  self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
@@ -156,10 +162,12 @@ class MPIMultiEnv(Environment):
         '''Assuming 1 Agent per Learner, we could break it with a star operation'''
         self.io.send(True, dest=0 , tag=Tags.io_menv_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
-        self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
+        self.agents = [ Admin._load_agents(learner_spec['load_path'],device=self.device)[0] for learner_spec in self.learners_specs ]
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
        #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
-
+       for a in learner_agents:
+                    '''Force Agent to use self.device'''
+                    a.to_device(self.device)
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
         # Get signal from single env that they have connected with Learner

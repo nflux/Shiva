@@ -16,11 +16,28 @@ class Agent(torch.nn.Module):
             learning_rate = Learning Rate
         '''
         {setattr(self, k, v) for k,v in agent_config.items()}
+        self.id = id
+        self.agent_config = agent_config
+        self.networks_config = networks_config
+        self.step_count = 0
+        self.done_count = 0
+        self.num_updates = 0
+        self.role = agent_config['role'] if 'role' in agent_config else 'Role' # use 'A' for the folder name when there's no role assigned
         self.obs_space = obs_space
         self.acs_space = acs_space
-        self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
+        try:
+            self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
+        except:
+            self.log("No optimizer", to_print=True)
         self.policy = None
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role']
+        if hasattr(self,'epsilon'):
+            self.state_attrs = self.state_attrs + ['epsilon']
+        if hasattr(self,'noise_scale'):
+            self.state_attrs = self.state_attrs + ['noise_scale']
+        self.save_filename = "{id}.state"
 
     def __str__(self):
         return "<{}:id={}>".format(self.__class__, self.id)
@@ -37,28 +54,45 @@ class Agent(torch.nn.Module):
     #     '''
     #     assert False, "Method Not Implemented"
 
+    def instantiate_networks(self):
+        raise NotImplemented
+
+    def to_device(self):
+        raise NotImplemented
+
+    def save(self, save_path, step):
+        '''
+            During saving maintain the .pth file name to have the same name as the Agent attribute
+                torch.save(self.policy, save_path + '/policy.pth')
+                torch.save(self.critic, save_path + '/critic.pth')
+        '''
+        raise NotImplemented
+
     def load_net(self, policy_name, policy_file):
-        '''
-            TBD
-            Load as many policies the Agent needs (actor, critic, target, etc...) on the agents folder @load_path
+        setattr(self, policy_name, torch.load(policy_file))
 
-            Do something like
-                self.policy = torch.load(load_path)
-            OR maybe even better:
-                setattr(self, policy_name, torch.load(policy_file))
+    def save_state_dict(self, save_path):
+        assert hasattr(self, 'net_names'), "Need this attribute to save"
+        dict = {}
+        # save networks
+        for net_name in self.net_names:
+            net = getattr(self, net_name)
+            dict[net_name] = net.state_dict()
+        # save other state attributes
+        for attr in self.state_attrs:
+            dict[attr] = getattr(self, attr)
+        dict['class_module'], dict['class_name'] = self.get_module_and_classname()
+        dict['inits'] = (self.id, self.obs_space, self.acs_space, self.agent_config, self.networks_config)
+        filename = save_path + '/' + self.save_filename.format(id=self.id)
+        torch.save(dict, filename)
 
-            Possible approach:
-            - ShivaAdmin finds the policies saved for the Agent and calls this method that many times
-
-        '''
-        flag = True
-        while flag:
-            try:
-                setattr(self, policy_name, torch.load(policy_file))
-                flag = False
-            except:
-                # try again
-                pass
+    def load_state_dict(self, state_dict):
+        '''Assuming @agent has all the attributes already and @state_dict contains expected keys for that @agent'''
+        for net_name in self.net_names:
+            net = getattr(self, net_name)
+            net.load_state_dict(state_dict[net_name])
+        for attr in self.state_attrs:
+            setattr(self, attr, state_dict[attr])
 
     def get_action(self, obs):
         assert False, "Method Not Implemented"

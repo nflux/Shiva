@@ -77,28 +77,15 @@ class DDPGAgent(Agent):
         if hasattr(self,'rewards') and self.rewards: # Flag saying whether use are optimizing reward functions with PBT
             self.set_reward_factors()
 
-        if 'MADDPG' not in str(self):
-            self.critic_input_size = obs_space + self.actor_output
-
         self.instantiate_networks()
 
     def instantiate_networks(self):
-        self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
-
+        self.net_names = ['actor']
         self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor'])
-        self.target_actor = copy.deepcopy(self.actor)
-        '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
-        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.networks_config['critic'])
-        self.target_critic = copy.deepcopy(self.critic)
-        self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
     def to_device(self, device):
         self.device = device
         self.actor.to(self.device)
-        self.target_actor.to(self.device)
-        self.critic.to(self.device)
-        self.target_critic.to(self.device)
 
 
     def get_action(self, observation, step_count, evaluate=False):
@@ -183,136 +170,14 @@ class DDPGAgent(Agent):
         action = self.actor(observation.float())
         return action[0]
 
-    def save(self, save_path, step):
-        torch.save(self.actor, save_path + '/actor.pth')
-        torch.save(self.target_actor, save_path + '/target_actor.pth')
-        torch.save(self.critic, save_path + '/critic.pth')
-        torch.save(self.target_critic, save_path + '/target_critic.pth')
-        torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
-        torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
-
-    # def load(self,save_path):
-    #     self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
-    #     self.target_actor.load_state_dict(torch.load(save_path + 'target_actor.pth'))
-    #     self.critic.load_state_dict(torch.load(save_path + 'critic.pth'))
-    #     self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
-    #     self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
-    #     self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
-
-    def set_reward_factors(self):
-        self.reward_factors = dict()
-        for reward in self.reward_events:
-            self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
-
-    def copy_weights(self,evo_agent):
-        self.actor_learning_rate = evo_agent.actor_learning_rate
-        self.critic_learning_rate = evo_agent.critic_learning_rate
-        self.actor_optimizer = copy.deepcopy(evo_agent.actor_optimizer)
-        self.critic_optimizer = copy.deepcopy(evo_agent.critic_optimizer)
-        self.actor = copy.deepcopy(evo_agent.actor)
-        self.target_actor = copy.deepcopy(evo_agent.target_actor)
-        self.critic = copy.deepcopy(evo_agent.critic)
-        self.target_critic = copy.deepcopy(evo_agent.target_critic)
-        self.epsilon = evo_agent.epsilon
-        self.noise_scale = evo_agent.noise_scale
-        self.reward_factors = evo_agent.reward_factors
-
-    def perturb_hyperparameters(self,perturb_factor):
-        perturb_factor = np.random.choice(self.perturb_factors)
-        self.actor_learning_rate = self.actor_learning_rate * perturb_factor
-        self.critic_learning_rate = self.critic_learning_rate * perturb_factor
-        for param_group in self.actor_optimizer.param_groups:
-            param_group['lr'] = self.actor_learning_rate
-        for param_group in self.critic_optimizer.param_groups:
-            param_group['lr'] = self.critic_learning_rate
-
-        self.epsilon *= perturb_factor
-        self.noise_scale *= perturb_factor
-        if self.rewards:
-            for reward in self.reward_factors:
-                self.reward_factors[reward] *= perturb_factor
-        #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
-
-    def resample_hyperparameters(self):
-        self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        for param_group in self.actor_optimizer.param_groups:
-            param_group['lr'] = self.actor_learning_rate
-        for param_group in self.critic_optimizer.param_groups:
-            param_group['lr'] = self.critic_learning_rate
-        self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
-        self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-        if self.rewards:
-            for reward in self.reward_factors:
-                self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
-        #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
-        #self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
-
-    def robocup_exploration(self):
-        perturb_prob = 1 / self.num_adaptable_params
-        resample_prob = 1 / self.num_adaptable_params
-        keep_prob = 1 - perturb_prob - resample_prob
-        options = ['pass','resample','perturb']
-        option_probs = [keep_prob,resample_prob,perturb_prob]
-        print('Option Probs: {}'.format(option_probs))
-
-        choice = np.random.choice(options,size = self.num_adaptable_params,p=option_probs)
-        if choice[0] == 'resample':
-            self.resample_actor_learning_rate()
-        elif choice[0] == 'perturb':
-            self.perturb_actor_learning_rate()
-
-        if choice[1] =='resample':
-            self.resample_critic_learning_rate()
-        elif choice[1] == 'perturb':
-            self.perturb_critic_learning_rate()
-
-        if choice[2] == 'resample':
-            self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
-        elif choice[2] == 'perturb':
-            perturb_factor = np.random.choice(self.perturb_factors)
-            self.epsilon *= perturb_factor
-
-        if choice[3] == 'resample':
-            self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-        elif choice[3] == 'perturb':
-            perturb_factor = np.random.choice(self.perturb_factors)
-            self.noise_scale *= perturb_factor
-
-        self.reward_exploration(choice[4:])
-
-    def resample_actor_learning_rate(self):
-        self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        for param_group in self.actor_optimizer.param_groups:
-            param_group['lr'] = self.actor_learning_rate
-
-    def perturb_actor_learning_rate(self):
-        perturb_factor = np.random.choice(self.perturb_factors)
-        self.actor_learning_rate = self.actor_learning_rate * perturb_factor
-        for param_group in self.actor_optimizer.param_groups:
-            param_group['lr'] = self.actor_learning_rate
 
 
-    def resample_critic_learning_rate(self):
-        self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        for param_group in self.critic_optimizer.param_groups:
-            param_group['lr'] = self.critic_learning_rate
-
-    def perturb_critic_learning_rate(self):
-        perturb_factor = np.random.choice(self.perturb_factors)
-        self.critic_learning_rate = self.critic_learning_rate * perturb_factor
-        for param_group in self.critic_optimizer.param_groups:
-            param_group['lr'] = self.critic_learning_rate
 
 
-    def reward_exploration(self,choices):
-        for i,reward in enumerate(self.reward_factors.keys()):
-            if choices[i] == 'resample':
-                self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
-            elif choices[i] == 'perturb':
-                perturb_factor = np.random.choice(self.perturb_factors)
-                self.reward_factors[reward] *= perturb_factor
+
+
+
+
 
     def get_module_and_classname(self):
         return ('shiva.agents', 'DDPGReducedAgent.DDPGReducedAgent')
