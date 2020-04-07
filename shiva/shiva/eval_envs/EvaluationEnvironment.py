@@ -1,4 +1,4 @@
-import gym
+import gym, torch
 from shiva.core.admin import Admin, logger
 
 from shiva.envs.Environment import Environment

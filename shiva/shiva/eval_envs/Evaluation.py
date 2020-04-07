@@ -1,4 +1,5 @@
 from shiva.core.admin import Admin, logger
+import torch
 
 class Evaluation(object):
     def __init__(self,

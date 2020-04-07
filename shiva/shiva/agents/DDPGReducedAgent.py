@@ -11,9 +11,9 @@ from shiva.utils import Noise as noise
 from shiva.helpers.misc import action2one_hot
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
-class DDPGAgent(Agent):
+class DDPGReducedAgent(Agent):
     def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict):
-        super(DDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
+        super(DDPGReducedAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
         self.agent_config = agent_config
         try:
             torch.manual_seed(self.manual_seed)
@@ -67,15 +67,13 @@ class DDPGAgent(Agent):
             self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-            self.ou_noise = noise.OUNoise(self.acs_space, self.ou_noise)
+            self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
         else:
             self.actor_learning_rate = agent_config['actor_learning_rate']
             self.critic_learning_rate = agent_config['critic_learning_rate']
             self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
 
 
-        if hasattr(self,'rewards') and self.rewards: # Flag saying whether use are optimizing reward functions with PBT
-            self.set_reward_factors()
 
         self.instantiate_networks()
 

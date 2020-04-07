@@ -1,4 +1,4 @@
-import sys, time, traceback, pickle
+import sys, time, traceback, pickle, torch
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging

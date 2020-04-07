@@ -4,7 +4,7 @@ from shiva.core.admin import Admin, logger
 
 class Agent(torch.nn.Module):
 
-    def __init__(self, id, obs_space, acs_space, agent_config, network_config):
+    def __init__(self, id, obs_space, acs_space, agent_config, networks_config):
         super(Agent, self).__init__()
         '''
         Base Attributes of Agent

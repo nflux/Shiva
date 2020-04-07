@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import logging
 from mpi4py import MPI
-import time
+import time, torch
 
 
 from shiva.core.admin import logger

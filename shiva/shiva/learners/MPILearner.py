@@ -27,7 +27,7 @@ class MPILearner(Learner):
         self._connect_io_handler()
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
 
-        Admin.init(self.configs['Admin'])
+        Admin.init(self.configs)
         Admin.add_learner_profile(self, function_only=True)
         #print('This is my Admin object: {}'.format(Admin))
         # Open Port for Single Environments

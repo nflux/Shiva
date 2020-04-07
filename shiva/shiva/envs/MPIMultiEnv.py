@@ -165,9 +165,8 @@ class MPIMultiEnv(Environment):
         self.agents = [ Admin._load_agents(learner_spec['load_path'],device=self.device)[0] for learner_spec in self.learners_specs ]
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
        #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
-       for a in learner_agents:
-                    '''Force Agent to use self.device'''
-                    a.to_device(self.device)
+        self.agents[learner_id].to_device(self.device)
+        '''Force Agent to use self.device'''
         # Cast LearnersSpecs to single envs for them to communicate with Learners
         self.envs.bcast(self.learners_specs, root=MPI.ROOT)
         # Get signal from single env that they have connected with Learner

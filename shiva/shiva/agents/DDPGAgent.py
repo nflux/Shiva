@@ -27,7 +27,6 @@ class DDPGAgent(Agent):
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']
         self.param = acs_space['discrete']
-        #self.acs_space = acs_space['acs_space']
 
         #if self.continuous == 0:
             #self.action_space = 'discrete'
@@ -67,7 +66,7 @@ class DDPGAgent(Agent):
             self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-            self.ou_noise = noise.OUNoise(self.acs_space, self.ou_noise)
+            self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
         else:
             self.actor_learning_rate = agent_config['actor_learning_rate']
             self.critic_learning_rate = agent_config['critic_learning_rate']

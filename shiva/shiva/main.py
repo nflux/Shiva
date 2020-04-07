@@ -1,5 +1,5 @@
 import sys, os, argparse, traceback
-from shiva.core.admin import Admin
+from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_config_file_2_dict, load_class
 from shiva.helpers.misc import terminate_process
 

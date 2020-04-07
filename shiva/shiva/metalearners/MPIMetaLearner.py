@@ -2,6 +2,7 @@ import sys
 import logging
 import numpy as np
 from mpi4py import MPI
+import torch
 
 from shiva.core.admin import logger
 from shiva.metalearners.MetaLearner import MetaLearner
