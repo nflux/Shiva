@@ -498,6 +498,7 @@ class Trainer(object):
     for p,name in necProcesses:
       if p is not None and p.poll() is not None:
         print('Something necessary closed (%s), exiting' % name)
+        # print("This is the error", p.communicate()[0].decode("utf-8"))
         return False
     return True
 
