@@ -194,9 +194,11 @@ class MPIMultiEnv(Environment):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def log(self, msg, to_print=False):
-        text = 'Menv {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['MultiEnv']:
+            text = '{}\t{}'.format(str(self), msg)
+            logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

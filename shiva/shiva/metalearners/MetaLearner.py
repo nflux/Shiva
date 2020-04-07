@@ -44,5 +44,11 @@ class MetaLearner(object):
             folder_name = '-'.join([self.config['Algorithm']['type1'], self.config['Environment']['env_name']])
         return folder_name
 
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['MetaLearner']:
+            text = "{}\t\t{}".format(str(self), msg)
+            logger.info(text, to_print=to_print or self.configs['Admin']['print_debug'])
+
     def save(self):
         Admin.save(self)

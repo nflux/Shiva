@@ -111,6 +111,10 @@ class Agent(torch.nn.Module):
             # print(g['lr'])
             g['lr'] = lr
 
+    def log(self, msg, to_print=False):
+        text = '{}\t{}'.format(self, msg)
+        logger.info(text, to_print)
+
     # def save(self, save_path, step_count):
     #     torch.save(self, save_path + 'agent.pth')
 

@@ -4,7 +4,7 @@ from shiva.core.admin import Admin
 from shiva.helpers.config_handler import load_class
 
 class Learner(object):
-    
+
     def __init__(self, learner_id, config, port=None):
         {setattr(self, k, v) for k,v in config['Learner'].items()}
         self.configs = config
@@ -137,3 +137,9 @@ class Learner(object):
         id = self.agentCount
         self.agentCount +=1
         return id
+
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['Learner']:
+            text = '{}\t\t{}'.format(str(self), msg)
+            logger.info(text, to_print=to_print or self.configs['Admin']['print_debug'])

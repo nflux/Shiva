@@ -69,3 +69,9 @@ class Environment:
 
     def normalize_reward(self, reward):
         return self.reward_factor*(reward-self.min_reward)/(self.max_reward-self.min_reward)
+
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['Env']:
+            text = "{}\t\t\t{}".format(str(self), msg)
+            logger.info(text, to_print or self.configs['Admin']['print_debug'])

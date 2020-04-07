@@ -288,9 +288,6 @@ class MPIEvaluation(Evaluation):
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def log(self, msg, to_print=False):
-        text = 'Eval {}/{}\t{}'.format(self.id, MPI.COMM_WORLD.Get_size(), msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def show_comms(self):
         self.debug("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
