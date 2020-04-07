@@ -68,9 +68,9 @@ class MADDPGAlgorithm(Algorithm):
     def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
         dones = bf_dones.bool()
-        # self.log("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states, bf_actions, bf_rewards, bf_next_states, dones))
+        self.log("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states, bf_actions, bf_rewards, bf_next_states, dones), verbose_level=4)
         self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape), verbose_level=3)
-        # self.log("FROM BUFFER Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.dtype, bf_actions.dtype, bf_rewards.dtype, bf_next_states.dtype, bf_dones.dtype))
+        self.log("FROM BUFFER Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.dtype, bf_actions.dtype, bf_rewards.dtype, bf_next_states.dtype, bf_dones.dtype), verbose_level=3)
 
         '''Transform buffer actions to a one hot or softmax if needed'''
         # for ix, (role, action_space) in enumerate(self.action_space.items()):
@@ -117,10 +117,13 @@ class MADDPGAlgorithm(Algorithm):
             self.critic_optimizer.zero_grad()
 
             # The actions that target actor would do in the next state & concat actions
-            '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
-            # this iteration might not be following the same permutation order - at least is from a different _agent.target_actor
-            next_state_actions_target = torch.cat([one_hot_from_logits(agents[perms[_ix]].target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
-            # self.log('OneHot next_state_actions_target {}'.format(next_state_actions_target))
+            if self.action_space[agent.role]['type'] == 'discrete':
+                '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
+                # this iteration might not be following the same permutation order - at least is from a different _agent.target_actor
+                next_state_actions_target = torch.cat([one_hot_from_logits(agents[perms[_ix]].target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
+                # self.log('OneHot next_state_actions_target {}'.format(next_state_actions_target))
+            elif self.action_space[agent.role]['type'] == 'continuous':
+                next_state_actions_target = torch.cat([agents[perms[_ix]].target_actor(next_states[:, _ix, :]) for _ix, _agent in enumerate(agents)], dim=1)
 
             Q_next_states_target = self.target_critic(torch.cat( [next_states.reshape(batch_size, num_agents*obs_dim).float(), next_state_actions_target.float()] , dim=1))
             # self.log('Q_next_states_target {}'.format(Q_next_states_target.shape))
@@ -156,15 +159,14 @@ class MADDPGAlgorithm(Algorithm):
             # agent.actor_optimizer.zero_grad()
 
             # Get the actions the main actor would take from the initial states
-            if self.action_space[agent.role]['type'] == "discrete" or self.action_space[agent.role]['type'] == "parameterized":
-                '''Option 1: grab new actions only for the current agent'''
+            if self.action_space[agent.role]['type'] == "discrete":
+                '''Option 1: grab new actions only for the current agent and keep original ones from the others..'''
                 # current_state_actor_actions = actions
                 # current_state_actor_actions[:, 0, :] = agent.actor(states[:, 0, :].float(), gumbel=True)
                 '''Option 2: grab new actions from every agent: this might be destabilizer'''
                 current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
-            else:
-                assert "MADDPG Continuous Update To Be Implemented"
-                # current_state_actor_actions = torch.cat([_agent.actor(states[:, perms[_ix], :].float()) for _ix, _agent in enumerate(agents)], dim=1)
+            elif self.action_space[agent.role]['type'] == "continuous":
+                current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float(), gumbel=False) for _ix, _agent in enumerate(agents)], dim=1)
 
             # Calculate Q value for taking those actions in those states
             # self.log("current_state_actor_actions {}".format(current_state_actor_actions.shape))
@@ -229,10 +231,13 @@ class MADDPGAlgorithm(Algorithm):
             # Zero the gradient
             agent.critic_optimizer.zero_grad()
             # The actions that target actor would do in the next state & concat actions
-            '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
-            # this iteration might not be following the same permutation order - at least is from a different _agent.target_actor
-            next_state_actions_target = torch.cat([one_hot_from_logits(_agent.target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
-            # self.log('OneHot next_state_actions_target {}'.format(next_state_actions_target))
+            if self.action_space[agent.role]['type'] == 'discrete':
+                '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
+                # this iteration might not be following the same permutation order - at least is from a different _agent.target_actor
+                next_state_actions_target = torch.cat([one_hot_from_logits(_agent.target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
+                # self.log('OneHot next_state_actions_target {}'.format(next_state_actions_target))
+            elif self.action_space[agent.role]['type'] == 'continuous':
+                next_state_actions_target = torch.cat([_agent.target_actor(next_states[:, _ix, :]) for _ix, _agent in enumerate(agents)], dim=1)
 
             Q_next_states_target = agent.target_critic(torch.cat( [next_states.reshape(batch_size, num_agents*obs_dim).float(), next_state_actions_target.float()] , 1))
             # self.log('Q_next_states_target {}'.format(Q_next_states_target.shape))
@@ -266,12 +271,13 @@ class MADDPGAlgorithm(Algorithm):
             for _agent in agents:
                 _agent.actor_optimizer.zero_grad()
             # Get the actions the main actor would take from the initial states
-            if self.action_space[agent.role]['type'] == "discrete" or self.action_space[agent.role]['type'] == "parameterized":
+            if self.action_space[agent.role]['type'] == "discrete":
                 current_state_actor_actions = torch.cat([_agent.actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
                 # current_state_actor_actions = agent.actor(states[:, ix,s :].float(), gumbel=True)
-            else:
+            elif self.action_space[agent.role]['type'] == "continuous":
                 current_state_actor_actions = torch.cat([_agent.actor(states[:, _ix, :].float()) for _ix, _agent in enumerate(agents)], dim=1)
                 # current_state_actor_actions = agent.actor(states[:, ix, :].float())
+
             # Calculate Q value for taking those actions in those states
             actor_loss_value = agent.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), current_state_actor_actions.float()], dim=1))
             # actor_loss_value = self.critic(torch.cat([states[:, ix, :].float(), current_state_actor_actions[:, ix, :].float()], -1))
@@ -311,9 +317,17 @@ class MADDPGAlgorithm(Algorithm):
         pass
 
     def copy_weight_from_agent(self, evo_agent):
-        self.critic = copy.deepcopy(evo_agent.critic)
+        # self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
-        self.critic_optimizer = copy.deepcopy(evo_agent.critic_optimizer)
+        # self.epsilon = evo_agent.epsilon
+        # self.noise_scale = evo_agent.noise_scale
+
+        # self.actor.load_state_dict(evo_agent.actor.to(self.device).state_dict())
+        # self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
+        self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
+        self.target_critic.load_state_dict(evo_agent.target_critic.to(self.device).state_dict())
+        # self.actor_optimizer.load_state_dict(evo_agent.actor_optimizer.to(self.device).state_dict())
+        self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.to(self.device).state_dict())
 
     def perturb_hyperparameters(self, perturb_factor):
         self.critic_learning_rate = self.critic_learning_rate * perturb_factor
@@ -336,6 +350,7 @@ class MADDPGAlgorithm(Algorithm):
         return MADDPGAgent(id, self.observation_space[role], self.action_space[role], self.configs['Agent'], self.configs['Network'])
 
     def set_spaces(self, observation_space, action_space):
+        self.log("Got Obs Space {} and Acs Space {}".format(observation_space, action_space), verbose_level=3)
         if len(self.roles) == 1 and not isinstance(observation_space, Iterable):
             self.observation_space = {}
             self.observation_space[self.roles[0]] = observation_space
@@ -345,7 +360,7 @@ class MADDPGAlgorithm(Algorithm):
         self.action_space = {}
         for role in self.roles:
             if role not in roles_action_space:
-                '''Here is DDPG collapse because we are running a Gym (or similar with single agent)'''
+                '''Here is DDPG collapse because we are running a Gym (or similar with single agent) - specifically if the Env doesn't output a dict of roles->dimensions when calling for acs/obs spaces'''
                 roles_action_space[role] = roles_action_space
             if roles_action_space[role]['continuous'] == 0:
                 roles_action_space[role]['type'] = 'discrete'

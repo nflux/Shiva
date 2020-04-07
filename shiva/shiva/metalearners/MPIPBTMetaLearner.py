@@ -243,6 +243,7 @@ class MPIPBTMetaLearner(MetaLearner):
                 self.bottom_20 = int(self.rankings_size * (1-self.configs['Evaluation']['expert_population']))
                 self.top_20 = int(self.rankings_size * self.configs['Evaluation']['expert_population'])
                 self.evolve = self._single_agent_evolve
+
             self.mevals = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/eval_envs/MPIMultiEvaluationWrapper.py'], maxprocs=self.num_mevals)
             self.mevals.bcast(self.configs, root=MPI.ROOT)
             mevals_specs = self.mevals.gather(None, root=MPI.ROOT)
