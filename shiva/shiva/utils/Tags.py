@@ -34,6 +34,8 @@ class Tags(IntEnum):
     io_learner_request = 51
     io_menv_request = 52
     io_eval_request = 53
+    trajectory_info_super = 54
+    trajectory_info_dagger = 55
 
 
 

@@ -183,12 +183,12 @@ class MPIRoboCupImitationEnv(Environment):
             #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
             # self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
 
-            self.learner.send(trajectory_info, dest=self.id, tag=Tags.trajectory_info)
-            self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_observations)
-            self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_actions)
-            self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_rewards)
-            self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
-            self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
+            self.learner.send(trajectory_info, dest=ix+self.id, tag=Tags.trajectory_info_super)
+            self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=ix+self.id, tag=Tags.trajectory_observations)
+            self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=ix+self.id, tag=Tags.trajectory_actions)
+            self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix+self.id, tag=Tags.trajectory_rewards)
+            self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix+self.id, tag=Tags.trajectory_next_observations)
+            self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=ix+self.id, tag=Tags.trajectory_dones)
 
         self.done_count +=1
 
@@ -214,13 +214,13 @@ class MPIRoboCupImitationEnv(Environment):
             #self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
             # self.log("Trajectory Shapes: Obs {}".format(self.observations_buffer.shape))
 
-            self.learner.send(trajectory_info, dest=self.id, tag=Tags.trajectory_info)
-            self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_observations)
-            self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_actions)
-            self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_rewards)
-            self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
-            self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
-            self.learner.Send([self.expert_actions_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_expert_actions)
+            self.learner.send(trajectory_info, dest=ix+self.id, tag=Tags.trajectory_info_dagger)
+            self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=ix+self.id, tag=Tags.trajectory_observations)
+            self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=ix+self.id, tag=Tags.trajectory_actions)
+            self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=ix+self.id, tag=Tags.trajectory_rewards)
+            self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=ix+self.id, tag=Tags.trajectory_next_observations)
+            self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=ix+self.id, tag=Tags.trajectory_dones)
+            self.learner.Send([self.expert_actions_buffer, MPI.DOUBLE], dest=ix+self.id, tag=Tags.trajectory_expert_actions)
 
         self.done_count +=1
 

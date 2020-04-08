@@ -280,10 +280,10 @@ class rc_env:
 
     def getImitObsMsg(self):
         obsMsg = ""
-        obsMsg += str(self.right_envs[0].getBallX()) + " "
-        obsMsg += str(self.right_envs[0].getBallY()) + " "
-        obsMsg += str(self.right_envs[0].getBallVelX()) + " "
-        obsMsg += str(self.right_envs[0].getBallVelY()) + " "
+        obsMsg += str(self.left_envs[0].getBallX()) + " "
+        obsMsg += str(self.left_envs[0].getBallY()) + " "
+        obsMsg += str(self.left_envs[0].getBallVelX()) + " "
+        obsMsg += str(self.left_envs[0].getBallVelY()) + " "
 
         for env in self.left_envs:
             obsMsg += str(env.side()) + " "
@@ -600,7 +600,7 @@ class rc_env:
         self.viewer = subprocess.Popen(cmd.split(' '), shell=False)
 
     def checkGoal(self):
-        return self.right_envs[0].statusToString(self.world_status) == 'Goal_By_Right'
+        return self.left_envs[0].statusToString(self.world_status) == 'Goal_By_Left'
 
     def getReward(self, s, agentID, base, ep_num):
         '''

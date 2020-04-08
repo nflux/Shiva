@@ -146,9 +146,9 @@ class MPIImitationLearner(Learner):
                     self.agents[0].actor_learning_rate = max(lr, self.agents[0].lr_end)
                     self.log('The agents new lr {}'.format(self.agents[0].actor_learning_rate))
                     self.agents[0].mod_lr(self.agents[0].actor_optimizer, self.agents[0].actor_learning_rate)
-                elif self.done_count >= self.initial_evolution_episodes:
-                    cmd = 'pkill python'
-                    subprocess.call(cmd, shell=False)
+                # elif self.done_count >= self.initial_evolution_episodes:
+                #     cmd = 'pkill python'
+                #     subprocess.call(cmd, shell=False)
 
                 if self.done_count >= self.initial_evolution_episodes and self.done_count % self.evolution_episodes == 0 and self.pbt:
                     # self.log('Requesting evolution config')
@@ -183,7 +183,7 @@ class MPIImitationLearner(Learner):
         '''Assuming 1 Agent here (no support for MADDPG), may need to iterate thru all the indexes of the @traj'''
 
         info = MPI.Status()
-        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
+        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info_super, status=info)
         env_source = info.Get_source()
 
         '''Assuming 1 Agent here'''
@@ -236,7 +236,7 @@ class MPIImitationLearner(Learner):
         '''Assuming 1 Agent here (no support for MADDPG), may need to iterate thru all the indexes of the @traj'''
 
         info = MPI.Status()
-        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
+        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info_dagger, status=info)
         env_source = info.Get_source()
 
         '''Assuming 1 Agent here'''
