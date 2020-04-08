@@ -53,7 +53,7 @@ class MPIEnv(Environment):
                 #if time.time() - start >= 5:
                     #self.log('Env is still running')
                     #start = time.time()
-                time.sleep(0.00001)
+                #time.sleep(0.00001)
                 if 'RoboCup' in self.type:
                     self.reset_reward_factors()
                 self._step_numpy()
