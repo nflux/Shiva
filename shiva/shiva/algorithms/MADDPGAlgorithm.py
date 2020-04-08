@@ -327,7 +327,7 @@ class MADDPGAlgorithm(Algorithm):
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
         self.target_critic.load_state_dict(evo_agent.target_critic.to(self.device).state_dict())
         # self.actor_optimizer.load_state_dict(evo_agent.actor_optimizer.to(self.device).state_dict())
-        self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.to(self.device).state_dict())
+        self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
 
     def perturb_hyperparameters(self, perturb_factor):
         self.critic_learning_rate = self.critic_learning_rate * perturb_factor

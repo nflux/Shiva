@@ -30,6 +30,7 @@ class MPILearner(Learner):
         Admin.init(self.configs)
         Admin.add_learner_profile(self, function_only=True)
         self.log("Received config with {} keys".format(len(self.configs.keys())), verbose_level=1)
+        self.log("Received config {}".format(self.configs), verbose_level=3)
         self.launch()
 
     def launch(self):
@@ -196,6 +197,7 @@ class MPILearner(Learner):
         '''Roles Evolution'''
 
         '''
+            TODO:
             Expect to perturb 1 hyperparameter per evolution
             Case if we have 10 HPs
                 Probability of 1/(num of HPs) to perturb the hyperparameters
@@ -207,7 +209,10 @@ class MPILearner(Learner):
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
                 self.evolution_config = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)  # block statement
                 self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=2)
-                
+                if not self.evolve:
+                    self.log("Evolution canceled! self.evolve={}!".format(self.evolve), verbose_level=2)
+                    return
+
                 for evol_config in self.evolution_config:
                     agent = self.get_agent_of_id(evol_config['agent_id'])
                     if evol_config['evolution'] == False:
@@ -305,6 +310,9 @@ class MPILearner(Learner):
 
     def _io_checkpoint(self, checkpoint_num, function_only, use_temp_folder):
         # Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
+        # Save current state of central critic on each agent to enable evolution of the critic
+        for a in self.agents:
+            self.save_central_critic(a)
         self._io_permission(Admin.checkpoint, self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
 
     '''Abstraction of the IO request'''
@@ -393,7 +401,7 @@ class MPILearner(Learner):
 
         agent.copy_weights(evo_agent_id)
         self.alg.copy_weight_from_agent(evo_agent_id)
-        self.save_central_critic(agent)
+        # self.save_central_critic(agent)
         # print('Truncated')
 
     def truncation(self, agent, evo_config):
@@ -406,22 +414,22 @@ class MPILearner(Learner):
 
         agent.copy_weights(evo_agent_id)
         self.alg.copy_weight_from_agent(evo_agent_id)
-        self.save_central_critic(agent)
+        # self.save_central_critic(agent)
 
     def perturb(self, agent):
         # print('Pertubing')
-        perturb_factor = np.random.choice([0.8, 1.2])
+        perturb_factor = np.random.choice(self.perturb_factor)
 
         agent.perturb_hyperparameters(perturb_factor)
         self.alg.perturb_hyperparameters(perturb_factor)
-        self.save_central_critic(agent)
+        # self.save_central_critic(agent)
         # print('Finished Pertubing')
 
     def resample(self, agent):
         # print('Resampling')
         agent.resample_hyperparameters()
         self.alg.resample_hyperparameters()
-        self.save_central_critic(agent)
+        # self.save_central_critic(agent)
 
     def exploitation(self):
         raise NotImplemented
@@ -433,6 +441,7 @@ class MPILearner(Learner):
         if 'MADDPG' in str(self.alg):
             # All Agents will host a copy of the central critic to enable evolution
             agent.critic.load_state_dict(self.alg.critic.state_dict())
+            agent.target_critic.load_state_dict(self.alg.target_critic.state_dict())
             agent.critic_optimizer.load_state_dict(self.alg.critic_optimizer.state_dict())
 
     def _connect_menvs(self):
