@@ -66,7 +66,8 @@ class DDPGAgent(Agent):
             self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-            self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
+            self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale) 
+            self.state_attrs = self.state_attrs + ['epsilon', 'noise_scale']
         else:
             self.actor_learning_rate = agent_config['actor_learning_rate']
             self.critic_learning_rate = agent_config['critic_learning_rate']
@@ -75,6 +76,9 @@ class DDPGAgent(Agent):
 
         if hasattr(self,'rewards') and self.rewards: # Flag saying whether use are optimizing reward functions with PBT
             self.set_reward_factors()
+            self.state_attrs += ['reward_factors']
+        print('DDPG State Attributes: {}'.format(self.state_attrs))
+
 
         if 'MADDPG' not in str(self):
             self.critic_input_size = obs_space + self.actor_output

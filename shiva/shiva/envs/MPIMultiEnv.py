@@ -126,7 +126,7 @@ class MPIMultiEnv(Environment):
             self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
         elif 'RoboCup' in self.type:
             #self.log('Getting Actions')
-            actions = [[agent.get_action(obs, self.step_count,self.learners_specs[ix]['evaluate']) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+            actions = [[agent.get_action(obs, self.step_count,evaluate=False) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
             actions = np.array(actions)
             # self.log("The actions shape {}".format(actions))
             #self.log('Sent Actions')

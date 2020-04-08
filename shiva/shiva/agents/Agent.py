@@ -35,9 +35,16 @@ class Agent(torch.nn.Module):
 
         self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role']
         if hasattr(self,'epsilon'):
+            print('Has epsilon')
             self.state_attrs = self.state_attrs + ['epsilon']
         if hasattr(self,'noise_scale'):
+            print('Has noise_scale')
             self.state_attrs = self.state_attrs + ['noise_scale']
+        if hasattr(self,'reward_factors'):
+            print('Has Reward factors')
+            self.state_attrs = self.state_attrs + ['reward_factors']
+
+        #print('State Attributes: {}'.format(self.state_attrs))
         self.save_filename = "{id}.state"
 
     def __str__(self):

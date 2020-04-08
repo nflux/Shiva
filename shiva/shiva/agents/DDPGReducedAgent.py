@@ -73,13 +73,14 @@ class DDPGReducedAgent(Agent):
             self.critic_learning_rate = agent_config['critic_learning_rate']
             self.ou_noise = noise.OUNoise(self.acs_space, self.exploration_noise)
 
-
+        if hasattr(self,'rewards') and self.rewards: # Flag saying whether use are optimizing reward functions with PBT
+            self.set_reward_factors()
 
         self.instantiate_networks()
 
     def instantiate_networks(self):
         self.net_names = ['actor']
-        self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor'])
+        self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor']).to(self.device)
 
     def to_device(self, device):
         self.device = device
@@ -105,16 +106,7 @@ class DDPGReducedAgent(Agent):
             #action = action / action.sum()
             # print("Agent Evaluate {}".format(action))
         #else:
-        if step_count < self.exploration_steps:
-            if hasattr(self,'noise_scale'):
-                self.ou_noise.set_scale(self.noise_scale)
-            else:
-                self.ou_noise.set_scale(self.exploration_noise)
-            action = np.array([np.random.uniform(0,1) for _ in range(self.actor_output)])
-            action = torch.from_numpy(action + self.ou_noise.noise())
-            action = softmax(action, dim=-1)
-            # print("Random: {}".format(action))
-        elif hasattr(self, 'epsilon') and (np.random.uniform(0, 1) < self.epsilon):
+        if hasattr(self, 'epsilon') and (np.random.uniform(0, 1) < self.epsilon):
             action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
             action = softmax(torch.from_numpy(action), dim=-1)
         else:
@@ -170,7 +162,10 @@ class DDPGReducedAgent(Agent):
 
 
 
-
+    def set_reward_factors(self):
+        self.reward_factors = dict()
+        for reward in self.reward_events:
+            self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
 
 
 
