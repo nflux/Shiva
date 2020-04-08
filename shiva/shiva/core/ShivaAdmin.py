@@ -447,7 +447,7 @@ class ShivaAdmin():
         agents_states = dh.find_pattern_in_path(path, '{id}.state'.format(id=agent_id if agent_id is not None else ''))
         assert len(agents_states) > 0, "No agents found in {} with agent_id {}".format(path, agent_id)
         for state_dict in agents_states:
-            agent_state_dict = torch.load(state_dict, map_location=torch.device('cpu'))
+            agent_state_dict = torch.load(state_dict, map_location=device)
             _new_agent = self.__create_agent_from_state_dict__(agent_state_dict)
             agents.append(_new_agent)
         return agents

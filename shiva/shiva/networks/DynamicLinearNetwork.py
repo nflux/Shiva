@@ -8,7 +8,6 @@ class DynamicLinearNetwork(torch.nn.Module):
         super(DynamicLinearNetwork, self).__init__()
         torch.manual_seed(5)
 
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # print(config)
         self.config = config
         self.net = nh.DynamicLinearSequential(
@@ -22,7 +21,7 @@ class DynamicLinearNetwork(torch.nn.Module):
                             config['last_layer'],
                             # getattr(torch.nn, config['network']['output_function']) if config['network']['output_function'] is not None else None
                             getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
-                        ).to(self.device)
+                        )
     def forward(self, x):
         return self.net(x)
 

@@ -186,13 +186,13 @@ class DDPGAgent(Agent):
         action = self.actor(observation.float())
         return action[0]
 
-    def save(self, save_path, step):
-        torch.save(self.actor, save_path + '/actor.pth')
-        torch.save(self.target_actor, save_path + '/target_actor.pth')
-        torch.save(self.critic, save_path + '/critic.pth')
-        torch.save(self.target_critic, save_path + '/target_critic.pth')
-        torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
-        torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
+    # def save(self, save_path, step):
+    #     torch.save(self.actor, save_path + '/actor.pth')
+    #     torch.save(self.target_actor, save_path + '/target_actor.pth')
+    #     torch.save(self.critic, save_path + '/critic.pth')
+    #     torch.save(self.target_critic, save_path + '/target_critic.pth')
+    #     torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
+    #     torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
 
     # def load(self,save_path):
     #     self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
