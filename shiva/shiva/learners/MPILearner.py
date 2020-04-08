@@ -30,6 +30,7 @@ class MPILearner(Learner):
         Admin.init(self.configs)
         Admin.add_learner_profile(self, function_only=True)
         self.log("Received config with {} keys".format(len(self.configs.keys())), verbose_level=1)
+        self.log("Received config {}".format(self.configs), verbose_level=3)
         self.launch()
 
     def launch(self):

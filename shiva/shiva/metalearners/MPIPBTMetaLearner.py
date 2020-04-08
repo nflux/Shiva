@@ -34,7 +34,7 @@ class MPIPBTMetaLearner(MetaLearner):
         while True:
             time.sleep(self.configs['Admin']['time_sleep']['MetaLearner'])
             self.get_multieval_metrics()
-            # self.review_training_matches() # training matches are fixed for now
+            # self.review_training_matches() # dont send new training matches during runtime - keep fixed for now
             self.evolve()
 
     '''
@@ -156,6 +156,7 @@ class MPIPBTMetaLearner(MetaLearner):
 
     def get_training_matches(self):
         matches = []
+        self.log(self.learners_specs)
         for i in range(0, self.num_learners, self.num_learners_per_map):
             low = i
             high = i + self.num_learners_per_map
@@ -166,7 +167,7 @@ class MPIPBTMetaLearner(MetaLearner):
                     m[role] = learner_spec
             for role in self.roles:
                 if role not in m:
-                    assert False, "Role not found on this created match {}".format(m)
+                    assert False, "Role {} not found on this created match {}".format(role, m)
             matches += [m] * self.num_menvs_per_learners_map
 
         assert len(matches) == self.num_menvs, "Tried to create unique matches for MultiEnvs so that all Learners are training. " \
@@ -295,6 +296,7 @@ class MPIPBTMetaLearner(MetaLearner):
             for config_path, learner_roles in self.learners_map.items():
                 learner_config = load_config_file_2_dict(config_path)
                 learner_config = merge_dicts(self.configs, learner_config)
+                self.log("Learner {} with roles {}".format(len(self.learners_configs), learner_roles), verbose_level=2)
                 learner_config['Learner']['roles'] = learner_roles
                 learner_config['Learner']['learners_io_port'] = self.configs['IOHandler']['learners_io_port']
                 learner_config['Learner']['pbt'] = self.pbt
@@ -315,6 +317,7 @@ class MPIPBTMetaLearner(MetaLearner):
             self.num_learners_per_map = len(self.learners_map.keys())
             self.num_learners = self.num_learners_per_map * self.num_learners_maps
             self.configs['MetaLearner']['num_learners'] = self.num_learners
+            self.log("Preprocess config\nOriginal LearnerMap {}\nNum Learners\t{}\nNum Learners Per Map\t{}\nNum Learners Maps\t{}\nNum MultiEnvs Per Learner Map\t{}".format(self.learners_map, self.num_learners, self.num_learners_per_map, self.num_learners_maps, self.num_menvs_per_learners_map), verbose_level=3)
         else:
             # num_learners is explicitely in the config
             pass
