@@ -375,7 +375,6 @@ class rc_env:
             if self.action_level == 'low':
                 for p in range(options.shape[1]):
                     self.left_action_option[agent_id][p] = options[agent_id][p]
-            # i was thinking that maybe I could choose the action here
             elif self.action_level == 'discretized':
                 self.left_action_option[agent_id] = options[agent_id]
         else:
@@ -383,6 +382,8 @@ class rc_env:
             if self.action_level == 'low':
                 for p in range(options.shape[1]):
                     self.right_action_option[agent_id][p] = options[agent_id][p]
+            elif self.action_level == 'discretized':
+                self.right_action_option[agent_id] = options[agent_id]
 
     def descritize_action(self, action):
         '''
@@ -511,16 +512,9 @@ class rc_env:
                         # without tackle
                         envs[agent_ID].act(self.action_list[a], *self.get_valid_scaled_param(agent_ID,a,base))
                     elif act_lvl == 'discretized':
-                        try:
-                            envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID,base))
-                        except:
-                            print("This is valid", self.get_valid_discrete_value(agent_ID,base))
-                            print("Error is here")
+                        envs[agent_ID].act(self.action_list[a], *self.get_valid_discrete_value(agent_ID,base))
 
-                    print("Before sync status")
                     self.sync_at_status.wait()
-
-                    print("Not passing act")
 
                     obs_prev[agent_ID] = obs[agent_ID]
                     self.world_status = envs[agent_ID].step() # update world
