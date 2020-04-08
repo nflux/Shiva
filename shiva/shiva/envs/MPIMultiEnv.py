@@ -97,7 +97,7 @@ class MPIMultiEnv(Environment):
                  #'''Assuming 1 Agent per Learner'''
                  self.io.send(True, dest=0, tag=Tags.io_menv_request)
                  _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
-                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'],device=self.device)[0]
+                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'],device=self.device,reduced=self.load_reduced)[0]
                  self.io.send(True, dest=0, tag=Tags.io_menv_request)
                  for a in self.agents:
                      '''Force Agent to use self.device'''
@@ -163,7 +163,7 @@ class MPIMultiEnv(Environment):
         '''Assuming 1 Agent per Learner, we could break it with a star operation'''
         self.io.send(True, dest=0 , tag=Tags.io_menv_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
-        self.agents = [ Admin._load_agents(learner_spec['load_path'],device=self.device)[0] for learner_spec in self.learners_specs ]
+        self.agents = [ Admin._load_agents(learner_spec['load_path'],device=self.device,reduced=self.load_reduced)[0] for learner_spec in self.learners_specs ]
         self.io.send(True, dest=0, tag=Tags.io_menv_request)
        #self.agents = [ Admin._load_agents(learner_spec['load_path'])[0] for learner_spec in self.learners_specs ]
         for agent in self.agents:

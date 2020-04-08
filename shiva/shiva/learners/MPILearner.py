@@ -460,7 +460,7 @@ class MPILearner(Learner):
 
     def perturb(self,agent):
         # print('Pertubing')
-        agent.perturb_hyperparameters(perturb_factor)
+        agent.perturb_hyperparameters()
         # print('Finished Pertubing')
 
     def resample(self,agent):

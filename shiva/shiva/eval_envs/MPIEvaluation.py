@@ -199,7 +199,7 @@ class MPIEvaluation(Evaluation):
                 print('New Eval Agent: {}'.format(new_agent))
                 path = self.eval_path+'Agent_'+str(new_agent)
                 #self.log('Path: {} '.format(path))
-                self.agents[i] = Admin._load_agent_of_id(path,new_agent)[0]
+                self.agents[i] = Admin._load_agent_of_id(path,new_agent,reduced=self.load_reduced)[0]
                 #self.log('Agent: {}'.format(str(self.agents[0])))
                 self.evals[i].fill(0)
                 self.eval_counts[i]=0
@@ -228,7 +228,7 @@ class MPIEvaluation(Evaluation):
                 #print('New Eval Agent: {}'.format(new_agent))
                 path = self.eval_path+'Agent_'+str(new_agent)
                 #self.log('Path: {} '.format(path))
-                self.agents[i] = Admin._load_agent_of_id(path,new_agent,device=self.device)[0]
+                self.agents[i] = Admin._load_agent_of_id(path,new_agent,device=self.device,reduced=self.load_reduced)[0]
                 #self.log('Agent: {}'.format(str(self.agents[0])))
                 self.io.send(True, dest=0, tag=Tags.io_eval_request)
                 self.agents[i].to_device(self.device)
@@ -269,7 +269,7 @@ class MPIEvaluation(Evaluation):
         #agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
-        self.agents = [Admin._load_agent_of_id(self.eval_path+'Agent_'+str(agent_id),agent_id,absolute_path=False,device=self.device)[0] for agent_id in self.agent_ids]
+        self.agents = [Admin._load_agent_of_id(self.eval_path+'Agent_'+str(agent_id),agent_id,absolute_path=False,device=self.device,reduced=self.load_reduced)[0] for agent_id in self.agent_ids]
         #self.log('Agent: {}'.format(str(self.agents[0])))
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         for agent in self.agents:

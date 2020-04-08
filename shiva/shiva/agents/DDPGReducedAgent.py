@@ -168,10 +168,6 @@ class DDPGReducedAgent(Agent):
             self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
 
 
-
-
-
-
     def get_module_and_classname(self):
         return ('shiva.agents', 'DDPGReducedAgent.DDPGReducedAgent')
 

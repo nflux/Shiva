@@ -66,7 +66,7 @@ class DDPGAgent(Agent):
             self.actor_learning_rate = np.random.uniform(agent_config['lr_uniform'][0],agent_config['lr_uniform'][1]) / np.random.choice(agent_config['lr_factors'])
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-            self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale) 
+            self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
             self.state_attrs = self.state_attrs + ['epsilon', 'noise_scale']
         else:
             self.actor_learning_rate = agent_config['actor_learning_rate']
@@ -216,11 +216,14 @@ class DDPGAgent(Agent):
         self.target_actor = copy.deepcopy(evo_agent.target_actor)
         self.critic = copy.deepcopy(evo_agent.critic)
         self.target_critic = copy.deepcopy(evo_agent.target_critic)
-        self.epsilon = evo_agent.epsilon
-        self.noise_scale = evo_agent.noise_scale
-        self.reward_factors = evo_agent.reward_factors
+        if hasattr(self,'epsilon'):
+            self.epsilon = evo_agent.epsilon
+        if hasattr(self,'noise_scale'):
+            self.noise_scale = evo_agent.noise_scale
+        if hasattr(self,'reward_factors'):
+            self.reward_factors = evo_agent.reward_factors
 
-    def perturb_hyperparameters(self,perturb_factor):
+    def perturb_hyperparameters(self):
         perturb_factor = np.random.choice(self.perturb_factors)
         self.actor_learning_rate = self.actor_learning_rate * perturb_factor
         self.critic_learning_rate = self.critic_learning_rate * perturb_factor
@@ -231,7 +234,7 @@ class DDPGAgent(Agent):
 
         self.epsilon *= perturb_factor
         self.noise_scale *= perturb_factor
-        if self.rewards:
+        if hasattr(self,'rewards') and self.rewards:
             for reward in self.reward_factors:
                 self.reward_factors[reward] *= perturb_factor
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
@@ -246,7 +249,7 @@ class DDPGAgent(Agent):
             param_group['lr'] = self.critic_learning_rate
         self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
         self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-        if self.rewards:
+        if hasattr(self,'rewards') and self.rewards:
             for reward in self.reward_factors:
                 self.reward_factors[reward] = np.random.uniform(self.reward_range[0],self.reward_range[1])
         #self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
@@ -317,8 +320,9 @@ class DDPGAgent(Agent):
                 perturb_factor = np.random.choice(self.perturb_factors)
                 self.reward_factors[reward] *= perturb_factor
 
-    def get_module_and_classname(self):
-        return ('shiva.agents', 'DDPGReducedAgent.DDPGReducedAgent')
+    def get_module_and_classname(self, reduced=False):
+
+            return ('shiva.agents', 'DDPGReducedAgent.DDPGReducedAgent','DDPGAgent.DDPGAgent')
 
     def __str__(self):
         return '<DDPGAgent(id={}, steps={}, episodes={})>'.format(self.id, self.step_count, self.done_count)

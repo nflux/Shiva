@@ -58,7 +58,6 @@ class ShivaAdmin():
         '''
         self.configs = configs
         self.logger.configs = configs
-        print('Shiva Configs: ',self.configs)
         if 'Admin' in configs:
             {setattr(self, k, v) for k, v in configs['Admin'].items()}
             self.need_to_save = self.configs['Admin']['save']
@@ -375,8 +374,8 @@ class ShivaAdmin():
         LOAD METHODS
     '''
 
-    def _load_agents(self, path, absolute_path=True, device=torch.device('cpu')) -> list:
-        return self._load_agents_states(path, absolute_path=absolute_path, device=device)
+    def _load_agents(self, path, absolute_path=True, device=torch.device('cpu'),reduced=False) -> list:
+        return self._load_agents_states(path, absolute_path=absolute_path, device=device,reduced=reduced)
     #     '''
     #         For a given @path, the procedure will walk recursively over all the folders inside the @path
     #         And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
@@ -394,8 +393,8 @@ class ShivaAdmin():
     #         agents.append(_new_agent)
     #     return agents
 
-    def _load_agent_of_id(self, path, agent_id, absolute_path=True, device=torch.device('cpu')):
-        return self._load_agents_states(path, agent_id, absolute_path, device=device)
+    def _load_agent_of_id(self, path, agent_id, absolute_path=True, device=torch.device('cpu'),reduced=False):
+        return self._load_agents_states(path, agent_id, absolute_path, device=device,reduced=reduced)
         # if not absolute_path:
         #     path = '/'.join([self.base_url, path])
         # agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
@@ -434,7 +433,7 @@ class ShivaAdmin():
         States Handling of Agents
     '''
 
-    def _load_agents_states(self, path, agent_id=None, absolute_path=True, device=torch.device('cpu')) -> list:
+    def _load_agents_states(self, path, agent_id=None, absolute_path=True, device=torch.device('cpu'),reduced=False) -> list:
         '''
             For a given @path, the procedure will walk recursively over all the folders inside the @path
             And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
@@ -448,13 +447,17 @@ class ShivaAdmin():
         assert len(agents_states) > 0, "No agents found in {} with agent_id {}".format(path, agent_id)
         for state_dict in agents_states:
             agent_state_dict = torch.load(state_dict, map_location=device)
-            _new_agent = self.__create_agent_from_state_dict__(agent_state_dict)
+            _new_agent = self.__create_agent_from_state_dict__(agent_state_dict,reduced=reduced)
             agents.append(_new_agent)
         return agents
 
-    def __create_agent_from_state_dict__(self, state_dict):
+    def __create_agent_from_state_dict__(self, state_dict,reduced):
         '''This does the actual mechanics of loading - low level'''
-        _new_agent_class = ch.load_class(state_dict['class_module'], state_dict['class_name'])
+        if reduced:
+            _new_agent_class = ch.load_class(state_dict['class_module'], state_dict['reduced_class_name'])
+        else:
+            _new_agent_class = ch.load_class(state_dict['class_module'], state_dict['full_class_name'])
+
         _new_agent = _new_agent_class(*state_dict['inits'])
         _new_agent.load_state_dict(state_dict)
         # _new_agent = self.__load_agent_states__(_new_agent, state_dict)

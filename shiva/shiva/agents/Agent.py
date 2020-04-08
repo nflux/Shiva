@@ -89,7 +89,7 @@ class Agent(torch.nn.Module):
         # save other state attributes
         for attr in self.state_attrs:
             dict[attr] = getattr(self, attr)
-        dict['class_module'], dict['class_name'] = self.get_module_and_classname()
+        dict['class_module'], dict['reduced_class_name'], dict['full_class_name'] = self.get_module_and_classname()
         dict['inits'] = (self.id, self.obs_space, self.acs_space, self.agent_config, self.networks_config)
         filename = save_path + '/' + self.save_filename.format(id=self.id)
         torch.save(dict, filename)
