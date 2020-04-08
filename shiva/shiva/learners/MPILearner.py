@@ -330,13 +330,17 @@ class MPILearner(Learner):
 
     def create_agents(self):
         if self.load_agents:
-            agents = Admin._load_agents(self.load_agents, absolute_path=False)
+            agents = Admin._load_agents(self.load_agents, absolute_path=False, device=self.alg.device)
         else:
             self.start_agent_idx = self.num_agents * self.id
             self.end_agent_idx = self.start_agent_idx + self.num_agents
             agents = [self.alg.create_agent(ix) for ix in np.arange(self.start_agent_idx,self.end_agent_idx)]
-            #agents = [self.alg.create_agent(self.id + i) for i in range(self.num_agents)]
-            agent_ids = [agent.id for agent in agents]
+            # agents = [self.alg.create_agent(self.id + i) for i in range(self.num_agents)]
+            # agent_ids = [agent.id for agent in agents]
+        agent_ids = []
+        for a in agents:
+            agent_ids.append(a.id)
+            a.to_device(self.alg.device)
         self.log("Agents created: {} of type {}".format(len(agents), type(agents[0])))
         return agents, agent_ids
 
