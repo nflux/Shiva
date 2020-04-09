@@ -51,61 +51,17 @@ class MPIMultiEnv(Environment):
     def run(self):
         self.step_count = 0
         self.log(self.env_specs)
-        self.saving = [True] * self.num_learners
-
         ''' Assuming that
             - all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI
             - agents_instances are in equal amount for all agents
         '''
-
-        if 'Unity' in self.type:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
-        elif 'Gym' in self.type:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
-        elif 'RoboCup' in self.type:
-            self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
+        self.create_obs_buffer()
 
         #start = time.time()
         while True:
-            #if time.time() - start >= 5:
-                #self.log('MultiEnv is still running')
-                #start = time.time()
-            #time.sleep(0.00001)
-            # self._step_python_list()
             self._step_numpy()
+            self._update_agents()
 
-            #if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=info):
-                # self.log("THERE ARE NEW AGENTS TO LOAD")
-                #learner_id = info.Get_source()
-                #learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
-                # self.log("These are the learner specs {}".format(learner_spec))
-                #'''Assuming 1 Agent per Learner'''
-                # if self.update_nums[learner_id] != learner_spec['update_num']:
-                # self.log("About to load {}".format(learner_id))
-                #self.saving[learner_id] = learner_spec['load']
-                #if not self.saving[learner_id]:
-                    #self.saving[learner_id] = True
-                    #self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'])[0]
-                    # self.log("Agent Loaded From Learner {}".format(learner_id))
-                    #self.learners.send(True, dest=learner_id, tag=Tags.save_agents)
-                    # self.update_nums[learner_id] = learner_spec['update_num']
-
-            if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
-                #self._io_load_agents()
-                 learner_id = self.info.Get_source()
-                 learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
-                 #'''Assuming 1 Agent per Learner'''
-                 self.io.send(True, dest=0, tag=Tags.io_menv_request)
-                 _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
-                 self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'],device=self.device,reduced=self.load_reduced)[0]
-                 self.io.send(True, dest=0, tag=Tags.io_menv_request)
-                 for a in self.agents:
-                     '''Force Agent to use self.device'''
-                     a.to_device(self.device)
-                 if 'RoboCup' in self.type:
-                    self.envs.send(self.agents[learner_id].reward_factors,dest=learner_id,tag=Tags.new_agents)
-                 self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
-        # self.close()
 
     def _step_numpy(self):
         #self.log('Waiting for observations')
@@ -133,7 +89,33 @@ class MPIMultiEnv(Environment):
             self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
 
+    def _update_agents(self):
+        if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
+            #self._io_load_agents()
+             learner_id = self.info.Get_source()
+             learner_spec = self.learners.recv(None, source=learner_id, tag=Tags.new_agents)
+             #'''Assuming 1 Agent per Learner'''
+             self.io.send(True, dest=0, tag=Tags.io_menv_request)
+             _ = self.io.recv(None, source = 0, tag=Tags.io_menv_request)
+             self.agents[learner_id] = Admin._load_agents(learner_spec['load_path'],device=self.device,reduced=self.load_reduced)[0]
+             self.io.send(True, dest=0, tag=Tags.io_menv_request)
+             for a in self.agents:
+                 '''Force Agent to use self.device'''
+                 a.to_device(self.device)
+             if 'RoboCup' in self.type:
+                self.envs.send(self.agents[learner_id].reward_factors,dest=learner_id,tag=Tags.new_agents)
+             self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
+
+
         # self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions))
+
+    def create_obs_buffer(self):
+        if 'Unity' in self.type:
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
+        elif 'Gym' in self.type:
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
+        elif 'RoboCup' in self.type:
+            self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
     def _launch_envs(self):
         # Spawn Single Environments

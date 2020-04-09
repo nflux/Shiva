@@ -21,6 +21,7 @@ class Tags(IntEnum):
     new_agents_request=9
     new_agents = 10
     clear_buffers=11
+    learner_specs=12
     #For updated rankings
     rankings = 12
     new_pbt_agents = 13

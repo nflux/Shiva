@@ -24,33 +24,17 @@ class MPIEvaluation(Evaluation):
     def launch(self):
         # Receive Config from MultiEvalWrapper
         self.configs = self.meval.bcast(None, root=0)
+        self.learners_specs = self.meval.bcast(None,root=0)
         super(MPIEvaluation, self).__init__(self.configs)
         Admin.init(self.configs)
         self._connect_io_handler()
-        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
-        if hasattr(self, 'device') and self.device == 'gpu':
-            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        else:
-            self.device = torch.device('cpu')
-
+        self.set_device() #Device for agents to be on ie... GPU or CPU
         self._launch_envs()
         self.meval.gather(self._get_eval_specs(), root=0) # checkin with MultiEvalWrapper
-        #self._connect_learners()
-        self.agent_sel = self.meval.recv(None, source=0,tag=Tags.new_agents)
-        self.agent_ids = [id for id in self.agent_sel]
-        print('Agent IDs: ', self.agent_ids)
-        print('Agent Sel: ', self.agent_sel)
-        #self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
-        if 'RoboCup' in self.env_specs['type']:
-            self.evals_list = [[None]*self.eval_episodes] * self.agents_per_env
-            self.send_eval_update_agents = getattr(self, 'send_robocup_eval_update_agents')
-        else:
-            self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
-        self.ep_evals = dict()
-        self.eval_counts = np.zeros(len(self.agent_ids),dtype=int)
-        self._io_load_agents()
+        self.get_initial_agents()#Get Agent IDs
+        self.set_evaluation_attributes()
+        self._io_load_agents()#Load actual agents
         self.log("Agents created: {} of type {}".format(len(self.agents), type(self.agents[0])))
-
         # Give start flag!
         self.envs.bcast([True], root=MPI.ROOT)
         self.log('Eval Envs have been told to start!')
@@ -59,8 +43,46 @@ class MPIEvaluation(Evaluation):
     def run(self):
         self.step_count = 0
         info = MPI.Status()
+        self.create_obs_buffer()
 
-        # self.log("Get here 53")
+        while True:
+            time.sleep(0.00001)
+            self._receive_eval_numpy()
+            self.step()
+            self.send_evals()
+
+        self.close()
+
+    def step(self):
+        self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
+        # self.log('Daniel is cooler')
+        # self.debug("Obs {}".format(observations))
+        self.step_count  += self.env_specs['num_instances_per_env'] * self.num_envs
+
+        if 'Unity' in self.env_specs['type']:
+            actions = [ [ [self.agents[ix].get_action(o, self.step_count, True) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+            self.actions = np.array(actions)
+            self.envs.scatter(self.actions, root=MPI.ROOT)
+        elif 'Gym' in self.env_specs['type']:
+            # Gym
+            # same?
+            #actions = [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
+            actions = [[agent.get_action(obs, self.step_count, True) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+            self.actions = np.array(actions)
+            self.envs.scatter(self.actions, root=MPI.ROOT)
+        elif 'RoboCup' in self.env_specs['type']:
+            actions = [[agent.get_action(obs, self.step_count, True) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
+            actions = np.array(actions, dtype=np.float64)
+            # self.log("The actions shape {}".format(actions.shape))
+            self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
+
+    def send_evals(self):
+        if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
+            self.send_eval_update_agents()
+            for i in range(self.num_envs):
+                self.envs.send([True],dest=i,tag=Tags.clear_buffers)
+
+    def create_obs_buffer(self):
         if 'Unity' in self.env_specs['type']:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         elif 'Gym' in self.env_specs['type']:
@@ -68,97 +90,6 @@ class MPIEvaluation(Evaluation):
         elif 'RoboCup' in self.env_specs['type']:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
-        # self.log("Get here 61")
-        # if ''
-        #     self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
-        # except:
-        #     self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
-
-
-        while True:
-            time.sleep(0.001)
-            self._receive_eval_numpy()
-            # self.log("Jorge is so cool")
-            self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
-            # self.log('Daniel is cooler')
-            # self.debug("Obs {}".format(observations))
-            self.step_count  += self.env_specs['num_instances_per_env'] * self.num_envs
-
-            if 'Unity' in self.env_specs['type']:
-                actions = [ [ [self.agents[ix].get_action(o, self.step_count, True) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
-                self.actions = np.array(actions)
-                self.envs.scatter(self.actions, root=MPI.ROOT)
-            elif 'Gym' in self.env_specs['type']:
-                # Gym
-                # same?
-                #actions = [ [self.agents[ix].get_action(o, self.step_count, False) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
-                actions = [[agent.get_action(obs, self.step_count, True) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
-                self.actions = np.array(actions)
-                self.envs.scatter(self.actions, root=MPI.ROOT)
-            elif 'RoboCup' in self.env_specs['type']:
-                actions = [[agent.get_action(obs, self.step_count, True) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
-                actions = np.array(actions, dtype=np.float64)
-                # self.log("The actions shape {}".format(actions.shape))
-                self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
-
-            # self.log("Getting here at 91")
-
-            if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-                self.send_eval_update_agents()
-                #print('Sending Eval and updating most recent agent file path ')
-                #for i in range(self.agents_per_env):
-                    #self.log('agent_id: {}'.format(self.agent_ids[i]))
-                    #path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                    #self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
-                    #self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
-                    #if 'RoboCup' in self.configs['type']:
-                        #self.meval.send(self.evals_list[i], dest=0, tag=Tags.evals)
-                    #else:
-                        #self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
-                    ##self.ep_evals['path'] = path+'/episode_evaluations'
-                    ##self.ep_evals['evals'] = self.evals[i]
-                    #self.io.send(True, dest=0, tag=Tags.io_eval_request)
-                    #_ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
-                    #np.save(path+'/episode_evaluations',self.evals[i])
-                    ## self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
-                    #new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
-                    #self.agent_ids[i] = new_agent
-                    #print('New Eval Agent: {}'.format(new_agent))
-                    #path = self.eval_path+'Agent_'+str(new_agent)
-                    #self.log('Path: {} '.format(path))
-                    #self.agents[i] = Admin._load_agents(path)[0]
-                    #self.log('Agent: {}'.format(str(self.agents[0])))
-                    #self.evals[i].fill(0)
-                    #self.eval_counts[i]=0
-                    #self.io.send(True, dest=0, tag=Tags.io_eval_request)
-                #time.sleep(0.1)
-
-
-            #if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-                #self.log('Sending Eval and updating most recent agent file path')
-                #self.ep_evals['agent_ids'] = self.agent_ids
-                #self.ep_evals['evals'] = self.evals
-                #self.ep_evals['path'] = self.eval_path
-                #self.meval.send(self.ep_evals,dest=0,tag=Tags.evals)
-                #self.agent_ids= self.meval.recv(None,source=MPI.ANY_SOURCE,tag=Tags.new_agents)[0]
-                #self.ep_evals['new_agent_ids'] = self.agent_ids
-                #self.io.send(self.ep_evals,dest=0,tag=Tags.io_evals_save,)
-                #self.agents = self.io.recv(None,source=0,tag=Tags.io_evals_save)
-                #self.evals.fill(0)
-                #self.eval_counts.fill(0)
-                #time.sleep(0.1)
-
-
-
-
-
-                for i in range(self.num_envs):
-                    self.envs.send([True],dest=i,tag=Tags.clear_buffers)
-                #print("Agents have been told to clear buffers for new agents")
-
-
-
-        self.close()
 
     def _launch_envs(self):
         # Spawn Single Environments
@@ -181,61 +112,39 @@ class MPIEvaluation(Evaluation):
 
     def send_eval_update_agents(self):
         if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-            #print('Sending Eval and updating most recent agent file path ')
             for i in range(self.agents_per_env):
-                #self.log('agent_id: {}'.format(self.agent_ids[i]))
-                path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                #self.log('Sending Evaluations to MultiEval: {}'.format(self.evals[i]))
+                #path = self.eval_path+'Agent_'+str(self.agent_ids[i])
                 self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
                 self.meval.send(self.evals[i],dest=0,tag=Tags.evals)
-                #self.ep_evals['path'] = path+'/episode_evaluations'
-                #self.ep_evals['evals'] = self.evals[i]
+                new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0]
                 self.io.send(True, dest=0, tag=Tags.io_eval_request)
                 _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
-                np.save(path+'/episode_evaluations',self.evals[i])
-                # self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
-                new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
+                np.save(self.learners_specs[self.agent_ids[i]]['load_path']+'/episode_evaluations',self.evals[i])
+                self.agents[i] = Admin._load_agent_of_id(self.learners_specs[new_agent]['load_path'],new_agent,absolute_path=True,reduced=self.load_reduced)[0]
+                self.io.send(True, dest=0, tag=Tags.io_eval_request)
                 self.agent_ids[i] = new_agent
-                print('New Eval Agent: {}'.format(new_agent))
-                path = self.eval_path+'Agent_'+str(new_agent)
-                #self.log('Path: {} '.format(path))
-                self.agents[i] = Admin._load_agent_of_id(path,new_agent,reduced=self.load_reduced)[0]
-                #self.log('Agent: {}'.format(str(self.agents[0])))
                 self.evals[i].fill(0)
                 self.eval_counts[i]=0
-                self.io.send(True, dest=0, tag=Tags.io_eval_request)
-            time.sleep(0.001)
 
 
     def send_robocup_eval_update_agents(self):
         if self.eval_counts.sum() >= self.eval_episodes*self.agents_per_env:
-            #print('Sending Eval and updating most recent agent file path ')
             for i in range(self.agents_per_env):
-                #self.log('agent_id: {}'.format(self.agent_ids[i]))
-                path = self.eval_path+'Agent_'+str(self.agent_ids[i])
-                #self.log('Sending Evaluations to MultiEval: {}'.format(self.evals_list[i]))
+                #path = self.eval_path+'Agent_'+str(self.agent_ids[i])
                 self.meval.send(self.agent_ids[i],dest=0,tag=Tags.evals)
                 self.meval.send(self.evals_list[i], dest=0, tag=Tags.evals)
-                #self.ep_evals['path'] = path+'/episode_evaluations'
-                #self.ep_evals['evals'] = self.evals[i]
+                new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0]
                 self.io.send(True, dest=0, tag=Tags.io_eval_request)
                 _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
-                #np.save(path+'/episode_evaluations',self.evals[i])
-                with open(path+'/episode_evaluations.data','wb') as file_handler:
-                    pickle.dump(self.evals_list,file_handler)
-                # self.agents = Admin._load_agents(self.eval_path+'Agent_'+str(self.id))
-                new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0][0]
-                #print('New Eval Agent: {}'.format(new_agent))
-                path = self.eval_path+'Agent_'+str(new_agent)
-                #self.log('Path: {} '.format(path))
-                self.agents[i] = Admin._load_agent_of_id(path,new_agent,device=self.device,reduced=self.load_reduced)[0]
-                #self.log('Agent: {}'.format(str(self.agents[0])))
+                with open(self.learners_specs[self.agent_ids[i]]+'/episode_evaluations.data','wb') as file_handler:
+                    pickle.dump(self.evals_list[i],file_handler)
+                #path = self.eval_path+'Agent_'+str(new_agent)
+                self.agents[i] = Admin._load_agent_of_id(self.learners_specs[new_agent]['load_path'],new_agent,device=self.device,reduced=self.load_reduced)[0]
                 self.io.send(True, dest=0, tag=Tags.io_eval_request)
                 self.agents[i].to_device(self.device)
-                self.evals_list = [[None]*self.eval_episodes]*len(self.agent_ids)
+                self.evals_list[i] = [None for i in range(self.eval_episodes)]
                 self.eval_counts[i]=0
                 self.agent_ids[i] = new_agent
-            time.sleep(0.001)
 
     def _receive_eval_numpy(self):
         '''Receive trajectory reward from each single  evaluation environment in self.envs process group'''
@@ -269,17 +178,34 @@ class MPIEvaluation(Evaluation):
         #agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
-        self.agents = [Admin._load_agent_of_id(self.eval_path+'Agent_'+str(agent_id),agent_id,absolute_path=False,device=self.device,reduced=self.load_reduced)[0] for agent_id in self.agent_ids]
+        self.log('IO_Load_Agents: {}'.format([self.learners_specs[agent_id] for agent_id in self.agent_ids]))
+        #self.agents = [Admin._load_agent_of_id(self.eval_path+'Agent_'+str(agent_id),agent_id,absolute_path=False,device=self.device,reduced=self.load_reduced)[0] for agent_id in self.agent_ids]
+        self.agents = [Admin._load_agent_of_id(self.learners_specs[agent_id]['load_path'],agent_id,absolute_path=True,device=self.device,reduced=self.load_reduced)[0] for agent_id in self.agent_ids]
         #self.log('Agent: {}'.format(str(self.agents[0])))
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         for agent in self.agents:
             agent.to_device(self.device)
-        #self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
 
+    def set_device(self):
+        if hasattr(self, 'device') and self.device == 'gpu':
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = torch.device('cpu')
 
-        # self.debug("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-        # self.debug("{}\n{}\n{}\n{}\n{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-        # self.debug("{}\n{}\n{}\n{}\n{}".format(observations, actions, rewards, next_observations, dones))
+    def get_initial_agents(self):
+        self.agent_sel = self.meval.recv(None, source=0,tag=Tags.new_agents)
+        ''' Get Learner specs for load paths'''
+        self.agent_ids = [id for id in self.agent_sel]
+        print('Agent IDs: ', self.agent_ids)
+
+    def set_evaluation_attributes(self):
+        if 'RoboCup' in self.env_specs['type']:
+            self.evals_list = [[None]*self.eval_episodes] * self.agents_per_env
+            self.send_eval_update_agents = getattr(self, 'send_robocup_eval_update_agents')
+        else:
+            self.evals = np.zeros((len(self.agent_ids),self.eval_episodes))
+        self.ep_evals = dict()
+        self.eval_counts = np.zeros(len(self.agent_ids),dtype=int)
 
     def _connect_io_handler(self):
         self.io = MPI.COMM_WORLD.Connect(self.evals_io_port, MPI.INFO_NULL)

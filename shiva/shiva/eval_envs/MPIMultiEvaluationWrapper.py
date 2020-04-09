@@ -29,28 +29,14 @@ class MPIMultiEvaluationWrapper(Evaluation):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEvaluationWrapper, self).__init__(self.configs)
+        self.learners_specs = self.meta.bcast(None,root=0)
         self._launch_evals()
         self.meta.gather(self._get_meval_specs(), root=0) # checkin with Meta
-        #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
-        #self.rankings = np.zeros(self.num_agents)
+        self.agent_ids = self.meta.bcast(None,root=0)
         self.evaluations = dict()
         self.info = MPI.Status()
-        self.log("This at 35 is not printed")
-        self.agent_ids = self.meta.bcast(None,root=0)
-        print('Agent IDS: ', self.agent_ids)
-        if 'RoboCup' in self.configs['Environment']['type']:
-            self.evaluations = pd.DataFrame(index = np.arange(0,self.num_agents),columns = self.eval_events)
-            self.rankings = np.zeros(self.num_agents)
-            self._sort_evals = getattr(self, '_sort_robocup')
-            self._get_evaluations = getattr(self,'_get_robocup_evaluations')
-            self._set_pandas()
-        else:
-            self.evaluations = dict()
-            self.rankings = np.zeros(self.num_agents)
-            self._sort_evals = getattr(self,'_sort_simple')
-            self._get_evaluations = getattr(self,'_get_simple_evaluations')
+        self.set_environment_specific_attributes()
         self.initial_agent_selection()
-
         self.run()
 
     def run(self):
@@ -58,17 +44,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self._get_initial_evaluations()
 
         while True:
-            time.sleep(0.001)
+            time.sleep(0.00001)
             self._get_evaluations(True)
-
             if self.sort:
                 self._sort_evals()
-                #self.rankings = np.array(sorted(self.evaluations, key=self.evaluations.__getitem__,reverse=True))
-                #print('Rankings: ', self.rankings)
-                #print('Rankings type: ', type(self.rankings))
-                #self.meta.send(self.rankings,dest= 0,tag=Tags.rankings)
-                #print('Sent rankings to Meta')
-                #self.sort = False
 
 
         self.close()
@@ -77,6 +56,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         # Spawn Single Environments
         self.evals = MPI.COMM_WORLD.Spawn(sys.executable, args=['shiva/eval_envs/MPIEvaluation.py'], maxprocs=self.num_evals)
         self.evals.bcast(self.configs, root=MPI.ROOT)  # Send them the Config
+        self.evals.bcast(self.learners_specs,root=MPI.ROOT)
         #self.log('Eval configs sent')
         eval_spec = self.evals.gather(None, root=MPI.ROOT)  # Wait for Eval Specs ()
         self.log("These are the evals {}".format(eval_spec))
@@ -108,7 +88,6 @@ class MPIMultiEvaluationWrapper(Evaluation):
             agent_id = self.evals.recv(None, source = MPI.ANY_SOURCE, tag=Tags.evals, status=self.info)
             env_source = self.info.Get_source()
             evals = self.evals.recv(None, source=env_source, tag=Tags.evals)
-            #evals['agent_id'] = agent_id
             keys = evals[0].keys()
             averages = dict()
             for i in range(len(evals)):
@@ -131,17 +110,6 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.sort = False
 
     def _sort_robocup(self):
-        #self.log('Robocup Sort!')
-        #self.evaluations['total_score'] = 0
-        #self.evaluations= self.evaluations.rename_axis('agent_ids').reset_index()
-        #for i,col in enumerate(self.eval_events):
-            #self.log('enumerating events')
-            #self.evaluations.sort_values(by=col,inplace=True)
-            #self.log('sorting')
-            #self.evaluations['total_score'] += np.array(self.evaluations.index) * self.eval_weights[i]
-            #self.log('setting total scores')
-        #self.evaluations.sort_values(by='total_score',ascending=False,inplace=True)
-        #self.log('Sorting Total Scores')
         self.evaluations.sort_values(by=self.eval_events,ascending=self.sort_ascending,inplace=True)
         #self.evaluations.sort_values(by=self.eval_events,inplace=True)
         self.rankings = np.array(self.evaluations.index)
@@ -153,17 +121,6 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.sort = False
 
 
-    #def _get_evaluations(self,sort):
-        #if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag = Tags.evals):
-            #evals = self.evals.recv(None,source=MPI.ANY_SOURCE,tag=Tags.evals,status=self.info)
-            #eval_source = self.info.Get_source()
-            #self.log('Agent IDS: '.format(evals['agent_ids']))
-            #for i in range(len(evals['agent_ids'])):
-                #self.evaluations[evals['agent_ids'][i]] = evals['evals'][i].mean()
-            #self.sort=sort
-            #print('Multi Evaluation has received evaluations!')
-            #self.agent_selection(eval_source)
-
     def _get_initial_evaluations(self):
         while len(self.evaluations ) < self.num_agents:
             self._get_evaluations(False)
@@ -172,12 +129,12 @@ class MPIMultiEvaluationWrapper(Evaluation):
     def initial_agent_selection(self):
         for i in range(self.num_evals):
             self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))[0]
-            print('Selected Evaluation Agents for Environment {}: {}'.format(i, self.agent_sel))
+            self.log('Selected Evaluation Agents for Environment {}: {}'.format(i, self.agent_sel))
             self.evals.send(self.agent_sel,dest=i,tag=Tags.new_agents)
 
     def agent_selection(self,env_rank):
-        self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
-        print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
+        self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))[0]
+        self.log('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
         self.evals.send(self.agent_sel,dest=env_rank,tag=Tags.new_agents)
 
     def _set_pandas(self):
@@ -185,6 +142,19 @@ class MPIMultiEvaluationWrapper(Evaluation):
         pd.set_option('display.max_columns',None)
         pd.set_option('display.width',None)
         pd.set_option('display.max_colwidth',-1)
+
+    def set_environment_specific_attributes(self):
+        if 'RoboCup' in self.configs['Environment']['type']:
+            self.evaluations = pd.DataFrame(index = np.arange(0,self.num_agents),columns = self.eval_events)
+            self.rankings = np.zeros(self.num_agents)
+            self._sort_evals = getattr(self, '_sort_robocup')
+            self._get_evaluations = getattr(self,'_get_robocup_evaluations')
+            self._set_pandas()
+        else:
+            self.evaluations = dict()
+            self.rankings = np.zeros(self.num_agents)
+            self._sort_evals = getattr(self,'_sort_simple')
+            self._get_evaluations = getattr(self,'_get_simple_evaluations')
 
     def close(self):
         comm = MPI.Comm.Get_parent()
