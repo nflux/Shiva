@@ -107,7 +107,7 @@ class MPILearner(Learner):
         for comm in self.envs:
             self.receive_trajectory_numpy(comm)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
-            self.log("Got {} metrics ~like {}".format(self.num_received, self.last_metric_received), verbose_level=2)
+            self.log("{} as {}".format(self.num_received, self.last_metric_received), verbose_level=2)
 
     def receive_trajectory_numpy(self, env_comm):
         '''Receive trajectory from each single environment in self.envs process group'''
@@ -116,7 +116,7 @@ class MPILearner(Learner):
             env_source = self.info.Get_source()
             self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info)
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
-            self.last_metric_received, self.num_received = "Traj from {} got {}".format(self.traj_info['env_id'], self.traj_info['metrics']), self.num_received + 1
+            self.last_metric_received, self.num_received = "{} got {}".format(self.traj_info['env_id'], self.traj_info['metrics']), self.num_received + 1
 
             self.metrics_env = {}
             for ix, role in enumerate(self.roles):
@@ -204,7 +204,8 @@ class MPILearner(Learner):
         '''
         if self.pbt:
             if self.done_count % self.evolution_episodes == 0 and (self.done_count >= self.initial_evolution_episodes):
-                self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution) # ask for evolution configs
+                self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution_config) # ask for evolution configs
+                # self.log("Ask for Evolution", verbose_level=3)
 
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
                 self.evolution_config = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)  # block statement

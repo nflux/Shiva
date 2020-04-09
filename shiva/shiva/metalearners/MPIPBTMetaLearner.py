@@ -47,18 +47,17 @@ class MPIPBTMetaLearner(MetaLearner):
 
     def _roles_evolve(self):
         '''Evolve only if we received Rankings'''
-        if self.pbt and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution, status=self.info):
+        if self.pbt and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
 
             if not self.start_evals_flag:
                 # Enable evaluations to start!
                 self.start_evals()
                 return
 
-            learner_spec = self.learners.recv(None, source=self.info.Get_source(), tag=Tags.evolution)
+            learner_spec = self.learners.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)
+            assert learner_spec['id'] == self.info.Get_source(), "mm - just checking"
 
-            # if hasattr(self, 'rankings'):
-            if self.evols_sent[learner_spec['id']]:
-            # if eval_rankings_received % self.num_learners == 0:
+            if hasattr(self, 'rankings') and not self.evols_sent[learner_spec['id']]:
                 roles_evo = []
                 for role, agent_ids in learner_spec['role2ids'].items():
                     agent_evo = dict()
@@ -144,7 +143,7 @@ class MPIPBTMetaLearner(MetaLearner):
         if self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings, status=self.info):
             self.rankings = self.mevals.recv(None, source=self.info.Get_source(), tag=Tags.rankings)
             self.evols_sent = {i:False for i in range(self.num_learners)}
-            self.log('Got Rankings {}'.format(self.rankings), verbose_level=1)
+            self.log('Got New Rankings {}'.format(self.rankings), verbose_level=1)
 
 
     '''
@@ -175,7 +174,14 @@ class MPIPBTMetaLearner(MetaLearner):
 
         assert len(matches) == self.num_menvs, "Tried to create unique matches for MultiEnvs so that all Learners are training. " \
                                                f"Created the wrong number of matches: we have {self.num_envs} MultiEnvs and created {len(matches)} matches"
-        self.log("Created {} new matches\n{}".format(len(matches), matches), verbose_level=2)
+
+        matches_log = []
+        for ix, m in enumerate(matches):
+            match_log = "Match {}: ".format(ix)
+            for role, l_spec in m.items():
+                match_log += " {} to Learner {} |".format(role, l_spec['id'])
+            matches_log.append(match_log)
+        self.log("Created {} new training matches\n{}".format(len(matches), "\n".join(matches_log)), verbose_level=2)
         return matches
 
     def has_pair(self, agent_id, role):

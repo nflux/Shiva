@@ -166,7 +166,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self.rankings[role] = self.evaluations[self.evaluations['Role']==role].index.tolist()
 
         self.meta.send(self.rankings, dest=0, tag=Tags.rankings)
-        self.log("Rankings\n{}".format(self.evaluations.sort_values('Average_Reward', ascending=False)), verbose_level=1)
+        self.log("Rankings\n{}".format(self.evaluations.sort_values(['Role', 'Average_Reward'], ascending=False)), verbose_level=1)
         self.sort = False
 
     def get_role(self, agent_id):
