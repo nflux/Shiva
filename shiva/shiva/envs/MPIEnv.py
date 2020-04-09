@@ -7,6 +7,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 from mpi4py import MPI
 import torch
 
+from shiva.core.admin import logger
 from shiva.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.buffers.TensorBuffer import MultiAgentTensorBuffer
@@ -57,7 +58,7 @@ class MPIEnv(Environment):
 
     def _receive_new_match(self):
         self.role2learner_spec = self.menv.recv(None, source=0, tag=Tags.new_agents)
-        self.log("Got LearnerSpecs {}".format(self.role2learner_spec), verbose_level=3)
+        self.log("Got LearnerSpecs {}".format(self.role2learner_spec), verbose_level=2)
 
     def _reload_match_learners(self):
         '''MultiEnv got new matching agents, we receive Learner Specs to send trajectory'''

@@ -7,7 +7,7 @@ import numpy as np
 from shiva.eval_envs.Evaluation import Evaluation
 from shiva.helpers.misc import terminate_process, flat_1d_list
 from shiva.utils.Tags import Tags
-from shiva.core.admin import Admin
+from shiva.core.admin import Admin, logger
 
 class MPIEvaluation(Evaluation):
 
@@ -197,9 +197,8 @@ class MPIEvaluation(Evaluation):
         # self.role2id = self.meval.recv(None, source=0, tag=Tags.new_agents)
         self.role2learner_spec = self.meval.recv(None, source=0, tag=Tags.new_agents)
         self.log("Received Match {}".format(self.role2learner_spec), verbose_level=3)
-        '''Assuming a Learner has 1 Agent per Role'''
-        self.agent_ids = [self.role2learner_spec[role]['role2ids'][role][0] for role in self.roles] # keep same order of the self.roles list
         self.agents = self.load_agents(self.role2learner_spec)
+        self.agent_ids = [a.id for a in self.agents]
         self.role2agent = self.get_role2agent()
         self.eval_metrics = []
         self.log("Got match for: {}".format(self.agent_ids), verbose_level=2)
@@ -217,12 +216,13 @@ class MPIEvaluation(Evaluation):
     def load_agents(self, role2learner_spec=None):
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
+
         self.io.send(True, dest=0, tag=Tags.io_eval_request)
         _ = self.io.recv(None, source=0, tag=Tags.io_eval_request)
 
         agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
         for role, learner_spec in role2learner_spec.items():
-            '''Need to load ONLY the agents that are not being evaluated'''
+            '''Need to reload ONLY the agents that are not being evaluated'''
             if not learner_spec['evaluate']:
 
                 # Useful when loading all Learners agents

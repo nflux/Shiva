@@ -103,11 +103,11 @@ class MPILearner(Learner):
             self.run_evolution()
 
     def check_incoming_trajectories(self):
-        self.last_metric_received = None
+        self.last_metric_received, self.num_received = None, 0
         for comm in self.envs:
             self.receive_trajectory_numpy(comm)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
-            self.log("{}".format(self.last_metric_received), verbose_level=2)
+            self.log("Got {} metrics ~like {}".format(self.num_received, self.last_metric_received), verbose_level=2)
 
     def receive_trajectory_numpy(self, env_comm):
         '''Receive trajectory from each single environment in self.envs process group'''
@@ -116,7 +116,7 @@ class MPILearner(Learner):
             env_source = self.info.Get_source()
             self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info)
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
-            self.last_metric_received = "From {} got {}".format(self.traj_info['env_id'], self.traj_info['metrics'])
+            self.last_metric_received, self.num_received = "Traj from {} got {}".format(self.traj_info['env_id'], self.traj_info['metrics']), self.num_received + 1
 
             self.metrics_env = {}
             for ix, role in enumerate(self.roles):
@@ -489,8 +489,13 @@ class MPILearner(Learner):
 
     def set_default_configs(self):
         assert 'Learner' in self.configs, 'No Learner config found on {}'.format(self.configs)
-        if not hasattr(self.configs['Learner'], 'evaluate'):
-            self.configs['Learner']['evaluate'] = False
+        default_configs = {
+            'evaluate': False,
+            'perturb_factor': [0.8, 1.2]
+        }
+        for attr_name, default_val in default_configs.items():
+            if not hasattr(self.configs['Learner'], attr_name):
+                self.configs['Learner'][attr_name] = default_val
 
     def close(self):
         comm = MPI.Comm.Get_parent()
@@ -499,7 +504,7 @@ class MPILearner(Learner):
         comm.Disconnect()
 
     def __str__(self):
-        return "<Learner(id={})>".format(self.id)
+        return "<Learner(id={}, roles={})>".format(self.id, self.roles)
 
     # def show_comms(self):
     #     self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))

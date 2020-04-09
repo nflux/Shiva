@@ -56,7 +56,9 @@ class MPIPBTMetaLearner(MetaLearner):
 
             learner_spec = self.learners.recv(None, source=self.info.Get_source(), tag=Tags.evolution)
 
-            if hasattr(self, 'rankings'): #self.evols_sent[learner_spec['id']]:
+            # if hasattr(self, 'rankings'):
+            if self.evols_sent[learner_spec['id']]:
+            # if eval_rankings_received % self.num_learners == 0:
                 roles_evo = []
                 for role, agent_ids in learner_spec['role2ids'].items():
                     agent_evo = dict()
@@ -68,10 +70,10 @@ class MPIPBTMetaLearner(MetaLearner):
                     agent_evo['agent_id'] = agent_id
                     agent_evo['ranking'] = ranking
                     if ranking <= self.top_20[role]:
-                        # Good agent
+                        agent_evo['msg'] = 'You are good'
                         agent_evo['evolution'] = False
                     elif self.top_20[role]  < ranking < self.bottom_20[role]:
-                        # Middle of the Pack
+                        agent_evo['msg'] = 'Middle of the Pack'
                         agent_evo['evolution'] = True
                         agent_evo['evo_agent_id'] = self.rankings[role][ np.random.choice(range(self.bottom_20[role])) ]
                         agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent_id'])['load_path']
@@ -80,7 +82,7 @@ class MPIPBTMetaLearner(MetaLearner):
                         agent_evo['exploitation'] = 't_test'
                         agent_evo['exploration'] = np.random.choice(['perturb', 'resample'])
                     else:
-                        # You suck
+                        agent_evo['msg'] = 'You suck'
                         agent_evo['evolution'] = True
                         if not self.top_20[role] == 0:
                             agent_evo['evo_agent_id'] = self.rankings[role][ np.random.choice(range(self.top_20[role])) ]
@@ -95,8 +97,9 @@ class MPIPBTMetaLearner(MetaLearner):
 
                 self.log("Sending Evo {}".format(roles_evo), verbose_level=2)
                 self.learners.send(roles_evo, dest=self.info.Get_source(), tag=Tags.evolution_config)
-                # self.evols_sent[learner_spec['id']] = True
-                delattr(self, 'rankings')
+
+                self.evols_sent[learner_spec['id']] = True
+                # delattr(self, 'rankings')
 
     '''
         Single Agent Evolution
