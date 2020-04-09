@@ -9,7 +9,7 @@ from shiva.core.admin import Admin, logger
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import terminate_process
 
-class MPIMultiEnv(Environment):
+class MPIImitationMultiEnv(Environment):
 
     def __init__(self):
         self.meta = MPI.Comm.Get_parent()
@@ -19,7 +19,7 @@ class MPIMultiEnv(Environment):
     def launch(self):
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
-        super(MPIMultiEnv, self).__init__(self.configs)
+        super(MPIImitationMultiEnv, self).__init__(self.configs)
         self.io = MPI.COMM_WORLD.Connect(self.menvs_io_port, MPI.INFO_NULL)
         self.info = MPI.Status()
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
@@ -55,6 +55,9 @@ class MPIMultiEnv(Environment):
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
         elif 'RoboCup' in self.type:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
+
+        start_dagger = self.envs.gather(None, root=MPI.ROOT) # Wait for dagger to occur for imitation
+        self.log("Start dagger {}".format(start_dagger))
 
         while True:
             time.sleep(0.0001)
@@ -169,7 +172,7 @@ class MPIMultiEnv(Environment):
 
 if __name__ == "__main__":
     try:
-        menv = MPIMultiEnv()
+        menv = MPIImitationMultiEnv()
     except Exception as e:
         print("MultiEnv error:", traceback.format_exc())
     finally:

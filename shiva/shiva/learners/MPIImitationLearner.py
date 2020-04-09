@@ -109,13 +109,22 @@ class MPIImitationLearner(Learner):
                     self.agents[0].step_count = self.step_count
                     self.agents[0].done_count = self.done_count
                     self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                    self.log("The loss for supervised is {}".format(self.alg.get_loss()))
+                    self.log("The loss for supervised is {} and ep is {}".format(self.alg.get_loss(), self.done_count))
 
-                    for ix in range(self.num_menvs):
-                        self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+                    # for ix in range(self.num_menvs):
+                    #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
+
+                    # if self.pbt:
+                    #     self._io_save_pbt_agents()
 
                     if self.done_count % self.save_checkpoint_episodes == 0:
                         self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
+                
+                # if self.done_count < self.initial_evolution_episodes and self.done_count % self.configs['Agent']['lr_decay_every'] == 0:
+                #     lr = self.configs['Agent']['init_actor_learning_rate'][self.agents[0].id] - (self.done_count * self.agents[0].lr_decay)
+                #     self.agents[0].actor_learning_rate = max(lr, self.agents[0].lr_end)
+                #     self.log('The agents new lr {}'.format(self.agents[0].actor_learning_rate))
+                #     self.agents[0].mod_lr(self.agents[0].actor_optimizer, self.agents[0].actor_learning_rate)
                 
                 self.collect_metrics(episodic=True)
             
@@ -130,7 +139,7 @@ class MPIImitationLearner(Learner):
                     self.agents[0].step_count = self.step_count
                     self.agents[0].done_count = self.done_count
                     self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
-                    self.log("The loss for dagger is {}".format(self.alg.get_loss()))
+                    self.log("The loss for dagger is {} and ep is {}".format(self.alg.get_loss(), self.done_count))
 
                     for ix in range(self.num_menvs):
                         self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
