@@ -107,7 +107,7 @@ class MPILearner(Learner):
         for comm in self.envs:
             self.receive_trajectory_numpy(comm)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
-            self.log("{} as {}".format(self.num_received, self.last_metric_received), verbose_level=2)
+            self.log("{} as {}".format(self.num_received, self.last_metric_received), verbose_level=1)
 
     def receive_trajectory_numpy(self, env_comm):
         '''Receive trajectory from each single environment in self.envs process group'''
@@ -204,12 +204,12 @@ class MPILearner(Learner):
         '''
         if self.pbt:
             if self.done_count % self.evolution_episodes == 0 and (self.done_count >= self.initial_evolution_episodes):
-                self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution_config) # ask for evolution configs
+                self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution_request) # ask for evolution configs1
                 # self.log("Ask for Evolution", verbose_level=3)
 
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
                 self.evolution_config = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)  # block statement
-                self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=2)
+                self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=1)
                 if not self.evolve:
                     self.log("Evolution canceled! self.evolve={}!".format(self.evolve), verbose_level=2)
                     return
@@ -228,6 +228,8 @@ class MPILearner(Learner):
                 #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
 
                 # self.log('Evolution Completed for {} agents'.format(len(self.agents)), verbose_level=2)
+            # else:
+            #     self.log("No configs probed!", verbose_level=1)
 
     def _run_agent_evolution(self):
         '''Single Agent Evolution'''
