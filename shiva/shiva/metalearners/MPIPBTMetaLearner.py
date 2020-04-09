@@ -47,56 +47,64 @@ class MPIPBTMetaLearner(MetaLearner):
 
     def _roles_evolve(self):
         '''Evolve only if we received Rankings'''
-        if self.pbt and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution, status=self.info):
+        if self.pbt and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_request, status=self.info):
 
             if not self.start_evals_flag:
                 # Enable evaluations to start!
                 self.start_evals()
                 return
 
-            learner_spec = self.learners.recv(None, source=self.info.Get_source(), tag=Tags.evolution)
+            learner_spec = self.learners.recv(None, source=self.info.Get_source(), tag=Tags.evolution_request)
+            assert learner_spec['id'] == self.info.Get_source(), "mm - just checking :)"
 
-            if hasattr(self, 'rankings'): #self.evols_sent[learner_spec['id']]:
-                roles_evo = []
-                for role, agent_ids in learner_spec['role2ids'].items():
-                    agent_evo = dict()
-                    '''@agent_ids is a list of a single agent'''
-                    '''Assuming that each Learner has 1 agent per role'''
-                    agent_id = agent_ids[0]
-                    # ranking = np.where(self.rankings[role] == agent_id)[0]
-                    ranking = self.rankings[role].index(agent_id)
-                    agent_evo['agent_id'] = agent_id
-                    agent_evo['ranking'] = ranking
-                    if ranking <= self.top_20[role]:
-                        # Good agent
-                        agent_evo['evolution'] = False
-                    elif self.top_20[role]  < ranking < self.bottom_20[role]:
-                        # Middle of the Pack
-                        agent_evo['evolution'] = True
-                        agent_evo['evo_agent_id'] = self.rankings[role][ np.random.choice(range(self.bottom_20[role])) ]
-                        agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent_id'])['load_path']
-                        # agent_evo['evo_ranking']= np.where(self.rankings[role] == agent_evo['evo_agent_id'])
-                        agent_evo['evo_ranking'] = self.rankings[role].index(agent_evo['evo_agent_id'])
-                        agent_evo['exploitation'] = 't_test'
-                        agent_evo['exploration'] = np.random.choice(['perturb', 'resample'])
-                    else:
-                        # You suck
-                        agent_evo['evolution'] = True
-                        if not self.top_20[role] == 0:
-                            agent_evo['evo_agent_id'] = self.rankings[role][ np.random.choice(range(self.top_20[role])) ]
-                        else:
-                            agent_evo['evo_agent_id'] = self.rankings[role][0]
-                        agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent_id'])['load_path']
-                        # agent_evo['evo_ranking'] = np.where(self.rankings[role] == agent_evo['evo_agent_id'])
-                        agent_evo['evo_ranking'] = self.rankings[role].index(agent_evo['evo_agent_id'])
-                        agent_evo['exploitation'] = 'truncation'
-                        agent_evo['exploration'] = np.random.choice(['perturb', 'resample'])
-                    roles_evo.append(agent_evo)
-
-                self.log("Sending Evo {}".format(roles_evo), verbose_level=2)
+            if hasattr(self, 'rankings') and not self.evols_sent[learner_spec['id']]:
+                roles_evo = self._get_evolution_config(learner_spec)
                 self.learners.send(roles_evo, dest=self.info.Get_source(), tag=Tags.evolution_config)
-                # self.evols_sent[learner_spec['id']] = True
-                delattr(self, 'rankings')
+                self.log("Evo Sent {}".format(roles_evo), verbose_level=2)
+                self.evols_sent[learner_spec['id']] = True
+                # delattr(self, 'rankings')
+            else:
+                pass
+                # self.log("Don't send to Learner duplicate ranking", verbose_level=2)
+
+    def _get_evolution_config(self, learner_spec):
+        roles_evo = []
+        for role, agent_ids in learner_spec['role2ids'].items():
+            agent_evo = dict()
+            '''@agent_ids is a list of a single agent'''
+            '''Assuming that each Learner has 1 agent per role'''
+            agent_id = agent_ids[0]
+            # ranking = np.where(self.rankings[role] == agent_id)[0]
+            ranking = self.rankings[role].index(agent_id)
+            agent_evo['agent_id'] = agent_id
+            agent_evo['ranking'] = ranking
+            if ranking <= self.top_20[role]:
+                agent_evo['msg'] = 'You are good'
+                agent_evo['evolution'] = False
+            elif self.top_20[role] < ranking < self.bottom_20[role]:
+                agent_evo['msg'] = 'Middle of the Pack'
+                agent_evo['evolution'] = True
+                agent_evo['evo_agent_id'] = self.rankings[role][np.random.choice(range(self.bottom_20[role]))]
+                agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent_id'])['load_path']
+                # agent_evo['evo_ranking']= np.where(self.rankings[role] == agent_evo['evo_agent_id'])
+                agent_evo['evo_ranking'] = self.rankings[role].index(agent_evo['evo_agent_id'])
+                agent_evo['exploitation'] = 't_test'
+                agent_evo['exploration'] = np.random.choice(['perturb', 'resample'])
+            else:
+                agent_evo['msg'] = 'You suck'
+                agent_evo['evolution'] = True
+                if not self.top_20[role] == 0:
+                    agent_evo['evo_agent_id'] = self.rankings[role][np.random.choice(range(self.top_20[role]))]
+                else:
+                    agent_evo['evo_agent_id'] = self.rankings[role][0]
+                agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent_id'])['load_path']
+                # agent_evo['evo_ranking'] = np.where(self.rankings[role] == agent_evo['evo_agent_id'])
+                agent_evo['evo_ranking'] = self.rankings[role].index(agent_evo['evo_agent_id'])
+                agent_evo['exploitation'] = 'truncation'
+                agent_evo['exploration'] = np.random.choice(['perturb', 'resample'])
+            roles_evo.append(agent_evo)
+        return roles_evo
+
 
     '''
         Single Agent Evolution
@@ -141,7 +149,7 @@ class MPIPBTMetaLearner(MetaLearner):
         if self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings, status=self.info):
             self.rankings = self.mevals.recv(None, source=self.info.Get_source(), tag=Tags.rankings)
             self.evols_sent = {i:False for i in range(self.num_learners)}
-            self.log('Got Rankings {}'.format(self.rankings), verbose_level=1)
+            self.log('Got New Rankings {}'.format(self.rankings), verbose_level=1)
 
 
     '''
@@ -172,7 +180,14 @@ class MPIPBTMetaLearner(MetaLearner):
 
         assert len(matches) == self.num_menvs, "Tried to create unique matches for MultiEnvs so that all Learners are training. " \
                                                f"Created the wrong number of matches: we have {self.num_envs} MultiEnvs and created {len(matches)} matches"
-        self.log("Created {} new matches\n{}".format(len(matches), matches), verbose_level=2)
+
+        matches_log = []
+        for ix, m in enumerate(matches):
+            match_log = "Match {}: ".format(ix)
+            for role, l_spec in m.items():
+                match_log += " {} to Learner {} |".format(role, l_spec['id'])
+            matches_log.append(match_log)
+        self.log("Created {} new training matches\n{}".format(len(matches), "\n".join(matches_log)), verbose_level=2)
         return matches
 
     def has_pair(self, agent_id, role):

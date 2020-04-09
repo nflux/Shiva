@@ -49,7 +49,7 @@ class MPIEvalEnv(Environment):
                 self._step_python()
                 # self._step_numpy()
 
-                if self.env.is_done():
+                if self.env.is_done() or self.env.step_count == self.env.episode_max_length:
                     self.send_evaluations()
                     self.env.reset()
 
@@ -64,7 +64,7 @@ class MPIEvalEnv(Environment):
         self.eval.gather(self.observations, root=0)
         self.actions = self.eval.scatter(None, root=0)
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-        self.log("Acs {} Obs {}".format(self.actions, self.observations), verbose_level=2)
+        self.log("Acs {} Obs {}".format(self.actions, self.observations), verbose_level=3)
 
     def _step_numpy(self):
         self.observations = self.env.get_observations()
@@ -84,11 +84,11 @@ class MPIEvalEnv(Environment):
             recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
             self.eval.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
             self.actions = recv_action
-            self.next_observations, self.rewards, self.dones, _, self.metrics = self.env.step(self.actions,evaluate=True)
+            self.next_observations, self.rewards, self.dones, _, self.metrics = self.env.step(self.actions, evaluate=True)
             # if self.dones:
             #     self._send_eval(self.metrics, 0)
             #     self.env.reset()
-        self.log("Obs {} Act {}".format(self.observations, self.actions), verbose_level=2)
+        self.log("Obs {} Act {}".format(self.observations, self.actions), verbose_level=3)
 
     '''
         Roles Methods
@@ -99,6 +99,7 @@ class MPIEvalEnv(Environment):
             'reward_per_episode': self.env.get_reward_episode(roles=True)  # dict() that maps role_name->reward
         }
         self.eval.send(metric, dest=0, tag=Tags.trajectory_eval)
+        self.log("Sent metrics {}".format(metric), verbose_level=2)
 
     '''
         Single Agent Methods

@@ -5,7 +5,7 @@ import logging
 from mpi4py import MPI
 import numpy as np
 import pandas as pd
-pd.set_option('max_columns', 3)
+pd.set_option('max_columns', 4)
 
 from shiva.core.admin import logger
 from shiva.eval_envs.Evaluation import Evaluation
@@ -41,11 +41,12 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 or 'Unity' in self.configs['Environment']['type'] \
                 or 'ParticleEnv' in self.configs['Environment']['type']:
             '''Here Evaluation metrics are hardcoded'''
-            self.evaluations = pd.DataFrame(index=[id for id in self.agent_ids], columns=['Learner_ID', 'Role', 'Average_Reward'])
+            self.evaluations = pd.DataFrame(index=[id for id in self.agent_ids], columns=['Learner_ID', 'Role', 'Num_Evaluations', 'Average_Reward'])
             self.evaluations.index.name = "Agent_ID"
             self.evaluations['Learner_ID'] = self.evaluations.index.map(self.get_learner_id)
             self.evaluations['Role'] = self.evaluations.index.map(self.get_role)
             self.evaluations['Learner_ID'] = self.evaluations.index.map(self.get_learner_id)
+            self.evaluations['Num_Evaluations'] = 0
             self.rankings = {role:[] for role in self.roles}
             self.current_matches = {eval_id:{} for eval_id in range(self.num_evals)}
             self._sort_evals = self._sort_roles
@@ -86,6 +87,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         new_match = self._get_new_match()
         self.current_matches[eval_id] = new_match # save reference to the match at that evaluation process
         self.evals.send(new_match, dest=eval_id, tag=Tags.new_agents)
+        self.log("Sent new match {} to Eval_ID {}".format(new_match, eval_id), verbose_level=3)
 
     def _get_new_match(self) -> dict:
         '''
@@ -98,27 +100,26 @@ class MPIMultiEvaluationWrapper(Evaluation):
         match = {}
         # self.restrict_pairs_proba = 1
         # restrict_pairs = lambda: np.random.uniform() < self.restrict_pairs_proba
-        is_full = lambda x: len(self.roles) == len(x.keys())
-        agents_without_evaluations = self.evaluations[self.evaluations['Average_Reward'].isna()].index.tolist()
-        agents_without_evaluations = list( set(agents_without_evaluations) - set(self.get_agents_currently_being_evaluated()) )
+        match_is_full = lambda x: len(self.roles) == len(x.keys())
+
         for role in self.roles:
             if role in match:
                 # role was filled by a companion of a random chosen agent
                 continue
 
-            agent_id = np.random.choice(self.role2ids[role])
-            if len(agents_without_evaluations) > 0:
-                # there's at least 1 agent thas hasn't been evaluated!
-                agent_id = np.random.choice(agents_without_evaluations)
+            _min_num_evals_of_role = self.evaluations.query('Role == @role')['Num_Evaluations'].min()
+            possible_ids = self.evaluations.query('Role == @role and Num_Evaluations == @_min_num_evals_of_role').index.tolist()
+            agent_id = np.random.choice(possible_ids)
 
             match[role] = self.get_learner_spec(agent_id)
 
-            pair_bool, pairs = self.has_pair(agent_id, role)
             '''Force pairs to play together'''
-            if pair_bool:
-                for pair_role, pair_id in pairs.items():
-                    match[pair_role] = pair_id[0] # Assuming that Learners have only 1 Agent per Role
-            if is_full(match):
+            pairs_roles = self.has_pair(agent_id, role)
+            self.log("Found pair for {} to be {}".format(agent_id, pairs_roles), verbose_level=3)
+            for role_of_pair in pairs_roles:
+                match[role_of_pair] = match[role]
+
+            if match_is_full(match):
                 break
         return match
 
@@ -126,19 +127,12 @@ class MPIMultiEvaluationWrapper(Evaluation):
         ret = []
         for eval_id, match in self.current_matches.items():
             for role, learner_spec in match.items():
-                ret += learner_spec['role2ids'][role][0]
+                ret += learner_spec['role2ids'][role]
         return ret
 
     def has_pair(self, agent_id, role):
-        has = False
-        for l_spec in self.learners_specs:
-            if agent_id in l_spec['agent_ids'] and len(l_spec['agent_ids']) > 1:
-                for l_roles in l_spec['roles']:
-                    if role != l_roles:
-                        has = True
-                if has:
-                    return True, l_spec['role2ids']
-        return False, []
+        learner_id = self.evaluations.at[agent_id, 'Learner_ID']
+        return self.evaluations.query('Learner_ID == @learner_id')['Role'].tolist()
 
     def _get_initial_roles_evaluations(self):
         self.ready = False
@@ -158,6 +152,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 agent_id = eval_match[role]['role2ids'][role][0]
                 for metric_name, value in metrics.items():
                     self.evaluations.at[agent_id, metric_name] = value
+                    self.evaluations.at[agent_id, 'Num_Evaluations'] += 1
             self.sort = sort
             self.ready = True
             self._send_new_match(eval_id)
@@ -171,7 +166,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self.rankings[role] = self.evaluations[self.evaluations['Role']==role].index.tolist()
 
         self.meta.send(self.rankings, dest=0, tag=Tags.rankings)
-        self.log("Rankings\n{}".format(self.evaluations), verbose_level=1)
+        self.log("Rankings\n{}".format(self.evaluations.sort_values(['Role', 'Average_Reward'], ascending=False)), verbose_level=1)
         self.sort = False
 
     def get_role(self, agent_id):
