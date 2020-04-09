@@ -67,12 +67,11 @@ class MPIRoboCupImitationEnv(Environment):
     
     def supervised_run(self):
         while self.super_ep < self.supervised_episodes:
-            time.sleep(0.001)
+            time.sleep(0.01)
             self._super_step_numpy()
             self._super_append_step()
             
             if self.env.is_done():
-                self.log("Supervised env")
                 # self.print(self.env.get_metrics(episodic=True)) # print metrics
                 self.super_ep += 1
                 self._send_super_trajectory_numpy()
@@ -80,7 +79,7 @@ class MPIRoboCupImitationEnv(Environment):
                 self.env.reset()
     
     def dagger_run(self):
-        self.log("About to gather")
+        self.log("About to gather forr dagger")
         self.menv.gather(True, root=0)
         while True:
             time.sleep(0.001)
@@ -88,7 +87,6 @@ class MPIRoboCupImitationEnv(Environment):
             self._dagger_append_step()
 
             if self.env.is_done():
-                self.log("Dagger env")
                 # self.print(self.env.get_metrics(episodic=True)) # print metrics
                 self._send_dagger_trajectory_numpy()
                 # self.log('Episode_count: {}'.format(self.done_count))
@@ -104,7 +102,7 @@ class MPIRoboCupImitationEnv(Environment):
         acs_msg = self.comm.recv(8192)
 
         if len(acs_msg) == 0:
-            raise ValueError('A very specific bad thing happened.')
+            raise ValueError('Action message is zero')
 
         acs_msg = str(acs_msg)[2:].split(' ')[:-1]
 

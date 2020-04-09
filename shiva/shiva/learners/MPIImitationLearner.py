@@ -128,6 +128,8 @@ class MPIImitationLearner(Learner):
                 
                 self.collect_metrics(episodic=True)
             
+            self.menv.send(True, dest=0, tag=Tags.start_dagger)
+
             while self.dagger:
                 time.sleep(0.0001)
                 self._receive_dagger_trajectory_numpy()

@@ -42,7 +42,6 @@ class MPIImitationMultiEnv(Environment):
     def run(self):
         self.step_count = 0
         # self.log(self.env_specs)
-        self.saving = [True] * self.num_learners
 
         ''' Assuming that
             - all agents have the same observation shape, if they don't then we have a multidimensional problem for MPI
@@ -55,9 +54,14 @@ class MPIImitationMultiEnv(Environment):
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], self.env_specs['observation_space'] ), dtype=np.float64)
         elif 'RoboCup' in self.type:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
+        
+        # Wait for evns to finsish supervised
+        _ = self.envs.gather(None, root=MPI.ROOT)
+        # Wait for learners to finish supervised
+        for i in range(self.num_learners):
+            _ = self.learners.recv(None, source=i, tag=Tags.start_dagger)
 
-        start_dagger = self.envs.gather(None, root=MPI.ROOT) # Wait for dagger to occur for imitation
-        self.log("Start dagger {}".format(start_dagger))
+        self.log("Start dagger")
 
         while True:
             time.sleep(0.0001)

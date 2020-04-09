@@ -100,7 +100,7 @@ class MPIMultiEnv(Environment):
 
     def _launch_envs(self):
         # Spawn Single Environments
-        self.envs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIImitationEnv.py'], maxprocs=self.num_envs)
+        self.envs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIEnv.py'], maxprocs=self.num_envs)
         self.envs.bcast(self.configs, root=MPI.ROOT)  # Send them the Config
         envs_spec = self.envs.gather(None, root=MPI.ROOT)  # Wait for Env Specs (obs, acs spaces)
         assert len(envs_spec) == self.num_envs, "Not all Environments checked in.."

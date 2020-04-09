@@ -12,9 +12,9 @@ from shiva.utils.Tags import Tags
 # logging.basicConfig(level=logging.INFO)
 # logger = logging.getLogger("shiva")
 
-class MPIPBTMetaLearner(MetaLearner):
+class MPIImitPBTMetaLearner(MetaLearner):
     def __init__(self, configs):
-        super(MPIPBTMetaLearner, self).__init__(configs, profile=False)
+        super(MPIImitPBTMetaLearner, self).__init__(configs, profile=False)
         self.configs = configs
         self._preprocess_config()
         self.learner_specs = None
@@ -111,7 +111,7 @@ class MPIPBTMetaLearner(MetaLearner):
 
 
     def _launch_menvs(self):
-        self.menvs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIMultiEnv.py'], maxprocs=self.num_menvs)
+        self.menvs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIImitationMultiEnv.py'], maxprocs=self.num_menvs)
         self.menvs.bcast(self.configs, root=MPI.ROOT)
         menvs_specs = self.menvs.gather(None, root=MPI.ROOT)
         self.log("Got total of {} MultiEnvsSpecs with {} keys".format(str(len(menvs_specs)), str(len(menvs_specs[0].keys()))))
@@ -119,7 +119,7 @@ class MPIPBTMetaLearner(MetaLearner):
 
     def _launch_learners(self):
         self.learners_configs = self._get_learners_configs()
-        self.learners = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/learners/MPILearner.py'], maxprocs=self.num_learners)
+        self.learners = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/learners/MPIImitationLearner.py'], maxprocs=self.num_learners)
         self.learners.scatter(self.learners_configs, root=MPI.ROOT)
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
         self.agent_ids = self.learners.gather(None, root=MPI.ROOT)
