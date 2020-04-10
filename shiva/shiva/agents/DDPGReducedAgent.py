@@ -172,4 +172,4 @@ class DDPGReducedAgent(Agent):
         return ('shiva.agents', 'DDPGReducedAgent.DDPGReducedAgent')
 
     def __str__(self):
-        return '<DDPGAgent(id={}, steps={}, episodes={})>'.format(self.id, self.step_count, self.done_count)
+        return '<DDPGAgent(id={}, steps={}, episodes={}, reward_factors={})>'.format(self.id, self.step_count, self.done_count,self.reward_factors)

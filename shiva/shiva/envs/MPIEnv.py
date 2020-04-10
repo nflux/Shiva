@@ -299,8 +299,14 @@ class MPIEnv(Environment):
         }
 
     def set_reward_factors(self):
-        self.reward_factors = self.menv.scatter(None,root=0)
-        self.env.env.set_agent_rewards(self.reward_factors)
+        if self.configs['Agent']['rewards']:
+            self.reward_factors = self.menv.scatter(None,root=0)
+            self.env.env.set_agent_rewards(self.reward_factors)
+        else:
+            self.reward_factors = dict()
+            for reward in self.configs['Agent']['reward_events']:
+                self.reward_factors[reward] = 1
+            self.env.env.set_agent_rewards(self.reward_factors)
 
     def reset_reward_factors(self):
         if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents):

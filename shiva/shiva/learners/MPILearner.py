@@ -18,6 +18,7 @@ class MPILearner(Learner):
     def __init__(self):
         self.meta = MPI.Comm.Get_parent()
         self.id = self.meta.Get_rank()
+        self.info = MPI.Status()
         self.launch()
 
     def launch(self):
@@ -65,60 +66,61 @@ class MPILearner(Learner):
             self._receive_trajectory_numpy()
             self.log('Episodes collected: {}'.format(self.done_count))
             self.update()
-            self.evolution()
             self.collect_metrics(episodic=True)
+            self.evolution()
+
 
     def _receive_trajectory_numpy(self):
         '''Receive trajectory from each single environment in self.envs process group'''
         '''Assuming 1 Agent here (no support for MADDPG), may need to iterate thru all the indexes of the @traj'''
         self.log('Receiving Trajectory')
 
-        info = MPI.Status()
-        self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=info)
-        env_source = info.Get_source()
-        #self.log('Got Source')
-        '''Assuming 1 Agent here'''
-        self.metrics_env = self.traj_info['metrics']
-        traj_length = self.traj_info['length']
+        if self.envs.Iprobe(source=MPI.ANY_SOURCE, tag= Tags.trajectory_info, status=self.info):
+            self.traj_info = self.envs.recv(None, source=MPI.ANY_SOURCE, tag=Tags.trajectory_info)
+            env_source = self.info.Get_source()
+            #self.log('Got Source')
+            '''Assuming 1 Agent here'''
+            self.metrics_env = self.traj_info['metrics']
+            traj_length = self.traj_info['length']
 
-        #self.log("{}".format(self.traj_info))
+            #self.log("{}".format(self.traj_info))
 
-        observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
-        self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
-        #self.log("Got Obs shape {}".format(observations.shape))
+            observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+            self.envs.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
+            #self.log("Got Obs shape {}".format(observations.shape))
 
-        actions = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
-        self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
-        #self.log("Got Acs shape {}".format(actions.shape))
+            actions = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
+            self.envs.Recv([actions, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_actions)
+            #self.log("Got Acs shape {}".format(actions.shape))
 
-        rewards = np.empty(self.traj_info['rew_shape'], dtype=np.float64)
-        self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
-        #self.log("Got Rewards shape {}".format(rewards.shape))
+            rewards = np.empty(self.traj_info['rew_shape'], dtype=np.float64)
+            self.envs.Recv([rewards, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_rewards)
+            #self.log("Got Rewards shape {}".format(rewards.shape))
 
-        next_observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
-        self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
-        #self.log("Got Next Obs shape {}".format(next_observations.shape))
+            next_observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
+            self.envs.Recv([next_observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_next_observations)
+            #self.log("Got Next Obs shape {}".format(next_observations.shape))
 
-        dones = np.empty(self.traj_info['done_shape'], dtype=np.bool)
-        self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
-        #self.log("Got Dones shape {}".format(dones.shape))
+            dones = np.empty(self.traj_info['done_shape'], dtype=np.bool)
+            self.envs.Recv([dones, MPI.C_BOOL], source=env_source, tag=Tags.trajectory_dones)
+            #self.log("Got Dones shape {}".format(dones.shape))
 
-        self.step_count += traj_length
-        self.done_count += 1
-        self.steps_per_episode = traj_length
-        self.reward_per_episode = sum(rewards)
+            self.step_count += traj_length
+            self.done_count += 1
+            self.steps_per_episode = traj_length
+            self.reward_per_episode = sum(rewards)
 
-        # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-        # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-        # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
+            # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
+            # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
+            # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
 
-        exp = list(map(torch.clone, (torch.from_numpy(observations),
-                                     torch.from_numpy(actions),
-                                     torch.from_numpy(rewards) ,
-                                     torch.from_numpy(next_observations),
-                                     torch.from_numpy(dones)
-                                     )))
-        self.buffer.push(exp)
+            exp = list(map(torch.clone, (torch.from_numpy(observations),
+                                         torch.from_numpy(actions),
+                                         torch.from_numpy(rewards) ,
+                                         torch.from_numpy(next_observations),
+                                         torch.from_numpy(dones)
+                                         )))
+            self.buffer.push(exp)
 
     def update(self):
         if self.done_count % self.episodes_to_update == 0:
