@@ -213,6 +213,8 @@ class DDPGAgent(Agent):
         return [
             ('Agent/{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate),
             ('Agent/{}/Critic_Learning_Rate'.format(self.role), self.critic_learning_rate),
+            ('Agent/{}/Epsilon'.format(self.role), self.epsilon),
+            ('Agent/{}/Noise_Scale'.format(self.role), self.noise_scale),
         ]
 
     def get_module_and_classname(self):
