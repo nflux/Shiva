@@ -45,8 +45,14 @@ class MADDPGAlgorithm(Algorithm):
             '''Single Local Critic'''
             self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.configs['Network']['critic']).to(self.device)
             self.target_critic = copy.deepcopy(self.critic)
-            self.optimizer_function = getattr(torch.optim, self.optimizer_function)
-            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.configs['Agent']['critic_learning_rate'])
+
+            if hasattr(self.configs['Agent'], 'lr_range') and self.configs['Agent']['lr_range']:
+                self.critic_learning_rate = np.random.uniform(self.configs['Agent']['lr_uniform'][0], self.configs['Agent']['lr_uniform'][1]) / np.random.choice( self.configs['Agent']['lr_factors'])
+            else:
+                self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
+
+            self.optimizer_function = getattr(torch.optim, self.configs['Agent']['optimizer_function'])
+            self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
             self._update = self.update_permutes
         elif self.method == "critics":
             self._update = self.update_critics

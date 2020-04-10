@@ -39,7 +39,7 @@ class GymEnvironment(Environment):
 
         '''Set some attribute for Gym on MPI'''
         self.num_agents = 1
-        self.roles = ['Agent_0']
+        self.roles = [self.env_name]
         self.num_instances_per_role = 1
         self.num_instances_per_env = 1
         # self.agent_ids = [0]
@@ -94,7 +94,7 @@ class GymEnvironment(Environment):
 
         return self.obs, self.rew, self.done, {'raw_reward': self.reward_per_step, 'action': action}
 
-    def reset(self):
+    def reset(self, *args, **kwargs):
         self.steps_per_episode = 0
         self.reward_per_step = 0
         self.reward_per_episode = 0

@@ -83,8 +83,8 @@ class DDPGAgent(Agent):
         if evaluate:
 # <<<<<<< HEAD
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            # action = torch.from_numpy(action.cpu().numpy()) ?
-            '''???'''
+            action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+            # if self.normalize:
             action = torch.abs(action)
             action = action / action.sum()
 # =======
@@ -108,6 +108,7 @@ class DDPGAgent(Agent):
             else:
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+                # if self.normalize:
                 action = torch.abs(action)
                 action = action / action.sum()
                 # print("Net: {}".format(action))
@@ -120,8 +121,8 @@ class DDPGAgent(Agent):
     def get_continuous_action(self, observation, step_count, evaluate=False, *args, **kwargs):
         self.ou_noise.set_scale(self.noise_scale)
         if evaluate:
-            observation = torch.tensor(observation).to(self.device).float()
-            action = self.actor(observation)
+            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+            action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
         else:
             if step_count < self.exploration_steps or self.is_e_greedy(step_count):
                 action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
@@ -130,7 +131,6 @@ class DDPGAgent(Agent):
             else:
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-                # action = action / action.sum()
         return action.tolist()
 
     def get_parameterized_action(self, observation, step_count, evaluate=False):
@@ -211,10 +211,10 @@ class DDPGAgent(Agent):
     def get_metrics(self):
         '''Used for evolution metric'''
         return [
-            ('Agent/{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate),
-            ('Agent/{}/Critic_Learning_Rate'.format(self.role), self.critic_learning_rate),
-            ('Agent/{}/Epsilon'.format(self.role), self.epsilon),
-            ('Agent/{}/Noise_Scale'.format(self.role), self.noise_scale),
+            ('{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate),
+            ('{}/Critic_Learning_Rate'.format(self.role), self.critic_learning_rate),
+            ('{}/Epsilon'.format(self.role), self.epsilon),
+            ('{}/Noise_Scale'.format(self.role), self.noise_scale),
         ]
 
     def get_module_and_classname(self):

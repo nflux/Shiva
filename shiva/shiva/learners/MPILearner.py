@@ -202,22 +202,24 @@ class MPILearner(Learner):
             Case if we have 10 HPs
                 Probability of 1/(num of HPs) to perturb the hyperparameters
         '''
-        if self.pbt:
-            if self.done_count % self.evolution_episodes == 0 and (self.done_count >= self.initial_evolution_episodes):
+        if self.pbt and self.done_count >= self.initial_evolution_episodes:
+
+            if self.done_count % self.evolution_episodes == 0:
                 self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution_request) # ask for evolution configs1
                 # self.log("Ask for Evolution", verbose_level=3)
             
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
                 self.evolution_config = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)  # block statement
-                self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=1)
+
                 if not self.evolve:
-                    self.log("Evolution canceled! self.evolve={}!".format(self.evolve), verbose_level=2)
+                    self.log("self.evolve is set to {}! Got Evolution {}".format(self.evolve, self.evolution_config), verbose_level=1)
                     return
+                self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=1)
 
                 for evol_config in self.evolution_config:
-                    agent = self.get_agent_of_id(evol_config['agent_id'])
-                    if evol_config['evolution'] == False:
+                    if evol_config['evolution'] == False or evol_config['agent_id'] == evol_config['evo_agent_id']:
                         continue
+                    agent = self.get_agent_of_id(evol_config['agent_id'])
                     setattr(self, 'exploitation', getattr(self, evol_config['exploitation']))
                     setattr(self, 'exploration', getattr(self, evol_config['exploration']))
                     self.exploitation(agent, evol_config)
@@ -346,13 +348,6 @@ class MPILearner(Learner):
     #     # self.save_pbt_agents()
     #     # self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
-    def welch_T_Test(self, evals, evo_evals):
-        if 'RoboCup' in self.configs['Environment']['type']:
-            return True
-        else:
-            t, p = stats.ttest_ind(evals, evo_evals, equal_var=False)
-            return p < self.p_value
-
     # def _t_test(self, agent, evo_config):
     #     # print('Starting t_test')
     #     if evo_config['ranking'] > evo_config['evo_ranking']:
@@ -396,6 +391,13 @@ class MPILearner(Learner):
                 self.alg.copy_weight_from_agent(evo_agent_id)
                 self.save_central_critic(agent)
 
+    def welch_T_Test(self, evals, evo_evals):
+        if 'RoboCup' in self.configs['Environment']['type']:
+            return True
+        else:
+            t, p = stats.ttest_ind(evals, evo_evals, equal_var=False)
+            return p < self.p_value
+
     def _truncation(self, agent, evo_config):
         # print('Truncating')
         # path = self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])
@@ -404,7 +406,6 @@ class MPILearner(Learner):
 
         agent.copy_weights(evo_agent_id)
         self.alg.copy_weight_from_agent(evo_agent_id)
-        # self.save_central_critic(agent)
         # print('Truncated')
 
     def truncation(self, agent, evo_config):
@@ -417,7 +418,6 @@ class MPILearner(Learner):
 
         agent.copy_weights(evo_agent_id)
         self.alg.copy_weight_from_agent(evo_agent_id)
-        # self.save_central_critic(agent)
 
     def perturb(self, agent):
         # print('Pertubing')
@@ -425,7 +425,6 @@ class MPILearner(Learner):
 
         agent.perturb_hyperparameters(perturb_factor)
         self.alg.perturb_hyperparameters(perturb_factor)
-        # self.save_central_critic(agent)
         # print('Finished Pertubing')
 
     def resample(self, agent):

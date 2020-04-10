@@ -28,7 +28,8 @@ class MPIPBTMetaLearner(MetaLearner):
         self.run()
 
     def run(self):
-        self.start_evals_flag = False
+        # self.start_evals_flag = False
+        self.start_evals()
 
         self.review_training_matches() # send first match
         while True:
@@ -42,17 +43,18 @@ class MPIPBTMetaLearner(MetaLearner):
     '''
 
     def start_evals(self):
-        self.start_evals_flag = True
-        self.mevals.bcast(True, root=MPI.ROOT)
+        if self.pbt:
+            self.start_evals_flag = True
+            self.mevals.bcast(True, root=MPI.ROOT)
 
     def _roles_evolve(self):
         '''Evolve only if we received Rankings'''
         if self.pbt and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_request, status=self.info):
 
-            if not self.start_evals_flag:
-                # Enable evaluations to start!
-                self.start_evals()
-                return
+            # if not self.start_evals_flag:
+            #     # Enable evaluations to start!
+            #     self.start_evals()
+            #     return
 
             learner_spec = self.learners.recv(None, source=self.info.Get_source(), tag=Tags.evolution_request)
             assert learner_spec['id'] == self.info.Get_source(), "mm - just checking :)"
@@ -158,8 +160,8 @@ class MPIPBTMetaLearner(MetaLearner):
 
     def review_training_matches(self):
         '''Sends new pair of training matches to all MultiEnvs to load agents'''
-        new_matches = self.get_training_matches()
-        for ix, match in enumerate(new_matches):
+        self.current_matches = self.get_training_matches()
+        for ix, match in enumerate(self.current_matches):
             self.menvs.send(match, dest=ix, tag=Tags.new_agents)
 
     def get_training_matches(self):
@@ -173,14 +175,14 @@ class MPIPBTMetaLearner(MetaLearner):
                 learner_spec = self.learners_specs[l_ix]
                 for role in learner_spec['roles']:
                     m[role] = learner_spec
+            # test all roles are filled
             for role in self.roles:
-                if role not in m:
-                    assert False, "Role {} not found on this created match {}".format(role, m)
+                assert role in m, "Role {} not found on this created match {}".format(role, m)
             matches += [m] * self.num_menvs_per_learners_map
 
         assert len(matches) == self.num_menvs, "Tried to create unique matches for MultiEnvs so that all Learners are training. " \
                                                f"Created the wrong number of matches: we have {self.num_envs} MultiEnvs and created {len(matches)} matches"
-
+        # log match to some other format
         matches_log = []
         for ix, m in enumerate(matches):
             match_log = "Match {}: ".format(ix)

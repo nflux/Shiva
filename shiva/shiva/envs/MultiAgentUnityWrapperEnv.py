@@ -62,7 +62,7 @@ class MultiAgentUnityWrapperEnv(Environment):
         '''Reset Metrics'''
         self.reset()
 
-    def reset(self):
+    def reset(self, force=False, *args, **kwargs):
         '''
             To be called by Shiva Learner
             It's just to reinitialize our metrics. Unity resets the environment on its own.
@@ -71,6 +71,10 @@ class MultiAgentUnityWrapperEnv(Environment):
         self.temp_done_counter = 0
         self.reward_per_step = {role:0 for role in self.roles}
         self.reward_per_episode = {role:0 for role in self.roles}
+
+        if force:
+            '''In case the environment never ends - Unity Basic can get stuck...'''
+            self.Unity.reset()
 
     def collect_step_data(self):
         self.BatchedStepResult = {role:self.Unity.get_step_result(role) for role in self.roles}

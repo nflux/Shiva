@@ -107,10 +107,17 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 # role was filled by a companion of a random chosen agent
                 continue
 
+            '''Randomly choosing agents that haven't been evaluated as much'''
+            # grab the ones with the less Num_Evaluations
             _min_num_evals_of_role = self.evaluations.query('Role == @role')['Num_Evaluations'].min()
-            possible_ids = self.evaluations.query('Role == @role and Num_Evaluations == @_min_num_evals_of_role').index.tolist()
-            ids_being_evaluated = self.get_agents_currently_being_evaluated()
-            agent_id = np.random.choice(list(set(possible_ids) - set(ids_being_evaluated)))
+            ids_with_min_num_evals = self.evaluations.query('Role == @role and Num_Evaluations == @_min_num_evals_of_role').index.tolist()
+            # OPTIONAL: get IDs currently being evaluated and taken them out of @possible_ids to choose
+            _take_out = [] # self.get_agents_currently_being_evaluated()
+
+            possible_ids = list(set(ids_with_min_num_evals) - set(_take_out))
+            if len(possible_ids) == 0:
+                possible_ids = ids_with_min_num_evals
+            agent_id = np.random.choice(possible_ids)
 
             match[role] = self.get_learner_spec(agent_id)
 
