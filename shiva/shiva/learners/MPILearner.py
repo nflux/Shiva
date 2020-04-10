@@ -107,7 +107,7 @@ class MPILearner(Learner):
         for comm in self.envs:
             self.receive_trajectory_numpy(comm)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
-            self.log("{} as {}".format(self.num_received, self.last_metric_received), verbose_level=1)
+            self.log("{}:{}".format(self.num_received, self.last_metric_received), verbose_level=1)
 
     def receive_trajectory_numpy(self, env_comm):
         '''Receive trajectory from each single environment in self.envs process group'''
@@ -507,7 +507,8 @@ class MPILearner(Learner):
         comm.Disconnect()
 
     def __str__(self):
-        return "<Learner(id={}, roles={})>".format(self.id, self.roles)
+        return "<Learner(id={})>".format(self.id)
+        # return "<Learner(id={}, roles={})>".format(self.id, self.roles)
 
     # def show_comms(self):
     #     self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
