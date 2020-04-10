@@ -109,7 +109,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
             _min_num_evals_of_role = self.evaluations.query('Role == @role')['Num_Evaluations'].min()
             possible_ids = self.evaluations.query('Role == @role and Num_Evaluations == @_min_num_evals_of_role').index.tolist()
-            agent_id = np.random.choice(possible_ids)
+            ids_being_evaluated = self.get_agents_currently_being_evaluated()
+            agent_id = np.random.choice(list(set(possible_ids) - set(ids_being_evaluated)))
 
             match[role] = self.get_learner_spec(agent_id)
 
@@ -124,6 +125,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         return match
 
     def get_agents_currently_being_evaluated(self):
+        '''This function assumes that Agents from same Learner MUST be evaluated together'''
         ret = []
         for eval_id, match in self.current_matches.items():
             for role, learner_spec in match.items():
