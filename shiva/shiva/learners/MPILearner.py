@@ -357,7 +357,7 @@ class MPILearner(Learner):
         path = self.eval_path+'Agent_'+str(evo_config['evo_agent'])
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
-        evo_agent = Admin._load_agents(path)[0]
+        evo_agent =Admin._load_agent_of_id(self.learners_specs[evo_config['evo_agent']]['load_path'],evo_config['evo_agent'],absolute_path=True,reduced=False)[0]
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
         agent.copy_weights(evo_agent)
 

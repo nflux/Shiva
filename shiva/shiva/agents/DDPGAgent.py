@@ -222,6 +222,7 @@ class DDPGAgent(Agent):
             self.noise_scale = evo_agent.noise_scale
         if hasattr(self,'reward_factors'):
             self.reward_factors = evo_agent.reward_factors
+        self.to_device(torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
 
     def perturb_hyperparameters(self):
         perturb_factor = np.random.choice(self.perturb_factors)

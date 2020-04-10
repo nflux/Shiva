@@ -136,7 +136,7 @@ class MPIEvaluation(Evaluation):
                 new_agent = self.meval.recv(None,source=0,tag=Tags.new_agents)[0]
                 self.io.send(True, dest=0, tag=Tags.io_eval_request)
                 _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
-                with open(self.learners_specs[self.agent_ids[i]]+'/episode_evaluations.data','wb') as file_handler:
+                with open(self.learners_specs[self.agent_ids[i]]['load_path']+'/episode_evaluations.data','wb') as file_handler:
                     pickle.dump(self.evals_list[i],file_handler)
                 #path = self.eval_path+'Agent_'+str(new_agent)
                 self.agents[i] = Admin._load_agent_of_id(self.learners_specs[new_agent]['load_path'],new_agent,device=self.device,reduced=self.load_reduced)[0]
