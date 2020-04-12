@@ -41,7 +41,7 @@ class MPIMultiEnv(Environment):
         self.meta.gather(self._get_menv_specs(), root=0)
 
         self._connect_learners()
-        self._receive_match() # receive first match
+        self._receive_match(io_request=False) # receive first match, no IO request for the first one to avoid overhead
 
         # Give start flag!
         self.envs.bcast([True], root=MPI.ROOT)
@@ -66,7 +66,7 @@ class MPIMultiEnv(Environment):
             self._step_python()
             # self._step_numpy()
             if self.step_count % self.episode_max_length == 0:
-                self.reload_match_agents() # temporarily training matches are fixed
+                self.reload_match_agents(io_request=True) # temporarily training matches are fixed
                 for a in self.agents:
                     a.reset_noise()
 
@@ -158,25 +158,25 @@ class MPIMultiEnv(Environment):
         self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions), verbose_level=3)
         self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
-    def reload_match_agents(self):
+    def reload_match_agents(self, io_request=True):
         if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
             pass
             '''If new match is received from MetaLearner'''
             # STATIC FOR NOW
-            # self._receive_match()
+            # self._receive_match(io_request=io_request)
         else:
             '''No match available - reload current agents'''
-            self.agents = self.load_agents()
+            self.agents = self.load_agents(io_request=io_request)
 
-    def _receive_match(self):
+    def _receive_match(self, io_request=True):
         '''New match from the single MetaLearner'''
         self.role2learner_spec = self.meta.recv(None, source=0, tag=Tags.new_agents)
         self.log("Received Training Match {}".format(self.role2learner_spec), verbose_level=2)
-        self._update_match_data(self.role2learner_spec)
+        self._update_match_data(self.role2learner_spec, io_request=io_request)
 
-    def _update_match_data(self, role2learner_spec):
+    def _update_match_data(self, role2learner_spec, io_request=True):
         self.role2learner_id = {role:role2learner_spec[role]['id'] for role in self.env_specs['roles']}
-        self.agents = self.load_agents(role2learner_spec)
+        self.agents = self.load_agents(role2learner_spec, io_request=io_request)
         self.role2agent = self.get_role2agent_ix(self.agents) # for local usage
         # forward learner specs to all single environments
         for env_id in range(self.num_envs):
@@ -192,12 +192,13 @@ class MPIMultiEnv(Environment):
                     break
         return self.role2agent
 
-    def load_agents(self, role2learner_spec=None):
+    def load_agents(self, role2learner_spec=None, io_request=True):
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
 
-        self.io.send(True, dest=0, tag=Tags.io_menv_request)
-        _ = self.io.recv(None, source=0, tag=Tags.io_menv_request)
+        if io_request:
+            self.io.send(True, dest=0, tag=Tags.io_menv_request)
+            _ = self.io.recv(None, source=0, tag=Tags.io_menv_request)
 
         agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
         for role, learner_spec in role2learner_spec.items():
@@ -209,7 +210,9 @@ class MPIMultiEnv(Environment):
                     a.to_device(self.device)
                     agents[self.env_specs['roles'].index(a.role)] = a
 
-        self.io.send(True, dest=0, tag=Tags.io_menv_request)
+        if io_request:
+            self.io.send(True, dest=0, tag=Tags.io_menv_request)
+
         self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
         return agents
 

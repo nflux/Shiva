@@ -274,8 +274,8 @@ class MPIEnv(Environment):
 
     def _launch_env(self):
         # initiate env from the config
-        self.configs['Environment']['port'] += self.menv_id * 100 + self.id
-        self.configs['Environment']['worker_id'] = self.menv_id * 100 + self.id
+        self.configs['Environment']['port'] += (self.menv_id + 1) * 100 + self.id
+        self.configs['Environment']['worker_id'] = (self.menv_id + 1) * 100 + self.id
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         self.env = env_class(self.configs)
 

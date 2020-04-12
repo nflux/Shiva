@@ -52,7 +52,7 @@ class MultiAgentParticleEnv(Environment):
         '''Reset Metrics'''
         self.reset()
 
-    def reset(self):
+    def reset(self, *args, **kwargs):
         '''
             To be called by Shiva Learner
             It's just to reinitialize our metrics. Unity resets the environment on its own.
