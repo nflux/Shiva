@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from shiva.core.admin import logger
 
 class Environment:
     def __init__(self, configs):
@@ -12,7 +13,6 @@ class Environment:
         self.step_count = 0
         self.done_count = 0
         self.total_episodes_to_play = None
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
 
         # for previous versions support on attribute names
@@ -26,7 +26,6 @@ class Environment:
         self.max_reward = self.max_reward if hasattr(self, 'max_reward') else 1
         self.min_reward = self.min_reward if hasattr(self, 'min_reward') else -1
 
-
     def step(self,actions):
         pass
 
@@ -37,6 +36,9 @@ class Environment:
         '''
         assert (n_episodes is not None), 'A @n_episodes is required to check if we are done running the Environment'
         return self.done_count >= n_episodes
+
+    def start_env(self):
+        return True
 
     def get_observation(self, agent):
         pass
@@ -82,3 +84,9 @@ class Environment:
 
     def _normalize_reward(self, reward):
         return (self.b-self.a)*(reward-self.min)/(self.max-self.min)
+
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['Env']:
+            text = "{}\t\t\t{}".format(str(self), msg)
+            logger.info(text, to_print or self.configs['Admin']['print_debug'])

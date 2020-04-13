@@ -52,7 +52,7 @@ class MultiAgentParticleEnv(Environment):
         '''Reset Metrics'''
         self.reset()
 
-    def reset(self):
+    def reset(self, *args, **kwargs):
         '''
             To be called by Shiva Learner
             It's just to reinitialize our metrics. Unity resets the environment on its own.
@@ -129,7 +129,7 @@ class MultiAgentParticleEnv(Environment):
         return actions
 
     def get_action_space_from_env(self, agent_action_space):
-        '''All Action Spaces are Discrete - unless new environment is implemented'''
+        '''All Action Spaces are Discrete - unless new environment is created by us'''
         if self.env.discrete_action_space:
             action_space = {
                 'discrete': agent_action_space.n,
@@ -167,6 +167,9 @@ class MultiAgentParticleEnv(Environment):
 
     def get_rewards(self):
         return list(self.rewards.values())
+
+    def get_reward_episode(self, roles=True):
+        return self.reward_per_episode
 
     def display(self):
         if self.render:

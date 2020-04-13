@@ -1,9 +1,6 @@
-from .Agent import Agent
-import networks.DynamicLinearNetwork as DLN
 from torch.distributions import Categorical
 from torch.distributions.normal import Normal
 from torch.nn import Softmax as Softmax
-import utils.Noise as noise
 import copy
 import torch
 import torch.nn as nn
@@ -13,12 +10,12 @@ from shiva.networks import DynamicLinearNetwork as DLN
 from shiva.utils import Noise as noise
 from shiva.helpers import misc
 
-def init_layer(layer):
-    weights = layer.weight.data
-    weights.normal_(0,1)
-    weights *= 1.0 / torch.sqrt(weights.pow(2).sum(1,keepdim=True))
-    nn.init.constant_(layer.bias.data,0)
-    return layer
+def init_layer(module, w_init, b_init, gain=1):
+    w_init(module.weight.data, gain=gain)
+    b_init(module.bias.data)
+    return module
+
+
 
 class PPOAgent(Agent):
     def __init__(self, id, obs_dim, acs_space, agent_config, net_config):
@@ -28,23 +25,20 @@ class PPOAgent(Agent):
         np.random.seed(agent_config['manual_seed'])
 
         self.acs_discrete = acs_space['discrete']
-        self.acs_continuous = acs_space['param']
-        self.scale = 0.9
+        self.acs_continuous = acs_space['continuous']
         self.softmax = Softmax(dim=-1)
+        print('acs_continuous: {}'.format(self.acs_continuous))
 
         if (self.acs_discrete != 0) and (self.acs_continuous != 0):
             # parametrized PPO?
             self.action_space = 'Param'
             self.network_output = self.acs_discrete + self.acs_continuous
-            self.ou_noise = noise.OUNoise(self.acs_discrete+self.acs_continuous, self.scale)
         elif (self.acs_discrete == 0):
             self.action_space = 'Continuous'
             self.network_output = self.acs_continuous
-            self.ou_noise = noise.OUNoise(self.acs_continuous, self.scale)
         else:
             self.action_space = 'Discrete'
             self.network_output = self.acs_discrete
-            self.ou_noise = noise.OUNoise(self.acs_discrete, self.scale)
 
         self.id = id
         self.network_input = obs_dim
@@ -58,10 +52,19 @@ class PPOAgent(Agent):
 
         elif self.action_space == 'Continuous':
             self.mu = DLN.DynamicLinearNetwork(self.network_input,self.network_output,net_config['mu'])
-            self.sigma = DLN.DynamicLinearNetwork(self.network_input,self.network_output,net_config['var'])
+            #self.sigma = DLN.DynamicLinearNetwork(self.network_input,self.network_output,net_config['sigma'])
+            #self.logstd = nn.Parameter(torch.zeros(self.network_output))
+            self.logstd = nn.Parameter(torch.zeros(1,self.network_output))
             self.critic = DLN.DynamicLinearNetwork(self.network_input,1,net_config['critic'])
-            self.params = list(self.mu.parameters()) + list(self.sigma.parameters()) + list(self.critic.parameters())
-            self.optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.params, lr=agent_config['learning_rate'])
+            self.params= list(self.mu.parameters()) + list(self.critic.parameters())
+            #self.actor_params = list(self.mu.parameters()) + list(self.sigma.parameters())
+            #self.critic_params = list(self.critic.parameters())
+            #self.actor_optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.actor_params, lr=agent_config['actor_learning_rate'])
+            #self.critic_optimizer = getattr(torch.optim, agent_config['optimizer_function'])(params=self.critic_params, lr=agent_config['critic_learning_rate'])
+            self.optimizer = self.optimizer_function(params=self.parameters(), lr=self.learning_rate)
+            #self.critic_optimizer = self.optimizer_function(params=self.critic_params, lr=self.critic_learning_rate)
+
+        print('My Action Space is: {}'.format(self.action_space))
 
 
     def get_action(self, observation):
@@ -85,6 +88,9 @@ class PPOAgent(Agent):
 
     def get_discrete_action(self, observation):
         #retrieve the action given an observation
+        if type(observation) == np.ndarray:
+            observation = torch.from_numpy(observation)
+          #retrieve the action given an observation
         action = self.actor(observation.float()).to(self.device).float().detach()
         action = self.softmax(action)
         dist = Categorical(action)
@@ -94,6 +100,8 @@ class PPOAgent(Agent):
 
 
     def evaluate_discrete(self,observation):
+        if type(observation) == np.ndarray:
+            observation = torch.from_numpy(observation)
         action = self.actor(observation.float()).detach().to(self.device)
         action = self.softmax(action)
         dist = Categorical(action)
@@ -103,17 +111,19 @@ class PPOAgent(Agent):
         return action.tolist(), logprobs.tolist()
 
     def get_discrete_logprobs(self,observation,action):
-        action_probs = self.actor(observation.float()).detach().to(self.device)
+        action_probs = self.actor(torch.tensor(observation).float()).detach().to(self.device)
         action_probs = self.softmax(action_probs)
         dist = Categorical(action_probs)
         action = torch.tensor(np.argmax(action, axis=-1)).to(self.device).long()
         logprobs = dist.log_prob(action)
-        return logprobs.tolist()
+        return logprobs
 
     def get_continuous_action(self,observation):
-        mu = self.mu(observation.float()).squeeze(0).to(self.device)
-        sigma = self.sigma(observation).squeeze(0).to(self.device)
-        actions = Normal(mu,torch.abs(sigma)).sample()
+        mu = self.mu(torch.tensor(observation).float()).squeeze(0).to(self.device)
+        #sigma = self.sigma(observation).squeeze(0).to(self.device)
+        #actions = Normal(mu,torch.abs(sigma)).sample()
+        log_std = self.logstd.expand_as(mu)
+        actions = Normal(mu, logstd.exp()).sample()
         #self.ou_noise.set_scale(0.8)
         #actions +=torch.tensor(self.ou_noise.noise()).float()
         actions = np.clip(actions,-1,1)
@@ -121,11 +131,14 @@ class PPOAgent(Agent):
 
     def get_continuous_logprobs(self,observation,action):
         action = torch.tensor(action).float().to(self.device)
-        mu = self.mu(observation.float()).squeeze(0).to(self.device)
-        sigma = self.sigma(observation).squeeze(0).to(self.device)
-        dist = Normal(mu,torch.abs(sigma))
+        mu = self.mu(torch.tensor(observation).float()).squeeze(0).to(self.device)
+        logstd = self.logstd.expand_as(mu)
+        #sigma = self.sigma(observation).squeeze(0).to(self.device)
+        #dist = Normal(mu,torch.abs(sigma))
+        dist = Normal(mu logstd.exp())
         logprobs = dist.log_prob(action)
-        return logprobs.tolist()
+        return logprobs
+
 
 
     def save_agent(self, save_path,step):
@@ -135,7 +148,7 @@ class PPOAgent(Agent):
             torch.save(self,save_path + '/agent.pth')
         else:
             torch.save(self.mu.state_dict(), save_path + '/mu.pth')
-            torch.save(self.sigma.state_dict(), save_path + '/sigma.pth')
+            #torch.save(self.sigma.state_dict(), save_path + '/sigma.pth')
             torch.save(self.critic.state_dict(), save_path +'/critic.pth')
             torch.save(self,save_path + '/agent.pth')
 
@@ -144,11 +157,13 @@ class PPOAgent(Agent):
             torch.save(self.actor.state_dict(), save_path + '/actor.pth')
             torch.save(self.critic.state_dict(), save_path +'/critic.pth')
             torch.save(self,save_path + '/agent.pth')
+            #torch.save(self.actor_optimizer.state_dict(), save_path + 'optimizer.pth')
         else:
             torch.save(self.mu.state_dict(), save_path + '/mu.pth')
-            torch.save(self.sigma.state_dict(), save_path + '/sigma.pth')
+            #torch.save(self.sigma.state_dict(), save_path + '/sigma.pth')
             torch.save(self.critic.state_dict(), save_path +'/critic.pth')
             torch.save(self,save_path + '/agent.pth')
+            #torch.save(self.actor_optimizer.state_dict(), save_path + 'optimizer.pth')
 
     def load(self,save_path):
         # print(save_path)
@@ -156,11 +171,13 @@ class PPOAgent(Agent):
             self = torch.load(save_path+'/agent.pth')
             self.actor.load_state_dict(torch.load(save_path+'/actor.pth'))
             self.critic.load_state_dict(torch.load(save_path+'/critic.pth'))
+            #self.actor_optimizer.load_state_dict(torch.load(save_path+'/optimizer.pth'))
         else:
             self = torch.load(save_path+'/agent.pth')
             self.mu.load_state_dict(torch.load(save_path+'/mu.pth'))
-            self.sigma.load_state_dict(torch.load(save_path+'/sigma.pth'))
+            #self.sigma.load_state_dict(torch.load(save_path+'/sigma.pth'))
             self.critic.load_state_dict(torch.load(save_path+'/critic.pth'))
+            #self.actor_optimizer.load_state_dict(torch.load(save_path+'/optimizer.pth'))
 
 
 

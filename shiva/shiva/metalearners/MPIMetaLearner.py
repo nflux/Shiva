@@ -8,6 +8,7 @@ from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.utils.Tags import Tags
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
 from shiva.helpers.misc import terminate_process
+from shiva.utils.Tags import Tags
 
 class MPIMetaLearner(MetaLearner):
     def __init__(self, configs):
@@ -36,7 +37,7 @@ class MPIMetaLearner(MetaLearner):
             self.configs['Learner']['learners_io_port'] = self.io_specs['learners_port']
             # self.configs['Evaluation']['evals_io_port'] = self.io_specs['evals_port']
         else:
-            '''With the learners_map, self.configs['Leraner'] dict doesn't exist yet - will try some approaches here'''
+            '''With the learners_map, self.configs['Learner'] dict doesn't exist yet - will try some approaches here'''
             self.configs['IOHandler'] = {}
             self.configs['Environment']['menvs_io_port'] = self.io_specs['menvs_port']
             self.configs['IOHandler']['menvs_io_port'] = self.io_specs['menvs_port']
@@ -44,29 +45,18 @@ class MPIMetaLearner(MetaLearner):
             # self.configs['IOHandler']['evals_io_port'] = self.io_specs['evals_port']
 
     def _launch_menvs(self):
-        self.menv_configs = self._get_menv_configs()
         self.menvs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIMultiEnv.py'], maxprocs=self.num_menvs)
-        self.menvs.bcast(self.menv_configs, root=MPI.ROOT)
+        self.menvs.bcast(self.configs, root=MPI.ROOT)
         menvs_specs = self.menvs.gather(None, root=MPI.ROOT)
-        self.log("Got total of {} MultiEnvsSpecs with {} keys".format(len(menvs_specs), len(menvs_specs[0].keys())))
+        self.log("Got total of {} MultiEnvsSpecs with {} keys".format(str(len(menvs_specs)), str(len(menvs_specs[0].keys()))))
         self.configs['MultiEnv'] = menvs_specs
 
     def _launch_learners(self):
         self.learners_configs = self._get_learners_configs()
         self.learners = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/learners/MPILearner.py'], maxprocs=self.num_learners)
-        # self.log("Scattering {}".format(self.learners_configs))
         self.learners.scatter(self.learners_configs, root=MPI.ROOT)
         learners_specs = self.learners.gather(None, root=MPI.ROOT)
         self.log("Got {} LearnerSpecs".format(len(learners_specs)))
-
-    def _get_menv_configs(self):
-        self.menv_configs = []
-        if hasattr(self, 'learners_map'):
-            ''' Create a friendly Learners map for the MultiEnv '''
-            self.menv_configs = self.configs.copy()
-        elif 'Learner' in self.configs:
-            self.menv_configs = self.configs.copy()
-        return self.menv_configs
 
     def _get_learners_configs(self):
         '''

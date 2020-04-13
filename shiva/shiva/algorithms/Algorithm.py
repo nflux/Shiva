@@ -23,10 +23,10 @@ class Algorithm():
         self.observation_space = obs_space
         self.action_space = acs_space
         self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
         self.num_updates = 0
-        
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     def update(self, agent, data, episodic=False):
         '''
             Updates the agents network using the data
@@ -40,6 +40,9 @@ class Algorithm():
                 None
         '''
         assert "Method Not Implemented"
+
+    def evolve(self):
+        raise NotImplemented
 
     def get_num_updates(self):
         return self.num_updates
@@ -68,6 +71,12 @@ class Algorithm():
         '''
         assert "Method Not Implemented"
 
+    def save_central_critic(self, agent):
+        pass
+
+    def load_central_critic(self, agent):
+        pass
+
     def id_generator(self):
         agent_id = self.agentCount
         self.agentCount += 1
@@ -76,6 +85,8 @@ class Algorithm():
     def get_agents(self):
         return self.agents
 
-    def log(self, msg, to_print=False):
-        text = '{}\t{}'.format(self, msg)
-        logger.info(text, to_print or self.configs['Admin']['print_debug'])
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['Algorithm']:
+            text = '{}\t{}'.format(self, msg)
+            logger.info(text, to_print or self.configs['Admin']['print_debug'])

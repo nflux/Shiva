@@ -15,32 +15,34 @@ class GymEnvironment(Environment):
         self.done = False
         self.action_space_continuous = None
         self.action_space_discrete = None
-        self.observation_space = self.set_observation_space()         
+        self.observation_space = self.set_observation_space()
+        #self.seed = np.random.randint(0, 10000)
+        #self.env.seed(self.seed)
 
         if self.action_space == "discrete":
             self.action_space = {
-                'discrete': self.set_action_space() , 
+                'discrete': self.set_action_space() ,
                 'continuous': 0,
-                'param': self.set_action_space(), 
+                'param': self.set_action_space(),
                 'acs_space': self.set_action_space()
             }
             self.gymEnvType = 'discrete'
-            
+
         elif self.action_space == "continuous":
             self.action_space = {
-                'discrete': 0 , 
+                'discrete': 0 ,
                 'continuous': self.set_action_space(),
-                'param': 0, 
+                'param': 0,
                 'acs_space': self.set_action_space()
             }
             self.gymEnvType = 'continuous'
 
         '''Set some attribute for Gym on MPI'''
         self.num_agents = 1
-        self.roles = ['Agent_0']
+        self.roles = [self.env_name]
         self.num_instances_per_role = 1
         self.num_instances_per_env = 1
-        self.agent_ids = [0]
+        # self.agent_ids = [0]
 
         self.steps_per_episode = 0
         self.step_count = 0
@@ -70,7 +72,7 @@ class GymEnvironment(Environment):
             self.obs, self.reward_per_step, self.done, info = self.env.step([action[action4Gym.item()]])
 
         self.rew = self.normalize_reward(self.reward_per_step) if self.normalize else self.reward_per_step
-            
+
         self.load_viewer()
         '''
             Metrics collection
@@ -92,28 +94,25 @@ class GymEnvironment(Environment):
 
         return self.obs, self.rew, self.done, {'raw_reward': self.reward_per_step, 'action': action}
 
-    def reset(self):
+    def reset(self, *args, **kwargs):
         self.steps_per_episode = 0
         self.reward_per_step = 0
         self.reward_per_episode = 0
         self.done = False
         self.obs = self.env.reset()
 
-    def get_metrics(self, episodic=False):
+    def get_metrics(self, episodic):
         if not episodic:
             metrics = [
-                ('Reward/Per_Step', self.reward_per_step)
+                ('Reward/Per_Step', self.reward_per_step),
             ]
         else:
             metrics = [
                 ('Reward/Per_Episode', self.reward_per_episode),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
-            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
-
-            # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
-
-        return metrics
+        return [metrics] # single role metrics!
+        # return metrics
 
     def is_done(self):
         return self.done
@@ -165,8 +164,10 @@ class GymEnvironment(Environment):
         '''
         return self.reward_per_episode
 
-    def get_reward_episode(self):
-        return self.reward_episode
+    def get_reward_episode(self, roles=False):
+        if roles:
+            return {self.roles[0]:self.reward_per_episode}
+        return self.reward_per_episode
 
     def load_viewer(self):
         if self.render:

@@ -23,17 +23,18 @@ class DDPGAlgorithm(Algorithm):
         self.actor_loss = torch.tensor(0)
         self.critic_loss = torch.tensor(0)
         self.set_action_space()
+        self.critic_learning_rate = 0
+        self.actor_learning_rate = 0
+<<<<<<< HEAD
+        assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", "acs_space config must be set to either discrete, continuous, or parameterized."
 
-    def update(self, agent, buffer, step_count, episodic=False):
-        '''
-            DDPG updates every episode. This avoids doing an extra update at the end of an episode
-            But it does reset the noise after an episode.
+    def update(self, agents, buffer, step_count, episodic):
+        self.log("Start update # {}".format(self.num_updates))
+        for _ in range(self.update_iterations):
+            self._update(agents, buffer, step_count, episodic)
+        self.num_updates += self.update_iterations
 
-            For Multi-Environment scenarios, the agent whose noise is being reset is not the agent inside
-            the multi environment instances, as such, 
-        '''
-        self.num_updates += 1
-
+    def _update(self, agent, buffer, step_count, episodic=False):
         self.agent = agent[0] if type(agent) == list else agent
         try:
             '''For MultiAgentTensorBuffer - 1 Agent only here'''
@@ -42,19 +43,99 @@ class DDPGAlgorithm(Algorithm):
         except:
             states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
             dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
+=======
+        self.exploration_epsilon = 0
+        self.noise_scale = 0
+>>>>>>> robocup-mpi-pbt
 
         # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones))
         # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones.shape))
 
-        assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
-            "acs_space config must be set to either discrete, continuous, or parameterized."
+        '''
+            Updates starts here
+        '''
+        self.critic_learning_rate = self.agent.critic_learning_rate
+        self.actor_learning_rate = self.agent.actor_learning_rate
+
+        # # Send everything to gpu if available
+        # states = states.squeeze(1).to(self.device)
+        # actions = actions.squeeze(1).to(self.device)
+        # rewards = rewards.squeeze(1).to(self.device)
+        # next_states = next_states.squeeze(1).to(self.device)
+        # dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
 
         '''
             Training the Critic
         '''
+<<<<<<< HEAD
     
         # Zero the gradient
         self.agent.critic_optimizer.zero_grad()
+=======
+        self.critic_learning_rate = agent.critic_learning_rate
+        self.actor_learning_rate = agent.actor_learning_rate
+        self.exploration_epsilon = agent.epsilon
+        self.noise_scale = agent.noise_scale
+
+        for i in range(self.updates):
+
+            try:
+                 '''For MultiAgentTensorBuffer - 1 Agent only here'''
+                 states, actions, rewards, next_states, dones = buffer.sample(agent_id=agent.id, device=self.device)
+                 dones = dones.bool()
+            except:
+                states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+                dones = dones.byte()
+
+            # Send everything to gpu if available
+            states = states.squeeze(1).to(self.device)
+            actions = actions.squeeze(1).to(self.device)
+            rewards = rewards.squeeze(1).to(self.device)
+            next_states = next_states.squeeze(1).to(self.device)
+            dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
+
+
+
+            # print("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states, actions, rewards, next_states, dones_mask))
+            # print("Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(states.shape, actions.shape, rewards.shape, next_states.shape, dones_mask.shape))
+
+            assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", \
+                "acs_space config must be set to either discrete, continuous, or parameterized."
+
+            '''  yes its supposed to be
+                Training the Critic
+            '''
+
+            # Zero the gradient
+            agent.critic_optimizer.zero_grad()
+
+            # The actions that target actor would do in the next state.
+            next_state_actions_target = agent.target_actor(next_states.float(), gumbel=False)
+
+            dims = len(next_state_actions_target.shape)
+
+            if self.a_space == "discrete" or self.a_space == "parameterized":
+
+                # Grab the discrete actions in the batch
+                # generate a tensor of one hot encodings of the argmax of each discrete action tensors
+                # concat the discrete and parameterized actions back together
+
+                if dims == 3:
+                    discrete_actions = next_state_actions_target[:,:,:self.discrete].squeeze(dim=1)
+                    one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions).unsqueeze(dim=1)
+                    next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,self.discrete:]], dim=2)
+
+                elif dims == 2:
+                    discrete_actions = next_state_actions_target[:,:self.discrete]
+                    one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
+                    next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,self.discrete:]], dim=1)
+                else:
+                    discrete_actions = next_state_actions_target[:self.discrete]
+                    one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
+                    next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[self.discrete:]], dim=0)
+
+
+>>>>>>> robocup-mpi-pbt
 
         # The actions that target actor would do in the next state.
         next_state_actions_target = self.agent.target_actor(next_states.float(), gumbel=False)
@@ -62,29 +143,24 @@ class DDPGAlgorithm(Algorithm):
         dims = len(next_state_actions_target.shape)
 
         if self.a_space == "discrete" or self.a_space == "parameterized":
-
             # Grab the discrete actions in the batch
             # generate a tensor of one hot encodings of the argmax of each discrete action tensors
             # concat the discrete and parameterized actions back together
-
             if dims == 3:
-                discrete_actions = next_state_actions_target[:,:,:self.discrete].squeeze(dim=1)
+                discrete_actions = next_state_actions_target[:, :, :self.discrete].squeeze(dim=1)
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions).unsqueeze(dim=1)
-                next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,:,self.discrete:]], dim=2)
-
+                next_state_actions_target = torch.cat(
+                    [one_hot_encoded_discrete_actions, next_state_actions_target[:, :, self.discrete:]], dim=2)
             elif dims == 2:
-                discrete_actions = next_state_actions_target[:,:self.discrete]
+                discrete_actions = next_state_actions_target[:, :self.discrete]
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
-                next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[:,self.discrete:]], dim=1)
+                next_state_actions_target = torch.cat(
+                    [one_hot_encoded_discrete_actions, next_state_actions_target[:, self.discrete:]], dim=1)
             else:
                 discrete_actions = next_state_actions_target[:self.discrete]
                 one_hot_encoded_discrete_actions = one_hot_from_logits(discrete_actions)
-                next_state_actions_target = torch.cat([one_hot_encoded_discrete_actions, next_state_actions_target[self.discrete:]], dim=0)
-
-
-
-       
-        # print(next_state_actions_target.shape, '\n')
+                next_state_actions_target = torch.cat(
+                    [one_hot_encoded_discrete_actions, next_state_actions_target[self.discrete:]], dim=0)
 
         # The Q-value the target critic estimates for taking those actions in the next state.
         if dims == 3:
@@ -94,41 +170,37 @@ class DDPGAlgorithm(Algorithm):
         else:
             Q_next_states_target = self.agent.target_critic( torch.cat([next_states.float(), next_state_actions_target.float()], 0) )
 
-        # print('dones', dones.size())
         # Sets the Q values of the next states to zero if they were from the last step in an episode.
         Q_next_states_target[dones] = 0.0
         # Use the Bellman equation.
-        y_i = rewards + self.gamma * Q_next_states_target
+        y_i = rewards.float() + self.gamma * Q_next_states_target.float()
 
-        # Get Q values of the batch from states and actions.
         if self.a_space == 'discrete':
             actions = one_hot_from_logits(actions)
         else:
-            actions = softmax(actions) 
+            actions = softmax(actions)
 
-        # Grab the discrete actions in the batch
+        # Get Q values of the batch from states and actions.
         if dims == 3:
-            # print(states.shape, actions.shape)
-            Q_these_states_main = self.agent.critic( torch.cat([states.float(), actions.unsqueeze(dim=1).float()], 2) )
+            Q_these_states_main = self.agent.critic(torch.cat([states.float(), actions.float()], 2))
         elif dims == 2:
-            Q_these_states_main = self.agent.critic( torch.cat([states.float(), actions.float()], 1) )
+            Q_these_states_main = self.agent.critic(torch.cat([states.float(), actions.float()], 1))
         else:
-            Q_these_states_main = self.agent.critic( torch.cat([states.float(), actions.float()], 0) )
+            Q_these_states_main = self.agent.critic(torch.cat([states.float(), actions.float()], 0))
 
         # Calculate the loss.
-
         critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
         # Backward propogation!
         critic_loss.backward()
         # Update the weights in the direction of the gradient.
-        self.agent.critic_optimizer.step()
+        agent.critic_optimizer.step()
         # Save critic loss for tensorboard
         self.critic_loss = critic_loss
+
 
         '''
             Training the Actor
         '''
-
         # Zero the gradient
         self.agent.actor_optimizer.zero_grad()
         # Get the actions the main actor would take from the initial states
@@ -160,48 +232,35 @@ class DDPGAlgorithm(Algorithm):
         '''
             Soft Target Network Updates
         '''
-
         # Update Target Actor
-        ac_state = self.agent.actor.state_dict()
-        tgt_ac_state = self.agent.target_actor.state_dict()
+        ac_state = agent.actor.state_dict()
+        tgt_ac_state = agent.target_actor.state_dict()
 
         for k, v in ac_state.items():
-            tgt_ac_state[k] = v*self.tau + (1 - self.tau)*tgt_ac_state[k] 
-        self.agent.target_actor.load_state_dict(tgt_ac_state)
+            tgt_ac_state[k] = v*self.tau + (1 - self.tau)*tgt_ac_state[k]
+        agent.target_actor.load_state_dict(tgt_ac_state)
 
         # Update Target Critic
-        ct_state = self.agent.critic.state_dict()
-        tgt_ct_state = self.agent.target_critic.state_dict()
+        ct_state = agent.critic.state_dict()
+        tgt_ct_state = agent.target_critic.state_dict()
 
         for k, v in ct_state.items():
-            tgt_ct_state[k] =  v*self.tau + (1 - self.tau)*tgt_ct_state[k] 
-        self.agent.target_critic.load_state_dict(tgt_ct_state)
+            tgt_ct_state[k] = v*self.tau + (1 - self.tau)*tgt_ct_state[k]
+        agent.target_critic.load_state_dict(tgt_ct_state)
 
-        '''
-            Hard Target Network Updates
-        '''
-
-        # if step_count % 1000 == 0:
-
-        #     for target_param,param in zip(agent.target_critic.parameters(), agent.critic.parameters()):
-        #         target_param.data.copy_(param.data)
-
-        #     for target_param,param in zip(agent.target_actor.parameters(), agent.actor.parameters()):
-        #         target_param.data.copy_(param.data)
-
-    def create_agent(self, id=None):
-        self.agent = DDPGAgent(self.id_generator(), self.observation_space, self.action_space, self.configs['Agent'], self.configs['Network'])
+    def create_agent(self, id):
+        self.agent = DDPGAgent(id, self.observation_space, self.action_space, self.configs['Agent'], self.configs['Network'])
         return self.agent
 
-    def create_agent_of_role(self, role):
+    def create_agent_of_role(self, id, role):
         self.configs['Agent']['role'] = role
-        return self.create_agent()
+        return self.create_agent(id)
 
     def set_action_space(self):
         if self.action_space['continuous'] == 0:
             self.a_space = 'discrete'
-
         elif self.action_space['discrete'] == 0:
+            assert "Continuous not tested yet"
             self.a_space = 'continuous'
         else:
             assert "Parametrized not supported yet"
@@ -215,7 +274,9 @@ class DDPGAlgorithm(Algorithm):
         if not episodic:
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss.item()),
-                ('Algorithm/Critic_Loss', self.critic_loss.item())
+                ('Algorithm/Critic_Loss', self.critic_loss.item()),
+                ('Agent/Actor_Learning_Rate: ', self.actor_learning_rate),
+                ('Agent/Critic_Learning_Rate: ', self.critic_learning_rate)
             ]
             # # not sure if I want this all of the time
             # for i, ac in enumerate(self.action_space['acs_space']):
@@ -223,7 +284,16 @@ class DDPGAlgorithm(Algorithm):
         else:
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss.item()),
-                ('Algorithm/Critic_Loss', self.critic_loss.item())
+                ('Algorithm/Critic_Loss', self.critic_loss.item()),
+<<<<<<< HEAD
+                ('Agent/Actor_Learning_Rate: ', self.actor_learning_rate),
+                ('Agent/Critic_Learning_Rate: ', self.critic_learning_rate)
+=======
+                ('Actor Learning Rate: ', self.actor_learning_rate),
+                ('Critic Learning Rate: ', self.critic_learning_rate),
+                ('Agent Exploration Epsilon: ', self.exploration_epsilon),
+                ('Agent Noise Scale: ', self.noise_scale)
+>>>>>>> robocup-mpi-pbt
             ]
         return metrics
 

@@ -8,7 +8,7 @@ taken a time t(the ratio of the probabilities of taking that action) from the
 current policy over the old policy. It multiplies this by a an advantage function,
 which is just a function of the actual state values and the approximated state
 values. The full loss function then takes the minimum of this value and 1 +-
-a clipped value (dictated in the [Initialization Configuration File](../configs/PPO.ini).
+a clipped value (dictated in the [Initialization Configuration File](../configs/PPO/PPO.ini).
 multiplied by the above surrogate objective function. This clipping merely keeps
 the updated policy within a given distance from the previous policy. This
 implementation adds stability and decreases variance to the policy gradient

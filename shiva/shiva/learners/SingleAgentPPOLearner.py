@@ -116,11 +116,14 @@ class SingleAgentPPOLearner(Learner):
 
     def create_algorithm(self):
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
-        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(), [self.configs['Algorithm'], self.configs['Agent'], self.configs['Network']])
+        return algorithm_class(self.env.get_observation_space(), self.env.get_action_space(),self.configs)
 
-    def create_buffer(self):
+    def create_buffer(self, obs_dim, ac_dim):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        return buffer_class(self.configs['Buffer']['batch_size'], self.configs['Buffer']['capacity'])
+        if self.env.env_name == 'RoboCupEnvironment':
+            return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], self.env.num_left, obs_dim, ac_dim)
+        else:
+            return buffer_class(self.configs['Buffer']['capacity'],self.configs['Buffer']['batch_size'], self.env.num_instances, obs_dim, ac_dim)
 
     def get_agents(self):
         return self.agents
@@ -129,27 +132,27 @@ class SingleAgentPPOLearner(Learner):
         return self.alg
 
     def launch(self):
-
-        # Launch the environment
         self.env = self.create_environment()
         self.queues = [mp.Queue(self.max_length)] * self.env.num_instances
         self.rewards = np.zeros((self.env.num_instances))
-
-        # Launch the algorithm which will handle the
+        if hasattr(self, 'manual_play') and self.manual_play:
+            '''
+                Only for RoboCup!
+                Maybe for Unity at some point?????
+            '''
+            from shiva.envs.RoboCupEnvironment import HumanPlayerInterface
+            self.HPI = HumanPlayerInterface()
         self.alg = self.create_algorithm()
-        # Create the agent
         if self.load_agents:
-            self.agent= self.load_agent(self.load_agents)
+            self.agent = Admin._load_agent(self.load_agents)
+            if self.using_buffer:
+                self.buffer = Admin._load_buffer(self.load_agents)
         else:
-            self.agent= self.alg.create_agent()
+            self.agent = self.alg.create_agent(self.get_new_agent_id())
+            if self.using_buffer:
+                self.buffer = self.create_buffer(self.env.observation_space, self.env.action_space['acs_space'])
 
-
-
-        # if buffer set to true in config
-        if self.using_buffer:
-            # Basic replay buffer at the moment
-            self.buffer = self.create_buffer()
-
+        print('Learners Agents: {}'.format(self.agent))
         print('Launch Successful.')
 
 

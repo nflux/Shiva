@@ -98,7 +98,7 @@ class UnityWrapperEnvironment(Environment):
         self.reward_total += self.reward_per_episode
 
         # self.debug()
-        return self.observations, self.rewards, self.dones, {}
+        return self.observations, self.rewards, self.dones, np.argwhere(self.dones)
 
     def get_metrics(self, episodic=True):
         if not episodic:
@@ -116,10 +116,10 @@ class UnityWrapperEnvironment(Environment):
         '''
             One Shiva episode is when all instances in the Environment terminate at least once
         '''
-        if not self.on_policy:
-            return self.temp_done_counter >= self.num_instances
-        else:
+        if self.on_policy:
             return self.temp_done_counter >= self.update_episodes
+        else:
+            return self.temp_done_counter >= self.num_instances
 
     def _clean_actions(self, actions):
         '''

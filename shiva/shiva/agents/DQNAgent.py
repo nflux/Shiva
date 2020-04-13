@@ -15,7 +15,11 @@ class DQNAgent(Agent):
         self.id = id
         network_input = obs_space + acs_space
         network_output = 1
-        self.learning_rate = agent_config['learning_rate']
+        self.agent_config = agent_config
+        if isinstance(agent_config['learning_rate'],list):
+            self.learning_rate = random.uniform(agent_config['learning_rate'][0],agent_config['learning_rate'][1])
+        else:
+            self.learning_rate = agent_config['learning_rate']
 
         self.policy = nh.DynamicLinearSequential(
                                         network_input,
@@ -38,7 +42,8 @@ class DQNAgent(Agent):
             obs = torch.tensor(obs).float()
         if evaluate:
             return self.find_best_action(self.policy, obs)
-        if step_n < self.exploration_steps or random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n / self.epsilon_decay)):
+        # if step_n < self.exploration_steps or random.uniform(0, 1) < max(self.epsilon_end, self.epsilon_start - (step_n * self.epsilon_decay)):
+        if step_n < self.exploration_steps or self.is_e_greedy(step_n):
             '''Random action or e-greedy exploration'''
             # check if obs is a batch!
             if len(obs.shape) > 1:
@@ -85,7 +90,7 @@ class DQNAgent(Agent):
         best_q, best_act_v = float('-inf'), torch.zeros(self.acs_space).to(self.device)
         for i in range(self.acs_space):
             act_v = misc.action2one_hot_v(self.acs_space, i).to(self.device)
-            q_val = network(torch.cat([obs_v, act_v], dim=-1))
+            q_val = network(torch.cat([obs_v.float(), act_v.float()], dim=-1))
             if q_val > best_q:
                 best_q = q_val
                 best_act_v = act_v
@@ -108,6 +113,27 @@ class DQNAgent(Agent):
     def save(self, save_path, step):
         torch.save(self.policy, save_path + '/policy.pth')
         torch.save(self.target_policy, save_path + '/target_policy.pth')
-        
+
+
+    def copy_weights(self,evo_agent):
+        print('Copying Weights')
+        self.learning_rate = evo_agent.learning_rate
+        self.optimizer = copy.deepcopy(evo_agent.optimizer)
+        self.policy = copy.deepcopy(evo_agent.policy)
+        self.target_policy = copy.deepcopy(evo_agent.target_policy)
+        print('Copied Weights')
+
+    def perturb_hyperparameters(self,perturb_factor):
+        print('Pertubing HP')
+        self.learning_rate = self.learning_rate * perturb_factor
+        self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=self.learning_rate)
+        print('Pertubed HP')
+
+    def resample_hyperparameters(self):
+        print('Resampling')
+        self.learning_rate = random.uniform(self.agent_config['learning_rate'][0],self.agent_config['learning_rate'][1])
+        self.optimizer = self.optimizer_function(params=self.policy.parameters(), lr=self.learning_rate)
+        print('Resampled')
+
     def __str__(self):
-        return 'DQNAgent'
+        return '<DQNAgent(id={}, steps={}, episodes={})>'.format(self.id, self.step_count, self.done_count)
