@@ -376,6 +376,19 @@ class MADDPGAlgorithm(Algorithm):
                 assert "Parametrized not supported yet"
             self.action_space[role] = roles_action_space[role]
 
+    def save_central_critic(self, agent):
+        # All Agents will host a copy of the central critic to enable evolution
+        agent.critic.load_state_dict(self.critic.state_dict())
+        agent.target_critic.load_state_dict(self.target_critic.state_dict())
+        agent.critic_optimizer.load_state_dict(self.critic_optimizer.state_dict())
+        agent.num_updates = self.get_num_updates()
+
+    def load_central_critic(self, agent):
+        self.critic.load_state_dict(agent.critic.state_dict())
+        self.target_critic.load_state_dict(agent.target_critic.state_dict())
+        self.critic_optimizer.load_state_dict(agent.critic_optimizer.state_dict())
+        self.num_updates = agent.num_updates
+
     def get_metrics(self, episodic, agent_id):
         if not episodic:
             '''Step metrics'''
@@ -388,6 +401,8 @@ class MADDPGAlgorithm(Algorithm):
             # if self.configs['MetaLearner']['pbt']:
             #     metrics += [('Agent/MADDPG/Critic_Learning_Rate', self.critic_learning_rate)]
         return metrics
+
+
 
     def __str__(self):
         return '<MADDPGAlgorithm(n_agents={}, num_updates={}, method={})>'.format(self.agentCount, self.num_updates, self.method)

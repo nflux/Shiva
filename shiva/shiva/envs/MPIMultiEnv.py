@@ -66,7 +66,7 @@ class MPIMultiEnv(Environment):
             self._step_python()
             # self._step_numpy()
             if self.step_count % self.episode_max_length == 0:
-                self.reload_match_agents(io_request=True) # temporarily training matches are fixed
+                self.reload_match_agents() # temporarily training matches are fixed
                 for a in self.agents:
                     a.reset_noise()
 
@@ -84,7 +84,7 @@ class MPIMultiEnv(Environment):
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
                     for o in role_obs:
-                        role_actions.append(self.agents[agent_ix].get_action(o, self.step_count))
+                        role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
                     env_actions.append(role_actions)
                 actions.append(env_actions)
         elif 'Particle' in self.type:
@@ -95,7 +95,7 @@ class MPIMultiEnv(Environment):
                 for role_ix, role_name in enumerate(self.env_specs['roles']):
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
-                    role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count)
+                    role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate'])
                     env_actions.append(role_actions)
                 actions.append(env_actions)
         elif 'Gym' in self.type:
@@ -105,7 +105,7 @@ class MPIMultiEnv(Environment):
             agent_ix = self.role2agent[role_name]
             for role_obs in self._obs_recv_buffer:
                 env_actions = []
-                role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count)
+                role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate'])
                 env_actions.append(role_actions)
                 actions.append(env_actions)
 
@@ -193,6 +193,7 @@ class MPIMultiEnv(Environment):
         return self.role2agent
 
     def load_agents(self, role2learner_spec=None, io_request=True):
+        '''If io_request=False, it's the first time we are loading agents - we must load all of them without IO request'''
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
 
@@ -202,8 +203,8 @@ class MPIMultiEnv(Environment):
 
         agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
         for role, learner_spec in role2learner_spec.items():
-            '''Need to load ONLY the agents that are not being evaluated'''
-            if not learner_spec['evaluate']:
+            '''During runtime loops we only need to load the agents that are not being evaluated'''
+            if not learner_spec['evaluate'] or not io_request:
                 learner_agents = Admin._load_agents(learner_spec['load_path'], device=self.device)
                 for a in learner_agents:
                     '''Force Agent to use self.device'''
