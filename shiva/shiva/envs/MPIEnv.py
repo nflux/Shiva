@@ -28,7 +28,7 @@ class MPIEnv(Environment):
         super(MPIEnv, self).__init__(self.configs)
         #self.log("Received config with {} keys".format(str(len(self.configs.keys()))))
         self._launch_env()
-        self.env.env.env_id = self.id #Using for troubleshooting rc_env
+        
         # Check in and send single env specs with MultiEnv
         self.menv.gather(self._get_env_specs(), root=0)
         self._connect_learners()
@@ -37,6 +37,7 @@ class MPIEnv(Environment):
         self.create_buffers()
 
         if 'RoboCup' in self.type:
+            self.env.env.env_id = self.id #Using for troubleshooting rc_env
             self.set_reward_factors()
         # Wait for flag to start running
         #self.log("Waiting MultiEnv flag to start")
@@ -53,13 +54,12 @@ class MPIEnv(Environment):
                 #if time.time() - start >= 5:
                     #self.log('Env is still running')
                     #start = time.time()
-                time.sleep(0.05)
                 if 'RoboCup' in self.type:
                     self.reset_reward_factors()
                 self._step_numpy()
                 self._append_step()
                 if self.env.is_done():
-                    self.print(self.env.get_metrics(episodic=True)) # print metrics
+                    #self.print(self.env.get_metrics(episodic=True)) # print metrics
                     self._send_trajectory_numpy()
                     self.log('Episode_count: {}'.format(self.done_count))
                     self.env.reset()
@@ -97,6 +97,7 @@ class MPIEnv(Environment):
         # self.log("Act {}".format(self.actions))
         #self.log('Stepping')
         self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
+        self.metrics = self.env.get_metrics(episodic=True)
         #self.log('Finished stepping')
        # self.log('The Dones look like this: {}'.format(self.dones))
 
@@ -212,7 +213,8 @@ class MPIEnv(Environment):
                     'acs_shape': self.actions_buffer.shape,
                     'rew_shape': self.rewards_buffer.shape,
                     'done_shape': self.done_buffer.shape,
-                    'metrics': self.env.get_metrics(episodic=True)
+                    'metrics': self.metrics
+                    #'metrics': self.env.get_metrics(episodic=True)
                 }
 
                 # self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
@@ -277,6 +279,7 @@ class MPIEnv(Environment):
     def create_environment(self):
         self.configs['Environment']['port'] += (self.id * 10)
         self.configs['Environment']['worker_id'] = self.id * 11
+        self.configs['Environment']['id'] = self.id
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         return env_class(self.configs)
 

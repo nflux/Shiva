@@ -15,14 +15,14 @@ class DDPGReducedAgent(Agent):
     def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict):
         super(DDPGReducedAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
         self.agent_config = agent_config
-        try:
-            torch.manual_seed(self.manual_seed)
-            np.random.seed(self.manual_seed)
-        except:
+        #try:
+            #torch.manual_seed(self.manual_seed)
+            #np.random.seed(self.manual_seed)
+        #except:
             #torch.manual_seed(5)
             #np.random.seed(5)
-            torch.manual_seed(self.id)
-            np.random.seed(self.id)
+            #torch.manual_seed(self.id)
+            #np.random.seed(self.id)
 
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']
@@ -81,6 +81,8 @@ class DDPGReducedAgent(Agent):
     def instantiate_networks(self):
         self.net_names = ['actor']
         self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor']).to(self.device)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
 
     def to_device(self, device):
         self.device = device
@@ -172,4 +174,7 @@ class DDPGReducedAgent(Agent):
         return ('shiva.agents', 'DDPGReducedAgent.DDPGReducedAgent')
 
     def __str__(self):
-        return '<DDPGAgent(id={}, steps={}, episodes={}, reward_factors={})>'.format(self.id, self.step_count, self.done_count,self.reward_factors)
+        if self.rewards:
+            return '<DDPGAgent(id={}, steps={}, episodes={}, reward_factors={})>'.format(self.id, self.step_count, self.done_count,self.reward_factors)
+        else:
+            return '<DDPGAgent(id={}, step{}, episodes={})>'.format(self.id,self.step_count, self.done_count)

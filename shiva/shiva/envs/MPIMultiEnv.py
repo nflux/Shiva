@@ -40,7 +40,7 @@ class MPIMultiEnv(Environment):
         self.meta.gather(self._get_menv_specs(), root=0) # checkin with Meta
         self._connect_learners()
 
-        if 'RoboCup' in self.type:
+        if 'RoboCup' in self.type and self.configs['Agent']['rewards']:
             reward_factors = [agent.reward_factors for agent in self.agents]
             self.envs.scatter(reward_factors,root=MPI.ROOT)
 
@@ -103,7 +103,8 @@ class MPIMultiEnv(Environment):
                  '''Force Agent to use self.device'''
                  a.to_device(self.device)
              if 'RoboCup' in self.type:
-                self.envs.send(self.agents[learner_id].reward_factors,dest=learner_id,tag=Tags.new_agents)
+                if self.configs['Agent']['rewards']:
+                    self.envs.send(self.agents[learner_id].reward_factors,dest=learner_id,tag=Tags.new_agents)
              self.log("Got LearnerSpecs<{}> and loaded Agent at Episode {} / Step {}".format(learner_id, self.agents[learner_id].done_count, self.agents[learner_id].step_count))
 
 

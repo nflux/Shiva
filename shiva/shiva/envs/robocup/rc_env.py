@@ -912,7 +912,7 @@ class rc_env:
         if ((self.left_base == base) and possession_side == 'L'):
             team_possessor = (np.array(self.left_agent_possesion) == 'L').argmax()
             if agentID == team_possessor:
-                delta = (2 * self.num_left) * (r_prev - r) * 1.0
+                delta = (self.num_left) * (r_prev - r) * 1.0
                 if True:
                     # if delta > 0:
                     reward += delta * (ball_distance_to_goal_points * self.ball_distance_to_goal_factor)

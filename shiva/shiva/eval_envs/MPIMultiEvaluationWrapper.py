@@ -44,7 +44,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self._get_initial_evaluations()
 
         while True:
-            time.sleep(0.00001)
+            time.sleep(0.001)
             self._get_evaluations(True)
             if self.sort:
                 self._sort_evals()

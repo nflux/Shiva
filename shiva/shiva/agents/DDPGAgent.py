@@ -15,14 +15,14 @@ class DDPGAgent(Agent):
     def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
         self.agent_config = agent_config
-        try:
-            torch.manual_seed(self.manual_seed)
-            np.random.seed(self.manual_seed)
-        except:
+        #try:
+            #torch.manual_seed(self.manual_seed)
+            #np.random.seed(self.manual_seed)
+        #except:
             #torch.manual_seed(5)
             #np.random.seed(5)
-            torch.manual_seed(self.id)
-            np.random.seed(self.id)
+            #torch.manual_seed(self.id)
+            #np.random.seed(self.id)
 
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']
@@ -286,8 +286,9 @@ class DDPGAgent(Agent):
         elif choice[3] == 'perturb':
             perturb_factor = np.random.choice(self.perturb_factors)
             self.noise_scale *= perturb_factor
-
-        self.reward_exploration(choice[4:])
+        
+        if self.rewards:
+            self.reward_exploration(choice[4:])
 
     def resample_actor_learning_rate(self):
         self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0],self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])

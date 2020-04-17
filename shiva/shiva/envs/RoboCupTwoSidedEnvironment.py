@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import itertools
+import os
 from shiva.envs.robocup.rc_env import rc_env
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
@@ -17,6 +18,10 @@ class RoboCupTwoSidedEnvironment(Environment):
         np.random.seed(self.seed)
         # self.port = port
         self.env = rc_env(config)
+        if hasattr(self,'id'):
+            if not os.path.isdir('rc_log/env_logs/env_{}'.format(self.id)):
+                os.mkdir('rc_log/env_logs/env_{}'.format(self.id))
+            self.env.rc_log += '/env_logs/env_{}'.format(self.id)
         self.env.launch()
 
         self.num_agents = self.num_left + self.num_right

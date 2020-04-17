@@ -46,7 +46,7 @@ class MPIEvaluation(Evaluation):
         self.create_obs_buffer()
 
         while True:
-            time.sleep(0.00001)
+            time.sleep(0.0001)
             self._receive_eval_numpy()
             self.step()
             self.send_evals()

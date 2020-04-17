@@ -22,7 +22,7 @@ class DDPGAlgorithm(Algorithm):
         self.actor_learning_rate = 0
         self.exploration_epsilon = 0
         self.noise_scale = 0
-        if 'RoboCup' in self.configs['Environment']['type']:
+        if 'RoboCup' in self.configs['Environment']['type'] and self.configs['Agent']['rewards']:
             self.reward_factors = dict()
             for reward in self.configs['Agent']['reward_events']:
                 self.reward_factors[reward] = 0
@@ -66,7 +66,7 @@ class DDPGAlgorithm(Algorithm):
         self.actor_learning_rate = agent.actor_learning_rate
         self.exploration_epsilon = agent.epsilon
         self.noise_scale = agent.noise_scale
-        if 'RoboCup' in self.configs['Environment']['type']:
+        if 'RoboCup' in self.configs['Environment']['type'] and self.configs['Agent']['rewards']:
             self.reward_factors = agent.reward_factors
         
         for i in range(self.updates):
@@ -270,7 +270,7 @@ class DDPGAlgorithm(Algorithm):
                 ('Agent Exploration Epsilon: ', self.exploration_epsilon),
                 ('Agent Noise Scale: ', self.noise_scale)
             ]
-            if 'RoboCup' in self.configs['Environment']['type']:
+            if 'RoboCup' in self.configs['Environment']['type'] and self.configs['Agent']['rewards']:
                 metrics = metrics + [('Reward: '+reward, self.reward_factors[reward]) for reward in self.reward_factors]
         return metrics
 

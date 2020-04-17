@@ -1,5 +1,6 @@
 import torch
 import torch.nn
+import numpy as np
 from shiva.core.admin import Admin, logger
 
 class Agent(torch.nn.Module):
@@ -18,6 +19,13 @@ class Agent(torch.nn.Module):
         '''
         {setattr(self, k, v) for k,v in agent_config.items()}
         self.id = id
+        try:
+            torch.manual_seed(self.manual_seed)
+            np.random.seed(self.manual_seed)
+        except:
+            self.manual_seed = np.random.randint(0,100)
+            torch.manual_seed(self.manual_seed)
+            np.random.seed(self.manual_seed)
         self.agent_config = agent_config
         self.networks_config = networks_config
         self.step_count = 0
@@ -33,7 +41,7 @@ class Agent(torch.nn.Module):
         self.policy = None
         self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role']
+        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role', 'manual_seed']
         if hasattr(self,'epsilon'):
             print('Has epsilon')
             self.state_attrs = self.state_attrs + ['epsilon']
