@@ -322,6 +322,9 @@ class MADDPGAlgorithm(Algorithm):
     def evolve(self, evol_config):
         pass
 
+    def copy_hyperparameters(self, evo_agent):
+        self.critic_learning_rate = evo_agent.critic_learning_rate
+
     def copy_weight_from_agent(self, evo_agent):
         # self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
