@@ -168,8 +168,13 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self.log("\nGot Evals {} for match {}".format(evals, eval_match), verbose_level=2)
 
     def _sort_roles(self):
-        '''Sort Evaluations and updates MetaLearner'''
+        '''Sort Evaluations and updates MetaLearner with current rankings'''
         '''Assuming 1 evaluation metric: Average Reward'''
+
+        # skip if we don't have everyones rankings
+        if self.evaluations['Average_Reward'].isna().sum() > 0:
+            return
+
         self.evaluations.sort_values(by=['Role', 'Average_Reward'], ascending=False, inplace=True)
         for role in self.roles:
             self.rankings[role] = self.evaluations[self.evaluations['Role']==role].index.tolist()

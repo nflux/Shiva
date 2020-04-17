@@ -95,7 +95,7 @@ class MPIPBTMetaLearner(MetaLearner):
             else:
                 agent_evo['msg'] = 'You suck'
                 agent_evo['evolution'] = True
-                if not self.top_20[role] == 0:
+                if self.top_20[role] != 0:
                     agent_evo['evo_agent_id'] = self.rankings[role][np.random.choice(range(self.top_20[role]))]
                 else:
                     agent_evo['evo_agent_id'] = self.rankings[role][0]

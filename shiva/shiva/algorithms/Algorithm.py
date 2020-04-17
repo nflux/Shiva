@@ -71,6 +71,12 @@ class Algorithm():
         '''
         assert "Method Not Implemented"
 
+    def save_central_critic(self, agent):
+        pass
+
+    def load_central_critic(self, agent):
+        pass
+
     def id_generator(self):
         agent_id = self.agentCount
         self.agentCount += 1

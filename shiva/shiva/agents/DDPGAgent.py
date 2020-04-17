@@ -162,12 +162,13 @@ class DDPGAgent(Agent):
     #     torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
     #     torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
 
-    def copy_weights(self, evo_agent):
+    def copy_hyperparameters(self, evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
 
+    def copy_weights(self, evo_agent):
         self.actor.load_state_dict(evo_agent.actor.to(self.device).state_dict())
         self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())

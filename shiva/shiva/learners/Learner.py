@@ -57,21 +57,25 @@ class Learner(object):
     def _collect_metrics(self, agent_id, episodic):
         if hasattr(self, 'MULTI_ENV_FLAG'):
             try:
-                metrics = self.alg.get_metrics(episodic, agent_id) + self.get_metrics(episodic, agent_id)
-                # self.log("{} at step {} / done {}".format(metrics, self.step_count, self.done_count))
+                metrics = self.get_metrics(episodic, agent_id)
             except:
-                '''Assuming 1 Agent per Learner here'''
-                metrics = self.alg.get_metrics(episodic) + self.get_metrics(episodic)
-                # self.log("{} at step {} / done {}".format(metrics, self.step_count, self.done_count))
+                metrics = self.get_metrics(episodic)
+
+            if not self.evaluate:
+                try:
+                    metrics += self.alg.get_metrics(episodic, agent_id)
+                except:
+                    metrics += self.alg.get_metrics(episodic)
             self._add_summary_writer(agent_id, metrics)
         else:
-            metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
-            if not episodic:
-                for metric_name, y_val in metrics:
-                    Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.env.step_count)
-            else:
-                for metric_name, y_val in metrics:
-                    Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.env.done_count)
+            assert False, "Testing if this if statement is unnecessary"
+            # metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
+            # if not episodic:
+            #     for metric_name, y_val in metrics:
+            #         Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.env.step_count)
+            # else:
+            #     for metric_name, y_val in metrics:
+            #         Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.env.done_count)
 
     def _add_summary_writer(self, agent_id, metrics):
         for m in metrics:

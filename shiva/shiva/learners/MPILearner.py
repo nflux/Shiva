@@ -101,6 +101,7 @@ class MPILearner(Learner):
             #     exit()
             self.run_updates()
             self.run_evolution()
+            self.collect_metrics(episodic=True) # tensorboard
 
     def check_incoming_trajectories(self):
         self.last_metric_received, self.num_received = None, 0
@@ -114,7 +115,7 @@ class MPILearner(Learner):
         # env_comm = self.envs
         if env_comm.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=self.info):
             env_source = self.info.Get_source()
-            self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info)
+            self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info) # block statement
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
             self.last_metric_received, self.num_received = "{} got {}".format(self.traj_info['env_id'], self.traj_info['metrics']), self.num_received + 1
 
@@ -190,7 +191,6 @@ class MPILearner(Learner):
             if self.done_count % self.save_checkpoint_episodes == 0:
                 self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
-            self.collect_metrics(episodic=True)
             self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=4)
 
     def _run_roles_evolution(self):
@@ -265,6 +265,7 @@ class MPILearner(Learner):
 
         if self.load_agents:
             agents = Admin._load_agents(self.load_agents, absolute_path=False, device=self.alg.device) # the alg determines the device
+            self.alg.load_central_critic(agents[0]) # for a central critic, all agents host a copy of the algs critic so we can grab any of them
             agent_creation_log = "{} agents loaded".format([str(a) for a in agents])
         elif hasattr(self, 'roles') and len(self.roles) > 0:
             self.agents_dict = {role:self.alg.create_agent_of_role(self.new_agents_ids[ix], role) for ix, role in enumerate(self.roles)}
@@ -317,7 +318,7 @@ class MPILearner(Learner):
         # Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
         # Save current state of central critic on each agent to enable evolution of the critic
         for a in self.agents:
-            self.save_central_critic(a)
+            self.alg.save_central_critic(a)
         self._io_permission(Admin.checkpoint, self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
 
     '''Abstraction of the IO request'''
@@ -380,16 +381,15 @@ class MPILearner(Learner):
                     evals = np.array(pickle.load(file_handler))
                 with open(evo_path + '_episode_evaluations.data', 'rb') as file_handler:
                     evo_evals = np.array(pickle.load(file_handler))
-
-            # evo_agent_id = Admin._load_agents(path)[0]
-            evo_agent_id = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
+            evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
 
             self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
             if self.welch_T_Test(evals, evo_evals):
-                agent.copy_weights(evo_agent_id)
-                self.alg.copy_weight_from_agent(evo_agent_id)
-                self.save_central_critic(agent)
+                agent.copy_hyperparameters(evo_agent)
+                self.alg.copy_hyperparameters(evo_agent)
+                agent.copy_weights(evo_agent)
+                self.alg.copy_weight_from_agent(evo_agent)
 
     def welch_T_Test(self, evals, evo_evals):
         if 'RoboCup' in self.configs['Environment']['type']:
@@ -398,53 +398,31 @@ class MPILearner(Learner):
             t, p = stats.ttest_ind(evals, evo_evals, equal_var=False)
             return p < self.p_value
 
-    def _truncation(self, agent, evo_config):
-        # print('Truncating')
-        # path = self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])
-        # evo_agent_id = Admin._load_agents(path)[0]
-        evo_agent_id = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
-
-        agent.copy_weights(evo_agent_id)
-        self.alg.copy_weight_from_agent(evo_agent_id)
-        # print('Truncated')
-
     def truncation(self, agent, evo_config):
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
         _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
-        # path = self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])
-        # evo_agent_id = Admin._load_agents(path)[0]
-        evo_agent_id = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
+        evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
         self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
-        agent.copy_weights(evo_agent_id)
-        self.alg.copy_weight_from_agent(evo_agent_id)
+        agent.copy_hyperparameters(evo_agent)
+        self.alg.copy_hyperparameters(evo_agent)
+        agent.copy_weights(evo_agent)
+        self.alg.copy_weight_from_agent(evo_agent)
 
     def perturb(self, agent):
-        # print('Pertubing')
         perturb_factor = np.random.choice(self.perturb_factor)
-
         agent.perturb_hyperparameters(perturb_factor)
         self.alg.perturb_hyperparameters(perturb_factor)
-        # print('Finished Pertubing')
 
     def resample(self, agent):
-        # print('Resampling')
         agent.resample_hyperparameters()
         self.alg.resample_hyperparameters()
-        # self.save_central_critic(agent)
 
     def exploitation(self):
         raise NotImplemented
 
     def exploration(self):
         raise NotImplemented
-
-    def save_central_critic(self, agent):
-        if 'MADDPG' in str(self.alg):
-            # All Agents will host a copy of the central critic to enable evolution
-            agent.critic.load_state_dict(self.alg.critic.state_dict())
-            agent.target_critic.load_state_dict(self.alg.target_critic.state_dict())
-            agent.critic_optimizer.load_state_dict(self.alg.critic_optimizer.state_dict())
 
     def _connect_menvs(self):
         # Connect with MultiEnv
@@ -490,13 +468,15 @@ class MPILearner(Learner):
         return [self.metrics_env[agent_id]] + evolution_metrics
 
     def set_default_configs(self):
-        assert 'Learner' in self.configs, 'No Learner config found on {}'.format(self.configs)
+        assert 'Learner' in self.configs, 'No Learner config found on received config: {}'.format(self.configs)
         default_configs = {
             'evaluate': False,
             'perturb_factor': [0.8, 1.2]
+            # add default configs here
+
         }
         for attr_name, default_val in default_configs.items():
-            if not hasattr(self.configs['Learner'], attr_name):
+            if attr_name not in self.configs['Learner']:
                 self.configs['Learner'][attr_name] = default_val
 
     def close(self):
