@@ -8,7 +8,7 @@ from shiva.utils import Noise as noise
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.MADDPGAgent import MADDPGAgent
 from shiva.algorithms.Algorithm import Algorithm
-from shiva.helpers.networks_helper import perturb_optimizer
+from shiva.helpers.networks_helper import mod_optimizer
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork
 from shiva.helpers.misc import one_hot_from_logits
 
@@ -326,25 +326,17 @@ class MADDPGAlgorithm(Algorithm):
         self.critic_learning_rate = evo_agent.critic_learning_rate
 
     def copy_weight_from_agent(self, evo_agent):
-        # self.actor_learning_rate = evo_agent.actor_learning_rate
-        self.critic_learning_rate = evo_agent.critic_learning_rate
-        # self.epsilon = evo_agent.epsilon
-        # self.noise_scale = evo_agent.noise_scale
-
-        # self.actor.load_state_dict(evo_agent.actor.to(self.device).state_dict())
-        # self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
         self.target_critic.load_state_dict(evo_agent.target_critic.to(self.device).state_dict())
-        # self.actor_optimizer.load_state_dict(evo_agent.actor_optimizer.to(self.device).state_dict())
         self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
 
     def perturb_hyperparameters(self, perturb_factor):
-        self.critic_learning_rate = self.critic_learning_rate * perturb_factor
-        self.critic_optimizer = perturb_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self.critic_learning_rate *= perturb_factor
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
     def resample_hyperparameters(self):
         self.critic_learning_rate = np.random.uniform(self.configs['Agent']['lr_uniform'][0], self.configs['Agent']['lr_uniform'][1]) / np.random.choice(self.configs['Agent']['lr_factors'])
-        self.critic_optimizer = perturb_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
     def create_agents(self):
         assert 'NotImplemented - this method could be creating all Roles agents at once'
@@ -401,8 +393,8 @@ class MADDPGAlgorithm(Algorithm):
                 ('Algorithm/Actor_Loss', self.actor_loss[agent_id]),
                 ('Algorithm/Critic_Loss', self.critic_loss[agent_id])
             ]
-            # if self.configs['MetaLearner']['pbt']:
-            #     metrics += [('Agent/MADDPG/Critic_Learning_Rate', self.critic_learning_rate)]
+            if self.configs['MetaLearner']['pbt']:
+                metrics += [('Agent/Critic_Learning_Rate_MADDPG', self.critic_learning_rate)]
         return metrics
 
 

@@ -5,13 +5,14 @@ class MADDPGAgent(DDPGAgent):
     def __init__(self, id: int, obs_space: int, acs_space: dict, agent_config: dict, networks: dict):
         super(MADDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
 
-    # def save(self, save_path, step):
-    #     torch.save(self.actor, save_path + '/actor.pth')
-    #     torch.save(self.target_actor, save_path + '/target_actor.pth')
-    #     torch.save(self.critic, save_path + '/critic.pth')
-    #     torch.save(self.target_critic, save_path + '/target_critic.pth')
-    #     torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
-    #     torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
+    def get_metrics(self):
+        '''Used for evolution metric'''
+        return [
+            ('{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate),
+            # ('{}/Critic_Learning_Rate'.format(self.role), self.critic_learning_rate),
+            ('{}/Epsilon'.format(self.role), self.epsilon),
+            ('{}/Noise_Scale'.format(self.role), self.noise_scale),
+        ]
 
     def get_module_and_classname(self):
         return ('shiva.agents', 'MADDPGAgent.MADDPGAgent')

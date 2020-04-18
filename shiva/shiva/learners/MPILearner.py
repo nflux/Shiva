@@ -108,7 +108,7 @@ class MPILearner(Learner):
         for comm in self.envs:
             self.receive_trajectory_numpy(comm)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
-            self.log("{}:{}".format(self.num_received, self.last_metric_received), verbose_level=1)
+            self.log("{}:{}".format(self.done_count, self.last_metric_received), verbose_level=1)
 
     def receive_trajectory_numpy(self, env_comm):
         '''Receive trajectory from each single environment in self.envs process group'''
@@ -117,7 +117,7 @@ class MPILearner(Learner):
             env_source = self.info.Get_source()
             self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info) # block statement
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
-            self.last_metric_received, self.num_received = "{} got {}".format(self.traj_info['env_id'], self.traj_info['metrics']), self.num_received + 1
+            self.last_metric_received = "{} got {}".format(self.traj_info['env_id'], self.traj_info['metrics'])
 
             self.metrics_env = {}
             for ix, role in enumerate(self.roles):
@@ -149,6 +149,7 @@ class MPILearner(Learner):
             self.done_count += 1
             self.steps_per_episode = traj_length
             self.reward_per_episode = sum(rewards)
+            self.num_received = self.num_received + 1
 
             # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
             # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
@@ -191,16 +192,13 @@ class MPILearner(Learner):
             if self.done_count % self.save_checkpoint_episodes == 0:
                 self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
-            self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=4)
+            self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=2)
 
     def _run_roles_evolution(self):
         '''Roles Evolution'''
 
         '''
-            TODO:
-            Expect to perturb 1 hyperparameter per evolution
-            Case if we have 10 HPs
-                Probability of 1/(num of HPs) to perturb the hyperparameters
+            Expectation value of how many parameter to change per evolution = 1
         '''
         if self.pbt and self.done_count >= self.initial_evolution_episodes:
 
@@ -386,8 +384,10 @@ class MPILearner(Learner):
             self.io.send(True, dest=0, tag=Tags.io_learner_request)
 
             if self.welch_T_Test(evals, evo_evals):
+
                 agent.copy_hyperparameters(evo_agent)
                 self.alg.copy_hyperparameters(evo_agent)
+
                 agent.copy_weights(evo_agent)
                 self.alg.copy_weight_from_agent(evo_agent)
 
@@ -406,6 +406,7 @@ class MPILearner(Learner):
 
         agent.copy_hyperparameters(evo_agent)
         self.alg.copy_hyperparameters(evo_agent)
+
         agent.copy_weights(evo_agent)
         self.alg.copy_weight_from_agent(evo_agent)
 
@@ -471,7 +472,7 @@ class MPILearner(Learner):
         assert 'Learner' in self.configs, 'No Learner config found on received config: {}'.format(self.configs)
         default_configs = {
             'evaluate': False,
-            'perturb_factor': [0.8, 1.2]
+            # 'perturb_factor': [0.8, 1.2]
             # add default configs here
 
         }
