@@ -96,10 +96,7 @@ class MPIPBTMetaLearner(MetaLearner):
             else:
                 agent_evo['msg'] = 'You suck'
                 agent_evo['evolution'] = True
-                if self.top_20[role] != 0:
-                    agent_evo['evo_agent_id'] = self.rankings[role][np.random.choice(range(self.top_20[role]))]
-                else:
-                    agent_evo['evo_agent_id'] = self.rankings[role][0]
+                agent_evo['evo_agent_id'] = self.rankings[role][ np.random.choice(range(self.top_20[role])) if self.top_20[role] != 0 else 0 ]
                 agent_evo['evo_path'] = self.get_learner_spec(agent_evo['evo_agent_id'])['load_path']
                 # agent_evo['evo_ranking'] = np.where(self.rankings[role] == agent_evo['evo_agent_id'])
                 agent_evo['evo_ranking'] = self.rankings[role].index(agent_evo['evo_agent_id'])
