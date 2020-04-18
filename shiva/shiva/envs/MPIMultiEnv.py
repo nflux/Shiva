@@ -6,6 +6,7 @@ from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
+from shiva.core.IOHandler import get_io_stub
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import terminate_process, flat_1d_list
 
@@ -41,7 +42,7 @@ class MPIMultiEnv(Environment):
         self.meta.gather(self._get_menv_specs(), root=0)
 
         self._connect_learners()
-        self._receive_match(io_request=False) # receive first match, no IO request for the first one to avoid overhead
+        self._receive_match(bypass_request=True) # receive first match, no IO request for the first one to avoid overhead
 
         # Give start flag!
         self.envs.bcast([True], root=MPI.ROOT)
@@ -158,25 +159,25 @@ class MPIMultiEnv(Environment):
         self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions), verbose_level=3)
         self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
-    def reload_match_agents(self, io_request=True):
+    def reload_match_agents(self, bypass_request=False):
         if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
             pass
             '''If new match is received from MetaLearner'''
             # STATIC FOR NOW
-            # self._receive_match(io_request=io_request)
+            # self._receive_match(bypass_request=bypass_request)
         else:
             '''No match available - reload current agents'''
-            self.agents = self.load_agents(io_request=io_request)
+            self.agents = self.load_agents(bypass_request=bypass_request)
 
-    def _receive_match(self, io_request=True):
+    def _receive_match(self, bypass_request=False):
         '''New match from the single MetaLearner'''
         self.role2learner_spec = self.meta.recv(None, source=0, tag=Tags.new_agents)
         self.log("Received Training Match {}".format(self.role2learner_spec), verbose_level=2)
-        self._update_match_data(self.role2learner_spec, io_request=io_request)
+        self._update_match_data(self.role2learner_spec, bypass_request=bypass_request)
 
-    def _update_match_data(self, role2learner_spec, io_request=True):
+    def _update_match_data(self, role2learner_spec, bypass_request=False):
         self.role2learner_id = {role:role2learner_spec[role]['id'] for role in self.env_specs['roles']}
-        self.agents = self.load_agents(role2learner_spec, io_request=io_request)
+        self.agents = self.load_agents(role2learner_spec, bypass_request=bypass_request)
         self.role2agent = self.get_role2agent_ix(self.agents) # for local usage
         # forward learner specs to all single environments
         for env_id in range(self.num_envs):
@@ -192,27 +193,25 @@ class MPIMultiEnv(Environment):
                     break
         return self.role2agent
 
-    def load_agents(self, role2learner_spec=None, io_request=True):
-        '''If io_request=False, it's the first time we are loading agents - we must load all of them without IO request'''
+    def load_agents(self, role2learner_spec=None, bypass_request=False):
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
-
-        if io_request:
-            self.io.send(True, dest=0, tag=Tags.io_menv_request)
-            _ = self.io.recv(None, source=0, tag=Tags.io_menv_request)
 
         agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
         for role, learner_spec in role2learner_spec.items():
             '''During runtime loops we only need to load the agents that are not being evaluated'''
-            if not learner_spec['evaluate'] or not io_request:
+            if not learner_spec['evaluate']:
+
+                if not bypass_request:
+                    self.io.request_io(self._get_menv_specs(), learner_spec['load_path'], wait_for_access=True)
                 learner_agents = Admin._load_agents(learner_spec['load_path'], device=self.device)
+                if not bypass_request:
+                    self.io.done_io(self._get_menv_specs(), learner_spec['load_path'])
+
                 for a in learner_agents:
                     '''Force Agent to use self.device'''
                     a.to_device(self.device)
                     agents[self.env_specs['roles'].index(a.role)] = a
-
-        if io_request:
-            self.io.send(True, dest=0, tag=Tags.io_menv_request)
 
         self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
         return agents
@@ -259,18 +258,8 @@ class MPIMultiEnv(Environment):
             'num_learners': self.num_learners if hasattr(self, 'num_learners') else None
         }
 
-    '''Abstraction of the IO request'''
-    def _io_permission(self, function_call, *args, **kwargs):
-        self.io_tag = Tags.io_menv_request
-        self.io.send(True, dest=0, tag=self.io_tag)
-        _ = self.io.recv(None, source=0, tag=self.io_tag)
-        r = function_call(*args, **kwargs)
-        self.io.send(True, dest=0, tag=self.io_tag)
-        return r
-
     def _connect_io_handler(self):
-        self.io = MPI.COMM_WORLD.Connect(self.menvs_io_port, MPI.INFO_NULL)
-        self.log('IOHandler connected', verbose_level=1)
+        self.io = get_io_stub(self.configs['Admin']['iohandler_address'])
 
     def close(self):
         comm = MPI.Comm.Get_parent()

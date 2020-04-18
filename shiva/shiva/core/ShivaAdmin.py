@@ -169,7 +169,10 @@ class ShivaAdmin():
         else:
             return self._learner_dir[learner.id]['checkpoint'][-1]
 
-    def get_temp_directory(self, learner):
+    def get_learner_url(self, learner):
+        return self._learner_dir[learner.id]['base']
+
+    def get_latest_directory(self, learner):
         assert learner.id in self._learner_dir, "Learner was not profiled by ShivaAdmin, try calling Admin.add_learner_profile at initialization "
         return self._learner_dir[learner.id]['latest']
 
