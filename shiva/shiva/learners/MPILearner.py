@@ -310,14 +310,14 @@ class MPILearner(Learner):
         return buffer
 
     def _connect_io_handler(self):
-        self.io = get_io_stub(self.configs['Admin']['iohandler_address'])
+        self.io = get_io_stub(self.configs)
 
     def checkpoint(self, checkpoint_num, function_only, use_temp_folder):
         for a in self.agents:
             self.alg.save_central_critic(a)
-        if self.io.request_io(self._get_learner_specs(), Admin.get_learner_url(self)):
-            Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only,use_temp_folder=use_temp_folder)
-            self.io.done_io(self._get_learner_specs(), Admin.get_learner_url(self))
+        self.io.request_io(self._get_learner_specs(), Admin.get_learner_url(self), wait_for_access=True)
+        Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
+        self.io.done_io(self._get_learner_specs(), Admin.get_learner_url(self))
 
     def t_test(self, agent, evo_config):
         if evo_config['ranking'] > evo_config['evo_ranking']:
@@ -409,7 +409,7 @@ class MPILearner(Learner):
             'evaluate': self.evaluate,
             'roles': self.roles,
             'num_agents': self.num_agents,
-            'agent_ids': [a.id for a in self.agents] if hasattr(self, 'agents') else None,
+            'agent_ids': list([a.id for a in self.agents]) if hasattr(self, 'agents') else None,
             'role2ids': self.role2ids,
             'done_count': self.done_count if hasattr(self, 'done_count') else None,
             'port': self.port,

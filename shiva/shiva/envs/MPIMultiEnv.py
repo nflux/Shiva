@@ -259,7 +259,7 @@ class MPIMultiEnv(Environment):
         }
 
     def _connect_io_handler(self):
-        self.io = get_io_stub(self.configs['Admin']['iohandler_address'])
+        self.io = get_io_stub(self.configs)
 
     def close(self):
         comm = MPI.Comm.Get_parent()
