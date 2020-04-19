@@ -41,7 +41,7 @@ class Agent(torch.nn.Module):
         self.policy = None
         self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role', 'manual_seed']
+        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role', 'manual_seed', 'actor_learning_rate', 'critic_learning_rate']
         if hasattr(self,'epsilon'):
             print('Has epsilon')
             self.state_attrs = self.state_attrs + ['epsilon']

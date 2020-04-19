@@ -6,6 +6,7 @@ from shiva.envs.robocup.rc_env import rc_env
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
 from torch.distributions import Categorical
+from google.cloud import storage
 
 
 class RoboCupTwoSidedEnvironment(Environment):
@@ -51,6 +52,10 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.step_count = 0
         self.render = self.env.env_render
         self.done = self.env.d
+
+        if hasattr('save_logs') and self.save_logs:
+            self.client = storage.Client()
+            self.bucket = self.client.get_bucket('shiva-footage')
 
         self.load_viewer()
 
@@ -194,6 +199,9 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.obs = self.left_obs.tolist()+self.right_obs.tolist()
         self.rews = self.left_rews.tolist()+self.right_rews.tolist()
 
+        if hasattr('save_logs') and self.save_logs and (self.done_count % self.log_epsidoes == 0):
+            self.cut_and_save_logs()
+
 
         if evaluate:
             return self.obs, self.rews, self.done, {'raw_reward': self.left_rews, 'action': actions_v}, self.eval_metrics
@@ -252,9 +260,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.reward_per_episode += sum(self.rews)
         if self.isGoal():
             self.goal_ctr += 1
-            self.goal = 1
-        else:
-            self.goal = 0
+        self.goal = self.env.goal_metric
 
     def get_metrics(self, episodic=False):
         if not episodic:
@@ -275,6 +281,10 @@ class RoboCupTwoSidedEnvironment(Environment):
             # print("Episode {} complete. Total Reward: {}".format(self.done_count, self.reward_per_episode))
 
         return metrics
+
+    def cut_and_save_logs(self):
+        blob = storage.Blob('rc_gamelogs/env_{}/episode_200'.format(self.id,self.done_count),self.bucket)
+        blob.upload_from_filename(self.rc_log + '/incomplete.rcg')
 
 #from pynput.keyboard import Key, KeyCode, Listener
 #from math import atan2, pi, acos

@@ -491,7 +491,7 @@ class rc_env:
         config_dir = hfo.get_config_path()
         envs[agent_ID].connectToServer(feat_lvl, config_dir=config_dir,
                                        server_port=port, server_addr='localhost', team_name=base,
-                                       play_goalie=goalie, record_dir=self.rc_log + '/')                               
+                                       play_goalie=goalie, record_dir=self.rc_log + '/')
 
         if base == 'base_left':
             obs_prev = self.left_obs_previous
@@ -506,6 +506,7 @@ class rc_env:
 
         obs[agent_ID] = envs[agent_ID].getState()
         self.set_initial_metrics(obs[agent_ID])
+        self.goal_metric = 0
         self.eval_metrics = self.get_eval_metrics()
         ep_num = 0
         while True:
@@ -559,8 +560,9 @@ class rc_env:
                         if not self.goal:
                             self.inv_steps_to_goal = self.ep_length
                         self.eval_metrics = self.get_eval_metrics()
+                        self.goal_metric =  1 if self.goal else 0 
 
-                    
+
                     j += 1
                     #print('Connect: After j+=1')
                     self.sync_before_step.wait()
@@ -745,7 +747,7 @@ class rc_env:
         # this won't work because of the changes I made, I'd have to get the action inside of action_list somehow
         # i dont think i should murder myself trying to get this perfect, as long as it gets rewards for the current possible actions
         # just check for the value inside of action list
-        
+
         # if self.action_list[team_actions[agentID]] in self.kick_actions and not kickable:
         #print('RC_Env {}: Penalizing for kicking when not kickable'.format(self.env_id))
         if self.action_list[team_actions[agentID]] == 3 and not kickable:
@@ -757,7 +759,7 @@ class rc_env:
         #    self.inv_steps_to_kick += 1
         #else:
         #    pass
-        
+
         #print('RC_Env {}: Reward for first time ball is kickable'.format(self.env_id))
         #print('RC_Env {} Reward: {} '.format(self.env_id,reward+1))
         #print('RC_Env {} Team Reward: {} '.format(self.env_id,team_reward+1))
@@ -769,7 +771,7 @@ class rc_env:
             self.first_kickable = True
 
         #print('RC_Env {}: Rewarded for first time ball is kickable'.format(self.env_id))
-        
+
         # it looks like this is broken for discretized as well
         # so its not getting any rewards for kicking
         # print(self.action_list)
@@ -787,9 +789,9 @@ class rc_env:
                     np.array(self.right_agent_possesion) == 'N').all():
                 print("First Kick")
                 self.first_kick = True
-                reward += (first_kick_points * self.first_kick_factor) 
+                reward += (first_kick_points * self.first_kick_factor)
                 team_reward += 1.5
-                
+
 
             # set initial ball position after kick
             #print('set initial ball position after kick')
@@ -963,11 +965,11 @@ class rc_env:
     '''
 
     def get_kickable_status(self, agentID, env):
-        
+
         ball_kickable = False
         ball_kickable = env.isKickable()
         # print("no implementation")
-        
+
         return ball_kickable
 
     def closest_player_to_ball(self, team_obs, num_agents):
@@ -985,55 +987,55 @@ class rc_env:
         return ball_distance, closest_player_index
 
     def distance_to_ball(self, obs):
-        
+
         relative_x = obs[self.x] - obs[self.ball_x]
         relative_y = obs[self.y] - obs[self.ball_y]
         ball_distance = math.sqrt(relative_x ** 2 + relative_y ** 2)
-        
+
         return ball_distance
 
     def ball_distance_to_goal(self, obs):
-        
+
         goal_center_x = 1.0
         goal_center_y = 0.0
         relative_x = obs[self.ball_x] - goal_center_x
         relative_y = obs[self.ball_y] - goal_center_y
         ball_distance_to_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
-        
+
         return ball_distance_to_goal
 
     def ball_distance_to_own_goal(self, obs):
-        
+
         # my own goal
         goal_center_x = -1.0
         goal_center_y = 0.0
         relative_x = obs[self.ball_x] - goal_center_x
         relative_y = obs[self.ball_y] - goal_center_y
         ball_distance_to_own_goal = math.sqrt(relative_x ** 2 + relative_y ** 2)
-        
+
         return ball_distance_to_own_goal
 
     def prox_2_dist(self, prox):
-        
+
         return (prox + .8) / 1.8
 
     def set_lowest_player_distance_to_ball(self, obs):
-        
+
         if self.distance_to_ball(obs) < self.min_player_distance_to_ball:
             self.min_player_distance_to_ball = self.distance_to_ball(obs)
-        
+
 
     def set_lowest_ball_distance_to_goal(self, obs):
-        
+
         if self.min_distance_to_opp_goal > self.ball_distance_to_goal(obs):
             self.min_distance_to_opp_goal = self.ball_distance_to_goal(obs)
-        
+
 
     def set_lowest_ball_distance_to_own_goal(self, obs):
-        
+
         if self.min_distance_to_own_goal > self.ball_distance_to_own_goal(obs):
             self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
-        
+
 
     def set_initial_metrics(self,obs):
         self.initial_distance_to_ball = self.distance_to_ball(obs)
@@ -1048,7 +1050,7 @@ class rc_env:
         self.min_distance_to_own_goal = self.ball_distance_to_own_goal(obs)
         self.inv_steps_to_goal = 0
         self.inv_steps_to_kick = 0
-    
+
     def get_eval_metrics(self):
         metrics = dict()
         metrics['min_player_distance_to_ball'] = self.min_player_distance_to_ball / self.initial_distance_to_ball
@@ -1064,6 +1066,5 @@ class rc_env:
         self.ball_distance_to_goal_factor = reward_factors['ball_distance_to_goal']
         self.out_of_bounds_factor = reward_factors['out_of_bounds']
         self.low_stamina_factor = reward_factors['low_stamina']
-        self.first_kick_factor = reward_factors['first_kick'] 
+        self.first_kick_factor = reward_factors['first_kick']
         self.first_kickable_factor = reward_factors['first_kickable']
-    
