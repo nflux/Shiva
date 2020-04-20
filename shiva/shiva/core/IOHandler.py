@@ -36,13 +36,13 @@ class IOHandlerServer(IOHandlerServicer):
         response = SimpleMessage()
         response.data = json.dumps({'spec': msg['spec'], 'has_access': _has_access})
 
-        self.log("Access for {}:{} is {}".format(req_spec['type'], req_spec['id'], _has_access), verbose_level=2)
+        self.log("{} Access for {}:{} @ {}".format(_has_access, req_spec['type'], req_spec['id'], req_url), verbose_level=2)
         return response
 
     def DoneIO(self, simple_message: SimpleMessage, context) -> SimpleMessage:
         msg = json.loads(simple_message.data)
         req_spec, req_url = msg['spec'], msg['url']
-        self.log("DoneIO of {}:{} for {}".format(req_spec['type'], req_spec['id'], req_url), verbose_level=2)
+        self.log("DoneIO of {}:{} for {}".format(req_spec['type'], req_spec['id'], req_url), verbose_level=3)
         self._urls_used.remove(req_url)
         return Empty()
 
