@@ -263,7 +263,7 @@ class MPILearner(Learner):
         self.new_agents_ids = np.arange(self.start_agent_idx, self.start_agent_idx + self.num_agents)
 
         if self.load_agents:
-            agents = Admin._load_agents(self.load_agents, absolute_path=False, device=self.alg.device) # the alg determines the device
+            agents = Admin._load_agents(self.load_agents, absolute_path=False, load_latest=False, device=self.alg.device) # the alg determines the device
             self.alg.load_central_critic(agents[0]) # for a central critic, all agents host a copy of the algs critic so we can grab any of them
             agent_creation_log = "{} agents loaded".format([str(a) for a in agents])
         elif hasattr(self, 'roles') and len(self.roles) > 0:
@@ -315,9 +315,12 @@ class MPILearner(Learner):
     def checkpoint(self, checkpoint_num, function_only, use_temp_folder):
         for a in self.agents:
             self.alg.save_central_critic(a)
-        self.io.request_io(self._get_learner_specs(), Admin.get_learner_url(self), wait_for_access=True)
+
+        if use_temp_folder:
+            self.io.request_io(self._get_learner_specs(), Admin.get_learner_url(self), wait_for_access=True)
         Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
-        self.io.done_io(self._get_learner_specs(), Admin.get_learner_url(self))
+        if use_temp_folder:
+            self.io.done_io(self._get_learner_specs(), Admin.get_learner_url(self))
 
     def t_test(self, agent, evo_config):
         if evo_config['ranking'] > evo_config['evo_ranking']:
@@ -414,7 +417,7 @@ class MPILearner(Learner):
             'done_count': self.done_count if hasattr(self, 'done_count') else None,
             'port': self.port,
             'menv_port': self.menv_port,
-            'load_path': Admin.get_latest_directory(self),
+            'load_path': Admin.get_learner_url(self),
         }
 
     def get_metrics(self, episodic, agent_id):
