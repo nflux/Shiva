@@ -98,7 +98,7 @@ class DDPGAgent(Agent):
 # >>>>>>> robocup-mpi-pbt
         else:
             if step_count < self.exploration_steps or self.is_e_greedy(step_count):
-                action = np.array([np.random.uniform(0,1) for _ in range(self.actor_output)])
+                action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
                 # print("Random: {}".format(action))
