@@ -48,9 +48,9 @@ class MPIEvalEnv(Environment):
             while self.env.start_env():
                 self._step_python()
                 # self._step_numpy()
-                if self.env.is_done() or self.env.step_count == self.env.episode_max_length:
+                if self.env.is_done(): # or self.env.step_count == self.env.episode_max_length:
                     self.send_evaluations()
-                    self.env.reset(force=True)
+                    self.env.reset(force=False)
 
                 # if self.eval.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.clear_buffers, status=self.info):
                 #     _ = self.eval.recv(None, source=self.info.Get_source(), tag=Tags.clear_buffers)
