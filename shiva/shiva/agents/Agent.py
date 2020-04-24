@@ -35,6 +35,8 @@ class Agent:
         self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role']
+        self.net_names = []
+        self.hps = []
         self.save_filename = "{id}.state"
 
     def reset_noise(self):
@@ -63,13 +65,16 @@ class Agent:
     def save_state_dict(self, save_path):
         assert hasattr(self, 'net_names'), "Need this attribute to save"
         dict = {}
+        # save general state attributes
+        for attr in self.state_attrs:
+            dict[attr] = getattr(self, attr)
         # save networks
         for net_name in self.net_names:
             net = getattr(self, net_name)
             dict[net_name] = net.state_dict()
-        # save other state attributes
-        for attr in self.state_attrs:
-            dict[attr] = getattr(self, attr)
+        # save hyperparameters
+        for hp in self.hps:
+            dict[hp] = getattr(self, hp)
         dict['class_module'], dict['class_name'] = self.get_module_and_classname()
         dict['inits'] = (self.id, self.obs_space, self.acs_space, self.agent_config, self.networks_config)
         filename = save_path + '/' + self.save_filename.format(id=self.id)
@@ -77,11 +82,16 @@ class Agent:
 
     def load_state_dict(self, state_dict):
         '''Assuming @agent has all the attributes already and @state_dict contains expected keys for that @agent'''
+        # load general state attributes
+        for attr in self.state_attrs:
+            setattr(self, attr, state_dict[attr])
+        # load networks
         for net_name in self.net_names:
             net = getattr(self, net_name)
             net.load_state_dict(state_dict[net_name])
-        for attr in self.state_attrs:
-            setattr(self, attr, state_dict[attr])
+        # load hyperparameters
+        for hp in self.hps:
+            setattr(self, hp, state_dict[hp])
 
     def get_action(self, obs):
         raise NotImplemented

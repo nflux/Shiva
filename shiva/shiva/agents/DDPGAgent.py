@@ -8,7 +8,7 @@ from torch.nn.functional import softmax
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.Agent import Agent
 from shiva.utils import Noise as noise
-from shiva.helpers.networks_helper import perturb_optimizer
+from shiva.helpers.networks_helper import mod_optimizer
 from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
@@ -61,6 +61,7 @@ class DDPGAgent(Agent):
         self.instantiate_networks()
 
     def instantiate_networks(self):
+        self.hps = ['actor_learning_rate', 'critic_learning_rate', 'epsilon', 'noise_scale']
         self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
 
         self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor'])
@@ -97,7 +98,7 @@ class DDPGAgent(Agent):
 # >>>>>>> robocup-mpi-pbt
         else:
             if step_count < self.exploration_steps or self.is_e_greedy(step_count):
-                action = np.array([np.random.uniform(0,1) for _ in range(self.actor_output)])
+                action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
                 # print("Random: {}".format(action))
@@ -162,12 +163,15 @@ class DDPGAgent(Agent):
     #     torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
     #     torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
 
-    def copy_weights(self, evo_agent):
+    def copy_hyperparameters(self, evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
+        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
 
+    def copy_weights(self, evo_agent):
         self.actor.load_state_dict(evo_agent.actor.to(self.device).state_dict())
         self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
@@ -176,26 +180,18 @@ class DDPGAgent(Agent):
         self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
 
     def perturb_hyperparameters(self, perturb_factor):
-        self.actor_learning_rate = self.actor_learning_rate * perturb_factor
-        self.critic_learning_rate = self.critic_learning_rate * perturb_factor
-        # for param_group in self.actor_optimizer.param_groups:
-        #     param_group['lr'] = self.actor_learning_rate
-        # for param_group in self.critic_optimizer.param_groups:
-        #     param_group['lr'] = self.critic_learning_rate
-        self.actor_optimizer = perturb_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
-        self.critic_optimizer = perturb_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self.actor_learning_rate *= perturb_factor
+        self.critic_learning_rate *= perturb_factor
+        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
         self.epsilon *= perturb_factor
         self.noise_scale *= perturb_factor
 
     def resample_hyperparameters(self):
         self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        # for param_group in self.actor_optimizer.param_groups:
-        #     param_group['lr'] = self.actor_learning_rate
-        # for param_group in self.critic_optimizer.param_groups:
-        #     param_group['lr'] = self.critic_learning_rate
-        self.actor_optimizer = perturb_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
-        self.critic_optimizer = perturb_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
         self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
         self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
 
