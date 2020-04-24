@@ -197,14 +197,15 @@ class MPIMultiEnv(Environment):
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
 
+        _force_load = not hasattr(self, 'agents')
         agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
         for role, learner_spec in role2learner_spec.items():
             '''During runtime loops we only need to load the agents that are not being evaluated'''
-            if not learner_spec['evaluate']:
+            if _force_load or not learner_spec['evaluate']:
 
                 if not bypass_request:
                     self.io.request_io(self._get_menv_specs(), learner_spec['load_path'], wait_for_access=True)
-                learner_agents = Admin._load_agents(learner_spec['load_path'], device=self.device)
+                learner_agents = Admin._load_agents(learner_spec['load_path'], device=self.device, load_latest=True)
                 if not bypass_request:
                     self.io.done_io(self._get_menv_specs(), learner_spec['load_path'])
 
