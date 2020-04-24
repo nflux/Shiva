@@ -340,17 +340,8 @@ class MPILearner(Learner):
                     evo_evals = np.array(pickle.load(file_handler))
             self.io.done_io(self._get_learner_specs(), self.eval_path)
 
-            self.io.request_io(self._get_learner_specs(), evo_config['evo_path'], wait_for_access=True)
-            evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
-            self.io.done_io(self._get_learner_specs(), evo_config['evo_path'])
-
             if self.welch_T_Test(evals, evo_evals):
-
-                agent.copy_hyperparameters(evo_agent)
-                self.alg.copy_hyperparameters(evo_agent)
-
-                agent.copy_weights(evo_agent)
-                self.alg.copy_weight_from_agent(evo_agent)
+                self.truncation(agent, evo_config)
 
     def welch_T_Test(self, evals, evo_evals):
         if 'RoboCup' in self.configs['Environment']['type']:

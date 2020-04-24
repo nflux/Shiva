@@ -324,6 +324,7 @@ class MADDPGAlgorithm(Algorithm):
 
     def copy_hyperparameters(self, evo_agent):
         self.critic_learning_rate = evo_agent.critic_learning_rate
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
     def copy_weight_from_agent(self, evo_agent):
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
@@ -337,6 +338,21 @@ class MADDPGAlgorithm(Algorithm):
     def resample_hyperparameters(self):
         self.critic_learning_rate = np.random.uniform(self.configs['Agent']['lr_uniform'][0], self.configs['Agent']['lr_uniform'][1]) / np.random.choice(self.configs['Agent']['lr_factors'])
         self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+
+    def save_central_critic(self, agent):
+        # All Agents will host a copy of the central critic to enable evolution
+        agent.critic_learning_rate = self.critic_learning_rate
+        agent.critic.load_state_dict(self.critic.state_dict())
+        agent.target_critic.load_state_dict(self.target_critic.state_dict())
+        agent.critic_optimizer.load_state_dict(self.critic_optimizer.state_dict())
+        agent.num_updates = self.get_num_updates()
+
+    def load_central_critic(self, agent):
+        self.critic_learning_rate = agent.critic_learning_rate
+        self.critic.load_state_dict(agent.critic.state_dict())
+        self.target_critic.load_state_dict(agent.target_critic.state_dict())
+        self.critic_optimizer.load_state_dict(agent.critic_optimizer.state_dict())
+        self.num_updates = agent.num_updates
 
     def create_agents(self):
         assert 'NotImplemented - this method could be creating all Roles agents at once'
@@ -370,19 +386,6 @@ class MADDPGAlgorithm(Algorithm):
             else:
                 assert "Parametrized not supported yet"
             self.action_space[role] = roles_action_space[role]
-
-    def save_central_critic(self, agent):
-        # All Agents will host a copy of the central critic to enable evolution
-        agent.critic.load_state_dict(self.critic.state_dict())
-        agent.target_critic.load_state_dict(self.target_critic.state_dict())
-        agent.critic_optimizer.load_state_dict(self.critic_optimizer.state_dict())
-        agent.num_updates = self.get_num_updates()
-
-    def load_central_critic(self, agent):
-        self.critic.load_state_dict(agent.critic.state_dict())
-        self.target_critic.load_state_dict(agent.target_critic.state_dict())
-        self.critic_optimizer.load_state_dict(agent.critic_optimizer.state_dict())
-        self.num_updates = agent.num_updates
 
     def get_metrics(self, episodic, agent_id):
         if not episodic:

@@ -166,6 +166,8 @@ class DDPGAgent(Agent):
     def copy_hyperparameters(self, evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
+        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
 

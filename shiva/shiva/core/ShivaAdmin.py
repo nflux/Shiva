@@ -416,7 +416,7 @@ class ShivaAdmin():
         _new_agent = _new_agent_class(*state_dict['inits'])
         _new_agent.load_state_dict(state_dict)
         # _new_agent = self.__load_agent_states__(_new_agent, state_dict)
-        self.log("Loaded {}".format(str(_new_agent)), to_print=True, verbose_level=1)
+        self.log("Loaded {}".format(str(_new_agent)), to_print=True, verbose_level=2)
         return _new_agent
 
     def _load_buffer(self, path) -> list:
