@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package communication_objects;
+
+message Empty {
+    string data = 1;
+}
+
+message ListOfInts {
+    repeated int32 data = 1;
+}
+
+message ListOfFloats {
+    repeated float data = 1;
+}
+
+message ListOfStrings {
+    repeated string data = 1;
+}
+
+message SimpleMessage {
+    string data = 1;
+}

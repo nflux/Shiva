@@ -7,6 +7,7 @@ from shiva.metalearners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
 from shiva.helpers.misc import terminate_process
 from shiva.utils.Tags import Tags
+from shiva.core.IOHandler import serve_iohandler
 
 class MPIPBTMetaLearner(MetaLearner):
 
@@ -216,23 +217,13 @@ class MPIPBTMetaLearner(MetaLearner):
                 return spec
 
     def _launch_io_handler(self):
-        self.io = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/helpers/io_handler.py'], maxprocs=1)
-        self.io.send(self.configs, dest=0, tag=Tags.configs)
-        self.io_specs = self.io.recv(None, source=0, tag=Tags.io_config)
-        if 'Learner' in self.configs:
-            self.configs['Environment']['menvs_io_port'] = self.io_specs['menvs_port']
-            self.configs['Learner']['learners_io_port'] = self.io_specs['learners_port']
-            # self.configs['Evaluation']['evals_io_port'] = self.io_specs['evals_port']
-        else:
-            '''With the learners_map, self.configs['Learner'] dict doesn't exist yet - will try some approaches here'''
-            self.configs['IOHandler'] = {}
-            self.configs['IOHandler']['menvs_io_port'] = self.io_specs['menvs_port']
-            self.configs['IOHandler']['learners_io_port'] = self.io_specs['learners_port']
-            self.configs['IOHandler']['evals_io_port'] = self.io_specs['evals_port'] if 'evals_port' in self.io_specs else None
+        args = ['shiva/core/IOHandler.py', '-a', self.configs['Admin']['iohandler_address']]
+        self.io = MPI.COMM_SELF.Spawn(sys.executable, args=args, maxprocs=1)
+        self.io.bcast(self.configs, root=MPI.ROOT)
 
     def _launch_menvs(self):
         self.num_menvs = self.num_learners_maps * self.num_menvs_per_learners_map # in order to have all Learners interact with at least 1 MultiEnv
-        self.configs['Environment']['menvs_io_port'] = self.configs['IOHandler']['menvs_io_port']
+        # self.configs['Environment']['menvs_io_port'] = self.configs['IOHandler']['menvs_io_port']
         self.menvs = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/envs/MPIMultiEnv.py'], maxprocs=self.num_menvs)
         self.menvs.bcast(self.configs, root=MPI.ROOT)
         menvs_specs = self.menvs.gather(None, root=MPI.ROOT)
@@ -244,7 +235,7 @@ class MPIPBTMetaLearner(MetaLearner):
         self.configs['Evaluation']['roles'] = self.roles if hasattr(self, 'roles') else []
         self.configs['Evaluation']['role2ids'] = self.role2ids
         self.configs['Evaluation']['learners_specs'] = self.learners_specs
-        self.configs['Evaluation']['evals_io_port'] = self.configs['IOHandler']['evals_io_port']
+        # self.configs['Evaluation']['evals_io_port'] = self.configs['IOHandler']['evals_io_port']
 
         if self.pbt:
             if hasattr(self, 'learners_map'):
@@ -312,7 +303,7 @@ class MPIPBTMetaLearner(MetaLearner):
                 learner_config = merge_dicts(self.configs, learner_config)
                 self.log("Learner {} with roles {}".format(len(self.learners_configs), learner_roles), verbose_level=2)
                 learner_config['Learner']['roles'] = learner_roles
-                learner_config['Learner']['learners_io_port'] = self.configs['IOHandler']['learners_io_port']
+                # learner_config['Learner']['learners_io_port'] = self.configs['IOHandler']['learners_io_port']
                 learner_config['Learner']['pbt'] = self.pbt
                 learner_config['Agent']['pbt'] = self.pbt
                 self.learners_configs.append(learner_config)
