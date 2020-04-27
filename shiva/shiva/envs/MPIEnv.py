@@ -271,7 +271,7 @@ class MPIEnv(Environment):
         # Check-in with MultiEnv that we successfully connected with Learner/s
         self.menv.gather(self._get_env_state(), root=0)
         Admin.init(self.configs)
-        self.profiler = TimeProfiler(self.configs, Admin.get_learner_url_summary(None, self.role2learner_spec[0]['load_path']), postfix_dir='{}/Env{}'.format(self.menv_id, self.id))
+        self.profiler = TimeProfiler(self.configs, Admin.get_learner_url_summary(None, self.role2learner_spec[0]['load_path']), filename_suffix='ME{}-Env{}'.format(self.menv_id, self.id))
 
     def _get_env_state(self, traj=[]):
         return {
