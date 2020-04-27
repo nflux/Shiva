@@ -7,7 +7,8 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 from mpi4py import MPI
 import torch
 
-from shiva.core.admin import logger
+from shiva.core.admin import Admin, logger
+from shiva.core.TimeProfiler import TimeProfiler
 from shiva.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.buffers.TensorBuffer import MultiAgentTensorBuffer
@@ -44,8 +45,8 @@ class MPIEnv(Environment):
         self.run()
 
     def run(self):
-        self.done_count = 0
         self.env.reset()
+        self.profiler.start(['ExperienceSent'])
         while True:
             while self.env.start_env():
                 self._step_python()
@@ -68,6 +69,7 @@ class MPIEnv(Environment):
             self.reset_buffers()
 
     def _step_python(self):
+        self.step_count += 1
         self.observations = self.env.get_observations()
         self.menv.gather(self.observations, root=0)
         self.actions = self.menv.scatter(None, root=0)
@@ -75,6 +77,7 @@ class MPIEnv(Environment):
         self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=3)
 
     def _step_numpy(self):
+        self.step_count += 1
         self.observations = self.env.get_observations()
         '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
                                     --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
@@ -151,8 +154,8 @@ class MPIEnv(Environment):
                 self.done_buffer = []
                 self.metrics = []
                 '''
-                    Send 1 MPI message to Learner with the metadata of the trajectory
-                    then, send the trajectory data. Note:
+                    First, send 1 MPI message to Learner with the metadata of the trajectory
+                    Then, send the trajectory data. Note:
                     - trajectory shapes = number of roles x timesteps x (obs or acs dim)
                     - If Agent Roles have different acs/obs dimensions, we may need to split the trajectories in more numpy messages - we could make it dynamic to cover both cases
                 '''
@@ -194,30 +197,6 @@ class MPIEnv(Environment):
                 self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_next_observations)
                 self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
 
-        # elif 'Gym' in self.type:
-        #     '''Assuming 1 Learner and 1 Role'''
-        #     learner_spec = self.role2learner_spec[0]
-        #     learner_ix = learner_spec['id']
-        #     role_ix = 0
-        #
-        #     self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._unity_reshape,
-        #                                                                            self.trajectory_buffers[learner_ix].all_numpy())
-        #     self.metrics = metrics
-        #     trajectory_info = {
-        #         'env_id': self.id,
-        #         'role': learner_spec['roles'],
-        #         'length_index': 0,  # index where the Learner can infer the trajectory length
-        #         'obs_shape': self.observations_buffer.shape,
-        #         'acs_shape': self.actions_buffer.shape,
-        #         'rew_shape': self.rewards_buffer.shape,
-        #         'done_shape': self.done_buffer.shape,
-        #         'metrics': [self.metrics]
-        #     }
-        #
-        #     self.log("Trajectory Shapes: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.shape, self.actions_buffer.shape,self.rewards_buffer.shape,self.next_observations_buffer.shape,self.done_buffer.shape))
-        #     # self.log("Trajectory Types: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(self.observations_buffer.dtype, self.actions_buffer.dtype, self.rewards_buffer.dtype, self.next_observations_buffer.dtype, self.done_buffer.dtype))
-        #     # self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
-
         elif 'RoboCup' in self.type:
             for ix in range(self.configs['Evaluation']['agents_per_env']):
                 self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer = map(self._robo_reshape, self.trajectory_buffers[0].agent_numpy(ix))
@@ -244,8 +223,8 @@ class MPIEnv(Environment):
                 self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=self.id, tag=Tags.trajectory_next_observations)
                 self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
 
-        self.done_count +=1
-
+        self.done_count += 1
+        self.profiler.time('ExperienceSent', self.done_count, output_quantity=len(self.env.roles))
         self.reset_buffers()
 
     def create_buffers(self):
@@ -291,6 +270,8 @@ class MPIEnv(Environment):
         self.log("Connected with Learners at port {}".format(self.learners_port), verbose_level=1)
         # Check-in with MultiEnv that we successfully connected with Learner/s
         self.menv.gather(self._get_env_state(), root=0)
+        Admin.init(self.configs)
+        self.profiler = TimeProfiler(self.configs, Admin.get_learner_url_summary(None, self.role2learner_spec[0]['load_path']), postfix_dir='{}/Env{}'.format(self.menv_id, self.id))
 
     def _get_env_state(self, traj=[]):
         return {

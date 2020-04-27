@@ -28,8 +28,6 @@ class MPILearner(Learner):
         self.configs = self.meta.scatter(None, root=0)
         self.set_default_configs()
         super(MPILearner, self).__init__(self.id, self.configs)
-        Admin.init(self.configs)
-        Admin.add_learner_profile(self, function_only=True)
         self.log("Received config with {} keys".format(len(self.configs.keys())), verbose_level=1)
         self.log("Received config {}".format(self.configs), verbose_level=3)
         self.launch()
@@ -93,6 +91,7 @@ class MPILearner(Learner):
         # '''Used for calculating collection time'''
         # t0 = time.time()
         # n_episodes = 500
+        self.profiler.start(["AlgUpdates", 'ExperienceReceived'])
         while True:
             self.check_incoming_trajectories()
             # '''Used for calculating collection time'''
@@ -105,7 +104,7 @@ class MPILearner(Learner):
             self.collect_metrics(episodic=True) # tensorboard
 
     def check_incoming_trajectories(self):
-        self.last_metric_received, self.num_received = None, 0
+        self.last_metric_received = None
         for comm in self.envs:
             self.receive_trajectory_numpy(comm)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
@@ -150,7 +149,8 @@ class MPILearner(Learner):
             self.done_count += 1
             self.steps_per_episode = traj_length
             self.reward_per_episode = sum(rewards)
-            self.num_received = self.num_received + 1
+
+            self.profiler.time('ExperienceReceived', self.done_count, output_quantity=1)
 
             # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
             # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
@@ -174,6 +174,8 @@ class MPILearner(Learner):
 
             self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
             self.num_updates = self.alg.get_num_updates()
+            self.profiler.time('AlgUpdates', self.num_updates, output_quantity=self.alg.update_iterations)
+
             for ix in range(len(self.agents)):
                 self.agents[ix].step_count = self.step_count
                 self.agents[ix].done_count = self.done_count
@@ -193,7 +195,7 @@ class MPILearner(Learner):
             if self.done_count % self.save_checkpoint_episodes == 0:
                 self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
-            self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=2)
+            # self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=2)
 
     def _run_roles_evolution(self):
         '''Roles Evolution'''
