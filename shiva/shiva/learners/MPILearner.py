@@ -8,6 +8,7 @@ from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
+from shiva.core.IOHandler import get_io_stub
 import shiva.helpers.file_handler as fh
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process, flat_1d_list
@@ -27,8 +28,6 @@ class MPILearner(Learner):
         self.configs = self.meta.scatter(None, root=0)
         self.set_default_configs()
         super(MPILearner, self).__init__(self.id, self.configs)
-        Admin.init(self.configs)
-        Admin.add_learner_profile(self, function_only=True)
         self.log("Received config with {} keys".format(len(self.configs.keys())), verbose_level=1)
         self.log("Received config {}".format(self.configs), verbose_level=3)
         self.launch()
@@ -92,6 +91,7 @@ class MPILearner(Learner):
         # '''Used for calculating collection time'''
         # t0 = time.time()
         # n_episodes = 500
+        self.profiler.start(["AlgUpdates", 'ExperienceReceived'])
         while True:
             self.check_incoming_trajectories()
             # '''Used for calculating collection time'''
@@ -104,7 +104,7 @@ class MPILearner(Learner):
             self.collect_metrics(episodic=True) # tensorboard
 
     def check_incoming_trajectories(self):
-        self.last_metric_received, self.num_received = None, 0
+        self.last_metric_received = None
         for comm in self.envs:
             self.receive_trajectory_numpy(comm)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
@@ -149,7 +149,8 @@ class MPILearner(Learner):
             self.done_count += 1
             self.steps_per_episode = traj_length
             self.reward_per_episode = sum(rewards)
-            self.num_received = self.num_received + 1
+
+            self.profiler.time('ExperienceReceived', self.done_count, output_quantity=1)
 
             # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
             # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
@@ -173,13 +174,15 @@ class MPILearner(Learner):
 
             self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
             self.num_updates = self.alg.get_num_updates()
+            self.profiler.time('AlgUpdates', self.num_updates, output_quantity=self.alg.update_iterations)
+
             for ix in range(len(self.agents)):
                 self.agents[ix].step_count = self.step_count
                 self.agents[ix].done_count = self.done_count
                 self.agents[ix].num_updates = self.num_updates
 
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
-            self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
+            self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
             '''No need to send message to MultiEnv for now, they have the learner_spec['load_path'] for all Learners'''
             # for ix in range(self.num_menvs):
@@ -190,9 +193,9 @@ class MPILearner(Learner):
 
             '''Check point purposes only'''
             if self.done_count % self.save_checkpoint_episodes == 0:
-                self._io_checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
+                self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
-            self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=2)
+            # self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=2)
 
     def _run_roles_evolution(self):
         '''Roles Evolution'''
@@ -205,7 +208,7 @@ class MPILearner(Learner):
             if self.done_count % self.evolution_episodes == 0:
                 self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution_request) # ask for evolution configs1
                 # self.log("Ask for Evolution", verbose_level=3)
-            
+
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
                 self.evolution_config = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)  # block statement
 
@@ -262,7 +265,7 @@ class MPILearner(Learner):
         self.new_agents_ids = np.arange(self.start_agent_idx, self.start_agent_idx + self.num_agents)
 
         if self.load_agents:
-            agents = Admin._load_agents(self.load_agents, absolute_path=False, device=self.alg.device) # the alg determines the device
+            agents = Admin._load_agents(self.load_agents, absolute_path=False, load_latest=False, device=self.alg.device) # the alg determines the device
             self.alg.load_central_critic(agents[0]) # for a central critic, all agents host a copy of the algs critic so we can grab any of them
             agent_creation_log = "{} agents loaded".format([str(a) for a in agents])
         elif hasattr(self, 'roles') and len(self.roles) > 0:
@@ -309,66 +312,24 @@ class MPILearner(Learner):
         return buffer
 
     def _connect_io_handler(self):
-        self.io = MPI.COMM_WORLD.Connect(self.learners_io_port, MPI.INFO_NULL)
-        self.log('Connected with IOHandler', verbose_level=1)
+        self.io = get_io_stub(self.configs)
 
-    def _io_checkpoint(self, checkpoint_num, function_only, use_temp_folder):
-        # Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
-        # Save current state of central critic on each agent to enable evolution of the critic
+    def checkpoint(self, checkpoint_num, function_only, use_temp_folder):
         for a in self.agents:
             self.alg.save_central_critic(a)
-        self._io_permission(Admin.checkpoint, self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
 
-    '''Abstraction of the IO request'''
-    def _io_permission(self, function_call, *args, **kwargs):
-        self.io_tag = Tags.io_learner_request
-        self.io.send(True, dest=0, tag=self.io_tag)
-        _ = self.io.recv(None, source=0, tag=self.io_tag)
-        r = function_call(*args, **kwargs)
-        self.io.send(True, dest=0, tag=self.io_tag)
-        return r
-
-    # def save_pbt_agents(self):
-    #     for agent in self.agents:
-    #         agent_path = self.eval_path+'Agent_'+str(agent.id)
-    #         agent.save(agent_path, 0)
-    #         fh.save_pickle_obj(agent, os.path.join(agent_path, 'agent_cls.pickle'))
-    #
-    # def create_pbt_dirs(self):
-    #     for agent in self.agents:
-    #         if not os.path.isdir(self.eval_path+'Agent_'+str(agent.id)):
-    #             agent_dir = self.eval_path+'Agent_'+str(agent.id)
-    #             os.mkdir(agent_dir)
-
-    # def _io_save_pbt_agents(self):
-    #     self._io_permission(self.save_pbt_agents)
-    #     # self.io.send(True, dest=0, tag=Tags.io_learner_request)
-    #     # _ = self.io.recv(None, source=0, tag=Tags.io_learner_request)
-    #     # self.save_pbt_agents()
-    #     # self.io.send(True, dest=0, tag=Tags.io_learner_request)
-
-    # def _t_test(self, agent, evo_config):
-    #     # print('Starting t_test')
-    #     if evo_config['ranking'] > evo_config['evo_ranking']:
-    #         # print('Ranking > Evo_Ranking')
-    #         evals = np.load(self.eval_path+'Agent_'+str(evo_config['agent'])+'/episode_evaluations.npy')
-    #         evo_evals = np.load(self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])+'/episode_evaluations.npy')
-    #         if self.welch_T_Test(evals, evo_evals):
-    #             path = self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])
-    #             evo_agent_id = Admin._load_agents(path)[0]
-    #
-    #             agent.copy_weights(evo_agent_id)
-    #             self.alg.copy_weight_from_agent(evo_agent_id)
-    #             self.save_central_critic(agent)
+        if use_temp_folder:
+            self.io.request_io(self._get_learner_specs(), Admin.get_learner_url(self), wait_for_access=True)
+        Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
+        if use_temp_folder:
+            self.io.done_io(self._get_learner_specs(), Admin.get_learner_url(self))
 
     def t_test(self, agent, evo_config):
         if evo_config['ranking'] > evo_config['evo_ranking']:
-            self.io.send(True, dest=0, tag=Tags.io_learner_request)
-            _ = self.io.recv(None, source=0, tag=Tags.io_learner_request)
 
+            self.io.request_io(self._get_learner_specs(), self.eval_path, wait_for_access=True)
             path = self.eval_path + 'Agent_' + str(evo_config['agent_id'])
             evo_path = self.eval_path + 'Agent_'+str(evo_config['evo_agent_id'])
-
             if 'RoboCup' in self.configs['Environment']['type']:
                 with open(self.eval_path+'Agent_'+str(evo_config['agent_id'])+'/episode_evaluations.data','rb') as file_handler:
                     evals = np.array(pickle.load(file_handler))
@@ -379,17 +340,10 @@ class MPILearner(Learner):
                     evals = np.array(pickle.load(file_handler))
                 with open(evo_path + '_episode_evaluations.data', 'rb') as file_handler:
                     evo_evals = np.array(pickle.load(file_handler))
-            evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
-
-            self.io.send(True, dest=0, tag=Tags.io_learner_request)
+            self.io.done_io(self._get_learner_specs(), self.eval_path)
 
             if self.welch_T_Test(evals, evo_evals):
-
-                agent.copy_hyperparameters(evo_agent)
-                self.alg.copy_hyperparameters(evo_agent)
-
-                agent.copy_weights(evo_agent)
-                self.alg.copy_weight_from_agent(evo_agent)
+                self.truncation(agent, evo_config)
 
     def welch_T_Test(self, evals, evo_evals):
         if 'RoboCup' in self.configs['Environment']['type']:
@@ -399,10 +353,9 @@ class MPILearner(Learner):
             return p < self.p_value
 
     def truncation(self, agent, evo_config):
-        self.io.send(True, dest=0, tag=Tags.io_learner_request)
-        _ = self.io.recv(None, source = 0, tag=Tags.io_learner_request)
+        self.io.request_io(self._get_learner_specs(), evo_config['evo_path'], wait_for_access=True)
         evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
-        self.io.send(True, dest=0, tag=Tags.io_learner_request)
+        self.io.done_io(self._get_learner_specs(), evo_config['evo_path'])
 
         agent.copy_hyperparameters(evo_agent)
         self.alg.copy_hyperparameters(evo_agent)
@@ -452,12 +405,12 @@ class MPILearner(Learner):
             'evaluate': self.evaluate,
             'roles': self.roles,
             'num_agents': self.num_agents,
-            'agent_ids': [a.id for a in self.agents] if hasattr(self, 'agents') else None,
+            'agent_ids': list([a.id for a in self.agents]) if hasattr(self, 'agents') else None,
             'role2ids': self.role2ids,
             'done_count': self.done_count if hasattr(self, 'done_count') else None,
             'port': self.port,
             'menv_port': self.menv_port,
-            'load_path': Admin.get_temp_directory(self),
+            'load_path': Admin.get_learner_url(self),
         }
 
     def get_metrics(self, episodic, agent_id):

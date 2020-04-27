@@ -98,7 +98,7 @@ class DDPGAgent(Agent):
 # >>>>>>> robocup-mpi-pbt
         else:
             if step_count < self.exploration_steps or self.is_e_greedy(step_count):
-                action = np.array([np.random.uniform(0,1) for _ in range(self.actor_output)])
+                action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
                 # print("Random: {}".format(action))
@@ -166,6 +166,8 @@ class DDPGAgent(Agent):
     def copy_hyperparameters(self, evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
+        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
 

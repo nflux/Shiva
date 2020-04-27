@@ -8,6 +8,7 @@ from shiva.eval_envs.Evaluation import Evaluation
 from shiva.helpers.misc import terminate_process, flat_1d_list
 from shiva.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
+from shiva.core.IOHandler import get_io_stub
 
 class MPIEvaluation(Evaluation):
 
@@ -217,8 +218,6 @@ class MPIEvaluation(Evaluation):
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
 
-        self.io.send(True, dest=0, tag=Tags.io_eval_request)
-        _ = self.io.recv(None, source=0, tag=Tags.io_eval_request)
 
         agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
         for role, learner_spec in role2learner_spec.items():
@@ -233,11 +232,14 @@ class MPIEvaluation(Evaluation):
                 # Here when loading individual Agents
                 '''Assuming Learner has 1 Agent per Role'''
                 agent_id = learner_spec['role2ids'][role][0]
+
+                self.io.request_io(self._get_eval_specs(), learner_spec['load_path'], wait_for_access=True)
                 agent = Admin._load_agent_of_id(learner_spec['load_path'], agent_id, device=self.device)[0]
+                self.io.done_io(self._get_eval_specs(), learner_spec['load_path'])
+
                 agent.to_device(self.device)
                 agents[self.env_specs['roles'].index(agent.role)] = agent
 
-        self.io.send(True, dest=0, tag=Tags.io_eval_request)
         self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
         return agents
 
@@ -332,13 +334,13 @@ class MPIEvaluation(Evaluation):
             else:
                 _ = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
 
-    def _io_load_agents(self):
-        #agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
-        self.io.send(True, dest=0, tag=Tags.io_eval_request)
-        _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
-        self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
-        self.log('Load {}'.format([str(a) for a in self.agents]), verbose_level=1)
-        self.io.send(True, dest=0, tag=Tags.io_eval_request)
+    # def _io_load_agents(self):
+    #     #agent_paths = [self.eval_path+'Agent_'+str(agent_id) for agent_id in self.agent_ids]
+    #     self.io.send(True, dest=0, tag=Tags.io_eval_request)
+    #     _ = self.io.recv(None, source = 0, tag=Tags.io_eval_request)
+    #     self.agents = [Admin._load_agents(self.eval_path+'Agent_'+str(agent_id))[0] for agent_id in self.agent_ids]
+    #     self.log('Load {}'.format([str(a) for a in self.agents]), verbose_level=1)
+    #     self.io.send(True, dest=0, tag=Tags.io_eval_request)
 
     def _launch_envs(self):
         # Spawn Single Environments
@@ -349,8 +351,7 @@ class MPIEvaluation(Evaluation):
         self.env_specs = envs_spec[0] # set self attr only 1 of them
 
     def _connect_io_handler(self):
-        self.io = MPI.COMM_WORLD.Connect(self.evals_io_port, MPI.INFO_NULL)
-        self.log('Connected with IOHandler', verbose_level=2)
+        self.io = get_io_stub(self.configs)
 
     def _get_eval_specs(self):
         return {

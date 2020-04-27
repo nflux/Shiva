@@ -3,16 +3,14 @@ import numpy as np
 from shiva.core.admin import logger
 
 class Environment:
+    steps_per_episode = 0
+    step_count = 0
+    done_count = 0
+    total_episodes_to_play = None
+
     def __init__(self, configs):
-        if 'MetaLearner' in configs:
-            {setattr(self, k, v) for k,v in configs['Environment'].items()}
-        else:
-            {setattr(self, k, v) for k,v in configs.items()}
+        {setattr(self, k, v) for k,v in configs['Environment'].items()}
         self.configs = configs
-        self.steps_per_episode = 0
-        self.step_count = 0
-        self.done_count = 0
-        self.total_episodes_to_play = None
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
 
         # for previous versions support on attribute names

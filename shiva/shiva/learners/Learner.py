@@ -1,21 +1,26 @@
 import torch
 
+
 from shiva.core.admin import Admin, logger
+from shiva.core.TimeProfiler import TimeProfiler
 from shiva.helpers.config_handler import load_class
 
 class Learner(object):
+    agentCount = 0
+    ep_count = 0
+    step_count = 0
+    checkpoints_made = 0
+    totalReward = 0
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     def __init__(self, learner_id, config, port=None):
         {setattr(self, k, v) for k,v in config['Learner'].items()}
         self.configs = config
         self.id = learner_id
         self.port = port
-        self.agentCount = 0
-        self.ep_count = 0
-        self.step_count = 0
-        self.checkpoints_made = 0
-        self.totalReward = 0
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        Admin.init(self.configs)
+        Admin.add_learner_profile(self, function_only=True)
+        self.profiler = TimeProfiler(self.configs, Admin.get_learner_url_summary(self))
 
     def __getstate__(self):
         d = dict(self.__dict__)

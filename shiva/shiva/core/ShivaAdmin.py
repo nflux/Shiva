@@ -1,4 +1,4 @@
-import os
+import os, re
 import configparser
 import inspect
 import numpy as np
@@ -90,9 +90,9 @@ class ShivaAdmin():
             directory = self.base_url + folder_name
             setattr(self, key+'_url', directory)
             if not self.need_to_save: continue
-            dh.make_dir(os.path.join(self.base_url, directory), overwrite=True)
+            dh.make_dir(os.path.join(self.base_url, directory), use_existing=True)
 
-    def add_meta_profile(self, meta_learner, folder_name: str=None, overwrite=False) -> None:
+    def add_meta_profile(self, meta_learner, folder_name: str=None, use_existing=False) -> None:
         '''
             This method would be called by a Meta Learner in order to add himself
             Is needed in order to keep track of the Meta Learner directory.
@@ -104,9 +104,12 @@ class ShivaAdmin():
         if not self.need_to_save: return
         if folder_name is None:
             folder_name = self.__folder_name__['metalearner'].format(algorithm=meta_learner.config['Algorithm']['type'], env=meta_learner.config['Environment']['env_name'])
-        new_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, folder_name), overwrite=overwrite)
+        new_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, folder_name), use_existing=use_existing)
         self._meta_learner_dir = new_dir
         self.log("New MetaLearner @ {}".format(self._meta_learner_dir), to_print=True, verbose_level=1)
+
+    def get_meta_url(self):
+        return self._meta_learner_dir
 
     def add_learner_profile(self, learner, function_only=False) -> None:
         '''
@@ -114,7 +117,7 @@ class ShivaAdmin():
             Creates a folder for it if save flag is True.
             Input
                 @learner            Learner instance to be saved
-                @function_only      When we only want to use this functionality without profiling, used for distributed processes but running locally
+                @function_only      When we only want to use this functionality without profiling, used for distributed processes mode
         '''
         if not self.need_to_save: return
         if learner.id not in self._learner_dir:
@@ -124,13 +127,13 @@ class ShivaAdmin():
                     env_name = learner.configs['Environment']['exec'].split('/')[-1].replace('.app', '').replace('.86_64', '')
                 else:
                     env_name = learner.configs['Environment']['env_name']
-                folder_name = self.__folder_name__['metalearner'].format(algorithm=learner.configs['Algorithm']['type'], env=env_name)
-                self.add_meta_profile(None, folder_name, overwrite=True)
+                folder_name = self.__folder_name__['metalearner'].format(algorithm=self.configs['Algorithm']['type'], env=env_name)
+                self.add_meta_profile(None, folder_name, use_existing=True)
             self._learner_dir[learner.id] = {}
             new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
             self._learner_dir[learner.id]['base'] = new_dir
             self._learner_dir[learner.id]['checkpoint'] = [] # keep track of each checkpoint directory
-            latest_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['latest']), overwrite=True )
+            latest_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['latest']), use_existing=True )
             self._learner_dir[learner.id]['latest'] = latest_dir
             new_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['summary']) )
             self._learner_dir[learner.id]['summary'] = new_dir
@@ -169,9 +172,21 @@ class ShivaAdmin():
         else:
             return self._learner_dir[learner.id]['checkpoint'][-1]
 
-    def get_temp_directory(self, learner):
+    def get_learner_url(self, learner):
+        return self._learner_dir[learner.id]['base']
+
+    def get_latest_directory(self, learner):
         assert learner.id in self._learner_dir, "Learner was not profiled by ShivaAdmin, try calling Admin.add_learner_profile at initialization "
         return self._learner_dir[learner.id]['latest']
+
+    def get_learner_url_summary(self, learner: object=None, some_path: str=None):
+        if learner is not None:
+            return self._learner_dir[learner.id]['summary']
+        else:
+            # extract the base url from the given sample @some_path
+            rx = "\d{2}-\d{2}-\d{4}\/"
+            match = re.search(rx, some_path)
+            return some_path.replace(some_path[match.span()[1]:], '')
 
     def _add_agent_checkpoint(self, learner, agent):
         '''
@@ -182,7 +197,7 @@ class ShivaAdmin():
                 @agent              Agent instance ref to be saved
         '''
         if not self.need_to_save: return
-        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ), overwrite=self.use_temp_folder )
+        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ), use_existing=self.use_temp_folder )
         if agent.id not in self._agent_dir[learner.id]:
             self._agent_dir[learner.id][agent.id] = []
         self._agent_dir[learner.id][agent.id].append(new_dir)
@@ -375,60 +390,14 @@ class ShivaAdmin():
         LOAD METHODS
     '''
 
-    def _load_agents(self, path, absolute_path=True, device=torch.device('cpu')) -> list:
-        return self._load_agents_states(path, absolute_path=absolute_path, device=device)
-    #     '''
-    #         For a given @path, the procedure will walk recursively over all the folders inside the @path
-    #         And find all the agent_cls.pickle and policy.pth files to load all those agents with their corresponding policies
-    #         Input
-    #             @path       Path where the agents files will be located
-    #     '''
-    #     if not absolute_path:
-    #         path = '/'.join([self.base_url, path])
-    #     agents = []
-    #     agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
-    #     agents_policies = dh.find_pattern_in_path(path, '.pth')
-    #     assert len(agents_pickles) > 0, "No agents found in {}".format(path)
-    #     for agent_pickle in agents_pickles:
-    #         _new_agent = self.__load_agent_from_dir__(agent_pickle, agents_policies)
-    #         agents.append(_new_agent)
-    #     return agents
+    def _load_agents(self, path, absolute_path=True, load_latest=True, device=torch.device('cpu')) -> list:
+        _path = path
+        if load_latest and self.__folder_name__['latest'] not in path:
+            _path = os.path.join(path, self.__folder_name__['latest'])
+        return self._load_agents_states(_path, absolute_path=absolute_path, device=device)
 
     def _load_agent_of_id(self, path, agent_id, absolute_path=True, device=torch.device('cpu')):
-        return self._load_agents_states(path, agent_id, absolute_path, device=device)
-        # if not absolute_path:
-        #     path = '/'.join([self.base_url, path])
-        # agents_pickles = dh.find_pattern_in_path(path, 'agent_cls.pickle')
-        # agents_policies = dh.find_pattern_in_path(path, '.pth')
-        # assert len(agents_pickles) > 0, "No agents founds in {}".format(path)
-        # found = False
-        # for agent_pickle_dir in agents_pickles:
-        #     parse_path = lambda x: os.path.normpath(x).split(os.sep)
-        #     path_to_file = parse_path(agent_pickle_dir)
-        #     agent_folder_name = path_to_file[-2]
-        #     possible_name = str(agent_id)+'-'
-        #     if possible_name in agent_folder_name:
-        #         found, file_dir = True, agent_pickle_dir
-        #         break
-        # assert found, "Wrong directory given {}".format(path)
-        # return self.__load_agent_from_dir__(agent_pickle_dir, agents_policies)
-
-    # def __load_agent_from_dir__(self, agent_pickle_dir, agents_policies_dir):
-    #     '''This does the actual mechanics of loading - low level'''
-    #     _new_agent = fh.load_pickle_obj(agent_pickle_dir)
-    #     _new_agent.instantiate_networks()
-    #     this_agent_folder = agent_pickle_dir.replace('agent_cls.pickle', '')
-    #     this_agent_policies = []
-    #     # find this agents corresponding policies
-    #     for pols in agents_policies_dir:
-    #         if this_agent_folder in pols:
-    #             this_agent_policies.append(pols)
-    #             policy_name = pols.replace(this_agent_folder, '').replace('.pth', '')
-    #             _new_agent.load_net(policy_name, pols)
-    #             # _new_agent.load_state_dict(policy_name, pols)
-    #     self.log("Load {} {} with {} networks".format(str(_new_agent), agent_pickle_dir.replace(os.getcwd(), ''), len(this_agent_policies)), to_print=True, verbose_level=1)
-    #     return _new_agent
-
+        return self._load_agents_states(path, agent_id, absolute_path=absolute_path, device=device)
 
     '''
         States Handling of Agents
@@ -446,6 +415,7 @@ class ShivaAdmin():
         agents = []
         agents_states = dh.find_pattern_in_path(path, '{id}.state'.format(id=agent_id if agent_id is not None else ''))
         assert len(agents_states) > 0, "No agents found in {} with agent_id {}".format(path, agent_id)
+        self.log("Found to load {}".format(agents_states), verbose_level=2)
         for state_dict in agents_states:
             agent_state_dict = torch.load(state_dict, map_location=device)
             _new_agent = self.__create_agent_from_state_dict__(agent_state_dict)
@@ -458,7 +428,7 @@ class ShivaAdmin():
         _new_agent = _new_agent_class(*state_dict['inits'])
         _new_agent.load_state_dict(state_dict)
         # _new_agent = self.__load_agent_states__(_new_agent, state_dict)
-        self.log("Loaded {}".format(str(_new_agent)), to_print=True, verbose_level=1)
+        self.log("Loaded {}".format(str(_new_agent)), to_print=True, verbose_level=2)
         return _new_agent
 
     def _load_buffer(self, path) -> list:
