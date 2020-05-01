@@ -23,6 +23,8 @@ class RoboCupTwoSidedEnvironment(Environment):
             if not os.path.isdir('rc_log/env_logs/env_{}'.format(self.id)):
                 os.mkdir('rc_log/env_logs/env_{}'.format(self.id))
             self.env.rc_log += '/env_logs/env_{}'.format(self.id)
+        else:
+            self.save_logs = False
         self.env.launch()
 
         self.num_agents = self.num_left + self.num_right
@@ -53,7 +55,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.render = self.env.env_render
         self.done = self.env.d
 
-        if hasattr('save_logs') and self.save_logs:
+        if hasattr(self,'save_logs') and self.save_logs:
             self.client = storage.Client()
             self.bucket = self.client.get_bucket('shiva-footage')
 
@@ -199,7 +201,7 @@ class RoboCupTwoSidedEnvironment(Environment):
         self.obs = self.left_obs.tolist()+self.right_obs.tolist()
         self.rews = self.left_rews.tolist()+self.right_rews.tolist()
 
-        if hasattr('save_logs') and self.save_logs and (self.done_count % self.log_epsidoes == 0):
+        if hasattr(self,'save_logs') and self.save_logs and (self.done_count % self.log_episodes == 0):
             self.cut_and_save_logs()
 
 
@@ -283,8 +285,25 @@ class RoboCupTwoSidedEnvironment(Environment):
         return metrics
 
     def cut_and_save_logs(self):
-        blob = storage.Blob('rc_gamelogs/env_{}/episode_200'.format(self.id,self.done_count),self.bucket)
-        blob.upload_from_filename(self.rc_log + '/incomplete.rcg')
+        print('Starting cut and Save')
+        if not self.done_count:
+            print('Cut and save not dont count!')
+            self.header = list()
+            with open('rc_log/env_logs/env_{}/incomplete.rcg'.format(self.id),'r') as reader:
+                for _ in range(23):
+                    self.header.append(reader.readline())
+        else:
+            print('Cut and save done count = True')
+            #client = storage.Client()
+            #bucket = client.get_bucket('shiva-footage')
+            blob = storage.Blob('rc_gamelogs/env_{}/episode_{}'.format(self.id,self.done_count),self.bucket)
+            print('After Blob')
+            self.log(os.path.exists(self.env.rc_log + '/incomplete.rcg'))
+            blob.upload_from_filename(self.env.rc_log + '/incomplete.rcg')
+            print('After upload')
+            with open('rc_log/env_logs/env_{}/incomplete.rcg'.format(self.id),'w') as reader:
+                reader.writelines(self.header)
+            print('After header write')
 
 #from pynput.keyboard import Key, KeyCode, Listener
 #from math import atan2, pi, acos
