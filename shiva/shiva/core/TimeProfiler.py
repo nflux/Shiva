@@ -15,6 +15,8 @@ class TimeProfiler:
         self.configs = configs
         self._base_dir = base_dir
         self._save_dir = dh.make_dir(os.path.join(self._base_dir, 'profiler', filename_suffix), use_existing=True)
+        if 'profiler' not in self.configs['Admin']:
+            self.configs['Admin']['profiler'] = False
         if self.configs['Admin']['profiler']:
             self.writer = SummaryWriter(logdir=self._save_dir, filename_suffix=filename_suffix)
         self.reset()
