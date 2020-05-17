@@ -66,7 +66,7 @@ class MPIMultiEnv(Environment):
             time.sleep(self.configs['Admin']['time_sleep']['MultiEnv'])
             self._step_python()
             # self._step_numpy()
-            if self.step_count % self.episode_max_length == 0:
+            if self.step_count % (self.episode_max_length * self.num_envs) == 0:
                 self.reload_match_agents() # temporarily training matches are fixed
                 for a in self.agents:
                     a.reset_noise()
