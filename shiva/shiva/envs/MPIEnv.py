@@ -191,6 +191,7 @@ class MPIEnv(Environment):
                 # self.log("Sending Trajectory Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer))
 
                 self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
+                self.log("Traj sent to {}".format(learner_ix), verbose_level=1)
                 self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
                 self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_actions)
                 self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_rewards)
@@ -224,7 +225,7 @@ class MPIEnv(Environment):
                 self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
 
         self.done_count += 1
-        self.profiler.time('ExperienceSent', self.done_count, output_quantity=len(self.env.roles))
+        self.profiler.time('ExperienceSent', self.done_count, output_quantity=len(learners_sent.keys()))
         self.reset_buffers()
 
     def create_buffers(self):

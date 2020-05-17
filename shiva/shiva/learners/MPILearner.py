@@ -92,7 +92,7 @@ class MPILearner(Learner):
         # t0 = time.time()
         # n_episodes = 500
         self.profiler.start(["AlgUpdates", 'ExperienceReceived'])
-        while True:
+        while self.done_count < self.episodes:
             self.check_incoming_trajectories()
             # '''Used for calculating collection time'''
             # if self.done_count == n_episodes:
@@ -105,10 +105,14 @@ class MPILearner(Learner):
 
     def check_incoming_trajectories(self):
         self.last_metric_received = None
-        for comm in self.envs:
-            self.receive_trajectory_numpy(comm)
+
+        self._n_success_pulls = 0
+        for _ in range(self.n_traj_pulls):
+            for comm in self.envs:
+                self.receive_trajectory_numpy(comm)
+        self.profiler.time('ExperienceReceived', self.done_count, output_quantity=self._n_success_pulls)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
-            self.log("{}:{}".format(self.done_count, self.last_metric_received), verbose_level=1)
+            self.log("{} {}:{}".format(self._n_success_pulls, self.done_count, self.last_metric_received), verbose_level=1)
 
     def receive_trajectory_numpy(self, env_comm):
         '''Receive trajectory from each single environment in self.envs process group'''
@@ -150,7 +154,8 @@ class MPILearner(Learner):
             self.steps_per_episode = traj_length
             self.reward_per_episode = sum(rewards)
 
-            self.profiler.time('ExperienceReceived', self.done_count, output_quantity=1)
+            self._n_success_pulls += 1
+            # self.profiler.time('ExperienceReceived', self.done_count, output_quantity=1)
 
             # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
             # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
@@ -425,6 +430,8 @@ class MPILearner(Learner):
         assert 'Learner' in self.configs, 'No Learner config found on received config: {}'.format(self.configs)
         default_configs = {
             'evaluate': False,
+            'n_traj_pulls': 1,
+            'episodes': float('inf')
             # 'perturb_factor': [0.8, 1.2]
             # add default configs here
 
