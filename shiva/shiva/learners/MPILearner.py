@@ -103,6 +103,23 @@ class MPILearner(Learner):
             self.run_evolution()
             self.collect_metrics(episodic=True) # tensorboard
 
+        self.close()
+
+    def close(self):
+        self.log("Started closing", verbose_level=2)
+        self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.close)
+        for e in self.envs:
+            e.Disconnect()
+        # Close Environment port
+        for portname in self.port['env']:
+            MPI.Close_port(portname)
+        self.log("Closed Environments", verbose_level=2)
+        self.menv.Disconnect()
+        self.log("Closed MultiEnv", verbose_level=2)
+        self.meta.Disconnect()
+        self.log("FULLY CLOSED", verbose_level=1)
+        exit(0)
+
     def check_incoming_trajectories(self):
         self.last_metric_received = None
 
@@ -440,23 +457,8 @@ class MPILearner(Learner):
             if attr_name not in self.configs['Learner']:
                 self.configs['Learner'][attr_name] = default_val
 
-    def close(self):
-        comm = MPI.Comm.Get_parent()
-        self.envs.Disconnect()
-        self.menv.Disconnect()
-        comm.Disconnect()
-
     def __str__(self):
         return "<Learner(id={})>".format(self.id)
-        # return "<Learner(id={}, roles={})>".format(self.id, self.roles)
-
-    # def show_comms(self):
-    #     self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
-    #     self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
-    #     self.log("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
-    #     # self.log("MENV = Inter: {} / Intra: {}".format(self.menv.Is_inter(), self.menv.Is_intra()))
-    #     self.log("ENV = Inter: {} / Intra: {}".format(self.envs.Is_inter(), self.envs.Is_intra()))
-    #     self.log("MEVAL = Inter: {} / Intra: {}".format(self.meval.Is_inter(), self.meval.Is_intra()))
 
 if __name__ == "__main__":
     try:

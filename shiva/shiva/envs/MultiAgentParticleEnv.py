@@ -18,7 +18,10 @@ class MultiAgentParticleEnv(Environment):
 
     def _connect(self):
         # load scenario from script
-        self.scenario = scenarios.load(self.env_name).Scenario()
+        _load_name = self.env_name
+        if '.py' not in _load_name:
+            _load_name += '.py'
+        self.scenario = scenarios.load(_load_name).Scenario()
         # create world
         self.world = self.scenario.make_world()
         # create multiagent environment

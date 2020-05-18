@@ -184,9 +184,14 @@ class ShivaAdmin():
             return self._learner_dir[learner.id]['summary']
         else:
             # extract the base url from the given sample @some_path
-            rx = "\d{2}-\d{2}-\d{4}\/"
-            match = re.search(rx, some_path)
-            return some_path.replace(some_path[match.span()[1]:], '')
+            rx = "\w+-\w+-\d{2}-\d{2}-\d{4}\/"
+            # match = re.search(rx, some_path)
+            _literal_found = re.findall(rx, some_path)[-1] # get the last directory with this format
+            match = re.search(_literal_found, some_path)
+            _start, _end = match.span()[0], match.span()[1]
+            _return = some_path.replace(some_path[_end:], '')
+            print("Given dir: {}".format(_return))
+            return _return
 
     def _add_agent_checkpoint(self, learner, agent):
         '''
