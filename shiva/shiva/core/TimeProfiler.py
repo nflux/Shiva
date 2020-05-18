@@ -19,10 +19,11 @@ class TimeProfiler:
             self.configs['Admin']['profiler'] = False
         if self.configs['Admin']['profiler']:
             self.writer = SummaryWriter(logdir=self._save_dir, filename_suffix=filename_suffix)
-        self.reset()
 
-    def reset(self):
-        self._data = []
+    #     self.reset()
+    #
+    # def reset(self):
+    #     self._data = []
 
     def start(self, metric_name):
         if type(metric_name) == str:
@@ -43,7 +44,7 @@ class TimeProfiler:
         self._ti[metric_name] = time.time()
 
     def _record(self, metric_name, x_value):
-        _now = str(datetime.now())
+        # _now = str(datetime.now())
         # self._data.append({
         #     'ts': _now,
         #     'metric': metric_name,
@@ -60,8 +61,8 @@ class TimeProfiler:
         # outliers for minutes
         if y_val > 10000:
             return
-        if self.configs['Admin']['profiler'] and self._output_per_minute:
+        if self.configs['Admin']['profiler']:
             self.writer.add_scalar("Profiler/{}_{}".format(metric_name, _per_string), y_val, x_value)
 
-    def show_results(self, range=(0, 5)):
-        return pd.DataFrame(self._data, columns=['ts', 'ti', 'tf', 'diff', 'output_quantity', 'output_per_sec', 'output_per_min', 'output_per_hour']).sort_index(ascending=False).iloc[range[0]:range[1]]
+    # def show_results(self, range=(0, 5)):
+    #     return pd.DataFrame(self._data, columns=['ts', 'ti', 'tf', 'diff', 'output_quantity', 'output_per_sec', 'output_per_min', 'output_per_hour']).sort_index(ascending=False).iloc[range[0]:range[1]]

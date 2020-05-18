@@ -255,7 +255,8 @@ class MPIEnv(Environment):
                 self.learner.Send([self.done_buffer, MPI.C_BOOL], dest=self.id, tag=Tags.trajectory_dones)
 
         self.done_count += 1
-        self.profiler.time('ExperienceSent', self.done_count, output_quantity=len(learners_sent.keys()))
+        _output_quantity = len(learners_sent.keys())
+        self.profiler.time('ExperienceSent', self.done_count, output_quantity=_output_quantity)
         self.reset_buffers()
 
     def create_buffers(self):
