@@ -313,5 +313,6 @@ if __name__ == "__main__":
         msg = "<MultiEnv(id={}) error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
         print(msg)
         logger.info(msg, True)
-    finally:
         terminate_process()
+    finally:
+        pass
