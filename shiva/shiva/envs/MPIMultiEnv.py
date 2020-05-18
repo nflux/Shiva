@@ -62,7 +62,10 @@ class MPIMultiEnv(Environment):
         elif 'RoboCup' in self.type:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
-        while True:
+        self.is_running = True
+
+        while self.is_running:
+            self.check_state()
             time.sleep(self.configs['Admin']['time_sleep']['MultiEnv'])
             self._step_python()
             # self._step_numpy()
@@ -70,6 +73,27 @@ class MPIMultiEnv(Environment):
                 self.reload_match_agents() # temporarily training matches are fixed
                 for a in self.agents:
                     a.reset_noise()
+        self.close()
+
+    def check_state(self):
+        if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.close, status=self.info):
+            # one of the Learners run the close()
+            _ = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.close)
+            # used only to stop the whole session, for running profiling experiments..
+            self.is_running = False
+
+    def close(self):
+        self.log("Started closing", verbose_level=2)
+        for i in range(self.num_envs):
+            self.envs.send(True, dest=i, tag=Tags.close)
+        self.envs.Disconnect()
+        self.log("Closed Envs", verbose_level=2)
+        self.learners.Disconnect()
+        MPI.Close_port(self.port) # close Learners port
+        self.log("Closed Learners", verbose_level=2)
+        self.meta.Disconnect()
+        self.log("FULLY CLOSED", verbose_level=1)
+        exit(0)
 
     def _step_python(self):
         self._obs_recv_buffer = self.envs.gather(None, root=MPI.ROOT)
@@ -113,7 +137,11 @@ class MPIMultiEnv(Environment):
         self.actions = np.array(actions)
         self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions), verbose_level=3)
         self.log("Step {}".format(self.step_count), verbose_level=2)
-        self.envs.scatter(actions, root=MPI.ROOT)
+
+        if self.is_running:
+            self.envs.scatter(actions, root=MPI.ROOT)
+        else:
+            self.envs.scatter([False] * self.num_envs, root=MPI.ROOT)
 
     def _step_numpy(self):
         '''
@@ -261,10 +289,6 @@ class MPIMultiEnv(Environment):
 
     def _connect_io_handler(self):
         self.io = get_io_stub(self.configs)
-
-    def close(self):
-        comm = MPI.Comm.Get_parent()
-        comm.Disconnect()
 
     def log(self, msg, to_print=False, verbose_level=-1):
         '''If verbose_level is not given, by default will log'''

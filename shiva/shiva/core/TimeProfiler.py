@@ -14,7 +14,7 @@ class TimeProfiler:
     def __init__(self, configs, base_dir, filename_suffix=''):
         self.configs = configs
         self._base_dir = base_dir
-        self._save_dir = dh.make_dir(os.path.join(self._base_dir, 'profiler', filename_suffix), use_existing=True)
+        self._save_dir = dh.make_dir(os.path.join(self._base_dir, 'profiler', filename_suffix), use_existing=False)
         if 'profiler' not in self.configs['Admin']:
             self.configs['Admin']['profiler'] = False
         if self.configs['Admin']['profiler']:

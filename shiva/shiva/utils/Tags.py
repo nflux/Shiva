@@ -38,11 +38,4 @@ class Tags(IntEnum):
     io_menv_request = 52
     io_eval_request = 53
 
-    #io_checkpoint_save = 51
-    #io_checkpoint_load =52
-    #io_pbt_save = 53
-    #io_pbt_load = 54
-    #io_evo_load = 55
-    #io_evals_save = 56
-    #io_evals_load = 57
-    #io_load_agents = 58
+    close = 999

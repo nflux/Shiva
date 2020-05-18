@@ -47,15 +47,41 @@ class MPIEnv(Environment):
     def run(self):
         self.env.reset()
         self.profiler.start(['ExperienceSent'])
-        while True:
-            while self.env.start_env():
+        self.is_running = True
+
+        while self.is_running:
+            # self.check_state()
+
+            while self.env.start_env(): # give time for the Environment server to be ready (RC specifically)
                 self._step_python()
+                if not self.is_running:
+                    break
                 # self._step_numpy()
                 self._append_step()
                 if self.env.is_done():
                     self._send_trajectory_numpy()
                     self.env.reset()
                 # self._reload_match_learners()
+
+        self.close()
+
+    # def check_state(self):
+    #     if self.menv.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.close, status=self.info):
+    #         # one of the Learners run the close()
+    #         _ = self.menv.recv(None, source=self.info.Get_source(), tag=Tags.close)
+    #         self.log("MultiEnv call to CLOSE")
+    #         # used only to stop the whole session, for running profiling experiments..
+    #         self.is_running = False
+    #         self.close()
+
+    def close(self):
+        self.log("Started closing", verbose_level=2)
+        self.menv.Disconnect()
+        self.log("Closed MultiEnv", verbose_level=2)
+        self.learner.Disconnect()
+        self.log("Closed Learner", verbose_level=2)
+        self.log("FULLY CLOSED", verbose_level=1)
+        exit(0)
 
     def _receive_new_match(self):
         self.role2learner_spec = self.menv.recv(None, source=0, tag=Tags.new_agents)
@@ -73,8 +99,12 @@ class MPIEnv(Environment):
         self.observations = self.env.get_observations()
         self.menv.gather(self.observations, root=0)
         self.actions = self.menv.scatter(None, root=0)
-        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-        self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=3)
+        if self.actions == False:
+            # disconnect signal
+            self.is_running = False
+        else:
+            self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
+            self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=3)
 
     def _step_numpy(self):
         self.step_count += 1
@@ -292,38 +322,12 @@ class MPIEnv(Environment):
             'learners_port': self.learners_port if hasattr(self, 'learners_port') else False
         }
 
-    def close(self):
-        comm = MPI.Comm.Get_parent()
-        comm.Disconnect()
-
     def print(self, msg, to_print=False):
         text = "{}\t\t\t{}".format(str(self), msg)
         print(text)
 
     def __str__(self):
         return "<Env(id={}, menv_id={})>".format(self.id, self.menv_id)
-
-    def show_comms(self):
-        self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
-        self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
-        self.log("MENV = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
-
-
-    # def _step_python_list(self):
-    #     self.observations = list(self.env.get_observations().values())
-    #     # self.log("Obs {}".format(observations))
-    #     self.menv.gather(self.observations, root=0)
-    #     self.actions = self.menv.scatter(None, root=0)
-    #     self.log("Act {}".format(self.actions))
-    #     self.next_observations, self.reward, self.done, _ = self.env.step(self.actions)
-
-    # def _send_trajectory_python_list(self):
-    #     '''Python List approach'''
-    #     trajectory = [[self.observations_buffer, self.actions_buffer, self.rewards_buffer, self.next_observations_buffer, self.done_buffer]]
-    #     '''Assuming 1 learner here --> Spec should indicate what agent corresponds to that learner dest=ix'''
-    #     for ix in range(self.num_learners):
-    #         '''Python List Approach'''
-    #         self.learner.send(self._get_env_state(trajectory), dest=ix, tag=Tags.trajectory)
 
 if __name__ == "__main__":
     try:
