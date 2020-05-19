@@ -190,7 +190,7 @@ class ShivaAdmin():
             match = re.search(_literal_found, some_path)
             _start, _end = match.span()[0], match.span()[1]
             _return = some_path.replace(some_path[_end:], '')
-            print("Given dir: {}".format(_return))
+            # print("Given dir: {}".format(_return))
             return _return
 
     def _add_agent_checkpoint(self, learner, agent):

@@ -113,7 +113,8 @@ class MADDPGAlgorithm(Algorithm):
             rewards = permutate_f(bf_rewards.to(self.device))
             next_states = permutate_f(bf_next_states.to(self.device))
             dones = permutate_f(dones.to(self.device))
-            dones_mask = torch.tensor(dones[:, 0, :], dtype=torch.bool).view(-1, 1).to(self.device)
+            # dones_mask = torch.tensor(dones[:, 0, :], dtype=torch.bool).view(-1, 1).to(self.device)
+            dones_mask = dones[:, 0, :].view(-1, 1).to(self.device)
             # self.log("Permuted States {} is {}".format(perms, states.reshape(1, -1)))
             '''Assuming all agents have the same obs_dim!'''
             batch_size, num_agents, obs_dim = states.shape

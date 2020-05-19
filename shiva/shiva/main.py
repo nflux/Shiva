@@ -16,15 +16,16 @@ def start_meta(metalearner_class, configs):
         msg = "<Meta> error: {}".format(traceback.format_exc())
         print(msg)
         logger.info(msg, True)
-    finally:
         terminate_process()
+    finally:
+        pass
 
 configs = load_config_file_2_dict(os.path.join(os.getcwd(), 'configs', args.config))
 
 if 'configs_set' in configs['MetaLearner']:
     _date, _time = str(datetime.datetime.now()).split()
     tmpst = _date[5:] + '-' + _time[0:5]
-    _run_root_dir = '{}-configs-{}'.format(len(configs['MetaLearner']['configs_set']), tmpst).replace(':', '')
+    _run_root_dir = '{}-{}-configs-{}'.format(tmpst, len(configs['MetaLearner']['configs_set'])).replace(':', '')
     for ix, c in enumerate(configs['MetaLearner']['configs_set']):
         print("\n%%% {} run %%%\n%%% {} %%%\n".format(ix+1, c))
         _run_type = c.split('/')[1] # like, 1U-5P, specifically for Profiling
