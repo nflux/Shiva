@@ -184,6 +184,7 @@ class ShivaAdmin():
             return self._learner_dir[learner.id]['summary']
         else:
             # extract the base url from the given sample @some_path
+            # print("Got {}".format(some_path))
             rx = "\w+-\w+-\d{2}-\d{2}-\d{4}\/"
             # match = re.search(rx, some_path)
             _literal_found = re.findall(rx, some_path)[-1] # get the last directory with this format

@@ -127,7 +127,8 @@ class MPILearner(Learner):
         for _ in range(self.n_traj_pulls):
             for comm in self.envs:
                 self.receive_trajectory_numpy(comm)
-        self.profiler.time('ExperienceReceived', self.done_count, output_quantity=self._n_success_pulls)
+        if self._n_success_pulls > 0:
+            self.profiler.time('ExperienceReceived', self.done_count, output_quantity=self._n_success_pulls)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
             self.log("{} {}:{}".format(self._n_success_pulls, self.done_count, self.last_metric_received), verbose_level=1)
 

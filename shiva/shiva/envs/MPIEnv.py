@@ -22,17 +22,18 @@ class MPIEnv(Environment):
     id = MPI.COMM_SELF.Get_parent().Get_rank()
     info = MPI.Status()
 
+    env = None
+
     def __init__(self):
         # Receive Config from MultiEnv
         self.configs = self.menv.bcast(None, root=0)
         self.menv_id = self.configs['MultiEnv']['id']
         super(MPIEnv, self).__init__(self.configs)
-        self.log("Received config with {} keys".format(str(len(self.configs.keys()))), verbose_level=1)
         self.launch()
 
     def launch(self):
         self._launch_env()
-
+        # self.log("Received config with {} keys".format(str(len(self.configs.keys()))), verbose_level=1)
         # Check in with MultiEnv
         self.menv.gather(self._get_env_specs(), root=0)
 
@@ -86,6 +87,7 @@ class MPIEnv(Environment):
     def _receive_new_match(self):
         self.role2learner_spec = self.menv.recv(None, source=0, tag=Tags.new_agents)
         self.log("Got LearnerSpecs {}".format(self.role2learner_spec), verbose_level=2)
+        self.done_count = 0
 
     def _reload_match_learners(self):
         '''MultiEnv got new matching agents, we receive Learner Specs to send trajectory'''
@@ -289,6 +291,7 @@ class MPIEnv(Environment):
         self.configs['Environment']['worker_id'] = (self.menv_id + 1) * 100 + self.id
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         self.env = env_class(self.configs)
+        self.log("Launched {}".format(env_class), verbose_level=1)
 
     def _connect_learners(self):
         self.log("Waiting LearnersSpecs from the MultiEnv", verbose_level=3)
@@ -328,7 +331,7 @@ class MPIEnv(Environment):
         print(text)
 
     def __str__(self):
-        return "<Env(id={}, menv_id={})>".format(self.id, self.menv_id)
+        return "<Env(id={}, menv_id={}, done_count={})>".format(self.id, self.menv_id, self.done_count)
 
 if __name__ == "__main__":
     try:
