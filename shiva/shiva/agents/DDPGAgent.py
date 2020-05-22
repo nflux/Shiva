@@ -84,7 +84,7 @@ class DDPGAgent(Agent):
         if evaluate:
 # <<<<<<< HEAD
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+            # action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
             # if self.normalize:
             action = torch.abs(action)
             action = action / action.sum()
@@ -199,10 +199,16 @@ class DDPGAgent(Agent):
         '''E-greedy with linear decay'''
         if step_count is None:
             step_count = self.step_count
+        return self._decay(self.epsilon_start, self.epsilon, self.epsilon_decay, step_count)
+        # r = random.uniform(0, 1)
+        # ceiling = max(self.epsilon, self.epsilon_start - (step_count / self.epsilon_decay))
+        # is_random = r < ceiling
+        # return is_random
+
+    def _decay(self, start, end, decay, current_step_count):
         r = random.uniform(0, 1)
-        ceiling = max(self.epsilon, self.epsilon_start - (step_count / self.epsilon_decay))
-        is_random = r < ceiling
-        return is_random
+        ceiling = max(end, start - (current_step_count / decay))
+        return r < ceiling
 
     def get_metrics(self):
         '''Used for evolution metric'''
