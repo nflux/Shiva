@@ -32,7 +32,7 @@ class rc_env:
             {setattr(self, k, v) for k,v in config.items()}
 
         self.hfo_path = hfo.get_hfo_path()
-        # self.seed = np.random.randint(1000)
+        self.seed = np.random.randint(1000)
         self.viewer = None
 
         self.left_action_option = None

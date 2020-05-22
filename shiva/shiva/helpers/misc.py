@@ -46,5 +46,5 @@ def one_hot_from_logits(logits):
     return (logits == logits.max(1, keepdim=True)[0]).float()
 
 def terminate_process():
-    cmd = 'pkill -e -f "python shiva"'
+    cmd = ['pkill', 'python']
     subprocess.call(cmd, shell=False)

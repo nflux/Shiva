@@ -55,12 +55,11 @@ class MPIImitationMultiEnv(Environment):
         elif 'RoboCup' in self.type:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
         
-        # Wait for evns to finsish supervised
-        _ = self.envs.gather(None, root=MPI.ROOT)
         # Wait for learners to finish supervised
         for i in range(self.num_learners):
             _ = self.learners.recv(None, source=i, tag=Tags.start_dagger)
 
+        self.envs.bcast([True], root=MPI.ROOT)
         self.log("Start dagger")
 
         while True:

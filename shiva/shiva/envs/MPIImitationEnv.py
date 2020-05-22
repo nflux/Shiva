@@ -79,8 +79,14 @@ class MPIRoboCupImitationEnv(Environment):
                 self.env.reset()
     
     def dagger_run(self):
-        self.log("About to gather forr dagger")
-        self.menv.gather(True, root=0)
+        start_time = time.time()
+        # self.menv.gather(True, root=0)
+        # Wait for learner to finish supervised portion
+        # _ = self.learner.recv(None, source=MPI.ANY_SOURCE, tag=Tags.start_dagger)
+        self.log("Stuck before bcast")
+        start_flag = self.menv.bcast(None, root=0)
+        self.log("--- {} seconds ---".format(time.time() - start_time))
+        self.log("Going to gather dagger {}".format(start_flag))
         while True:
             time.sleep(0.001)
             self._dagger_step_numpy()
@@ -102,7 +108,8 @@ class MPIRoboCupImitationEnv(Environment):
         acs_msg = self.comm.recv(8192)
 
         if len(acs_msg) == 0:
-            raise ValueError('Action message is zero')
+            self.log("This is the env with error")
+            terminate_process()
 
         acs_msg = str(acs_msg)[2:].split(' ')[:-1]
 
