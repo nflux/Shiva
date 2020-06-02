@@ -123,7 +123,7 @@ class DDPGAgent(Agent):
         self.ou_noise.set_scale(self.noise_scale)
         if evaluate:
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+            # action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
         else:
             if step_count < self.exploration_steps or self.is_e_greedy(step_count):
                 action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])

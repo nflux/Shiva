@@ -3,6 +3,11 @@ import numpy as np
 from shiva.core.admin import logger
 
 class Environment:
+    observations = []
+    actions = []
+    rewards = []
+    dones = []
+
     steps_per_episode = 0
     step_count = 0
     done_count = 0
@@ -88,3 +93,6 @@ class Environment:
         if verbose_level <= self.configs['Admin']['log_verbosity']['Env']:
             text = "{}\t\t\t{}".format(str(self), msg)
             logger.info(text, to_print or self.configs['Admin']['print_debug'])
+
+    def __str__(self):
+        return "<{}>".format(self.__class__.__name__)

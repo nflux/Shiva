@@ -9,11 +9,11 @@ from mlagents_envs.side_channel.float_properties_channel import FloatPropertiesC
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
 
-class MultiAgentUnityWrapperEnv(Environment):
+class MultiAgentUnityWrapperEnv012Environment):
     def __init__(self, config):
         # assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
         self.on_policy = False
-        super(MultiAgentUnityWrapperEnv, self).__init__(config)
+        super(MultiAgentUnityWrapperEnv012Environment, self).__init__(config)
         self.worker_id = config['worker_id'] if 'worker_id' in config else 0
         self._connect()
         self.set_initial_values()

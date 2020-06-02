@@ -10,6 +10,7 @@ class ReplayBuffer(object):
         self.max_size = max_size
         self.obs_dim = obs_dim
         self.acs_dim = acs_dim
+        self.rew_dim = 1
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def __len__(self):

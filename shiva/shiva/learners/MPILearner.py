@@ -150,7 +150,8 @@ class MPILearner(Learner):
             traj_length_index = self.traj_info['length_index']
             traj_length = self.traj_info['obs_shape'][traj_length_index]
             role = self.traj_info['role']
-            assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
+            # assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
+            assert role in self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
 
             observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
             env_comm.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
