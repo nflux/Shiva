@@ -115,28 +115,38 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 self.Unity.step()
         '''
             Metrics collection
-                Episodic # of steps             self.steps_per_episode --> is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
+                Episodic # of steps             self.steps_per_episode
                 Cumulative # of steps           self.step_count
-                Temporary episode count         self.temp_done_counter --> used for the is_done() call. Zeroed on reset().
+                Temporary episode count         self.temp_done_counter
                 Cumulative # of episodes        self.done_count
                 Step Reward                     self.reward_per_step
                 Episodic Reward                 self.reward_per_episode
-                Cumulative Reward               self.reward_total
+                Cumulative Reward               self.reward_total (average upon all the agents that are controlled by that Role)
         '''
         self.temp_done_counter += sum(sum(self.dones[role]) for role in self.roles)
 
-        for role in self.roles:
-            role_total_reward = 0
-            for agent_ix, role_agent_id in enumerate(self.role_agent_ids[role]):
-                self.steps_per_episode[role][agent_ix] += 1
-                self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
-                self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
-            self.reward_total[role] += sum(self.rewards[role]) / self.num_instances_per_role[role] # total average reward
-            self.done_count[role] += sum(self.dones[role])
+        '''Metrics are now updated withing self.collect_step_data()'''
+        # for role in self.roles:
+            # for agent_ix, role_agent_id in enumerate(self.role_agent_ids[role]):
+                # self.steps_per_episode[role][agent_ix] += 1
+                # self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
+                # self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
+            # self.reward_total[role] += sum(self.rewards[role]) / self.num_instances_per_role[role] # total average reward
+            # self.done_count[role] += sum(self.dones[role])
+
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
 
+    def _unity_reshape(self, arr):
+        '''Unity reshape of the data - concat all same Role agents trajectories'''
+        traj_length, num_agents, dim = arr.shape
+        return np.reshape(arr, (traj_length * num_agents, dim))
+
     def collect_step_data(self):
-        # self.request_actions = False
+        """
+        per @vincentpierre (MLAgents developer) - https://forum.unity.com/threads/decisionstep-vs-terminalstep.903227/#post-5927795
+        If an AgentId is both in DecisionStep and TerminalStep, it means that the Agent reseted in Unity and immediately requested a decision.
+        In your example, Agents 1, 7 and 9 had their episode terminated, started a new episode and requested a new decision. All in the same call to env.step()
+        """
 
         for role in self.roles:
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
@@ -147,15 +157,28 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 self.trajectory_ready[role] = self.TerminalSteps[role].agent_id.tolist()
                 for terminal_step_agent_ix, role_agent_id in enumerate(self.TerminalSteps[role].agent_id):
                     agent_ix = self.role_agent_ids[role].index(role_agent_id)
+                    # Append to buffer last experience
                     exp = list(map(torch.clone, (torch.tensor([self.observations[role][agent_ix]], dtype=torch.float64),
                                                  torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
                                                  torch.tensor([self.TerminalSteps[role].reward[terminal_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
                                                  torch.tensor([self.TerminalSteps[role].obs[0][terminal_step_agent_ix]], dtype=torch.float64),
                                                  torch.tensor([[True]], dtype=torch.bool).unsqueeze(dim=-1)
                                                  )))
-                    self.trajectory_buffers[role][agent_ix].push(exp)
-            else:
-                self.trajectory_ready[role] = []
+                    self.trajectory_buffers[role][role_agent_id].push(exp)
+
+                    # Update terminal metrics
+                    self.done_count[role] += 1
+                    self.steps_per_episode[role][agent_ix] += 1
+                    self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
+                    self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
+                    self.reward_total[role] = self.reward_total[role] + (self.reward_per_episode[role][agent_ix] / self.num_instances_per_role[role]) # Incremental Means Method
+
+                    # Prepare trajectory for MPIEnv to send
+                    self._ready_trajectories[role][role_agent_id] += [[*map(self._unity_reshape, self.trajectory_buffers[role][role_agent_id].all_numpy())] + [self.get_role_metrics(role, role_agent_id, episodic=True)]]
+                    self.reset_agent_id(role, role_agent_id)
+                    self.trajectory_buffers[role][role_agent_id].reset()
+            # else:
+            #     self.trajectory_ready[role] = []
 
             if len(self.DecisionSteps[role].agent_id) > 0:
                 '''Agents who need a next action'''
@@ -168,31 +191,18 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
                     for decision_step_agent_ix, agent_id in enumerate(self.DecisionSteps[role].agent_id):
                         agent_ix = self.role_agent_ids[role].index(decision_step_agent_ix)
-                        if agent_id in self.TerminalSteps[role].agent_id:
-                            '''Occassionaly, I have seen that the DecisionStep and TerminalStep both have information about the agents,
-                                So, for Terminal ones we need to overwrite onto the DecisionSteps
-                            '''
-                            terminal_step_agent_ix = self.TerminalSteps[role].agent_id.tolist().index(agent_id)
-                            self.observations[role][decision_step_agent_ix] = self.TerminalSteps[role].obs[0][terminal_step_agent_ix]
-                            self.rewards[role][decision_step_agent_ix] = self.TerminalSteps[role].reward[terminal_step_agent_ix]
-                            self.dones[role][decision_step_agent_ix] = True
-                            # No need to append again
-                        else:
+                        exp = list(map(torch.clone, (torch.tensor([self.observations[role][decision_step_agent_ix]], dtype=torch.float64),
+                                                     torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
+                                                     torch.tensor([self.DecisionSteps[role].reward[decision_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
+                                                     torch.tensor([self.DecisionSteps[role].obs[0][decision_step_agent_ix]], dtype=torch.float64),
+                                                     torch.tensor([[False]], dtype=torch.bool).unsqueeze(dim=-1)
+                                                     )))
+                        self.trajectory_buffers[role][agent_id].push(exp)
 
-                            exp = list(map(torch.clone, (torch.tensor([self.observations[role][decision_step_agent_ix]], dtype=torch.float64),
-                                                         torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
-                                                         torch.tensor([self.DecisionSteps[role].reward[decision_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
-                                                         torch.tensor([self.DecisionSteps[role].obs[0][decision_step_agent_ix]], dtype=torch.float64),
-                                                         torch.tensor([[False]], dtype=torch.bool).unsqueeze(dim=-1)
-                                                         )))
-                            self.trajectory_buffers[role][agent_id].push(exp)
-
-            # # Recalculate Metrics by incremental means method
-            # step_total_reward = sum(self.rewards[role])
-            # self.reward_per_step[role] = self.reward_per_step[role] + (1/self.num_instances_per_role[role])*(step_total_reward - self.reward_per_step[role])
-            # self.reward_per_episode[role] = self.reward_per_episode[role] + (1/self.num_instances_per_role[role])*(step_total_reward - self.reward_per_episode[role])
-            # self.reward_total[role] += self.reward_per_episode[role]
-
+                        # Update metrics at each agent step
+                        self.steps_per_episode[role][agent_ix] += 1
+                        self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
+                        self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
 
     def _flatten_observations(self, obs):
         '''Turns the funky (2, 16, 56) array into a (16, 112)'''
@@ -217,12 +227,10 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
     def is_done(self, n_episodes=None):
         '''
-            One Shiva episode is when all instances in the Environment terminate at least once
-            On MultiAgent env, all agents will have the same number of dones, so we can check only one of them
+            Check if there's any role-agent that has finished the episode
         '''
-        # return self.temp_done_counter > 0
-        # print("{} {}".format(self.temp_done_counter, self.num_instances_per_env))
-        # self.log(f"Traj Ready {self.trajectory_ready}")
+        # self.log(f"DecisionSteps {self.DecisionSteps[self.roles[0]].agent_id}")
+        # self.log(f"TerminalStep {self.TerminalSteps[self.roles[0]].agent_id}")
         return sum(1 if len(self.trajectory_ready[role]) > 0 else 0 for role in self.roles) > 0
         # return self.temp_done_counter >= self.num_instances_per_env
 
@@ -295,13 +303,16 @@ class MultiAgentUnityWrapperEnv1(Environment):
             Test performance for Multiple environments within one single Unity simulation
         '''
         self.trajectory_buffers = {}
+        self._ready_trajectories = {}
         for role in self.roles:
             self.trajectory_buffers[role] = {}
+            self._ready_trajectories[role] = {}
             for role_agent_id in self.role_agent_ids[role]:
                 self.trajectory_buffers[role][role_agent_id] = MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
                                                                   1, #self.num_instances_per_role[role],
                                                                   self.observation_space[role],
                                                                   self.action_space[role]['acs_space'])
+                self._ready_trajectories[role][role_agent_id] = []
 
     def reset_buffers(self):
         for _, role_buffers in self.trajectory_buffers.items():

@@ -39,6 +39,8 @@ class DDPGAgent(Agent):
             self.actor_input = obs_space
             self.actor_output = self.continuous
             self.get_action = self.get_continuous_action
+            if not hasattr(self, 'actions_range'):
+                self.actions_range = [-1, 1]
         else:
             self.action_space = 'parametrized'
             self.actor_input = obs_space
@@ -64,7 +66,11 @@ class DDPGAgent(Agent):
         self.hps = ['actor_learning_rate', 'critic_learning_rate', 'epsilon', 'noise_scale']
         self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
 
-        self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor'])
+        if self.action_space == 'continuous':
+            self.actor = DynamicLinearNetwork(self.actor_input, self.actor_output, self.networks_config['actor'])
+        elif self.action_space == 'discrete':
+            self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor'])
+
         self.target_actor = copy.deepcopy(self.actor)
         '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
         self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.networks_config['critic'])
@@ -97,7 +103,7 @@ class DDPGAgent(Agent):
 #             # print("Agent Evaluate {}".format(action))
 # >>>>>>> robocup-mpi-pbt
         else:
-            if step_count < self.exploration_steps or self.is_e_greedy(step_count):
+            if self.is_exploring(step_count) or self.is_e_greedy(step_count):
                 action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
@@ -125,10 +131,10 @@ class DDPGAgent(Agent):
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
             # action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
         else:
-            if step_count < self.exploration_steps or self.is_e_greedy(step_count):
-                action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
-                action = torch.from_numpy(action + self.ou_noise.noise())
-                action = softmax(action, dim=-1)
+            if self.is_exploring(step_count) or self.is_e_greedy(step_count):
+                action = np.array([np.random.uniform(*self.actions_range) for _ in range(self.actor_output)])
+                # action = torch.from_numpy(action + self.ou_noise.noise())
+                # action = softmax(action, dim=-1)
             else:
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
@@ -207,8 +213,12 @@ class DDPGAgent(Agent):
 
     def _decay(self, start, end, decay, current_step_count):
         r = random.uniform(0, 1)
+        # linear decay relative to the step_count
         ceiling = max(end, start - (current_step_count / decay))
         return r < ceiling
+
+    def is_exploring(self, current_step_count):
+        return current_step_count < self.exploration_steps
 
     def get_metrics(self):
         '''Used for evolution metric'''

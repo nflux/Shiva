@@ -138,8 +138,6 @@ class MPILearner(Learner):
         if env_comm.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=self.info):
             env_source = self.info.Get_source()
             self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info) # block statement
-            self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
-            self.last_metric_received = "{} got {}".format(self.traj_info['env_id'], self.traj_info['metrics'])
 
             self.metrics_env = {}
             for ix, role in enumerate(self.roles):
@@ -172,18 +170,15 @@ class MPILearner(Learner):
             self.done_count += 1
             self.steps_per_episode = traj_length
             self.reward_per_episode = sum(rewards)
-
             self._n_success_pulls += 1
-            # self.profiler.time('ExperienceReceived', self.done_count, output_quantity=1)
+            self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
+            self.last_metric_received = "{} got {}".format(self.traj_info['env_id'], self.traj_info['metrics'])
 
-            # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-            # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
             # self.log(f"Obs {observations.shape} {observations}")
             # self.log(f"Acs {actions}")
             # self.log(f"Rew {rewards.shape} {rewards}")
             # self.log(f"NextObs {next_observations}")
             # self.log(f"Dones {dones}")
-            # self.log("From Env received Rew {}\n".format(rewards))
 
             '''Assuming roles with same acs/obs dimension'''
             exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.roles), observations.shape[-1]),

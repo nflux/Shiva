@@ -173,7 +173,7 @@ class MADDPGAlgorithm(Algorithm):
                 '''Option 2: grab new actions from every agent: this might be destabilizer'''
                 current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
             elif self.action_space[agent.role]['type'] == "continuous":
-                current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float(), gumbel=False) for _ix, _agent in enumerate(agents)], dim=1)
+                current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float()) for _ix, _agent in enumerate(agents)], dim=1)
 
             # Calculate Q value for taking those actions in those states
             # self.log("current_state_actor_actions {}".format(current_state_actor_actions.shape))

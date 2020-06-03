@@ -64,7 +64,7 @@ class MPIMultiEnv(Environment):
         self.run()
 
     def run(self):
-        self._should_load = False
+        self._time_to_load = False
         self.is_running = True
         while self.is_running:
             time.sleep(self.configs['Admin']['time_sleep']['MultiEnv'])
@@ -167,10 +167,11 @@ class MPIMultiEnv(Environment):
         self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
     def check_state(self):
-        if self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=self.info):
+        while self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=self.info):
             done_count = self.envs.recv(None, source=self.info.Get_source(), tag=Tags.trajectory_info)
+            # self.log(f"Recv from Env {self.info.Get_source()} {done_count}")
             self.done_count += done_count
-            self._should_load = True
+            self._time_to_load = True
 
         if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.close, status=self.info):
             # Close signal
@@ -180,17 +181,16 @@ class MPIMultiEnv(Environment):
 
     def reload_match_agents(self, bypass_request=False):
         # if self.step_count % (self.episode_max_length * self.num_envs) == 0:
-        if self._should_load and self.done_count > 0 and self.done_count % self.episodic_load_rate == 0:
+        if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
+            '''In case a new match is received from MetaLearner'''
+            self._receive_match(bypass_request=bypass_request)
 
-            if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
-                '''In case a new match is received from MetaLearner'''
-                self._receive_match(bypass_request=bypass_request)
-            else:
-                '''No match available - reload current agents'''
-                self.agents = self.load_agents(bypass_request=bypass_request)
-                for a in self.agents:
-                    a.reset_noise()
-                self._should_load = False
+        elif self._time_to_load and self.done_count > 0 and (self.done_count % self.episodic_load_rate == 0):
+            '''No match available - reload current agents'''
+            self.agents = self.load_agents(bypass_request=bypass_request)
+            for a in self.agents:
+                a.reset_noise()
+            self._time_to_load = False
 
     def _receive_match(self, bypass_request=False):
         '''New match from the single MetaLearner'''
