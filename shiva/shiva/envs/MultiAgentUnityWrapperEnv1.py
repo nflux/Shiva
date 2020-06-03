@@ -53,34 +53,49 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.rewards = {role:[] for role in self.roles}
         self.dones = {role:[] for role in self.roles}
         self.reward_total = {role:0 for role in self.roles}
-        '''Reset Metrics'''
-        self.reset()
 
         # Collect first set of datas from environment
         self.DecisionSteps = {role:None for role in self.roles}
         self.TerminalSteps = {role:None for role in self.roles}
+        self.trajectory_ready = {role:[] for role in self.roles}
         self.collect_step_data()
         '''Assuming all Roles Agent IDs are given at the beginning of the first episode'''
-        self.role_agent_ids = {role:self.DecisionSteps[role].agent_id for role in self.roles}
+        self.role_agent_ids = {role:self.DecisionSteps[role].agent_id.tolist() for role in self.roles}
         self.trajectory_ready = {role:[] for role in self.roles}
 
         '''Calculate how many instances Unity has'''
         self.num_instances_per_role = {role:len(self.DecisionSteps[role].agent_id) for role in self.roles}
         self.num_instances_per_env = self.DecisionSteps[self.roles[0]].obs[0].shape[0]
 
-    def reset(self, force=False, *args, **kwargs):
+        '''Reset Metrics'''
+        self.done_count = {role:0 for role in self.roles}
+        self.steps_per_episode = {role:[0 for _ in self.role_agent_ids[role]] for role in self.roles}
+        self.reward_per_step = {role:[0 for _ in self.role_agent_ids[role]] for role in self.roles}
+        self.reward_per_episode = {role:[0 for _ in self.role_agent_ids[role]] for role in self.roles}
+
+        self.metric_reset()
+
+    def reset(self):
+        pass
+
+    def metric_reset(self, force=False, *args, **kwargs):
         '''
             To be called by Shiva Learner
             It's just to reinitialize our metrics. Unity resets the environment on its own.
         '''
-        self.steps_per_episode = 0
         self.temp_done_counter = 0
-        self.reward_per_step = {role:0 for role in self.roles}
-        self.reward_per_episode = {role:0 for role in self.roles}
+        for role in self.roles:
+            for agent_id in self.role_agent_ids[role]:
+                self.reset_agent_id(role, agent_id)
+        # if force:
+        #     '''In case the environment never ends - for example, Unity Basic can get stuck...'''
+        #     self.Unity.reset()
 
-        if force:
-            '''In case the environment never ends - for example, Unity Basic can get stuck...'''
-            self.Unity.reset()
+    def reset_agent_id(self, role, agent_id):
+        agent_ix = self.role_agent_ids[role].index(agent_id)
+        self.steps_per_episode[role][agent_ix] = 0
+        self.reward_per_step[role][agent_ix] = 0
+        self.reward_per_episode[role][agent_ix] = 0
 
     def step(self, actions):
         self.raw_actions = {}
@@ -96,7 +111,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         while not self.request_actions:
             self.collect_step_data()
             if not self.request_actions:
-                # step until we get a DecisionStep
+                # step until we get a DecisionStep (we need an action)
                 self.Unity.step()
         '''
             Metrics collection
@@ -108,17 +123,16 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 Episodic Reward                 self.reward_per_episode
                 Cumulative Reward               self.reward_total
         '''
-        self.steps_per_episode += self.num_instances_per_env
-        self.step_count += self.num_instances_per_env
         self.temp_done_counter += sum(sum(self.dones[role]) for role in self.roles)
-        self.done_count += sum(sum(self.dones[role]) for role in self.roles)
 
         for role in self.roles:
-            # in case there's asymetric environment
-            self.reward_per_step[role] += sum(self.rewards[role]) / self.num_instances_per_role[role]
-            self.reward_per_episode[role] += sum(self.rewards[role]) / self.num_instances_per_role[role]
-            self.reward_total[role] += self.reward_per_episode[role]
-
+            role_total_reward = 0
+            for agent_ix, role_agent_id in enumerate(self.role_agent_ids[role]):
+                self.steps_per_episode[role][agent_ix] += 1
+                self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
+                self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
+            self.reward_total[role] += sum(self.rewards[role]) / self.num_instances_per_role[role] # total average reward
+            self.done_count[role] += sum(self.dones[role])
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
 
     def collect_step_data(self):
@@ -126,12 +140,13 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         for role in self.roles:
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
+            # self.log(f"DecisionStep {self.DecisionSteps[role].agent_id} \n TerminalSteps {self.TerminalSteps[role].agent_id}")
 
             if len(self.TerminalSteps[role].agent_id) > 0:
                 '''Agents that are on a Terminal Step'''
                 self.trajectory_ready[role] = self.TerminalSteps[role].agent_id.tolist()
                 for terminal_step_agent_ix, role_agent_id in enumerate(self.TerminalSteps[role].agent_id):
-                    agent_ix = self.role_agent_ids[role].tolist().index(role_agent_id)
+                    agent_ix = self.role_agent_ids[role].index(role_agent_id)
                     exp = list(map(torch.clone, (torch.tensor([self.observations[role][agent_ix]], dtype=torch.float64),
                                                  torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
                                                  torch.tensor([self.TerminalSteps[role].reward[terminal_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
@@ -139,6 +154,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
                                                  torch.tensor([[True]], dtype=torch.bool).unsqueeze(dim=-1)
                                                  )))
                     self.trajectory_buffers[role][agent_ix].push(exp)
+            else:
+                self.trajectory_ready[role] = []
 
             if len(self.DecisionSteps[role].agent_id) > 0:
                 '''Agents who need a next action'''
@@ -150,7 +167,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
                     self.request_actions = True
 
                     for decision_step_agent_ix, agent_id in enumerate(self.DecisionSteps[role].agent_id):
-                        agent_ix = self.role_agent_ids[role].tolist().index(decision_step_agent_ix)
+                        agent_ix = self.role_agent_ids[role].index(decision_step_agent_ix)
                         if agent_id in self.TerminalSteps[role].agent_id:
                             '''Occassionaly, I have seen that the DecisionStep and TerminalStep both have information about the agents,
                                 So, for Terminal ones we need to overwrite onto the DecisionSteps
@@ -183,18 +200,18 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
     def get_metrics(self, episodic=True):
         '''MultiAgent Metrics'''
-        metrics = {role:self.get_role_metrics(role, episodic) for ix, role in enumerate(self.roles)}
+        metrics = {role:[self.get_role_metrics(role, role_agent_id, episodic) for role_agent_id in self.role_agent_ids[role]] for ix, role in enumerate(self.roles)}
         return list(metrics.values())
 
-    def get_role_metrics(self, role=None, episodic=True):
+    def get_role_metrics(self, role, role_agent_id, episodic=True):
         if not episodic:
             metrics = [
                 ('Reward/Per_Step', self.reward_per_step[role])
             ]
         else:
             metrics = [
-                ('Reward/Per_Episode', self.reward_per_episode[role]),
-                ('Agent/Steps_Per_Episode', self.steps_per_episode / self.num_instances_per_env)
+                ('Reward/Per_Episode', self.reward_per_episode[role][role_agent_id]),
+                ('Agent/Steps_Per_Episode', self.steps_per_episode[role][role_agent_id])
             ]
         return metrics
 
@@ -205,7 +222,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
         '''
         # return self.temp_done_counter > 0
         # print("{} {}".format(self.temp_done_counter, self.num_instances_per_env))
-        return self.temp_done_counter >= self.num_instances_per_env
+        # self.log(f"Traj Ready {self.trajectory_ready}")
+        return sum(1 if len(self.trajectory_ready[role]) > 0 else 0 for role in self.roles) > 0
+        # return self.temp_done_counter >= self.num_instances_per_env
 
     def _clean_actions(self, role, role_actions):
         '''
@@ -258,7 +277,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
     def get_reward_episode(self, roles=False):
         if roles:
-            return {role: self.reward_per_episode[role] for role in self.roles}
+            return self.reward_per_episode
+            # return {role: self.reward_per_episode[role] for role in self.roles}
         return self.reward_per_episode
 
     def get_rewards(self):

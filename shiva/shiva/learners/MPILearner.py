@@ -151,7 +151,7 @@ class MPILearner(Learner):
             traj_length = self.traj_info['obs_shape'][traj_length_index]
             role = self.traj_info['role']
             # assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
-            assert role in self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
+            assert set(self.roles).issuperset(set(role)), "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
 
             observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
             env_comm.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
@@ -178,7 +178,11 @@ class MPILearner(Learner):
 
             # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
             # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-            # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
+            # self.log(f"Obs {observations.shape} {observations}")
+            # self.log(f"Acs {actions}")
+            # self.log(f"Rew {rewards.shape} {rewards}")
+            # self.log(f"NextObs {next_observations}")
+            # self.log(f"Dones {dones}")
             # self.log("From Env received Rew {}\n".format(rewards))
 
             '''Assuming roles with same acs/obs dimension'''

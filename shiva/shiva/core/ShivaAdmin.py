@@ -185,9 +185,14 @@ class ShivaAdmin():
         else:
             # extract the base url from the given sample @some_path
             # print("Got {}".format(some_path))
-            rx = "\w+-\w+-\d{2}-\d{2}-\d{4}\/"
+
             # match = re.search(rx, some_path)
-            _literal_found = re.findall(rx, some_path)[-1] # get the last directory with this format
+            try:
+                rx = "\w+-\w+-\d{2}-\d{2}-\d{4}\/"
+                _literal_found = re.findall(rx, some_path)[-1] # get the last directory with this format
+            except IndexError:
+                rx = "\d{2}-\d{2}-\d{4}\/"
+                _literal_found = re.findall(rx, some_path)[-1]  # get the last directory with this format
             match = re.search(_literal_found, some_path)
             _start, _end = match.span()[0], match.span()[1]
             _return = some_path.replace(some_path[_end:], '')
