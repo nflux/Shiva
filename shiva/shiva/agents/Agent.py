@@ -5,8 +5,14 @@ import random
 from shiva.core.admin import logger
 
 class Agent:
-    def __init__(self, id, obs_space, acs_space, agent_config, networks_config):
-        super(Agent, self).__init__()
+
+    id = None
+    step_count = 0
+    done_count = 0
+    num_updates = 0
+    role = None
+    
+    def __init__(self, id, obs_space, acs_space, configs):
         '''
         Base Attributes of Agent
             agent_id = given by the learner
@@ -17,18 +23,19 @@ class Agent:
             optimizer = Optimizer Function
             learning_rate = Learning Rate
         '''
-        {setattr(self, k, v) for k,v in agent_config.items()}
+        self.configs = configs
+        {setattr(self, k, v) for k, v in self.configs['Agent'].items()}
         self.id = id
-        self.agent_config = agent_config
-        self.networks_config = networks_config
+        self.agent_config = self.configs['Agent']
+        self.networks_config = self.configs['Network']
         self.step_count = 0
         self.done_count = 0
         self.num_updates = 0
-        self.role = agent_config['role'] if 'role' in agent_config else 'Unassigned Role' # use 'A' for the folder name when there's no role assigned
+        self.role = self.agent_config['role'] if 'role' in self.agent_config else 'Unassigned Role' # use 'A' for the folder name when there's no role assigned
         self.obs_space = obs_space
         self.acs_space = acs_space
         try:
-            self.optimizer_function = getattr(torch.optim, agent_config['optimizer_function'])
+            self.optimizer_function = getattr(torch.optim, self.agent_config['optimizer_function'])
         except:
             self.log("No optimizer", to_print=True)
         self.policy = None
@@ -76,7 +83,7 @@ class Agent:
         for hp in self.hps:
             dict[hp] = getattr(self, hp)
         dict['class_module'], dict['class_name'] = self.get_module_and_classname()
-        dict['inits'] = (self.id, self.obs_space, self.acs_space, self.agent_config, self.networks_config)
+        dict['inits'] = (self.id, self.obs_space, self.acs_space, self.configs)
         filename = save_path + '/' + self.save_filename.format(id=self.id)
         torch.save(dict, filename)
 
@@ -99,9 +106,11 @@ class Agent:
     def get_metrics(self):
         raise NotImplemented
 
-    def log(self, msg, to_print=False):
-        text = '{}\t{}'.format(self, msg)
-        logger.info(text, to_print)
+    def log(self, msg, to_print=False, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['Agent']:
+            text = '{}\t{}'.format(self, msg)
+            logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     @staticmethod
     def copy_model_over(from_model, to_model):

@@ -203,6 +203,9 @@ class MPILearner(Learner):
                 self.agents[ix].step_count = self.step_count
                 self.agents[ix].done_count = self.done_count
                 self.agents[ix].num_updates = self.num_updates
+                # update this HPs so that they show up on tensorboard
+                self.agents[ix].update_epsilon_scale()
+                self.agents[ix].update_noise_scale()
 
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
             self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
@@ -438,10 +441,10 @@ class MPILearner(Learner):
 
     def get_metrics(self, episodic, agent_id):
         evolution_metrics = []
-        if self.pbt:
-            agent = self.get_agent_of_id(agent_id)
-            evolution_metrics += agent.get_metrics()
-            # evolution_metrics += [('Agent/{}/Actor_Learning_Rate'.format(agent.role), agent.actor_learning_rate)]
+        # if self.pbt:
+        agent = self.get_agent_of_id(agent_id)
+        evolution_metrics += agent.get_metrics()
+        # evolution_metrics += [('Agent/{}/Actor_Learning_Rate'.format(agent.role), agent.actor_learning_rate)]
         return [self.metrics_env[agent_id]] + evolution_metrics
 
     def set_default_configs(self):

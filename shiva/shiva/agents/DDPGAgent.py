@@ -14,8 +14,8 @@ from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHea
 
 
 class DDPGAgent(Agent):
-    def __init__(self, id:int, obs_space:int, acs_space:dict, agent_config: dict, networks: dict):
-        super(DDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
+    def __init__(self, id:int, obs_space:int, acs_space:dict, configs):
+        super(DDPGAgent, self).__init__(id, obs_space, acs_space, configs)
         try:
             self.seed = self.manual_seed
             torch.manual_seed(self.manual_seed)
@@ -59,11 +59,17 @@ class DDPGAgent(Agent):
         if 'MADDPG' not in str(self):
             self.critic_input_size = obs_space + self.actor_output
 
-        self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
         self.instantiate_networks()
 
     def instantiate_networks(self):
-        self.hps = ['actor_learning_rate', 'critic_learning_rate', 'epsilon', 'noise_scale']
+        self.hps = ['actor_learning_rate', 'critic_learning_rate']
+        self.hps += ['epsilon', 'noise_scale']
+        self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
+
+        self.epsilon = self.epsilon_start
+        self.noise_scale = self.noise_start
+        self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
+
         self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
 
         if self.action_space == 'continuous':
@@ -86,7 +92,6 @@ class DDPGAgent(Agent):
         self.target_critic.to(self.device)
 
     def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
-        self.ou_noise.set_scale(self.noise_scale)
         if evaluate:
 # <<<<<<< HEAD
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
@@ -126,7 +131,6 @@ class DDPGAgent(Agent):
         return action.tolist()
 
     def get_continuous_action(self, observation, step_count, evaluate=False, *args, **kwargs):
-        self.ou_noise.set_scale(self.noise_scale)
         if evaluate:
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
             # action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
@@ -135,9 +139,12 @@ class DDPGAgent(Agent):
                 action = np.array([np.random.uniform(*self.actions_range) for _ in range(self.actor_output)])
                 # action = torch.from_numpy(action + self.ou_noise.noise())
                 # action = softmax(action, dim=-1)
+                # self.log(f"** Random action {action.tolist()}", verbose_level=1)
             else:
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+                action = torch.clamp(action, min=self.actions_range[0], max=self.actions_range[1])
+                self.log(f"Network action {action.tolist()}", verbose_level=1)
         return action.tolist()
 
     def get_parameterized_action(self, observation, step_count, evaluate=False):
@@ -152,9 +159,6 @@ class DDPGAgent(Agent):
         #     action = self.actor(observation.float())
         # # return action.tolist()
         # return action[0]
-
-    def reset_noise(self):
-        self.ou_noise.reset()
 
     def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
         observation = torch.tensor(observation).to(self.device)
@@ -202,22 +206,50 @@ class DDPGAgent(Agent):
         self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
 
     def is_e_greedy(self, step_count=None):
-        '''E-greedy with linear decay'''
         if step_count is None:
             step_count = self.step_count
-        return self._decay(self.epsilon_start, self.epsilon, self.epsilon_decay, step_count)
-        # r = random.uniform(0, 1)
-        # ceiling = max(self.epsilon, self.epsilon_start - (step_count / self.epsilon_decay))
-        # is_random = r < ceiling
-        # return is_random
+        if step_count > self.exploration_steps:
+            step_count = step_count - self.exploration_steps # don't count explorations steps
+            return random.uniform(0, 1) < self.epsilon
+        else:
+            return True
 
-    def _decay(self, start, end, decay, current_step_count):
-        r = random.uniform(0, 1)
-        # linear decay relative to the step_count
-        ceiling = max(end, start - (current_step_count / decay))
-        return r < ceiling
+    def update_epsilon_scale(self, done_count=None):
+        if done_count is None:
+            done_count = self.done_count
+        if self.is_exploring():
+            return self.epsilon_start
+        self.epsilon = self.get_epsilon_scale(done_count)
 
-    def is_exploring(self, current_step_count):
+    def get_epsilon_scale(self, done_count=None):
+        if done_count is None:
+            done_count = self.done_count
+        avr_exploration_episodes = self.exploration_steps / (self.step_count / self.done_count)
+        return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.epsilon_episodes, (done_count - avr_exploration_episodes), degree=self.epsilon_decay_degree))
+
+    def update_noise_scale(self, done_count=None):
+        if done_count is None:
+            done_count = self.done_count
+        self.noise_scale = self.get_noise_scale(done_count)
+        self.ou_noise.set_scale(self.noise_scale)
+
+    def get_noise_scale(self, done_count=None):
+        if done_count is None:
+            done_count = self.done_count
+        if self.is_exploring():
+            return self.noise_start
+        avr_exploration_episodes = self.exploration_steps / (self.step_count / self.done_count)
+        return max(self.noise_end, self.decay_value(self.noise_start, self.noise_episodes, (done_count - (avr_exploration_episodes)), degree=self.noise_decay_degree))
+
+    def reset_noise(self):
+        self.ou_noise.reset()
+
+    def decay_value(self, start, decay_end_step, current_step_count, degree=1):
+        return start - start * ((current_step_count / decay_end_step) ** degree)
+
+    def is_exploring(self, current_step_count=None):
+        if current_step_count is None:
+            current_step_count = self.step_count
         return current_step_count < self.exploration_steps
 
     def get_metrics(self):
@@ -233,4 +265,4 @@ class DDPGAgent(Agent):
         return ('shiva.agents', 'DDPGAgent.DDPGAgent')
 
     def __str__(self):
-        return '<DDPGAgent(id={}, role={}, steps={}, episodes={}, num_updates={}, device={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates, self.device)
+        return f"'<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, device={self.device})>'"

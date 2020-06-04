@@ -221,7 +221,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         else:
             metrics = [
                 ('Reward/Per_Episode', self.reward_per_episode[role][role_agent_id]),
-                ('Agent/Steps_Per_Episode', self.steps_per_episode[role][role_agent_id])
+                (f'{role}/Steps_Per_Episode', self.steps_per_episode[role][role_agent_id])
             ]
         return metrics
 

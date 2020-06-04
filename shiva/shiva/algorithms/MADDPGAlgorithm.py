@@ -65,7 +65,6 @@ class MADDPGAlgorithm(Algorithm):
             self.resample_hyperparameters()
 
     def update(self, agents, buffer, step_count, episodic):
-        self.log("", verbose_level=1)
         self.agents = agents
         for _ in range(self.update_iterations):
             self._update(agents, buffer, step_count, episodic)
@@ -74,19 +73,12 @@ class MADDPGAlgorithm(Algorithm):
     def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
         dones = bf_dones.bool()
-        self.log("Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states, bf_actions, bf_rewards, bf_next_states, dones), verbose_level=4)
-        self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape), verbose_level=3)
-        self.log("FROM BUFFER Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.dtype, bf_actions.dtype, bf_rewards.dtype, bf_next_states.dtype, bf_dones.dtype), verbose_level=3)
 
-        '''Transform buffer actions to a one hot or softmax if needed'''
-        # for ix, (role, action_space) in enumerate(self.action_space.items()):
-        #     if action_space['type'] == 'discrete':
-        #         pass
-        #         # no need if buffer stored one hot encodings
-        #         # bf_actions[:, :, :] = one_hot_from_logits(bf_actions[:, ix, :]) for ix in range(self.num_agents)
-        #     else:
-        #         # Ezequiel: curious if here is doing a second softmax?
-        #         bf_actions[:, ix, :] = softmax(bf_actions[:, ix, :])
+        # self.log(f"Obs {bf_states}", verbose_level=2)
+        # self.log(f"Acs {bf_actions}", verbose_level=2)
+        # self.log(f"Rew {bf_rewards}", verbose_level=2)
+        # self.log(f"NextObs {bf_next_states}", verbose_level=2)
+        # self.log(f"Done {bf_dones}", verbose_level=2)
 
         # helper function
         def _permutate(data, p, dim):
@@ -99,10 +91,8 @@ class MADDPGAlgorithm(Algorithm):
                 data[d] = data[d][p]
             return data
 
-        # self.log("States from Buff {}".format(bf_rewards.reshape(1, -1)))
         '''Do all permutations of experiences to concat for the 1 single critic'''
         possible_permutations = set(permutations(np.arange(len(agents))))
-        # self.log('Updating {} on permutations {}'.format([str(agent) for agent in agents], possible_permutations))
         for perms_ix, perms in enumerate(possible_permutations):
             agent_ix = perms[0]
             agent = agents[agent_ix]
@@ -113,13 +103,15 @@ class MADDPGAlgorithm(Algorithm):
             rewards = permutate_f(bf_rewards.to(self.device))
             next_states = permutate_f(bf_next_states.to(self.device))
             dones = permutate_f(dones.to(self.device))
-            # dones_mask = torch.tensor(dones[:, 0, :], dtype=torch.bool).view(-1, 1).to(self.device)
             dones_mask = dones[:, 0, :].view(-1, 1).to(self.device)
-            # self.log("Permuted States {} is {}".format(perms, states.reshape(1, -1)))
+
             '''Assuming all agents have the same obs_dim!'''
             batch_size, num_agents, obs_dim = states.shape
             _, _, acs_dim = actions.shape
 
+            '''
+                Train the Critic
+            '''
             # Zero the gradient
             self.critic_optimizer.zero_grad()
 
@@ -288,9 +280,11 @@ class MADDPGAlgorithm(Algorithm):
             # Calculate Q value for taking those actions in those states
             actor_loss_value = agent.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), current_state_actor_actions.float()], dim=1))
             # actor_loss_value = self.critic(torch.cat([states[:, ix, :].float(), current_state_actor_actions[:, ix, :].float()], -1))
+
             # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using logs probabilities
             # penalty for going beyond the bounded interval
             param_reg = torch.clamp((current_state_actor_actions ** 2) - torch.ones_like(current_state_actor_actions), min=0.0).mean()
+
             # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration
             actor_loss = -actor_loss_value.mean() + param_reg  # + entropy_reg
             # Backward Propogation!
@@ -365,7 +359,7 @@ class MADDPGAlgorithm(Algorithm):
         self.agentCount += 1
         self.actor_loss[id] = 0
         self.critic_loss[id] = 0
-        return MADDPGAgent(id, self.observation_space[role], self.action_space[role], self.configs['Agent'], self.configs['Network'])
+        return MADDPGAgent(id, self.observation_space[role], self.action_space[role], self.configs)
 
     def set_spaces(self, observation_space, action_space):
         self.log("Got Obs Space {} and Acs Space {}".format(observation_space, action_space), verbose_level=3)

@@ -77,7 +77,6 @@ class MPIMultiEnv(Environment):
     def _step_python(self):
         self._obs_recv_buffer = self.envs.gather(None, root=MPI.ROOT)
 
-        self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         if 'Unity' in self.type:
             # N sets of Roles
             actions = []
@@ -113,6 +112,7 @@ class MPIMultiEnv(Environment):
                 env_actions.append(role_actions)
                 actions.append(env_actions)
 
+        self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         self.actions = np.array(actions)
         self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions), verbose_level=3)
         self.log("Step {}".format(self.step_count), verbose_level=2)
