@@ -11,6 +11,10 @@ class Environment:
     steps_per_episode = 0
     step_count = 0
     done_count = 0
+    reward_per_step = 0
+    reward_per_episode = 0
+    reward_total = 0
+
     total_episodes_to_play = None
 
     def __init__(self, configs):
