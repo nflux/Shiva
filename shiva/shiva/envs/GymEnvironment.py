@@ -12,9 +12,9 @@ class GymEnvironment(Environment):
         self.env.seed(self.manual_seed)
         np.random.seed(self.manual_seed)
 
-        self.obs = self.env.reset()
-        self.action_space = self.set_action_space()
-        self.observation_space = self.set_observation_space()
+        self.action_space = self.get_action_space()
+        self.observation_space = self.get_observation_space()
+        self.reset()
 
         '''Set some attribute for Gym on MPI'''
         self.num_agents = 1
@@ -44,6 +44,9 @@ class GymEnvironment(Environment):
             # self.obs, self.reward_per_step, self.done, info = self.env.step([action[action4Gym.item()]])
             self.obs, self.reward_per_step, self.done, info = self.env.step(action)
 
+        '''If Observation Space is discrete, turn it into a one-hot encode'''
+        self.obs = self.transform_observation_space(self.obs)
+
         self.rew = self.normalize_reward(self.reward_per_step) if self.normalize else self.reward_per_step
 
         self.load_viewer()
@@ -69,7 +72,7 @@ class GymEnvironment(Environment):
         self.reward_per_step = 0
         self.reward_per_episode = 0
         self.done = False
-        self.obs = self.env.reset()
+        self.obs = self.transform_observation_space(self.env.reset())
 
     def get_metrics(self, episodic):
         if not episodic:
@@ -87,20 +90,36 @@ class GymEnvironment(Environment):
     def is_done(self):
         return self.done
 
-    def set_observation_space(self):
+    def transform_observation_space(self, raw_obs):
+        if self.is_observation_space_discrete():
+            _one_hot_obs = np.zeros(self.observation_space)
+            _one_hot_obs[raw_obs] = 1
+            return _one_hot_obs
+        else:
+            return raw_obs
+
+    def is_observation_space_discrete(self):
+        return self.env.observation_space.shape == ()
+
+    def get_observation_space(self):
         observation_space = 1
-        if self.env.observation_space.shape != ():
+        # if self.env.observation_space.shape != ():
+        if not self.is_observation_space_discrete():
             for i in range(len(self.env.observation_space.shape)):
                 observation_space *= self.env.observation_space.shape[i]
         else:
             observation_space = self.env.observation_space.n
         return observation_space
 
-    def set_action_space(self):
+    def is_action_space_discrete(self):
+        return self.env.action_space.shape == ()
+
+    def get_action_space(self):
         self.action_space_continuous = 0
         self.action_space_discrete = 0
 
-        if self.env.action_space.shape != ():
+        # if self.env.action_space.shape != ():
+        if not self.is_action_space_discrete():
             '''
                 Portion where Action Space is Continuous
             '''
