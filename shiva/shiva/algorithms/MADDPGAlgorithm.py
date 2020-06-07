@@ -356,10 +356,20 @@ class MADDPGAlgorithm(Algorithm):
         assert role in self.roles, "Invalid given role, got {} expected of {}".format(role, self.roles)
         self.configs['Agent']['role'] = role
         self.configs['Agent']['critic_input_size'] = self.critic_input_size
+        new_agent = MADDPGAgent(id, self.observation_space[role], self.action_space[role], self.configs)
+        self.add_agent(new_agent)
+        return new_agent
+
+    def add_agent(self, agent):
         self.agentCount += 1
-        self.actor_loss[id] = 0
-        self.critic_loss[id] = 0
-        return MADDPGAgent(id, self.observation_space[role], self.action_space[role], self.configs)
+        self.actor_loss[agent.id] = 0
+        self.critic_loss[agent.id] = 0
+
+    def add_agents(self, agents:list):
+        assert len(agents) > 0, "Empty list of agents to load"
+        for a in agents:
+            self.add_agent(a)
+        self.load_central_critic(agents[0]) # for a central critic, all agents host a copy of the algs critic so we can grab any of them
 
     def set_spaces(self, observation_space, action_space):
         self.log("Got Obs Space {} and Acs Space {}".format(observation_space, action_space), verbose_level=3)

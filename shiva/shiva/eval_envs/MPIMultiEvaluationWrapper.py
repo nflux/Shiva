@@ -150,7 +150,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
 
     def _get_roles_evaluations(self, sort):
         '''Receive Evaluation results from one Evaluation processes'''
-        if self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evals, status=self.info):
+        while self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evals, status=self.info):
             eval_id = self.info.Get_source()
             eval_match = self.current_matches[eval_id]
             evals = self.evals.recv(None, source=eval_id, tag=Tags.evals)

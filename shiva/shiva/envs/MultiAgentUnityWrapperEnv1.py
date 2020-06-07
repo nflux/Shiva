@@ -13,7 +13,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
         self.on_policy = False
         super(MultiAgentUnityWrapperEnv1, self).__init__(config)
-        self.worker_id = config['worker_id'] if 'worker_id' in config else 0
         self.start_unity_environment()
         self.set_initial_values()
 
@@ -61,7 +60,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.collect_step_data()
         '''Assuming all Roles Agent IDs are given at the beginning of the first episode'''
         self.role_agent_ids = {role:self.DecisionSteps[role].agent_id.tolist() for role in self.roles}
-        self.trajectory_ready = {role:[] for role in self.roles}
 
         '''Calculate how many instances Unity has'''
         self.num_instances_per_role = {role:len(self.DecisionSteps[role].agent_id) for role in self.roles}
@@ -75,8 +73,11 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         self.metric_reset()
 
-    def reset(self):
-        pass
+    def reset(self, force=False, *args, **kwargs):
+        if force:
+            self.Unity.reset()
+            self.metric_reset(force=True)
+
 
     def metric_reset(self, force=False, *args, **kwargs):
         '''
@@ -87,9 +88,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
         for role in self.roles:
             for agent_id in self.role_agent_ids[role]:
                 self.reset_agent_id(role, agent_id)
-        # if force:
-        #     '''In case the environment never ends - for example, Unity Basic can get stuck...'''
-        #     self.Unity.reset()
+            if force:
+                self.trajectory_ready[role] = []
+                # maybe clear buffer?
 
     def reset_agent_id(self, role, agent_id):
         agent_ix = self.role_agent_ids[role].index(agent_id)
@@ -103,6 +104,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         for ix, role in enumerate(self.roles):
             self.raw_actions[role] = actions[ix]
             self.actions[role] = self._clean_actions(role, actions[ix])
+            # print(self.actions[role])
             self.Unity.set_actions(role, self.actions[role])
 
         self.Unity.step()
@@ -177,8 +179,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
                     self._ready_trajectories[role][role_agent_id] += [[*map(self._unity_reshape, self.trajectory_buffers[role][role_agent_id].all_numpy())] + [self.get_role_metrics(role, role_agent_id, episodic=True)]]
                     self.reset_agent_id(role, role_agent_id)
                     self.trajectory_buffers[role][role_agent_id].reset()
-            # else:
-            #     self.trajectory_ready[role] = []
 
             if len(self.DecisionSteps[role].agent_id) > 0:
                 '''Agents who need a next action'''
@@ -231,7 +231,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         '''
         # self.log(f"DecisionSteps {self.DecisionSteps[self.roles[0]].agent_id}")
         # self.log(f"TerminalStep {self.TerminalSteps[self.roles[0]].agent_id}")
-        return sum(1 if len(self.trajectory_ready[role]) > 0 else 0 for role in self.roles) > 0
+        return sum([len(self.trajectory_ready[role]) for role in self.roles]) > 0
         # return self.temp_done_counter >= self.num_instances_per_env
 
     def _clean_actions(self, role, role_actions):
@@ -284,10 +284,11 @@ class MultiAgentUnityWrapperEnv1(Environment):
         return list(self.actions.values())
 
     def get_reward_episode(self, roles=False):
-        if roles:
-            return self.reward_per_episode
-            # return {role: self.reward_per_episode[role] for role in self.roles}
-        return self.reward_per_episode
+        episodic_reward = {}
+        for role in self.roles:
+            # take an average when there are many instances within one Unity simulation
+            episodic_reward[role] = sum(self.reward_per_episode[role]) / len(self.reward_per_episode[role])
+        return episodic_reward
 
     def get_rewards(self):
         return list(self.rewards.values())

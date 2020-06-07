@@ -292,7 +292,10 @@ class MPILearner(Learner):
 
         if self.load_agents:
             agents = Admin._load_agents(self.load_agents, absolute_path=False, load_latest=False, device=self.alg.device) # the alg determines the device
-            self.alg.load_central_critic(agents[0]) # for a central critic, all agents host a copy of the algs critic so we can grab any of them
+            # minor tweak on the agent id as we can have an issue when multiple learners load the same agent id (like loading a PBT session)
+            for a in agents:
+                a.id += 10 * self.id
+            self.alg.add_agents(agents)
             agent_creation_log = "{} agents loaded".format([str(a) for a in agents])
         elif hasattr(self, 'roles') and len(self.roles) > 0:
             self.agents_dict = {role:self.alg.create_agent_of_role(self.new_agents_ids[ix], role) for ix, role in enumerate(self.roles)}

@@ -166,7 +166,7 @@ class MPIPBTMetaLearner(MetaLearner):
             delattr(self, 'rankings')
 
     def get_multieval_metrics(self):
-        if self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings, status=self.info):
+        while self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings, status=self.info):
             self.rankings = self.mevals.recv(None, source=self.info.Get_source(), tag=Tags.rankings)
             self.evols_sent = {i:False for i in range(self.num_learners)}
             self.log('Got New Rankings {}'.format(self.rankings), verbose_level=1)
