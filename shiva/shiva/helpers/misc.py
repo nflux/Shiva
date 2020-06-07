@@ -52,7 +52,7 @@ def terminate_process():
     else:
         cmd = "pkill -e -f 'python shiva'"
     time.sleep(1)
-    subprocess.call(cmd, shell=True)
+    # subprocess.call(cmd, shell=True)
 
 def flat_1d_list(list):
     return [item for sublist in list for item in sublist]

@@ -13,7 +13,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
         self.on_policy = False
         super(MultiAgentUnityWrapperEnv1, self).__init__(config)
-        self.worker_id = config['worker_id'] if 'worker_id' in config else 0
         self.start_unity_environment()
         self.set_initial_values()
 
