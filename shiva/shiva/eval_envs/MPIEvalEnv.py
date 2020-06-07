@@ -49,7 +49,6 @@ class MPIEvalEnv(Environment):
                 self._step_python()
                 # self._step_numpy()
                 if self.env.is_done():
-                    self.log(f"Done {self.env.steps_per_episode}")
                     self.send_evaluations()
                     self.env.reset(force=True)
 
@@ -102,7 +101,7 @@ class MPIEvalEnv(Environment):
                 for role_agent_id in self.env.trajectory_ready[role]:
                     while len(self.env._ready_trajectories[role][role_agent_id]) > 0:
                         _, _, _, _, _, agent_metric = self.env._ready_trajectories[role][role_agent_id].pop()
-                        self.log(f"Agent_metric {role} {role_agent_id} {agent_metric}")
+                        # self.log(f"Agent_metric {role} {role_agent_id} {agent_metric}")
                         for metric_name, value in agent_metric:
                             if metric_name == 'Reward/Per_Episode':
                                 reward_per_episode[role].append(value)
