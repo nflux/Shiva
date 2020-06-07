@@ -215,25 +215,27 @@ class DDPGAgent(Agent):
             return True
 
     def update_epsilon_scale(self, done_count=None):
+        '''To be called by the Learner before saving'''
         if done_count is None:
             done_count = self.done_count
         if self.is_exploring():
             return self.epsilon_start
-        self.epsilon = self.get_epsilon_scale(done_count)
+        self.epsilon = self._get_epsilon_scale(done_count)
 
-    def get_epsilon_scale(self, done_count=None):
+    def _get_epsilon_scale(self, done_count=None):
         if done_count is None:
             done_count = self.done_count
         avr_exploration_episodes = self.exploration_steps / (self.step_count / self.done_count)
         return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.epsilon_episodes, (done_count - avr_exploration_episodes), degree=self.epsilon_decay_degree))
 
     def update_noise_scale(self, done_count=None):
+        '''To be called by the Learner before saving'''
         if done_count is None:
             done_count = self.done_count
-        self.noise_scale = self.get_noise_scale(done_count)
+        self.noise_scale = self._get_noise_scale(done_count)
         self.ou_noise.set_scale(self.noise_scale)
 
-    def get_noise_scale(self, done_count=None):
+    def _get_noise_scale(self, done_count=None):
         if done_count is None:
             done_count = self.done_count
         if self.is_exploring():
@@ -248,9 +250,15 @@ class DDPGAgent(Agent):
         return start - start * ((current_step_count / decay_end_step) ** degree)
 
     def is_exploring(self, current_step_count=None):
-        if current_step_count is None:
-            current_step_count = self.step_count
-        return current_step_count < self.exploration_steps
+        if hasattr(self, 'exploration_episodes'):
+            if current_step_count is None:
+                current_step_count = self.done_count
+            _threshold = self.exploration_episodes
+        else:
+            if current_step_count is None:
+                current_step_count = self.step_count
+            _threshold = self.exploration_steps
+        return current_step_count < _threshold
 
     def get_metrics(self):
         '''Used for evolution metric'''
