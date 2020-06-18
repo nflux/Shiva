@@ -152,7 +152,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         for role in self.roles:
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
-            # self.log(f"DecisionStep {self.DecisionSteps[role].agent_id} \n TerminalSteps {self.TerminalSteps[role].agent_id}")
+            self.log(f"DecisionStep {self.DecisionSteps[role].agent_id}\nTerminalSteps {self.TerminalSteps[role].agent_id}")
 
             if len(self.TerminalSteps[role].agent_id) > 0:
                 '''Agents that are on a Terminal Step'''
@@ -190,19 +190,20 @@ class MultiAgentUnityWrapperEnv1(Environment):
                     self.request_actions = True
 
                     for decision_step_agent_ix, agent_id in enumerate(self.DecisionSteps[role].agent_id):
-                        agent_ix = self.role_agent_ids[role].index(decision_step_agent_ix)
-                        exp = list(map(torch.clone, (torch.tensor([self.observations[role][decision_step_agent_ix]], dtype=torch.float64),
-                                                     torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
-                                                     torch.tensor([self.DecisionSteps[role].reward[decision_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
-                                                     torch.tensor([self.DecisionSteps[role].obs[0][decision_step_agent_ix]], dtype=torch.float64),
-                                                     torch.tensor([[False]], dtype=torch.bool).unsqueeze(dim=-1)
-                                                     )))
-                        self.trajectory_buffers[role][agent_id].push(exp)
+                        if agent_id not in self.TerminalSteps[role].agent_id:
+                            agent_ix = self.role_agent_ids[role].index(decision_step_agent_ix)
+                            exp = list(map(torch.clone, (torch.tensor([self.observations[role][decision_step_agent_ix]], dtype=torch.float64),
+                                                         torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
+                                                         torch.tensor([self.DecisionSteps[role].reward[decision_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
+                                                         torch.tensor([self.DecisionSteps[role].obs[0][decision_step_agent_ix]], dtype=torch.float64),
+                                                         torch.tensor([[False]], dtype=torch.bool).unsqueeze(dim=-1)
+                                                         )))
+                            self.trajectory_buffers[role][agent_id].push(exp)
 
-                        # Update metrics at each agent step
-                        self.steps_per_episode[role][agent_ix] += 1
-                        self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
-                        self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
+                            # Update metrics at each agent step
+                            self.steps_per_episode[role][agent_ix] += 1
+                            self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
+                            self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
 
     def _flatten_observations(self, obs):
         '''Turns the funky (2, 16, 56) array into a (16, 112)'''
