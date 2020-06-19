@@ -49,6 +49,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         '''Init session cumulative metrics'''
         self.observations = {role:[] for role in self.roles}
+        self.terminal_observations = {role:[] for role in self.roles}
         self.rewards = {role:[] for role in self.roles}
         self.dones = {role:[] for role in self.roles}
         self.reward_total = {role:0 for role in self.roles}
@@ -104,9 +105,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
         for ix, role in enumerate(self.roles):
             self.raw_actions[role] = actions[ix]
             self.actions[role] = self._clean_actions(role, actions[ix])
-            # print(self.actions[role])
             self.Unity.set_actions(role, self.actions[role])
-
+            self.log(f"{self.actions[role].shape} {self.actions[role]}", verbose_level=1)
         self.Unity.step()
 
         self.request_actions = False
@@ -156,6 +156,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
             if len(self.TerminalSteps[role].agent_id) > 0:
                 '''Agents that are on a Terminal Step'''
+                self.terminal_observations[role] = self._flatten_observations(self.TerminalSteps[role].obs)
                 self.trajectory_ready[role] = self.TerminalSteps[role].agent_id.tolist()
                 for terminal_step_agent_ix, role_agent_id in enumerate(self.TerminalSteps[role].agent_id):
                     agent_ix = self.role_agent_ids[role].index(role_agent_id)
@@ -163,7 +164,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
                     exp = list(map(torch.clone, (torch.tensor([self.observations[role][agent_ix]], dtype=torch.float64),
                                                  torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
                                                  torch.tensor([self.TerminalSteps[role].reward[terminal_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
-                                                 torch.tensor([self.TerminalSteps[role].obs[0][terminal_step_agent_ix]], dtype=torch.float64),
+                                                 torch.tensor([self.terminal_observations[role][terminal_step_agent_ix]], dtype=torch.float64),
                                                  torch.tensor([[True]], dtype=torch.bool).unsqueeze(dim=-1)
                                                  )))
                     self.trajectory_buffers[role][role_agent_id].push(exp)
@@ -183,7 +184,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
             if len(self.DecisionSteps[role].agent_id) > 0:
                 '''Agents who need a next action'''
                 # self.observations = {role:self._flatten_observations(self.DecisionSteps[role].obs) for role in self.roles} # unsure if needed to flatten observations???? This might be deprecated
-                self.observations[role] = self.DecisionSteps[role].obs[0]
+                self.observations[role] = self._flatten_observations(self.DecisionSteps[role].obs)
+                # self.log(f"{self.observations[role].shape}", verbose_level=1)
                 self.rewards[role] = self.DecisionSteps[role].reward
                 self.dones[role] = [False] * len(self.DecisionSteps[role].agent_id)
                 if hasattr(self, 'raw_actions'):
@@ -195,7 +197,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
                             exp = list(map(torch.clone, (torch.tensor([self.observations[role][decision_step_agent_ix]], dtype=torch.float64),
                                                          torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
                                                          torch.tensor([self.DecisionSteps[role].reward[decision_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
-                                                         torch.tensor([self.DecisionSteps[role].obs[0][decision_step_agent_ix]], dtype=torch.float64),
+                                                         torch.tensor([self.observations[role][decision_step_agent_ix]], dtype=torch.float64),
                                                          torch.tensor([[False]], dtype=torch.bool).unsqueeze(dim=-1)
                                                          )))
                             self.trajectory_buffers[role][agent_id].push(exp)
@@ -259,10 +261,10 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 raise NotImplemented
             else:
                 return {
-                    'discrete': unity_spec.action_size,
+                    'discrete': unity_spec.action_shape[0],
                     'continuous': 0,
                     'param': 0,
-                    'acs_space': unity_spec.action_size
+                    'acs_space': unity_spec.action_shape[0]
                 }
         elif unity_spec.is_action_continuous():
             return {
