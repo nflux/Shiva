@@ -152,7 +152,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         for role in self.roles:
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
-            self.log(f"DecisionStep {self.DecisionSteps[role].agent_id}\nTerminalSteps {self.TerminalSteps[role].agent_id}")
+            # self.log(f"DecisionStep {self.DecisionSteps[role].agent_id}\nTerminalSteps {self.TerminalSteps[role].agent_id}")
 
             if len(self.TerminalSteps[role].agent_id) > 0:
                 '''Agents that are on a Terminal Step'''

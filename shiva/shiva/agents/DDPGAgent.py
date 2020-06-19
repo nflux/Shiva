@@ -47,18 +47,6 @@ class DDPGAgent(Agent):
             self.actor_output = self.discrete + self.param
             self.get_action = self.get_parameterized_action
 
-        if hasattr(self, 'lr_range') and self.lr_range:
-            self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
-            self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
-            self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-            self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        else:
-            self.actor_learning_rate = self.agent_config['actor_learning_rate']
-            self.critic_learning_rate = self.agent_config['critic_learning_rate']
-
-        if 'MADDPG' not in str(self):
-            self.critic_input_size = obs_space + self.actor_output
-
         self.instantiate_networks()
 
     def instantiate_networks(self):
@@ -66,9 +54,21 @@ class DDPGAgent(Agent):
         self.hps += ['epsilon', 'noise_scale']
         self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
 
-        self.epsilon = self.epsilon_start
-        self.noise_scale = self.noise_start
         self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
+
+        if hasattr(self, 'lr_range') and self.lr_range:
+            self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
+            self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
+            self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+            self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+        else:
+            self.epsilon = self.epsilon_start
+            self.noise_scale = self.noise_start
+            self.actor_learning_rate = self.agent_config['actor_learning_rate']
+            self.critic_learning_rate = self.agent_config['critic_learning_rate']
+
+        if 'MADDPG' not in str(self):
+            self.critic_input_size = obs_space + self.actor_output
 
         self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
 
@@ -218,8 +218,8 @@ class DDPGAgent(Agent):
         '''To be called by the Learner before saving'''
         if done_count is None:
             done_count = self.done_count
-        if self.is_exploring():
-            return self.epsilon_start
+        # if self.is_exploring():
+        #     return self.epsilon_start
         self.epsilon = self._get_epsilon_scale(done_count)
 
     def _get_epsilon_scale(self, done_count=None):

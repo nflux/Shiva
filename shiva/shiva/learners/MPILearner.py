@@ -204,8 +204,8 @@ class MPILearner(Learner):
                 self.agents[ix].done_count = self.done_count
                 self.agents[ix].num_updates = self.num_updates
                 # update this HPs so that they show up on tensorboard
-                self.agents[ix].update_epsilon_scale()
-                self.agents[ix].update_noise_scale()
+                # self.agents[ix].update_epsilon_scale()
+                # self.agents[ix].update_noise_scale()
 
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
             self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)

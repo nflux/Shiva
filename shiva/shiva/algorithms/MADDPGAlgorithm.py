@@ -399,10 +399,9 @@ class MADDPGAlgorithm(Algorithm):
         else:
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss[agent_id]),
-                ('Algorithm/Critic_Loss', self.critic_loss[agent_id])
+                ('Algorithm/Critic_Loss', self.critic_loss[agent_id]),
+                ('Agent/Critic_Learning_Rate_MADDPG', self.critic_learning_rate)
             ]
-            if self.configs['MetaLearner']['pbt']:
-                metrics += [('Agent/Critic_Learning_Rate_MADDPG', self.critic_learning_rate)]
         return metrics
 
 
