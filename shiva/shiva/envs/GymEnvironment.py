@@ -59,6 +59,13 @@ class GymEnvironment(Environment):
                 Episodic Reward                 self.reward_per_episode
                 Cumulative Reward               self.reward_total
         '''
+
+        # Just for MountainCar Discrete, 200 steps is not enough, giving it 1000 steps
+        if self.done and self.steps_per_episode < 999 and self.env_name == 'MountainCar-v0':
+            self.done = False
+        elif not self.done and self.steps_per_episode >= 999 and self.env_name == 'MountainCar-v0':
+            self.done = True
+
         self.steps_per_episode += 1
         self.step_count += 1
         self.done_count += 1 if self.done else 0
