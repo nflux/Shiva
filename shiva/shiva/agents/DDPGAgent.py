@@ -57,6 +57,7 @@ class DDPGAgent(Agent):
         self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
 
         if hasattr(self, 'lr_range') and self.lr_range:
+            self.hp_range = self.lr_range
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
             self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
@@ -216,11 +217,12 @@ class DDPGAgent(Agent):
 
     def update_epsilon_scale(self, done_count=None):
         '''To be called by the Learner before saving'''
-        if done_count is None:
-            done_count = self.done_count
-        # if self.is_exploring():
-        #     return self.epsilon_start
-        self.epsilon = self._get_epsilon_scale(done_count)
+        if self.hp_range is False:
+            if done_count is None:
+                done_count = self.done_count
+            # if self.is_exploring():
+            #     return self.epsilon_start
+            self.epsilon = self._get_epsilon_scale(done_count)
 
     def _get_epsilon_scale(self, done_count=None):
         if done_count is None:
@@ -230,10 +232,11 @@ class DDPGAgent(Agent):
 
     def update_noise_scale(self, done_count=None):
         '''To be called by the Learner before saving'''
-        if done_count is None:
-            done_count = self.done_count
-        self.noise_scale = self._get_noise_scale(done_count)
-        self.ou_noise.set_scale(self.noise_scale)
+        if self.hp_range is False:
+            if done_count is None:
+                done_count = self.done_count
+            self.noise_scale = self._get_noise_scale(done_count)
+            self.ou_noise.set_scale(self.noise_scale)
 
     def _get_noise_scale(self, done_count=None):
         if done_count is None:

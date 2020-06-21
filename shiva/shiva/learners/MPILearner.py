@@ -180,7 +180,7 @@ class MPILearner(Learner):
             # self.log(f"NextObs {next_observations}")
             # self.log(f"Dones {dones}")
 
-            '''Assuming roles with same acs/obs dimension'''
+            '''Assuming roles with same acs/obs dimension and reward function'''
             exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.roles), observations.shape[-1]),
                                          torch.from_numpy(actions).reshape(traj_length, len(self.roles), actions.shape[-1]),
                                          torch.from_numpy(rewards).reshape(traj_length, len(self.roles), rewards.shape[-1]),
@@ -204,8 +204,8 @@ class MPILearner(Learner):
                 self.agents[ix].done_count = self.done_count
                 self.agents[ix].num_updates = self.num_updates
                 # update this HPs so that they show up on tensorboard
-                # self.agents[ix].update_epsilon_scale()
-                # self.agents[ix].update_noise_scale()
+                self.agents[ix].update_epsilon_scale()
+                self.agents[ix].update_noise_scale()
 
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
             self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
