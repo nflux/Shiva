@@ -88,17 +88,9 @@ class MPILearner(Learner):
         self.steps_per_episode = 0
         self.reward_per_episode = 0
 
-        # '''Used for calculating collection time'''
-        # t0 = time.time()
-        # n_episodes = 500
         self.profiler.start(["AlgUpdates", 'ExperienceReceived'])
         while self.done_count < self.episodes:
             self.check_incoming_trajectories()
-            # '''Used for calculating collection time'''
-            # if self.done_count == n_episodes:
-            #     t1 = time.time()
-            #     self.log("Collected {} episodes in {} seconds".format(n_episodes, (t1-t0)), verbose_level=2)
-            #     exit()
             self.run_updates()
             self.run_evolution()
             self.collect_metrics(episodic=True) # tensorboard
@@ -204,8 +196,8 @@ class MPILearner(Learner):
                 self.agents[ix].done_count = self.done_count
                 self.agents[ix].num_updates = self.num_updates
                 # update this HPs so that they show up on tensorboard
-                # self.agents[ix].update_epsilon_scale()
-                # self.agents[ix].update_noise_scale()
+                self.agents[ix].update_epsilon_scale()
+                self.agents[ix].update_noise_scale()
 
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
             self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)

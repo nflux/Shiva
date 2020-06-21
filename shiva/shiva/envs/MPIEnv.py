@@ -98,30 +98,30 @@ class MPIEnv(Environment):
         else:
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
-    def _step_numpy(self):
-        self.step_count += 1
-        self.observations = self.env.get_observations()
-        '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
-                                    --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
-        '''
-        self.observations = np.array(self.observations, dtype=np.float64)
-        self.menv.Gather([self.observations, MPI.DOUBLE], None, root=0)
-
-        if 'Gym' in self.type or 'RoboCup' in self.type:
-            recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
-            self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
-            self.actions = recv_action
-        elif 'Unity':
-            self.actions = self.menv.scatter(None, root=0)
-
-        self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-        self.log("Obs {} Act {}".format(self.observations, self.actions), verbose_level=3)
+    # def _step_numpy(self):
+    #     self.step_count += 1
+    #     self.observations = self.env.get_observations()
+    #     '''Obs Shape = (# of Shiva Agents, # of instances of that Agent per EnvWrapper, Observation dimension)
+    #                                 --> # of instances of that Agent per EnvWrapper is usually 1, except Unity?
+    #     '''
+    #     self.observations = np.array(self.observations, dtype=np.float64)
+    #     self.menv.Gather([self.observations, MPI.DOUBLE], None, root=0)
+    #
+    #     if 'Gym' in self.type or 'RoboCup' in self.type:
+    #         recv_action = np.zeros((self.env.num_agents, self.env.action_space['acs_space']), dtype=np.float64)
+    #         self.menv.Scatter(None, [recv_action, MPI.DOUBLE], root=0)
+    #         self.actions = recv_action
+    #     elif 'Unity':
+    #         self.actions = self.menv.scatter(None, root=0)
+    #
+    #     self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
+    #     self.log("Obs {} Act {}".format(self.observations, self.actions), verbose_level=3)
 
     def _append_step(self):
         if 'UnityWrapperEnv012' in self.type or 'ParticleEnv' in self.type:
             # for ix, buffer in enumerate(self.trajectory_buffers):
             for ix, role in enumerate(self.env.roles):
-                self.log(f"Before putting to buffer {self.rewards}")
+                # self.log(f"Before putting to buffer {self.rewards}")
                 '''Order is maintained, each ix is for each Agent Role'''
                 exp = list(map(torch.clone, (torch.tensor([self.observations[ix]]),
                                              torch.tensor([self.actions[ix]]),
@@ -225,7 +225,7 @@ class MPIEnv(Environment):
 
                         self.log(f"Traj sent to Learner {learner_ix} for Role: {role} / Agent ID {role_agent_id} / Length: {observations_buffer.shape}", verbose_level=1)
 
-        elif 'Gym' in self.type or 'Particle' in self.type:
+        elif 'UnityWrapperEnv012' in self.type or 'Gym' in self.type or 'Particle' in self.type:
             for role, learner_spec in self.role2learner_spec.items():
                 learner_ix = learner_spec['id']
                 if learners_sent[learner_ix]:
@@ -326,25 +326,24 @@ class MPIEnv(Environment):
             self.reset_buffers = self.env.reset_buffers
             self.env.create_buffers()
             self.trajectory_buffers = self.env.trajectory_buffers # change pointer
-        else:
-            if 'UnityWrapperEnv012' in self.type or 'Particle' in self.type:
-                '''
-                    Need a buffer for each Agent Role
-                    - Agent roles may have different act/obs spaces and number of agent role
-                    - And each Role may have many agents instances (num_instances_per_env on Unity)
-                    - Order is maintained
-                '''
-                self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
-                                                                  self.env.num_instances_per_role[role],
-                                                                  self.env.observation_space[role],
-                                                                  self.env.action_space[role]['acs_space']) \
-                                           for i, role in enumerate(self.env.roles) ]
-            else:
-                '''Gym - has only 1 agent per environment and no roles'''
-                self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
-                                                                  self.env.num_agents,
-                                                                  self.env.observation_space,
-                                                                  self.env.action_space['acs_space'])]
+        elif 'UnityWrapperEnv012' in self.type or 'Particle' in self.type:
+            '''
+                Need a buffer for each Agent Role
+                - Agent roles may have different act/obs spaces and number of agent role
+                - And each Role may have many agents instances (num_instances_per_env on Unity)
+                - Order is maintained
+            '''
+            self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
+                                                              self.env.num_instances_per_role[role],
+                                                              self.env.observation_space[role],
+                                                              self.env.action_space[role]['acs_space']) \
+                                       for i, role in enumerate(self.env.roles) ]
+        elif 'Gym' in self.type:
+            '''Gym - has only 1 agent per environment and no roles'''
+            self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
+                                                              self.env.num_agents,
+                                                              self.env.observation_space,
+                                                              self.env.action_space['acs_space'])]
 
     def reset_buffers(self):
         for buffer in self.trajectory_buffers:

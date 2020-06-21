@@ -9,11 +9,11 @@ from mlagents_envs.side_channel.float_properties_channel import FloatPropertiesC
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
 
-class MultiAgentUnityWrapperEnv012Environment):
+class MultiAgentUnityWrapperEnv012(Environment):
     def __init__(self, config):
         # assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
         self.on_policy = False
-        super(MultiAgentUnityWrapperEnv012Environment, self).__init__(config)
+        super(MultiAgentUnityWrapperEnv012, self).__init__(config)
         self.worker_id = config['worker_id'] if 'worker_id' in config else 0
         self._connect()
         self.set_initial_values()
@@ -23,6 +23,7 @@ class MultiAgentUnityWrapperEnv012Environment):
             'config': EngineConfigurationChannel(),
             'props': FloatPropertiesChannel()
         }
+        print("Before")
         self.Unity = UnityEnvironment(
             file_name= self.exec,
             base_port = self.port if hasattr(self, 'port') else 5005, # 5005 is Unity's default value
@@ -32,6 +33,7 @@ class MultiAgentUnityWrapperEnv012Environment):
             no_graphics= not self.render,
             timeout_wait = self.timeout_wait if hasattr(self, 'timeout_wait') else 60
         )
+        print("After")
         # self.channel['config'].set_configuration_parameters(**self.unity_configs)
         # for k, v in self.unity_props.items():
         #     self.channel['props'].set_property(k, v)
