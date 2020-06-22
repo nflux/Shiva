@@ -177,7 +177,9 @@ class MPIEnv(Environment):
                 # learners_sent[learner_ix] = True
 
                 '''Check if we have any trajectory ready to send'''
-                for role_agent_id in self.env.trajectory_ready[role]:
+                # for role_agent_id in self.env.trajectory_ready_agent_ids[role]:
+                while len(self.env.trajectory_ready_agent_ids[role]) > 0:
+                    role_agent_id = self.env.trajectory_ready_agent_ids[role].pop()
                     role_ix = self.env.roles.index(role)
                     while len(self.env._ready_trajectories[role][role_agent_id]) > 0:
                         self.done_count += 1
@@ -193,7 +195,6 @@ class MPIEnv(Environment):
                         rewards_buffer = np.array([rewards_buffer])
                         next_observations_buffer = np.array([next_observations_buffer])
                         done_buffer = np.array([done_buffer])
-                        # role_metric = self.env.get_role_metrics(role, role_agent_id, episodic=True)
 
                         trajectory_info = {
                             'env_id': str(self),
@@ -216,6 +217,8 @@ class MPIEnv(Environment):
                         # self.log(f"NextObs {next_observations_buffer}")Œ
                         # self.log(f"Dones {done_buffer}")
 
+                        self.log(f"Traj sent to Learner {learner_ix} for Role: {role} / Agent ID {role_agent_id} / Length: {observations_buffer.shape}", verbose_level=1)
+
                         self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
                         self.learner.Send([observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
                         self.learner.Send([actions_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_actions)
@@ -223,7 +226,6 @@ class MPIEnv(Environment):
                         self.learner.Send([next_observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_next_observations)
                         self.learner.Send([done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
 
-                        self.log(f"Traj sent to Learner {learner_ix} for Role: {role} / Agent ID {role_agent_id} / Length: {observations_buffer.shape}", verbose_level=1)
 
         elif 'UnityWrapperEnv012' in self.type or 'Gym' in self.type or 'Particle' in self.type:
             for role, learner_spec in self.role2learner_spec.items():
