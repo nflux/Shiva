@@ -164,11 +164,11 @@ class MPILearner(Learner):
             self.reward_per_episode = sum(rewards)
             self._n_success_pulls += 1
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
-            self.last_metric_received = "{} got {}".format(self.traj_info['env_id'], self.traj_info['metrics'])
+            self.last_metric_received = f"{self.traj_info['env_id']} got ObsShape {observations.shape} {self.traj_info['metrics']}"
 
             # self.log(f"Obs {observations.shape} {observations}")
             # self.log(f"Acs {actions}")
-            # self.log(f"Rew {rewards.shape} {rewards}")
+            self.log(f"Rew {rewards.shape} {rewards}")
             # self.log(f"NextObs {next_observations}")
             # self.log(f"Dones {dones}")
 

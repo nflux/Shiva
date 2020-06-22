@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import time
 
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
@@ -159,7 +160,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
             if len(self.TerminalSteps[role].agent_id) > 0:
                 '''Agents that are on a Terminal Step'''
-                self.log(f"TerminalSteps {self.TerminalSteps[role].agent_id}")
+                self.log(f"TerminalSteps {self.TerminalSteps[role].agent_id}", verbose_level=3)
                 self.terminal_observations[role] = self._flatten_observations(self.TerminalSteps[role].obs)
                 self.trajectory_ready_agent_ids[role] += self.TerminalSteps[role].agent_id.tolist()
                 for terminal_step_agent_ix, role_agent_id in enumerate(self.TerminalSteps[role].agent_id):
@@ -188,9 +189,10 @@ class MultiAgentUnityWrapperEnv1(Environment):
                     self.reset_agent_id(role, role_agent_id)
                     self.trajectory_buffers[role][role_agent_id].reset()
 
+            self.log(f"DecisionStep {self.DecisionSteps[role].reward} TerminalStep {self.TerminalSteps[role].reward}", verbose_level=-2)
+
             if len(self.DecisionSteps[role].agent_id) > 0:
                 '''Agents who need a next action'''
-                # self.log(f"DecisionStep {self.DecisionSteps[role].agent_id}")
                 # self.observations = {role:self._flatten_observations(self.DecisionSteps[role].obs) for role in self.roles} # unsure if needed to flatten observations???? This might be deprecated
                 self.previous_observation = self.observations.copy()
                 self.observations[role] = self._flatten_observations(self.DecisionSteps[role].obs)
@@ -201,7 +203,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
                     self.request_actions = True
 
                     for decision_step_agent_ix, role_agent_id in enumerate(self.DecisionSteps[role].agent_id):
+
+                        # Important IF statement because if Agent_ID is on both DecisionStep and TerminalStep
+                        # means that Unity automatically resetted the agent and it's on the very first state of the Env
+                        # (where we haven't taken an action yet!)
                         if role_agent_id not in self.TerminalSteps[role].agent_id:
+
                             agent_ix = self.role_agent_ids[role].index(role_agent_id)
                             exp = list(map(torch.clone, (torch.tensor([self.previous_observation[role][agent_ix]], dtype=torch.float64),
                                                          torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
