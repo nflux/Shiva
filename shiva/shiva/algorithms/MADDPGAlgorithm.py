@@ -398,9 +398,9 @@ class MADDPGAlgorithm(Algorithm):
             metrics = []
         else:
             metrics = [
-                ('Algorithm/Actor_Loss', self.actor_loss[agent_id]),
-                ('Algorithm/Critic_Loss', self.critic_loss[agent_id]),
-                ('Agent/Critic_Learning_Rate_MADDPG', self.critic_learning_rate)
+                ('Algorithm/Actor_Loss', self.actor_loss[agent_id], self.num_updates),
+                ('Algorithm/Critic_Loss', self.critic_loss[agent_id], self.num_updates),
+                ('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)
             ]
         return metrics
 
