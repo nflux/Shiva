@@ -56,8 +56,7 @@ class DDPGAgent(Agent):
 
         self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
 
-        if hasattr(self, 'lr_range') and self.lr_range:
-            self.hp_range = self.lr_range
+        if hasattr(self, 'hp_random') and self.hp_random:
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
             self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
@@ -69,7 +68,7 @@ class DDPGAgent(Agent):
             self.critic_learning_rate = self.agent_config['critic_learning_rate']
 
         if 'MADDPG' not in str(self):
-            self.critic_input_size = obs_space + self.actor_output
+            self.critic_input_size = self.actor_input + self.actor_output
 
         self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
 
@@ -113,7 +112,7 @@ class DDPGAgent(Agent):
                 action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
-                # print("Random: {}".format(action))
+                _action_debug = "Random: {}".format(action)
             # elif np.random.uniform(0, 1) < self.epsilon:
             # elif self.is_e_greedy(step_count):
             #     action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
@@ -124,7 +123,9 @@ class DDPGAgent(Agent):
                 # if self.normalize:
                 action = torch.abs(action)
                 action = action / action.sum()
-                # print("Net: {}".format(action))
+                _action_debug = "Net: {}".format(action)
+
+            self.log(f"Obs {observation} Acs {_action_debug}", verbose_level=3)
         if one_hot:
             action = action2one_hot(action.shape[0], torch.argmax(action).item())
 
@@ -217,7 +218,7 @@ class DDPGAgent(Agent):
 
     def update_epsilon_scale(self, done_count=None):
         '''To be called by the Learner before saving'''
-        if self.hp_range is False:
+        if self.hp_random is False:
             if done_count is None:
                 done_count = self.done_count
             # if self.is_exploring():
@@ -232,7 +233,7 @@ class DDPGAgent(Agent):
 
     def update_noise_scale(self, done_count=None):
         '''To be called by the Learner before saving'''
-        if self.hp_range is False:
+        if self.hp_random is False:
             if done_count is None:
                 done_count = self.done_count
             self.noise_scale = self._get_noise_scale(done_count)
