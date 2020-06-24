@@ -145,16 +145,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
         traj_length, num_agents, dim = arr.shape
         return np.reshape(arr, (traj_length * num_agents, dim))
 
-    def debug_metrics(self):
-        self.log(f"{self.steps_per_episode}")
-
     def collect_step_data(self):
         """
         per @vincentpierre (MLAgents developer) - https://forum.unity.com/threads/decisionstep-vs-terminalstep.903227/#post-5927795
         If an AgentId is both in DecisionStep and TerminalStep, it means that the Agent reseted in Unity and immediately requested a decision.
         In your example, Agents 1, 7 and 9 had their episode terminated, started a new episode and requested a new decision. All in the same call to env.step()
         """
-        # self.debug_metrics()
         for role in self.roles:
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
 
@@ -189,7 +185,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
                     self.reset_agent_id(role, role_agent_id)
                     self.trajectory_buffers[role][role_agent_id].reset()
 
-            self.log(f"DecisionStep {self.DecisionSteps[role].reward} TerminalStep {self.TerminalSteps[role].reward}", verbose_level=-2)
+            # self.log(f"DecisionStep {self.DecisionSteps[role].reward} TerminalStep {self.TerminalSteps[role].reward}", verbose_level=-2)
 
             if len(self.DecisionSteps[role].agent_id) > 0:
                 '''Agents who need a next action'''
