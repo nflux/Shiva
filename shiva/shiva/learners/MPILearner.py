@@ -168,7 +168,7 @@ class MPILearner(Learner):
 
             # self.log(f"Obs {observations.shape} {observations}")
             # self.log(f"Acs {actions}")
-            self.log(f"Rew {rewards.shape} {rewards}")
+            # self.log(f"Rew {rewards.shape} {rewards}")
             # self.log(f"NextObs {next_observations}")
             # self.log(f"Dones {dones}")
 

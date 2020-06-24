@@ -93,37 +93,24 @@ class DDPGAgent(Agent):
 
     def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
         if evaluate:
-# <<<<<<< HEAD
             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            # action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-            # if self.normalize:
-            action = torch.abs(action)
-            action = action / action.sum()
-# =======
-#             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-#             self.ou_noise.set_scale(self.noise_scale)
-#             action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-#             action = torch.abs(action)
-#             action = action / action.sum()
-#             # print("Agent Evaluate {}".format(action))
-# >>>>>>> robocup-mpi-pbt
+            # print("Agent Evaluate {}".format(action))
         else:
             if self.is_exploring(step_count) or self.is_e_greedy(step_count):
                 action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
                 action = torch.from_numpy(action + self.ou_noise.noise())
                 action = softmax(action, dim=-1)
                 # print("Random: {}".format(action))
-            # elif np.random.uniform(0, 1) < self.epsilon:
-            # elif self.is_e_greedy(step_count):
-            #     action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
-            #     action = softmax(torch.from_numpy(action), dim=-1)
             else:
+                print(f"Observation: {observation}")
                 action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+                print(f"Before Noise: {action}")
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-                # if self.normalize:
+                # print(f"Action Before ABS: {action}")
                 action = torch.abs(action)
+                # print(f"Action After ABS: {action}")
                 action = action / action.sum()
-                # print("Net: {}".format(action))
+                # print(f"Action After Normalization: {action}")
         if one_hot:
             action = action2one_hot(action.shape[0], torch.argmax(action).item())
 
@@ -218,8 +205,8 @@ class DDPGAgent(Agent):
         '''To be called by the Learner before saving'''
         if done_count is None:
             done_count = self.done_count
-        # if self.is_exploring():
-        #     return self.epsilon_start
+        if self.is_exploring():
+            return self.epsilon_start
         self.epsilon = self._get_epsilon_scale(done_count)
 
     def _get_epsilon_scale(self, done_count=None):

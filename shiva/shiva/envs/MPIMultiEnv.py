@@ -235,6 +235,7 @@ class MPIMultiEnv(Environment):
                 for a in learner_agents:
                     '''Force Agent to use self.device'''
                     a.to_device(self.device)
+                    a.reset_noise()
                     agents[self.env_specs['roles'].index(a.role)] = a
 
         self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
