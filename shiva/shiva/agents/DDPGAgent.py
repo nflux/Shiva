@@ -55,8 +55,9 @@ class DDPGAgent(Agent):
         self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
 
         self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
+        self.hp_random = self.hp_random if hasattr(self, 'hp_random') else False
 
-        if hasattr(self, 'hp_random') and self.hp_random:
+        if self.hp_random:
             self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
             self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
             self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
@@ -209,7 +210,7 @@ class DDPGAgent(Agent):
 
     def recalculate_hyperparameters(self, done_count=None):
         if done_count is None:
-            done_count = self.done_count
+            done_count = self.done_count if self.done_count != 0 else 1
         self.update_epsilon_scale(done_count)
         self.update_noise_scale(done_count)
 
@@ -225,8 +226,7 @@ class DDPGAgent(Agent):
     def _get_epsilon_scale(self, done_count=None):
         if done_count is None:
             done_count = self.done_count
-        avr_exploration_episodes = self.exploration_steps / (self.step_count / self.done_count)
-        return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.epsilon_episodes, (done_count - avr_exploration_episodes), degree=self.epsilon_decay_degree))
+        return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.epsilon_episodes, (done_count - self._average_exploration_episodes_performed()), degree=self.epsilon_decay_degree))
 
     def update_noise_scale(self, done_count=None):
         '''To be called by the Learner before saving'''
@@ -241,8 +241,10 @@ class DDPGAgent(Agent):
             done_count = self.done_count
         if self.is_exploring():
             return self.noise_start
-        avr_exploration_episodes = self.exploration_steps / (self.step_count / self.done_count)
-        return max(self.noise_end, self.decay_value(self.noise_start, self.noise_episodes, (done_count - (avr_exploration_episodes)), degree=self.noise_decay_degree))
+        return max(self.noise_end, self.decay_value(self.noise_start, self.noise_episodes, (done_count - (self._average_exploration_episodes_performed())), degree=self.noise_decay_degree))
+
+    def _average_exploration_episodes_performed(self):
+        return self.exploration_steps / (self.step_count / self.done_count) if (self.step_count != 0 and self.done_count != 0) else 0
 
     def reset_noise(self):
         self.ou_noise.reset()
