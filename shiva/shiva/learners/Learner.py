@@ -71,28 +71,29 @@ class Learner(object):
                     metrics += self.alg.get_metrics(episodic, agent_id)
                 except:
                     metrics += self.alg.get_metrics(episodic)
-            self._add_summary_writer(agent_id, metrics)
+            self._process_metrics(agent_id, metrics)
         else:
             assert False, "Testing if this if statement is unnecessary"
-            # metrics = self.alg.get_metrics(episodic) + self.env.get_metrics(episodic)
-            # if not episodic:
-            #     for metric_name, y_val in metrics:
-            #         Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.env.step_count)
-            # else:
-            #     for metric_name, y_val in metrics:
-            #         Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.env.done_count)
 
-    def _add_summary_writer(self, agent_id, metrics):
+    def _process_metrics(self, agent_id, metrics):
         for m in metrics:
             # self.log("Agent {}, Metric {}".format(agent_id, m))
             if type(m) == list:
-                '''Is a list of set metrics'''
-                for metric_name, y_val in m:
-                    Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.done_count)
+                '''Is a list of tuple metrics'''
+                for metric_tuple in m:
+                    self._add_summary_writer(agent_id, metric_tuple)
             elif type(m) == tuple:
-                '''One single set metric'''
-                metric_name, y_val = m
-                Admin.add_summary_writer(self, agent_id, metric_name, y_val, self.done_count)
+                '''One single tuple metric'''
+                self._add_summary_writer(agent_id, m)
+
+    def _add_summary_writer(self, agent_id, metric_tuple):
+        if len(metric_tuple) == 3:
+            metric_name, y_value, x_value = metric_tuple
+        elif len(metric_tuple) == 2:
+            metric_name, y_value = metric_tuple
+            x_value = self.done_count
+        Admin.add_summary_writer(self, agent_id, metric_name, y_value, x_value)
+
 
     def checkpoint(self):
         assert hasattr(self, 'save_checkpoint_episodes'), "Learner needs 'save_checkpoint_episodes' attribute in config - put 0 if don't want to save checkpoints"

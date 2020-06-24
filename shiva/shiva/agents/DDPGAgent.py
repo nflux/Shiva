@@ -207,14 +207,11 @@ class DDPGAgent(Agent):
         self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
         self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
 
-    def is_e_greedy(self, step_count=None):
-        if step_count is None:
-            step_count = self.step_count
-        if step_count > self.exploration_steps:
-            step_count = step_count - self.exploration_steps # don't count explorations steps
-            return random.uniform(0, 1) < self.epsilon
-        else:
-            return True
+    def recalculate_hyperparameters(self, done_count=None):
+        if done_count is None:
+            done_count = self.done_count
+        self.update_epsilon_scale(done_count)
+        self.update_noise_scale(done_count)
 
     def update_epsilon_scale(self, done_count=None):
         '''To be called by the Learner before saving'''
@@ -252,6 +249,15 @@ class DDPGAgent(Agent):
 
     def decay_value(self, start, decay_end_step, current_step_count, degree=1):
         return start - start * ((current_step_count / decay_end_step) ** degree)
+
+    def is_e_greedy(self, step_count=None):
+        if step_count is None:
+            step_count = self.step_count
+        if step_count > self.exploration_steps:
+            step_count = step_count - self.exploration_steps # don't count explorations steps
+            return random.uniform(0, 1) < self.epsilon
+        else:
+            return True
 
     def is_exploring(self, current_step_count=None):
         if hasattr(self, 'exploration_episodes'):
