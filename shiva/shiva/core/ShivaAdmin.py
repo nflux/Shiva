@@ -160,7 +160,9 @@ class ShivaAdmin():
         if self.use_temp_folder:
             checkpoint_dir = self._learner_dir[learner.id]['latest']
         else:
-            checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ))
+            # use_existing=True so that in case the Learner did not received a new trajectory
+            # but still attemps to save, we must be using the same folder
+            checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ), use_existing=True)
         self._learner_dir[learner.id]['checkpoint'].append(checkpoint_dir)
         self._save_learner(learner, checkpoint_num)
         self._save_learner_agents(learner, checkpoint_num)
@@ -208,7 +210,7 @@ class ShivaAdmin():
                 @agent              Agent instance ref to be saved
         '''
         if not self.need_to_save: return
-        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ), use_existing=self.use_temp_folder )
+        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ), use_existing=True )
         if agent.id not in self._agent_dir[learner.id]:
             self._agent_dir[learner.id][agent.id] = []
         self._agent_dir[learner.id][agent.id].append(new_dir)
@@ -325,7 +327,7 @@ class ShivaAdmin():
         learner = self.caller if learner is None else learner
         self.add_learner_profile(learner) # will only add if was not profiled before
         # save learner pickle
-        learner_data_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['learner_data']) )
+        learner_data_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['learner_data']), use_existing=True )
         fh.save_pickle_obj(learner, os.path.join(learner_data_dir, 'learner_cls.pickle'))
         # save buffer
         # fh.save_pickle_obj(learner.buffer, os.path.join(learner_data_dir, 'buffer_cls.pickle'))
