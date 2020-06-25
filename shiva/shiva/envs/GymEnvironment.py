@@ -7,35 +7,14 @@ import torch
 
 class GymEnvironment(Environment):
     def __init__(self, configs, *args, **kwargs):
-        super(GymEnvironment,self).__init__(configs)
-        # self.env = gym.make(self.env_name).env
+        super(GymEnvironment, self).__init__(configs)
         self.env = gym.make(self.env_name)
+        self.env.seed(self.manual_seed)
         np.random.seed(self.manual_seed)
-        self.obs = self.env.reset()
-        self.done = False
-        self.action_space_continuous = None
-        self.action_space_discrete = None
-        self.observation_space = self.set_observation_space()
-        #self.seed = np.random.randint(0, 10000)
-        #self.env.seed(self.seed)
 
-        if self.action_space == "discrete":
-            self.action_space = {
-                'discrete': self.set_action_space() ,
-                'continuous': 0,
-                'param': self.set_action_space(),
-                'acs_space': self.set_action_space()
-            }
-            self.gymEnvType = 'discrete'
-
-        elif self.action_space == "continuous":
-            self.action_space = {
-                'discrete': 0 ,
-                'continuous': self.set_action_space(),
-                'param': 0,
-                'acs_space': self.set_action_space()
-            }
-            self.gymEnvType = 'continuous'
+        self.action_space = self.get_action_space()
+        self.observation_space = self.get_observation_space()
+        self.reset()
 
         '''Set some attribute for Gym on MPI'''
         self.num_agents = 1
@@ -44,32 +23,29 @@ class GymEnvironment(Environment):
         self.num_instances_per_env = 1
         # self.agent_ids = [0]
 
-        self.steps_per_episode = 0
-        self.step_count = 0
         self.temp_done_counter = 0
-        self.done_count = 0
-        self.reward_per_step = 0
-        self.reward_per_episode = 0
-        self.reward_total = 0
-
-        self.last_action = None
 
     def step(self, action, discrete_select='argmax'):
         if not torch.is_tensor(action):
             action = torch.tensor(action)
         self.acs = action
 
-        if discrete_select == 'argmax':
-            if type(action).__module__ == np.__name__:
-                action = torch.from_numpy(action)
-            action4Gym = torch.argmax(action) if self.action_space_continuous is None else action
-        elif discrete_select == 'sample':
-            action4Gym = Categorical(torch.tensor(action)).sample()
-
-        if self.gymEnvType == 'discrete':
+        if self.action_space['continuous'] == 0:
+            '''Discrete, argmax or sample from distribution'''
+            if discrete_select == 'argmax':
+                if type(action).__module__ == np.__name__:
+                    action = torch.from_numpy(action)
+                action4Gym = torch.argmax(action) if self.action_space['continuous'] == 0 else action
+            elif discrete_select == 'sample':
+                action4Gym = Categorical(torch.tensor(action)).sample()
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
         else:
-            self.obs, self.reward_per_step, self.done, info = self.env.step([action[action4Gym.item()]])
+            '''Continuous actions'''
+            # self.obs, self.reward_per_step, self.done, info = self.env.step([action[action4Gym.item()]])
+            self.obs, self.reward_per_step, self.done, info = self.env.step(action)
+
+        '''If Observation Space is discrete, turn it into a one-hot encode'''
+        self.obs = self.transform_observation_space(self.obs)
 
         self.rew = self.normalize_reward(self.reward_per_step) if self.normalize else self.reward_per_step
 
@@ -89,9 +65,6 @@ class GymEnvironment(Environment):
         self.reward_per_episode += self.rew
         self.reward_total += self.rew
 
-        # if self.action_space['discrete'] != 0:
-        #     action = action2one_hot(self.action_space['discrete'], action4Gym)
-
         return self.obs, self.rew, self.done, {'raw_reward': self.reward_per_step, 'action': action}
 
     def reset(self, *args, **kwargs):
@@ -99,7 +72,7 @@ class GymEnvironment(Environment):
         self.reward_per_step = 0
         self.reward_per_episode = 0
         self.done = False
-        self.obs = self.env.reset()
+        self.obs = self.transform_observation_space(self.env.reset())
 
     def get_metrics(self, episodic):
         if not episodic:
@@ -117,41 +90,67 @@ class GymEnvironment(Environment):
     def is_done(self):
         return self.done
 
-    def set_observation_space(self):
+    def transform_observation_space(self, raw_obs):
+        if self.is_observation_space_discrete():
+            _one_hot_obs = np.zeros(self.observation_space)
+            _one_hot_obs[raw_obs] = 1
+            return _one_hot_obs
+        else:
+            return raw_obs
+
+    def is_observation_space_discrete(self):
+        return self.env.observation_space.shape == ()
+
+    def get_observation_space(self):
         observation_space = 1
-        if self.env.observation_space.shape != ():
+        # if self.env.observation_space.shape != ():
+        if not self.is_observation_space_discrete():
             for i in range(len(self.env.observation_space.shape)):
                 observation_space *= self.env.observation_space.shape[i]
         else:
             observation_space = self.env.observation_space.n
-
         return observation_space
 
-    def set_action_space(self):
-        action_space = 1
-        if self.env.action_space.shape != ():
+    def is_action_space_discrete(self):
+        return self.env.action_space.shape == ()
+
+    def get_action_space(self):
+        self.action_space_continuous = 0
+        self.action_space_discrete = 0
+
+        # if self.env.action_space.shape != ():
+        if not self.is_action_space_discrete():
             '''
                 Portion where Action Space is Continuous
             '''
+            _action_space = 1
             for i in range(len(self.env.action_space.shape)):
-                action_space *= self.env.action_space.shape[i]
-            self.action_space_continuous = action_space
-            # self.action_space = action_space
+                _action_space *= self.env.action_space.shape[i]
+            self.action_space_continuous = _action_space
+            actions_range = [self.env.action_space.low, self.env.action_space.high]
         else:
             '''
                 Portion where Action Space is Discrete
             '''
-            action_space = self.env.action_space.n
-            self.action_space_discrete = action_space
-        return action_space
+            self.action_space_discrete = self.env.action_space.n
+            actions_range = None
+        return {
+            'discrete': self.action_space_discrete,
+            'continuous': self.action_space_continuous,
+            'param': 0,
+            'acs_space': self.action_space_discrete + self.action_space_continuous,
+            'actions_range': actions_range
+        }
 
     def get_observations(self):
         return self.obs
+
     def get_observation(self):
         return self.obs
 
     def get_actions(self):
         return self.acs
+
     def get_action(self):
         return self.acs
 

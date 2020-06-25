@@ -48,7 +48,7 @@ class MPIEvalEnv(Environment):
             while self.env.start_env():
                 self._step_python()
                 # self._step_numpy()
-                if self.env.is_done(): # or self.env.step_count == self.env.episode_max_length:
+                if self.env.is_done():
                     self.send_evaluations()
                     self.env.reset(force=False)
 
@@ -94,9 +94,25 @@ class MPIEvalEnv(Environment):
     '''
 
     def _send_eval_roles(self):
-        metric = {
-            'reward_per_episode': self.env.get_reward_episode(roles=True)  # dict() that maps role_name->reward
-        }
+        if 'UnityWrapperEnv1' in self.type:
+            reward_per_episode = {}
+            for role in self.env.roles:
+                reward_per_episode[role] = []
+                for role_agent_id in self.env.trajectory_ready[role]:
+                    while len(self.env._ready_trajectories[role][role_agent_id]) > 0:
+                        _, _, _, _, _, agent_metric = self.env._ready_trajectories[role][role_agent_id].pop()
+                        # self.log(f"Agent_metric {role} {role_agent_id} {agent_metric}")
+                        for metric_name, value in agent_metric:
+                            if metric_name == 'Reward/Per_Episode':
+                                reward_per_episode[role].append(value)
+                reward_per_episode[role] = sum(reward_per_episode[role]) / len(reward_per_episode[role])
+            metric = {
+                'reward_per_episode': reward_per_episode
+            }
+        else:
+            metric = {
+                'reward_per_episode': self.env.get_reward_episode(roles=True)  # dict() that maps role_name->reward
+            }
         self.eval.send(metric, dest=0, tag=Tags.trajectory_eval)
         self.log("Sent metrics {}".format(metric), verbose_level=2)
 
@@ -144,13 +160,16 @@ class MPIEvalEnv(Environment):
     def _launch_env(self):
         try:
             self.configs['Environment']['port'] += 500 + np.random.randint(0, 1500)
-            self.configs['Environment']['worker_id'] = 100 * (self.id * 22)
+            self.configs['Environment']['worker_id'] = 1000 * (self.id * 22)
+            self.configs['Environment']['render'] = self.configs['Evaluation']['render'] if 'render' in self.configs['Evaluation'] else False
             # self.configs['Environment']['rc_log'] = 'rc_eval_log'
             # self.configs['Environment']['server_addr'] = self.eval.Get_attr(MPI.HOST)
         except:
             pass
         env_class = load_class('shiva.envs', self.configs['Environment']['type'])
         self.env = env_class(self.configs)
+        if 'UnityWrapperEnv1' in self.type:
+            self.env.create_buffers()
 
     def _get_env_specs(self):
         return {

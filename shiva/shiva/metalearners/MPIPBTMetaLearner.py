@@ -29,33 +29,53 @@ class MPIPBTMetaLearner(MetaLearner):
         self.run()
 
     def run(self):
-        # self.start_evals_flag = False
         self.start_evals()
-
         self.review_training_matches() # send first match
-        while True:
+        self.is_running = True
+        while self.is_running:
             time.sleep(self.configs['Admin']['time_sleep']['MetaLearner'])
             self.get_multieval_metrics()
             # self.review_training_matches() # dont send new training matches during runtime - keep fixed for now
             self.evolve()
-
+            self.check_states()
+        self.close()
     '''
         Roles Evolution
     '''
 
+    def check_states(self):
+        if self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.close, status=self.info):
+            # one of the Learners run the close()
+            learner_spec = self.learners.recv(None, source=self.info.Get_source(), tag=Tags.close)
+            self.log("Learner {} CLOSED".format(learner_spec['id']), verbose_level=2)
+            # used only to stop the whole session, for running profiling experiments..
+            self.is_running = False
+
+    def close(self):
+        self.log("Started closing", verbose_level=1)
+        '''Send message to childrens'''
+        for i in range(self.num_menvs):
+            self.menvs.send(True, dest=i, tag=Tags.close)
+        for i in range(self.num_learners):
+            self.learners.send(True, dest=i, tag=Tags.close)
+        self.io.send(True, dest=0, tag=Tags.close)
+
+        self.menvs.Disconnect()
+        self.log("Closed MultiEnvs", verbose_level=2)
+        self.learners.Disconnect()
+        self.log("Closed Learners", verbose_level=2)
+        # self.mevals.Disconnect()
+        # self.log("Closed MultiEvals", verbose_level=1)
+        self.io.Disconnect()
+        self.log("FULLY CLOSED", verbose_level=1)
+
     def start_evals(self):
         if self.pbt:
-            self.start_evals_flag = True
             self.mevals.bcast(True, root=MPI.ROOT)
 
     def _roles_evolve(self):
         '''Evolve only if we received Rankings'''
         if self.pbt and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_request, status=self.info):
-
-            # if not self.start_evals_flag:
-            #     # Enable evaluations to start!
-            #     self.start_evals()
-            #     return
 
             learner_spec = self.learners.recv(None, source=self.info.Get_source(), tag=Tags.evolution_request)
             assert learner_spec['id'] == self.info.Get_source(), "mm - just checking :)"
@@ -146,7 +166,7 @@ class MPIPBTMetaLearner(MetaLearner):
             delattr(self, 'rankings')
 
     def get_multieval_metrics(self):
-        if self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings, status=self.info):
+        while self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings, status=self.info):
             self.rankings = self.mevals.recv(None, source=self.info.Get_source(), tag=Tags.rankings)
             self.evols_sent = {i:False for i in range(self.num_learners)}
             self.log('Got New Rankings {}'.format(self.rankings), verbose_level=1)
@@ -329,9 +349,3 @@ class MPIPBTMetaLearner(MetaLearner):
 
     def __str__(self):
         return "<Meta(id={})>".format(self.id)
-
-    def close(self):
-        '''Send message to childrens'''
-        self.menvs.Disconnect()
-        self.learners.Disconnect()
-        self.mevals.Disconnect()

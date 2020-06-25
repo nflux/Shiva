@@ -1,4 +1,4 @@
-import os
+import os, re
 import configparser
 import inspect
 import numpy as np
@@ -90,9 +90,9 @@ class ShivaAdmin():
             directory = self.base_url + folder_name
             setattr(self, key+'_url', directory)
             if not self.need_to_save: continue
-            dh.make_dir(os.path.join(self.base_url, directory), overwrite=True)
+            dh.make_dir(os.path.join(self.base_url, directory), use_existing=True)
 
-    def add_meta_profile(self, meta_learner, folder_name: str=None, overwrite=False) -> None:
+    def add_meta_profile(self, meta_learner, folder_name: str=None, use_existing=False) -> None:
         '''
             This method would be called by a Meta Learner in order to add himself
             Is needed in order to keep track of the Meta Learner directory.
@@ -104,9 +104,12 @@ class ShivaAdmin():
         if not self.need_to_save: return
         if folder_name is None:
             folder_name = self.__folder_name__['metalearner'].format(algorithm=meta_learner.config['Algorithm']['type'], env=meta_learner.config['Environment']['env_name'])
-        new_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, folder_name), overwrite=overwrite)
+        new_dir = dh.make_dir_timestamp(os.path.join(self.base_url, self.runs_url, folder_name), use_existing=use_existing)
         self._meta_learner_dir = new_dir
         self.log("New MetaLearner @ {}".format(self._meta_learner_dir), to_print=True, verbose_level=1)
+
+    def get_meta_url(self):
+        return self._meta_learner_dir
 
     def add_learner_profile(self, learner, function_only=False) -> None:
         '''
@@ -124,13 +127,13 @@ class ShivaAdmin():
                     env_name = learner.configs['Environment']['exec'].split('/')[-1].replace('.app', '').replace('.86_64', '')
                 else:
                     env_name = learner.configs['Environment']['env_name']
-                folder_name = self.__folder_name__['metalearner'].format(algorithm=learner.configs['Algorithm']['type'], env=env_name)
-                self.add_meta_profile(None, folder_name, overwrite=True)
+                folder_name = self.__folder_name__['metalearner'].format(algorithm=self.configs['Algorithm']['type'], env=env_name)
+                self.add_meta_profile(None, folder_name, use_existing=True)
             self._learner_dir[learner.id] = {}
             new_dir = dh.make_dir( os.path.join(self._meta_learner_dir, self.__folder_name__['learner'].format(id=str(learner.id))) )
             self._learner_dir[learner.id]['base'] = new_dir
             self._learner_dir[learner.id]['checkpoint'] = [] # keep track of each checkpoint directory
-            latest_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['latest']), overwrite=True )
+            latest_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['latest']), use_existing=True )
             self._learner_dir[learner.id]['latest'] = latest_dir
             new_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['summary']) )
             self._learner_dir[learner.id]['summary'] = new_dir
@@ -157,7 +160,9 @@ class ShivaAdmin():
         if self.use_temp_folder:
             checkpoint_dir = self._learner_dir[learner.id]['latest']
         else:
-            checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ))
+            # use_existing=True so that in case the Learner did not received a new trajectory
+            # but still attemps to save, we must be using the same folder
+            checkpoint_dir = dh.make_dir(os.path.join( self._learner_dir[learner.id]['base'], self.__folder_name__['checkpoint'].format(ep_num=str(checkpoint_num)) ), use_existing=True)
         self._learner_dir[learner.id]['checkpoint'].append(checkpoint_dir)
         self._save_learner(learner, checkpoint_num)
         self._save_learner_agents(learner, checkpoint_num)
@@ -176,6 +181,26 @@ class ShivaAdmin():
         assert learner.id in self._learner_dir, "Learner was not profiled by ShivaAdmin, try calling Admin.add_learner_profile at initialization "
         return self._learner_dir[learner.id]['latest']
 
+    def get_learner_url_summary(self, learner: object=None, some_path: str=None):
+        if learner is not None:
+            return self._learner_dir[learner.id]['summary']
+        else:
+            # extract the base url from the given sample @some_path
+            # print("Got {}".format(some_path))
+
+            # match = re.search(rx, some_path)
+            try:
+                rx = "\w+-\w+-\d{2}-\d{2}-\d{4}\/"
+                _literal_found = re.findall(rx, some_path)[-1] # get the last directory with this format
+            except IndexError:
+                rx = "\d{2}-\d{2}-\d{4}\/"
+                _literal_found = re.findall(rx, some_path)[-1]  # get the last directory with this format
+            match = re.search(_literal_found, some_path)
+            _start, _end = match.span()[0], match.span()[1]
+            _return = some_path.replace(some_path[_end:], '')
+            # print("Given dir: {}".format(_return))
+            return _return
+
     def _add_agent_checkpoint(self, learner, agent):
         '''
             Creates the corresponding folder for the agent checkpoint
@@ -185,7 +210,7 @@ class ShivaAdmin():
                 @agent              Agent instance ref to be saved
         '''
         if not self.need_to_save: return
-        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ), overwrite=self.use_temp_folder )
+        new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ), use_existing=True )
         if agent.id not in self._agent_dir[learner.id]:
             self._agent_dir[learner.id][agent.id] = []
         self._agent_dir[learner.id][agent.id].append(new_dir)
@@ -302,7 +327,7 @@ class ShivaAdmin():
         learner = self.caller if learner is None else learner
         self.add_learner_profile(learner) # will only add if was not profiled before
         # save learner pickle
-        learner_data_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['learner_data']) )
+        learner_data_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['learner_data']), use_existing=True )
         fh.save_pickle_obj(learner, os.path.join(learner_data_dir, 'learner_cls.pickle'))
         # save buffer
         # fh.save_pickle_obj(learner.buffer, os.path.join(learner_data_dir, 'buffer_cls.pickle'))

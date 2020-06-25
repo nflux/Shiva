@@ -3,16 +3,23 @@ import numpy as np
 from shiva.core.admin import logger
 
 class Environment:
+    observations = []
+    actions = []
+    rewards = []
+    dones = []
+
+    steps_per_episode = 0
+    step_count = 0
+    done_count = 0
+    reward_per_step = 0
+    reward_per_episode = 0
+    reward_total = 0
+
+    total_episodes_to_play = None
+
     def __init__(self, configs):
-        if 'MetaLearner' in configs:
-            {setattr(self, k, v) for k,v in configs['Environment'].items()}
-        else:
-            {setattr(self, k, v) for k,v in configs.items()}
+        {setattr(self, k, v) for k,v in configs['Environment'].items()}
         self.configs = configs
-        self.steps_per_episode = 0
-        self.step_count = 0
-        self.done_count = 0
-        self.total_episodes_to_play = None
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
 
         # for previous versions support on attribute names
@@ -90,3 +97,6 @@ class Environment:
         if verbose_level <= self.configs['Admin']['log_verbosity']['Env']:
             text = "{}\t\t\t{}".format(str(self), msg)
             logger.info(text, to_print or self.configs['Admin']['print_debug'])
+
+    def __str__(self):
+        return "<{}>".format(self.__class__.__name__)

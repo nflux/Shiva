@@ -121,7 +121,7 @@ class MPIEvaluation(Evaluation):
                 env_actions.append(role_actions)
                 actions.append(env_actions)
         self.actions = np.array(actions)
-        self.log("Step {} Obs {} Acs {}".format(self.step_count, self._obs_recv_buffer, actions), verbose_level=2)
+        self.log("Step {} Obs {} Acs {}".format(self.step_count, self._obs_recv_buffer, actions), verbose_level=3)
         self.envs.scatter(actions, root=MPI.ROOT)
 
     def _step_numpy(self):
@@ -152,7 +152,7 @@ class MPIEvaluation(Evaluation):
 
     def _receive_roles_evals(self):
         '''Receive metrics after every episode from each Environment'''
-        if self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_eval, status=self.info):
+        while self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_eval, status=self.info):
             env_source = self.info.Get_source()
             env_metrics = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
             self.eval_metrics.append(env_metrics)
@@ -167,7 +167,6 @@ class MPIEvaluation(Evaluation):
         metric_conversion = {
             'reward_per_episode': 'Average_Reward'
         }
-        self.log("To summarize {}".format(self.eval_metrics), verbose_level=2)
 
         for episode_metric in self.eval_metrics:
             for metric_name, role_values in episode_metric.items():
@@ -190,7 +189,7 @@ class MPIEvaluation(Evaluation):
                 del evals[role][metric_name]
 
         self.meval.send(evals, dest=0, tag=Tags.evals)
-        self.log("Sent Tags.evals {}".format(evals), verbose_level=2)
+        self.log("Summarized {} into {}".format(self.eval_metrics, evals), verbose_level=2)
         self._receive_new_match()
 
     def _receive_new_match(self):

@@ -28,8 +28,6 @@ class MPILearner(Learner):
         self.configs = self.meta.scatter(None, root=0)
         self.set_default_configs()
         super(MPILearner, self).__init__(self.id, self.configs)
-        Admin.init(self.configs)
-        Admin.add_learner_profile(self, function_only=True)
         self.log("Received config with {} keys".format(len(self.configs.keys())), verbose_level=1)
         self.log("Received config {}".format(self.configs), verbose_level=3)
         self.launch()
@@ -90,26 +88,41 @@ class MPILearner(Learner):
         self.steps_per_episode = 0
         self.reward_per_episode = 0
 
-        # '''Used for calculating collection time'''
-        # t0 = time.time()
-        # n_episodes = 500
-        while True:
+        self.profiler.start(["AlgUpdates", 'ExperienceReceived'])
+        while self.done_count < self.episodes:
             self.check_incoming_trajectories()
-            # '''Used for calculating collection time'''
-            # if self.done_count == n_episodes:
-            #     t1 = time.time()
-            #     self.log("Collected {} episodes in {} seconds".format(n_episodes, (t1-t0)), verbose_level=2)
-            #     exit()
             self.run_updates()
             self.run_evolution()
             self.collect_metrics(episodic=True) # tensorboard
 
+        self.close()
+
+    def close(self):
+        self.log("Started closing", verbose_level=2)
+        self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.close)
+        for e in self.envs:
+            e.Disconnect()
+        # Close Environment port
+        for portname in self.port['env']:
+            MPI.Close_port(portname)
+        self.log("Closed Environments", verbose_level=2)
+        self.menv.Disconnect()
+        self.log("Closed MultiEnv", verbose_level=2)
+        self.meta.Disconnect()
+        self.log("FULLY CLOSED", verbose_level=1)
+        exit(0)
+
     def check_incoming_trajectories(self):
-        self.last_metric_received, self.num_received = None, 0
-        for comm in self.envs:
-            self.receive_trajectory_numpy(comm)
+        self.last_metric_received = None
+
+        self._n_success_pulls = 0
+        for _ in range(self.n_traj_pulls):
+            for comm in self.envs:
+                self.receive_trajectory_numpy(comm)
+        if self._n_success_pulls > 0:
+            self.profiler.time('ExperienceReceived', self.done_count, output_quantity=self._n_success_pulls)
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
-            self.log("{}:{}".format(self.done_count, self.last_metric_received), verbose_level=1)
+            self.log("{} {}:{}".format(self._n_success_pulls, self.done_count, self.last_metric_received), verbose_level=1)
 
     def receive_trajectory_numpy(self, env_comm):
         '''Receive trajectory from each single environment in self.envs process group'''
@@ -117,8 +130,6 @@ class MPILearner(Learner):
         if env_comm.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=self.info):
             env_source = self.info.Get_source()
             self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info) # block statement
-            self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
-            self.last_metric_received = "{} got {}".format(self.traj_info['env_id'], self.traj_info['metrics'])
 
             self.metrics_env = {}
             for ix, role in enumerate(self.roles):
@@ -129,7 +140,8 @@ class MPILearner(Learner):
             traj_length_index = self.traj_info['length_index']
             traj_length = self.traj_info['obs_shape'][traj_length_index]
             role = self.traj_info['role']
-            assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
+            # assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
+            assert set(self.roles).issuperset(set(role)), "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
 
             observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
             env_comm.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
@@ -150,14 +162,17 @@ class MPILearner(Learner):
             self.done_count += 1
             self.steps_per_episode = traj_length
             self.reward_per_episode = sum(rewards)
-            self.num_received = self.num_received + 1
+            self._n_success_pulls += 1
+            self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
+            self.last_metric_received = f"{self.traj_info['env_id']} got ObsShape {observations.shape} {self.traj_info['metrics']}"
 
-            # self.log("{}\n{}\n{}\n{}\n{}".format(type(observations), type(actions), type(rewards), type(next_observations), type(dones)))
-            # self.log("Trajectory shape: Obs {}\t Acs {}\t Reward {}\t NextObs {}\tDones{}".format(observations.shape, actions.shape, rewards.shape, next_observations.shape, dones.shape))
-            # self.log("Obs {}\n Acs {}\nRew {}\nNextObs {}\nDones {}".format(observations, actions, rewards, next_observations, dones))
-            # self.log("From Env received Rew {}\n".format(rewards))
+            # self.log(f"Obs {observations.shape} {observations}")
+            # self.log(f"Acs {actions}")
+            # self.log(f"Rew {rewards.shape} {rewards}")
+            # self.log(f"NextObs {next_observations}")
+            # self.log(f"Dones {dones}")
 
-            '''Assuming roles with same acs/obs dimension'''
+            '''Assuming roles with same acs/obs dimension and reward function'''
             exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.roles), observations.shape[-1]),
                                          torch.from_numpy(actions).reshape(traj_length, len(self.roles), actions.shape[-1]),
                                          torch.from_numpy(rewards).reshape(traj_length, len(self.roles), rewards.shape[-1]),
@@ -174,10 +189,14 @@ class MPILearner(Learner):
 
             self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
             self.num_updates = self.alg.get_num_updates()
+            self.profiler.time('AlgUpdates', self.num_updates, output_quantity=self.alg.update_iterations)
+
             for ix in range(len(self.agents)):
                 self.agents[ix].step_count = self.step_count
                 self.agents[ix].done_count = self.done_count
                 self.agents[ix].num_updates = self.num_updates
+                # update this HPs so that they show up on tensorboard
+                self.agents[ix].recalculate_hyperparameters()
 
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
             self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
@@ -193,7 +212,7 @@ class MPILearner(Learner):
             if self.done_count % self.save_checkpoint_episodes == 0:
                 self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
-            self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=2)
+            # self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=2)
 
     def _run_roles_evolution(self):
         '''Roles Evolution'''
@@ -264,7 +283,10 @@ class MPILearner(Learner):
 
         if self.load_agents:
             agents = Admin._load_agents(self.load_agents, absolute_path=False, load_latest=False, device=self.alg.device) # the alg determines the device
-            self.alg.load_central_critic(agents[0]) # for a central critic, all agents host a copy of the algs critic so we can grab any of them
+            # minor tweak on the agent id as we can have an issue when multiple learners load the same agent id (like loading a PBT session)
+            for a in agents:
+                a.id += 10 * self.id
+            self.alg.add_agents(agents)
             agent_creation_log = "{} agents loaded".format([str(a) for a in agents])
         elif hasattr(self, 'roles') and len(self.roles) > 0:
             self.agents_dict = {role:self.alg.create_agent_of_role(self.new_agents_ids[ix], role) for ix, role in enumerate(self.roles)}
@@ -284,6 +306,7 @@ class MPILearner(Learner):
             _agent.evaluate = self.evaluate
             self.role2ids[_agent.role] += [_agent.id]
             self.id2role[_agent.id] = _agent.role
+            _agent.recalculate_hyperparameters()
         return agents
 
     def get_agent_of_id(self, id):
@@ -413,16 +436,18 @@ class MPILearner(Learner):
 
     def get_metrics(self, episodic, agent_id):
         evolution_metrics = []
-        if self.pbt:
-            agent = self.get_agent_of_id(agent_id)
-            evolution_metrics += agent.get_metrics()
-            # evolution_metrics += [('Agent/{}/Actor_Learning_Rate'.format(agent.role), agent.actor_learning_rate)]
+        # if self.pbt:
+        agent = self.get_agent_of_id(agent_id)
+        evolution_metrics += agent.get_metrics()
+        # evolution_metrics += [('Agent/{}/Actor_Learning_Rate'.format(agent.role), agent.actor_learning_rate)]
         return [self.metrics_env[agent_id]] + evolution_metrics
 
     def set_default_configs(self):
         assert 'Learner' in self.configs, 'No Learner config found on received config: {}'.format(self.configs)
         default_configs = {
             'evaluate': False,
+            'n_traj_pulls': 1,
+            'episodes': float('inf')
             # 'perturb_factor': [0.8, 1.2]
             # add default configs here
 
@@ -431,23 +456,8 @@ class MPILearner(Learner):
             if attr_name not in self.configs['Learner']:
                 self.configs['Learner'][attr_name] = default_val
 
-    def close(self):
-        comm = MPI.Comm.Get_parent()
-        self.envs.Disconnect()
-        self.menv.Disconnect()
-        comm.Disconnect()
-
     def __str__(self):
         return "<Learner(id={})>".format(self.id)
-        # return "<Learner(id={}, roles={})>".format(self.id, self.roles)
-
-    # def show_comms(self):
-    #     self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
-    #     self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
-    #     self.log("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
-    #     # self.log("MENV = Inter: {} / Intra: {}".format(self.menv.Is_inter(), self.menv.Is_intra()))
-    #     self.log("ENV = Inter: {} / Intra: {}".format(self.envs.Is_inter(), self.envs.Is_intra()))
-    #     self.log("MEVAL = Inter: {} / Intra: {}".format(self.meval.Is_inter(), self.meval.Is_intra()))
 
 if __name__ == "__main__":
     try:
@@ -456,5 +466,6 @@ if __name__ == "__main__":
         msg = "<Learner(id={})> error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
         print(msg)
         logger.info(msg, True)
-    finally:
         terminate_process()
+    finally:
+        pass

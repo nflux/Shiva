@@ -44,11 +44,7 @@ class MPIMultiEnv(Environment):
         self._connect_learners()
         self._receive_match(bypass_request=True) # receive first match, no IO request for the first one to avoid overhead
 
-        # Give start flag!
-        self.envs.bcast([True], root=MPI.ROOT)
-        self.run()
-
-    def run(self):
+        # Prepare
         self.step_count = 0
         self.done_count = 0
         '''
@@ -62,19 +58,25 @@ class MPIMultiEnv(Environment):
         elif 'RoboCup' in self.type:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
-        while True:
+        # Give start flag!
+        self.envs.bcast([True], root=MPI.ROOT)
+
+        self.run()
+
+    def run(self):
+        self._time_to_load = False
+        self.is_running = True
+        while self.is_running:
             time.sleep(self.configs['Admin']['time_sleep']['MultiEnv'])
             self._step_python()
             # self._step_numpy()
-            if self.step_count % self.episode_max_length == 0:
-                self.reload_match_agents() # temporarily training matches are fixed
-                for a in self.agents:
-                    a.reset_noise()
+            self.check_state()
+            self.reload_match_agents()
+        self.close()
 
     def _step_python(self):
         self._obs_recv_buffer = self.envs.gather(None, root=MPI.ROOT)
 
-        self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         if 'Unity' in self.type:
             # N sets of Roles
             actions = []
@@ -110,10 +112,15 @@ class MPIMultiEnv(Environment):
                 env_actions.append(role_actions)
                 actions.append(env_actions)
 
+        self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         self.actions = np.array(actions)
         self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions), verbose_level=3)
-        self.log("Step {}".format(self.step_count), verbose_level=2)
-        self.envs.scatter(actions, root=MPI.ROOT)
+        # self.log("Step {}".format(self.step_count), verbose_level=2)
+
+        if self.is_running:
+            self.envs.scatter(actions, root=MPI.ROOT)
+        else:
+            self.envs.scatter([False] * self.num_envs, root=MPI.ROOT)
 
     def _step_numpy(self):
         '''
@@ -159,15 +166,31 @@ class MPIMultiEnv(Environment):
         self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions), verbose_level=3)
         self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
+    def check_state(self):
+        while self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=self.info):
+            done_count = self.envs.recv(None, source=self.info.Get_source(), tag=Tags.trajectory_info)
+            # self.log(f"Recv from Env {self.info.Get_source()} {done_count}")
+            self.done_count += done_count
+            self._time_to_load = True
+
+        if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.close, status=self.info):
+            # Close signal
+            _ = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.close)
+            # used only to stop the whole session, for running profiling experiments..
+            self.is_running = False
+
     def reload_match_agents(self, bypass_request=False):
+        # if self.step_count % (self.episode_max_length * self.num_envs) == 0:
         if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
-            pass
-            '''If new match is received from MetaLearner'''
-            # STATIC FOR NOW
-            # self._receive_match(bypass_request=bypass_request)
-        else:
+            '''In case a new match is received from MetaLearner'''
+            self._receive_match(bypass_request=bypass_request)
+
+        elif self._time_to_load and self.done_count > 0 and (self.done_count % self.episodic_load_rate == 0):
             '''No match available - reload current agents'''
             self.agents = self.load_agents(bypass_request=bypass_request)
+            for a in self.agents:
+                a.reset_noise()
+            self._time_to_load = False
 
     def _receive_match(self, bypass_request=False):
         '''New match from the single MetaLearner'''
@@ -263,8 +286,17 @@ class MPIMultiEnv(Environment):
         self.io = get_io_stub(self.configs)
 
     def close(self):
-        comm = MPI.Comm.Get_parent()
-        comm.Disconnect()
+        self.log("Started closing", verbose_level=2)
+        for i in range(self.num_envs):
+            self.envs.send(True, dest=i, tag=Tags.close)
+        self.envs.Disconnect()
+        self.log("Closed Envs", verbose_level=2)
+        self.learners.Disconnect()
+        MPI.Close_port(self.port) # close Learners port
+        self.log("Closed Learners", verbose_level=2)
+        self.meta.Disconnect()
+        self.log("FULLY CLOSED", verbose_level=1)
+        exit(0)
 
     def log(self, msg, to_print=False, verbose_level=-1):
         '''If verbose_level is not given, by default will log'''
@@ -273,7 +305,7 @@ class MPIMultiEnv(Environment):
             logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def __str__(self):
-        return "<MultiEnv(id={}, num_envs={}, device={})>".format(self.id, self.num_envs, self.device)
+        return "<MultiEnv(id={}({}), episodes={} device={})>".format(self.id, self.num_envs, self.done_count, self.device)
 
     def show_comms(self):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
@@ -289,5 +321,6 @@ if __name__ == "__main__":
         msg = "<MultiEnv(id={}) error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
         print(msg)
         logger.info(msg, True)
-    finally:
         terminate_process()
+    finally:
+        pass

@@ -2,8 +2,12 @@ import torch
 from shiva.agents.DDPGAgent import DDPGAgent
 
 class MADDPGAgent(DDPGAgent):
-    def __init__(self, id: int, obs_space: int, acs_space: dict, agent_config: dict, networks: dict):
-        super(MADDPGAgent, self).__init__(id, obs_space, acs_space, agent_config, networks)
+
+    epsilon = 0
+    noise_scale = 0
+
+    def __init__(self, id: int, obs_space: int, acs_space: dict, configs: dict):
+        super(MADDPGAgent, self).__init__(id, obs_space, acs_space, configs)
 
     def get_metrics(self):
         '''Used for evolution metric'''
@@ -18,4 +22,4 @@ class MADDPGAgent(DDPGAgent):
         return ('shiva.agents', 'MADDPGAgent.MADDPGAgent')
 
     def __str__(self):
-        return '<MADDPGAgent(id={}, role={}, steps={}, episodes={}, num_updates={}, device={})>'.format(self.id, self.role, self.step_count, self.done_count, self.num_updates, self.device)
+        return f"<MADDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, device={self.device}, epsilon={round(self.epsilon, 2)}, noise_scale={round(self.noise_scale, 2)})>"

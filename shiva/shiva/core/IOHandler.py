@@ -1,7 +1,8 @@
-import sys
+import sys, time
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 
+import threading
 import grpc, json, argparse
 from concurrent import futures
 from mpi4py import MPI
@@ -10,6 +11,7 @@ import numpy as np
 from shiva.core.admin import logger
 from shiva.core.communication_objects.helpers_pb2 import Empty, SimpleMessage
 from shiva.core.communication_objects.service_iohandler_pb2_grpc import IOHandlerServicer, add_IOHandlerServicer_to_server, IOHandlerStub
+from shiva.utils.Tags import Tags
 
 class IOHandlerServer(IOHandlerServicer):
     '''
@@ -21,10 +23,14 @@ class IOHandlerServer(IOHandlerServicer):
     # id = MPI.COMM_SELF.Get_parent().Get_rank()
     info = MPI.Status()
 
-    def __init__(self, configs):
+    def __init__(self, stop_event):
+        self._stop_event = stop_event
         self.configs = self.meta.bcast(None, root=0)
-        self.log('Received configs'.format(len(self.configs.keys())), verbose_level=1)
+        self.log('Received configs with {} keys'.format(len(self.configs.keys())), verbose_level=1)
         self._urls_used = set()
+        self.is_running = True
+        t = threading.Thread(None, self._listen_2_meta)
+        t.start()
 
     def AskIORequest(self, simple_message: SimpleMessage, context) -> SimpleMessage:
         # response if directory is available
@@ -45,6 +51,16 @@ class IOHandlerServer(IOHandlerServicer):
         self.log("DoneIO of {}:{} for {}".format(req_spec['type'], req_spec['id'], req_url), verbose_level=3)
         self._urls_used.remove(req_url)
         return Empty()
+
+    def _listen_2_meta(self):
+        while self.is_running:
+            if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.close, status=self.info):
+                # one of the Learners run the close()
+                _ = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.close)
+                self.log("Close signal", verbose_level=1)
+                self.is_running = False
+                self.meta.Disconnect()
+                self._stop_event.set()
 
     def log(self, msg, verbose_level=-1):
         '''If verbose_level is not given, by default will log'''
@@ -103,20 +119,23 @@ def get_io_stub(*args, **kwargs):
 '''Starting functions of the gRPC server'''
 
 def serve_iohandler(address, server_args=(), max_workers=5):
+    stop_event = threading.Event()
     options = (('grpc.so_reuseport', 1),)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers, ), options=options)
-    add_IOHandlerServicer_to_server(IOHandlerServer(server_args), server)
+    add_IOHandlerServicer_to_server(IOHandlerServer(stop_event), server)
     server.add_insecure_port(address)
     server.start()
-    _wait_forever(server)
+    stop_event.wait()
+    server.stop(grace=None)
+    exit(0)
 
-def _wait_forever(server):
-    try:
-        while True:
-            # time.sleep(_ONE_DAY.total_seconds())
-            pass
-    except KeyboardInterrupt:
-        server.stop(None)
+# def _wait_forever(server):
+#     try:
+#         while True:
+#             # time.sleep(_ONE_DAY.total_seconds())
+#             pass
+#     except KeyboardInterrupt:
+#         server.stop(None)
 
 def myconverter(obj):
     if isinstance(obj, np.integer):
