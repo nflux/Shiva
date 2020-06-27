@@ -91,11 +91,12 @@ class MPIEnv(Environment):
         self.observations = self.env.get_observations()
         self.menv.gather(self.observations, root=0)
         self.actions = self.menv.scatter(None, root=0)
-        self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=3)
         if self.actions == False:
             # disconnect signal
             self.is_running = False
         else:
+            self.log("Shape Obs {} Act {}".format(np.array(self.observations).shape, np.array(self.actions).shape), verbose_level=2)
+            self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=3)
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
     # def _step_numpy(self):

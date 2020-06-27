@@ -55,7 +55,7 @@ class DDPGAgent(Agent):
         self.hps += ['epsilon', 'noise_scale']
         self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
 
-        self.ou_noise = noise.OUNoise(sum(self.actor_output), self.noise_scale)
+        self.ou_noise = noise.OUNoiseTorch(sum(self.actor_output), self.noise_scale)
         self.hp_random = self.hp_random if hasattr(self, 'hp_random') else False
 
         if self.hp_random:
@@ -76,8 +76,10 @@ class DDPGAgent(Agent):
 
         if self.action_space == 'continuous':
             self.actor = DynamicLinearNetwork(self.actor_input, self.actor_output, self.networks_config['actor'])
+            self.exploration_policy = torch.distributions.uniform.Uniform(low=self.actions_range[0], high=self.actions_range[1])
         elif self.action_space == 'discrete':
-            self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor'])
+            self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.actor_output, self.networks_config['actor'])
+            self.exploration_policy = torch.distributions.uniform.Uniform(low=0, high=1)
 
         self.target_actor = copy.deepcopy(self.actor)
         '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
@@ -96,17 +98,20 @@ class DDPGAgent(Agent):
 
     def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
         observation = torch.tensor(observation).to(self.device).float()
+        if len(observation.shape)>1:
+            self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
+        else:
+            self._output_dimension = (sum(self.actor_output),)
+        self.ou_noise.set_output_dim(self._output_dimension)
+
         if evaluate:
             action = self.actor(observation).detach()
         else:
             if self.is_exploring(step_count) or self.is_e_greedy(step_count):
-                action = np.array([np.random.uniform(0, 1) for _ in range(sum(self.actor_output))])
-                action = torch.from_numpy(action + self.ou_noise.noise())
-                action = softmax(action, dim=-1)
+                action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
                 _action_debug = "Random: {}".format(action)
             else:
-                action = self.actor(observation).detach()
-                action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+                action = self.actor(observation).detach() + self.ou_noise.noise()
                 # Normalize each individual branch
                 _cum_ix = 0
                 for ac_dim in self.actor_output:
@@ -115,7 +120,7 @@ class DDPGAgent(Agent):
                     _cum_ix += ac_dim
                 _action_debug = "Net: {}".format(action)
 
-            self.log(f"Obs {observation} Acs {_action_debug}", verbose_level=3)
+            self.log(f"Obs {observation.shape} Acs {action.shape}\nObs {observation} Acs {_action_debug}", verbose_level=3)
         # if one_hot:
         #     action = action2one_hot(action.shape[0], torch.argmax(action).item())
 
@@ -123,18 +128,21 @@ class DDPGAgent(Agent):
         return action.tolist()
 
     def get_continuous_action(self, observation, step_count, evaluate=False, *args, **kwargs):
+        observation = torch.tensor(observation).to(self.device).float()
+        if len(observation.shape)>1:
+            self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
+        else:
+            self._output_dimension = (sum(self.actor_output),)
+        self.ou_noise.set_output_dim(self._output_dimension)
+
         if evaluate:
-            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            # action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+            action = self.actor(observation).detach()
         else:
             if self.is_exploring(step_count) or self.is_e_greedy(step_count):
-                action = np.array([np.random.uniform(*self.actions_range) for _ in range(self.actor_output)])
-                # action = torch.from_numpy(action + self.ou_noise.noise())
-                # action = softmax(action, dim=-1)
-                # self.log(f"** Random action {action.tolist()}", verbose_level=1)
+                action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
+                self.log(f"** Random action {action.tolist()}", verbose_level=1)
             else:
-                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-                action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+                action = self.actor(observation).detach() + self.ou_noise.noise()
                 action = torch.clamp(action, min=self.actions_range[0], max=self.actions_range[1])
                 self.log(f"Network action {action.tolist()}", verbose_level=1)
         return action.tolist()

@@ -18,10 +18,9 @@ from functools import partial
 class MADDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):
         super(MADDPGAlgorithm, self).__init__(observation_space, action_space, configs)
-        # self.actor_loss = [0 for _ in range(len(self.roles))]
-        # self.critic_loss = [0 for _ in range(len(self.roles))]
         self.actor_loss = {}
         self.critic_loss = {}
+        self._metrics = {}
         self.set_spaces(observation_space, action_space)
         '''
             Agent 1 and 2
@@ -68,9 +67,10 @@ class MADDPGAlgorithm(Algorithm):
 
     def update(self, agents, buffer, step_count, episodic):
         self.agents = agents
+        self._metrics = {agent.id:[] for agent in self.agents}
         for _ in range(self.update_iterations):
             self._update(agents, buffer, step_count, episodic)
-        self.num_updates += self.update_iterations
+        # self.num_updates += self.update_iterations
 
     def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
@@ -148,7 +148,7 @@ class MADDPGAlgorithm(Algorithm):
             # Update the weights in the direction of the gradient.
             self.critic_optimizer.step()
             # Tensorboard
-            self.critic_loss[agent.id] = critic_loss.item()
+            # self.critic_loss[agent.id] = critic_loss.item()
 
             '''
                 Training the Actors
@@ -183,7 +183,12 @@ class MADDPGAlgorithm(Algorithm):
             # Update the weights in the direction of the gradient.
             agent.actor_optimizer.step()
             # Save actor loss for tensorboard
-            self.actor_loss[agent.id] = actor_loss.item()
+            # self.actor_loss[agent.id] = actor_loss.item()
+
+            self.num_updates += 1
+            self._metrics[agent.id] += [('Algorithm/Actor_Loss', actor_loss.item(), self.num_updates)]
+            self._metrics[agent.id] += [('Algorithm/Critic_Loss', critic_loss.item(), self.num_updates)]
+            self._metrics[agent.id] += [('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)]
 
         '''
             After all Actor updates, soft update Target Networks
@@ -395,16 +400,17 @@ class MADDPGAlgorithm(Algorithm):
             self.action_space[role] = roles_action_space[role]
 
     def get_metrics(self, episodic, agent_id):
-        if not episodic:
-            '''Step metrics'''
-            metrics = []
-        else:
-            metrics = [
-                ('Algorithm/Actor_Loss', self.actor_loss[agent_id], self.num_updates),
-                ('Algorithm/Critic_Loss', self.critic_loss[agent_id], self.num_updates),
-                ('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)
-            ]
-        return metrics
+        return self._metrics[agent_id] if agent_id in self._metrics else []
+        # if not episodic:
+        #     '''Step metrics'''
+        #     metrics = []
+        # else:
+        #     metrics = [
+        #         ('Algorithm/Actor_Loss', self.actor_loss[agent_id], self.num_updates),
+        #         ('Algorithm/Critic_Loss', self.critic_loss[agent_id], self.num_updates),
+        #         ('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)
+        #     ]
+        # return metrics
 
     def __str__(self):
         return '<MADDPGAlgorithm(n_agents={}, num_updates={}, method={})>'.format(self.agentCount, self.num_updates, self.method)
