@@ -111,7 +111,7 @@ class DDPGAgent(Agent):
                 action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
                 _action_debug = "Random: {}".format(action)
             else:
-                action = self.actor(observation).detach() + self.ou_noise.noise()
+                action = self.actor(observation).detach().cpu() + self.ou_noise.noise()
                 # Normalize each individual branch
                 _cum_ix = 0
                 for ac_dim in self.actor_output:
@@ -142,7 +142,7 @@ class DDPGAgent(Agent):
                 action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
                 self.log(f"** Random action {action.tolist()}", verbose_level=1)
             else:
-                action = self.actor(observation).detach() + self.ou_noise.noise()
+                action = self.actor(observation).detach().cpu() + self.ou_noise.noise()
                 action = torch.clamp(action, min=self.actions_range[0], max=self.actions_range[1])
                 self.log(f"Network action {action.tolist()}", verbose_level=1)
         return action.tolist()

@@ -189,7 +189,7 @@ class MPIMultiEnv(Environment):
             '''In case a new match is received from MetaLearner'''
             self._receive_match(bypass_request=bypass_request)
 
-        elif self._time_to_load and self.done_count > 0 and (self.done_count % self.episodic_load_rate == 0):
+        elif self.episodic_load_rate == 0 or (self._time_to_load and self.done_count > 0 and (self.done_count % self.episodic_load_rate == 0)):
             '''No match available - reload current agents'''
             self.agents = self.load_agents(bypass_request=bypass_request)
             for a in self.agents:
