@@ -86,16 +86,18 @@ class DDPGAgent(Agent):
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
-    def to_device(self, device):
-        self.device = device
-        self.actor.to(self.device)
-        self.target_actor.to(self.device)
-        self.critic.to(self.device)
-        self.target_critic.to(self.device)
+    # It's now in the Abstract Agent
+    # def to_device(self, device):
+    #     self.device = device
+    #     self.actor.to(self.device)
+    #     self.target_actor.to(self.device)
+    #     self.critic.to(self.device)
+    #     self.target_critic.to(self.device)
 
     def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
+        observation = torch.tensor(observation).to(self.device).float()
         if evaluate:
-            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+            action = self.actor(observation).detach()
         else:
             if self.is_exploring(step_count) or self.is_e_greedy(step_count):
                 action = np.array([np.random.uniform(0, 1) for _ in range(sum(self.actor_output))])
@@ -103,7 +105,7 @@ class DDPGAgent(Agent):
                 action = softmax(action, dim=-1)
                 _action_debug = "Random: {}".format(action)
             else:
-                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
+                action = self.actor(observation).detach()
                 action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
                 # Normalize each individual branch
                 _cum_ix = 0

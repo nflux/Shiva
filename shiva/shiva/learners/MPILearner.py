@@ -116,6 +116,7 @@ class MPILearner(Learner):
         self.last_metric_received = None
 
         self._n_success_pulls = 0
+        self.metrics_env = {agent.id:[] for agent in self.agents}
         for _ in range(self.n_traj_pulls):
             for comm in self.envs:
                 self.receive_trajectory_numpy(comm)
@@ -131,11 +132,13 @@ class MPILearner(Learner):
             env_source = self.info.Get_source()
             self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info) # block statement
 
-            self.metrics_env = {}
-            for ix, role in enumerate(self.roles):
+
+            for role_ix, role in enumerate(self.roles):
                 '''Assuming 1 agent per role here'''
                 agent_id = self.role2ids[role][0]
-                self.metrics_env[agent_id] = self.traj_info['metrics'][ix]
+                for metric_ix, metric_set in enumerate(self.traj_info['metrics'][role_ix]):
+                    self.traj_info['metrics'][role_ix][metric_ix] += (self.done_count,) # add the x_value for tensorboard!
+                self.metrics_env[agent_id] += self.traj_info['metrics'][role_ix]
 
             traj_length_index = self.traj_info['length_index']
             traj_length = self.traj_info['obs_shape'][traj_length_index]
@@ -301,10 +304,12 @@ class MPILearner(Learner):
 
         self.role2ids = {role:[] for role in self.roles}
         self.id2role = {}
+        self.metrics_env = {}
         for _agent in agents:
             _agent.to_device(self.alg.device)
             _agent.evaluate = self.evaluate
             self.role2ids[_agent.role] += [_agent.id]
+            self.metrics_env[_agent.id] = []
             self.id2role[_agent.id] = _agent.role
             _agent.recalculate_hyperparameters()
         return agents

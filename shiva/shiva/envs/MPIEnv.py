@@ -217,7 +217,7 @@ class MPIEnv(Environment):
                         # self.log(f"NextObs {next_observations_buffer}")Œ
                         # self.log(f"Dones {done_buffer}")
 
-                        self.log(f"Traj sent to Learner {learner_ix} for Role: {role} / Agent ID {role_agent_id} / Length: {observations_buffer.shape}", verbose_level=1)
+                        self.log(f"Sent Learner {learner_ix}, Role: {role}, AgentID {role_agent_id}, Length: {observations_buffer.shape[1]}, TrajRew {rewards_buffer.sum()}", verbose_level=1)
 
                         self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
                         self.learner.Send([observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)

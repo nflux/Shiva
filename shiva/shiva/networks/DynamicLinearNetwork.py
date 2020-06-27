@@ -49,7 +49,7 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                 last_layer=True,  # config['last_layer'],
                 output_function=getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
             )
-            self.branch_net = []
+            self.branch_net_names = []
             self.forward = self._forward_single_branch
         else:
             # Multiple branches of discrete actions
@@ -61,8 +61,9 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                 last_layer=False,  # config['last_layer'],
                 output_function=getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
             )
-            self.branch_net = [
-                nh.DynamicLinearSequential(
+            self.branch_net_names = []
+            for ac_ix, ac_dim in enumerate(output_dim):
+                branch_network = nh.DynamicLinearSequential(
                     config['layers'][-2],
                     output_dim=ac_dim,
                     layers=config['layers'][-1][ac_ix],
@@ -70,16 +71,28 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                     last_layer=True,  # config['last_layer'],
                     output_function=getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
                 )
-                for ac_ix, ac_dim in enumerate(output_dim)
-            ]
+                branch_name = f"branch_net_{ac_ix}"
+                setattr(self, branch_name, branch_network)
+                self.branch_net_names += [branch_name]
+            # self.branch_net = [
+            #     nh.DynamicLinearSequential(
+            #         config['layers'][-2],
+            #         output_dim=ac_dim,
+            #         layers=config['layers'][-1][ac_ix],
+            #         activ_function=nh.parse_functions(torch.nn, config['activation_function'][-1][ac_ix]),
+            #         last_layer=True,  # config['last_layer'],
+            #         output_function=getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
+            #     )
+            #     for ac_ix, ac_dim in enumerate(output_dim)
+            # ]
             self.forward = self._forward_multi_branch
 
     def _forward_multi_branch(self, x, gumbel=False):
         _shared_output = self.shared_net(x)
         if gumbel:
-            return torch.cat([self.gumbel(_branch_nn(_shared_output)) for _branch_nn in self.branch_net], dim=-1)
+            return torch.cat([self.gumbel(getattr(self, _branch_name)(_shared_output)) for _branch_name in self.branch_net_names], dim=-1)
         else:
-            return torch.cat([self.softmax(_branch_nn(_shared_output)) for _branch_nn in self.branch_net], dim=-1)
+            return torch.cat([self.softmax(getattr(self, _branch_name)(_shared_output)) for _branch_name in self.branch_net_names], dim=-1)
 
     def _forward_single_branch(self, x, gumbel=False, onehot=False):
         a = self.shared_net(x)

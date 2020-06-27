@@ -55,8 +55,14 @@ class Agent:
     def instantiate_networks(self):
         raise NotImplemented
 
-    def to_device(self):
-        raise NotImplemented
+    def to_device(self, device):
+        assert hasattr(self, 'net_names'), "Need this attribute to turn networks to a device"
+        self.device = device
+        for net_name in self.net_names:
+            if 'optimizer' in net_name:
+                continue
+            nn = getattr(self, net_name)
+            nn.to(self.device)
 
     def save(self, save_path, step):
         '''

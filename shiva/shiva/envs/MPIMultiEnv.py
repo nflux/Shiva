@@ -86,6 +86,8 @@ class MPIMultiEnv(Environment):
                     role_actions = []
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
+                    # try batching all role observations to the agent
+                    # role_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
                     for o in role_obs:
                         role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
                     env_actions.append(role_actions)
