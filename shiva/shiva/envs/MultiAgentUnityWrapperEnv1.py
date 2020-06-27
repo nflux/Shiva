@@ -105,7 +105,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.actions = {}
         for ix, role in enumerate(self.roles):
             self.raw_actions[role] = np.array(actions[ix])
-            self.actions[role] = self._clean_actions(role, actions[ix])
+            self.actions[role] = self._clean_role_actions(role, actions[ix])
             self.Unity.set_actions(role, self.actions[role])
             # self.log(f"{self.raw_actions[role].shape} {self.raw_actions[role]}", verbose_level=1)
             # self.log(f"{self.actions[role].shape} {self.actions[role]}", verbose_level=1)
@@ -250,15 +250,22 @@ class MultiAgentUnityWrapperEnv1(Environment):
         return sum([len(self.trajectory_ready_agent_ids[role]) for role in self.roles]) > 0
         # return self.temp_done_counter >= self.num_instances_per_env
 
-    def _clean_actions(self, role, role_actions):
+    def _clean_role_actions(self, role, role_actions):
         '''
+            Input dimension is (num_agents_for_this_role, action_space)
+
             Get the argmax when the Action Space is Discrete
             else,
                 make sure it's numpy array
         '''
-        # assert group_actions.shape == (self.DecisionSteps[group].n_agents(), 1), "Actions for group {} should be of shape {}".format(group, (self.DecisionSteps[group].n_agents(), 1))
         if self.RoleSpec[role].is_action_discrete():
-            actions = np.array([ [np.argmax(_act)] for _act in role_actions ])
+            role_actions = np.array(role_actions)
+            actions = np.zeros(shape=(len(self.role_agent_ids[role]), len(self.RoleSpec[role].action_shape)))
+            for agent_ix, agent_id in enumerate(self.role_agent_ids[role]):
+                _cum_ix = 0
+                for ac_ix, ac_dim in enumerate(self.RoleSpec[role].action_shape):
+                    actions[agent_ix, ac_ix] = np.argmax(role_actions[agent_ix, _cum_ix:ac_dim + _cum_ix])
+                    _cum_ix += ac_dim
         elif type(role_actions) != np.ndarray:
             actions = np.array(role_actions)
         # self.log(f"Clean action: {actions}")
@@ -266,19 +273,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
     def get_action_space_from_unity_spec(self, unity_spec):
         if unity_spec.is_action_discrete():
-            if unity_spec.action_size > 1:
-                # multi-discrete action branches to be implemented
-                # For Unity example: In a game direction input(no movement, left, right) and jump input(no jump, jump)
-                # there will be two branches(direction and jump), the first one with 3 options and the second
-                # with 2 options (action_size = 2 and discrete_action_branches = (3, 2, ))
-                raise NotImplemented
-            else:
-                return {
-                    'discrete': unity_spec.action_shape[0],
-                    'continuous': 0,
-                    'param': 0,
-                    'acs_space': unity_spec.action_shape[0]
-                }
+            return {
+                'discrete': unity_spec.action_shape,
+                'continuous': 0,
+                'param': 0,
+                'acs_space': unity_spec.action_shape
+            }
         elif unity_spec.is_action_continuous():
             return {
                 'discrete': 0,
@@ -328,7 +328,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 self.trajectory_buffers[role][role_agent_id] = MultiAgentTensorBuffer(self.episode_max_length+1, self.episode_max_length,
                                                                   1, #self.num_instances_per_role[role],
                                                                   self.observation_space[role],
-                                                                  self.action_space[role]['acs_space'])
+                                                                  sum(self.action_space[role]['acs_space']))
                 self._ready_trajectories[role][role_agent_id] = []
 
     def reset_buffers(self):

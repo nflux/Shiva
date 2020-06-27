@@ -326,7 +326,7 @@ class MPILearner(Learner):
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
         if type(self.observation_space) == dict:
             '''Assuming roles with same obs/acs dim'''
-            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space[self.roles[0]], self.action_space[self.roles[0]]['acs_space'])
+            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space[self.roles[0]], sum(self.action_space[self.roles[0]]['acs_space']))
         else:
             buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
         self.log("Buffer created of type {}".format(buffer_class), verbose_level=2)
