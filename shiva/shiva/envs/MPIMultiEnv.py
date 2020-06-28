@@ -241,7 +241,8 @@ class MPIMultiEnv(Environment):
                     a.to_device(self.device)
                     agents[self.env_specs['roles'].index(a.role)] = a
 
-        self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
+        if self.episodic_load_rate > 0 or (self.step_count % 500 == 0):
+            self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
         return agents
 
     def _receive_learner_spec(self, learner_ix):
