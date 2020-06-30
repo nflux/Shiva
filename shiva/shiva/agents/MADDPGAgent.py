@@ -22,4 +22,4 @@ class MADDPGAgent(DDPGAgent):
         return ('shiva.agents', 'MADDPGAgent.MADDPGAgent')
 
     def __str__(self):
-        return f"<MADDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, device={self.device}, epsilon={round(self.epsilon, 2)}, noise_scale={round(self.noise_scale, 2)})>"
+        return f"<MADDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} epsilon/noise={self.noise_scale}/{self.epsilon} device={self.device})>'"

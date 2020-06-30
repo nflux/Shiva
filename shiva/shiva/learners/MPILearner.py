@@ -232,8 +232,9 @@ class MPILearner(Learner):
         '''
         if self.pbt and self.done_count >= self.initial_evolution_episodes:
 
-            if self.done_count % self.evolution_episodes == 0:
+            if (self.done_count - self.initial_evolution_episodes) >= (self.n_evolution_requests * self.evolution_episodes):
                 self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution_request) # ask for evolution configs1
+                self.n_evolution_requests += 1
                 # self.log("Ask for Evolution", verbose_level=3)
 
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
@@ -242,7 +243,9 @@ class MPILearner(Learner):
                 if not self.evolve:
                     self.log("self.evolve is set to {}! Got Evolution {}".format(self.evolve, self.evolution_config), verbose_level=1)
                     return
+
                 self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=1)
+                self.evolution_count += 1
 
                 for evol_config in self.evolution_config:
                     if evol_config['evolution'] == False or evol_config['agent_id'] == evol_config['evo_agent_id']:

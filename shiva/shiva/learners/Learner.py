@@ -9,6 +9,8 @@ class Learner(object):
     num_agents_created = 0
     ep_count = 0
     step_count = 0
+    evolution_count = 0
+    n_evolution_requests = 0
     checkpoints_made = 0
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
