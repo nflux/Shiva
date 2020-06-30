@@ -241,14 +241,13 @@ class MultiAgentUnityWrapperEnv1(Environment):
             ]
         return metrics
 
-    def is_done(self, n_episodes=None):
+    def is_done(self, n_episodes=0):
         '''
             Check if there's any role-agent that has finished the episode
         '''
         # self.log(f"DecisionSteps {self.DecisionSteps[self.roles[0]].agent_id}")
         # self.log(f"TerminalStep {self.TerminalSteps[self.roles[0]].agent_id}")
-        return sum([len(self.trajectory_ready_agent_ids[role]) for role in self.roles]) > 0
-        # return self.temp_done_counter >= self.num_instances_per_env
+        return sum([len(self.trajectory_ready_agent_ids[role]) for role in self.roles]) > n_episodes
 
     def _clean_role_actions(self, role, role_actions):
         '''
