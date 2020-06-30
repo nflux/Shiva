@@ -6,11 +6,10 @@ from shiva.core.TimeProfiler import TimeProfiler
 from shiva.helpers.config_handler import load_class
 
 class Learner(object):
-    agentCount = 0
+    num_agents_created = 0
     ep_count = 0
     step_count = 0
     checkpoints_made = 0
-    totalReward = 0
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     def __init__(self, learner_id, config, port=None):
@@ -94,15 +93,8 @@ class Learner(object):
             x_value = self.done_count
         Admin.add_summary_writer(self, agent_id, metric_name, y_value, x_value)
 
-
     def checkpoint(self):
-        assert hasattr(self, 'save_checkpoint_episodes'), "Learner needs 'save_checkpoint_episodes' attribute in config - put 0 if don't want to save checkpoints"
-        if self.save_checkpoint_episodes > 0:
-            t = self.save_checkpoint_episodes * self.checkpoints_made
-            if self.env.done_count > t:
-                print("%% Saving checkpoint at episode {} %%".format(self.env.done_count))
-                Admin.checkpoint(self)
-                self.checkpoints_made += 1
+        raise NotImplemented
 
     def update(self):
         raise NotImplemented
@@ -135,11 +127,6 @@ class Learner(object):
 
     def get_id(self):
         return self.get_new_agent_id()
-
-    def get_new_agent_id(self):
-        id = self.agentCount
-        self.agentCount +=1
-        return id
 
     def log(self, msg, to_print=False, verbose_level=-1):
         '''If verbose_level is not given, by default will log'''

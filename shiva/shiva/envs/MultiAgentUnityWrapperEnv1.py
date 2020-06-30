@@ -281,9 +281,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
         elif unity_spec.is_action_continuous():
             return {
                 'discrete': 0,
-                'continuous': unity_spec.action_size,
-                'param': unity_spec.action_size,
-                'acs_space': unity_spec.action_size
+                'continuous': (unity_spec.action_size,),
+                'param': (unity_spec.action_size,),
+                'acs_space': (unity_spec.action_size,)
             }
         else:
             assert "Something weird happened here..."

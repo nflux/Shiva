@@ -47,7 +47,7 @@ class MADDPGAlgorithm(Algorithm):
             self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.configs['Network']['critic']).to(self.device)
             self.target_critic = copy.deepcopy(self.critic)
 
-            if hasattr(self.configs['Agent'], 'lr_range') and self.configs['Agent']['lr_range']:
+            if hasattr(self.configs['Agent'], 'hp_random') and self.configs['Agent']['hp_random']:
                 self.critic_learning_rate = np.random.uniform(self.configs['Agent']['lr_uniform'][0], self.configs['Agent']['lr_uniform'][1]) / np.random.choice( self.configs['Agent']['lr_factors'])
             else:
                 self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
@@ -326,7 +326,7 @@ class MADDPGAlgorithm(Algorithm):
 
     def copy_hyperparameters(self, evo_agent):
         self.critic_learning_rate = evo_agent.critic_learning_rate
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizer()
 
     def copy_weight_from_agent(self, evo_agent):
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
@@ -335,10 +335,22 @@ class MADDPGAlgorithm(Algorithm):
 
     def perturb_hyperparameters(self, perturb_factor):
         self.critic_learning_rate *= perturb_factor
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizer()
 
     def resample_hyperparameters(self):
         self.critic_learning_rate = np.random.uniform(self.configs['Agent']['lr_uniform'][0], self.configs['Agent']['lr_uniform'][1]) / np.random.choice(self.configs['Agent']['lr_factors'])
+        self._update_optimizer()
+
+    def decay_learning_rate(self):
+        self.critic_learning_rate *= self.configs['Agent']['learning_rate_decay_factor']
+        self._update_optimizers()
+
+    def restore_learning_rate(self):
+        if self.critic_learning_rate != self.configs['Agent']['critic_learning_rate']:
+            self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
+            self._update_optimizers()
+
+    def _update_optimizer(self):
         self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
     def save_central_critic(self, agent):

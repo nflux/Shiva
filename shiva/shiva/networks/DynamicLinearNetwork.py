@@ -74,17 +74,6 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                 branch_name = f"branch_net_{ac_ix}"
                 setattr(self, branch_name, branch_network)
                 self.branch_net_names += [branch_name]
-            # self.branch_net = [
-            #     nh.DynamicLinearSequential(
-            #         config['layers'][-2],
-            #         output_dim=ac_dim,
-            #         layers=config['layers'][-1][ac_ix],
-            #         activ_function=nh.parse_functions(torch.nn, config['activation_function'][-1][ac_ix]),
-            #         last_layer=True,  # config['last_layer'],
-            #         output_function=getattr(torch.nn, config['output_function']) if config['output_function'] is not None else None
-            #     )
-            #     for ac_ix, ac_dim in enumerate(output_dim)
-            # ]
             self.forward = self._forward_multi_branch
 
     def _forward_multi_branch(self, x, gumbel=False):

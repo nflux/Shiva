@@ -75,7 +75,7 @@ class DDPGAgent(Agent):
         self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
 
         if self.action_space == 'continuous':
-            self.actor = DynamicLinearNetwork(self.actor_input, self.actor_output, self.networks_config['actor'])
+            self.actor = DynamicLinearNetwork(self.actor_input, sum(self.actor_output), self.networks_config['actor'])
             self.exploration_policy = torch.distributions.uniform.Uniform(low=self.actions_range[0], high=self.actions_range[1])
         elif self.action_space == 'discrete':
             self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.actor_output, self.networks_config['actor'])
@@ -176,8 +176,7 @@ class DDPGAgent(Agent):
     def copy_hyperparameters(self, evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
-        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizers()
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
 
@@ -192,16 +191,14 @@ class DDPGAgent(Agent):
     def perturb_hyperparameters(self, perturb_factor):
         self.actor_learning_rate *= perturb_factor
         self.critic_learning_rate *= perturb_factor
-        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizers()
         self.epsilon *= perturb_factor
         self.noise_scale *= perturb_factor
 
     def resample_hyperparameters(self):
         self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizers()
         self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
         self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
 
@@ -210,6 +207,21 @@ class DDPGAgent(Agent):
             done_count = self.done_count if self.done_count != 0 else 1
         self.update_epsilon_scale(done_count)
         self.update_noise_scale(done_count)
+
+    def decay_learning_rate(self):
+        self.actor_learning_rate *= self.learning_rate_decay_factor
+        self.critic_learning_rate *= self.learning_rate_decay_factor
+        self._update_optimizers()
+
+    def restore_learning_rate(self):
+        if self.actor_learning_rate != self.configs['Agent']['actor_learning_rate']:
+            self.actor_learning_rate = self.configs['Agent']['actor_learning_rate']
+            self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
+            self._update_optimizers()
+
+    def _update_optimizers(self):
+        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
     def update_epsilon_scale(self, done_count=None):
         '''To be called by the Learner before saving'''
