@@ -93,12 +93,15 @@ class MPIEvaluation(Evaluation):
             for env_observations in self._obs_recv_buffer:
                 env_actions = []
                 for role_ix, role_name in enumerate(self.env_specs['roles']):
-                    role_actions = []
+                    # role_actions = []
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
-                    for o in role_obs:
-                        role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=True))
-                    env_actions.append(role_actions)
+                    # try batching all role observations to the agent
+                    # role_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
+                    # for o in role_obs:
+                    #     role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
+                    # env_actions.append(role_actions)
+                    env_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=True))
                 actions.append(env_actions)
         elif 'Particle' in self.env_specs['type']:
             actions = []

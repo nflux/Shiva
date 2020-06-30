@@ -98,7 +98,7 @@ class MPIEvalEnv(Environment):
             reward_per_episode = {}
             for role in self.env.roles:
                 reward_per_episode[role] = []
-                for role_agent_id in self.env.trajectory_ready[role]:
+                for role_agent_id in self.env.trajectory_ready_agent_ids[role]:
                     while len(self.env._ready_trajectories[role][role_agent_id]) > 0:
                         _, _, _, _, _, agent_metric = self.env._ready_trajectories[role][role_agent_id].pop()
                         # self.log(f"Agent_metric {role} {role_agent_id} {agent_metric}")
