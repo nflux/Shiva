@@ -26,7 +26,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
             file_name = self.exec,
             base_port = self.port if hasattr(self, 'port') else 5005, # 5005 is Unity's default value
             worker_id = self.worker_id,
-            seed = self.worker_id * 5005,
+            seed = (self.worker_id * 5005) // np.random.randint(100),
             side_channels = [self.channel['config'], self.channel['props']],
             no_graphics = not self.render,
             # timeout_wait = self.timeout_wait if hasattr(self, 'timeout_wait') else 60
