@@ -105,7 +105,7 @@ class DDPGAgent(Agent):
         self.ou_noise.set_output_dim(self._output_dimension)
 
         if evaluate:
-            action = self.actor(observation).detach()
+            action = self.actor(observation).detach().cpu()
         else:
             if self.is_exploring(step_count) or self.is_e_greedy(step_count):
                 action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
@@ -182,6 +182,7 @@ class DDPGAgent(Agent):
         self.noise_scale = evo_agent.noise_scale
 
     def copy_weights(self, evo_agent):
+        self.num_evolutions['truncate'] += 1
         self.actor.load_state_dict(evo_agent.actor.to(self.device).state_dict())
         self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
@@ -190,6 +191,7 @@ class DDPGAgent(Agent):
         self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
 
     def perturb_hyperparameters(self, perturb_factor):
+        self.num_evolutions['perturb'] += 1
         self.actor_learning_rate *= perturb_factor
         self.critic_learning_rate *= perturb_factor
         self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
@@ -198,6 +200,7 @@ class DDPGAgent(Agent):
         self.noise_scale *= perturb_factor
 
     def resample_hyperparameters(self):
+        self.num_evolutions['resample'] += 1
         self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
@@ -282,4 +285,4 @@ class DDPGAgent(Agent):
         return ('shiva.agents', 'DDPGAgent.DDPGAgent')
 
     def __str__(self):
-        return f"'<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, device={self.device})>'"
+        return f"'<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} epsilon/noise={round(self.noise_scale, 2)}/{round(self.epsilon, 2)} device={self.device})>'"
