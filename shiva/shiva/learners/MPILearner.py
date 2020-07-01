@@ -4,6 +4,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch, time
 import numpy as np
 from scipy import stats
+from collections import deque
 from mpi4py import MPI
 
 from shiva.utils.Tags import Tags
@@ -82,7 +83,7 @@ class MPILearner(Learner):
         self.num_updates = 0
         self.steps_per_episode = 0
         self.metrics_env = {agent.id:[] for agent in self.agents}
-        self.average_reward = {agent.id:0 for agent in self.agents}
+        self.last_rewards = {agent.id:{'q':deque(maxlen=self.configs['Agent']['lr_decay']['average_episodes']), 'n':0} for agent in self.agents}
 
         self.profiler.start(["AlgUpdates", 'ExperienceReceived'])
         while self.done_count < self.episodes:
@@ -163,7 +164,7 @@ class MPILearner(Learner):
                 for metric_ix, metric_set in enumerate(self.traj_info['metrics'][role_ix]):
                     self.traj_info['metrics'][role_ix][metric_ix] += (self.done_count,) # add the x_value for tensorboard!
                 self.metrics_env[agent_id] += self.traj_info['metrics'][role_ix]
-                self.average_reward[agent_id] = self.average_reward[agent_id] + ((self.reward_per_episode - self.average_reward[agent_id]) / self.done_count )
+                self.last_rewards[agent_id]['q'].append(self.reward_per_episode)
 
             self.last_metric_received = f"{self.traj_info['env_id']} got ObsShape {observations.shape} {self.traj_info['metrics']}"
 
@@ -193,20 +194,29 @@ class MPILearner(Learner):
             self.profiler.time('AlgUpdates', self.num_updates, output_quantity=self.alg.update_iterations)
 
             _decay_algo_lr = False
+            _decay_log = ""
             for agent in self.agents:
                 agent.step_count = self.step_count
                 agent.done_count = self.done_count
                 agent.num_updates = self.num_updates
                 # update this HPs so that they show up on tensorboard
                 agent.recalculate_hyperparameters()
-                if self.configs['Environment']['expert_reward_range'][agent.role][0] <= self.average_reward[agent.id] <= self.configs['Environment']['expert_reward_range'][agent.role][1]:
-                    agent.decay_learning_rate()
-                    _decay_algo_lr = True
-                else:
-                    agent.restore_learning_rate()
-                    _decay_algo_lr = False
+
+                if 'lr_decay' in self.configs['Agent']:
+                    if not agent.is_exploring() and self.done_count > (self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] * self.last_rewards[agent.id]['n']):
+                        self.last_rewards[agent.id]['n'] = self.done_count // self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] + 1
+                        agent_ave_reward = sum(self.last_rewards[agent.id]['q']) / len(self.last_rewards[agent.id]['q'])
+                        if self.configs['Environment']['expert_reward_range'][agent.role][0] <= agent_ave_reward <= self.configs['Environment']['expert_reward_range'][agent.role][1]:
+                            agent.decay_learning_rate()
+                            _decay_algo_lr = True
+                            _decay_log += f"Decay Actor LR {agent.actor_learning_rate}"
+                        else:
+                            agent.restore_learning_rate()
+                            _decay_algo_lr = False
+                            _decay_log += f"Restore Actor LR {agent.actor_learning_rate}"
 
             self.alg.decay_learning_rate() if _decay_algo_lr else self.alg.restore_learning_rate()
+            self.log(f"{_decay_log} / Critic LR {self.alg.critic_learning_rate} / Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}", verbose_level=1) if _decay_log != '' else None
 
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
             self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)

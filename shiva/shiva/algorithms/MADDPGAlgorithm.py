@@ -28,7 +28,7 @@ class MADDPGAlgorithm(Algorithm):
 
             Methods
             Option 1 - critics
-                Each agent has it's own critic, order should of data input to critic should be consistent
+                Each agent has it's own critic, order of data input to critic should be consistent
             Option 2 - discriminator
                 Single critic with a one-hot encoding to correlate agents
                 Expensive as it needs to find the correlation between the one-hot and all the obs/acs for each agent
@@ -342,13 +342,15 @@ class MADDPGAlgorithm(Algorithm):
         self._update_optimizer()
 
     def decay_learning_rate(self):
-        self.critic_learning_rate *= self.configs['Agent']['learning_rate_decay_factor']
-        self._update_optimizers()
+        self.critic_learning_rate *= self.configs['Agent']['lr_decay']['factor']
+        self._update_optimizer()
 
     def restore_learning_rate(self):
-        if self.critic_learning_rate != self.configs['Agent']['critic_learning_rate']:
+        if self.critic_learning_rate < self.configs['Agent']['critic_learning_rate']:
+            self.critic_learning_rate /= self.configs['Agent']['lr_decay']['factor']
+        else:
             self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
-            self._update_optimizers()
+        self._update_optimizer()
 
     def _update_optimizer(self):
         self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})

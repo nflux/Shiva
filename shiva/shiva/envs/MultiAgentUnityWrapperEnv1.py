@@ -174,8 +174,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
                     # Update terminal metrics
                     self.done_count[role] += 1
                     self.steps_per_episode[role][agent_ix] += 1
-                    self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
-                    self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
+                    self.reward_per_step[role][agent_ix] = self.TerminalSteps[role].reward[terminal_step_agent_ix]
+                    self.reward_per_episode[role][agent_ix] += self.TerminalSteps[role].reward[terminal_step_agent_ix]
                     self.reward_total[role] = self.reward_total[role] + (self.reward_per_episode[role][agent_ix] / self.num_instances_per_role[role]) # Incremental Means Method
 
                     # Prepare trajectory for MPIEnv to send

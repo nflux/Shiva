@@ -212,15 +212,22 @@ class DDPGAgent(Agent):
         self.update_noise_scale(done_count)
 
     def decay_learning_rate(self):
-        self.actor_learning_rate *= self.learning_rate_decay_factor
-        self.critic_learning_rate *= self.learning_rate_decay_factor
+        self.actor_learning_rate *= self.lr_decay['factor']
+        self.critic_learning_rate *= self.lr_decay['factor']
         self._update_optimizers()
 
     def restore_learning_rate(self):
-        if self.actor_learning_rate != self.configs['Agent']['actor_learning_rate']:
+        if self.actor_learning_rate < self.configs['Agent']['actor_learning_rate']:
+            self.actor_learning_rate /= self.lr_decay['factor']
+        else:
             self.actor_learning_rate = self.configs['Agent']['actor_learning_rate']
+
+        if self.critic_learning_rate < self.configs['Agent']['critic_learning_rate']:
+            self.critic_learning_rate /= self.lr_decay['factor']
+        else:
             self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
-            self._update_optimizers()
+
+        self._update_optimizers()
 
     def _update_optimizers(self):
         self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
