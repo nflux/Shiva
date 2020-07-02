@@ -50,7 +50,7 @@ class MPIEvalEnv(Environment):
                 # self._step_numpy()
                 if self.env.is_done(n_episodes=self.configs['Evaluation']['eval_episodes']):
                     self.send_evaluations()
-                    self.env.reset(force=True)
+                    self.env.reset(force=False)
 
                 # if self.eval.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.clear_buffers, status=self.info):
                 #     _ = self.eval.recv(None, source=self.info.Get_source(), tag=Tags.clear_buffers)

@@ -34,11 +34,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
             seed = (self.worker_id * 5005) // np.random.randint(100),
             side_channels = [self.channel['config'], self.channel['props']],
             no_graphics = not self.render,
-            # timeout_wait = self.timeout_wait if hasattr(self, 'timeout_wait') else 60
+            timeout_wait = self.timeout_wait if hasattr(self, 'timeout_wait') else 60
         )
+        # https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md#environmentparameters
         self.channel['config'].set_configuration_parameters(**self.unity_configs)
-        # for k, v in self.unity_env_parameters.items():
-        #     self.channel['props'].set_float_parameter(k, v)
+        for param_name, param_value in self.unity_props.items():
+            self.channel['props'].set_float_parameter(param_name, param_value)
         self.Unity.reset()
         self.log("Unity env started with behaviours: {}".format(self.Unity.get_behavior_names()))
 
