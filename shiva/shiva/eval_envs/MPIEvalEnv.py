@@ -48,7 +48,7 @@ class MPIEvalEnv(Environment):
             while self.env.start_env():
                 self._step_python()
                 # self._step_numpy()
-                if self.env.is_done():
+                if self.env.is_done(n_episodes=self.configs['Evaluation']['eval_episodes']):
                     self.send_evaluations()
                     self.env.reset(force=False)
 
@@ -95,10 +95,12 @@ class MPIEvalEnv(Environment):
 
     def _send_eval_roles(self):
         if 'UnityWrapperEnv1' in self.type:
+            # Need to calculate the mean reward for all the simulations within the one Unity environment
+            # g.i. 3DBall has 16 simulations within one Unity Environment, so we take the average across 16 agents
             reward_per_episode = {}
             for role in self.env.roles:
                 reward_per_episode[role] = []
-                for role_agent_id in self.env.trajectory_ready[role]:
+                for role_agent_id in self.env.trajectory_ready_agent_ids[role]:
                     while len(self.env._ready_trajectories[role][role_agent_id]) > 0:
                         _, _, _, _, _, agent_metric = self.env._ready_trajectories[role][role_agent_id].pop()
                         # self.log(f"Agent_metric {role} {role_agent_id} {agent_metric}")

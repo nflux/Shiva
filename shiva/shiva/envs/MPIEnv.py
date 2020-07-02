@@ -91,11 +91,12 @@ class MPIEnv(Environment):
         self.observations = self.env.get_observations()
         self.menv.gather(self.observations, root=0)
         self.actions = self.menv.scatter(None, root=0)
-        self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=3)
         if self.actions == False:
             # disconnect signal
             self.is_running = False
         else:
+            self.log("Shape Obs {} Act {}".format(np.array(self.observations).shape, np.array(self.actions).shape), verbose_level=2)
+            self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=3)
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
     # def _step_numpy(self):
@@ -160,7 +161,6 @@ class MPIEnv(Environment):
 
     def _send_trajectory_numpy(self):
         metrics = self.env.get_metrics(episodic=True)
-        self.log(metrics, verbose_level=2) # LOG metrics from this end
         learners_sent = {spec['id']:False for role, spec in self.role2learner_spec.items()}
         _output_quantity = 0
 
@@ -217,7 +217,8 @@ class MPIEnv(Environment):
                         # self.log(f"NextObs {next_observations_buffer}")Œ
                         # self.log(f"Dones {done_buffer}")
 
-                        self.log(f"Traj sent to Learner {learner_ix} for Role: {role} / Agent ID {role_agent_id} / Length: {observations_buffer.shape}", verbose_level=1)
+                        self.log(f"Sent Learner {learner_ix}, Role: {role}, AgentID {role_agent_id}, Length: {observations_buffer.shape[1]}, TrajRew {rewards_buffer.sum()}", verbose_level=1)
+                        self.log(f"{agent_metric}", verbose_level=2)
 
                         self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
                         self.learner.Send([observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)

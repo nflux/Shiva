@@ -26,6 +26,7 @@ class Algorithm():
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
         self.num_updates = 0
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.metrics = []
 
     def update(self, agent, data, episodic=False):
         '''

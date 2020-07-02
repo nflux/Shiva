@@ -125,52 +125,52 @@ class MPIPBTMetaLearner(MetaLearner):
             roles_evo.append(agent_evo)
         return roles_evo
 
-
-    '''
-        Single Agent Evolution
-    '''
-
-    def _single_agent_evolve(self):
-        if hasattr(self, 'rankings') and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution):
-            self.log('MetaLearner Received evolution request', verbose_level=2)
-            agent_nums = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evolution, status=self.info)  # block statement
-            learner_source = self.info.Get_source()
-            for agent_id in agent_nums:
-                evo = dict()
-                ranking = np.where(self.rankings == agent_id)[0]
-                self.log('Current Agent Ranking: {}'.format(ranking), verbose_level=2)
-                evo['agent_id'] = evo['agent'] = agent_id
-                evo['ranking'] = ranking
-                if ranking <= self.top_20:
-                    evo['evolution'] = False
-                    # print('Do Not Evolve')
-                elif self.top_20  < ranking < self.bottom_20:
-                    # print('Middle of the Pack: {}'.format(learner_source))
-                    evo['evolution'] = True
-                    evo['evo_agent'] = self.rankings[np.random.choice(range(self.bottom_20))]
-                    evo['evo_ranking']= np.where(self.rankings == evo['evo_agent'])
-                    evo['exploitation'] = 't_test'
-                    evo['exploration'] = np.random.choice(['perturb', 'resample'])
-                else:
-                    # print('You suck')
-                    evo['evolution'] = True
-                    if not self.top_20 == 0:
-                        evo['evo_agent'] = self.rankings[np.random.choice(range(self.top_20))]
-                    else:
-                        evo['evo_agent'] = self.rankings[0]
-                    evo['evo_ranking'] = np.where(self.rankings == evo['evo_agent'])
-                    evo['exploitation'] = 'truncation'
-                    evo['exploration'] = np.random.choice(['perturb', 'resample'])
-                self.learners.send(evo, dest=learner_source, tag=Tags.evolution_config)
-            self.log('MetaLearner Responded to evolution request with evolution config', verbose_level=2)
-            delattr(self, 'rankings')
-
     def get_multieval_metrics(self):
         while self.mevals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.rankings, status=self.info):
             self.rankings = self.mevals.recv(None, source=self.info.Get_source(), tag=Tags.rankings)
             self.evols_sent = {i:False for i in range(self.num_learners)}
             self.log('Got New Rankings {}'.format(self.rankings), verbose_level=1)
 
+
+    # '''
+    #     Single Agent Evolution
+    #     (Travis approach not currently being used)
+    # '''
+    #
+    # def _single_agent_evolve(self):
+    #     if hasattr(self, 'rankings') and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution):
+    #         self.log('MetaLearner Received evolution request', verbose_level=2)
+    #         agent_nums = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evolution, status=self.info)  # block statement
+    #         learner_source = self.info.Get_source()
+    #         for agent_id in agent_nums:
+    #             evo = dict()
+    #             ranking = np.where(self.rankings == agent_id)[0]
+    #             self.log('Current Agent Ranking: {}'.format(ranking), verbose_level=2)
+    #             evo['agent_id'] = evo['agent'] = agent_id
+    #             evo['ranking'] = ranking
+    #             if ranking <= self.top_20:
+    #                 evo['evolution'] = False
+    #                 # print('Do Not Evolve')
+    #             elif self.top_20  < ranking < self.bottom_20:
+    #                 # print('Middle of the Pack: {}'.format(learner_source))
+    #                 evo['evolution'] = True
+    #                 evo['evo_agent'] = self.rankings[np.random.choice(range(self.bottom_20))]
+    #                 evo['evo_ranking']= np.where(self.rankings == evo['evo_agent'])
+    #                 evo['exploitation'] = 't_test'
+    #                 evo['exploration'] = np.random.choice(['perturb', 'resample'])
+    #             else:
+    #                 # print('You suck')
+    #                 evo['evolution'] = True
+    #                 if not self.top_20 == 0:
+    #                     evo['evo_agent'] = self.rankings[np.random.choice(range(self.top_20))]
+    #                 else:
+    #                     evo['evo_agent'] = self.rankings[0]
+    #                 evo['evo_ranking'] = np.where(self.rankings == evo['evo_agent'])
+    #                 evo['exploitation'] = 'truncation'
+    #                 evo['exploration'] = np.random.choice(['perturb', 'resample'])
+    #             self.learners.send(evo, dest=learner_source, tag=Tags.evolution_config)
+    #         self.log('MetaLearner Responded to evolution request with evolution config', verbose_level=2)
+    #         delattr(self, 'rankings')
 
     '''
         Functions to be replaced by the match making process
