@@ -343,13 +343,16 @@ class MADDPGAlgorithm(Algorithm):
 
     def decay_learning_rate(self):
         self.critic_learning_rate *= self.configs['Agent']['lr_decay']['factor']
+        self.log(f"Decay Critic LR {self.critic_learning_rate}", verbose_level=3)
         self._update_optimizer()
 
     def restore_learning_rate(self):
         if self.critic_learning_rate < self.configs['Agent']['critic_learning_rate']:
             self.critic_learning_rate /= self.configs['Agent']['lr_decay']['factor']
+            self.log(f"Increment Critic LR {self.critic_learning_rate}", verbose_level=3)
         else:
             self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
+            self.log(f"Critic LR Restored {self.critic_learning_rate}", verbose_level=3)
         self._update_optimizer()
 
     def _update_optimizer(self):

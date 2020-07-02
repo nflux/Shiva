@@ -193,7 +193,7 @@ class MPILearner(Learner):
             self.num_updates = self.alg.get_num_updates()
             self.profiler.time('AlgUpdates', self.num_updates, output_quantity=self.alg.update_iterations)
 
-            _decay_algo_lr = False
+            _decay_or_restore_lr = 0 # -1 to decay, 1 to restore, 0 to do nothing
             _decay_log = ""
             for agent in self.agents:
                 agent.step_count = self.step_count
@@ -201,21 +201,20 @@ class MPILearner(Learner):
                 agent.num_updates = self.num_updates
                 # update this HPs so that they show up on tensorboard
                 agent.recalculate_hyperparameters()
-
-                if 'lr_decay' in self.configs['Agent']:
+                if 'lr_decay' in self.configs['Agent'] and self.configs['Agent']:
                     if not agent.is_exploring() and self.done_count > (self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] * self.last_rewards[agent.id]['n']):
                         self.last_rewards[agent.id]['n'] = self.done_count // self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] + 1
                         agent_ave_reward = sum(self.last_rewards[agent.id]['q']) / len(self.last_rewards[agent.id]['q'])
                         if self.configs['Environment']['expert_reward_range'][agent.role][0] <= agent_ave_reward <= self.configs['Environment']['expert_reward_range'][agent.role][1]:
                             agent.decay_learning_rate()
-                            _decay_algo_lr = True
+                            _decay_or_restore_lr = -1
                             _decay_log += f"Decay Actor LR {agent.actor_learning_rate}"
                         else:
                             agent.restore_learning_rate()
-                            _decay_algo_lr = False
+                            _decay_or_restore_lr = 1
                             _decay_log += f"Restore Actor LR {agent.actor_learning_rate}"
 
-            self.alg.decay_learning_rate() if _decay_algo_lr else self.alg.restore_learning_rate()
+            self.alg.decay_learning_rate() if _decay_or_restore_lr == -1 else self.alg.restore_learning_rate() if _decay_or_restore_lr == 1 else None
             self.log(f"{_decay_log} / Critic LR {self.alg.critic_learning_rate} / Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}", verbose_level=1) if _decay_log != '' else None
 
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
@@ -481,6 +480,14 @@ class MPILearner(Learner):
         for attr_name, default_val in default_configs.items():
             if attr_name not in self.configs['Learner']:
                 self.configs['Learner'][attr_name] = default_val
+
+        assert 'Agent' in self.configs, "No Agent config given!, got {}".format(self.configs)
+        default_agent_configs = {
+            'lr_decay': {'factor': 1, 'average_episodes': 100, 'wait_episodes_to_decay': 100} # no decay by default
+        }
+        for attr_name, default_val in default_agent_configs.items():
+            if attr_name not in self.configs['Agent']:
+                self.configs['Agent'][attr_name] = default_val
 
     def __str__(self):
         return "<Learner(id={})>".format(self.id)

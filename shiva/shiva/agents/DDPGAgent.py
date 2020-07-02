@@ -213,19 +213,28 @@ class DDPGAgent(Agent):
 
     def decay_learning_rate(self):
         self.actor_learning_rate *= self.lr_decay['factor']
-        self.critic_learning_rate *= self.lr_decay['factor']
+        if 'MADDPG' not in str(self):
+            self.critic_learning_rate *= self.lr_decay['factor']
+            self.log(f"Decay Actor and Critic LR: {self.actor_learning_rate} {self.critic_learning_rate}", verbose_level=3)
+        else:
+            self.log(f"Decay Actor LR: {self.actor_learning_rate}", verbose_level=3)
         self._update_optimizers()
 
     def restore_learning_rate(self):
         if self.actor_learning_rate < self.configs['Agent']['actor_learning_rate']:
             self.actor_learning_rate /= self.lr_decay['factor']
+            self.log(f"Increment Actor LR {self.actor_learning_rate}", verbose_level=3)
         else:
             self.actor_learning_rate = self.configs['Agent']['actor_learning_rate']
+            self.log(f"Actor LR Restored {self.actor_learning_rate}", verbose_level=3)
 
-        if self.critic_learning_rate < self.configs['Agent']['critic_learning_rate']:
-            self.critic_learning_rate /= self.lr_decay['factor']
-        else:
-            self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
+        if 'MADDPG' not in str(self):
+            if self.critic_learning_rate < self.configs['Agent']['critic_learning_rate']:
+                self.critic_learning_rate /= self.lr_decay['factor']
+                self.log(f"Increment Critic LR {self.actor_learning_rate}", verbose_level=3)
+            else:
+                self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
+            self.log(f"Critic LR Restored {self.actor_learning_rate}", verbose_level=3)
 
         self._update_optimizers()
 
@@ -258,8 +267,6 @@ class DDPGAgent(Agent):
     def _get_noise_scale(self, done_count=None):
         if done_count is None:
             done_count = self.done_count
-        if self.is_exploring():
-            return self.noise_start
         return max(self.noise_end, self.decay_value(self.noise_start, self.noise_episodes, (done_count - (self._average_exploration_episodes_performed())), degree=self.noise_decay_degree))
 
     def _average_exploration_episodes_performed(self):
