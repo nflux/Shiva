@@ -14,7 +14,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
         self.on_policy = False
         super(MultiAgentUnityWrapperEnv1, self).__init__(config)
-        self.start_unity_environment()
+        try:
+            self.start_unity_environment()
+        except:
+            self.port += 100
+            self.log(f"Retrying other port {self.port}")
+            self.start_unity_environment()
         self.set_initial_values()
 
     def start_unity_environment(self):

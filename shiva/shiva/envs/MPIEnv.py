@@ -161,7 +161,6 @@ class MPIEnv(Environment):
 
     def _send_trajectory_numpy(self):
         metrics = self.env.get_metrics(episodic=True)
-        self.log(metrics, verbose_level=2) # LOG metrics from this end
         learners_sent = {spec['id']:False for role, spec in self.role2learner_spec.items()}
         _output_quantity = 0
 
@@ -219,6 +218,7 @@ class MPIEnv(Environment):
                         # self.log(f"Dones {done_buffer}")
 
                         self.log(f"Sent Learner {learner_ix}, Role: {role}, AgentID {role_agent_id}, Length: {observations_buffer.shape[1]}, TrajRew {rewards_buffer.sum()}", verbose_level=1)
+                        self.log(f"{agent_metric}", verbose_level=2)
 
                         self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
                         self.learner.Send([observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
