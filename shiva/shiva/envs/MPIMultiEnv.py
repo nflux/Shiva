@@ -75,7 +75,7 @@ class MPIMultiEnv(Environment):
         self.close()
 
     def _step_python(self):
-        self._obs_recv_buffer = self.envs.gather(None, root=MPI.ROOT)
+        self._obs_recv_buffer = np.array(self.envs.gather(None, root=MPI.ROOT))
 
         if 'Unity' in self.type:
             # N sets of Roles
@@ -83,12 +83,15 @@ class MPIMultiEnv(Environment):
             for env_observations in self._obs_recv_buffer:
                 env_actions = []
                 for role_ix, role_name in enumerate(self.env_specs['roles']):
-                    role_actions = []
+                    # role_actions = []
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
-                    for o in role_obs:
-                        role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
-                    env_actions.append(role_actions)
+                    # try batching all role observations to the agent
+                    # role_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
+                    # for o in role_obs:
+                    #     role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
+                    # env_actions.append(role_actions)
+                    env_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
                 actions.append(env_actions)
         elif 'Particle' in self.type:
             # 1 set of Roles
@@ -114,6 +117,7 @@ class MPIMultiEnv(Environment):
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         self.actions = np.array(actions)
+        self.log("Shape Obs {} Acs {}".format(self._obs_recv_buffer.shape, self.actions.shape), verbose_level=2)
         self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions), verbose_level=3)
         # self.log("Step {}".format(self.step_count), verbose_level=2)
 
@@ -185,7 +189,7 @@ class MPIMultiEnv(Environment):
             '''In case a new match is received from MetaLearner'''
             self._receive_match(bypass_request=bypass_request)
 
-        elif self._time_to_load and self.done_count > 0 and (self.done_count % self.episodic_load_rate == 0):
+        elif self.episodic_load_rate == 0 or (self._time_to_load and self.done_count > 0 and (self.done_count % self.episodic_load_rate == 0)):
             '''No match available - reload current agents'''
             self.agents = self.load_agents(bypass_request=bypass_request)
             for a in self.agents:
@@ -237,7 +241,8 @@ class MPIMultiEnv(Environment):
                     a.to_device(self.device)
                     agents[self.env_specs['roles'].index(a.role)] = a
 
-        self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
+        if self.episodic_load_rate > 0 or (self.step_count % 500 == 0):
+            self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
         return agents
 
     def _receive_learner_spec(self, learner_ix):

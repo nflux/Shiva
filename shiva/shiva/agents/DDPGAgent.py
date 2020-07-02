@@ -42,10 +42,11 @@ class DDPGAgent(Agent):
             if not hasattr(self, 'actions_range'):
                 self.actions_range = [-1, 1]
         else:
-            self.action_space = 'parametrized'
-            self.actor_input = obs_space
-            self.actor_output = self.discrete + self.param
-            self.get_action = self.get_parameterized_action
+            raise NotImplemented
+            # self.action_space = 'parametrized'
+            # self.actor_input = obs_space
+            # self.actor_output = self.discrete + self.param
+            # self.get_action = self.get_parameterized_action
 
         self.instantiate_networks()
 
@@ -54,7 +55,7 @@ class DDPGAgent(Agent):
         self.hps += ['epsilon', 'noise_scale']
         self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
 
-        self.ou_noise = noise.OUNoise(self.actor_output, self.noise_scale)
+        self.ou_noise = noise.OUNoiseTorch(sum(self.actor_output), self.noise_scale)
         self.hp_random = self.hp_random if hasattr(self, 'hp_random') else False
 
         if self.hp_random:
@@ -69,14 +70,16 @@ class DDPGAgent(Agent):
             self.critic_learning_rate = self.agent_config['critic_learning_rate']
 
         if 'MADDPG' not in str(self):
-            self.critic_input_size = self.actor_input + self.actor_output
+            self.critic_input_size = self.actor_input + sum(self.actor_output)
 
         self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
 
         if self.action_space == 'continuous':
-            self.actor = DynamicLinearNetwork(self.actor_input, self.actor_output, self.networks_config['actor'])
+            self.actor = DynamicLinearNetwork(self.actor_input, sum(self.actor_output), self.networks_config['actor'])
+            self.exploration_policy = torch.distributions.uniform.Uniform(low=self.actions_range[0], high=self.actions_range[1])
         elif self.action_space == 'discrete':
-            self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.param, self.networks_config['actor'])
+            self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.actor_output, self.networks_config['actor'])
+            self.exploration_policy = torch.distributions.uniform.Uniform(low=0, high=1)
 
         self.target_actor = copy.deepcopy(self.actor)
         '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
@@ -85,67 +88,61 @@ class DDPGAgent(Agent):
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
-    def to_device(self, device):
-        self.device = device
-        self.actor.to(self.device)
-        self.target_actor.to(self.device)
-        self.critic.to(self.device)
-        self.target_critic.to(self.device)
+    # It's now in the Abstract Agent
+    # def to_device(self, device):
+    #     self.device = device
+    #     self.actor.to(self.device)
+    #     self.target_actor.to(self.device)
+    #     self.critic.to(self.device)
+    #     self.target_critic.to(self.device)
 
     def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
+        observation = torch.tensor(observation).to(self.device).float()
+        if len(observation.shape)>1:
+            self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
+        else:
+            self._output_dimension = (sum(self.actor_output),)
+        self.ou_noise.set_output_dim(self._output_dimension)
+
         if evaluate:
-# <<<<<<< HEAD
-            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            # action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-            # if self.normalize:
-            action = torch.abs(action)
-            action = action / action.sum()
-# =======
-#             action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-#             self.ou_noise.set_scale(self.noise_scale)
-#             action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-#             action = torch.abs(action)
-#             action = action / action.sum()
-#             # print("Agent Evaluate {}".format(action))
-# >>>>>>> robocup-mpi-pbt
+            action = self.actor(observation).detach().cpu()
         else:
             if self.is_exploring(step_count) or self.is_e_greedy(step_count):
-                action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
-                action = torch.from_numpy(action + self.ou_noise.noise())
-                action = softmax(action, dim=-1)
+                action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
                 _action_debug = "Random: {}".format(action)
-            # elif np.random.uniform(0, 1) < self.epsilon:
-            # elif self.is_e_greedy(step_count):
-            #     action = np.array([np.random.uniform(0, 1) for _ in range(self.actor_output)])
-            #     action = softmax(torch.from_numpy(action), dim=-1)
             else:
-                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-                action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
-                # if self.normalize:
-                action = torch.abs(action)
-                action = action / action.sum()
+                action = self.actor(observation).detach().cpu() + self.ou_noise.noise()
+                # Normalize each individual branch
+                _cum_ix = 0
+                for ac_dim in self.actor_output:
+                    _branch_action = torch.abs(action[_cum_ix:ac_dim+_cum_ix])
+                    action[_cum_ix:ac_dim+_cum_ix] = _branch_action / _branch_action.sum()
+                    _cum_ix += ac_dim
                 _action_debug = "Net: {}".format(action)
 
-            self.log(f"Obs {observation} Acs {_action_debug}", verbose_level=3)
-        if one_hot:
-            action = action2one_hot(action.shape[0], torch.argmax(action).item())
+            self.log(f"Obs {observation.shape} Acs {action.shape}\nObs {observation} Acs {_action_debug}", verbose_level=3)
+        # if one_hot:
+        #     action = action2one_hot(action.shape[0], torch.argmax(action).item())
 
         # until this point the action was a tensor, we are returning a python list - needs to be checked.
         return action.tolist()
 
     def get_continuous_action(self, observation, step_count, evaluate=False, *args, **kwargs):
+        observation = torch.tensor(observation).to(self.device).float()
+        if len(observation.shape)>1:
+            self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
+        else:
+            self._output_dimension = (sum(self.actor_output),)
+        self.ou_noise.set_output_dim(self._output_dimension)
+
         if evaluate:
-            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            # action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+            action = self.actor(observation).detach()
         else:
             if self.is_exploring(step_count) or self.is_e_greedy(step_count):
-                action = np.array([np.random.uniform(*self.actions_range) for _ in range(self.actor_output)])
-                # action = torch.from_numpy(action + self.ou_noise.noise())
-                # action = softmax(action, dim=-1)
-                # self.log(f"** Random action {action.tolist()}", verbose_level=1)
+                action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
+                self.log(f"** Random action {action.tolist()}", verbose_level=1)
             else:
-                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-                action = torch.from_numpy(action.cpu().numpy() + self.ou_noise.noise())
+                action = self.actor(observation).detach().cpu() + self.ou_noise.noise()
                 action = torch.clamp(action, min=self.actions_range[0], max=self.actions_range[1])
                 self.log(f"Network action {action.tolist()}", verbose_level=1)
         return action.tolist()
@@ -179,12 +176,12 @@ class DDPGAgent(Agent):
     def copy_hyperparameters(self, evo_agent):
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
-        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizers()
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
 
     def copy_weights(self, evo_agent):
+        self.num_evolutions['truncate'] += 1
         self.actor.load_state_dict(evo_agent.actor.to(self.device).state_dict())
         self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
@@ -193,18 +190,18 @@ class DDPGAgent(Agent):
         self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
 
     def perturb_hyperparameters(self, perturb_factor):
+        self.num_evolutions['perturb'] += 1
         self.actor_learning_rate *= perturb_factor
         self.critic_learning_rate *= perturb_factor
-        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizers()
         self.epsilon *= perturb_factor
         self.noise_scale *= perturb_factor
 
     def resample_hyperparameters(self):
+        self.num_evolutions['resample'] += 1
         self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
-        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizers()
         self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
         self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
 
@@ -213,6 +210,37 @@ class DDPGAgent(Agent):
             done_count = self.done_count if self.done_count != 0 else 1
         self.update_epsilon_scale(done_count)
         self.update_noise_scale(done_count)
+
+    def decay_learning_rate(self):
+        self.actor_learning_rate *= self.lr_decay['factor']
+        if 'MADDPG' not in str(self):
+            self.critic_learning_rate *= self.lr_decay['factor']
+            self.log(f"Decay Actor and Critic LR: {self.actor_learning_rate} {self.critic_learning_rate}", verbose_level=3)
+        else:
+            self.log(f"Decay Actor LR: {self.actor_learning_rate}", verbose_level=3)
+        self._update_optimizers()
+
+    def restore_learning_rate(self):
+        if self.actor_learning_rate < self.configs['Agent']['actor_learning_rate']:
+            self.actor_learning_rate /= self.lr_decay['factor']
+            self.log(f"Increment Actor LR {self.actor_learning_rate}", verbose_level=3)
+        else:
+            self.actor_learning_rate = self.configs['Agent']['actor_learning_rate']
+            self.log(f"Actor LR Restored {self.actor_learning_rate}", verbose_level=3)
+
+        if 'MADDPG' not in str(self):
+            if self.critic_learning_rate < self.configs['Agent']['critic_learning_rate']:
+                self.critic_learning_rate /= self.lr_decay['factor']
+                self.log(f"Increment Critic LR {self.actor_learning_rate}", verbose_level=3)
+            else:
+                self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
+            self.log(f"Critic LR Restored {self.actor_learning_rate}", verbose_level=3)
+
+        self._update_optimizers()
+
+    def _update_optimizers(self):
+        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
     def update_epsilon_scale(self, done_count=None):
         '''To be called by the Learner before saving'''
@@ -239,8 +267,6 @@ class DDPGAgent(Agent):
     def _get_noise_scale(self, done_count=None):
         if done_count is None:
             done_count = self.done_count
-        if self.is_exploring():
-            return self.noise_start
         return max(self.noise_end, self.decay_value(self.noise_start, self.noise_episodes, (done_count - (self._average_exploration_episodes_performed())), degree=self.noise_decay_degree))
 
     def _average_exploration_episodes_performed(self):
@@ -285,4 +311,4 @@ class DDPGAgent(Agent):
         return ('shiva.agents', 'DDPGAgent.DDPGAgent')
 
     def __str__(self):
-        return f"'<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, device={self.device})>'"
+        return f"'<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} epsilon/noise={round(self.noise_scale, 2)}/{round(self.epsilon, 2)} device={self.device})>'"

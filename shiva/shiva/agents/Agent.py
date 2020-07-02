@@ -10,6 +10,7 @@ class Agent:
     step_count = 0
     done_count = 0
     num_updates = 0
+    num_evolutions = {'truncate': 0, 'perturb': 0, 'resample': 0}
     role = None
     
     def __init__(self, id, obs_space, acs_space, configs):
@@ -41,7 +42,7 @@ class Agent:
         self.policy = None
         self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'role']
+        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'num_evolutions', 'role']
         self.net_names = []
         self.hps = []
         self.save_filename = "{id}.state"
@@ -55,8 +56,14 @@ class Agent:
     def instantiate_networks(self):
         raise NotImplemented
 
-    def to_device(self):
-        raise NotImplemented
+    def to_device(self, device):
+        assert hasattr(self, 'net_names'), "Need this attribute to turn networks to a device"
+        self.device = device
+        for net_name in self.net_names:
+            if 'optimizer' in net_name:
+                continue
+            nn = getattr(self, net_name)
+            nn.to(self.device)
 
     def save(self, save_path, step):
         '''

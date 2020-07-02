@@ -24,8 +24,8 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
             @activ_function     an iterable of function definitions to be used on each layer        g.e. [nn.ReLU, nn.ReLU, nn.Tanh]
             @output_function    a function definition that will transform the network output        g.e. nn.Tanh
     '''
-    assert hasattr(layers, '__iter__'), '@layers input must be iterable - try a list or set'
-    assert len(layers) > 0, '@layers input is empty'
+    assert hasattr(layers, '__iter__'), f"@layers input must be iterable - try a list or set, got {layers}"
+    assert len(layers) > 0, f"@layers input is empty, got {layers}"
     assert len(activ_function) == 1 or (len(activ_function) > 1 and len(activ_function) == len(layers)), '@layers and @activ_function must be same size if more than one @activ_function is given'
 
     net_layers = []

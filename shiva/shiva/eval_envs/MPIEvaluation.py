@@ -93,12 +93,15 @@ class MPIEvaluation(Evaluation):
             for env_observations in self._obs_recv_buffer:
                 env_actions = []
                 for role_ix, role_name in enumerate(self.env_specs['roles']):
-                    role_actions = []
+                    # role_actions = []
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
-                    for o in role_obs:
-                        role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=True))
-                    env_actions.append(role_actions)
+                    # try batching all role observations to the agent
+                    # role_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
+                    # for o in role_obs:
+                    #     role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
+                    # env_actions.append(role_actions)
+                    env_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=not self.allow_noise))
                 actions.append(env_actions)
         elif 'Particle' in self.env_specs['type']:
             actions = []
@@ -107,7 +110,7 @@ class MPIEvaluation(Evaluation):
                 for role_ix, role_name in enumerate(self.env_specs['roles']):
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
-                    role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=True)
+                    role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=not self.allow_noise)
                     env_actions.append(role_actions)
                 actions.append(env_actions)
         elif 'Gym' in self.env_specs['type']:
@@ -117,7 +120,7 @@ class MPIEvaluation(Evaluation):
             agent_ix = self.role2agent[role_name]
             for role_obs in self._obs_recv_buffer:
                 env_actions = []
-                role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=True)
+                role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=not self.allow_noise)
                 env_actions.append(role_actions)
                 actions.append(env_actions)
         self.actions = np.array(actions)

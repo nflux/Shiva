@@ -18,10 +18,9 @@ from functools import partial
 class MADDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):
         super(MADDPGAlgorithm, self).__init__(observation_space, action_space, configs)
-        # self.actor_loss = [0 for _ in range(len(self.roles))]
-        # self.critic_loss = [0 for _ in range(len(self.roles))]
         self.actor_loss = {}
         self.critic_loss = {}
+        self._metrics = {}
         self.set_spaces(observation_space, action_space)
         '''
             Agent 1 and 2
@@ -29,7 +28,7 @@ class MADDPGAlgorithm(Algorithm):
 
             Methods
             Option 1 - critics
-                Each agent has it's own critic, order should of data input to critic should be consistent
+                Each agent has it's own critic, order of data input to critic should be consistent
             Option 2 - discriminator
                 Single critic with a one-hot encoding to correlate agents
                 Expensive as it needs to find the correlation between the one-hot and all the obs/acs for each agent
@@ -39,14 +38,16 @@ class MADDPGAlgorithm(Algorithm):
                 Critic would think they are just one agent but looking at many datapoints (each agent is a diff datapoint)
                 Agents should have the same Action Space
         '''
-        self.critic_input_size = sum([self.action_space[role]['acs_space'] for role in self.roles]) + sum([self.observation_space[role] for role in self.roles])
+        self.critic_input_size = 0
+        for role in self.roles:
+            self.critic_input_size += sum(self.action_space[role]['acs_space']) + self.observation_space[role]
 
         if self.method == "permutations":
             '''Single Local Critic'''
             self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.configs['Network']['critic']).to(self.device)
             self.target_critic = copy.deepcopy(self.critic)
 
-            if hasattr(self.configs['Agent'], 'lr_range') and self.configs['Agent']['lr_range']:
+            if hasattr(self.configs['Agent'], 'hp_random') and self.configs['Agent']['hp_random']:
                 self.critic_learning_rate = np.random.uniform(self.configs['Agent']['lr_uniform'][0], self.configs['Agent']['lr_uniform'][1]) / np.random.choice( self.configs['Agent']['lr_factors'])
             else:
                 self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
@@ -66,9 +67,10 @@ class MADDPGAlgorithm(Algorithm):
 
     def update(self, agents, buffer, step_count, episodic):
         self.agents = agents
+        self._metrics = {agent.id:[] for agent in self.agents}
         for _ in range(self.update_iterations):
             self._update(agents, buffer, step_count, episodic)
-        self.num_updates += self.update_iterations
+        # self.num_updates += self.update_iterations
 
     def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
@@ -146,7 +148,7 @@ class MADDPGAlgorithm(Algorithm):
             # Update the weights in the direction of the gradient.
             self.critic_optimizer.step()
             # Tensorboard
-            self.critic_loss[agent.id] = critic_loss.item()
+            # self.critic_loss[agent.id] = critic_loss.item()
 
             '''
                 Training the Actors
@@ -181,7 +183,12 @@ class MADDPGAlgorithm(Algorithm):
             # Update the weights in the direction of the gradient.
             agent.actor_optimizer.step()
             # Save actor loss for tensorboard
-            self.actor_loss[agent.id] = actor_loss.item()
+            # self.actor_loss[agent.id] = actor_loss.item()
+
+            self.num_updates += 1
+            self._metrics[agent.id] += [('Algorithm/Actor_Loss', actor_loss.item(), self.num_updates)]
+            self._metrics[agent.id] += [('Algorithm/Critic_Loss', critic_loss.item(), self.num_updates)]
+            self._metrics[agent.id] += [('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)]
 
         '''
             After all Actor updates, soft update Target Networks
@@ -319,7 +326,7 @@ class MADDPGAlgorithm(Algorithm):
 
     def copy_hyperparameters(self, evo_agent):
         self.critic_learning_rate = evo_agent.critic_learning_rate
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizer()
 
     def copy_weight_from_agent(self, evo_agent):
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
@@ -328,10 +335,27 @@ class MADDPGAlgorithm(Algorithm):
 
     def perturb_hyperparameters(self, perturb_factor):
         self.critic_learning_rate *= perturb_factor
-        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+        self._update_optimizer()
 
     def resample_hyperparameters(self):
         self.critic_learning_rate = np.random.uniform(self.configs['Agent']['lr_uniform'][0], self.configs['Agent']['lr_uniform'][1]) / np.random.choice(self.configs['Agent']['lr_factors'])
+        self._update_optimizer()
+
+    def decay_learning_rate(self):
+        self.critic_learning_rate *= self.configs['Agent']['lr_decay']['factor']
+        self.log(f"Decay Critic LR {self.critic_learning_rate}", verbose_level=3)
+        self._update_optimizer()
+
+    def restore_learning_rate(self):
+        if self.critic_learning_rate < self.configs['Agent']['critic_learning_rate']:
+            self.critic_learning_rate /= self.configs['Agent']['lr_decay']['factor']
+            self.log(f"Increment Critic LR {self.critic_learning_rate}", verbose_level=3)
+        else:
+            self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
+            self.log(f"Critic LR Restored {self.critic_learning_rate}", verbose_level=3)
+        self._update_optimizer()
+
+    def _update_optimizer(self):
         self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
     def save_central_critic(self, agent):
@@ -393,16 +417,17 @@ class MADDPGAlgorithm(Algorithm):
             self.action_space[role] = roles_action_space[role]
 
     def get_metrics(self, episodic, agent_id):
-        if not episodic:
-            '''Step metrics'''
-            metrics = []
-        else:
-            metrics = [
-                ('Algorithm/Actor_Loss', self.actor_loss[agent_id], self.num_updates),
-                ('Algorithm/Critic_Loss', self.critic_loss[agent_id], self.num_updates),
-                ('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)
-            ]
-        return metrics
+        return self._metrics[agent_id] if agent_id in self._metrics else []
+        # if not episodic:
+        #     '''Step metrics'''
+        #     metrics = []
+        # else:
+        #     metrics = [
+        #         ('Algorithm/Actor_Loss', self.actor_loss[agent_id], self.num_updates),
+        #         ('Algorithm/Critic_Loss', self.critic_loss[agent_id], self.num_updates),
+        #         ('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)
+        #     ]
+        # return metrics
 
     def __str__(self):
         return '<MADDPGAlgorithm(n_agents={}, num_updates={}, method={})>'.format(self.agentCount, self.num_updates, self.method)
