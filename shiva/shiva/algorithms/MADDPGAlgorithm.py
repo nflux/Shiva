@@ -219,31 +219,28 @@ class MADDPGAlgorithm(Algorithm):
         # self.log("FROM BUFFER Shapes Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.shape, bf_actions.shape, bf_rewards.shape, bf_next_states.shape, bf_dones.shape), verbose_level=3)
         # self.log("FROM BUFFER Types Obs {} Acs {} Rew {} NextObs {} Dones {}".format(bf_states.dtype, bf_actions.dtype, bf_rewards.dtype, bf_next_states.dtype, bf_dones.dtype))
 
-        '''Transform buffer actions to a one hot or softmax if needed'''
-        # for ix, (role, action_space) in enumerate(self.action_space.items()):
-        #     if action_space['type'] == 'discrete':
-        #         pass
-        #         # no need if buffer stored one hot encodings
-        #         # bf_actions[:, :, :] = one_hot_from_logits(bf_actions[:, ix, :]) for ix in range(self.num_agents)
-        #     else:
-        #         # Ezequiel: curious if here is doing a second softmax?
-        #         bf_actions[:, ix, :] = softmax(bf_actions[:, ix, :])
-
         # self.log("States from Buff {}".format(rewards.reshape(1, -1)))
+
+        self.num_updates += 1
         for agent_ix, agent in enumerate(self.agents):
             batch_size, num_agents, obs_dim = states.shape
             _, _, acs_dim = actions.shape
 
+            '''
+                Train the Critic
+            '''
             # Zero the gradient
             agent.critic_optimizer.zero_grad()
             # The actions that target actor would do in the next state & concat actions
             if self.action_space[agent.role]['type'] == 'discrete':
                 '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
                 # this iteration might not be following the same permutation order - at least is from a different _agent.target_actor
-                next_state_actions_target = torch.cat([one_hot_from_logits(_agent.target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
+                # next_state_actions_target = torch.cat([one_hot_from_logits(_agent.target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
+                next_state_actions_target = torch.cat([one_hot_from_logits(agents[perms[_ix]].target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
                 # self.log('OneHot next_state_actions_target {}'.format(next_state_actions_target))
             elif self.action_space[agent.role]['type'] == 'continuous':
-                next_state_actions_target = torch.cat([_agent.target_actor(next_states[:, _ix, :]) for _ix, _agent in enumerate(agents)], dim=1)
+                # next_state_actions_target = torch.cat([_agent.target_actor(next_states[:, _ix, :]) for _ix, _agent in enumerate(agents)], dim=1)
+                next_state_actions_target = torch.cat([agents[perms[_ix]].target_actor(next_states[:, _ix, :]) for _ix, _agent in enumerate(agents)], dim=1)
 
             Q_next_states_target = agent.target_critic(torch.cat( [next_states.reshape(batch_size, num_agents*obs_dim).float(), next_state_actions_target.float()] , 1))
             # self.log('Q_next_states_target {}'.format(Q_next_states_target.shape))
@@ -278,11 +275,11 @@ class MADDPGAlgorithm(Algorithm):
                 _agent.actor_optimizer.zero_grad()
             # Get the actions the main actor would take from the initial states
             if self.action_space[agent.role]['type'] == "discrete":
-                current_state_actor_actions = torch.cat([_agent.actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
-                # current_state_actor_actions = agent.actor(states[:, ix,s :].float(), gumbel=True)
+                # current_state_actor_actions = torch.cat([_agent.actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
+                current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
             elif self.action_space[agent.role]['type'] == "continuous":
                 current_state_actor_actions = torch.cat([_agent.actor(states[:, _ix, :].float()) for _ix, _agent in enumerate(agents)], dim=1)
-                # current_state_actor_actions = agent.actor(states[:, ix, :].float())
+                current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float()) for _ix, _agent in enumerate(agents)], dim=1)
 
             # Calculate Q value for taking those actions in those states
             actor_loss_value = agent.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), current_state_actor_actions.float()], dim=1))
@@ -298,6 +295,10 @@ class MADDPGAlgorithm(Algorithm):
             actor_loss.backward()
             # Update the weights in the direction of the gradient.
             agent.actor_optimizer.step()
+
+            self._metrics[agent.id] += [('Algorithm/Actor_Loss', actor_loss.item(), self.num_updates)]
+            self._metrics[agent.id] += [('Algorithm/Critic_Loss', critic_loss.item(), self.num_updates)]
+            self._metrics[agent.id] += [('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)]
             # Save actor loss for tensorboard
             self.actor_loss[agent.id] = actor_loss.item()
 

@@ -117,8 +117,8 @@ class MPIMultiEnv(Environment):
 
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
         self.actions = np.array(actions)
-        self.log("Shape Obs {} Acs {}".format(self._obs_recv_buffer.shape, self.actions.shape), verbose_level=2)
-        self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions), verbose_level=3)
+        self.log("Shape Obs {} Acs {}".format(self._obs_recv_buffer.shape, self.actions.shape), verbose_level=3)
+        self.log("Obs {} Acs {}".format(self._obs_recv_buffer, actions), verbose_level=4)
         # self.log("Step {}".format(self.step_count), verbose_level=2)
 
         if self.is_running:

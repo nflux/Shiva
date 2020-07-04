@@ -95,8 +95,8 @@ class MPIEnv(Environment):
             # disconnect signal
             self.is_running = False
         else:
-            self.log("Shape Obs {} Act {}".format(np.array(self.observations).shape, np.array(self.actions).shape), verbose_level=2)
-            self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=3)
+            self.log("Shape Obs {} Act {}".format(np.array(self.observations).shape, np.array(self.actions).shape), verbose_level=3)
+            self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=4)
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
 
     # def _step_numpy(self):
