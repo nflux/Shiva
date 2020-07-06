@@ -32,12 +32,12 @@ class DDPGAgent(Agent):
         if self.continuous == 0:
             self.action_space = 'discrete'
             self.actor_input = obs_space
-            self.actor_output = self.discrete
+            self.actor_output = self.discrete if isinstance(self.discrete, tuple) else (self.discrete,)
             self.get_action = self.get_discrete_action
         elif self.discrete == 0:
             self.action_space = 'continuous'
             self.actor_input = obs_space
-            self.actor_output = self.continuous
+            self.actor_output = self.continuous if isinstance(self.continuous, tuple) else (self.continuous,)
             self.get_action = self.get_continuous_action
             if not hasattr(self, 'actions_range'):
                 self.actions_range = [-1, 1]
@@ -54,7 +54,6 @@ class DDPGAgent(Agent):
         self.hps = ['actor_learning_rate', 'critic_learning_rate']
         self.hps += ['epsilon', 'noise_scale']
         self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
-
         self.ou_noise = noise.OUNoiseTorch(sum(self.actor_output), self.noise_scale)
         self.hp_random = self.hp_random if hasattr(self, 'hp_random') else False
 

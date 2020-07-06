@@ -40,6 +40,8 @@ class MADDPGAlgorithm(Algorithm):
         '''
         self.critic_input_size = 0
         for role in self.roles:
+            # print("LOOK HERE", self.action_space[role]['acs_space'])
+            # print("NOW LOOK HERE", self.observation_space)
             self.critic_input_size += sum(self.action_space[role]['acs_space']) + self.observation_space[role]
 
         if self.method == "permutations":

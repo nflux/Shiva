@@ -51,10 +51,11 @@ class MPIMultiEnv(Environment):
             Check if we can do a numpy step instead of python list
             If obs/acs dimensions for all roles are the same, then we can do MPI
         '''
+        print(f"MultiEnv: Env Specs: {self.env_specs}")
         if 'Unity' in self.type or 'ParticleEnv' in self.type:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         elif 'Gym' in self.type:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'] ), dtype=np.float64)
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'][self.env_specs['roles'][0]] ), dtype=np.float64)
         elif 'RoboCup' in self.type:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 

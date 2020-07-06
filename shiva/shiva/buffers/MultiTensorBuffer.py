@@ -95,6 +95,7 @@ class MultiAgentTensorBuffer(ReplayBuffer):
 
     def reset(self):
         '''Resets the buffer parameters'''
+        print(f"Reset: Obs Dim: {self.obs_dim}")
         self.obs_buffer = torch.zeros((self.max_size, self.num_agents, self.obs_dim), dtype=torch.float64, requires_grad=False)
         self.acs_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), dtype=torch.float64, requires_grad=False)
         self.rew_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.float64, requires_grad=False)

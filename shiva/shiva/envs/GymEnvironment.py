@@ -109,7 +109,7 @@ class GymEnvironment(Environment):
                 observation_space *= self.env.observation_space.shape[i]
         else:
             observation_space = self.env.observation_space.n
-        return observation_space
+        return {self.env_name: observation_space}
 
     def is_action_space_discrete(self):
         return self.env.action_space.shape == ()
@@ -138,7 +138,7 @@ class GymEnvironment(Environment):
             'discrete': self.action_space_discrete,
             'continuous': self.action_space_continuous,
             'param': 0,
-            'acs_space': self.action_space_discrete + self.action_space_continuous,
+            'acs_space': (self.action_space_discrete + self.action_space_continuous,),
             'actions_range': actions_range
         }
 
