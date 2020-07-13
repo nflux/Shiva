@@ -65,7 +65,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.DecisionSteps = {role:None for role in self.roles}
         self.TerminalSteps = {role:None for role in self.roles}
         self.trajectory_ready_agent_ids = {role:[] for role in self.roles}
-        self.collect_step_data()
+
+        self.collect_step_data() # collect first environment state
         '''Assuming all Roles Agent IDs are given at the beginning of the first episode'''
         self.role_agent_ids = {role:self.DecisionSteps[role].agent_id.tolist() for role in self.roles}
 
@@ -159,6 +160,11 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """
         for role in self.roles:
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
+
+            # try:
+            #     self.log(f"Step {self.steps_per_episode[role]} Role {role} Decision: {self.DecisionSteps[role].agent_id}, Terminal: {self.TerminalSteps[role].agent_id}", verbose_level=3)
+            # except:
+            #     pass
 
             if len(self.TerminalSteps[role].agent_id) > 0:
                 '''Agents that are on a Terminal Step'''

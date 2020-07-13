@@ -78,10 +78,10 @@ class MPILearner(Learner):
         self.run()
 
     def run(self):
-        self.step_count = 0
+        self.step_count = {agent.id:0 for agent in self.agents}
         self.done_count = 0
         self.num_updates = 0
-        self.steps_per_episode = 0
+        self.steps_per_episode = {agent.id:0 for agent in self.agents}
         self.metrics_env = {agent.id:[] for agent in self.agents}
         self.last_rewards = {agent.id:{'q':deque(maxlen=self.configs['Agent']['lr_decay']['average_episodes']), 'n':0} for agent in self.agents}
 
@@ -131,9 +131,8 @@ class MPILearner(Learner):
 
             traj_length_index = self.traj_info['length_index']
             traj_length = self.traj_info['obs_shape'][traj_length_index]
-            role = self.traj_info['role']
             # assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
-            assert set(self.roles).issuperset(set(role)), "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
+            assert set(self.roles).issuperset(set(self.traj_info['role'])), "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, self.traj_info['role'], self.roles)
 
             observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
             env_comm.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
@@ -150,17 +149,19 @@ class MPILearner(Learner):
             dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
             env_comm.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
 
-            self.step_count += traj_length
+            # self.step_count += traj_length
             self.done_count += 1
-            self.steps_per_episode = traj_length
+            # self.steps_per_episode = traj_length
             # below metric could be a potential issue when Learner controls multiple agents and receives individual trajectories for them
             self.reward_per_episode = sum(rewards.squeeze())
             self._n_success_pulls += 1
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
 
-            for role_ix, role in enumerate(self.roles):
+            for role_ix, role in enumerate(self.traj_info['role']):
                 '''Assuming 1 agent per role here'''
                 agent_id = self.role2ids[role][0]
+                self.step_count[agent_id] += traj_length
+                self.steps_per_episode[agent_id] = traj_length
                 for metric_ix, metric_set in enumerate(self.traj_info['metrics'][role_ix]):
                     self.traj_info['metrics'][role_ix][metric_ix] += (self.done_count,) # add the x_value for tensorboard!
                 self.metrics_env[agent_id] += self.traj_info['metrics'][role_ix]
@@ -174,12 +175,12 @@ class MPILearner(Learner):
             # self.log(f"NextObs {next_observations}")
             # self.log(f"Dones {dones}")
 
-            '''Assuming each individual role has same acs/obs dimension and reward function'''
-            exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.roles), observations.shape[-1]),
-                                         torch.from_numpy(actions).reshape(traj_length, len(self.roles), actions.shape[-1]),
-                                         torch.from_numpy(rewards).reshape(traj_length, len(self.roles), rewards.shape[-1]),
-                                         torch.from_numpy(next_observations).reshape(traj_length, len(self.roles), next_observations.shape[-1]),
-                                         torch.from_numpy(dones).reshape(traj_length, len(self.roles), dones.shape[-1])
+            '''VERY IMPORTANT Assuming each individual role has same acs/obs dimension and reward function'''
+            exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.traj_info['role']), observations.shape[-1]),
+                                         torch.from_numpy(actions).reshape(traj_length, len(self.traj_info['role']), actions.shape[-1]),
+                                         torch.from_numpy(rewards).reshape(traj_length, len(self.traj_info['role']), rewards.shape[-1]),
+                                         torch.from_numpy(next_observations).reshape(traj_length, len(self.traj_info['role']), next_observations.shape[-1]),
+                                         torch.from_numpy(dones).reshape(traj_length, len(self.traj_info['role']), dones.shape[-1])
                                          )))
             self.buffer.push(exp)
 
@@ -196,7 +197,7 @@ class MPILearner(Learner):
             _decay_or_restore_lr = 0 # -1 to decay, 1 to restore, 0 to do nothing
             _decay_log = ""
             for agent in self.agents:
-                agent.step_count = self.step_count
+                agent.step_count = self.step_count[agent.id]
                 agent.done_count = self.done_count
                 agent.num_updates = self.num_updates
                 # update this HPs so that they show up on tensorboard
