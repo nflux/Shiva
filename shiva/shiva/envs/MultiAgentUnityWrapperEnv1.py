@@ -7,7 +7,8 @@ from mlagents_envs.side_channel.engine_configuration_channel import EngineConfig
 from mlagents_envs.side_channel.environment_parameters_channel import EnvironmentParametersChannel
 
 from shiva.envs.Environment import Environment
-from shiva.buffers.MultiTensorBuffer import MultiAgentTensorBuffer
+from shiva.buffers.MultiTensorBuffer import MultiAgentSimpleTensorBuffer
+
 
 class MultiAgentUnityWrapperEnv1(Environment):
     def __init__(self, config):
@@ -330,7 +331,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
             self.trajectory_buffers[role] = {}
             self._ready_trajectories[role] = {}
             for role_agent_id in self.role_agent_ids[role]:
-                self.trajectory_buffers[role][role_agent_id] = MultiAgentTensorBuffer(self.episode_max_length+1, self.episode_max_length,
+                self.trajectory_buffers[role][role_agent_id] = MultiAgentSimpleTensorBuffer(self.configs,
+                                                                  self.episode_max_length+1,
+                                                                  self.episode_max_length,
                                                                   1, #self.num_instances_per_role[role],
                                                                   self.observation_space[role],
                                                                   sum(self.action_space[role]['acs_space']))

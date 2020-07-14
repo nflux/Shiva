@@ -55,7 +55,7 @@ as `envs`. For example, if the filename of your Unity environment is 3DBall.app,
 
 ```python
 from mlagents_envs.environment import UnityEnvironment
-env = UnityEnvironment(file_name="3DBall", base_port=5005, seed=1, side_channels=[])
+env = UnityEnvironment(file_name="3DBallDiscrete", base_port=5005, seed=1, side_channels=[])
 ```
 
 - `file_name` is the name of the environment binary (located in the root

@@ -15,6 +15,7 @@ from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process, flat_1d_list
 from shiva.learners.Learner import Learner
 
+
 class MPILearner(Learner):
 
     # for future MPI child abstraction
@@ -346,16 +347,13 @@ class MPILearner(Learner):
 
     def create_buffer(self):
         # TensorBuffer
-        print(f"Create Buffer: {self.observation_space[self.roles[0]]}")
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
         if type(self.observation_space) == dict:
-            print("THIS IS ACTUALLY RUNNING")
             '''Assuming roles with same obs/acs dim'''
-            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'],
-                                  self.num_agents, self.observation_space[self.roles[0]],
+            buffer = buffer_class(self.configs, self.num_agents, self.observation_space[self.roles[0]],
                                   sum(self.action_space[self.roles[0]]['acs_space']))
         else:
-            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
+            buffer = buffer_class(self.configs, self.num_agents, self.observation_space, self.action_space['acs_space'])
         self.log("Buffer created of type {}".format(buffer_class), verbose_level=2)
         return buffer
 
@@ -493,6 +491,7 @@ class MPILearner(Learner):
 
     def __str__(self):
         return "<Learner(id={})>".format(self.id)
+
 
 if __name__ == "__main__":
     try:

@@ -15,6 +15,7 @@ from shiva.helpers.misc import one_hot_from_logits
 from itertools import permutations
 from functools import partial
 
+
 class MADDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):
         super(MADDPGAlgorithm, self).__init__(observation_space, action_space, configs)
@@ -40,8 +41,6 @@ class MADDPGAlgorithm(Algorithm):
         '''
         self.critic_input_size = 0
         for role in self.roles:
-            # print("LOOK HERE", self.action_space[role]['acs_space'])
-            # print("NOW LOOK HERE", self.observation_space)
             self.critic_input_size += sum(self.action_space[role]['acs_space']) + self.observation_space[role]
 
         if self.method == "permutations":
@@ -69,13 +68,15 @@ class MADDPGAlgorithm(Algorithm):
 
     def update(self, agents, buffer, step_count, episodic):
         self.agents = agents
-        self._metrics = {agent.id:[] for agent in self.agents}
+        self._metrics = {agent.id: [] for agent in self.agents}
         for _ in range(self.update_iterations):
+            # print(f"UPDATE NUMBER {i}")
             self._update(agents, buffer, step_count, episodic)
         # self.num_updates += self.update_iterations
 
     def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
-        bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
+        bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones, indeces = buffer.sample(device=self.device)
+
         dones = bf_dones.bool()
 
         # self.log(f"Obs {bf_states}", verbose_level=2)
@@ -144,6 +145,10 @@ class MADDPGAlgorithm(Algorithm):
             # self.log('Q_these_states_main {}'.format(Q_these_states_main))
 
             # Calculate the loss.
+            td_errors = y_i - Q_these_states_main  # + self.omicron
+            # print(indeces)
+            buffer.update_td_errors(td_errors.abs(), indeces)
+            # print(f"td errors?: {td_errors.shape}")
             critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
             # Backward propagation!
             critic_loss.backward()

@@ -11,9 +11,10 @@ from shiva.core.admin import Admin, logger
 from shiva.core.TimeProfiler import TimeProfiler
 from shiva.utils.Tags import Tags
 from shiva.envs.Environment import Environment
-from shiva.buffers.MultiTensorBuffer import MultiAgentTensorBuffer
+from shiva.buffers.MultiTensorBuffer import MultiAgentSimpleTensorBuffer
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process
+
 
 class MPIEnv(Environment):
 
@@ -227,7 +228,6 @@ class MPIEnv(Environment):
                         self.learner.Send([next_observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_next_observations)
                         self.learner.Send([done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
 
-
         elif 'UnityWrapperEnv012' in self.type or 'Gym' in self.type or 'Particle' in self.type:
             for role, learner_spec in self.role2learner_spec.items():
                 learner_ix = learner_spec['id']
@@ -336,15 +336,17 @@ class MPIEnv(Environment):
                 - And each Role may have many agents instances (num_instances_per_env on Unity)
                 - Order is maintained
             '''
-            self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
+            self.trajectory_buffers = [MultiAgentSimpleTensorBuffer(self.configs,
+                                                              self.episode_max_length, self.episode_max_length,
                                                               self.env.num_instances_per_role[role],
                                                               self.env.observation_space[role],
-                                                              self.env.action_space[role]['acs_space']) \
-                                       for i, role in enumerate(self.env.roles) ]
+                                                              self.env.action_space[role]['acs_space'])
+                                       for i, role in enumerate(self.env.roles)]
         elif 'Gym' in self.type:
             '''Gym - has only 1 agent per environment and no roles'''
             print(f"MPIEnv: {self.env.action_space}")
-            self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
+            self.trajectory_buffers = [MultiAgentSimpleTensorBuffer(self.configs,
+                                                              self.episode_max_length, self.episode_max_length,
                                                               self.env.num_agents,
                                                               self.env.observation_space[self.env.env_name],
                                                               sum(self.env.action_space['acs_space']))]
@@ -400,6 +402,7 @@ class MPIEnv(Environment):
 
     def __str__(self):
         return f"<Env(id={self.menv_id}-{self.id}, done_count={self.done_count})>"
+
 
 if __name__ == "__main__":
     try:

@@ -21,7 +21,7 @@ def test_load_demo_dir():
     brain_parameters, pair_infos, total_expected = load_demonstration(
         path_prefix + "/test_demo_dir"
     )
-    assert brain_parameters.brain_name == "3DBall"
+    assert brain_parameters.brain_name == "3DBallDiscrete"
     assert brain_parameters.vector_observation_space_size == 8
     assert len(pair_infos) == total_expected
 
