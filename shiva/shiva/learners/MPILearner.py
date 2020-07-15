@@ -94,21 +94,6 @@ class MPILearner(Learner):
 
         self.close()
 
-    def close(self):
-        self.log("Started closing", verbose_level=2)
-        self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.close)
-        for e in self.envs:
-            e.Disconnect()
-        # Close Environment port
-        for portname in self.port['env']:
-            MPI.Close_port(portname)
-        self.log("Closed Environments", verbose_level=2)
-        self.menv.Disconnect()
-        self.log("Closed MultiEnv", verbose_level=2)
-        self.meta.Disconnect()
-        self.log("FULLY CLOSED", verbose_level=1)
-        exit(0)
-
     def check_incoming_trajectories(self):
         self.last_metric_received = None
 
@@ -273,31 +258,6 @@ class MPILearner(Learner):
                 # self.log('Evolution Completed for {} agents'.format(len(self.agents)), verbose_level=2)
             # else:
             #     self.log("No configs probed!", verbose_level=1)
-
-    def _run_agent_evolution(self):
-        '''Single Agent Evolution'''
-        if self.pbt:
-            if self.done_count % self.evolution_episodes == 0 and (self.done_count >= self.initial_evolution_episodes):
-                self.meta.send(self.agent_ids, dest=0, tag=Tags.evolution) # send for evaluation
-
-            if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
-                meta_source = self.info.Get_source()
-                self.log('Starting Evolution for {} agents'.format(len(self.agents)), verbose_level=1)
-                for agent in self.agents:
-                    self.evolution_config = self.meta.recv(None, source=meta_source, tag=Tags.evolution_config)  # block statement
-                    self.log('Received EvolutionConfig for {}'.format(str(agent)))
-                    if self.evolution_config['evolution'] == False:
-                        continue
-                    setattr(self, 'exploitation', getattr(self, self.evolution_config['exploitation']))
-                    setattr(self, 'exploration', getattr(self, self.evolution_config['exploration']))
-                    self.exploitation(agent,self.evolution_config)
-                    self.exploration(agent)
-
-                '''No need to send message to MultiEnv for now'''
-                # for ix in range(self.num_menvs):
-                #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
-
-                self.log('Evolution Completed for {} agents'.format(len(self.agents)), verbose_level=2)
 
     def create_agents(self):
         assert hasattr(self, 'num_agents') and self.num_agents > 0, 'Learner num_agent not specified, got {}'.format(self.num_agents)
@@ -489,6 +449,21 @@ class MPILearner(Learner):
         for attr_name, default_val in default_agent_configs.items():
             if attr_name not in self.configs['Agent']:
                 self.configs['Agent'][attr_name] = default_val
+
+    def close(self):
+        self.log("Started closing", verbose_level=2)
+        self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.close)
+        for e in self.envs:
+            e.Disconnect()
+        # Close Environment port
+        for portname in self.port['env']:
+            MPI.Close_port(portname)
+        self.log("Closed Environments", verbose_level=2)
+        self.menv.Disconnect()
+        self.log("Closed MultiEnv", verbose_level=2)
+        self.meta.Disconnect()
+        self.log("FULLY CLOSED", verbose_level=1)
+        exit(0)
 
     def __str__(self):
         return "<Learner(id={})>".format(self.id)

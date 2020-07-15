@@ -312,13 +312,6 @@ class MPIMultiEnv(Environment):
     def __str__(self):
         return "<MultiEnv(id={}({}), episodes={} device={})>".format(self.id, self.num_envs, self.done_count, self.device)
 
-    def show_comms(self):
-        self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
-        self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
-        self.log("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
-        # self.log("LEARNER = Inter: {} / Intra: {}".format(self.learners.Is_inter(), self.learners.Is_intra()))
-
-
 if __name__ == "__main__":
     try:
         menv = MPIMultiEnv()

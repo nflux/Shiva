@@ -12,13 +12,13 @@ ___
 * Learner
     * [Go to code](../shiva/learners/Learner.py)
 * SingleAgentDDPGLearner
-    * [Go to code](../shiva/learners/SingleAgentDQNLearner.py)
+    * [Go to code](../archive/SingleAgentDQNLearner.py)
 * SingleAgentDQNLearner
-    * [Go to code](../shiva/learners/SingleAgentDQNLearner.py)
+    * [Go to code](../archive/SingleAgentDQNLearner.py)
 * SingleAgentImitationLearner
-    * [Go to code](../shiva/learners/SingleAgentImitationLearner.py)
+    * [Go to code](../archive/SingleAgentImitationLearner.py)
 * SingleAgentPPOLearner
-    * [Go to code](../shiva/learners/SingleAgentPPOLearner.py)
+    * [Go to code](../archive/SingleAgentPPOLearner.py)
 
 ##  DDPGLearner
 ___
@@ -66,7 +66,7 @@ manual_play = False
 
 ##  SingleAgentDQNLearner
 ___
-[Go to Code](../shiva/learners/SingleAgentDQNLearner.py)
+[Go to Code](../archive/SingleAgentDQNLearner.py)
 
 ### Config Set Up     
 ```
@@ -83,7 +83,7 @@ load_path=False
 
 ##  SingleAgentImitationLearner
 ___
-[Go to Code](../shiva/learners/SingleAgentImitationLearner.py)
+[Go to Code](../archive/SingleAgentImitationLearner.py)
 
 ### Config Set Up     
 ```
@@ -100,7 +100,7 @@ expert_agent='runs/ML-RoboCup-11-04-12:53/L-0'
 
 ##  SingleAgentPPOLearner
 ___
-[Go to Code](../shiva/learners/SingleAgentPPOLearner.py)
+[Go to Code](../archive/SingleAgentPPOLearner.py)
 
 ### Config Set Up     
 ```

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/shiva/shiva/envs/ml-agents" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/shiva/shiva/envs/multiagent-particle-envs" vcs="" />
+    <mapping directory="$PROJECT_DIR$/shiva/shiva/envs/robocup/HFO/build/soccerwindow2-prefix/src/soccerwindow2" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/shiva/shiva/envs/robocup/librcsc" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/shiva/shiva/envs/robocup/rcssserver" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/shiva/shiva/helpers/barracuda-release" vcs="" />
+    <mapping directory="$PROJECT_DIR$/shiva/shiva/helpers/barracuda_release" vcs="" />
+  </component>
+</project>
