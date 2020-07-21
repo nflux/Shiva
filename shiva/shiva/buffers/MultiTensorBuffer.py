@@ -35,6 +35,8 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         self.rew_buffer[self.current_index:self.current_index + nentries, :, :] = rew
         self.done_buffer[self.current_index:self.current_index + nentries, :, :] = done
         self.next_obs_buffer[self.current_index:self.current_index + nentries, :, :] = next_obs
+        td_errors = torch.ones(len(obs)) * self.td_error_buffer.max()
+        self.td_error_buffer[self.current_index:self.current_index + nentries, :, :] = td_errors.reshape(-1, 1, 1)
 
         # print("From in-buffer Obs {}".format(self.obs_buffer[self.current_index:self.current_index + nentries, :, :]))
         # print("From in-buffer Acs {}".format(self.acs_buffer[self.current_index:self.current_index + nentries, :, :]))
@@ -85,7 +87,8 @@ class MultiAgentTensorBuffer(ReplayBuffer):
 
         # Normalize
         # print("Before Normalization", td_errors)
-        # td_errors *= (1/self.batch_size) * (1/td_errors.max())
+        for i, td_error in enumerate(td_errors):
+            td_errors[i] = (1/self.batch_size) * (1/td_error)
         # print("Normalized", td_errors)
 
         # Update values
@@ -93,14 +96,14 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             self.td_error_buffer[ind, :, :] = td_error + self.omicron
 
         # Make probabilities sum to one; this might be extra as its done in the sample function as well
-        self.td_error_buffer[:self.size, :, :] = self.td_error_buffer[:self.size, :, :] / self.td_error_buffer[:self.size, :, :].sum()
+        # self.td_error_buffer[:self.size, :, :] = self.td_error_buffer[:self.size, :, :] / self.td_error_buffer[:self.size, :, :].sum()
         # print(f"TD Errors Updated!")
 
     def update_epsilon_scale(self, num_samples):
             self.epsilon = self._get_epsilon_scale(num_samples)
 
     def _get_epsilon_scale(self, num_samples):
-        return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.epsilon_samples, num_samples, degree=self.epsilon_decay_degree))
+        return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.stochastic_samples, num_samples, degree=self.epsilon_decay_degree))
 
     def decay_value(self, start, decay_end_step, current_step_count, degree=1):
         return start - start * ((current_step_count / decay_end_step) ** degree)

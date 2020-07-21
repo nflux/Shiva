@@ -145,7 +145,7 @@ class MADDPGAlgorithm(Algorithm):
             # self.log('Q_these_states_main {}'.format(Q_these_states_main))
 
             # Calculate the loss.
-            td_errors = y_i - Q_these_states_main  # + self.omicron
+            td_errors = y_i - Q_these_states_main #+ self.omicron
             # print(indeces)
             buffer.update_td_errors(td_errors.abs(), indeces)
             # print(f"td errors?: {td_errors.shape}")
