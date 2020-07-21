@@ -7,10 +7,9 @@ from scipy import stats
 from collections import deque
 from mpi4py import MPI
 
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.core.IOHandler import get_io_stub
-import shiva.helpers.file_handler as fh
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process, flat_1d_list
 from shiva.learners.Learner import Learner
@@ -206,18 +205,9 @@ class MPILearner(Learner):
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
             self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
-            '''No need to send message to MultiEnv for now, they have the learner_spec['load_path'] for all Learners'''
-            # for ix in range(self.num_menvs):
-            #     self.menv.send(self._get_learner_state(), dest=ix, tag=Tags.new_agents)
-            '''No more PBT directory - it's shared with the MultiEnv directory'''
-            # if self.pbt:
-            #     self._io_save_pbt_agents()
-
             '''Check point purposes only'''
             if self.done_count % self.save_checkpoint_episodes == 0:
                 self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
-
-            # self.log("run_updates() for {}".format(self.num_updates / self.alg.update_iterations), verbose_level=2)
 
     def _run_roles_evolution(self):
         '''Roles Evolution'''

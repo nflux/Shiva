@@ -4,7 +4,6 @@ import random
 
 from shiva.algorithms.Algorithm import Algorithm
 from shiva.agents.DQNAgent import DQNAgent
-from shiva.helpers.misc import action2one_hot
 
 class DQNAlgorithm(Algorithm):
     def __init__(self, obs_space, acs_space, configs):

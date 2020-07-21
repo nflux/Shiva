@@ -1,6 +1,6 @@
 # Shiva
 
-Deep Reinforcement / Imitation Learning pipeline leveraging population based training for continuous and discrete action spaces. Adaptable to game environments by creating a game specific environment wrapper.
+Deep Reinforcement pipeline leveraging population based training for continuous and discrete action spaces. Adaptable to game environments by creating a game specific environment wrapper.
 
 Get started with the Installation and then thru the Quickstart to see how to run a session. The Tutorial section goes in more details about Shiva to familiarize with it's components and then be able to extend new algorithms.
 

@@ -11,7 +11,7 @@ import numpy as np
 from shiva.core.admin import logger
 from shiva.core.communication_objects.helpers_pb2 import Empty, SimpleMessage
 from shiva.core.communication_objects.service_iohandler_pb2_grpc import IOHandlerServicer, add_IOHandlerServicer_to_server, IOHandlerStub
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 
 class IOHandlerServer(IOHandlerServicer):
     '''

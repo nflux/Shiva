@@ -7,7 +7,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 from mpi4py import MPI
 import time
 
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process

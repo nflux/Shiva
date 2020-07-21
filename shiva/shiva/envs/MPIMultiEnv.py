@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import numpy as np
 from mpi4py import MPI
 
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.core.IOHandler import get_io_stub
 from shiva.envs.Environment import Environment
@@ -52,15 +52,14 @@ class MPIMultiEnv(Environment):
             If obs/acs dimensions for all roles are the same, then we can do MPI
         '''
         if 'Unity' in self.type or 'ParticleEnv' in self.type:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
-        elif 'Gym' in self.type:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'] ), dtype=np.float64)
-        elif 'RoboCup' in self.type:
-            self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
+            obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0])
+        elif 'Gym' in self.type or 'RoboCup' in self.type:
+            obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'])
 
-        # Give start flag!
+        self._obs_recv_buffer = np.empty(obs_recv_dim, dtype=np.float64)
+
+        # Give start flag to the individual Environments
         self.envs.bcast([True], root=MPI.ROOT)
-
         self.run()
 
     def run(self):
@@ -83,14 +82,8 @@ class MPIMultiEnv(Environment):
             for env_observations in self._obs_recv_buffer:
                 env_actions = []
                 for role_ix, role_name in enumerate(self.env_specs['roles']):
-                    # role_actions = []
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
-                    # try batching all role observations to the agent
-                    # role_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
-                    # for o in role_obs:
-                    #     role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
-                    # env_actions.append(role_actions)
                     env_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
                 actions.append(env_actions)
         elif 'Particle' in self.type:
@@ -148,7 +141,6 @@ class MPIMultiEnv(Environment):
                         role_actions.append(self.agents[agent_ix].get_action(o, self.step_count))
                     env_actions.append(role_actions)
                 actions.append(env_actions)
-            # actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
         elif 'Gym' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
             actions = []
@@ -162,7 +154,6 @@ class MPIMultiEnv(Environment):
                     role_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count))
                     env_actions.append(role_actions)
                 actions.append(env_actions)
-            # actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
         elif 'RoboCup' in self.type:
             actions = [[agent.get_action(obs, self.step_count, self.device) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
 

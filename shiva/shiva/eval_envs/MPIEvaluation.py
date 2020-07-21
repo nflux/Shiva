@@ -6,7 +6,7 @@ import numpy as np
 
 from shiva.eval_envs.Evaluation import Evaluation
 from shiva.helpers.misc import terminate_process, flat_1d_list
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.core.IOHandler import get_io_stub
 

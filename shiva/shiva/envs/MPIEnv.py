@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import time, subprocess
 import numpy as np
-import sys, time, traceback
+import sys, traceback
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 from mpi4py import MPI
@@ -9,7 +9,7 @@ import torch
 
 from shiva.core.admin import Admin, logger
 from shiva.core.TimeProfiler import TimeProfiler
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.buffers.MultiTensorBuffer import MultiAgentTensorBuffer
 from shiva.helpers.config_handler import load_class

@@ -1,13 +1,10 @@
 import sys, time
-import logging
 import numpy as np
 from mpi4py import MPI
 
-from shiva.metalearners.MetaLearner import MetaLearner
+from shiva.learners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
-from shiva.helpers.misc import terminate_process
-from shiva.utils.Tags import Tags
-from shiva.core.IOHandler import serve_iohandler
+from shiva.helpers.utils.Tags import Tags
 
 class MPIPBTMetaLearner(MetaLearner):
 
@@ -39,6 +36,7 @@ class MPIPBTMetaLearner(MetaLearner):
             self.evolve()
             self.check_states()
         self.close()
+
     '''
         Roles Evolution
     '''
@@ -131,49 +129,8 @@ class MPIPBTMetaLearner(MetaLearner):
             self.evols_sent = {i:False for i in range(self.num_learners)}
             self.log('Got New Rankings {}'.format(self.rankings), verbose_level=1)
 
-
-    # '''
-    #     Single Agent Evolution
-    #     (Travis approach not currently being used)
-    # '''
-    #
-    # def _single_agent_evolve(self):
-    #     if hasattr(self, 'rankings') and self.learners.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution):
-    #         self.log('MetaLearner Received evolution request', verbose_level=2)
-    #         agent_nums = self.learners.recv(None, source=MPI.ANY_SOURCE, tag=Tags.evolution, status=self.info)  # block statement
-    #         learner_source = self.info.Get_source()
-    #         for agent_id in agent_nums:
-    #             evo = dict()
-    #             ranking = np.where(self.rankings == agent_id)[0]
-    #             self.log('Current Agent Ranking: {}'.format(ranking), verbose_level=2)
-    #             evo['agent_id'] = evo['agent'] = agent_id
-    #             evo['ranking'] = ranking
-    #             if ranking <= self.top_20:
-    #                 evo['evolution'] = False
-    #                 # print('Do Not Evolve')
-    #             elif self.top_20  < ranking < self.bottom_20:
-    #                 # print('Middle of the Pack: {}'.format(learner_source))
-    #                 evo['evolution'] = True
-    #                 evo['evo_agent'] = self.rankings[np.random.choice(range(self.bottom_20))]
-    #                 evo['evo_ranking']= np.where(self.rankings == evo['evo_agent'])
-    #                 evo['exploitation'] = 't_test'
-    #                 evo['exploration'] = np.random.choice(['perturb', 'resample'])
-    #             else:
-    #                 # print('You suck')
-    #                 evo['evolution'] = True
-    #                 if not self.top_20 == 0:
-    #                     evo['evo_agent'] = self.rankings[np.random.choice(range(self.top_20))]
-    #                 else:
-    #                     evo['evo_agent'] = self.rankings[0]
-    #                 evo['evo_ranking'] = np.where(self.rankings == evo['evo_agent'])
-    #                 evo['exploitation'] = 'truncation'
-    #                 evo['exploration'] = np.random.choice(['perturb', 'resample'])
-    #             self.learners.send(evo, dest=learner_source, tag=Tags.evolution_config)
-    #         self.log('MetaLearner Responded to evolution request with evolution config', verbose_level=2)
-    #         delattr(self, 'rankings')
-
     '''
-        Functions to be replaced by the match making process
+        Functions to be replaced by some match making process
     '''
 
     def review_training_matches(self):
@@ -258,17 +215,11 @@ class MPIPBTMetaLearner(MetaLearner):
         # self.configs['Evaluation']['evals_io_port'] = self.configs['IOHandler']['evals_io_port']
 
         if self.pbt:
-            if hasattr(self, 'learners_map'):
-                self.rankings_size = {role:len(self.role2ids[role]) for role in self.roles} # total population for each role
-                self.top_20 = {role:int(self.rankings_size[role] * self.configs['Evaluation']['expert_population']) for role in self.roles}
-                self.bottom_20 = {role:int(self.rankings_size[role] * (1-self.configs['Evaluation']['expert_population'])) for role in self.roles}
-                self.evolve = self._roles_evolve
-                self.evols_sent = {l_spec['id']:False for l_spec in self.learners_specs}
-            else:
-                self.rankings_size = self.configs['Evaluation']['num_agents']
-                self.bottom_20 = int(self.rankings_size * (1-self.configs['Evaluation']['expert_population']))
-                self.top_20 = int(self.rankings_size * self.configs['Evaluation']['expert_population'])
-                self.evolve = self._single_agent_evolve
+            self.rankings_size = {role:len(self.role2ids[role]) for role in self.roles} # total population for each role
+            self.top_20 = {role:int(self.rankings_size[role] * self.configs['Evaluation']['expert_population']) for role in self.roles}
+            self.bottom_20 = {role:int(self.rankings_size[role] * (1-self.configs['Evaluation']['expert_population'])) for role in self.roles}
+            self.evolve = self._roles_evolve
+            self.evols_sent = {l_spec['id']:False for l_spec in self.learners_specs}
 
             self.mevals = MPI.COMM_SELF.Spawn(sys.executable, args=['shiva/eval_envs/MPIMultiEvaluationWrapper.py'], maxprocs=self.num_mevals)
             self.mevals.bcast(self.configs, root=MPI.ROOT)

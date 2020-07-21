@@ -3,9 +3,6 @@ import copy
 import torch
 from collections.abc import Iterable
 
-from torch.nn.functional import softmax
-from shiva.utils import Noise as noise
-from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.MADDPGAgent import MADDPGAgent
 from shiva.algorithms.Algorithm import Algorithm
 from shiva.helpers.networks_helper import mod_optimizer

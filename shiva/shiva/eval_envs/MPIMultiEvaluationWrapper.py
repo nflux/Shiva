@@ -10,7 +10,7 @@ pd.set_option('max_columns', 4)
 from shiva.core.admin import logger
 from shiva.eval_envs.Evaluation import Evaluation
 from shiva.helpers.misc import terminate_process
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin
 from shiva.envs.Environment import Environment
 
