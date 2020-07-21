@@ -52,9 +52,11 @@ class MPIMultiEnv(Environment):
             If obs/acs dimensions for all roles are the same, then we can do MPI
         '''
         if 'Unity' in self.type or 'ParticleEnv' in self.type:
-            obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0])
-        elif 'Gym' in self.type or 'RoboCup' in self.type:
-            obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'])
+            obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0],)
+        elif 'Gym' in self.type:
+            obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'][self.env_specs['roles'][0]],)
+        else:
+            assert False, "Environment needs implementation"
 
         self._obs_recv_buffer = np.empty(obs_recv_dim, dtype=np.float64)
 

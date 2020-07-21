@@ -12,16 +12,15 @@ class GymEnvironment(Environment):
         self.env.seed(self.manual_seed)
         np.random.seed(self.manual_seed)
 
-        self.action_space = self.get_action_space()
-        self.observation_space = self.get_observation_space()
-        self.reset()
-
         '''Set some attribute for Gym on MPI'''
         self.num_agents = 1
         self.roles = [self.env_name]
         self.num_instances_per_role = 1
         self.num_instances_per_env = 1
-        # self.agent_ids = [0]
+
+        self.action_space = {self.roles[0]: self.get_gym_action_space()}
+        self.observation_space = {self.roles[0]: self.get_gym_observation_space()}
+        self.reset()
 
         self.temp_done_counter = 0
 
@@ -30,15 +29,15 @@ class GymEnvironment(Environment):
             action = torch.tensor(action)
         self.acs = action
 
-        if self.action_space['continuous'] == 0:
+        if self.is_action_space_discrete():
             '''Discrete, argmax or sample from distribution'''
+            if not torch.is_tensor(action):
+                action = torch.from_numpy(action)
             if discrete_select == 'argmax':
-                if type(action).__module__ == np.__name__:
-                    action = torch.from_numpy(action)
-                action4Gym = torch.argmax(action) if self.action_space['continuous'] == 0 else action
+                action4Gym = torch.argmax(action).item()
             elif discrete_select == 'sample':
-                action4Gym = Categorical(torch.tensor(action)).sample()
-            self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym.item())
+                action4Gym = Categorical(action).sample().item()
+            self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         else:
             '''Continuous actions'''
             # self.obs, self.reward_per_step, self.done, info = self.env.step([action[action4Gym.item()]])
@@ -101,7 +100,7 @@ class GymEnvironment(Environment):
     def is_observation_space_discrete(self):
         return self.env.observation_space.shape == ()
 
-    def get_observation_space(self):
+    def get_gym_observation_space(self):
         observation_space = 1
         # if self.env.observation_space.shape != ():
         if not self.is_observation_space_discrete():
@@ -114,33 +113,23 @@ class GymEnvironment(Environment):
     def is_action_space_discrete(self):
         return self.env.action_space.shape == ()
 
-    def get_action_space(self):
-        self.action_space_continuous = 0
-        self.action_space_discrete = 0
-
-        # if self.env.action_space.shape != ():
-        if not self.is_action_space_discrete():
-            '''
-                Portion where Action Space is Continuous
-            '''
-            _action_space = 1
-            for i in range(len(self.env.action_space.shape)):
-                _action_space *= self.env.action_space.shape[i]
-            self.action_space_continuous = _action_space
-            actions_range = [self.env.action_space.low, self.env.action_space.high]
+    def get_gym_action_space(self):
+        if self.is_action_space_discrete():
+            return {
+                'discrete': (self.env.action_space.n,),
+                'continuous': 0,
+                'param': 0,
+                'acs_space': (self.env.action_space.n,),
+                'actions_range': []
+            }
         else:
-            '''
-                Portion where Action Space is Discrete
-            '''
-            self.action_space_discrete = self.env.action_space.n
-            actions_range = None
-        return {
-            'discrete': self.action_space_discrete,
-            'continuous': self.action_space_continuous,
-            'param': 0,
-            'acs_space': self.action_space_discrete + self.action_space_continuous,
-            'actions_range': actions_range
-        }
+            return {
+                'discrete': 0,
+                'continuous': self.env.action_space.shape,
+                'param': 0,
+                'acs_space': self.env.action_space.shape,
+                'actions_range': [self.env.action_space.low, self.env.action_space.high]
+            }
 
     def get_observations(self):
         return self.obs

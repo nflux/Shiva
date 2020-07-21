@@ -339,14 +339,15 @@ class MPIEnv(Environment):
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
                                                               self.env.num_instances_per_role[role],
                                                               self.env.observation_space[role],
-                                                              self.env.action_space[role]['acs_space']) \
+                                                              sum(self.env.action_space[role]['acs_space'])) \
                                        for i, role in enumerate(self.env.roles) ]
         elif 'Gym' in self.type:
-            '''Gym - has only 1 agent per environment and no roles'''
+            '''Gym - has only 1 agent per environment and 1 Role'''
+            single_role_name = self.env.roles[0]
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
-                                                              self.env.num_agents,
-                                                              self.env.observation_space,
-                                                              self.env.action_space['acs_space'])]
+                                                              self.env.num_agents, # = 1
+                                                              self.env.observation_space[single_role_name],
+                                                              sum(self.env.action_space[single_role_name]['acs_space']))]
 
     def reset_buffers(self):
         for buffer in self.trajectory_buffers:

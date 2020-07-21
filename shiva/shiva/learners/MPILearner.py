@@ -298,7 +298,7 @@ class MPILearner(Learner):
     def create_buffer(self):
         # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        if type(self.observation_space) == dict:
+        if type(self.action_space) == dict:
             '''Assuming roles with same obs/acs dim'''
             buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'],
                                   self.num_agents, self.observation_space[self.roles[0]],

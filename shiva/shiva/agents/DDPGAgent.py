@@ -7,7 +7,7 @@ from torch.distributions import Categorical
 from torch.nn.functional import softmax
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.Agent import Agent
-from shiva.utils import Noise as noise
+from shiva.helpers.utils import Noise as noise
 from shiva.helpers.networks_helper import mod_optimizer
 from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
