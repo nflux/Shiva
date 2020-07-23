@@ -269,13 +269,13 @@ class MPIPBTMetaLearner(MetaLearner):
             '''Do some preprocessing before spreading the config'''
             # load each one of the configs and keeping same order
             self.learners_configs = []
-            for config_path, learner_roles in self.learners_map.items():
+            for learner_ix, (config_path, learner_roles) in enumerate(self.learners_map.items()):
                 learner_config = load_config_file_2_dict(config_path)
                 learner_config = merge_dicts(self.configs, learner_config)
                 self.log("Learner {} with roles {}".format(len(self.learners_configs), learner_roles), verbose_level=2)
                 learner_config['Learner']['roles'] = learner_roles
-                # learner_config['Learner']['learners_io_port'] = self.configs['IOHandler']['learners_io_port']
                 learner_config['Learner']['pbt'] = self.pbt
+                learner_config['Learner']['manual_seed'] = self.manual_seed + learner_ix if 'manual_seed' not in learner_config['Learner'] else learner_config['Learner']['manual_seed']
                 learner_config['Agent']['pbt'] = self.pbt
                 self.learners_configs.append(learner_config)
             self.learners_configs = self.learners_configs * self.num_learners_maps
@@ -286,17 +286,18 @@ class MPIPBTMetaLearner(MetaLearner):
         return self.learners_configs
 
     def _preprocess_config(self):
-        if hasattr(self, 'learners_map'):
-            # calculate number of learners using the learners_map dict
-            self.num_menvs_per_learners_map = self.num_menvs_per_learners_map if hasattr(self, 'num_menvs_per_learners_map') else 1
-            self.num_learners_maps = self.num_learners_maps if hasattr(self, 'num_learners_maps') else 1
-            self.num_learners_per_map = len(self.learners_map.keys())
-            self.num_learners = self.num_learners_per_map * self.num_learners_maps
-            self.configs['MetaLearner']['num_learners'] = self.num_learners
-            self.log("Preprocess config\nOriginal LearnerMap {}\nNum Learners\t{}\nNum Learners Per Map\t{}\nNum Learners Maps\t{}\nNum MultiEnvs Per Learner Map\t{}".format(self.learners_map, self.num_learners, self.num_learners_per_map, self.num_learners_maps, self.num_menvs_per_learners_map), verbose_level=3)
-        else:
-            # num_learners is explicitely in the config
-            pass
+        assert hasattr(self, 'learners_map'), "Need 'learners_map' attribute on the [MetaLearner] section of the config"
+
+        # calculate number of learners using the learners_map dict
+        self.num_menvs_per_learners_map = self.num_menvs_per_learners_map if hasattr(self, 'num_menvs_per_learners_map') else 1
+        self.num_learners_maps = self.num_learners_maps if hasattr(self, 'num_learners_maps') else 1
+        self.num_learners_per_map = len(self.learners_map.keys())
+        self.num_learners = self.num_learners_per_map * self.num_learners_maps
+        self.configs['MetaLearner']['num_learners'] = self.num_learners
+        self.log("Preprocess config\nOriginal LearnerMap {}\nNum Learners\t{}\nNum Learners Per Map\t{}\nNum Learners Maps\t{}\nNum MultiEnvs Per Learner Map\t{}".format(self.learners_map, self.num_learners, self.num_learners_per_map, self.num_learners_maps, self.num_menvs_per_learners_map), verbose_level=3)
+
+        self.configs['Evaluation']['manual_seed'] = self.manual_seed if 'manual_seed' not in self.configs['Evaluation'] else self.configs['Evaluation']['manual_seed']
+        self.configs['Environment']['manual_seed'] = self.manual_seed if 'manual_seed' not in self.configs['Environment'] else self.configs['Environment']['manual_seed']
 
     def __str__(self):
         return "<Meta(id={})>".format(self.id)

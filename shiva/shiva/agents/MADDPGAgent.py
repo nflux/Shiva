@@ -8,6 +8,7 @@ class MADDPGAgent(DDPGAgent):
 
     def __init__(self, id: int, obs_space: int, acs_space: dict, configs: dict):
         super(MADDPGAgent, self).__init__(id, obs_space, acs_space, configs)
+        torch.manual_seed(self.manual_seed)
 
     def get_metrics(self):
         '''Used for evolution metric'''

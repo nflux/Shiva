@@ -4,6 +4,7 @@ class MetaLearner(object):
     def __init__(self, configs, profile=True):
         {setattr(self, k, v) for k,v in configs['MetaLearner'].items()}
         self.configs = configs
+        self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
         self.learnerCount = 0
         if profile:
             Admin.add_meta_profile(self, self.get_folder_name())

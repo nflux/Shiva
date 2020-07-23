@@ -1,6 +1,4 @@
 import torch
-
-
 from shiva.core.admin import Admin, logger
 from shiva.core.TimeProfiler import TimeProfiler
 from shiva.helpers.config_handler import load_class
@@ -22,21 +20,6 @@ class Learner(object):
         Admin.init(self.configs)
         Admin.add_learner_profile(self, function_only=True)
         self.profiler = TimeProfiler(self.configs, Admin.get_learner_url_summary(self))
-
-    def __getstate__(self):
-        d = dict(self.__dict__)
-        attributes_to_ignore = ['env', 'envs', 'eval', 'queue', 'queues', 'miniBuffer']
-        return [] # Ezequiel: Unsure who added this but needs documentation - maybe because we don't need anything when save/loading the Learner?
-        for t in d:
-            if t not in attributes_to_ignore:
-                # print(t)
-                pass
-        for a in attributes_to_ignore:
-            try:
-                del d[a]
-            except:
-                pass
-        return d
 
     def collect_metrics(self, episodic=False):
         '''
@@ -61,20 +44,17 @@ class Learner(object):
             assert False, "Learner attribute 'agent' or 'agents' was not found..."
 
     def _collect_metrics(self, agent_id, episodic):
-        if hasattr(self, 'MULTI_ENV_FLAG'):
-            try:
-                metrics = self.get_metrics(episodic, agent_id)
-            except:
-                metrics = self.get_metrics(episodic)
+        try:
+            metrics = self.get_metrics(episodic, agent_id)
+        except:
+            metrics = self.get_metrics(episodic)
 
-            if not self.evaluate:
-                try:
-                    metrics += self.alg.get_metrics(episodic, agent_id)
-                except:
-                    metrics += self.alg.get_metrics(episodic)
-            self._process_metrics(agent_id, metrics)
-        else:
-            assert False, "Testing if this if statement is unnecessary"
+        if not self.evaluate:
+            try:
+                metrics += self.alg.get_metrics(episodic, agent_id)
+            except:
+                metrics += self.alg.get_metrics(episodic)
+        self._process_metrics(agent_id, metrics)
 
     def _process_metrics(self, agent_id, metrics):
         for m in metrics:

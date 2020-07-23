@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="SshConfigs">
-    <configs>
-      <sshConfig host="104.197.11.65" id="d2f07107-4e3e-44ca-be38-218f9d4851a8" keyPath="$PROJECT_DIR$/../gcp/pem/shiva-1.pem" port="22" customName="Shiva" nameFormat="CUSTOM" username="admin" />
-    </configs>
-  </component>
-</project>

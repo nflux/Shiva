@@ -24,6 +24,7 @@ class Agent:
         self.configs = configs
         {setattr(self, k, v) for k, v in self.configs['Agent'].items()}
         self.id = id
+        self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
         self.agent_config = self.configs['Agent']
         self.networks_config = self.configs['Network']
         self.step_count = 0
@@ -39,7 +40,7 @@ class Agent:
         self.policy = None
         self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'num_evolutions', 'role']
+        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'num_evolutions', 'role', 'manual_seed']
         self.net_names = []
         self.hps = []
         self.save_filename = "{id}.state"

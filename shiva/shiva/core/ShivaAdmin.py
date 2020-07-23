@@ -328,7 +328,7 @@ class ShivaAdmin():
         self.add_learner_profile(learner) # will only add if was not profiled before
         # save learner pickle
         learner_data_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['learner_data']), use_existing=True )
-        fh.save_pickle_obj(learner, os.path.join(learner_data_dir, 'learner_cls.pickle'))
+        # fh.save_pickle_obj(learner, os.path.join(learner_data_dir, 'learner_cls.pickle'))
         # save buffer
         # fh.save_pickle_obj(learner.buffer, os.path.join(learner_data_dir, 'buffer_cls.pickle'))
         # save learner current config status

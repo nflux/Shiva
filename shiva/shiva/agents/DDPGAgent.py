@@ -16,14 +16,8 @@ from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHea
 class DDPGAgent(Agent):
     def __init__(self, id:int, obs_space:int, acs_space:dict, configs):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, configs)
-        try:
-            self.seed = self.manual_seed
-            torch.manual_seed(self.manual_seed)
-            np.random.seed(self.manual_seed)
-        except:
-            self.seed = np.random.randint(0, 100)
-            torch.manual_seed(self.seed)
-            np.random.seed(self.seed)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
 
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']

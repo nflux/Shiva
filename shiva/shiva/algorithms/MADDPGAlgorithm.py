@@ -15,6 +15,9 @@ from functools import partial
 class MADDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):
         super(MADDPGAlgorithm, self).__init__(observation_space, action_space, configs)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
+
         self.actor_loss = {}
         self.critic_loss = {}
         self._metrics = {}
@@ -378,6 +381,7 @@ class MADDPGAlgorithm(Algorithm):
         assert role in self.roles, "Invalid given role, got {} expected of {}".format(role, self.roles)
         self.configs['Agent']['role'] = role
         self.configs['Agent']['critic_input_size'] = self.critic_input_size
+        self.configs['Agent']['manual_seed'] = self.manual_seed if 'manual_seed' not in self.configs['Agent'] else self.configs['Agent']['manual_seed']
         new_agent = MADDPGAgent(id, self.observation_space[role], self.action_space[role], self.configs)
         self.add_agent(new_agent)
         return new_agent

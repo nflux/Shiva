@@ -166,12 +166,19 @@ class MPIEvaluation(Evaluation):
                     evals[role][metric_name].append(value)
 
         for role in self.roles:
+            learner_spec = self.role2learner_spec[role]
+            file_path = f"{learner_spec['load_path']}/evaluations/"
+
             for metric_name in metrics_received:
                 evals[role][metric_conversion[metric_name]] = np.mean(evals[role][metric_name])
-                path = self.eval_path + 'Agent_' + str(self.agents[self.role2agent[role]].id)
-                with open(path + '_episode_evaluations.data', 'wb+') as file_handler:
-                    pickle.dump(evals[role][metric_name], file_handler)
-                self.log("Saved Evals {}".format(evals[role][metric_name]), verbose_level=3)
+
+                if metric_name == 'reward_per_episode':
+                    self.io.request_io(self._get_eval_specs(), file_path, wait_for_access=True)
+                    file_name = f"{file_path}/Agent_{str(self.agents[self.role2agent[role]].id)}.npy"
+                    np.save(file_name, np.array(evals[role][metric_name]))
+                    self.io.done_io(self._get_eval_specs(), file_path)
+
+                    self.log("Saved Evals {} @ {}".format(evals[role][metric_name], file_name), verbose_level=3)
                 del evals[role][metric_name]
 
         self.meval.send(evals, dest=0, tag=Tags.evals)
