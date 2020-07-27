@@ -48,10 +48,12 @@ class MultiAgentTensorBuffer(ReplayBuffer):
     def sample(self, device):
         self.num_samples += 1
         self.update_epsilon_scale(self.num_samples)
-        if self.is_e_greedy():
-            return self.stochastic_sample(device=device)
-        else:
+        self.update_beta_scale(self.num_samples)
+
+        if (uniform(0, 1) > self.epsilon) and self.prioritized:
             return self.prioritized_sample(device=device)
+        else:
+            return self.stochastic_sample(device=device)
 
     def stochastic_sample(self, agent_id=None, device='cpu'):
         inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
@@ -68,7 +70,9 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         )
 
     def prioritized_sample(self, agent_id=None, device='cpu'):
-        probs = np.reshape((self.td_error_buffer[:self.size, :, :].abs() / self.td_error_buffer[:self.size, :, :].abs().sum()).detach().numpy(), self.size)
+        numerator = torch.pow(self.td_error_buffer[:self.size, :, :], self.alpha)
+        denominator = torch.pow(self.td_error_buffer[:self.size, :, :], self.alpha).sum()
+        probs = np.reshape((numerator/denominator).detach().numpy(), self.size)
         inds = np.random.choice(np.arange(self.size), size=self.batch_size, replace=False, p=probs)
         cast = lambda x: Variable(x, requires_grad=False).to(device)
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
@@ -85,19 +89,15 @@ class MultiAgentTensorBuffer(ReplayBuffer):
     def update_td_errors(self, td_errors, indeces):
         """Update the td error values for sampled experiences"""
 
-        # Normalize
-        # print("Before Normalization", td_errors)
-        for i, td_error in enumerate(td_errors):
-            td_errors[i] = (1/self.batch_size) * (1/td_error)
-        # print("Normalized", td_errors)
-
         # Update values
         for ind, td_error in zip(indeces, td_errors):
-            self.td_error_buffer[ind, :, :] = td_error + self.omicron
+            self.td_error_buffer[ind, :, :] = td_error.item() + self.omicron
 
         # Make probabilities sum to one; this might be extra as its done in the sample function as well
-        # self.td_error_buffer[:self.size, :, :] = self.td_error_buffer[:self.size, :, :] / self.td_error_buffer[:self.size, :, :].sum()
-        # print(f"TD Errors Updated!")
+        numerator = self.td_error_buffer[:self.size, :, :]
+        denominator = self.td_error_buffer[:self.size, :, :].sum()
+        new_probs = numerator / denominator
+        self.td_error_buffer[:self.size, :, :] = new_probs
 
     def update_epsilon_scale(self, num_samples):
             self.epsilon = self._get_epsilon_scale(num_samples)
@@ -108,11 +108,17 @@ class MultiAgentTensorBuffer(ReplayBuffer):
     def decay_value(self, start, decay_end_step, current_step_count, degree=1):
         return start - start * ((current_step_count / decay_end_step) ** degree)
 
-    def is_e_greedy(self):
-        if self.num_samples > self.stochastic_samples:
-            return uniform(0, 1) < self.epsilon
-        else:
-            return True
+    # def is_e_greedy(self):
+    #     if self.num_samples > self.stochastic_samples:
+    #         return uniform(0, 1) < self.epsilon
+    #     else:
+    #         return True
+
+    def update_beta_scale(self, num_samples):
+            self.beta = self._get_beta_scale(num_samples)
+
+    def _get_beta_scale(self, num_samples):
+        return max(self.beta_end, self.decay_value(self.beta_start, self.beta_steps, num_samples, degree=self.beta_decay_degree))
 
     def all(self):
         '''Returns all buffers'''

@@ -22,7 +22,10 @@ class Algorithm():
         self.agents = []
         self.observation_space = obs_space
         self.action_space = acs_space
-        self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
+        if self.configs['Buffer']['prioritized']:
+            self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])(reduction='none')
+        else:
+            self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
         self.num_updates = 0
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
