@@ -75,7 +75,7 @@ class MADDPGAlgorithm(Algorithm):
         # self.num_updates += self.update_iterations
 
     def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
-        bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones, indeces = buffer.sample(device=self.device)
+        bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
 
         dones = bf_dones.bool()
 
@@ -145,18 +145,12 @@ class MADDPGAlgorithm(Algorithm):
             # self.log('Q_these_states_main {}'.format(Q_these_states_main))
 
             if buffer.prioritized:
-
-                # Calculate the updated td errors
-                td_errors = y_i - Q_these_states_main
-                # Update buffer with normalized td_errors
-                buffer.update_td_errors(self.normalize_td_errors(td_errors), indeces)
-                # Get importance sampling weights
-                importance_sampling_weights = self.importance_sampling_weights(buffer, indeces)
-                # Start the loss but no reduction
-                critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
-                # Multiply loss by the weights, then take the mean
-                critic_loss = torch.mean(critic_loss * importance_sampling_weights)
-
+                # Update the sampled transitions' td errors
+                buffer.update_td_errors(y_i - Q_these_states_main)
+                # Fold the importance sample weights into the loss
+                critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main) * buffer.importance_sampling_weights()
+                # Reduce the loss to a scalar by taking the mean
+                critic_loss = torch.mean(critic_loss)
             else:
                 critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
 
@@ -389,22 +383,6 @@ class MADDPGAlgorithm(Algorithm):
         self.target_critic.load_state_dict(agent.target_critic.state_dict())
         self.critic_optimizer.load_state_dict(agent.critic_optimizer.state_dict())
         self.num_updates = agent.num_updates
-
-    def normalize_td_errors(self, td_errors):
-        max_error = td_errors.max()
-        td_errors /= max_error
-        return td_errors.abs()
-
-    def importance_sampling_weights(self, buffer, indeces):
-        """ Importance Sampling """
-        #
-        probs = buffer.td_error_buffer[indeces, :, :].reshape(-1).to(self.device)
-        #
-        imp_samp_weights = torch.pow(1 / (buffer.size * probs), buffer.beta)
-        # Grab the max importance sample weight
-        max_weight = imp_samp_weights.max()
-        # Divide all the weights by the max weight
-        return imp_samp_weights / max_weight
 
     def create_agents(self):
         assert 'NotImplemented - this method could be creating all Roles agents at once'

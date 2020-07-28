@@ -15,6 +15,104 @@ class MultiAgentTensorBuffer(ReplayBuffer):
 
     def push(self, exps):
         obs, ac, rew, next_obs, done = exps
+        #         print("Received action:\n", ac)
+        # print("Obs shape {} Acs shape {} Rew shape {} Next Obs shape {} Dones shape {}".format(obs.shape, ac.shape, rew.shape, next_obs.shape, done.shape))
+        nentries = len(obs)
+        if self.current_index + nentries > self.max_size:
+            rollover = self.max_size - self.current_index
+            self.obs_buffer = bh.roll(self.obs_buffer, rollover)
+            self.acs_buffer = bh.roll(self.acs_buffer, rollover)
+            self.rew_buffer = bh.roll(self.rew_buffer, rollover)
+            self.done_buffer = bh.roll(self.done_buffer, rollover)
+            self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
+            self.current_index = 0
+            self.size = self.max_size
+            # print("Roll!")
+
+        self.obs_buffer[self.current_index:self.current_index + nentries, :, :] = obs
+        self.acs_buffer[self.current_index:self.current_index + nentries, :, :] = ac
+        self.rew_buffer[self.current_index:self.current_index + nentries, :, :] = rew
+        self.done_buffer[self.current_index:self.current_index + nentries, :, :] = done
+        self.next_obs_buffer[self.current_index:self.current_index + nentries, :, :] = next_obs
+
+        # print("From in-buffer Obs {}".format(self.obs_buffer[self.current_index:self.current_index + nentries, :, :]))
+        # print("From in-buffer Acs {}".format(self.acs_buffer[self.current_index:self.current_index + nentries, :, :]))
+
+        if self.size < self.max_size:
+            self.size += nentries
+        self.current_index += nentries
+
+    def sample(self, agent_id=None, device='cpu'):
+        inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
+        cast = lambda x: Variable(x, requires_grad=False).to(device)
+        cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
+
+        # if agent_id is None:
+        return (
+            cast_obs(self.obs_buffer[inds, :, :].float()),
+            cast(self.acs_buffer[inds, :, :].float()),
+            cast(self.rew_buffer[inds, :, :].float()),
+            cast_obs(self.next_obs_buffer[inds, :, :].float()),
+            cast(self.done_buffer[inds, :, :])
+        )
+        # else:
+        #     return (
+        #         cast_obs(self.obs_buffer[inds, agent_id, :]),
+        #         cast(self.acs_buffer[inds, agent_id, :]),
+        #         cast(self.rew_buffer[inds, agent_id, :]),
+        #         cast_obs(self.next_obs_buffer[inds, agent_id, :]),
+        #         cast(self.done_buffer[inds, agent_id, :])
+        #     )
+
+    def all(self):
+        '''Returns all buffers'''
+        return [
+            self.obs_buffer[:self.current_index, :, :],
+            self.acs_buffer[:self.current_index, :, :],
+            self.rew_buffer[:self.current_index, :, :],
+            self.next_obs_buffer[:self.current_index, :, :],
+            self.done_buffer[:self.current_index, :, :]
+        ]
+
+    def all_numpy(self, astype=np.float64):
+        '''For data passing'''
+        return copy.deepcopy([
+            self.obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
+            self.acs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
+            self.rew_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
+            self.next_obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
+            self.done_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype)
+        ])
+
+    def agent_numpy(self, agent_id, reshape_fn=None):
+        '''For data passing'''
+        return [
+            self.obs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.acs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.rew_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.next_obs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.done_buffer[:self.current_index, agent_id, :].cpu().detach().numpy()
+        ]
+
+    def reset(self):
+        '''Resets the buffer parameters'''
+        self.obs_buffer = torch.zeros((self.max_size, self.num_agents, self.obs_dim), dtype=torch.float64, requires_grad=False)
+        self.acs_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), dtype=torch.float64, requires_grad=False)
+        self.rew_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.float64, requires_grad=False)
+        self.next_obs_buffer = torch.zeros((self.max_size, self.num_agents, self.obs_dim), dtype=torch.float64, requires_grad=False)
+        self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.bool, requires_grad=False)
+        self.current_index = 0
+        self.size = 0
+
+
+class PrioritizedMultiAgentTensorBuffer(ReplayBuffer):
+
+    def __init__(self, configs, num_agents, obs_dim, acs_dim):
+        super(PrioritizedMultiAgentTensorBuffer, self).__init__(configs, num_agents, obs_dim, acs_dim)
+        self.reset()
+
+    def push(self, exps):
+        obs, ac, rew, next_obs, done = exps
         # print("Received action:\n", ac)
         # print("Obs shape {} Acs shape {} Rew shape {} Next Obs shape {} Dones shape {}".format(obs.shape, ac.shape, rew.shape, next_obs.shape, done.shape))
         nentries = len(obs)
@@ -56,41 +154,40 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             return self.stochastic_sample(device=device)
 
     def stochastic_sample(self, agent_id=None, device='cpu'):
-        inds = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
+        self.indeces = np.random.choice(np.arange(len(self)), size=self.batch_size, replace=True)
         cast = lambda x: Variable(x, requires_grad=False).to(device)
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
         return (
-            cast_obs(self.obs_buffer[inds, :, :].float()),
-            cast(self.acs_buffer[inds, :, :].float()),
-            cast(self.rew_buffer[inds, :, :].float()),
-            cast_obs(self.next_obs_buffer[inds, :, :].float()),
-            cast(self.done_buffer[inds, :, :]),
-            inds
+            cast_obs(self.obs_buffer[self.indeces, :, :].float()),
+            cast(self.acs_buffer[self.indeces, :, :].float()),
+            cast(self.rew_buffer[self.indeces, :, :].float()),
+            cast_obs(self.next_obs_buffer[self.indeces, :, :].float()),
+            cast(self.done_buffer[self.indeces, :, :])
         )
 
     def prioritized_sample(self, agent_id=None, device='cpu'):
         numerator = torch.pow(self.td_error_buffer[:self.size, :, :], self.alpha)
         denominator = torch.pow(self.td_error_buffer[:self.size, :, :], self.alpha).sum()
         probs = np.reshape((numerator/denominator).detach().numpy(), self.size)
-        inds = np.random.choice(np.arange(self.size), size=self.batch_size, replace=False, p=probs)
+        self.indeces = np.random.choice(np.arange(self.size), size=self.batch_size, replace=False, p=probs)
         cast = lambda x: Variable(x, requires_grad=False).to(device)
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
         return (
-            cast_obs(self.obs_buffer[inds, :, :].float()),
-            cast(self.acs_buffer[inds, :, :].float()),
-            cast(self.rew_buffer[inds, :, :].float()),
-            cast_obs(self.next_obs_buffer[inds, :, :].float()),
-            cast(self.done_buffer[inds, :, :]),
-            inds
+            cast_obs(self.obs_buffer[self.indeces, :, :].float()),
+            cast(self.acs_buffer[self.indeces, :, :].float()),
+            cast(self.rew_buffer[self.indeces, :, :].float()),
+            cast_obs(self.next_obs_buffer[self.indeces, :, :].float()),
+            cast(self.done_buffer[self.indeces, :, :])
         )
 
-    def update_td_errors(self, td_errors, indeces):
+    def update_td_errors(self, td_errors):
         """Update the td error values for sampled experiences"""
 
         # Update values
-        for ind, td_error in zip(indeces, td_errors):
+        for ind, td_error in zip(self.indeces, self.normalize_td_errors(td_errors)):
+            # Adding self.omicron so that errors don't go to 0 and have a chance of being re-sampled
             self.td_error_buffer[ind, :, :] = td_error.item() + self.omicron
 
         # Make probabilities sum to one; this might be extra as its done in the sample function as well
@@ -98,6 +195,23 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         denominator = self.td_error_buffer[:self.size, :, :].sum()
         new_probs = numerator / denominator
         self.td_error_buffer[:self.size, :, :] = new_probs
+
+    def normalize_td_errors(self, td_errors):
+        td_errors = td_errors.abs()
+        max_error = td_errors.max()
+        td_errors /= max_error
+        return td_errors
+
+    def importance_sampling_weights(self):
+        """ Importance Sampling """
+        # Get the probabilities of the transitions that were sampled
+        probs = self.td_error_buffer[self.indeces, :, :].reshape(-1).to(self.device)
+        # Importance Sampling, Beta will anneal to 1 over time
+        imp_samp_weights = torch.pow(1 / (self.size * probs), self.beta)
+        # Grab the max importance sample weight
+        max_weight = imp_samp_weights.max()
+        # Divide all the weights by the max weight to normalize the weights between [0,1]
+        return imp_samp_weights / max_weight
 
     def update_epsilon_scale(self, num_samples):
             self.epsilon = self._get_epsilon_scale(num_samples)
@@ -107,12 +221,6 @@ class MultiAgentTensorBuffer(ReplayBuffer):
 
     def decay_value(self, start, decay_end_step, current_step_count, degree=1):
         return start - start * ((current_step_count / decay_end_step) ** degree)
-
-    # def is_e_greedy(self):
-    #     if self.num_samples > self.stochastic_samples:
-    #         return uniform(0, 1) < self.epsilon
-    #     else:
-    #         return True
 
     def update_beta_scale(self, num_samples):
             self.beta = self._get_beta_scale(num_samples)
@@ -163,10 +271,10 @@ class MultiAgentTensorBuffer(ReplayBuffer):
 
 
 # Need a tensorbuffer just for the MPIEnv that uses max_size and batch_size
-class MultiAgentSimpleTensorBuffer(ReplayBuffer):
+class SimpleTensorBuffer(ReplayBuffer):
 
     def __init__(self, configs, max_size, batch_size, num_agents, obs_dim, acs_dim):
-        super(MultiAgentSimpleTensorBuffer, self).__init__(configs, num_agents, obs_dim, acs_dim)
+        super(SimpleTensorBuffer, self).__init__(configs, num_agents, obs_dim, acs_dim)
         self.max_size = max_size
         self.batch_size = batch_size
         self.reset()
