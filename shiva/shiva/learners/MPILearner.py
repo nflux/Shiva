@@ -21,8 +21,6 @@ class MPILearner(Learner):
     id = MPI.COMM_SELF.Get_parent().Get_rank()
     info = MPI.Status()
 
-    MULTI_ENV_FLAG = True  # only being used for get_metrics function - to be handled differently at some point
-
     def __init__(self):
         # Receive Config from Meta
         self.configs = self.meta.scatter(None, root=0)
@@ -47,12 +45,6 @@ class MPILearner(Learner):
         self.port = {'env': []}
         for i in range(self.num_menvs):
             self.port['env'].append(MPI.Open_port(MPI.INFO_NULL))
-
-        if not hasattr(self, 'roles'):
-            self.roles = self.env_specs['roles'] # take all roles
-            self.run_evolution = self._run_agent_evolution
-        else:
-            self.run_evolution = self._run_roles_evolution
 
         '''Assuming Learner has 1 Agent per Role'''
         self.num_agents = len(self.roles)
@@ -209,7 +201,7 @@ class MPILearner(Learner):
             if self.done_count % self.save_checkpoint_episodes == 0:
                 self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
-    def _run_roles_evolution(self):
+    def run_evolution(self):
         '''Roles Evolution'''
 
         '''
@@ -255,7 +247,7 @@ class MPILearner(Learner):
         self.new_agents_ids = np.arange(self.start_agent_idx, self.start_agent_idx + self.num_agents)
 
         if self.load_agents:
-            agents = Admin._load_agents(self.load_agents, absolute_path=False, load_latest=False, device=self.alg.device) # the alg determines the device
+            agents = Admin.load_agents(self.load_agents, absolute_path=False, load_latest=False, device=self.alg.device) # the alg determines the device
             # minor tweak on the agent id as we can have an issue when multiple learners load the same agent id (like loading a PBT session)
             for a in agents:
                 a.id += 10 * self.id
@@ -324,34 +316,28 @@ class MPILearner(Learner):
     def t_test(self, agent, evo_config):
         if evo_config['ranking'] > evo_config['evo_ranking']:
 
-            self.io.request_io(self._get_learner_specs(), self.eval_path, wait_for_access=True)
-            path = self.eval_path + 'Agent_' + str(evo_config['agent_id'])
-            evo_path = self.eval_path + 'Agent_'+str(evo_config['evo_agent_id'])
-            if 'RoboCup' in self.configs['Environment']['type']:
-                with open(self.eval_path+'Agent_'+str(evo_config['agent_id'])+'/episode_evaluations.data','rb') as file_handler:
-                    evals = np.array(pickle.load(file_handler))
-                with open(self.eval_path+'Agent_'+str(evo_config['evo_agent_id'])+'/episode_evaluations.data','rb') as file_handler:
-                    evo_evals = np.array(pickle.load(file_handler))
-            else:
-                with open(path + '_episode_evaluations.data', 'rb') as file_handler:
-                    evals = np.array(pickle.load(file_handler))
-                with open(evo_path + '_episode_evaluations.data', 'rb') as file_handler:
-                    evo_evals = np.array(pickle.load(file_handler))
-            self.io.done_io(self._get_learner_specs(), self.eval_path)
+            my_eval_path = f"{Admin.get_learner_url(self)}/evaluations/"
+            self.io.request_io(self._get_learner_specs(), my_eval_path, wait_for_access=True)
+            evals = np.load(f"{my_eval_path}/Agent_{evo_config['agent_id']}.npy")
+            self.io.done_io(self._get_learner_specs(), my_eval_path)
+
+            evo_path = f"{evo_config['load_path']}/evaluations/"
+            self.io.request_io(self._get_learner_specs(), evo_path, wait_for_access=True)
+            evo_evals = np.load(f"{evo_path}/Agent_{evo_config['evo_agent_id']}.npy")
+            self.io.done_io(self._get_learner_specs(), evo_path)
 
             if self.welch_T_Test(evals, evo_evals):
                 self.truncation(agent, evo_config)
 
     def welch_T_Test(self, evals, evo_evals):
-        if 'RoboCup' in self.configs['Environment']['type']:
-            return True
-        else:
-            t, p = stats.ttest_ind(evals, evo_evals, equal_var=False)
-            return p < self.p_value
+        t, p = stats.ttest_ind(evals, evo_evals, equal_var=False)
+        self.log(f"T_test {evals} and {evo_evals}", verbose_level=3)
+        self.log(f"T_Test P_value {p}", verbose_level=3)
+        return p < self.p_value
 
     def truncation(self, agent, evo_config):
         self.io.request_io(self._get_learner_specs(), evo_config['evo_path'], wait_for_access=True)
-        evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
+        evo_agent = Admin.load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
         self.io.done_io(self._get_learner_specs(), evo_config['evo_path'])
 
         agent.copy_hyperparameters(evo_agent)

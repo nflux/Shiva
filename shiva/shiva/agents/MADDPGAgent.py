@@ -1,4 +1,3 @@
-import torch
 from shiva.agents.DDPGAgent import DDPGAgent
 
 class MADDPGAgent(DDPGAgent):
@@ -22,4 +21,4 @@ class MADDPGAgent(DDPGAgent):
         return ('shiva.agents', 'MADDPGAgent.MADDPGAgent')
 
     def __str__(self):
-        return f"<MADDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} noise/epsilon={round(self.noise_scale, 2)}/{round(self.epsilon, 2)} device={self.device})>'"
+        return f"<MADDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} noise/epsilon={round(self.noise_scale, 2)}/{round(self.epsilon, 2)} device={self.device})>"

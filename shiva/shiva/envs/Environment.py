@@ -20,7 +20,6 @@ class Environment:
     def __init__(self, configs):
         {setattr(self, k, v) for k,v in configs['Environment'].items()}
         self.configs = configs
-        self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
 
         # for previous versions support on attribute names
         if not hasattr(self, 'num_instances') and not hasattr(self, 'num_envs'):

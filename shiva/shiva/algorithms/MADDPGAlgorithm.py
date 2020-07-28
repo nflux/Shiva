@@ -15,6 +15,10 @@ from functools import partial
 class MADDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):
         super(MADDPGAlgorithm, self).__init__(observation_space, action_space, configs)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
+        self.log(f"MANUAL SEED {self.manual_seed}")
+
         self.actor_loss = {}
         self.critic_loss = {}
         self._metrics = {}

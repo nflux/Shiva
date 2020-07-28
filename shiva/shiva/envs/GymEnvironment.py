@@ -11,6 +11,7 @@ class GymEnvironment(Environment):
         self.env = gym.make(self.env_name)
         self.env.seed(self.manual_seed)
         np.random.seed(self.manual_seed)
+        torch.manual_seed(self.manual_seed)
 
         '''Set some attribute for Gym on MPI'''
         self.num_agents = 1
