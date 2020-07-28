@@ -190,7 +190,7 @@ class PrioritizedMultiAgentTensorBuffer(ReplayBuffer):
             # Adding self.omicron so that errors don't go to 0 and have a chance of being re-sampled
             self.td_error_buffer[ind, :, :] = td_error.item() + self.omicron
 
-        # Make probabilities sum to one; this might be extra as its done in the sample function as well
+        # Update the probabilities
         numerator = self.td_error_buffer[:self.size, :, :]
         denominator = self.td_error_buffer[:self.size, :, :].sum()
         new_probs = numerator / denominator
@@ -202,6 +202,7 @@ class PrioritizedMultiAgentTensorBuffer(ReplayBuffer):
         td_errors /= max_error
         return td_errors
 
+    @property
     def importance_sampling_weights(self):
         """ Importance Sampling """
         # Get the probabilities of the transitions that were sampled
