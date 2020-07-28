@@ -247,7 +247,7 @@ class MPILearner(Learner):
         self.new_agents_ids = np.arange(self.start_agent_idx, self.start_agent_idx + self.num_agents)
 
         if self.load_agents:
-            agents = Admin._load_agents(self.load_agents, absolute_path=False, load_latest=False, device=self.alg.device) # the alg determines the device
+            agents = Admin.load_agents(self.load_agents, absolute_path=False, load_latest=False, device=self.alg.device) # the alg determines the device
             # minor tweak on the agent id as we can have an issue when multiple learners load the same agent id (like loading a PBT session)
             for a in agents:
                 a.id += 10 * self.id
@@ -337,7 +337,7 @@ class MPILearner(Learner):
 
     def truncation(self, agent, evo_config):
         self.io.request_io(self._get_learner_specs(), evo_config['evo_path'], wait_for_access=True)
-        evo_agent = Admin._load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
+        evo_agent = Admin.load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
         self.io.done_io(self._get_learner_specs(), evo_config['evo_path'])
 
         agent.copy_hyperparameters(evo_agent)

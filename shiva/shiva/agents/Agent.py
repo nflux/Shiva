@@ -24,7 +24,6 @@ class Agent:
         self.configs = configs
         {setattr(self, k, v) for k, v in self.configs['Agent'].items()}
         self.id = id
-        self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
         self.agent_config = self.configs['Agent']
         self.networks_config = self.configs['Network']
         self.step_count = 0

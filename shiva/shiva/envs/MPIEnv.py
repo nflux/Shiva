@@ -28,6 +28,7 @@ class MPIEnv(Environment):
         # Receive Config from MultiEnv
         self.configs = self.menv.bcast(None, root=0)
         self.menv_id = self.configs['MultiEnv']['id']
+        self.configs['Environment']['manual_seed'] += self.menv_id * 100 + self.id
         super(MPIEnv, self).__init__(self.configs)
         self.launch()
 

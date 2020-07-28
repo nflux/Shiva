@@ -225,7 +225,8 @@ class MPIMultiEnv(Environment):
 
                 if not bypass_request:
                     self.io.request_io(self._get_menv_specs(), learner_spec['load_path'], wait_for_access=True)
-                learner_agents = Admin._load_agents(learner_spec['load_path'], device=self.device, load_latest=True)
+                # learner_agents = Admin.load_agents(learner_spec['load_path'], device=self.device, load_latest=True)
+                learner_agents = Admin.reload_agents(agents, learner_spec['load_path'], device=self.device, load_latest=True)
                 if not bypass_request:
                     self.io.done_io(self._get_menv_specs(), learner_spec['load_path'])
 

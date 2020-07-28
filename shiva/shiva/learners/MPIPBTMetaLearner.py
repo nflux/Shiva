@@ -275,7 +275,8 @@ class MPIPBTMetaLearner(MetaLearner):
                 self.log("Learner {} with roles {}".format(len(self.learners_configs), learner_roles), verbose_level=2)
                 learner_config['Learner']['roles'] = learner_roles
                 learner_config['Learner']['pbt'] = self.pbt
-                learner_config['Learner']['manual_seed'] = self.manual_seed + learner_ix if 'manual_seed' not in learner_config['Learner'] else learner_config['Learner']['manual_seed']
+                learner_config['Algorithm']['manual_seed'] = self.manual_seed + learner_ix if 'manual_seed' not in learner_config['Algorithm'] else learner_config['Algorithm']['manual_seed']
+                learner_config['Agent']['manual_seed'] = learner_config['Algorithm']['manual_seed'] if 'manual_seed' not in learner_config['Agent'] else learner_config['Agent']['manual_seed']
                 learner_config['Agent']['pbt'] = self.pbt
                 self.learners_configs.append(learner_config)
             self.learners_configs = self.learners_configs * self.num_learners_maps
