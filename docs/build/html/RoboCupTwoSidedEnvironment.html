@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoboCupTwoSidedEnvironment module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">RoboCupTwoSidedEnvironment module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-RoboCupTwoSidedEnvironment">
+<span id="robocuptwosidedenvironment-module"></span><h1>RoboCupTwoSidedEnvironment module<a class="headerlink" href="#module-RoboCupTwoSidedEnvironment" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="RoboCupTwoSidedEnvironment.HumanPlayerInterface">
+<em class="property">class </em><code class="sig-prename descclassname">RoboCupTwoSidedEnvironment.</code><code class="sig-name descname">HumanPlayerInterface</code><a class="headerlink" href="#RoboCupTwoSidedEnvironment.HumanPlayerInterface" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.HumanPlayerInterface.get_action">
+<code class="sig-name descname">get_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.HumanPlayerInterface.get_action" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.HumanPlayerInterface.is_valid_key">
+<code class="sig-name descname">is_valid_key</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">key</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.HumanPlayerInterface.is_valid_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.HumanPlayerInterface.normalize_angle">
+<code class="sig-name descname">normalize_angle</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">delta</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.HumanPlayerInterface.normalize_angle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.HumanPlayerInterface.normalize_power">
+<code class="sig-name descname">normalize_power</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">power</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.HumanPlayerInterface.normalize_power" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.HumanPlayerInterface.on_release">
+<code class="sig-name descname">on_release</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">key</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.HumanPlayerInterface.on_release" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.HumanPlayerInterface.robocup_action">
+<code class="sig-name descname">robocup_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action</span></em>, <em class="sig-param"><span class="n">obs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.HumanPlayerInterface.robocup_action" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment">
+<em class="property">class </em><code class="sig-prename descclassname">RoboCupTwoSidedEnvironment.</code><code class="sig-name descname">RoboCupTwoSidedEnvironment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.envs.Environment.Environment</span></code></p>
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.collect_metrics">
+<code class="sig-name descname">collect_metrics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.collect_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Metrics collection</dt><dd><p>Episodic # of steps             self.steps_per_episode –&gt; is equal to the amount of instances on Unity, 1 Shiva step could be a couple of Unity steps
+Cumulative # of steps           self.step_count
+Cumulative # of episodes        self.done_count
+Episodic Reward                 self.reward_per_episode
+Goal Total                      self.goal_ctr</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.descritize_action">
+<code class="sig-name descname">descritize_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.descritize_action" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_actions">
+<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_actions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_imit_obs_msg">
+<code class="sig-name descname">get_imit_obs_msg</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_imit_obs_msg" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_metrics">
+<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>To be implemented per Environment</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_observation_space">
+<code class="sig-name descname">get_observation_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_observation_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_observations">
+<code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_observations" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_reward">
+<code class="sig-name descname">get_reward</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.get_reward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.isDescritized">
+<code class="sig-name descname">isDescritized</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.isDescritized" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.isGoal">
+<code class="sig-name descname">isGoal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.isGoal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.isImit">
+<code class="sig-name descname">isImit</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.isImit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.is_done">
+<code class="sig-name descname">is_done</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.is_done" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.load_viewer">
+<code class="sig-name descname">load_viewer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.load_viewer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.start_env">
+<code class="sig-name descname">start_env</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.start_env" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.step">
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">actions</span></em>, <em class="sig-param"><span class="n">discrete_select</span><span class="o">=</span><span class="default_value">'argmax'</span></em>, <em class="sig-param"><span class="n">collect</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">evaluate</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#RoboCupTwoSidedEnvironment.RoboCupTwoSidedEnvironment.step" title="Permalink to this definition">¶</a></dt>
+<dd><dl>
+<dt>Input</dt><dd><p>&#64;actions
+&#64;discrete_select        Specify how to choose the discrete action taken</p>
+<blockquote>
+<div><p>argmax      do an argmax on the discrete side
+sample      take the discrete side as a probability distribution to sample from</p>
+</div></blockquote>
+</dd>
+<dt>Return</dt><dd><dl>
+<dt>A set with the following datas in order</dt><dd><p>next_observation
+reward
+done
+more_data           list of [</p>
+<blockquote>
+<div><blockquote>
+<div><p>raw_reward,         useful when rewards are normalized
+action_taken        useful if discrete_select == ‘sample’</p>
+</div></blockquote>
+<p>]</p>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/RoboCupTwoSidedEnvironment.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">RoboCupTwoSidedEnvironment module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

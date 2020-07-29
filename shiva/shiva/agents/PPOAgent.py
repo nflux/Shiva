@@ -7,7 +7,7 @@ import torch.nn as nn
 import numpy as np
 from shiva.agents.Agent import Agent
 from shiva.networks import DynamicLinearNetwork as DLN
-from shiva.utils import Noise as noise
+from shiva.helpers.utils import Noise as noise
 from shiva.helpers import misc
 
 def init_layer(module, w_init, b_init, gain=1):
@@ -135,7 +135,7 @@ class PPOAgent(Agent):
         logstd = self.logstd.expand_as(mu)
         #sigma = self.sigma(observation).squeeze(0).to(self.device)
         #dist = Normal(mu,torch.abs(sigma))
-        dist = Normal(mu logstd.exp())
+        dist = Normal(mu, logstd.exp())
         logprobs = dist.log_prob(action)
         return logprobs
 
