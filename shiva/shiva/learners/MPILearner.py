@@ -166,40 +166,47 @@ class MPILearner(Learner):
                 and (self.done_count % self.episodes_to_update == 0) \
                 and len(self.buffer) > self.buffer.batch_size:
 
+            self.run_lr_decay()
+
             self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
             self.num_updates = self.alg.get_num_updates()
             self.profiler.time('AlgUpdates', self.num_updates, output_quantity=self.alg.update_iterations)
-
-            _decay_or_restore_lr = 0 # -1 to decay, 1 to restore, 0 to do nothing
-            _decay_log = ""
-            for agent in self.agents:
-                agent.step_count = self.step_count[agent.id]
-                agent.done_count = self.done_count
-                agent.num_updates = self.num_updates
-                # update this HPs so that they show up on tensorboard
-                agent.recalculate_hyperparameters()
-                if 'lr_decay' in self.configs['Agent'] and self.configs['Agent']:
-                    if not agent.is_exploring() and self.done_count > (self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] * self.last_rewards[agent.id]['n']):
-                        self.last_rewards[agent.id]['n'] = self.done_count // self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] + 1
-                        agent_ave_reward = sum(self.last_rewards[agent.id]['q']) / len(self.last_rewards[agent.id]['q'])
-                        if self.configs['Environment']['expert_reward_range'][agent.role][0] <= agent_ave_reward <= self.configs['Environment']['expert_reward_range'][agent.role][1]:
-                            agent.decay_learning_rate()
-                            _decay_or_restore_lr = -1
-                            _decay_log += f"Decay Actor LR {agent.actor_learning_rate}"
-                        else:
-                            agent.restore_learning_rate()
-                            _decay_or_restore_lr = 1
-                            _decay_log += f"Restore Actor LR {agent.actor_learning_rate}"
-
-            self.alg.decay_learning_rate() if _decay_or_restore_lr == -1 else self.alg.restore_learning_rate() if _decay_or_restore_lr == 1 else None
-            self.log(f"{_decay_log} / Critic LR {self.alg.critic_learning_rate} / Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}", verbose_level=1) if _decay_log != '' else None
 
             '''Save latest updated agent in temp folder for MultiEnv and Evals to load'''
             self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=True)
 
             '''Check point purposes only'''
-            if self.done_count % self.save_checkpoint_episodes == 0:
+            if self.done_count >= self.checkpoints_made * self.save_checkpoint_episodes:
                 self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
+
+    def run_lr_decay(self):
+        '''Check if we need to do LR decay by looking at the last mean rewards'''
+        _decay_or_restore_lr = 0  # -1 to decay, 1 to restore, 0 to do nothing
+        _decay_log = ""
+        for agent in self.agents:
+            agent.step_count = self.step_count[agent.id]
+            agent.done_count = self.done_count
+            agent.num_updates = self.num_updates
+            # update this HPs so that they show up on tensorboard
+            agent.recalculate_hyperparameters()
+            if 'lr_decay' in self.configs['Agent'] and self.configs['Agent']:
+                if not agent.is_exploring() and self.done_count > (
+                        self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] * self.last_rewards[agent.id]['n']):
+                    self.last_rewards[agent.id]['n'] = self.done_count // self.configs['Agent']['lr_decay'][
+                        'wait_episodes_to_decay'] + 1
+                    agent_ave_reward = sum(self.last_rewards[agent.id]['q']) / len(self.last_rewards[agent.id]['q'])
+                    if self.configs['Environment']['expert_reward_range'][agent.role][0] <= agent_ave_reward <= \
+                            self.configs['Environment']['expert_reward_range'][agent.role][1]:
+                        agent.decay_learning_rate()
+                        _decay_or_restore_lr = -1
+                        _decay_log += f"Decay Actor LR {agent.actor_learning_rate}"
+                    else:
+                        agent.restore_learning_rate()
+                        _decay_or_restore_lr = 1
+                        _decay_log += f"Restore Actor LR {agent.actor_learning_rate}"
+
+        self.alg.decay_learning_rate() if _decay_or_restore_lr == -1 else self.alg.restore_learning_rate() if _decay_or_restore_lr == 1 else None
+        self.log(f"{_decay_log} / Critic LR {self.alg.critic_learning_rate} / Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}", verbose_level=1) if _decay_log != '' else None
 
     def run_evolution(self):
         '''Roles Evolution'''
@@ -304,6 +311,8 @@ class MPILearner(Learner):
         self.io = get_io_stub(self.configs)
 
     def checkpoint(self, checkpoint_num, function_only, use_temp_folder):
+        self.checkpoints_made += 1 if not use_temp_folder else 0
+
         for a in self.agents:
             self.alg.save_central_critic(a)
 
