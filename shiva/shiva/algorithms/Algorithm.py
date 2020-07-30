@@ -1,27 +1,23 @@
 import torch
-import numpy as np
 from shiva.core.admin import logger
 
+from typing import List, Dict, Tuple
+
 class Algorithm():
-    def __init__(self, obs_space, acs_space, configs):
-        '''
-            Input
-                observation_space   Shape of the observation space, aka input to policy network
-                action_space        Shape of the action space, aka output from policy network
-                loss_function       Function used to calculate the loss during training
-                regularizer
-                recurrence
-                optimizer           Optimization function to train network weights
-                gamma               Hyperparameter
-                learning_rate       Learning rate used in the optimizer
-                beta                Hyperparameter
-        '''
+    def __init__(self, observation_space: Dict[str, int], action_space: Dict[str, Dict[str, Tuple[int, ...]]], configs: Dict[str, ...]) -> None:
+        """
+        Abstract class for the algorithm. Several values are initialized.
+
+        Args:
+            observation_space (Dict[str, int]):
+            action_space (Dict[str, Dict[str, Tuple[int, ...]]]): This is the action space dictionary that our Environment wrappers output (link to Environment)
+            configs (Dict[str, ...]): The global config used for the run
+        """
         self.configs = configs
         {setattr(self, k, v) for k, v in self.configs['Algorithm'].items()}
-        self.agentCount = 0
         self.agents = []
-        self.observation_space = obs_space
-        self.action_space = acs_space
+        self.observation_space = observation_space
+        self.action_space = action_space
         self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
         self.num_updates = 0
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -41,24 +37,8 @@ class Algorithm():
         '''
         assert "Method Not Implemented"
 
-    def evolve(self):
-        raise NotImplemented
-
-    def get_num_updates(self):
+    def get_num_updates(self) -> int:
         return self.num_updates
-
-    def get_action(self, agent, observation):
-        '''
-            Determines the best action for the agent and a given observation
-
-            Input
-                agent:          the agent we want the action
-                observation:
-
-            Return
-                Action
-        '''
-        assert "Method Not Implemented"
 
     def create_agent(self):
         '''
@@ -69,23 +49,36 @@ class Algorithm():
             Return
                 Agent
         '''
-        assert "Method Not Implemented"
+        raise NotImplementedError("Method to be implemented by subclass")
 
-    def save_central_critic(self, agent):
+    def save_central_critic(self, agent: Agent) -> None:
+        """
+
+        Args:
+            agent:
+
+        Returns:
+
+        """
         pass
 
     def load_central_critic(self, agent):
         pass
 
-    def id_generator(self):
-        agent_id = self.agentCount
-        self.agentCount += 1
-        return agent_id
-
     def get_agents(self):
         return self.agents
 
-    def log(self, msg, to_print=False, verbose_level=-1):
+    def log(self, msg, to_print=False, verbose_level=-1) -> None:
+        """
+
+        Args:
+            msg:
+            to_print:
+            verbose_level:
+
+        Returns:
+
+        """
         '''If verbose_level is not given, by default will log'''
         if verbose_level <= self.configs['Admin']['log_verbosity']['Algorithm']:
             text = '{}\t{}'.format(self, msg)

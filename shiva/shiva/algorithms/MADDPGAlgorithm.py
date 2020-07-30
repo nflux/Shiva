@@ -12,8 +12,21 @@ from shiva.helpers.misc import one_hot_from_logits
 from itertools import permutations
 from functools import partial
 
+from typing import List, Dict, Tuple
+from shiva.buffers.MultiAgentTensorBuffer import MultiAgentTensorBuffer
+
 class MADDPGAlgorithm(Algorithm):
-    def __init__(self, observation_space: int, action_space: dict, configs: dict):
+    def __init__(self, observation_space: Dict[str, int], action_space: Dict[str, Dict[str, Tuple[int, ...]]], configs: Dict[str, ...]) -> None:
+        """
+        This class follows the algorithmic update explained on Ryan Lowe et all paper: https://arxiv.org/abs/1706.02275
+        We have implemented 2 different methods: one using permutations with a single critic (link to method) and other using multiple critics (link to method).
+        See MADDPG config explanation for correct usage.
+
+        Args:
+            observation_space (Dict[str, int]):
+            action_space (Dict[str, Dict[str, Tuple[int, ...]]]): This is the action space dictionary that our Environment wrappers output (link to Environment)
+            configs (Dict[str, ...]): The global config used for the run
+        """
         super(MADDPGAlgorithm, self).__init__(observation_space, action_space, configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
@@ -24,6 +37,8 @@ class MADDPGAlgorithm(Algorithm):
         self._metrics = {}
         self.set_spaces(observation_space, action_space)
         '''
+            This should go on the MADDPG Config explanation
+        
             Agent 1 and 2
             - Make sure actions/obs per agent are in the same indices in the buffer - don't sure how (I'm sure they come in the same order.. could be double checked)
 
@@ -66,14 +81,44 @@ class MADDPGAlgorithm(Algorithm):
         if self.configs['MetaLearner']['pbt']:
             self.resample_hyperparameters()
 
-    def update(self, agents, buffer, step_count, episodic):
+    def update(self, agents: List[MADDPGAgent], buffer: MultiAgentTensorBuffer, *args, **kwargs) -> None:
+        """
+        Runs the corresponding update method for a number of times specified by the config.
+        See MADDPG config explanation for the available update methods.
+
+        Args:
+            agents (List[MADDPGAgent]): List of agents to be updated
+            buffer (MultiAgentTensorBuffer): only buffers that have a `sample()` method that returns a 5 elements tuple in the order specified by the MultiAgentTensorBuffer (link)
+            *args:
+            **kwargs:
+        Returns:
+            None
+
+        """
         self.agents = agents
         self._metrics = {agent.id:[] for agent in self.agents}
         for _ in range(self.update_iterations):
-            self._update(agents, buffer, step_count, episodic)
+            self._update(agents, buffer)
         # self.num_updates += self.update_iterations
 
-    def update_permutes(self, agents: list, buffer: object, step_count: int, episodic=False):
+    def update_permutes(self, agents: List[MADDPGAgent], buffer: MultiAgentTensorBuffer, *args, **kwargs) -> None:
+        """
+        Update method when Algorithm section in config has attribute `method = "permutations"`
+        This method performs permutations on the observations, actions and target reward for a single central augmented critic.
+        By doing permutations we can reuse a same transition datapoint as many times as permutations are there possible with the number of actors being updates.
+
+        Note that this method only works when the agents have the same observation space, action spaces and reward function.
+
+        Args:
+            agents(List[MADDPGAgent]):
+            buffer(MultiAgentTensorBuffer): only buffers that have a `sample()` method that returns a 5 elements tuple in the order specified by the MultiAgentTensorBuffer (link)
+            *args:
+            **kwargs:
+
+        Returns:
+            None
+
+        """
         bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
         dones = bf_dones.bool()
 
@@ -211,7 +256,22 @@ class MADDPGAlgorithm(Algorithm):
             tgt_ct_state[k] = v * self.tau + (1 - self.tau) * tgt_ct_state[k]
         self.target_critic.load_state_dict(tgt_ct_state)
 
-    def update_critics(self, agents: list, buffer: object, step_count: int, episodic=False):
+    def update_critics(self, agents: List[MADDPGAgent], buffer: MultiAgentTensorBuffer, *args, **kwargs) -> None:
+        """Method to be revised and tested!
+        Update method when Algorithm section in config has attribute `method = "critics"`
+        With this method each actor will have it's own augmented critic. It must be used in the case where the actors have different observation/action spaces and reward function.
+        Each actor will have it's own critic.
+
+        Args:
+            agents (List[MADDPGAgent]): List of agents to be updated
+            buffer (MultiAgentTensorBuffer): only buffers that have a `sample()` method that returns a 5 elements tuple in the order specified by the MultiAgentTensorBuffer (link)
+            *args:
+            **kwargs:
+
+        Returns:
+            None
+
+        """
         states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
         '''Assuming same done flag for all agents on all timesteps'''
         dones_mask = torch.tensor(dones[:, 0, 0], dtype=torch.bool).view(-1, 1).to(self.device)
@@ -258,10 +318,10 @@ class MADDPGAlgorithm(Algorithm):
             # self.log('Q_these_states_main {}'.format(Q_these_states_main))
 
             # Calculate the loss.
-            agent_critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
+            critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
             # self.log('critic_loss {}'.format(self.critic_loss))
             # Backward propagation!
-            agent_critic_loss.backward()
+            critic_loss.backward()
             # Update the weights in the direction of the gradient.
             agent.critic_optimizer.step()
             # Save for tensorboard
@@ -323,44 +383,102 @@ class MADDPGAlgorithm(Algorithm):
                 tgt_ct_state[k] = v * self.tau + (1 - self.tau) * tgt_ct_state[k]
             agent.target_critic.load_state_dict(tgt_ct_state)
 
-    def evolve(self, evol_config):
-        pass
+    def copy_hyperparameters(self, evo_agent: MADDPGAgent) -> None:
+        """
+        Copies the critic hyperparameters from the `evo_agent`_ to the local
+        Only the critic learning rate is being copied for now.
 
-    def copy_hyperparameters(self, evo_agent):
+        Args:
+            evo_agent (MADDPGAgent):
+
+        Returns:
+            None
+
+        """
         self.critic_learning_rate = evo_agent.critic_learning_rate
         self._update_optimizer()
 
-    def copy_weight_from_agent(self, evo_agent):
+    def copy_weight_from_agent(self, evo_agent: MADDPGAgent) -> None:
+        """Copies the weights of the critic network, target critic network and critic optimizer from the `evo_agent`_ to the local
+
+        Args:
+            evo_agent (MADDPGAgent):
+
+        Returns:
+            None
+
+        """
         self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
         self.target_critic.load_state_dict(evo_agent.target_critic.to(self.device).state_dict())
         self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
 
-    def perturb_hyperparameters(self, perturb_factor):
+    def perturb_hyperparameters(self, perturb_factor: float) -> None:
+        """Perturbs the local critic learning rate by the `perturb_factor`_
+
+        Args:
+            perturb_factor (float): float value for which the local `critic_learning_rate`_ is multiplied
+
+        Returns:
+            None
+        """
         self.critic_learning_rate *= perturb_factor
         self._update_optimizer()
 
-    def resample_hyperparameters(self):
+    def resample_hyperparameters(self) -> None:
+        """
+        Resamples a new `critic_learning_rate`_ using a [don't know how to explain this function for which we sample a new LR]
+
+        Returns:
+            None
+
+        """
         self.critic_learning_rate = np.random.uniform(self.configs['Agent']['lr_uniform'][0], self.configs['Agent']['lr_uniform'][1]) / np.random.choice(self.configs['Agent']['lr_factors'])
         self._update_optimizer()
 
-    def decay_learning_rate(self):
+    def decay_learning_rate(self) -> None:
+        """
+        Decays the local `critic_learning_rate`_ using `configs['Agent']['lr_decay']['factor']`_
+
+        Returns:
+            None
+
+        """
         self.critic_learning_rate *= self.configs['Agent']['lr_decay']['factor']
         self.log(f"Decay Critic LR {self.critic_learning_rate}", verbose_level=3)
         self._update_optimizer()
 
-    def restore_learning_rate(self):
-        if self.critic_learning_rate < self.configs['Agent']['critic_learning_rate']:
-            self.critic_learning_rate /= self.configs['Agent']['lr_decay']['factor']
-            self.log(f"Increment Critic LR {self.critic_learning_rate}", verbose_level=3)
-        else:
-            self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
-            self.log(f"Critic LR Restored {self.critic_learning_rate}", verbose_level=3)
+    def restore_learning_rate(self) -> None:
+        """
+        Opposite to `decay_learning_rate()`_, restores the `critic_learning_rate`_ using `configs['Agent']['lr_decay']['factor']`_ until the maximum learning rate is reached
+
+        Returns:
+            None
+
+        """
+        self.critic_learning_rate = max(self.configs['Agent']['critic_learning_rate'], self.critic_learning_rate /= self.configs['Agent']['lr_decay']['factor'])
+        self.log(f"Critic LR Restored {self.critic_learning_rate}", verbose_level=3)
         self._update_optimizer()
 
-    def _update_optimizer(self):
+    def _update_optimizer(self) -> None:
+        """Updates the critic optimizer. Note only the learning rate is modified.
+
+        Returns:
+            None
+
+        """
         self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
-    def save_central_critic(self, agent):
+    def save_central_critic(self, agent: MADDPGAgent) -> None:
+        """
+        This function is used to save the central critic (hosted in the algorithm) in the agents. This enables the critic evolution across learners.
+
+        Args:
+            agent (MADDPGAgent): agent that is gonna host a copy of our local critic network
+
+        Returns:
+            None
+
+        """
         # All Agents will host a copy of the central critic to enable evolution
         agent.critic_learning_rate = self.critic_learning_rate
         agent.critic.load_state_dict(self.critic.state_dict())
@@ -368,17 +486,42 @@ class MADDPGAlgorithm(Algorithm):
         agent.critic_optimizer.load_state_dict(self.critic_optimizer.state_dict())
         agent.num_updates = self.get_num_updates()
 
-    def load_central_critic(self, agent):
+    def load_central_critic(self, agent: MADDPGAgent) -> None:
+        """
+        This function loads the critic from the `agent`_ input to the local critic hosted in this algorithm.
+
+        Args:
+            agent (MADDPGAgent): agent from which we are gonna make a copy of the critic network
+
+        Returns:
+            None
+
+        """
         self.critic_learning_rate = agent.critic_learning_rate
         self.critic.load_state_dict(agent.critic.state_dict())
         self.target_critic.load_state_dict(agent.target_critic.state_dict())
         self.critic_optimizer.load_state_dict(agent.critic_optimizer.state_dict())
         self.num_updates = agent.num_updates
 
-    def create_agents(self):
-        assert 'NotImplemented - this method could be creating all Roles agents at once'
+    def create_agents(self) -> List[MADDPGAgent]:
+        """Not implemented
 
-    def create_agent_of_role(self, id, role):
+        Returns:
+
+        """
+        raise NotImplementedError("Not implemented. This method could be creating all Roles agents at once")
+
+    def create_agent_of_role(self, id: int, role: str) -> MADDPGAgent:
+        """Creates a new MADDPG
+
+        Args:
+            id (int): unique ID for the agent
+            role (str): role name of the agent
+
+        Returns:
+            MADDPGAgent
+
+        """
         assert role in self.roles, "Invalid given role, got {} expected of {}".format(role, self.roles)
         self.configs['Agent']['role'] = role
         self.configs['Agent']['critic_input_size'] = self.critic_input_size
@@ -386,29 +529,72 @@ class MADDPGAlgorithm(Algorithm):
         self.add_agent(new_agent)
         return new_agent
 
-    def add_agent(self, agent):
+    def add_agent(self, agent: MADDPGAgent) -> None:
+        """
+        Function currently being used when loading agents. This way the algorithm can have a pointer to them.
+        May be deprecated.
+
+        Args:
+            agent (MADDPGAgent):
+
+        Returns:
+            None
+
+        """
         self.agentCount += 1
         self.actor_loss[agent.id] = 0
         self.critic_loss[agent.id] = 0
 
-    def add_agents(self, agents:list):
+    def add_agents(self, agents: List[MADDPGAgent]) -> None:
+        """
+        Function currently being used when loading agents. This way the algorithm can have a pointer to them.
+        May be deprecated.
+
+        Args:
+            agents (List[MADDPGAgent]):
+
+        Returns:
+            None
+
+        """
         assert len(agents) > 0, "Empty list of agents to load"
         for a in agents:
             self.add_agent(a)
         self.load_central_critic(agents[0]) # for a central critic, all agents host a copy of the algs critic so we can grab any of them
 
-    def set_spaces(self, observation_space, action_space):
+    def set_spaces(self, observation_space: Dict[str, int], action_space: Dict[str, Dict[str, tuple]]) -> None:
+        """
+        Function called during initialization to pre-process the observation and action space. Calls `set_action_space()`_
+
+        Args:
+            observation_space (Dict[str, int]):
+            action_space (Dict[str, Dict[str, tuple]]): This is the action space dictionary that our Environment wrappers output (link to Environment)
+
+        Returns:
+            None
+
+        """
         self.log("Got Obs Space {} and Acs Space {}".format(observation_space, action_space), verbose_level=3)
         if len(self.roles) == 1 and not isinstance(observation_space, Iterable):
             self.observation_space = {}
             self.observation_space[self.roles[0]] = observation_space
         self.set_action_space(action_space)
 
-    def set_action_space(self, roles_action_space):
+    def set_action_space(self, roles_action_space: Dict[str, Dict[str, tuple]]) -> None:
+        """
+        Function called during initialization to pre-process the action space.
+
+        Args:
+            roles_action_space (Dict[str, Dict[str, tuple]]):
+
+        Returns:
+            None
+
+        """
         self.action_space = {}
         for role in self.roles:
             if role not in roles_action_space:
-                '''Here is DDPG collapse because we are running a Gym (or similar with single agent) - specifically if the Env doesn't output a dict of roles->dimensions when calling for acs/obs spaces'''
+                '''Specifically if the Env doesn't output a dict of roles->dimensions'''
                 roles_action_space[role] = roles_action_space
             if roles_action_space[role]['continuous'] == 0:
                 roles_action_space[role]['type'] = 'discrete'
@@ -418,18 +604,21 @@ class MADDPGAlgorithm(Algorithm):
                 assert "Parametrized not supported yet"
             self.action_space[role] = roles_action_space[role]
 
-    def get_metrics(self, episodic, agent_id):
+    def get_metrics(self, agent_id: int) -> List[Tuple[str, float, int]]:
+        """
+        Args:
+            agent_id (int): Agent ID for which we want to the collected metrics
+
+        Returns:
+            Returns a list of tuples for the Tensorboard.
+            Each tuple is of the form (metric_name, y_value, x_value)
+
+        Examples:
+            >>> algorithm.get_metrics(agent_id=1)
+            [('Critic_loss', 0.002, 10), ('Actor_loss', 0.11, 10), ('Critic_loss', 0.05, 11), ('Actor_loss', 0.6, 11)]
+
+        """
         return self._metrics[agent_id] if agent_id in self._metrics else []
-        # if not episodic:
-        #     '''Step metrics'''
-        #     metrics = []
-        # else:
-        #     metrics = [
-        #         ('Algorithm/Actor_Loss', self.actor_loss[agent_id], self.num_updates),
-        #         ('Algorithm/Critic_Loss', self.critic_loss[agent_id], self.num_updates),
-        #         ('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)
-        #     ]
-        # return metrics
 
     def __str__(self):
         return '<MADDPGAlgorithm(n_agents={}, num_updates={}, method={})>'.format(self.agentCount, self.num_updates, self.method)
