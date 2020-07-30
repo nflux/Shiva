@@ -1,7 +1,11 @@
 from shiva.agents.DDPGAgent import DDPGAgent
 
-class MADDPGAgent(DDPGAgent):
 
+class MADDPGAgent(DDPGAgent):
+    """
+
+
+    """
     epsilon = 0
     noise_scale = 0
 

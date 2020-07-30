@@ -142,8 +142,16 @@ class MADDPGAlgorithm(Algorithm):
             Q_these_states_main = self.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), actions.reshape(batch_size, num_agents*acs_dim).float()], dim=1))
             # self.log('Q_these_states_main {}'.format(Q_these_states_main))
 
-            # Calculate the loss.
-            critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
+            if buffer.prioritized:
+                # Update the sampled transitions' td errors
+                buffer.update_td_errors(y_i - Q_these_states_main)
+                # Fold the importance sample weights into the loss
+                critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main) * buffer.importance_sampling_weights
+                # Reduce the loss to a scalar by taking the mean
+                critic_loss = torch.mean(critic_loss)
+            else:
+                critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
+
             # Backward propagation!
             critic_loss.backward()
             # Update the weights in the direction of the gradient.

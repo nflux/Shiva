@@ -238,7 +238,7 @@ class DDPGAgent(Agent):
         self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
     def update_epsilon_scale(self, done_count=None):
-        '''To be called by the Learner before saving'''
+        """To be called by the Learner before saving"""
         if self.hp_random is False:
             if done_count is None:
                 done_count = self.done_count
@@ -252,7 +252,7 @@ class DDPGAgent(Agent):
         return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.epsilon_episodes, (done_count - self._average_exploration_episodes_performed()), degree=self.epsilon_decay_degree))
 
     def update_noise_scale(self, done_count=None):
-        '''To be called by the Learner before saving'''
+        """To be called by the Learner before saving"""
         if self.hp_random is False:
             if done_count is None:
                 done_count = self.done_count

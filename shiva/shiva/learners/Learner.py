@@ -54,6 +54,12 @@ class Learner(object):
                 metrics += self.alg.get_metrics(episodic, agent_id)
             except:
                 metrics += self.alg.get_metrics(episodic)
+
+        try:
+            metrics += self.buffer.get_metrics(episodic, agent_id)
+        except:
+            metrics += self.buffer.get_metrics(episodic)
+
         self._process_metrics(agent_id, metrics)
 
     def _process_metrics(self, agent_id, metrics):
