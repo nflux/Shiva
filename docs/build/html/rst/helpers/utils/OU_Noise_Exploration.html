@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OU_Noise_Exploration module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">OU_Noise_Exploration module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-OU_Noise_Exploration">
+<span id="ou-noise-exploration-module"></span><h1>OU_Noise_Exploration module<a class="headerlink" href="#module-OU_Noise_Exploration" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="OU_Noise_Exploration.OU_Noise_Exploration">
+<em class="property">class </em><code class="sig-prename descclassname">OU_Noise_Exploration.</code><code class="sig-name descname">OU_Noise_Exploration</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action_size</span></em>, <em class="sig-param"><span class="n">config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#OU_Noise_Exploration.OU_Noise_Exploration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">utils.Base_Exploration_Strategy.Base_Exploration_Strategy</span></code></p>
+<p><a class="reference external" href="https://github.com/p-christ/Deep-Reinforcement-Learning-Algorithms-with-PyTorch/blob/master/exploration_strategies/OU_Noise_Exploration.py">https://github.com/p-christ/Deep-Reinforcement-Learning-Algorithms-with-PyTorch/blob/master/exploration_strategies/OU_Noise_Exploration.py</a></p>
+<dl class="py method">
+<dt id="OU_Noise_Exploration.OU_Noise_Exploration.perturb_action_for_exploration_purposes">
+<code class="sig-name descname">perturb_action_for_exploration_purposes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action_info</span></em><span class="sig-paren">)</span><a class="headerlink" href="#OU_Noise_Exploration.OU_Noise_Exploration.perturb_action_for_exploration_purposes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perturbs the action of the agent to encourage exploration</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="OU_Noise_Exploration.OU_Noise_Exploration.add_exploration_rewards">
+<code class="sig-name descname">add_exploration_rewards</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">reward_info</span></em><span class="sig-paren">)</span><a class="headerlink" href="#OU_Noise_Exploration.OU_Noise_Exploration.add_exploration_rewards" title="Permalink to this definition">¶</a></dt>
+<dd><p>Actions intrinsic rewards to encourage exploration</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="OU_Noise_Exploration.OU_Noise_Exploration.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#OU_Noise_Exploration.OU_Noise_Exploration.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the noise process</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/rst/helpers/utils/OU_Noise_Exploration.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">OU_Noise_Exploration module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

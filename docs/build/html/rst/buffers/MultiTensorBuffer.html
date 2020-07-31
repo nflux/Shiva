@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MultiTensorBuffer module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="ReplayBuffer module" href="ReplayBuffer.html" />
+    <link rel="prev" title="buffers" href="modules.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ReplayBuffer.html" title="ReplayBuffer module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="modules.html" title="buffers"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../modules.html" >shiva</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../main.html" >main module</a> &#187;</li>
+          <li class="nav-item nav-item-3"><a href="modules.html" accesskey="U">buffers</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">MultiTensorBuffer module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-MultiTensorBuffer">
+<span id="multitensorbuffer-module"></span><h1>MultiTensorBuffer module<a class="headerlink" href="#module-MultiTensorBuffer" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer">
+<em class="property">class </em><code class="sig-prename descclassname">MultiTensorBuffer.</code><code class="sig-name descname">MultiAgentTensorBuffer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_size</span></em>, <em class="sig-param"><span class="n">batch_size</span></em>, <em class="sig-param"><span class="n">num_agents</span></em>, <em class="sig-param"><span class="n">obs_dim</span></em>, <em class="sig-param"><span class="n">acs_dim</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.buffers.ReplayBuffer.ReplayBuffer</span></code></p>
+<dl class="py method">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer.push">
+<code class="sig-name descname">push</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">exps</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.push" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer.sample">
+<code class="sig-name descname">sample</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">'cpu'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.sample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer.all">
+<code class="sig-name descname">all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all buffers</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer.all_numpy">
+<code class="sig-name descname">all_numpy</code><span class="sig-paren">(</span><em class="sig-param">astype=&lt;class 'numpy.float64'&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.all_numpy" title="Permalink to this definition">¶</a></dt>
+<dd><p>For data passing</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer.agent_numpy">
+<code class="sig-name descname">agent_numpy</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em>, <em class="sig-param"><span class="n">reshape_fn</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.agent_numpy" title="Permalink to this definition">¶</a></dt>
+<dd><p>For data passing</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the buffer parameters</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer2">
+<em class="property">class </em><code class="sig-prename descclassname">MultiTensorBuffer.</code><code class="sig-name descname">MultiAgentTensorBuffer2</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#MultiTensorBuffer.MultiAgentTensorBuffer" title="MultiTensorBuffer.MultiAgentTensorBuffer"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiTensorBuffer.MultiAgentTensorBuffer</span></code></a></p>
+<p>Adding manipulation for Agent IDs</p>
+<dl class="py method">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer2.push">
+<code class="sig-name descname">push</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">exps</span></em>, <em class="sig-param"><span class="n">agent_id</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer2.push" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiTensorBuffer.MultiAgentTensorBuffer2.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer2.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the buffer parameters</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="modules.html"
+                        title="previous chapter">buffers</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="ReplayBuffer.html"
+                        title="next chapter">ReplayBuffer module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/rst/buffers/MultiTensorBuffer.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ReplayBuffer.html" title="ReplayBuffer module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="modules.html" title="buffers"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../modules.html" >shiva</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../main.html" >main module</a> &#187;</li>
+          <li class="nav-item nav-item-3"><a href="modules.html" >buffers</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">MultiTensorBuffer module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>
