@@ -3,10 +3,12 @@ from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_config_file_2_dict, load_class
 from shiva.helpers.misc import terminate_process
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--config", required=True, type=str, help='Config file name')
-parser.add_argument("-n", "--name", required=False, type=str, help="Name of the run")
-args = parser.parse_args()
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config", required=True, type=str, help='Config file name')
+    parser.add_argument("-n", "--name", required=False, type=str, help="Name of the run")
+    return parser.parse_args()
+
 
 def start_meta(metalearner_class, configs):
     try:
@@ -19,25 +21,29 @@ def start_meta(metalearner_class, configs):
     finally:
         pass
 
-configs = load_config_file_2_dict(os.path.join(os.getcwd(), 'configs', args.config))
+def main():
 
-if 'configs_set' in configs['MetaLearner']:
-    _date, _time = str(datetime.datetime.now()).split()
-    tmpst = _date[5:] + '-' + _time[0:5]
-    _run_root_dir = '{}-{}-configs-{}'.format(tmpst, len(configs['MetaLearner']['configs_set'])).replace(':', '')
-    for ix, c in enumerate(configs['MetaLearner']['configs_set']):
-        print("\n%%% {} run %%%\n%%% {} %%%\n".format(ix+1, c))
-        _run_type = c.split('/')[1] # like, 1U-5P, specifically for Profiling
-        run_config = load_config_file_2_dict(os.path.join(os.getcwd(), 'configs', c))
-        run_config['Admin']['directory']['runs'] = os.path.join('/', 'runs', _run_root_dir, 'run-{}-{}'.format(ix, _run_type))
-        Admin.init(run_config['Admin'])  # Admin is instantiated at shiva.core.admin for project global access
-        metalearner_class = load_class("shiva.learners", run_config['MetaLearner']['type'])
-        start_meta(metalearner_class, run_config)
-        print("\n%%% END WITH {} %%%".format(c))
-        time.sleep(5)
-else:
-    Admin.init(configs['Admin'])  # Admin is instantiated at shiva.core.admin for project global access
-    metalearner_class = load_class("shiva.learners", configs['MetaLearner']['type'])
-    start_meta(metalearner_class, configs)
+    args = get_args()
 
-exit(0)
+    configs = load_config_file_2_dict(os.path.join(os.getcwd(), 'configs', args.config))
+
+    if 'configs_set' in configs['MetaLearner']:
+        _date, _time = str(datetime.datetime.now()).split()
+        tmpst = _date[5:] + '-' + _time[0:5]
+        _run_root_dir = '{}-{}-configs-{}'.format(tmpst, len(configs['MetaLearner']['configs_set'])).replace(':', '')
+        for ix, c in enumerate(configs['MetaLearner']['configs_set']):
+            print("\n%%% {} run %%%\n%%% {} %%%\n".format(ix+1, c))
+            _run_type = c.split('/')[1] # like, 1U-5P, specifically for Profiling
+            run_config = load_config_file_2_dict(os.path.join(os.getcwd(), 'configs', c))
+            run_config['Admin']['directory']['runs'] = os.path.join('/', 'runs', _run_root_dir, 'run-{}-{}'.format(ix, _run_type))
+            Admin.init(run_config['Admin'])  # Admin is instantiated at shiva.core.admin for project global access
+            metalearner_class = load_class("shiva.learners", run_config['MetaLearner']['type'])
+            start_meta(metalearner_class, run_config)
+            print("\n%%% END WITH {} %%%".format(c))
+            time.sleep(5)
+    else:
+        Admin.init(configs['Admin'])  # Admin is instantiated at shiva.core.admin for project global access
+        metalearner_class = load_class("shiva.learners", configs['MetaLearner']['type'])
+        start_meta(metalearner_class, configs)
+
+    exit(0)

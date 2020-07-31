@@ -17,14 +17,15 @@ from shiva.helpers.misc import terminate_process
 
 class MPIEnv(Environment):
 
-    # for future MPI child abstraction
-    menv = MPI.COMM_SELF.Get_parent()
-    id = MPI.COMM_SELF.Get_parent().Get_rank()
-    info = MPI.Status()
-
-    env = None
 
     def __init__(self):
+        
+        # for future MPI child abstraction
+        self.menv = MPI.COMM_SELF.Get_parent()
+        self.id = MPI.COMM_SELF.Get_parent().Get_rank()
+        self.info = MPI.Status()
+        self.env = None
+
         # Receive Config from MultiEnv
         self.configs = self.menv.bcast(None, root=0)
         self.menv_id = self.configs['MultiEnv']['id']

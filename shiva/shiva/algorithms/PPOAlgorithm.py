@@ -4,10 +4,10 @@ import torch.functional as F
 import utils.Noise as noise
 from torch.nn import Softmax as Softmax
 from agents.PPOAgent import PPOAgent
-from .Algorithm import Algorithm
+from shiva.algorithms import Algorithm
 from torch.distributions import Categorical
 
-from shiva.utils import Noise as noise
+from shiva.helpers.utils import Noise as noise
 from shiva.agents.PPOAgent import PPOAgent
 from shiva.algorithms.Algorithm import Algorithm
 

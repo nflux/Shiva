@@ -12,12 +12,13 @@ from shiva.helpers.misc import terminate_process, flat_1d_list
 
 class MPIMultiEnv(Environment):
 
-    # for future MPI child abstraction
-    meta = MPI.COMM_SELF.Get_parent()
-    id = MPI.COMM_SELF.Get_parent().Get_rank()
-    info = MPI.Status()
 
     def __init__(self):
+        # for future MPI child abstraction
+        self.meta = MPI.COMM_SELF.Get_parent()
+        self.id = MPI.COMM_SELF.Get_parent().Get_rank()
+        self.info = MPI.Status()
+
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEnv, self).__init__(self.configs)

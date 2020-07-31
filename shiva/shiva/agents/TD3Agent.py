@@ -5,7 +5,7 @@ from torch.nn.functional import softmax
 
 from shiva.agents.Agent import Agent
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
-from shiva.utils import Noise as noise
+from shiva.helpers.utils import Noise as noise
 from shiva.helpers.calc_helper import np_softmax
 
 class TD3Agent(Agent):

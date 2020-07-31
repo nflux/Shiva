@@ -210,156 +210,156 @@ class RoboCupEnvironment(Environment):
 
         return metrics
 
-from pynput.keyboard import Key, KeyCode, Listener
-from math import atan2, pi, acos
+# from pynput.keyboard import Key, KeyCode, Listener
+# from math import atan2, pi, acos
 
-class HumanPlayerInterface():
+# class HumanPlayerInterface():
 
-    # Only for RoboCup
-    def __init__(self):
-        self.q = []
-        self.KEY_DASH = KeyCode.from_char('u')
-        self.KEY_TURN_LEFT = KeyCode.from_char(';')
-        self.KEY_TURN_RIGHT = KeyCode.from_char("'")
-        self.KEY_KICK = KeyCode.from_char("q")
+#     # Only for RoboCup
+#     def __init__(self):
+#         self.q = []
+#         self.KEY_DASH = KeyCode.from_char('u')
+#         self.KEY_TURN_LEFT = KeyCode.from_char(';')
+#         self.KEY_TURN_RIGHT = KeyCode.from_char("'")
+#         self.KEY_KICK = KeyCode.from_char("q")
 
-        self.listener = Listener(on_release=self.on_release)
-        self.listener.start()
+#         self.listener = Listener(on_release=self.on_release)
+#         self.listener.start()
 
-    def on_release(self, key):
-        if self.is_valid_key(key):
-            self.q.append(key)
+#     def on_release(self, key):
+#         if self.is_valid_key(key):
+#             self.q.append(key)
 
-    def is_valid_key(self, key):
-        return key in [self.KEY_DASH, self.KEY_TURN_LEFT, self.KEY_TURN_RIGHT, self.KEY_KICK]
+#     def is_valid_key(self, key):
+#         return key in [self.KEY_DASH, self.KEY_TURN_LEFT, self.KEY_TURN_RIGHT, self.KEY_KICK]
 
-    def get_action(self, obs):
-        if len(self.q) > 0:
-            action = self.q.pop(0)
-            return self.robocup_action(action, obs)
-        else:
-            return None
+#     def get_action(self, obs):
+#         if len(self.q) > 0:
+#             action = self.q.pop(0)
+#             return self.robocup_action(action, obs)
+#         else:
+#             return None
 
-    '''
-        Manual Control
+#     '''
+#         Manual Control
 
-            u - dash forward
-            j - dash backward
-            ; - 45 degree turn left
-            ' - 45 degree turn right
+#             u - dash forward
+#             j - dash backward
+#             ; - 45 degree turn left
+#             ' - 45 degree turn right
 
-    '''
+#     '''
 
-    def robocup_action(self, action, obs):
+#     def robocup_action(self, action, obs):
 
-        # obs.shape, 
-        # print(obs[0, 17])
-        print("(x,y):", obs[0,4], obs[0, 5])
+#         # obs.shape, 
+#         # print(obs[0, 17])
+#         print("(x,y):", obs[0,4], obs[0, 5])
 
-        # print(obs[0, 15], '\n', obs[0, 16], '\n')
+#         # print(obs[0, 15], '\n', obs[0, 16], '\n')
 
-        # x_rad = obs[0,4]
-        # y_rad = obs[0,5]
+#         # x_rad = obs[0,4]
+#         # y_rad = obs[0,5]
 
-        # print out observations of the ball (x y coordinates)
-        # also print out the coordinates of the agent
+#         # print out observations of the ball (x y coordinates)
+#         # also print out the coordinates of the agent
 
-        # test the x y coordinates to make sure the reward function is using those coordinates and not something else
-
-
-        # check that if the agent can't see the ball whether or not the coordinates of the ball become -1; therefor invalid
-        # so then we might need the true values if they are invalid
-        # if they are invalid then we need to get the true true from the coach
-
-        # print("sin:", y_rad)
-        # print("cos", x_rad)
-
-        # acos method for getting global angle
-        # th = acos(x_rad) * 180 / pi
-        # if y_rad < 0:
-        #     th *= -1
-        # print("global angle(acos):", th)
-
-        # arctan2 method for getting global angle
-        # global_theta = atan2(y_rad, x_rad) * 180 / pi
-        # print("global angle(atan2):", global_theta)
-
-        # if self.action_level discretized
-
-        # if action == self.KEY_DASH:
-        #     '''
-        #         Dash forward
-        #     '''
-        #     dash_degree = 0
-        #     dash_power = self.normalize_power(50)
-
-        #     action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
-
-        # elif action == self.KEY_TURN_LEFT:
-        #     '''
-        #         Turn Agent Left
-        #     '''
-        #     action = [0, 1, 0, 0, 0, -0.25, 0, 0]
-
-        # elif action == self.KEY_TURN_RIGHT:
-        #     '''
-        #         Turn Agent Right
-        #     '''
-        #     action = [0, 1, 0, 0, 0, .25, 0, 0]
-
-        # elif action == self.KEY_KICK:
-        #     '''
-        #         Agent Kick
-        #     '''
-        #     kick_degree = 0
-        #     kick_power = self.normalize_power(50)
-
-        #     action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
-        # else:
-        #     assert False, "Wrong action given"
+#         # test the x y coordinates to make sure the reward function is using those coordinates and not something else
 
 
+#         # check that if the agent can't see the ball whether or not the coordinates of the ball become -1; therefor invalid
+#         # so then we might need the true values if they are invalid
+#         # if they are invalid then we need to get the true true from the coach
 
-        if action == self.KEY_DASH:
-            '''
-                Dash forward
-            '''
-            dash_degree = 0
-            dash_power = self.normalize_power(50)
+#         # print("sin:", y_rad)
+#         # print("cos", x_rad)
 
-            action = (10,0)
-            action = 0
+#         # acos method for getting global angle
+#         # th = acos(x_rad) * 180 / pi
+#         # if y_rad < 0:
+#         #     th *= -1
+#         # print("global angle(acos):", th)
 
-        elif action == self.KEY_TURN_LEFT:
-            '''
-                Turn Agent Left
-            '''
-            action = (22.5,)
-            action = 1
+#         # arctan2 method for getting global angle
+#         # global_theta = atan2(y_rad, x_rad) * 180 / pi
+#         # print("global angle(atan2):", global_theta)
 
-        elif action == self.KEY_TURN_RIGHT:
-            '''
-                Turn Agent Right
-            '''
-            action = (-22.5,)
-            action = 2
+#         # if self.action_level discretized
 
-        elif action == elf.KEY_KICK:
-            '''
-                Agent Kick
-            '''
-            kick_degree = 0
-            kick_power = self.normalize_power(50)
+#         # if action == self.KEY_DASH:
+#         #     '''
+#         #         Dash forward
+#         #     '''
+#         #     dash_degree = 0
+#         #     dash_power = self.normalize_power(50)
 
-            action = (50,0)
-            action = 3
-        else:
-            assert False, "Wrong action given"            
+#         #     action = [1, 0, 0, dash_power, dash_degree, 0, 0, 0]
 
-        return np.array(action)
+#         # elif action == self.KEY_TURN_LEFT:
+#         #     '''
+#         #         Turn Agent Left
+#         #     '''
+#         #     action = [0, 1, 0, 0, 0, -0.25, 0, 0]
 
-    def normalize_angle(self, delta):
-        return 2 * (delta + 180) / 360
+#         # elif action == self.KEY_TURN_RIGHT:
+#         #     '''
+#         #         Turn Agent Right
+#         #     '''
+#         #     action = [0, 1, 0, 0, 0, .25, 0, 0]
 
-    def normalize_power(self, power):
-        return (1-(-1)) * (power + 100) / 200
+#         # elif action == self.KEY_KICK:
+#         #     '''
+#         #         Agent Kick
+#         #     '''
+#         #     kick_degree = 0
+#         #     kick_power = self.normalize_power(50)
+
+#         #     action = [0, 0, 1, 0, 0, 0, kick_power, kick_degree]
+#         # else:
+#         #     assert False, "Wrong action given"
+
+
+
+#         if action == self.KEY_DASH:
+#             '''
+#                 Dash forward
+#             '''
+#             dash_degree = 0
+#             dash_power = self.normalize_power(50)
+
+#             action = (10,0)
+#             action = 0
+
+#         elif action == self.KEY_TURN_LEFT:
+#             '''
+#                 Turn Agent Left
+#             '''
+#             action = (22.5,)
+#             action = 1
+
+#         elif action == self.KEY_TURN_RIGHT:
+#             '''
+#                 Turn Agent Right
+#             '''
+#             action = (-22.5,)
+#             action = 2
+
+#         elif action == elf.KEY_KICK:
+#             '''
+#                 Agent Kick
+#             '''
+#             kick_degree = 0
+#             kick_power = self.normalize_power(50)
+
+#             action = (50,0)
+#             action = 3
+#         else:
+#             assert False, "Wrong action given"            
+
+#         return np.array(action)
+
+#     def normalize_angle(self, delta):
+#         return 2 * (delta + 180) / 360
+
+#     def normalize_power(self, power):
+#         return (1-(-1)) * (power + 100) / 200

@@ -3,7 +3,7 @@ import torch
 import torch.functional as F
 from torch.distributions import Categorical
 from torch.distributions.normal import Normal
-from shiva.utils import Noise as noise
+from shiva.helpers.utils import Noise as noise
 from shiva.agents.PPOAgent import PPOAgent
 from shiva.algorithms.Algorithm import Algorithm
 
