@@ -9,15 +9,28 @@ from mlagents_envs.side_channel.environment_parameters_channel import Environmen
 from shiva.envs.Environment import Environment
 from shiva.buffers.MultiTensorBuffer import MultiAgentTensorBuffer
 
+
 class MultiAgentUnityWrapperEnv1(Environment):
-    def __init__(self, config):
+    """ Unity Wrapper that supports MLAgents version 1
+    Args:
+         config (dict): Expects a dictionary with the environment configurations.
+
+    Notes:
+        Loads in the Unity binary, extracts information about the agents, establishes the connection,
+        and sets up initial values in order to begin stepping in the environment.
+
+    """
+    def __init__(self, config) -> None:
         # assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
         self.on_policy = False
         super(MultiAgentUnityWrapperEnv1, self).__init__(config)
         self.start_unity_environment()
         self.set_initial_values()
 
-    def start_unity_environment(self):
+    def start_unity_environment(self) -> None:
+        """
+        Loads in the binary and passes an configs and props to the Unity end.
+        """
         self.channel = {
             'config': EngineConfigurationChannel(),
             'props': EnvironmentParametersChannel()
@@ -42,6 +55,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.log("Unity env started with behaviours: {}".format(self.Unity.get_behavior_names()))
 
     def set_initial_values(self):
+        """
+
+        """
         '''Unique Agent Behaviours'''
         self.roles = self.Unity.get_behavior_names()
         self.num_agents = len(self.roles)
@@ -53,11 +69,11 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.observation_space = {role:self.get_observation_space_from_unity_spec(self.RoleSpec[role]) for role in self.roles}
 
         '''Init session cumulative metrics'''
-        self.observations = {role:[] for role in self.roles}
-        self.terminal_observations = {role:[] for role in self.roles}
-        self.rewards = {role:[] for role in self.roles}
-        self.dones = {role:[] for role in self.roles}
-        self.reward_total = {role:0 for role in self.roles}
+        self.observations = {role: [] for role in self.roles}
+        self.terminal_observations = {role: [] for role in self.roles}
+        self.rewards = {role: [] for role in self.roles}
+        self.dones = {role: [] for role in self.roles}
+        self.reward_total = {role: 0 for role in self.roles}
 
         # Collect first set of datas from environment
         self.DecisionSteps = {role:None for role in self.roles}
@@ -80,17 +96,20 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         self.metric_reset()
 
-    def reset(self, force=False, *args, **kwargs):
+    def reset(self, force=False, *args, **kwargs) -> None:
+        """ Reset the environment and re-initialize metrics.
+        Args:
+            force (bool): Hard reset.
+        """
         if force:
             self.Unity.reset()
             self.metric_reset(force=True)
 
-
-    def metric_reset(self, force=False, *args, **kwargs):
-        '''
-            To be called by Shiva Learner
-            It's just to reinitialize our metrics. Unity resets the environment on its own.
-        '''
+    def metric_reset(self, force=False, *args, **kwargs) -> None:
+        """ Re-initializes our metrics. Unity resets the environment on its own; called by Shiva Learner.
+        Args:
+            force (bool): Hard reset.
+        """
         self.temp_done_counter = 0
         for role in self.roles:
             for agent_id in self.role_agent_ids[role]:
@@ -99,13 +118,17 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 self.trajectory_ready_agent_ids[role] = []
                 # maybe clear buffer?
 
-    def reset_agent_id(self, role, agent_id):
+    def reset_agent_id(self, role, agent_id) -> None:
         agent_ix = self.role_agent_ids[role].index(agent_id)
         self.steps_per_episode[role][agent_ix] = 0
         self.reward_per_step[role][agent_ix] = 0
         self.reward_per_episode[role][agent_ix] = 0
 
-    def step(self, actions):
+    def step(self, actions) -> Tuple[list, list, list, dict]:
+        """ Steps in the Unity Environment
+
+
+        """
         self.raw_actions = {}
         self.actions = {}
         for ix, role in enumerate(self.roles):
@@ -145,7 +168,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
 
-    def _unity_reshape(self, arr):
+    def _unity_reshape(self, arr) -> np.ndarray:
         '''Unity reshape of the data - concat all same Role agents trajectories'''
         traj_length, num_agents, dim = arr.shape
         return np.reshape(arr, (traj_length * num_agents, dim))

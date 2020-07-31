@@ -34,7 +34,7 @@ class GymEnvironment(Environment):
 
         self.temp_done_counter = 0
 
-    def step(self, action:list, discrete_select:str='argmax'):
+    def step(self, action:list, discrete_select:str='argmax') -> tuple:
         """ Takes an action in the environment.
 
         Note: 
@@ -97,7 +97,7 @@ class GymEnvironment(Environment):
 
         return self.obs, self.rew, self.done, {'raw_reward': self.reward_per_step, 'action': action}
 
-    def reset(self, *args, **kwargs):
+    def reset(self, *args, **kwargs) -> None:
         """Reset episode metrics at the end of an episode or trajectory."""
         self.steps_per_episode = 0
         self.reward_per_step = 0
@@ -105,7 +105,7 @@ class GymEnvironment(Environment):
         self.done = False
         self.obs = self.transform_observation_space(self.env.reset())
 
-    def get_metrics(self, episodic):
+    def get_metrics(self, episodic) -> list:
         """ Retrieve environment metrics.
 
         Args:
@@ -131,7 +131,7 @@ class GymEnvironment(Environment):
         return [metrics] # single role metrics!
         # return metrics
 
-    def is_done(self):
+    def is_done(self) -> bool:
         """Check if the episode/trajectory has completed.
         
         Returns:
@@ -141,7 +141,7 @@ class GymEnvironment(Environment):
         """
         return self.done
 
-    def transform_observation_space(self, raw_obs:np.array):
+    def transform_observation_space(self, raw_obs:np.array) -> np.array:
         """Converts a discrete observation into a One Hot Encoding.
         
         Returns: 
@@ -156,7 +156,7 @@ class GymEnvironment(Environment):
         else:
             return raw_obs
 
-    def is_observation_space_discrete(self):
+    def is_observation_space_discrete(self) -> tuple:
         """ Checks if the numpy shape of the observation space is scalar.
         
         If the observation space is a number it will return ().
@@ -174,7 +174,7 @@ class GymEnvironment(Environment):
         """
         return self.env.observation_space.shape == ()
 
-    def get_gym_observation_space(self):
+    def get_gym_observation_space(self) -> int:
         """ Calculates the observation space.
 
         If the environment is discrete then it can access the observation space but if its
@@ -199,7 +199,7 @@ class GymEnvironment(Environment):
             observation_space = self.env.observation_space.n
         return observation_space
 
-    def is_action_space_discrete(self):
+    def is_action_space_discrete(self) -> bool:
         """ Checks if the numpy shape of the action space is scalar.
         
         If the action space is a number it will return ().
@@ -217,7 +217,7 @@ class GymEnvironment(Environment):
         """        
         return self.env.action_space.shape == ()
 
-    def get_gym_action_space(self):
+    def get_gym_action_space(self) -> dict:
         """ Returns a dictionary 
         
         Returns: 
@@ -240,7 +240,7 @@ class GymEnvironment(Environment):
                 'actions_range': [self.env.action_space.low, self.env.action_space.high]
             }
 
-    def get_observations(self):
+    def get_observations(self) -> np.ndarray:
         """Returns a numpy array of numerical observations.
 
         Returns: 
@@ -248,7 +248,7 @@ class GymEnvironment(Environment):
         """
         return self.obs
 
-    def get_observation(self):
+    def get_observation(self) -> np.array:
         """Returns a numpy array of numerical observations.
         
         Returns: 
@@ -256,7 +256,7 @@ class GymEnvironment(Environment):
         """
         return self.obs
 
-    def get_actions(self):
+    def get_actions(self) -> np.ndarray:
         """ Returns stepwise actions.
 
         Returns: 
@@ -264,7 +264,7 @@ class GymEnvironment(Environment):
         """
         return self.acs
 
-    def get_action(self):
+    def get_action(self) -> np.array:
         """ Returns the stepwise action.
 
         Returns: 
@@ -272,23 +272,23 @@ class GymEnvironment(Environment):
         """
         return self.acs
 
-    def get_reward(self):
+    def get_reward(self) -> float:
         """ Returns the stepwise reward.
 
         Returns: 
-            (tensor)
+            (float)
         """
         return torch.tensor(self.reward_per_step)
 
-    def get_total_reward(self):
+    def get_total_reward(self) -> float:
         """Returns episodic reward
 
         Returns: 
-            (int)
+            (float)
         """
         return self.reward_per_episode
 
-    def get_reward_episode(self, roles:bool=False):
+    def get_reward_episode(self, roles:bool=False) -> dict:
         """ Returns the episodic reward.
 
         Returns: 
@@ -300,7 +300,7 @@ class GymEnvironment(Environment):
             return {self.roles[0]:self.reward_per_episode}
         return self.reward_per_episode
 
-    def load_viewer(self):
+    def load_viewer(self) -> None:
         """ Shows the environment running.
 
         If you set render=True inside the config under the environment section it will make the
@@ -314,10 +314,10 @@ class GymEnvironment(Environment):
         if self.render:
             self.env.render()
 
-    def close(self):
+    def close(self) -> None:
         """ Closes the environment instance.
 
-        Once the preset number of episodes have ran the environment will close. Also there is a killswitch in case
-        something causes Shiva to crash.
+        Once the preset number of episodes have ran the wrapper will send the environment a signal to shut down. 
+        Also there is a killswitch in case something causes Shiva to crash.
         """
         self.env.close()

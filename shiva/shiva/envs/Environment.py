@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from shiva.core.admin import logger
+from abc import abstractmethod
 
 class Environment:
     """
@@ -94,13 +95,13 @@ class Environment:
         
         """
 
-    def get_observation_space(self) -> torch.tensor:
+    def get_observation_space(self) -> np.array:
         """
         This could return either a scalar, list, array, or tensor depending upon implementation.
         """
         return self.observation_space
 
-    def get_action_space(self) -> torch.tensor:
+    def get_action_space(self) -> np.array:
         return self.action_space
 
     def get_current_step(self) -> int:
