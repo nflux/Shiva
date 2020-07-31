@@ -81,7 +81,9 @@ action can be selected by either taking the ‘argmax’, or by ‘sample’</p>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>Next Observation, Reward, Done Flag, and a Dictionary containing the raw Reward and Action stepped on.</p>
+<dd class="field-even"><p><p>(np.array,int,bool,dict)</p>
+<p>Next Observation, Reward, Done Flag, and a Dictionary containing the raw Reward and Action stepped on.</p>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -107,7 +109,9 @@ action can be selected by either taking the ‘argmax’, or by ‘sample’</p>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>A list of tuple metrics of the form (Metric_Name, Metric_Value)</p>
+<dd class="field-odd"><p><p>(str, int)</p>
+<p>A list of tuple metrics of the form (Metric_Name, Metric_Value)</p>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -118,7 +122,9 @@ action can be selected by either taking the ‘argmax’, or by ‘sample’</p>
 <dd><p>Check if the episode/trajectory has completed.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>boolean done flag</p>
+<dd class="field-odd"><p><p>(boolean)</p>
+<p>A done flag indicating whether the episode is over.</p>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -127,7 +133,13 @@ action can be selected by either taking the ‘argmax’, or by ‘sample’</p>
 <dt id="GymEnvironment.GymEnvironment.transform_observation_space">
 <code class="sig-name descname">transform_observation_space</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw_obs</span><span class="p">:</span> <span class="n">numpy.array</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.transform_observation_space" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts a discrete observation into a One Hot Encoding.</p>
-<p>Returns: (np.array) One Hot Encoding if its a discrete action, otherwise it returns itself.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p>(np.array)</p>
+<p>One Hot Encoding if its a discrete action, otherwise it returns itself.</p>
+</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -137,7 +149,11 @@ action can be selected by either taking the ‘argmax’, or by ‘sample’</p>
 <p>If the observation space is a number it will return ().
 If the observation space is 2 dimensional or greater it will return a tuple
 with the corresponding dimensions inside.</p>
-<p>Returns: (Boolean)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(Boolean)</p>
+</dd>
+</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Discrete</span>
 <span class="go">()</span>
@@ -158,7 +174,11 @@ the observation space.</p>
 <p class="admonition-title">Note</p>
 <p>This is used internally by this wrapper.</p>
 </div>
-<p>Returns: (int) A scalar value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(int)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -168,7 +188,11 @@ the observation space.</p>
 <p>If the action space is a number it will return ().
 If the action space is 2 dimensional or greater it will return a tuple
 with the corresponding dimensions inside.</p>
-<p>Returns: (Boolean)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(Boolean)</p>
+</dd>
+</dl>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Discrete</span>
 <span class="go">()</span>
@@ -182,63 +206,97 @@ with the corresponding dimensions inside.</p>
 <dt id="GymEnvironment.GymEnvironment.get_gym_action_space">
 <code class="sig-name descname">get_gym_action_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_gym_action_space" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a dictionary</p>
-<p>Returns: (dict)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(dict)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_observations">
 <code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_observations" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a numpy array of numerical observations.
-Returns: (np.array)</p>
+<dd><p>Returns a numpy array of numerical observations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(np.array)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_observation">
 <code class="sig-name descname">get_observation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_observation" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a numpy array of numerical observations.
-Returns: (np.array)</p>
+<dd><p>Returns a numpy array of numerical observations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(np.array)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_actions">
 <code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_actions" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns stepwise actions.
-Returns: (np.array)</p>
+<dd><p>Returns stepwise actions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(np.array)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_action">
 <code class="sig-name descname">get_action</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_action" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the stepwise action.
-Returns: (np.array)</p>
+<dd><p>Returns the stepwise action.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(np.array)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_reward">
 <code class="sig-name descname">get_reward</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_reward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the stepwise reward.
-Returns: (tensor)</p>
+<dd><p>Returns the stepwise reward.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(tensor)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_total_reward">
 <code class="sig-name descname">get_total_reward</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_total_reward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns episodic reward
-Returns: (int)</p>
+<dd><p>Returns episodic reward</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>(int)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_reward_episode">
 <code class="sig-name descname">get_reward_episode</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_reward_episode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the episodic reward.</p>
-<p>Returns: (dict) A dictionary with the total reward indexed by the environment name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p>(dict)</p>
+<p>A dictionary with the total reward indexed by the environment name.</p>
+</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.load_viewer">
 <code class="sig-name descname">load_viewer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.load_viewer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Shows the environment running.
-If you set render=True inside the config under the environment section it will make the
+<dd><p>Shows the environment running.</p>
+<p>If you set render=True inside the config under the environment section it will make the
 environment visible during experiments.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

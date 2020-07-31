@@ -51,6 +51,9 @@ class GymEnvironment(Environment):
                 action can be selected by either taking the 'argmax', or by 'sample'
         
         Returns:
+            
+            (np.array,int,bool,dict)
+
             Next Observation, Reward, Done Flag, and a Dictionary containing the raw Reward and Action stepped on.
         """
         if not torch.is_tensor(action):
@@ -111,9 +114,10 @@ class GymEnvironment(Environment):
         Note:
             This is utilized by Shiva Admin in order to generate the plots in Tensorboard.
 
-        Returns:
-            A list of tuple metrics of the form (Metric_Name, Metric_Value)
+        Returns: 
+            (str, int)
 
+            A list of tuple metrics of the form (Metric_Name, Metric_Value)
         """
         if not episodic:
             metrics = [
@@ -131,14 +135,19 @@ class GymEnvironment(Environment):
         """Check if the episode/trajectory has completed.
         
         Returns:
-            boolean done flag
+            (boolean)
+
+            A done flag indicating whether the episode is over.
         """
         return self.done
 
     def transform_observation_space(self, raw_obs:np.array):
         """Converts a discrete observation into a One Hot Encoding.
         
-        Returns: (np.array) One Hot Encoding if its a discrete action, otherwise it returns itself.
+        Returns: 
+            (np.array) 
+
+            One Hot Encoding if its a discrete action, otherwise it returns itself.
         """
         if self.is_observation_space_discrete():
             _one_hot_obs = np.zeros(self.observation_space)
@@ -154,7 +163,8 @@ class GymEnvironment(Environment):
         If the observation space is 2 dimensional or greater it will return a tuple
         with the corresponding dimensions inside.
 
-        Returns: (Boolean) 
+        Returns: 
+            (Boolean) 
 
         >>> import numpy as np
         >>> np.shape(1) # Discrete
@@ -174,7 +184,8 @@ class GymEnvironment(Environment):
         Note:
             This is used internally by this wrapper.
 
-        Returns: (int) A scalar value.  
+        Returns: 
+            (int)
         
         """
         observation_space = 1
@@ -195,7 +206,8 @@ class GymEnvironment(Environment):
         If the action space is 2 dimensional or greater it will return a tuple
         with the corresponding dimensions inside.
 
-        Returns: (Boolean) 
+        Returns: 
+            (Boolean) 
 
         >>> import numpy as np
         >>> np.shape(1) # Discrete
@@ -208,8 +220,8 @@ class GymEnvironment(Environment):
     def get_gym_action_space(self):
         """ Returns a dictionary 
         
-        Returns: (dict) 
-        
+        Returns: 
+            (dict)
         """
         if self.is_action_space_discrete():
             return {
@@ -230,45 +242,59 @@ class GymEnvironment(Environment):
 
     def get_observations(self):
         """Returns a numpy array of numerical observations.
-            Returns: (np.array)
+
+        Returns: 
+            (np.array)
         """
         return self.obs
 
     def get_observation(self):
         """Returns a numpy array of numerical observations.
-        Returns: (np.array)
-            
+        
+        Returns: 
+            (np.array)    
         """
         return self.obs
 
     def get_actions(self):
         """ Returns stepwise actions.
-        Returns: (np.array)
+
+        Returns: 
+            (np.array)
         """
         return self.acs
 
     def get_action(self):
         """ Returns the stepwise action.
-        Returns: (np.array)
+
+        Returns: 
+            (np.array)
         """
         return self.acs
 
     def get_reward(self):
         """ Returns the stepwise reward.
-        Returns: (tensor)
+
+        Returns: 
+            (tensor)
         """
         return torch.tensor(self.reward_per_step)
 
     def get_total_reward(self):
         """Returns episodic reward
-        Returns: (int)
+
+        Returns: 
+            (int)
         """
         return self.reward_per_episode
 
     def get_reward_episode(self, roles:bool=False):
         """ Returns the episodic reward.
 
-        Returns: (dict) A dictionary with the total reward indexed by the environment name.
+        Returns: 
+            (dict) 
+            
+            A dictionary with the total reward indexed by the environment name.
         """
         if roles:
             return {self.roles[0]:self.reward_per_episode}
@@ -276,6 +302,7 @@ class GymEnvironment(Environment):
 
     def load_viewer(self):
         """ Shows the environment running.
+
         If you set render=True inside the config under the environment section it will make the
         environment visible during experiments.
 
