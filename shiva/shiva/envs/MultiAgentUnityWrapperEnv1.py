@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import time
-
+from typing import Dict, List, Any, Optional, Tuple, Mapping as MappingType
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 from mlagents_envs.side_channel.environment_parameters_channel import EnvironmentParametersChannel
@@ -12,13 +12,16 @@ from shiva.buffers.MultiTensorBuffer import MultiAgentTensorBuffer
 
 class MultiAgentUnityWrapperEnv1(Environment):
     """ Unity Wrapper that supports MLAgents version 1
+
     Args:
          config (dict): Expects a dictionary with the environment configurations.
 
-    Notes:
+    Note:
         Loads in the Unity binary, extracts information about the agents, establishes the connection,
         and sets up initial values in order to begin stepping in the environment.
 
+    Returns:
+        None
     """
     def __init__(self, config) -> None:
         # assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
@@ -30,6 +33,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
     def start_unity_environment(self) -> None:
         """
         Loads in the binary and passes an configs and props to the Unity end.
+
+        Returns:
+            None
         """
         self.channel = {
             'config': EngineConfigurationChannel(),
@@ -54,19 +60,24 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.Unity.reset()
         self.log("Unity env started with behaviours: {}".format(self.Unity.get_behavior_names()))
 
-    def set_initial_values(self):
-        """
+    def set_initial_values(self) -> None:
+        """ Gets the environment ready to begin the simulation.
 
+        Grabs the environment parameters, behaviors, and prepares dictionaries to store the DecisionSteps,
+        TerminalSteps, and resets the metrics before beginning.
+
+        Returns:
+            None
         """
         '''Unique Agent Behaviours'''
         self.roles = self.Unity.get_behavior_names()
         self.num_agents = len(self.roles)
 
         '''Grab all the Agents Specs'''
-        self.RoleSpec = {role:self.Unity.get_behavior_spec(role) for role in self.roles}
+        self.RoleSpec = {role: self.Unity.get_behavior_spec(role) for role in self.roles}
 
-        self.action_space = {role:self.get_action_space_from_unity_spec(self.RoleSpec[role]) for role in self.roles}
-        self.observation_space = {role:self.get_observation_space_from_unity_spec(self.RoleSpec[role]) for role in self.roles}
+        self.action_space = {role: self.get_action_space_from_unity_spec(self.RoleSpec[role]) for role in self.roles}
+        self.observation_space = {role: self.get_observation_space_from_unity_spec(self.RoleSpec[role]) for role in self.roles}
 
         '''Init session cumulative metrics'''
         self.observations = {role: [] for role in self.roles}
@@ -76,9 +87,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.reward_total = {role: 0 for role in self.roles}
 
         # Collect first set of datas from environment
-        self.DecisionSteps = {role:None for role in self.roles}
-        self.TerminalSteps = {role:None for role in self.roles}
-        self.trajectory_ready_agent_ids = {role:[] for role in self.roles}
+        self.DecisionSteps = {role: None for role in self.roles}
+        self.TerminalSteps = {role: None for role in self.roles}
+        self.trajectory_ready_agent_ids = {role: [] for role in self.roles}
 
         self.collect_step_data() # collect first environment state
         '''Assuming all Roles Agent IDs are given at the beginning of the first episode'''
@@ -89,10 +100,10 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.num_instances_per_env = self.DecisionSteps[self.roles[0]].obs[0].shape[0]
 
         '''Reset Metrics'''
-        self.done_count = {role:0 for role in self.roles}
-        self.steps_per_episode = {role:[0 for _ in self.role_agent_ids[role]] for role in self.roles}
-        self.reward_per_step = {role:[0 for _ in self.role_agent_ids[role]] for role in self.roles}
-        self.reward_per_episode = {role:[0 for _ in self.role_agent_ids[role]] for role in self.roles}
+        self.done_count = {role: 0 for role in self.roles}
+        self.steps_per_episode = {role: [0 for _ in self.role_agent_ids[role]] for role in self.roles}
+        self.reward_per_step = {role: [0 for _ in self.role_agent_ids[role]] for role in self.roles}
+        self.reward_per_episode = {role: [0 for _ in self.role_agent_ids[role]] for role in self.roles}
 
         self.metric_reset()
 
@@ -124,10 +135,10 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.reward_per_step[role][agent_ix] = 0
         self.reward_per_episode[role][agent_ix] = 0
 
-    def step(self, actions) -> Tuple[list, list, list, dict]:
+    def step(self, actions) -> Tuple[List, List, List, Dict]:
         """ Steps in the Unity Environment
 
-
+        Returns:
         """
         self.raw_actions = {}
         self.actions = {}
@@ -168,16 +179,21 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
 
-    def _unity_reshape(self, arr) -> np.ndarray:
-        '''Unity reshape of the data - concat all same Role agents trajectories'''
+    def _unity_reshape(self, arr: np.ndarray) -> np.ndarray:
+        """Unity reshape of the data - concat all same Role agents trajectories"""
         traj_length, num_agents, dim = arr.shape
         return np.reshape(arr, (traj_length * num_agents, dim))
 
-    def collect_step_data(self):
-        """
-        per @vincentpierre (MLAgents developer) - https://forum.unity.com/threads/decisionstep-vs-terminalstep.903227/#post-5927795
-        If an AgentId is both in DecisionStep and TerminalStep, it means that the Agent reseted in Unity and immediately requested a decision.
-        In your example, Agents 1, 7 and 9 had their episode terminated, started a new episode and requested a new decision. All in the same call to env.step()
+    def collect_step_data(self) -> None:
+        """ Gets batches of data for the agents in the simulation.
+
+        Note:
+            per @vincentpierre (MLAgents developer) - https://forum.unity.com/threads/decisionstep-vs-terminalstep.903227/#post-5927795
+            If an AgentId is both in DecisionStep and TerminalStep, it means that the Agent reseted in Unity and immediately requested a decision.
+            In your example, Agents 1, 7 and 9 had their episode terminated, started a new episode and requested a new decision. All in the same call to env.step()
+
+        Returns:
+            None
         """
         for role in self.roles:
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
@@ -253,15 +269,32 @@ class MultiAgentUnityWrapperEnv1(Environment):
                             self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
 
     def _flatten_observations(self, obs):
-        '''Turns the funky (2, 16, 56) array into a (16, 112)'''
+        """Turns the funky (2, 16, 56) array into a (16, 112)"""
         return np.concatenate([o for o in obs], axis=-1)
 
-    def get_metrics(self, episodic=True):
-        '''MultiAgent Metrics'''
-        metrics = {role:[self.get_role_metrics(role, role_agent_id, episodic) for role_agent_id in self.role_agent_ids[role]] for ix, role in enumerate(self.roles)}
+    def get_metrics(self, episodic=True) -> List[Dict.values]:
+        """MultiAgent Metrics
+
+        Args:
+            episodic (bool): Indicates whether to get episodic or stepwise metrics.
+
+        Returns:
+            A list of metric values
+        """
+        metrics = {role: [self.get_role_metrics(role, role_agent_id, episodic) for role_agent_id in self.role_agent_ids[role]] for ix, role in enumerate(self.roles)}
         return list(metrics.values())
 
-    def get_role_metrics(self, role, role_agent_id, episodic=True):
+    def get_role_metrics(self, role: str, role_agent_id: int, episodic: bool = True) -> List[Tuple[str, Any]]:
+        """ Gets the metrics for a specific role
+
+        Args:
+            role (str): BehaviorName of the agent.
+            role_agent_id (int): Unique Agent Identifier.
+            episodic (bool): Indicates whether to get episodic or stepwise metrics.
+        Returns:
+            A list of metric tuples.
+
+        """
         agent_ix = self.role_agent_ids[role].index(role_agent_id)
         if not episodic:
             metrics = [
@@ -274,22 +307,23 @@ class MultiAgentUnityWrapperEnv1(Environment):
             ]
         return metrics
 
-    def is_done(self, n_episodes=0):
-        '''
-            Check if there's any role-agent that has finished the episode
-        '''
+    def is_done(self, n_episodes: int = 0):
+        """Check if there's any role-agent that has finished the episode
+        Args:
+            n_episodes (int):
+        """
         # self.log(f"DecisionSteps {self.DecisionSteps[self.roles[0]].agent_id}")
         # self.log(f"TerminalStep {self.TerminalSteps[self.roles[0]].agent_id}")
         return sum([len(self.trajectory_ready_agent_ids[role]) for role in self.roles]) > n_episodes
 
-    def _clean_role_actions(self, role, role_actions):
-        '''
+    def _clean_role_actions(self, role: str, role_actions: np.ndarray) -> np.ndarray:
+        """
             Input dimension is (num_agents_for_this_role, action_space)
 
             Get the argmax when the Action Space is Discrete
             else,
                 make sure it's numpy array
-        '''
+        """
         if self.RoleSpec[role].is_action_discrete():
             role_actions = np.array(role_actions)
             actions = np.zeros(shape=(len(self.role_agent_ids[role]), len(self.RoleSpec[role].action_shape)))
@@ -303,7 +337,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # self.log(f"Clean action: {actions}")
         return actions
 
-    def get_action_space_from_unity_spec(self, unity_spec):
+    def get_action_space_from_unity_spec(self, unity_spec: dict):
         if unity_spec.is_action_discrete():
             return {
                 'discrete': unity_spec.action_shape,
@@ -321,7 +355,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         else:
             assert "Something weird happened here..."
 
-    def get_observation_space_from_unity_spec(self, unity_spec):
+    def get_observation_space_from_unity_spec(self, unity_spec: dict):
         # flatten the obs_shape, g.e. from [(56,), (56,)] to 112
         return sum([ sum(obs_shape) for obs_shape in unity_spec.observation_shapes])
 
@@ -341,16 +375,20 @@ class MultiAgentUnityWrapperEnv1(Environment):
     def get_rewards(self):
         return list(self.rewards.values())
 
-    def create_buffers(self):
-        '''
-            Not best approach but solves current issue with Unity step function
-            Need a buffer for each Agent as they terminate at different times and could turn the Tensor buffer into undesired shapes,
-            so here we keep a separate buffer for each individual Agent in the simulation
+    def create_buffers(self) -> None:
+        """ Makes buffers for episodic trajectories to be stored in.
 
-            Secondary approach (possibly cheaper) could be to use a python list to collect data of current trajectory
-            And convert to numpy before sending trajectory
-            Test performance for Multiple environments within one single Unity simulation
-        '''
+        Todo:
+            -Not best approach but solves current issue with Unity step function
+             Need a buffer for each Agent as they terminate at different times and could turn the Tensor buffer into undesired shapes,
+             so here we keep a separate buffer for each individual Agent in the simulation
+            -Secondary approach (possibly cheaper) could be to use a python list to collect data of current trajectory
+             And convert to numpy before sending trajectory
+             Test performance for Multiple environments within one single Unity simulation
+
+        Returns:
+            None
+        """
         self.trajectory_buffers = {}
         self._ready_trajectories = {}
         for role in self.roles:

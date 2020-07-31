@@ -1,3 +1,4 @@
+from typing import Dict, List, Tuple, Any, Union
 import gym
 import numpy as np
 from torch.distributions import Categorical
@@ -5,16 +6,17 @@ from shiva.envs.Environment import Environment
 from shiva.helpers.misc import action2one_hot
 import torch
 
+
 class GymEnvironment(Environment):
     """ Gym Wrapper for interfacing with OpenAI Gym Environments.
         
-        Args:
-            configs (dict): Dictionary of environment hyperparameters, including
-                the env_name, what device to run the class on, whether to render
-                and reward modifiers. 
+    Args:
+        configs (dict): Dictionary of environment hyperparameters, including
+            the env_name, what device to run the class on, whether to render
+            and reward modifiers.
     
     """
-    def __init__(self, configs:dict, *args, **kwargs):
+    def __init__(self, configs: dict, *args, **kwargs):
         super(GymEnvironment, self).__init__(configs)
 
         self.env = gym.make(self.env_name)
@@ -34,7 +36,7 @@ class GymEnvironment(Environment):
 
         self.temp_done_counter = 0
 
-    def step(self, action:list, discrete_select:str='argmax') -> tuple:
+    def step(self, action: list, discrete_select: str='argmax') -> Tuple[Any, Any, Any, Dict[str, Union[list, Any]]]:
         """ Takes an action in the environment.
 
         Note: 
@@ -105,7 +107,7 @@ class GymEnvironment(Environment):
         self.done = False
         self.obs = self.transform_observation_space(self.env.reset())
 
-    def get_metrics(self, episodic) -> list:
+    def get_metrics(self, episodic) -> List[List[Tuple[str, int]]]:
         """ Retrieve environment metrics.
 
         Args:
@@ -128,7 +130,7 @@ class GymEnvironment(Environment):
                 ('Reward/Per_Episode', self.reward_per_episode),
                 ('Agent/Steps_Per_Episode', self.steps_per_episode)
             ]
-        return [metrics] # single role metrics!
+        return [metrics]  # single role metrics!
         # return metrics
 
     def is_done(self) -> bool:
@@ -141,7 +143,7 @@ class GymEnvironment(Environment):
         """
         return self.done
 
-    def transform_observation_space(self, raw_obs:np.array) -> np.array:
+    def transform_observation_space(self, raw_obs: np.array) -> np.array:
         """Converts a discrete observation into a One Hot Encoding.
         
         Returns: 
@@ -288,7 +290,7 @@ class GymEnvironment(Environment):
         """
         return self.reward_per_episode
 
-    def get_reward_episode(self, roles:bool=False) -> dict:
+    def get_reward_episode(self, roles:bool=False) -> Union[Dict[Any, int], int]:
         """ Returns the episodic reward.
 
         Returns: 
@@ -297,7 +299,7 @@ class GymEnvironment(Environment):
             A dictionary with the total reward indexed by the environment name.
         """
         if roles:
-            return {self.roles[0]:self.reward_per_episode}
+            return {self.roles[0]: self.reward_per_episode}
         return self.reward_per_episode
 
     def load_viewer(self) -> None:
