@@ -25,8 +25,6 @@ sys.path.insert(0, os.path.abspath('../../shiva/shiva/helpers/utils'))
 sys.path.insert(0, os.path.abspath('../../shiva/shiva/learners'))
 sys.path.insert(0, os.path.abspath('../../shiva/shiva/networks'))
 
-
-
 # -- Project information -----------------------------------------------------
 
 project = 'Shiva'

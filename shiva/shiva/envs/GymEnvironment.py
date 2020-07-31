@@ -16,7 +16,7 @@ class GymEnvironment(Environment):
             and reward modifiers.
     
     """
-    def __init__(self, configs: dict, *args, **kwargs):
+    def __init__(self, configs: Dict, *args, **kwargs) -> None:
         super(GymEnvironment, self).__init__(configs)
 
         self.env = gym.make(self.env_name)
@@ -36,7 +36,7 @@ class GymEnvironment(Environment):
 
         self.temp_done_counter = 0
 
-    def step(self, action: list, discrete_select: str='argmax') -> Tuple[Any, Any, Any, Dict[str, Union[list, Any]]]:
+    def step(self, action: List, discrete_select: str = 'argmax') -> Tuple[Any, Any, Any, Dict[str, Union[List, Any]]]:
         """ Takes an action in the environment.
 
         Note: 
@@ -158,7 +158,7 @@ class GymEnvironment(Environment):
         else:
             return raw_obs
 
-    def is_observation_space_discrete(self) -> tuple:
+    def is_observation_space_discrete(self) -> bool:
         """ Checks if the numpy shape of the observation space is scalar.
         
         If the observation space is a number it will return ().
@@ -219,7 +219,7 @@ class GymEnvironment(Environment):
         """        
         return self.env.action_space.shape == ()
 
-    def get_gym_action_space(self) -> dict:
+    def get_gym_action_space(self) -> Dict:
         """ Returns a dictionary 
         
         Returns: 
@@ -290,7 +290,7 @@ class GymEnvironment(Environment):
         """
         return self.reward_per_episode
 
-    def get_reward_episode(self, roles:bool=False) -> Union[Dict[Any, int], int]:
+    def get_reward_episode(self, roles: bool = False) -> Union[Dict[Any, int], int]:
         """ Returns the episodic reward.
 
         Returns: 

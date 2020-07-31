@@ -12,11 +12,12 @@ from shiva.helpers.misc import one_hot_from_logits
 from itertools import permutations
 from functools import partial
 
-from typing import List, Dict, Tuple
-from shiva.buffers.MultiAgentTensorBuffer import MultiAgentTensorBuffer
+from typing import List, Dict, Tuple, Union, Any
+from shiva.buffers.MultiTensorBuffer import MultiAgentTensorBuffer
+
 
 class MADDPGAlgorithm(Algorithm):
-    def __init__(self, observation_space: Dict[str, int], action_space: Dict[str, Dict[str, Tuple[int, ...]]], configs: Dict[str, ...]) -> None:
+    def __init__(self, observation_space: Dict[str, int], action_space: Dict[str, Dict[str, Tuple[Union[int]]]], configs: Dict[str, Any]) -> None:
         """
         This class follows the algorithmic update explained on Ryan Lowe et all paper: https://arxiv.org/abs/1706.02275
         We have implemented 2 different methods: one using permutations with a single critic (link to method) and other using multiple critics (link to method).
@@ -455,7 +456,7 @@ class MADDPGAlgorithm(Algorithm):
             None
 
         """
-        self.critic_learning_rate = max(self.configs['Agent']['critic_learning_rate'], self.critic_learning_rate /= self.configs['Agent']['lr_decay']['factor'])
+        self.critic_learning_rate = max(self.configs['Agent']['critic_learning_rate'], self.critic_learning_rate / self.configs['Agent']['lr_decay']['factor'])
         self.log(f"Critic LR Restored {self.critic_learning_rate}", verbose_level=3)
         self._update_optimizer()
 

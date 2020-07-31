@@ -268,7 +268,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
                             self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
                             self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
 
-    def _flatten_observations(self, obs):
+    def _flatten_observations(self, obs) -> np.ndarray:
         """Turns the funky (2, 16, 56) array into a (16, 112)"""
         return np.concatenate([o for o in obs], axis=-1)
 
@@ -337,7 +337,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # self.log(f"Clean action: {actions}")
         return actions
 
-    def get_action_space_from_unity_spec(self, unity_spec: dict):
+    def get_action_space_from_unity_spec(self, unity_spec: Dict):
         if unity_spec.is_action_discrete():
             return {
                 'discrete': unity_spec.action_shape,
@@ -355,7 +355,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         else:
             assert "Something weird happened here..."
 
-    def get_observation_space_from_unity_spec(self, unity_spec: dict):
+    def get_observation_space_from_unity_spec(self, unity_spec: Dict):
         # flatten the obs_shape, g.e. from [(56,), (56,)] to 112
         return sum([ sum(obs_shape) for obs_shape in unity_spec.observation_shapes])
 
@@ -365,7 +365,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
     def get_actions(self):
         return list(self.actions.values())
 
-    def get_reward_episode(self, roles=False):
+    def get_reward_episode(self, roles: bool = False):
         episodic_reward = {}
         for role in self.roles:
             # take an average when there are many instances within one Unity simulation

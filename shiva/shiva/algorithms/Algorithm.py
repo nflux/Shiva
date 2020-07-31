@@ -1,10 +1,12 @@
 import torch
 from shiva.core.admin import logger
+from shiva.agents import Agent
 
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any, Union
 
-class Algorithm():
-    def __init__(self, observation_space: Dict[str, int], action_space: Dict[str, Dict[str, Tuple[int, ...]]], configs: Dict[str, ...]) -> None:
+
+class Algorithm:
+    def __init__(self, observation_space: Dict[str, int], action_space: Dict[str, Dict[str, Tuple[Union[int]]]], configs: Dict[str, Any]) -> None:
         """
         Abstract class for the algorithm. Several values are initialized.
 

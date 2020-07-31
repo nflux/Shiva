@@ -1,7 +1,9 @@
 import torch
+from typing import Dict, List, Tuple, Any, Union
 import numpy as np
 from shiva.core.admin import logger
 from abc import abstractmethod
+
 
 class Environment:
     """
@@ -21,8 +23,8 @@ class Environment:
 
     total_episodes_to_play = None
 
-    def __init__(self, configs):
-        {setattr(self, k, v) for k,v in configs['Environment'].items()}
+    def __init__(self, configs: Dict):
+        {setattr(self, k, v) for k, v in configs['Environment'].items()}
         self.configs = configs
 
         # for previous versions support on attribute names
@@ -37,7 +39,7 @@ class Environment:
         self.min_reward = self.min_reward if hasattr(self, 'min_reward') else -1
 
     @abstractmethod
-    def step(self,actions) -> None:
+    def step(self, actions) -> None:
         """
         Passes in an action which is in turn passed into the environment to continue the 
         reinforcement training loop.
@@ -84,7 +86,7 @@ class Environment:
         Returns multiple actions.
         """
     @abstractmethod
-    def get_reward(self, agent) -> None:
+    def get_reward(self, agent: object) -> None:
         """
         
         """

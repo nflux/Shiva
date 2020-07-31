@@ -6,6 +6,7 @@ from torch.autograd import Variable
 from shiva.buffers.ReplayBuffer import ReplayBuffer
 from shiva.helpers import buffer_handler as bh
 
+
 class MultiAgentTensorBuffer(ReplayBuffer):
 
     def __init__(self, max_size, batch_size, num_agents, obs_dim, acs_dim):
@@ -102,6 +103,7 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.bool, requires_grad=False)
         self.current_index = 0
         self.size = 0
+
 
 class MultiAgentTensorBuffer2(MultiAgentTensorBuffer):
 
