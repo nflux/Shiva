@@ -38,6 +38,18 @@
   <div class="section" id="module-misc">
 <span id="misc-module"></span><h1>misc module<a class="headerlink" href="#module-misc" title="Permalink to this headline">¶</a></h1>
 <dl class="py function">
+<dt id="misc.handle_package">
+<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">handle_package</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">package</span></em>, <em class="sig-param"><span class="n">class_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#misc.handle_package" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used by the parse_functions()</p>
+<dl class="simple">
+<dt>Input</dt><dd><p>&#64;func_str       string name of a function     g.e. “ReLU”</p>
+</dd>
+<dt>Return</dt><dd><p>Function definition object (not instantiated)       g.e. nn.ReLU</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt id="misc.action2one_hot">
 <code class="sig-prename descclassname">misc.</code><code class="sig-name descname">action2one_hot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action_space</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">action_idx</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">numpy</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#misc.action2one_hot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a one-hot encoded numpy.ndarray</p>
@@ -50,20 +62,10 @@
 </dd></dl>
 
 <dl class="py function">
-<dt id="misc.flat_1d_list">
-<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">flat_1d_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">list</span></em><span class="sig-paren">)</span><a class="headerlink" href="#misc.flat_1d_list" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt id="misc.handle_package">
-<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">handle_package</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">package</span></em>, <em class="sig-param"><span class="n">class_name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#misc.handle_package" title="Permalink to this definition">¶</a></dt>
-<dd><p>This function is used by the parse_functions()</p>
-<dl class="simple">
-<dt>Input</dt><dd><p>&#64;func_str       string name of a function     g.e. “ReLU”</p>
-</dd>
-<dt>Return</dt><dd><p>Function definition object (not instantiated)       g.e. nn.ReLU</p>
-</dd>
-</dl>
+<dt id="misc.warn_with_traceback">
+<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">warn_with_traceback</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">message</span></em>, <em class="sig-param"><span class="n">category</span></em>, <em class="sig-param"><span class="n">filename</span></em>, <em class="sig-param"><span class="n">lineno</span></em>, <em class="sig-param"><span class="n">file</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#misc.warn_with_traceback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility for debugging
+Comment last line to enable/disable</p>
 </dd></dl>
 
 <dl class="py function">
@@ -77,11 +79,9 @@
 <dd></dd></dl>
 
 <dl class="py function">
-<dt id="misc.warn_with_traceback">
-<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">warn_with_traceback</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">message</span></em>, <em class="sig-param"><span class="n">category</span></em>, <em class="sig-param"><span class="n">filename</span></em>, <em class="sig-param"><span class="n">lineno</span></em>, <em class="sig-param"><span class="n">file</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#misc.warn_with_traceback" title="Permalink to this definition">¶</a></dt>
-<dd><p>Utility for debugging
-Comment last line to enable/disable</p>
-</dd></dl>
+<dt id="misc.flat_1d_list">
+<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">flat_1d_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">list</span></em><span class="sig-paren">)</span><a class="headerlink" href="#misc.flat_1d_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </div>
 

@@ -42,12 +42,15 @@
 <em class="property">class </em><code class="sig-prename descclassname">Algorithm.</code><code class="sig-name descname">Algorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs_space</span></em>, <em class="sig-param"><span class="n">acs_space</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py method">
-<dt id="Algorithm.Algorithm.create_agent">
-<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.create_agent" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates a new agent</p>
-<p>Input</p>
+<dt id="Algorithm.Algorithm.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the agents network using the data</p>
 <dl class="simple">
-<dt>Return</dt><dd><p>Agent</p>
+<dt>Input</dt><dd><p>agent:      the agent who we want to update it’s network
+data:       data used to train the network
+episodic:   flag indicating if the update is episodic or per timestep</p>
+</dd>
+<dt>Return</dt><dd><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -55,6 +58,11 @@
 <dl class="py method">
 <dt id="Algorithm.Algorithm.evolve">
 <code class="sig-name descname">evolve</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.evolve" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.get_num_updates">
+<code class="sig-name descname">get_num_updates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.get_num_updates" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -71,29 +79,14 @@ observation:</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="Algorithm.Algorithm.get_agents">
-<code class="sig-name descname">get_agents</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.get_agents" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Algorithm.Algorithm.get_num_updates">
-<code class="sig-name descname">get_num_updates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.get_num_updates" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Algorithm.Algorithm.id_generator">
-<code class="sig-name descname">id_generator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.id_generator" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Algorithm.Algorithm.load_central_critic">
-<code class="sig-name descname">load_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.load_central_critic" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Algorithm.Algorithm.log">
-<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.log" title="Permalink to this definition">¶</a></dt>
-<dd><p>If verbose_level is not given, by default will log</p>
+<dt id="Algorithm.Algorithm.create_agent">
+<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.create_agent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new agent</p>
+<p>Input</p>
+<dl class="simple">
+<dt>Return</dt><dd><p>Agent</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -102,17 +95,24 @@ observation:</p>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="Algorithm.Algorithm.update">
-<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Updates the agents network using the data</p>
-<dl class="simple">
-<dt>Input</dt><dd><p>agent:      the agent who we want to update it’s network
-data:       data used to train the network
-episodic:   flag indicating if the update is episodic or per timestep</p>
-</dd>
-<dt>Return</dt><dd><p>None</p>
-</dd>
-</dl>
+<dt id="Algorithm.Algorithm.load_central_critic">
+<code class="sig-name descname">load_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.load_central_critic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.id_generator">
+<code class="sig-name descname">id_generator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.id_generator" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.get_agents">
+<code class="sig-name descname">get_agents</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.get_agents" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.log">
+<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>If verbose_level is not given, by default will log</p>
 </dd></dl>
 
 </dd></dl>

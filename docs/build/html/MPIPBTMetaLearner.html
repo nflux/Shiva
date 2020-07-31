@@ -41,46 +41,6 @@
 <dt id="MPIPBTMetaLearner.MPIPBTMetaLearner">
 <em class="property">class </em><code class="sig-prename descclassname">MPIPBTMetaLearner.</code><code class="sig-name descname">MPIPBTMetaLearner</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.learners.MetaLearner.MetaLearner</span></code></p>
-<dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.check_states">
-<code class="sig-name descname">check_states</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.check_states" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.close">
-<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.close" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_id">
-<code class="sig-name descname">get_learner_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_id" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_spec">
-<code class="sig-name descname">get_learner_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_spec" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_multieval_metrics">
-<code class="sig-name descname">get_multieval_metrics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_multieval_metrics" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_role">
-<code class="sig-name descname">get_role</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_role" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_training_matches">
-<code class="sig-name descname">get_training_matches</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_training_matches" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.has_pair">
-<code class="sig-name descname">has_pair</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.has_pair" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="py attribute">
 <dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.id">
 <code class="sig-name descname">id</code><em class="property"> = 0</em><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.id" title="Permalink to this definition">¶</a></dt>
@@ -97,19 +57,59 @@
 <dd></dd></dl>
 
 <dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.check_states">
+<code class="sig-name descname">check_states</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.check_states" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.start_evals">
+<code class="sig-name descname">start_evals</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.start_evals" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_multieval_metrics">
+<code class="sig-name descname">get_multieval_metrics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_multieval_metrics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.review_training_matches">
 <code class="sig-name descname">review_training_matches</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.review_training_matches" title="Permalink to this definition">¶</a></dt>
 <dd><p>Sends new pair of training matches to all MultiEnvs to load agents</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.run">
-<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.run" title="Permalink to this definition">¶</a></dt>
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_training_matches">
+<code class="sig-name descname">get_training_matches</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_training_matches" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.start_evals">
-<code class="sig-name descname">start_evals</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.start_evals" title="Permalink to this definition">¶</a></dt>
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.has_pair">
+<code class="sig-name descname">has_pair</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.has_pair" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_role">
+<code class="sig-name descname">get_role</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_role" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_id">
+<code class="sig-name descname">get_learner_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_spec">
+<code class="sig-name descname">get_learner_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_spec" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

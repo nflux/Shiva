@@ -42,6 +42,25 @@
 <em class="property">class </em><code class="sig-prename descclassname">DQNAlgorithm.</code><code class="sig-name descname">DQNAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs_space</span></em>, <em class="sig-param"><span class="n">acs_space</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.algorithms.Algorithm.Algorithm</span></code></p>
 <dl class="py method">
+<dt id="DQNAlgorithm.DQNAlgorithm.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span></em>, <em class="sig-param"><span class="n">buffer</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">episodic</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the agents network using the data</p>
+<dl class="simple">
+<dt>Input</dt><dd><p>agent:      the agent who we want to update it’s network
+data:       data used to train the network
+episodic:   flag indicating if the update is episodic or per timestep</p>
+</dd>
+<dt>Return</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DQNAlgorithm.DQNAlgorithm.get_loss">
+<code class="sig-name descname">get_loss</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.get_loss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="DQNAlgorithm.DQNAlgorithm.create_agent">
 <code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.create_agent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a new agent</p>
@@ -58,28 +77,9 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="DQNAlgorithm.DQNAlgorithm.get_loss">
-<code class="sig-name descname">get_loss</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.get_loss" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
 <dt id="DQNAlgorithm.DQNAlgorithm.get_metrics">
 <code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">agent_id</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.get_metrics" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
-
-<dl class="py method">
-<dt id="DQNAlgorithm.DQNAlgorithm.update">
-<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span></em>, <em class="sig-param"><span class="n">buffer</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">episodic</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Updates the agents network using the data</p>
-<dl class="simple">
-<dt>Input</dt><dd><p>agent:      the agent who we want to update it’s network
-data:       data used to train the network
-episodic:   flag indicating if the update is episodic or per timestep</p>
-</dd>
-<dt>Return</dt><dd><p>None</p>
-</dd>
-</dl>
-</dd></dl>
 
 </dd></dl>
 

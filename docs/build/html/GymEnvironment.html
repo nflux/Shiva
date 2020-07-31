@@ -42,28 +42,13 @@
 <em class="property">class </em><code class="sig-prename descclassname">GymEnvironment.</code><code class="sig-name descname">GymEnvironment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.envs.Environment.Environment</span></code></p>
 <dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.close">
-<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.close" title="Permalink to this definition">¶</a></dt>
+<dt id="GymEnvironment.GymEnvironment.step">
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action</span></em>, <em class="sig-param"><span class="n">discrete_select</span><span class="o">=</span><span class="default_value">'argmax'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.step" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.get_action">
-<code class="sig-name descname">get_action</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_action" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.get_actions">
-<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_actions" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.get_gym_action_space">
-<code class="sig-name descname">get_gym_action_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_gym_action_space" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.get_gym_observation_space">
-<code class="sig-name descname">get_gym_observation_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_gym_observation_space" title="Permalink to this definition">¶</a></dt>
+<dt id="GymEnvironment.GymEnvironment.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.reset" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -73,8 +58,33 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.get_observation">
-<code class="sig-name descname">get_observation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_observation" title="Permalink to this definition">¶</a></dt>
+<dt id="GymEnvironment.GymEnvironment.is_done">
+<code class="sig-name descname">is_done</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.is_done" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="GymEnvironment.GymEnvironment.transform_observation_space">
+<code class="sig-name descname">transform_observation_space</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw_obs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.transform_observation_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="GymEnvironment.GymEnvironment.is_observation_space_discrete">
+<code class="sig-name descname">is_observation_space_discrete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.is_observation_space_discrete" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="GymEnvironment.GymEnvironment.get_gym_observation_space">
+<code class="sig-name descname">get_gym_observation_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_gym_observation_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="GymEnvironment.GymEnvironment.is_action_space_discrete">
+<code class="sig-name descname">is_action_space_discrete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.is_action_space_discrete" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="GymEnvironment.GymEnvironment.get_gym_action_space">
+<code class="sig-name descname">get_gym_action_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_gym_action_space" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -83,13 +93,23 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.get_reward">
-<code class="sig-name descname">get_reward</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_reward" title="Permalink to this definition">¶</a></dt>
+<dt id="GymEnvironment.GymEnvironment.get_observation">
+<code class="sig-name descname">get_observation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_observation" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.get_reward_episode">
-<code class="sig-name descname">get_reward_episode</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_reward_episode" title="Permalink to this definition">¶</a></dt>
+<dt id="GymEnvironment.GymEnvironment.get_actions">
+<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_actions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="GymEnvironment.GymEnvironment.get_action">
+<code class="sig-name descname">get_action</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_action" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="GymEnvironment.GymEnvironment.get_reward">
+<code class="sig-name descname">get_reward</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_reward" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -99,18 +119,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.is_action_space_discrete">
-<code class="sig-name descname">is_action_space_discrete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.is_action_space_discrete" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.is_done">
-<code class="sig-name descname">is_done</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.is_done" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.is_observation_space_discrete">
-<code class="sig-name descname">is_observation_space_discrete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.is_observation_space_discrete" title="Permalink to this definition">¶</a></dt>
+<dt id="GymEnvironment.GymEnvironment.get_reward_episode">
+<code class="sig-name descname">get_reward_episode</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_reward_episode" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -119,18 +129,8 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.reset">
-<code class="sig-name descname">reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.reset" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.step">
-<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action</span></em>, <em class="sig-param"><span class="n">discrete_select</span><span class="o">=</span><span class="default_value">'argmax'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.step" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="GymEnvironment.GymEnvironment.transform_observation_space">
-<code class="sig-name descname">transform_observation_space</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw_obs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.transform_observation_space" title="Permalink to this definition">¶</a></dt>
+<dt id="GymEnvironment.GymEnvironment.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.close" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

@@ -42,14 +42,9 @@
 <em class="property">class </em><code class="sig-prename descclassname">PPOAlgorithm.</code><code class="sig-name descname">PPOAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs_space</span></em>, <em class="sig-param"><span class="n">acs_space</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAlgorithm.PPOAlgorithm" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.algorithms.Algorithm.Algorithm</span></code></p>
 <dl class="py method">
-<dt id="PPOAlgorithm.PPOAlgorithm.create_agent">
-<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAlgorithm.PPOAlgorithm.create_agent" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates a new agent</p>
-<p>Input</p>
-<dl class="simple">
-<dt>Return</dt><dd><p>Agent</p>
-</dd>
-</dl>
+<dt id="PPOAlgorithm.PPOAlgorithm.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">buffer</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAlgorithm.PPOAlgorithm.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getting a Batch from the Replay Buffer</p>
 </dd></dl>
 
 <dl class="py method">
@@ -58,9 +53,14 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="PPOAlgorithm.PPOAlgorithm.update">
-<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">buffer</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAlgorithm.PPOAlgorithm.update" title="Permalink to this definition">¶</a></dt>
-<dd><p>Getting a Batch from the Replay Buffer</p>
+<dt id="PPOAlgorithm.PPOAlgorithm.create_agent">
+<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAlgorithm.PPOAlgorithm.create_agent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new agent</p>
+<p>Input</p>
+<dl class="simple">
+<dt>Return</dt><dd><p>Agent</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>

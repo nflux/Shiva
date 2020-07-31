@@ -38,6 +38,18 @@
   <div class="section" id="module-networks_handler">
 <span id="networks-handler-module"></span><h1>networks_handler module<a class="headerlink" href="#module-networks_handler" title="Permalink to this headline">¶</a></h1>
 <dl class="py function">
+<dt id="networks_handler.parse_functions">
+<code class="sig-prename descclassname">networks_handler.</code><code class="sig-name descname">parse_functions</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">package</span></em>, <em class="sig-param"><span class="n">funcs_str</span></em><span class="sig-paren">)</span><a class="headerlink" href="#networks_handler.parse_functions" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Input</dt><dd><p>&#64;func_str       coming from the config file as a string     g.e. “ReLU,ReLU,Tanh”
+&#64;package        optional when using other package as TF</p>
+</dd>
+<dt>Return</dt><dd><p>List of function definitions        g.e. [nn.ReLU, nn.ReLU, nn.Tanh]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt id="networks_handler.DynamicLinearSequential">
 <code class="sig-prename descclassname">networks_handler.</code><code class="sig-name descname">DynamicLinearSequential</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_dim</span></em>, <em class="sig-param"><span class="n">output_dim</span></em>, <em class="sig-param"><span class="n">layers</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">activ_function</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">last_layer</span><span class="p">:</span> <span class="n">bool</span></em>, <em class="sig-param"><span class="n">output_function</span><span class="p">:</span> <span class="n">object</span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#networks_handler.DynamicLinearSequential" title="Permalink to this definition">¶</a></dt>
 <dd><p>Function that returns a nn.Sequential object determined by the inputs (essentially coming from config)
@@ -50,18 +62,6 @@ Input</p>
 &#64;activ_function     an iterable of function definitions to be used on each layer        g.e. [nn.ReLU, nn.ReLU, nn.Tanh]
 &#64;output_function    a function definition that will transform the network output        g.e. nn.Tanh</p>
 </div></blockquote>
-</dd></dl>
-
-<dl class="py function">
-<dt id="networks_handler.parse_functions">
-<code class="sig-prename descclassname">networks_handler.</code><code class="sig-name descname">parse_functions</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">package</span></em>, <em class="sig-param"><span class="n">funcs_str</span></em><span class="sig-paren">)</span><a class="headerlink" href="#networks_handler.parse_functions" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Input</dt><dd><p>&#64;func_str       coming from the config file as a string     g.e. “ReLU,ReLU,Tanh”
-&#64;package        optional when using other package as TF</p>
-</dd>
-<dt>Return</dt><dd><p>List of function definitions        g.e. [nn.ReLU, nn.ReLU, nn.Tanh]</p>
-</dd>
-</dl>
 </dd></dl>
 
 </div>

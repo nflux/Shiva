@@ -35,8 +35,128 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="mpilearner-module">
-<h1>MPILearner module<a class="headerlink" href="#mpilearner-module" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-MPILearner">
+<span id="mpilearner-module"></span><h1>MPILearner module<a class="headerlink" href="#module-MPILearner" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="MPILearner.MPILearner">
+<em class="property">class </em><code class="sig-prename descclassname">MPILearner.</code><code class="sig-name descname">MPILearner</code><a class="headerlink" href="#MPILearner.MPILearner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.learners.Learner.Learner</span></code></p>
+<dl class="py method">
+<dt id="MPILearner.MPILearner.launch">
+<code class="sig-name descname">launch</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.launch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.check_incoming_trajectories">
+<code class="sig-name descname">check_incoming_trajectories</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.check_incoming_trajectories" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.receive_trajectory_numpy">
+<code class="sig-name descname">receive_trajectory_numpy</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">env_comm</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.receive_trajectory_numpy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receive trajectory from each single environment in self.envs process group</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.run_updates">
+<code class="sig-name descname">run_updates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.run_updates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Training</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.run_lr_decay">
+<code class="sig-name descname">run_lr_decay</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.run_lr_decay" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if we need to do LR decay by looking at the last mean rewards</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.run_evolution">
+<code class="sig-name descname">run_evolution</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.run_evolution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Roles Evolution</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.create_agents">
+<code class="sig-name descname">create_agents</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.create_agents" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.get_agent_of_id">
+<code class="sig-name descname">get_agent_of_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.get_agent_of_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.create_algorithm">
+<code class="sig-name descname">create_algorithm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.create_algorithm" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.create_buffer">
+<code class="sig-name descname">create_buffer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.create_buffer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.checkpoint">
+<code class="sig-name descname">checkpoint</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">checkpoint_num</span></em>, <em class="sig-param"><span class="n">function_only</span></em>, <em class="sig-param"><span class="n">use_temp_folder</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.checkpoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.t_test">
+<code class="sig-name descname">t_test</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">evo_config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.t_test" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.welch_T_Test">
+<code class="sig-name descname">welch_T_Test</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evals</span></em>, <em class="sig-param"><span class="n">evo_evals</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.welch_T_Test" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.truncation">
+<code class="sig-name descname">truncation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">evo_config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.truncation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.perturb">
+<code class="sig-name descname">perturb</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.perturb" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.resample">
+<code class="sig-name descname">resample</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.resample" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.exploitation">
+<code class="sig-name descname">exploitation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.exploitation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.exploration">
+<code class="sig-name descname">exploration</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.exploration" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.get_metrics">
+<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span></em>, <em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.get_metrics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.set_default_configs">
+<code class="sig-name descname">set_default_configs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.set_default_configs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPILearner.MPILearner.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPILearner.MPILearner.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </div>
 
 

@@ -1,14 +1,11 @@
+Welcome to Shiva's documentation!
+=================================
 
-Shiva Docs!
-=============
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
 
-Modules
-=======
-
-   .. :toctree:
-      :maxdepth: 2
-
-      modules
+   rst/modules
 
 
 

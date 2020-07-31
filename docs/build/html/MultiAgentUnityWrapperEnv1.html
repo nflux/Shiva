@@ -42,8 +42,36 @@
 <em class="property">class </em><code class="sig-prename descclassname">MultiAgentUnityWrapperEnv1.</code><code class="sig-name descname">MultiAgentUnityWrapperEnv1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.envs.Environment.Environment</span></code></p>
 <dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.close">
-<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.close" title="Permalink to this definition">¶</a></dt>
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.start_unity_environment">
+<code class="sig-name descname">start_unity_environment</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.start_unity_environment" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.set_initial_values">
+<code class="sig-name descname">set_initial_values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.set_initial_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unique Agent Behaviours</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">force</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.metric_reset">
+<code class="sig-name descname">metric_reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">force</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.metric_reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>To be called by Shiva Learner
+It’s just to reinitialize our metrics. Unity resets the environment on its own.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_agent_id">
+<code class="sig-name descname">reset_agent_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">role</span></em>, <em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_agent_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.step">
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">actions</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.step" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -55,56 +83,10 @@ In your example, Agents 1, 7 and 9 had their episode terminated, started a new e
 </dd></dl>
 
 <dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.create_buffers">
-<code class="sig-name descname">create_buffers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.create_buffers" title="Permalink to this definition">¶</a></dt>
-<dd><p>Not best approach but solves current issue with Unity step function
-Need a buffer for each Agent as they terminate at different times and could turn the Tensor buffer into undesired shapes,
-so here we keep a separate buffer for each individual Agent in the simulation</p>
-<p>Secondary approach (possibly cheaper) could be to use a python list to collect data of current trajectory
-And convert to numpy before sending trajectory
-Test performance for Multiple environments within one single Unity simulation</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.debug">
-<code class="sig-name descname">debug</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.debug" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_action_space_from_unity_spec">
-<code class="sig-name descname">get_action_space_from_unity_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">unity_spec</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_action_space_from_unity_spec" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_actions">
-<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_actions" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_metrics">
 <code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_metrics" title="Permalink to this definition">¶</a></dt>
 <dd><p>MultiAgent Metrics</p>
 </dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observation_space_from_unity_spec">
-<code class="sig-name descname">get_observation_space_from_unity_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">unity_spec</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observation_space_from_unity_spec" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observations">
-<code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observations" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_reward_episode">
-<code class="sig-name descname">get_reward_episode</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_reward_episode" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_rewards">
-<code class="sig-name descname">get_rewards</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_rewards" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_role_metrics">
@@ -118,21 +100,45 @@ Test performance for Multiple environments within one single Unity simulation</p
 </dd></dl>
 
 <dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.metric_reset">
-<code class="sig-name descname">metric_reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">force</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.metric_reset" title="Permalink to this definition">¶</a></dt>
-<dd><p>To be called by Shiva Learner
-It’s just to reinitialize our metrics. Unity resets the environment on its own.</p>
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_action_space_from_unity_spec">
+<code class="sig-name descname">get_action_space_from_unity_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">unity_spec</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_action_space_from_unity_spec" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observation_space_from_unity_spec">
+<code class="sig-name descname">get_observation_space_from_unity_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">unity_spec</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observation_space_from_unity_spec" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observations">
+<code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observations" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_actions">
+<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_actions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_reward_episode">
+<code class="sig-name descname">get_reward_episode</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_reward_episode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_rewards">
+<code class="sig-name descname">get_rewards</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_rewards" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.create_buffers">
+<code class="sig-name descname">create_buffers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.create_buffers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Not best approach but solves current issue with Unity step function
+Need a buffer for each Agent as they terminate at different times and could turn the Tensor buffer into undesired shapes,
+so here we keep a separate buffer for each individual Agent in the simulation</p>
+<p>Secondary approach (possibly cheaper) could be to use a python list to collect data of current trajectory
+And convert to numpy before sending trajectory
+Test performance for Multiple environments within one single Unity simulation</p>
 </dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset">
-<code class="sig-name descname">reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">force</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_agent_id">
-<code class="sig-name descname">reset_agent_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">role</span></em>, <em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_agent_id" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_buffers">
@@ -140,19 +146,13 @@ It’s just to reinitialize our metrics. Unity resets the environment on its own
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.set_initial_values">
-<code class="sig-name descname">set_initial_values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.set_initial_values" title="Permalink to this definition">¶</a></dt>
-<dd><p>Unique Agent Behaviours</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.start_unity_environment">
-<code class="sig-name descname">start_unity_environment</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.start_unity_environment" title="Permalink to this definition">¶</a></dt>
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.close" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.step">
-<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">actions</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.step" title="Permalink to this definition">¶</a></dt>
+<dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.debug">
+<code class="sig-name descname">debug</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.debug" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

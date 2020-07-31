@@ -42,8 +42,19 @@
 <em class="property">class </em><code class="sig-prename descclassname">DQNAgent.</code><code class="sig-name descname">DQNAgent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span></em>, <em class="sig-param"><span class="n">acs_space</span></em>, <em class="sig-param"><span class="n">obs_space</span></em>, <em class="sig-param"><span class="n">agent_config</span></em>, <em class="sig-param"><span class="n">net_config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.agents.Agent.Agent</span></code></p>
 <dl class="py method">
-<dt id="DQNAgent.DQNAgent.copy_weights">
-<code class="sig-name descname">copy_weights</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.copy_weights" title="Permalink to this definition">¶</a></dt>
+<dt id="DQNAgent.DQNAgent.get_action">
+<code class="sig-name descname">get_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs</span></em>, <em class="sig-param"><span class="n">step_n</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">evaluate</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.get_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method iterates over all the possible actions to find the one with the highest Q value</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DQNAgent.DQNAgent.get_action_target">
+<code class="sig-name descname">get_action_target</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.get_action_target" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="DQNAgent.DQNAgent.get_random_action">
+<code class="sig-name descname">get_random_action</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.get_random_action" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -70,19 +81,14 @@ observation     observation from the environment</p>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="DQNAgent.DQNAgent.get_action">
-<code class="sig-name descname">get_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs</span></em>, <em class="sig-param"><span class="n">step_n</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">evaluate</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.get_action" title="Permalink to this definition">¶</a></dt>
-<dd><p>This method iterates over all the possible actions to find the one with the highest Q value</p>
+<dt id="DQNAgent.DQNAgent.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">self.policy</em>, <em class="sig-param">save_path + '/policy.pth'</em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>torch.save(self.critic, save_path + ‘/critic.pth’)</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="DQNAgent.DQNAgent.get_action_target">
-<code class="sig-name descname">get_action_target</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.get_action_target" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="DQNAgent.DQNAgent.get_random_action">
-<code class="sig-name descname">get_random_action</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.get_random_action" title="Permalink to this definition">¶</a></dt>
+<dt id="DQNAgent.DQNAgent.copy_weights">
+<code class="sig-name descname">copy_weights</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.copy_weights" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -94,12 +100,6 @@ observation     observation from the environment</p>
 <dt id="DQNAgent.DQNAgent.resample_hyperparameters">
 <code class="sig-name descname">resample_hyperparameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.resample_hyperparameters" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
-
-<dl class="py method">
-<dt id="DQNAgent.DQNAgent.save">
-<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">self.policy</em>, <em class="sig-param">save_path + '/policy.pth'</em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAgent.DQNAgent.save" title="Permalink to this definition">¶</a></dt>
-<dd><p>torch.save(self.critic, save_path + ‘/critic.pth’)</p>
-</dd></dl>
 
 </dd></dl>
 

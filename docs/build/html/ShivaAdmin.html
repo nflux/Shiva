@@ -42,15 +42,12 @@
 <em class="property">class </em><code class="sig-prename descclassname">ShivaAdmin.</code><code class="sig-name descname">ShivaAdmin</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">logger</span></em>, <em class="sig-param"><span class="n">config</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.add_learner_profile">
-<code class="sig-name descname">add_learner_profile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span></em>, <em class="sig-param"><span class="n">function_only</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#ShivaAdmin.ShivaAdmin.add_learner_profile" title="Permalink to this definition">¶</a></dt>
-<dd><p>Needed to keep track of the Learner and it’s directory.
-Creates a folder for it if save flag is True.
-Input</p>
-<blockquote>
-<div><p>&#64;learner            Learner instance to be saved
-&#64;function_only      When we only want to use this functionality without profiling, used for distributed processes mode</p>
-</div></blockquote>
+<dt id="ShivaAdmin.ShivaAdmin.init">
+<code class="sig-name descname">init</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.init" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Input</dt><dd><p>&#64;config       Dictionary of the Shiva Admin config</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -67,16 +64,19 @@ Input</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.add_summary_writer">
-<code class="sig-name descname">add_summary_writer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span></em>, <em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">scalar_name</span></em>, <em class="sig-param"><span class="n">value_y</span></em>, <em class="sig-param"><span class="n">value_x</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#ShivaAdmin.ShivaAdmin.add_summary_writer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Adds a metric to the tensorboard of the given agent
+<dt id="ShivaAdmin.ShivaAdmin.get_meta_url">
+<code class="sig-name descname">get_meta_url</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.get_meta_url" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="ShivaAdmin.ShivaAdmin.add_learner_profile">
+<code class="sig-name descname">add_learner_profile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span></em>, <em class="sig-param"><span class="n">function_only</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#ShivaAdmin.ShivaAdmin.add_learner_profile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Needed to keep track of the Learner and it’s directory.
+Creates a folder for it if save flag is True.
 Input</p>
 <blockquote>
-<div><p>&#64;learner            Learner instance owner of the agent
-&#64;agent              Agent who we want to add, or agent_id
-&#64;scalar_name        Metric name
-&#64;value_y            Usually the metric
-&#64;value_x            Usually time</p>
+<div><p>&#64;learner            Learner instance to be saved
+&#64;function_only      When we only want to use this functionality without profiling, used for distributed processes mode</p>
 </div></blockquote>
 </dd></dl>
 
@@ -103,23 +103,18 @@ Input</p>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.get_latest_directory">
-<code class="sig-name descname">get_latest_directory</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.get_latest_directory" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
 <dt id="ShivaAdmin.ShivaAdmin.get_learner_url">
 <code class="sig-name descname">get_learner_url</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.get_learner_url" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.get_learner_url_summary">
-<code class="sig-name descname">get_learner_url_summary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span><span class="p">:</span> <span class="n">object</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">some_path</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.get_learner_url_summary" title="Permalink to this definition">¶</a></dt>
+<dt id="ShivaAdmin.ShivaAdmin.get_latest_directory">
+<code class="sig-name descname">get_latest_directory</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.get_latest_directory" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.get_meta_url">
-<code class="sig-name descname">get_meta_url</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.get_meta_url" title="Permalink to this definition">¶</a></dt>
+<dt id="ShivaAdmin.ShivaAdmin.get_learner_url_summary">
+<code class="sig-name descname">get_learner_url_summary</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span><span class="p">:</span> <span class="n">object</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">some_path</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.get_learner_url_summary" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -134,15 +129,6 @@ Input</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.init">
-<code class="sig-name descname">init</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.init" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Input</dt><dd><p>&#64;config       Dictionary of the Shiva Admin config</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt id="ShivaAdmin.ShivaAdmin.init_summary_writer">
 <code class="sig-name descname">init_summary_writer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span></em>, <em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#ShivaAdmin.ShivaAdmin.init_summary_writer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Instantiates the SummaryWriter for the given agent
@@ -154,27 +140,17 @@ Input</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.load_agent_of_id">
-<code class="sig-name descname">load_agent_of_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">agent_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">absolute_path</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">device(type='cpu')</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.load_agent_of_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads agent of some ID</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.load_agents">
-<code class="sig-name descname">load_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">absolute_path</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">load_latest</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">device(type='cpu')</span></em><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#ShivaAdmin.ShivaAdmin.load_agents" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads agents from sratch, initializing new Agent object</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.log">
-<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.log" title="Permalink to this definition">¶</a></dt>
-<dd><p>If verbose_level is not given, by default will log</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="ShivaAdmin.ShivaAdmin.reload_agents">
-<code class="sig-name descname">reload_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">absolute_path</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">load_latest</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">device(type='cpu')</span></em><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#ShivaAdmin.ShivaAdmin.reload_agents" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads new agent states</p>
+<dt id="ShivaAdmin.ShivaAdmin.add_summary_writer">
+<code class="sig-name descname">add_summary_writer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner</span></em>, <em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">scalar_name</span></em>, <em class="sig-param"><span class="n">value_y</span></em>, <em class="sig-param"><span class="n">value_x</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#ShivaAdmin.ShivaAdmin.add_summary_writer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a metric to the tensorboard of the given agent
+Input</p>
+<blockquote>
+<div><p>&#64;learner            Learner instance owner of the agent
+&#64;agent              Agent who we want to add, or agent_id
+&#64;scalar_name        Metric name
+&#64;value_y            Usually the metric
+&#64;value_x            Usually time</p>
+</div></blockquote>
 </dd></dl>
 
 <dl class="py method">
@@ -188,6 +164,30 @@ If a MetaLearner is the caller, the saving will cascade along all the Learner th
 <dt>Input</dt><dd><p>&#64;caller             Either a MetaLearner or Learner instance</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ShivaAdmin.ShivaAdmin.load_agents">
+<code class="sig-name descname">load_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">absolute_path</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">load_latest</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">device(type='cpu')</span></em><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#ShivaAdmin.ShivaAdmin.load_agents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads agents from sratch, initializing new Agent object</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ShivaAdmin.ShivaAdmin.load_agent_of_id">
+<code class="sig-name descname">load_agent_of_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">agent_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">absolute_path</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">device(type='cpu')</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.load_agent_of_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads agent of some ID</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ShivaAdmin.ShivaAdmin.reload_agents">
+<code class="sig-name descname">reload_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">absolute_path</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">load_latest</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">device(type='cpu')</span></em><span class="sig-paren">)</span> &#x2192; list<a class="headerlink" href="#ShivaAdmin.ShivaAdmin.reload_agents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads new agent states</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ShivaAdmin.ShivaAdmin.log">
+<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ShivaAdmin.ShivaAdmin.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>If verbose_level is not given, by default will log</p>
 </dd></dl>
 
 </dd></dl>

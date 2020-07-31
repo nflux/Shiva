@@ -37,13 +37,33 @@
             
   <div class="section" id="module-PPOAgent">
 <span id="ppoagent-module"></span><h1>PPOAgent module<a class="headerlink" href="#module-PPOAgent" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="PPOAgent.init_layer">
+<code class="sig-prename descclassname">PPOAgent.</code><code class="sig-name descname">init_layer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">module</span></em>, <em class="sig-param"><span class="n">w_init</span></em>, <em class="sig-param"><span class="n">b_init</span></em>, <em class="sig-param"><span class="n">gain</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.init_layer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py class">
 <dt id="PPOAgent.PPOAgent">
 <em class="property">class </em><code class="sig-prename descclassname">PPOAgent.</code><code class="sig-name descname">PPOAgent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span></em>, <em class="sig-param"><span class="n">obs_dim</span></em>, <em class="sig-param"><span class="n">acs_space</span></em>, <em class="sig-param"><span class="n">agent_config</span></em>, <em class="sig-param"><span class="n">net_config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.agents.Agent.Agent</span></code></p>
 <dl class="py method">
+<dt id="PPOAgent.PPOAgent.get_action">
+<code class="sig-name descname">get_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.get_action" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="PPOAgent.PPOAgent.get_logprobs">
+<code class="sig-name descname">get_logprobs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em>, <em class="sig-param"><span class="n">action</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.get_logprobs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="PPOAgent.PPOAgent.evaluate">
 <code class="sig-name descname">evaluate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="PPOAgent.PPOAgent.get_discrete_action">
+<code class="sig-name descname">get_discrete_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.get_discrete_action" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -52,8 +72,8 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="PPOAgent.PPOAgent.get_action">
-<code class="sig-name descname">get_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.get_action" title="Permalink to this definition">¶</a></dt>
+<dt id="PPOAgent.PPOAgent.get_discrete_logprobs">
+<code class="sig-name descname">get_discrete_logprobs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em>, <em class="sig-param"><span class="n">action</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.get_discrete_logprobs" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -67,23 +87,8 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="PPOAgent.PPOAgent.get_discrete_action">
-<code class="sig-name descname">get_discrete_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.get_discrete_action" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="PPOAgent.PPOAgent.get_discrete_logprobs">
-<code class="sig-name descname">get_discrete_logprobs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em>, <em class="sig-param"><span class="n">action</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.get_discrete_logprobs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="PPOAgent.PPOAgent.get_logprobs">
-<code class="sig-name descname">get_logprobs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em>, <em class="sig-param"><span class="n">action</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.get_logprobs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="PPOAgent.PPOAgent.load">
-<code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">save_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.load" title="Permalink to this definition">¶</a></dt>
+<dt id="PPOAgent.PPOAgent.save_agent">
+<code class="sig-name descname">save_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">save_path</span></em>, <em class="sig-param"><span class="n">step</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.save_agent" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -93,16 +98,11 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="PPOAgent.PPOAgent.save_agent">
-<code class="sig-name descname">save_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">save_path</span></em>, <em class="sig-param"><span class="n">step</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.save_agent" title="Permalink to this definition">¶</a></dt>
+<dt id="PPOAgent.PPOAgent.load">
+<code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">save_path</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.PPOAgent.load" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
-
-<dl class="py function">
-<dt id="PPOAgent.init_layer">
-<code class="sig-prename descclassname">PPOAgent.</code><code class="sig-name descname">init_layer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">module</span></em>, <em class="sig-param"><span class="n">w_init</span></em>, <em class="sig-param"><span class="n">b_init</span></em>, <em class="sig-param"><span class="n">gain</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#PPOAgent.init_layer" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 </div>
 

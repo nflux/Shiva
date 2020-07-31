@@ -42,86 +42,6 @@
 <em class="property">class </em><code class="sig-prename descclassname">MADDPGAlgorithm.</code><code class="sig-name descname">MADDPGAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation_space</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">action_space</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="n">configs</span><span class="p">:</span> <span class="n">dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.algorithms.Algorithm.Algorithm</span></code></p>
 <dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.add_agent">
-<code class="sig-name descname">add_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.add_agent" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.add_agents">
-<code class="sig-name descname">add_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.add_agents" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.copy_hyperparameters">
-<code class="sig-name descname">copy_hyperparameters</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.copy_hyperparameters" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.copy_weight_from_agent">
-<code class="sig-name descname">copy_weight_from_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.copy_weight_from_agent" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.create_agent_of_role">
-<code class="sig-name descname">create_agent_of_role</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.create_agent_of_role" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.create_agents">
-<code class="sig-name descname">create_agents</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.create_agents" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.decay_learning_rate">
-<code class="sig-name descname">decay_learning_rate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.decay_learning_rate" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.evolve">
-<code class="sig-name descname">evolve</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evol_config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.evolve" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.get_metrics">
-<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span></em>, <em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.get_metrics" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.load_central_critic">
-<code class="sig-name descname">load_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.load_central_critic" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.perturb_hyperparameters">
-<code class="sig-name descname">perturb_hyperparameters</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">perturb_factor</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.perturb_hyperparameters" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.resample_hyperparameters">
-<code class="sig-name descname">resample_hyperparameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.resample_hyperparameters" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.restore_learning_rate">
-<code class="sig-name descname">restore_learning_rate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.restore_learning_rate" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.save_central_critic">
-<code class="sig-name descname">save_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.save_central_critic" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.set_action_space">
-<code class="sig-name descname">set_action_space</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles_action_space</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.set_action_space" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.set_spaces">
-<code class="sig-name descname">set_spaces</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation_space</span></em>, <em class="sig-param"><span class="n">action_space</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.set_spaces" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
 <dt id="MADDPGAlgorithm.MADDPGAlgorithm.update">
 <code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span></em>, <em class="sig-param"><span class="n">buffer</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">episodic</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Updates the agents network using the data</p>
@@ -136,13 +56,93 @@ episodic:   flag indicating if the update is episodic or per timestep</p>
 </dd></dl>
 
 <dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.update_permutes">
+<code class="sig-name descname">update_permutes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">buffer</span><span class="p">:</span> <span class="n">object</span></em>, <em class="sig-param"><span class="n">step_count</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.update_permutes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="MADDPGAlgorithm.MADDPGAlgorithm.update_critics">
 <code class="sig-name descname">update_critics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">buffer</span><span class="p">:</span> <span class="n">object</span></em>, <em class="sig-param"><span class="n">step_count</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.update_critics" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="MADDPGAlgorithm.MADDPGAlgorithm.update_permutes">
-<code class="sig-name descname">update_permutes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">buffer</span><span class="p">:</span> <span class="n">object</span></em>, <em class="sig-param"><span class="n">step_count</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.update_permutes" title="Permalink to this definition">¶</a></dt>
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.evolve">
+<code class="sig-name descname">evolve</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evol_config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.evolve" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.copy_hyperparameters">
+<code class="sig-name descname">copy_hyperparameters</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.copy_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.copy_weight_from_agent">
+<code class="sig-name descname">copy_weight_from_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.copy_weight_from_agent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.perturb_hyperparameters">
+<code class="sig-name descname">perturb_hyperparameters</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">perturb_factor</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.perturb_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.resample_hyperparameters">
+<code class="sig-name descname">resample_hyperparameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.resample_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.decay_learning_rate">
+<code class="sig-name descname">decay_learning_rate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.decay_learning_rate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.restore_learning_rate">
+<code class="sig-name descname">restore_learning_rate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.restore_learning_rate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.save_central_critic">
+<code class="sig-name descname">save_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.save_central_critic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.load_central_critic">
+<code class="sig-name descname">load_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.load_central_critic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.create_agents">
+<code class="sig-name descname">create_agents</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.create_agents" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.create_agent_of_role">
+<code class="sig-name descname">create_agent_of_role</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.create_agent_of_role" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.add_agent">
+<code class="sig-name descname">add_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.add_agent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.add_agents">
+<code class="sig-name descname">add_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.add_agents" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.set_spaces">
+<code class="sig-name descname">set_spaces</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation_space</span></em>, <em class="sig-param"><span class="n">action_space</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.set_spaces" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.set_action_space">
+<code class="sig-name descname">set_action_space</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles_action_space</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.set_action_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.get_metrics">
+<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span></em>, <em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.get_metrics" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

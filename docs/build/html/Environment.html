@@ -42,8 +42,33 @@
 <em class="property">class </em><code class="sig-prename descclassname">Environment.</code><code class="sig-name descname">Environment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py attribute">
+<dt id="Environment.Environment.observations">
+<code class="sig-name descname">observations</code><em class="property"> = []</em><a class="headerlink" href="#Environment.Environment.observations" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
 <dt id="Environment.Environment.actions">
 <code class="sig-name descname">actions</code><em class="property"> = []</em><a class="headerlink" href="#Environment.Environment.actions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Environment.Environment.rewards">
+<code class="sig-name descname">rewards</code><em class="property"> = []</em><a class="headerlink" href="#Environment.Environment.rewards" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Environment.Environment.dones">
+<code class="sig-name descname">dones</code><em class="property"> = []</em><a class="headerlink" href="#Environment.Environment.dones" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Environment.Environment.steps_per_episode">
+<code class="sig-name descname">steps_per_episode</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.steps_per_episode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Environment.Environment.step_count">
+<code class="sig-name descname">step_count</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.step_count" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -52,8 +77,28 @@
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt id="Environment.Environment.dones">
-<code class="sig-name descname">dones</code><em class="property"> = []</em><a class="headerlink" href="#Environment.Environment.dones" title="Permalink to this definition">¶</a></dt>
+<dt id="Environment.Environment.reward_per_step">
+<code class="sig-name descname">reward_per_step</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.reward_per_step" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Environment.Environment.reward_per_episode">
+<code class="sig-name descname">reward_per_episode</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.reward_per_episode" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Environment.Environment.reward_total">
+<code class="sig-name descname">reward_total</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.reward_total" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Environment.Environment.total_episodes_to_play">
+<code class="sig-name descname">total_episodes_to_play</code><em class="property"> = None</em><a class="headerlink" href="#Environment.Environment.total_episodes_to_play" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.step">
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">actions</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.step" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -64,18 +109,48 @@ Here we evaluate the amount of episodes to be played</p>
 </dd></dl>
 
 <dl class="py method">
+<dt id="Environment.Environment.start_env">
+<code class="sig-name descname">start_env</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.start_env" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_observation">
+<code class="sig-name descname">get_observation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_observation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_observations">
+<code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_observations" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="Environment.Environment.get_action">
 <code class="sig-name descname">get_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_action" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="Environment.Environment.get_action_space">
-<code class="sig-name descname">get_action_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_action_space" title="Permalink to this definition">¶</a></dt>
+<dt id="Environment.Environment.get_actions">
+<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_actions" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="Environment.Environment.get_actions">
-<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_actions" title="Permalink to this definition">¶</a></dt>
+<dt id="Environment.Environment.get_reward">
+<code class="sig-name descname">get_reward</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_reward" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_rewards">
+<code class="sig-name descname">get_rewards</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_rewards" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_observation_space">
+<code class="sig-name descname">get_observation_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_observation_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_action_space">
+<code class="sig-name descname">get_action_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_action_space" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -90,28 +165,8 @@ Here we evaluate the amount of episodes to be played</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="Environment.Environment.get_observation">
-<code class="sig-name descname">get_observation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_observation" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Environment.Environment.get_observation_space">
-<code class="sig-name descname">get_observation_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_observation_space" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Environment.Environment.get_observations">
-<code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_observations" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Environment.Environment.get_reward">
-<code class="sig-name descname">get_reward</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_reward" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Environment.Environment.get_rewards">
-<code class="sig-name descname">get_rewards</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.get_rewards" title="Permalink to this definition">¶</a></dt>
+<dt id="Environment.Environment.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.reset" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -120,70 +175,15 @@ Here we evaluate the amount of episodes to be played</p>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="Environment.Environment.log">
-<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.log" title="Permalink to this definition">¶</a></dt>
-<dd><p>If verbose_level is not given, by default will log</p>
-</dd></dl>
-
-<dl class="py method">
 <dt id="Environment.Environment.normalize_reward">
 <code class="sig-name descname">normalize_reward</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">reward</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.normalize_reward" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py attribute">
-<dt id="Environment.Environment.observations">
-<code class="sig-name descname">observations</code><em class="property"> = []</em><a class="headerlink" href="#Environment.Environment.observations" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="py method">
-<dt id="Environment.Environment.reset">
-<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.reset" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt id="Environment.Environment.reward_per_episode">
-<code class="sig-name descname">reward_per_episode</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.reward_per_episode" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt id="Environment.Environment.reward_per_step">
-<code class="sig-name descname">reward_per_step</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.reward_per_step" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt id="Environment.Environment.reward_total">
-<code class="sig-name descname">reward_total</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.reward_total" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt id="Environment.Environment.rewards">
-<code class="sig-name descname">rewards</code><em class="property"> = []</em><a class="headerlink" href="#Environment.Environment.rewards" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Environment.Environment.start_env">
-<code class="sig-name descname">start_env</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.start_env" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Environment.Environment.step">
-<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">actions</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.step" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt id="Environment.Environment.step_count">
-<code class="sig-name descname">step_count</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.step_count" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt id="Environment.Environment.steps_per_episode">
-<code class="sig-name descname">steps_per_episode</code><em class="property"> = 0</em><a class="headerlink" href="#Environment.Environment.steps_per_episode" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt id="Environment.Environment.total_episodes_to_play">
-<code class="sig-name descname">total_episodes_to_play</code><em class="property"> = None</em><a class="headerlink" href="#Environment.Environment.total_episodes_to_play" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="Environment.Environment.log">
+<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>If verbose_level is not given, by default will log</p>
+</dd></dl>
 
 </dd></dl>
 

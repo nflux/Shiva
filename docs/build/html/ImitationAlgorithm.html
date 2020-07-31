@@ -42,12 +42,24 @@
 <em class="property">class </em><code class="sig-prename descclassname">ImitationAlgorithm.</code><code class="sig-name descname">ImitationAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs_space</span></em>, <em class="sig-param"><span class="n">acs_space</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.algorithms.Algorithm.Algorithm</span></code></p>
 <dl class="py method">
-<dt id="ImitationAlgorithm.ImitationAlgorithm.create_agent">
-<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.create_agent" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates a new agent</p>
-<p>Input</p>
-<dl class="simple">
-<dt>Return</dt><dd><p>Agent</p>
+<dt id="ImitationAlgorithm.ImitationAlgorithm.supervised_update">
+<code class="sig-name descname">supervised_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.supervised_update" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Implementation</dt><dd><ol class="arabic simple">
+<li><p>Collect trajectories from the expert agent on a replay buffer</p></li>
+<li><dl class="simple">
+<dt>Calculate the Cross Entropy Loss between imitation agent and</dt><dd><p>expert agent actions</p>
+</dd>
+</dl>
+</li>
+<li><p>Optimize</p></li>
+</ol>
+</dd>
+<dt>Input</dt><dd><p>agent        Agent who we are updating
+expert agent Agent from which we are imitating
+minibatch    Batch from the experience replay buffer</p>
+</dd>
+<dt>Returns</dt><dd><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -84,16 +96,6 @@ minibatch   Batch from the experience replay buffer</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="ImitationAlgorithm.ImitationAlgorithm.find_best_action">
-<code class="sig-name descname">find_best_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">network</span></em>, <em class="sig-param"><span class="n">observation</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.find_best_action" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="ImitationAlgorithm.ImitationAlgorithm.find_best_expert_action">
-<code class="sig-name descname">find_best_expert_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">network</span></em>, <em class="sig-param"><span class="n">observation</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.find_best_expert_action" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
 <dt id="ImitationAlgorithm.ImitationAlgorithm.get_action">
 <code class="sig-name descname">get_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">observation</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.get_action" title="Permalink to this definition">¶</a></dt>
 <dd><p>Determines the best action for the agent and a given observation</p>
@@ -107,29 +109,27 @@ observation:</p>
 </dd></dl>
 
 <dl class="py method">
+<dt id="ImitationAlgorithm.ImitationAlgorithm.find_best_action">
+<code class="sig-name descname">find_best_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">network</span></em>, <em class="sig-param"><span class="n">observation</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.find_best_action" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationAlgorithm.find_best_expert_action">
+<code class="sig-name descname">find_best_expert_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">network</span></em>, <em class="sig-param"><span class="n">observation</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.find_best_expert_action" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="ImitationAlgorithm.ImitationAlgorithm.get_loss">
 <code class="sig-name descname">get_loss</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.get_loss" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="ImitationAlgorithm.ImitationAlgorithm.supervised_update">
-<code class="sig-name descname">supervised_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.supervised_update" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Implementation</dt><dd><ol class="arabic simple">
-<li><p>Collect trajectories from the expert agent on a replay buffer</p></li>
-<li><dl class="simple">
-<dt>Calculate the Cross Entropy Loss between imitation agent and</dt><dd><p>expert agent actions</p>
-</dd>
-</dl>
-</li>
-<li><p>Optimize</p></li>
-</ol>
-</dd>
-<dt>Input</dt><dd><p>agent        Agent who we are updating
-expert agent Agent from which we are imitating
-minibatch    Batch from the experience replay buffer</p>
-</dd>
-<dt>Returns</dt><dd><p>None</p>
+<dt id="ImitationAlgorithm.ImitationAlgorithm.create_agent">
+<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.create_agent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new agent</p>
+<p>Input</p>
+<dl class="simple">
+<dt>Return</dt><dd><p>Agent</p>
 </dd>
 </dl>
 </dd></dl>
@@ -140,6 +140,16 @@ minibatch    Batch from the experience replay buffer</p>
 <dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm">
 <em class="property">class </em><code class="sig-prename descclassname">ImitationAlgorithm.</code><code class="sig-name descname">ImitationRoboCupAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation_space</span></em>, <em class="sig-param"><span class="n">action_space</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.algorithms.Algorithm.Algorithm</span></code></p>
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.supervised_update">
+<code class="sig-name descname">supervised_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.supervised_update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.dagger_update">
+<code class="sig-name descname">dagger_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">imitation_agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.dagger_update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.create_agent">
 <code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.create_agent" title="Permalink to this definition">¶</a></dt>
@@ -152,18 +162,8 @@ minibatch    Batch from the experience replay buffer</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.dagger_update">
-<code class="sig-name descname">dagger_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">imitation_agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.dagger_update" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
 <dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.get_loss">
 <code class="sig-name descname">get_loss</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.get_loss" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.supervised_update">
-<code class="sig-name descname">supervised_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.supervised_update" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

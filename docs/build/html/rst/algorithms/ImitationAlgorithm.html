@@ -1,0 +1,245 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImitationAlgorithm module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="MADDPGAlgorithm module" href="MADDPGAlgorithm.html" />
+    <link rel="prev" title="DQNAlgorithm module" href="DQNAlgorithm.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="MADDPGAlgorithm.html" title="MADDPGAlgorithm module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="DQNAlgorithm.html" title="DQNAlgorithm module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../modules.html" >shiva</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../main.html" >main module</a> &#187;</li>
+          <li class="nav-item nav-item-3"><a href="modules.html" accesskey="U">algorithms</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ImitationAlgorithm module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-ImitationAlgorithm">
+<span id="imitationalgorithm-module"></span><h1>ImitationAlgorithm module<a class="headerlink" href="#module-ImitationAlgorithm" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="ImitationAlgorithm.ImitationAlgorithm">
+<em class="property">class </em><code class="sig-prename descclassname">ImitationAlgorithm.</code><code class="sig-name descname">ImitationAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs_space</span></em>, <em class="sig-param"><span class="n">acs_space</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.algorithms.Algorithm.Algorithm</span></code></p>
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationAlgorithm.supervised_update">
+<code class="sig-name descname">supervised_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.supervised_update" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Implementation</dt><dd><ol class="arabic simple">
+<li><p>Collect trajectories from the expert agent on a replay buffer</p></li>
+<li><dl class="simple">
+<dt>Calculate the Cross Entropy Loss between imitation agent and</dt><dd><p>expert agent actions</p>
+</dd>
+</dl>
+</li>
+<li><p>Optimize</p></li>
+</ol>
+</dd>
+<dt>Input</dt><dd><p>agent        Agent who we are updating
+expert agent Agent from which we are imitating
+minibatch    Batch from the experience replay buffer</p>
+</dd>
+<dt>Returns</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationAlgorithm.dagger_update">
+<code class="sig-name descname">dagger_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">imitation_agent</span></em>, <em class="sig-param"><span class="n">expert_agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.dagger_update" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Implementation</dt><dd><ol class="arabic simple">
+<li><dl class="simple">
+<dt>Collect Trajectories from the imitation policy. By choosing</dt><dd><p>actions according to our initial policy, we are allowing for
+for further exploration, so we can encounter new observations
+that the expert would not have visited in. This allows us to
+encounter and learn from negative situations, as well as the
+positive states the expert lead us through.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Calculate the Cross Entropy Loss between the imitation policy’s</dt><dd><p>actions and the actions the expert policy would have taken.</p>
+</dd>
+</dl>
+</li>
+<li><p>Optimize</p></li>
+</ol>
+</dd>
+<dt>Input</dt><dd><p>agent       Agent who we are updating
+exper agent Agent we are imitating
+minibatch   Batch from the experience replay buffer</p>
+</dd>
+<dt>Returns</dt><dd><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationAlgorithm.get_action">
+<code class="sig-name descname">get_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">observation</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.get_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determines the best action for the agent and a given observation</p>
+<dl class="simple">
+<dt>Input</dt><dd><p>agent:          the agent we want the action
+observation:</p>
+</dd>
+<dt>Return</dt><dd><p>Action</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationAlgorithm.find_best_action">
+<code class="sig-name descname">find_best_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">network</span></em>, <em class="sig-param"><span class="n">observation</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.find_best_action" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationAlgorithm.find_best_expert_action">
+<code class="sig-name descname">find_best_expert_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">network</span></em>, <em class="sig-param"><span class="n">observation</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.find_best_expert_action" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationAlgorithm.get_loss">
+<code class="sig-name descname">get_loss</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.get_loss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationAlgorithm.create_agent">
+<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationAlgorithm.create_agent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new agent</p>
+<p>Input</p>
+<dl class="simple">
+<dt>Return</dt><dd><p>Agent</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm">
+<em class="property">class </em><code class="sig-prename descclassname">ImitationAlgorithm.</code><code class="sig-name descname">ImitationRoboCupAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation_space</span></em>, <em class="sig-param"><span class="n">action_space</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.algorithms.Algorithm.Algorithm</span></code></p>
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.supervised_update">
+<code class="sig-name descname">supervised_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.supervised_update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.dagger_update">
+<code class="sig-name descname">dagger_update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">imitation_agent</span></em>, <em class="sig-param"><span class="n">minibatch</span></em>, <em class="sig-param"><span class="n">step_n</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.dagger_update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.create_agent">
+<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.create_agent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new agent</p>
+<p>Input</p>
+<dl class="simple">
+<dt>Return</dt><dd><p>Agent</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="ImitationAlgorithm.ImitationRoboCupAlgorithm.get_loss">
+<code class="sig-name descname">get_loss</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#ImitationAlgorithm.ImitationRoboCupAlgorithm.get_loss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="DQNAlgorithm.html"
+                        title="previous chapter">DQNAlgorithm module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="MADDPGAlgorithm.html"
+                        title="next chapter">MADDPGAlgorithm module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/rst/algorithms/ImitationAlgorithm.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="MADDPGAlgorithm.html" title="MADDPGAlgorithm module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="DQNAlgorithm.html" title="DQNAlgorithm module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../modules.html" >shiva</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../main.html" >main module</a> &#187;</li>
+          <li class="nav-item nav-item-3"><a href="modules.html" >algorithms</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">ImitationAlgorithm module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

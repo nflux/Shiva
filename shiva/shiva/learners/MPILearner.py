@@ -16,12 +16,15 @@ from shiva.learners.Learner import Learner
 
 class MPILearner(Learner):
 
-    # for future MPI child abstraction
-    meta = MPI.COMM_SELF.Get_parent()
-    id = MPI.COMM_SELF.Get_parent().Get_rank()
-    info = MPI.Status()
+
 
     def __init__(self):
+        
+        # for future MPI child abstraction
+        self.meta = MPI.COMM_SELF.Get_parent()
+        self.id = MPI.COMM_SELF.Get_parent().Get_rank()
+        self.info = MPI.Status()
+
         # Receive Config from Meta
         self.configs = self.meta.scatter(None, root=0)
         self.set_default_configs()
