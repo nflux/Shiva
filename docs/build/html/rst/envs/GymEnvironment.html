@@ -50,99 +50,210 @@
 <span id="gymenvironment-module"></span><h1>GymEnvironment module<a class="headerlink" href="#module-GymEnvironment" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt id="GymEnvironment.GymEnvironment">
-<em class="property">class </em><code class="sig-prename descclassname">GymEnvironment.</code><code class="sig-name descname">GymEnvironment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">GymEnvironment.</code><code class="sig-name descname">GymEnvironment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.envs.Environment.Environment</span></code></p>
+<p>Gym Wrapper for interfacing with OpenAI Gym Environments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>configs</strong> (<em>dict</em>) – Dictionary of environment hyperparameters, including
+the env_name, what device to run the class on, whether to render
+and reward modifiers.</p>
+</dd>
+</dl>
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.step">
-<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action</span></em>, <em class="sig-param"><span class="n">discrete_select</span><span class="o">=</span><span class="default_value">'argmax'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.step" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">discrete_select</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'argmax'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes an action in the environment.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Every environment wrapper will have a step function that allows Shiva to interact with the environment. When
+the environment is discrete, it expects an integer as the action where as when the environment is continuous it
+is expecting a float.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>action</strong> (<em>list</em>) – A list or tensor of probabilities or one hot encoding indicating which of the
+index of the tensor should be used as the action to step on. The action is either a one
+hot encoding or list of probabilties depending on how the algorithm was implemented.</p></li>
+<li><p><strong>discrete_select</strong> (<em>str</em>) – This dictates how the index of the action it the list is chosen. The
+action can be selected by either taking the ‘argmax’, or by ‘sample’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Next Observation, Reward, Done Flag, and a Dictionary containing the raw Reward and Action stepped on.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.reset">
 <code class="sig-name descname">reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.reset" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Reset episode metrics at the end of an episode or trajectory.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_metrics">
 <code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_metrics" title="Permalink to this definition">¶</a></dt>
-<dd><p>To be implemented per Environment</p>
+<dd><p>Retrieve environment metrics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>episodic</strong> (<em>bool</em>) – Indicates whether we’re getting a stepwise or episodic metrics.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is utilized by Shiva Admin in order to generate the plots in Tensorboard.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A list of tuple metrics of the form (Metric_Name, Metric_Value)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.is_done">
 <code class="sig-name descname">is_done</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.is_done" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Check if the episode/trajectory has completed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>boolean done flag</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.transform_observation_space">
-<code class="sig-name descname">transform_observation_space</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw_obs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.transform_observation_space" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="sig-name descname">transform_observation_space</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw_obs</span><span class="p">:</span> <span class="n">numpy.array</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.transform_observation_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a discrete observation into a One Hot Encoding.</p>
+<p>Returns: (np.array) One Hot Encoding if its a discrete action, otherwise it returns itself.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.is_observation_space_discrete">
 <code class="sig-name descname">is_observation_space_discrete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.is_observation_space_discrete" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Checks if the numpy shape of the observation space is scalar.</p>
+<p>If the observation space is a number it will return ().
+If the observation space is 2 dimensional or greater it will return a tuple
+with the corresponding dimensions inside.</p>
+<p>Returns: (Boolean)</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Discrete</span>
+<span class="go">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]))</span>
+<span class="go">(2,)</span>
+</pre></div>
+</div>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_gym_observation_space">
 <code class="sig-name descname">get_gym_observation_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_gym_observation_space" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Calculates the observation space.</p>
+<p>If the environment is discrete then it can access the observation space but if its
+continuous then it has be calculated by multipling the dimensions. In short, it retrieves
+the observation space.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is used internally by this wrapper.</p>
+</div>
+<p>Returns: (int) A scalar value.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.is_action_space_discrete">
 <code class="sig-name descname">is_action_space_discrete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.is_action_space_discrete" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Checks if the numpy shape of the action space is scalar.</p>
+<p>If the action space is a number it will return ().
+If the action space is 2 dimensional or greater it will return a tuple
+with the corresponding dimensions inside.</p>
+<p>Returns: (Boolean)</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Discrete</span>
+<span class="go">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">]))</span>
+<span class="go">(2,)</span>
+</pre></div>
+</div>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_gym_action_space">
 <code class="sig-name descname">get_gym_action_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_gym_action_space" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns a dictionary</p>
+<p>Returns: (dict)</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_observations">
 <code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_observations" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns a numpy array of numerical observations.
+Returns: (np.array)</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_observation">
 <code class="sig-name descname">get_observation</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_observation" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns a numpy array of numerical observations.
+Returns: (np.array)</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_actions">
 <code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_actions" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns stepwise actions.
+Returns: (np.array)</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_action">
 <code class="sig-name descname">get_action</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_action" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns the stepwise action.
+Returns: (np.array)</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_reward">
 <code class="sig-name descname">get_reward</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_reward" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns the stepwise reward.
+Returns: (tensor)</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_total_reward">
 <code class="sig-name descname">get_total_reward</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_total_reward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns episodic reward</p>
+<dd><p>Returns episodic reward
+Returns: (int)</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.get_reward_episode">
-<code class="sig-name descname">get_reward_episode</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_reward_episode" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="sig-name descname">get_reward_episode</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.get_reward_episode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the episodic reward.</p>
+<p>Returns: (dict) A dictionary with the total reward indexed by the environment name.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.load_viewer">
 <code class="sig-name descname">load_viewer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.load_viewer" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Shows the environment running.
+If you set render=True inside the config under the environment section it will make the
+environment visible during experiments.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although its useful to see how the autonomous agent is behaving it is computationally more
+expensive.</p>
+</div>
+</dd></dl>
 
 <dl class="py method">
 <dt id="GymEnvironment.GymEnvironment.close">
 <code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GymEnvironment.GymEnvironment.close" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Closes the environment instance.</p>
+<p>Once the preset number of episodes have ran the environment will close. Also there is a killswitch in case
+something causes Shiva to crash.</p>
+</dd></dl>
 
 </dd></dl>
 
