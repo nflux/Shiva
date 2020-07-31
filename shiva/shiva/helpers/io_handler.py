@@ -6,7 +6,7 @@ import numpy as np
 from shiva.core.admin import logger
 from shiva.helpers.misc import terminate_process
 import shiva.helpers.file_handler as fh
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin
 
 class IOHandler(object):

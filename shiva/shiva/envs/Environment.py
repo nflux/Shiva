@@ -1,8 +1,12 @@
 import torch
 import numpy as np
 from shiva.core.admin import logger
+from abc import abstractmethod
 
 class Environment:
+    """
+    Abstract Environment Class all environments implemented in Shiva inherit from.
+    """
     observations = []
     actions = []
     rewards = []
@@ -32,10 +36,14 @@ class Environment:
         self.max_reward = self.max_reward if hasattr(self, 'max_reward') else 1
         self.min_reward = self.min_reward if hasattr(self, 'min_reward') else -1
 
-    def step(self,actions):
-        pass
+    @abstractmethod
+    def step(self,actions) -> None:
+        """
+        Passes in an action which is in turn passed into the environment to continue the 
+        reinforcement training loop.
+        """
 
-    def finished(self, n_episodes=None):
+    def finished(self, n_episodes=None) -> bool:
         '''
             The environment controls when the Learner is done stepping on the Environment
             Here we evaluate the amount of episodes to be played
@@ -43,59 +51,104 @@ class Environment:
         assert (n_episodes is not None), 'A @n_episodes is required to check if we are done running the Environment'
         return self.done_count >= n_episodes
 
-    def start_env(self):
+    def start_env(self) -> bool:
+        """
+
+        """
         return True
 
-    def get_observation(self, agent):
-        pass
+    @abstractmethod
+    def get_observation(self, agent) -> None:
+        """
+        Returns an observation.
+        """
 
-    def get_observations(self):
-        pass
+    @abstractmethod
+    def get_observations(self) -> None:
+        """
+        Returns multiple observations.
+        """
 
+    @abstractmethod
     def get_action(self, agent):
-        pass
+        """
+        Args:
+            agent (Agent): 
+                The agent from which you want to get the action from.
+        Returns an action.
+        """
 
-    def get_actions(self):
-        pass
+    @abstractmethod
+    def get_actions(self)-> None:
+        """
+        Returns multiple actions.
+        """
+    @abstractmethod
+    def get_reward(self, agent) -> None:
+        """
+        
+        """
 
-    def get_reward(self, agent):
-        pass
+    @abstractmethod
+    def get_rewards(self) -> None:
+        """
+        
+        """
 
-    def get_rewards(self):
-        pass
-
-    def get_observation_space(self):
+    def get_observation_space(self) -> np.array:
+        """
+        This could return either a scalar, list, array, or tensor depending upon implementation.
+        """
         return self.observation_space
 
-    def get_action_space(self):
+    def get_action_space(self) -> np.array:
         return self.action_space
 
-    def get_current_step(self):
+    def get_current_step(self) -> int:
+        """
+        Returns:
+            Current step in the enpisode.
+        """
         return self.step_count
 
-    def get_metrics(self):
+    @abstractmethod
+    def get_metrics(self) -> None:
         '''
-            To be implemented per Environment
+        To be implemented per Environment
         '''
-        pass
 
-    def reset(self):
-        pass
+    @abstractmethod
+    def reset(self) -> None:
+        """
+        Resets the environment.
+        """
 
-    def load_viewer(self):
-        pass
+    @abstractmethod
+    def load_viewer(self) -> None:
+        """
+        Loads the environment's renderer.
+        """
 
-    def normalize_reward(self, reward):
+    def normalize_reward(self, reward) -> float:
+        """
+        
+        """
         return self.reward_factor*(reward-self.min_reward)/(self.max_reward-self.min_reward)
 
-    def _normalize_reward(self, reward):
+    def _normalize_reward(self, reward) -> float:
+        """
+        
+        """
         return (self.b-self.a)*(reward-self.min)/(self.max-self.min)
 
-    def log(self, msg, to_print=False, verbose_level=-1):
+    def log(self, msg, to_print=False, verbose_level=-1) -> None:
         '''If verbose_level is not given, by default will log'''
         if verbose_level <= self.configs['Admin']['log_verbosity']['Env']:
             text = "{}\t\t\t{}".format(str(self), msg)
             logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        
+        """
         return "<{}>".format(self.__class__.__name__)

@@ -135,7 +135,7 @@ class PPOAgent(Agent):
         logstd = self.logstd.expand_as(mu)
         #sigma = self.sigma(observation).squeeze(0).to(self.device)
         #dist = Normal(mu,torch.abs(sigma))
-        dist = Normal(mu, logstd.exp())
+        dist = Normal(mu,logstd.exp())
         logprobs = dist.log_prob(action)
         return logprobs
 

@@ -23,6 +23,23 @@ class DDPGAlgorithm(Algorithm):
         self.set_action_space()
         self.critic_learning_rate = 0
         self.actor_learning_rate = 0
+        assert self.a_space == "discrete" or self.a_space == "continuous" or self.a_space == "parameterized", "acs_space config must be set to either discrete, continuous, or parameterized."
+
+    def update(self, agents, buffer, step_count, episodic):
+        self.log("Start update # {}".format(self.num_updates))
+        for _ in range(self.update_iterations):
+            self._update(agents, buffer, step_count, episodic)
+        self.num_updates += self.update_iterations
+
+    def _update(self, agent, buffer, step_count, episodic=False):
+        self.agent = agent[0] if type(agent) == list else agent
+        try:
+            '''For MultiAgentTensorBuffer - 1 Agent only here'''
+            states, actions, rewards, next_states, dones = buffer.sample(agent_id=self.agent.id, device=self.device)
+            dones = dones.bool()
+        except:
+            states, actions, rewards, next_states, dones = buffer.sample(device=self.device)
+            dones = torch.tensor(dones, dtype=torch.bool).view(-1, 1).to(self.device)
         self.exploration_epsilon = 0
         self.noise_scale = 0
 
@@ -45,6 +62,9 @@ class DDPGAlgorithm(Algorithm):
         '''
             Training the Critic
         '''
+    
+        # Zero the gradient
+        self.agent.critic_optimizer.zero_grad()
         self.critic_learning_rate = agent.critic_learning_rate
         self.actor_learning_rate = agent.actor_learning_rate
         self.exploration_epsilon = agent.epsilon
@@ -257,6 +277,8 @@ class DDPGAlgorithm(Algorithm):
             metrics = [
                 ('Algorithm/Actor_Loss', self.actor_loss.item()),
                 ('Algorithm/Critic_Loss', self.critic_loss.item()),
+                ('Agent/Actor_Learning_Rate: ', self.actor_learning_rate),
+                ('Agent/Critic_Learning_Rate: ', self.critic_learning_rate)
                 ('Actor Learning Rate: ', self.actor_learning_rate),
                 ('Critic Learning Rate: ', self.critic_learning_rate),
                 ('Agent Exploration Epsilon: ', self.exploration_epsilon),

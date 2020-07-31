@@ -3,6 +3,11 @@ from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_config_file_2_dict, load_class
 from shiva.helpers.misc import terminate_process
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config", required=True, type=str, help='Config file name')
+    parser.add_argument("-n", "--name", required=False, type=str, help="Name of the run")
+    return parser.parse_args()
 
 
 def start_meta(metalearner_class, configs):
@@ -16,15 +21,9 @@ def start_meta(metalearner_class, configs):
     finally:
         pass
 
-def get_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config", required=True, type=str, help='Config file name')
-    parser.add_argument("-n", "--name", required=False, type=str, help="Name of the run")
-    return parser.parse_args()
-
 def main():
 
-    args = get_arguments()
+    args = get_args()
 
     configs = load_config_file_2_dict(os.path.join(os.getcwd(), 'configs', args.config))
 

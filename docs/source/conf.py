@@ -12,25 +12,21 @@
 #
 import os
 import sys
-# from pathlib import Path
-# sys.path.append(str(Path(__file__).absolute().parent.parent))
-sys.path.insert(0, os.path.abspath('../'))
-sys.path.insert(0, os.path.abspath('../../shiva/'))
-sys.path.insert(0, os.path.abspath('../../shiva/shiva/'))
-sys.path.insert(0, os.path.abspath('../../shiva/shiva/algorithms'))
+sys.path.insert(0, os.path.abspath('../../shiva'))
+sys.path.insert(0, os.path.abspath('../../shiva/shiva'))
 sys.path.insert(0, os.path.abspath('../../shiva/shiva/agents'))
+sys.path.insert(0, os.path.abspath('../../shiva/shiva/algorithms'))
 sys.path.insert(0, os.path.abspath('../../shiva/shiva/buffers'))
-sys.path.insert(0, os.path.abspath('../../shiva/shiva/learners'))
-sys.path.insert(0, os.path.abspath('../../shiva/shiva/metalearners'))
-sys.path.insert(0, os.path.abspath('../../shiva/shiva/networks'))
+sys.path.insert(0, os.path.abspath('../../shiva/shiva/core'))
+sys.path.insert(0, os.path.abspath('../../shiva/shiva/envs'))
 sys.path.insert(0, os.path.abspath('../../shiva/shiva/eval_envs'))
 sys.path.insert(0, os.path.abspath('../../shiva/shiva/helpers'))
-sys.path.insert(0, os.path.abspath('../../shiva/shiva/envs'))
-sys.path.insert(0, os.path.abspath('../../shiva/shiva/core'))
-import shiva
-# from shiva.algorithms import ContinuousPPOAlgorithm
-# import shiva.algorithms
-# print(dir())
+sys.path.insert(0, os.path.abspath('../../shiva/shiva/helpers/utils'))
+sys.path.insert(0, os.path.abspath('../../shiva/shiva/learners'))
+sys.path.insert(0, os.path.abspath('../../shiva/shiva/networks'))
+
+
+
 # -- Project information -----------------------------------------------------
 
 project = 'Shiva'
@@ -48,8 +44,13 @@ release = '0.0.1'
 # ones.
 extensions = [
     'sphinx.ext.napoleon',
-    'sphinx.ext.autosummary'
+    'sphinx.ext.autodoc',
+    'sphinx.ext.coverage',
+    'sphinx.ext.todo',
+    'recommonmark'
 ]
+
+autodoc_member_order ='bysource'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
