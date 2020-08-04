@@ -246,7 +246,8 @@ class DDPGAlgorithm(Algorithm):
 
     def create_agent_of_role(self, id, role):
         self.configs['Agent']['role'] = role
-        return self.create_agent(id)
+        return self
+        create_agent(id)
 
     def set_action_space(self):
         if self.action_space['continuous'] == 0:

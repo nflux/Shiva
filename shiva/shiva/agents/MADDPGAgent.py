@@ -1,5 +1,6 @@
 from shiva.agents.DDPGAgent import DDPGAgent
 
+
 class MADDPGAgent(DDPGAgent):
 
     epsilon = 0

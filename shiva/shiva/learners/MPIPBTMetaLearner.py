@@ -6,6 +6,7 @@ from shiva.learners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
 from shiva.helpers.utils.Tags import Tags
 
+
 class MPIPBTMetaLearner(MetaLearner):
 
     # for future MPI abstraction
@@ -295,7 +296,12 @@ class MPIPBTMetaLearner(MetaLearner):
         self.num_learners_per_map = len(self.learners_map.keys())
         self.num_learners = self.num_learners_per_map * self.num_learners_maps
         self.configs['MetaLearner']['num_learners'] = self.num_learners
-        self.log("Preprocess config\nOriginal LearnerMap {}\nNum Learners\t{}\nNum Learners Per Map\t{}\nNum Learners Maps\t{}\nNum MultiEnvs Per Learner Map\t{}".format(self.learners_map, self.num_learners, self.num_learners_per_map, self.num_learners_maps, self.num_menvs_per_learners_map), verbose_level=3)
+        self.log(f"Preprocess config\nOriginal LearnerMap {self.learners_map}\n"
+                 f"Num Learners\t{self.num_learners}\n"
+                 f"Num Learners Per Map\t{self.num_learners_per_map}\n"
+                 f"Num Learners Maps\t{self.num_learners_maps}\n"
+                 f"Num MultiEnvs Per Learner Map\t{self.num_menvs_per_learners_map}",
+                 verbose_level=3)
 
         self.configs['Evaluation']['manual_seed'] = self.manual_seed if 'manual_seed' not in self.configs['Evaluation'] else self.configs['Evaluation']['manual_seed']
         self.configs['Environment']['manual_seed'] = self.manual_seed if 'manual_seed' not in self.configs['Environment'] else self.configs['Environment']['manual_seed']

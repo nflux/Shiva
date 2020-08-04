@@ -17,6 +17,7 @@ class Algorithm:
         """
         self.configs = configs
         {setattr(self, k, v) for k, v in self.configs['Algorithm'].items()}
+        self.agentCount = 0
         self.agents = []
         self.observation_space = observation_space
         self.action_space = action_space

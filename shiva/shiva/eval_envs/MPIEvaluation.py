@@ -10,8 +10,11 @@ from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.core.IOHandler import get_io_stub
 
-class MPIEvaluation(Evaluation):
 
+class MPIEvaluation(Evaluation):
+    """ Manages Instances of MPIEvalEnv, managed by MPIMultiEvalWrapper
+    Hosts an agent to give actions for all the environments.
+    """
     def __init__(self):
         self.meval = MPI.Comm.Get_parent()
         self.id = self.meval.Get_rank()
@@ -19,6 +22,11 @@ class MPIEvaluation(Evaluation):
         self.launch()
 
     def launch(self):
+        """ Launches the Evaluation Instance
+
+        Gets the configs from multienvironment, connects to the IO Handler, launches the environments,
+
+        """
         # Receive Config from MultiEvalWrapper
         self.configs = self.meval.bcast(None, root=0)
         super(MPIEvaluation, self).__init__(self.configs)
@@ -207,6 +215,9 @@ class MPIEvaluation(Evaluation):
         return self.role2agent
 
     def load_agents(self, role2learner_spec=None):
+        """
+
+        """
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
 
@@ -253,7 +264,12 @@ class MPIEvaluation(Evaluation):
             'num_envs': self.num_envs
         }
 
-    def close(self):
+    def close(self) -> None:
+        """ Close connection with MultiEvaluationWrapper
+
+        Returns:
+            None
+        """
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 

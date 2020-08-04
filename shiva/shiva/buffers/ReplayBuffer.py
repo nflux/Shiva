@@ -1,7 +1,9 @@
 import torch
+from abc import ABC, abstractmethod
 
-class ReplayBuffer(object):
 
+class ReplayBuffer(ABC):
+    """ Abstract Replay Buffer class all environments implemented in Shiva inherit from."""
     def __init__(self, max_size, batch_size, num_agents, obs_dim, acs_dim):
         self.current_index = 0
         self.size = 0
@@ -16,11 +18,14 @@ class ReplayBuffer(object):
     def __len__(self):
         return self.size
 
-    def push(self):
-        assert "NotImplemented"
+    @abstractmethod
+    def push(self) -> None:
+        """Pushes experiences into the buffer."""
 
-    def sample(self):
-        assert "NotImplemented"
+    @abstractmethod
+    def sample(self) -> None:
+        """Samples experiences from the buffer."""
 
-    def clear(self):
-        assert "NotImplemented"
+    @abstractmethod
+    def clear(self) -> None:
+        """ Clears the buffer."""

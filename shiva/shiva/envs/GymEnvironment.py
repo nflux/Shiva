@@ -100,7 +100,11 @@ class GymEnvironment(Environment):
         return self.obs, self.rew, self.done, {'raw_reward': self.reward_per_step, 'action': action}
 
     def reset(self, *args, **kwargs) -> None:
-        """Reset episode metrics at the end of an episode or trajectory."""
+        """Reset episode metrics at the end of an episode or trajectory.
+
+        Return:
+            None
+        """
         self.steps_per_episode = 0
         self.reward_per_step = 0
         self.reward_per_episode = 0
@@ -220,7 +224,7 @@ class GymEnvironment(Environment):
         return self.env.action_space.shape == ()
 
     def get_gym_action_space(self) -> Dict:
-        """ Returns a dictionary 
+        """ Returns a dictionary describing the action space.
         
         Returns: 
             (dict)

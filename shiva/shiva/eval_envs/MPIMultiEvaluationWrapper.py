@@ -14,7 +14,11 @@ from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin
 from shiva.envs.Environment import Environment
 
+
 class MPIMultiEvaluationWrapper(Evaluation):
+    """
+
+    """
 
     def __init__(self):
         self.meta = MPI.Comm.Get_parent()
@@ -311,6 +315,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
         self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
         self.log("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
+
 
 if __name__ == "__main__":
     try:
