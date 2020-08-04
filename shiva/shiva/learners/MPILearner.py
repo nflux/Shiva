@@ -13,12 +13,18 @@ from shiva.core.IOHandler import get_io_stub
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process, flat_1d_list
 from shiva.learners.Learner import Learner
+from shiva.agents.Agent import Agent
+from shiva.algorithm.Algorithm import Algorithm
+from shiva.buffers.ReplayBuffer import ReplayBuffer
+
+from typing import List, Dict, Tuple, Any, Union
 
 class MPILearner(Learner):
 
-
-
     def __init__(self):
+        """
+        Learner implementation for a distributed architecture where we can enable Population Based Training.
+        """
         
         # for future MPI child abstraction
         self.meta = MPI.COMM_SELF.Get_parent()
@@ -33,7 +39,18 @@ class MPILearner(Learner):
         self.log("Received config {}".format(self.configs), verbose_level=3)
         self.launch()
 
-    def launch(self):
+    def launch(self) -> None:
+        """
+        Initialization function.
+        * Connects with the IOHandler
+        * Creates the MPI port where trajectories are gonna arrived (from the MPIEnv)
+        * Initializes algorithm, creates agents and replay buffer
+        * Hand shake with the Meta Learner
+        * Connects with MultiEnv (soon to be deprecated as there's no communication going on)
+
+        Returns:
+            None
+        """
         self._connect_io_handler()
 
         '''Process Configs'''
@@ -61,7 +78,7 @@ class MPILearner(Learner):
         self.agents = self.create_agents()
 
         # Check in with Meta
-        self.meta.gather(self._get_learner_specs(), root=0)
+        self.meta.gather(self.get_learner_specs(), root=0)
 
         # make first saving
         Admin.checkpoint(self, checkpoint_num=0, function_only=True, use_temp_folder=True)
@@ -71,7 +88,17 @@ class MPILearner(Learner):
         self.log("Running..", verbose_level=1)
         self.run()
 
-    def run(self):
+    def run(self) -> None:
+        """
+        Training loop where we execute high level functions:
+        * Check and receive trajectories
+        * Run algorithmic updates
+        * Run evolution (if PBT enabled)
+        * Plot metrics on Tensorboard (using ShivaAdmin)
+
+        Returns:
+            None
+        """
         self.step_count = {agent.id:0 for agent in self.agents}
         self.done_count = 0
         self.num_updates = 0
@@ -84,11 +111,17 @@ class MPILearner(Learner):
             self.check_incoming_trajectories()
             self.run_updates()
             self.run_evolution()
-            self.collect_metrics(episodic=True) # tensorboard
+            self.collect_metrics() # tensorboard
 
         self.close()
 
-    def check_incoming_trajectories(self):
+    def check_incoming_trajectories(self) -> None:
+        """
+        This function iterates for `n_traj_pulls`_ times over all the MPIEnv groups and tries to pull a trajectory from their queue if there is any there. Also profiles time spent between pulls and logs.
+
+        Returns:
+            None
+        """
         self.last_metric_received = None
 
         self._n_success_pulls = 0
@@ -101,9 +134,16 @@ class MPILearner(Learner):
         if self.last_metric_received is not None: # and self.done_count % 20 == 0:
             self.log("{} {}:{}".format(self._n_success_pulls, self.done_count, self.last_metric_received), verbose_level=1)
 
-    def receive_trajectory_numpy(self, env_comm):
-        '''Receive trajectory from each single environment in self.envs process group'''
-        # env_comm = self.envs
+    def receive_trajectory_numpy(self, env_comm: MPI.Comm) -> None:
+        """
+        If the MPI queue has an available trajectory to be pulled we are gonna pull it and push it into the local replay buffer.
+
+        Args:
+            env_comm (MPI.Comm): MPI communication object. For more information go to mpi4py docs
+
+        Returns:
+            None
+        """
         if env_comm.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=self.info):
             env_source = self.info.Get_source()
             self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info) # block statement
@@ -163,8 +203,14 @@ class MPILearner(Learner):
                                          )))
             self.buffer.push(exp)
 
-    def run_updates(self):
-        '''Training'''
+    def run_updates(self) -> None:
+        """
+        The core training occurs here where we call `algorithm.update()`.
+        Before updating performs Meta Learning by decaying learning rate if necessary. Also saves new checkpoints.
+
+        Returns:
+            None
+        """
         if not self.evaluate \
                 and (self.done_count % self.episodes_to_update == 0) \
                 and len(self.buffer) > self.buffer.batch_size:
@@ -182,8 +228,13 @@ class MPILearner(Learner):
             if self.done_count >= self.checkpoints_made * self.save_checkpoint_episodes:
                 self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
-    def run_lr_decay(self):
-        '''Check if we need to do LR decay by looking at the last mean rewards'''
+    def run_lr_decay(self) -> None:
+        """
+        Check if we need to do Learning Rate decay by looking at the last mean rewards. See Learner config explanation for more details on usage.
+
+        Returns:
+            None
+        """
         _decay_or_restore_lr = 0  # -1 to decay, 1 to restore, 0 to do nothing
         _decay_log = ""
         for agent in self.agents:
@@ -211,16 +262,18 @@ class MPILearner(Learner):
         self.alg.decay_learning_rate() if _decay_or_restore_lr == -1 else self.alg.restore_learning_rate() if _decay_or_restore_lr == 1 else None
         self.log(f"{_decay_log} / Critic LR {self.alg.critic_learning_rate} / Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}", verbose_level=1) if _decay_log != '' else None
 
-    def run_evolution(self):
-        '''Roles Evolution'''
+    def run_evolution(self) -> None:
+        """
+        This functions is only executed when PBT is enabled. It will check if it's time to evolve and will ask a evolution config to the Meta Learner.
+        Once a new evolution config is received it will proceed with the evolution procedures for exploitation and exploration given by the Meta Learner.
 
-        '''
-            Expectation value of how many parameter to change per evolution = 1
-        '''
+        Returns:
+            None
+        """
         if self.pbt and self.done_count >= self.initial_evolution_episodes:
 
             if (self.done_count - self.initial_evolution_episodes) >= (self.n_evolution_requests * self.evolution_episodes):
-                self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.evolution_request) # ask for evolution configs1
+                self.meta.send(self.get_learner_specs(), dest=0, tag=Tags.evolution_request) # ask for evolution configs1
                 self.n_evolution_requests += 1
                 # self.log("Ask for Evolution", verbose_level=3)
 
@@ -251,7 +304,13 @@ class MPILearner(Learner):
             # else:
             #     self.log("No configs probed!", verbose_level=1)
 
-    def create_agents(self):
+    def create_agents(self) -> List[Agent]:
+        """
+        Initialization function where we create the agents or load the agents for continue training or to be evaluated.
+
+        Returns:
+            List[Agent]
+        """
         assert hasattr(self, 'num_agents') and self.num_agents > 0, 'Learner num_agent not specified, got {}'.format(self.num_agents)
         self.start_agent_idx = (self.id+1) * 1000
         self.new_agents_ids = np.arange(self.start_agent_idx, self.start_agent_idx + self.num_agents)
@@ -285,20 +344,40 @@ class MPILearner(Learner):
             _agent.recalculate_hyperparameters()
         return agents
 
-    def get_agent_of_id(self, id):
+    def get_agent_of_id(self, id: int) -> Agent:
+        """
+        For a given Agent ID, returns the Agent.
+
+        Args:
+            id (int): Agent ID
+
+        Returns:
+            Agent
+        """
         for agent in self.agents:
             if agent.id == id:
                 return agent
 
-    def create_algorithm(self):
+    def create_algorithm(self) -> Algorithm:
+        """
+        Initialization function.
+
+        Returns:
+            Algorithm
+        """
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         self.configs['Algorithm']['roles'] = self.roles if hasattr(self, 'roles') else []
         alg = algorithm_class(self.observation_space, self.action_space, self.configs)
         self.log("Algorithm created of type {}".format(algorithm_class), verbose_level=2)
         return alg
 
-    def create_buffer(self):
-        # TensorBuffer
+    def create_buffer(self) -> ReplayBuffer:
+        """
+        Initialization function
+
+        Returns:
+            ReplayBuffer
+        """
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
         if type(self.action_space) == dict:
             '''Assuming roles with same obs/acs dim'''
@@ -310,47 +389,93 @@ class MPILearner(Learner):
         self.log("Buffer created of type {}".format(buffer_class), verbose_level=2)
         return buffer
 
-    def _connect_io_handler(self):
+    def _connect_io_handler(self) -> None:
+        """
+        Connect to the gRPC IOHandler. See `get_io_stub` helper function to get more depth information on it's work.
+
+        Returns:
+            None
+        """
         self.io = get_io_stub(self.configs)
 
-    def checkpoint(self, checkpoint_num, function_only, use_temp_folder):
+    def checkpoint(self, checkpoint_num: int, function_only: bool, use_temp_folder: bool) -> None:
+        """
+        Performs the checkpoint saving using ShivaAdmin.
+
+        Args:
+            checkpoint_num (int): current checkpoint number
+            function_only (bool): if we want to use ShivaAdmin as a function_only helper. Used for distributed architecture!
+            use_temp_folder (bool): If True, checkpoints will be saved in the 'last' folder. If False, a new checkpoint folder will be created.
+
+        Returns:
+            None
+        """
         self.checkpoints_made += 1 if not use_temp_folder else 0
 
         for a in self.agents:
             self.alg.save_central_critic(a)
 
         if use_temp_folder:
-            self.io.request_io(self._get_learner_specs(), Admin.get_learner_url(self), wait_for_access=True)
+            self.io.request_io(self.get_learner_specs(), Admin.get_learner_url(self), wait_for_access=True)
         Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
         if use_temp_folder:
-            self.io.done_io(self._get_learner_specs(), Admin.get_learner_url(self))
+            self.io.done_io(self.get_learner_specs(), Admin.get_learner_url(self))
 
-    def t_test(self, agent, evo_config):
+    def t_test(self, agent: Agent, evo_config: Dict) -> None:
+        """
+
+        Args:
+            agent (Agent): Agent that is being tested with the `t_test` metric. If `t_test` passes, Agent will be truncated with the Evo Agent.
+            evo_config (Dict): evolution config. For more information look at the Meta Learner generating evolution configs.
+
+        Returns:
+            None
+        """
         if evo_config['ranking'] > evo_config['evo_ranking']:
 
             my_eval_path = f"{Admin.get_learner_url(self)}/evaluations/"
-            self.io.request_io(self._get_learner_specs(), my_eval_path, wait_for_access=True)
+            self.io.request_io(self.get_learner_specs(), my_eval_path, wait_for_access=True)
             evals = np.load(f"{my_eval_path}/Agent_{evo_config['agent_id']}.npy")
-            self.io.done_io(self._get_learner_specs(), my_eval_path)
+            self.io.done_io(self.get_learner_specs(), my_eval_path)
 
             evo_path = f"{evo_config['load_path']}/evaluations/"
-            self.io.request_io(self._get_learner_specs(), evo_path, wait_for_access=True)
+            self.io.request_io(self.get_learner_specs(), evo_path, wait_for_access=True)
             evo_evals = np.load(f"{evo_path}/Agent_{evo_config['evo_agent_id']}.npy")
-            self.io.done_io(self._get_learner_specs(), evo_path)
+            self.io.done_io(self.get_learner_specs(), evo_path)
 
             if self.welch_T_Test(evals, evo_evals):
                 self.truncation(agent, evo_config)
 
-    def welch_T_Test(self, evals, evo_evals):
+    def welch_T_Test(self, evals: np.ndarray, evo_evals: np.ndarray) -> bool:
+        """
+        Performs the `t_test` between the rewards distribution of our local agent and the evo agent.
+
+        Args:
+            evals (np.ndarray): rewards obtained by our Agent on the last evaluation run
+            evo_evals (np.ndarray): rewards obtained by the Evo Agent on the last evaluation run
+
+        Returns:
+            bool: indicating if the `p` value between both reward distributions is less than the config `p_value`
+        """
         t, p = stats.ttest_ind(evals, evo_evals, equal_var=False)
         self.log(f"T_test {evals} and {evo_evals}", verbose_level=3)
         self.log(f"T_Test P_value {p}", verbose_level=3)
         return p < self.p_value
 
-    def truncation(self, agent, evo_config):
-        self.io.request_io(self._get_learner_specs(), evo_config['evo_path'], wait_for_access=True)
+    def truncation(self, agent, evo_config) -> None:
+        """
+        Performs truncation. Loads the Evo Agent where our Agent is gonna truncate from.
+
+        Args:
+            agent (Agent): Agent being truncated
+            evo_config (Dict): Evolution config containing path where we can load the Evo Agent
+
+        Returns:
+            None
+        """
+        self.io.request_io(self.get_learner_specs(), evo_config['evo_path'], wait_for_access=True)
         evo_agent = Admin.load_agent_of_id(evo_config['evo_path'], evo_config['evo_agent_id'])[0]
-        self.io.done_io(self._get_learner_specs(), evo_config['evo_path'])
+        self.io.done_io(self.get_learner_specs(), evo_config['evo_path'])
 
         agent.copy_hyperparameters(evo_agent)
         self.alg.copy_hyperparameters(evo_agent)
@@ -358,28 +483,46 @@ class MPILearner(Learner):
         agent.copy_weights(evo_agent)
         self.alg.copy_weight_from_agent(evo_agent)
 
-    def perturb(self, agent):
+    def perturb(self, agent: Agent) -> None:
+        """
+        Performs hyperparameter perturbation. Note that when using a central critic algorithm we also call the Algorithm.
+
+        Args:
+            agent (Agent): Agent who we are perturbing the hyperparameters.
+
+        Returns:
+            None
+        """
         perturb_factor = np.random.choice(self.perturb_factor)
         agent.perturb_hyperparameters(perturb_factor)
         self.alg.perturb_hyperparameters(perturb_factor)
 
-    def resample(self, agent):
+    def resample(self, agent: Agent) -> None:
+        """
+        Performs hyperparameters resampling. Note that when using a central critic algorithm we also call the Algorithm.
+
+        Args:
+            agent (Agent): Agent who we are resampling hyperparameters for.
+
+        Returns:
+            None
+        """
         agent.resample_hyperparameters()
         self.alg.resample_hyperparameters()
 
-    def exploitation(self):
-        raise NotImplemented
-
-    def exploration(self):
-        raise NotImplemented
-
     def _connect_menvs(self):
+        """
+        Connects with the MPIMultiEnv.
+
+        Returns:
+            None
+        """
         # Connect with MultiEnv
         self.menv = MPI.COMM_WORLD.Connect(self.menv_port,  MPI.INFO_NULL)
         self.log('Connected with MultiEnvs', verbose_level=2)
 
         for i in range(self.num_menvs):
-            self.menv.send(self._get_learner_specs(), dest=i, tag=Tags.specs)
+            self.menv.send(self.get_learner_specs(), dest=i, tag=Tags.specs)
 
         # We need to accept the connection from each Environments group == number of MultiEnvs
         self.envs = []
@@ -388,12 +531,13 @@ class MPILearner(Learner):
         # self.envs = MPI.COMM_WORLD.Accept(self.port)
         self.log("Connected with {} Env Groups".format(len(self.envs)), verbose_level=2)
 
-    def _get_learner_state(self):
-        specs = self._get_learner_specs()
-        specs['num_updates'] = self.num_update
-        return specs
+    def get_learner_specs(self) -> Dict:
+        """
+        Creates a new Learner spec depending on the current state of the Learner.
 
-    def _get_learner_specs(self):
+        Returns:
+            Dict
+        """
         return {
             'type': 'Learner',
             'id': self.id,
@@ -408,15 +552,30 @@ class MPILearner(Learner):
             'load_path': Admin.get_learner_url(self),
         }
 
-    def get_metrics(self, episodic, agent_id):
+    def get_metrics(self, agent_id: int) -> List[Union[List[Tuple[str, float, int]], Tuple[str, float, int]]]:
+        """
+        Collects the metrics from
+        * Agent
+        * Environment (received with the trajectory)
+
+        Args:
+            agent_id (int): Agent ID for which we want to get the metrics from.
+
+        Returns:
+            List[Union[List[Tuple[str, float, int]], Tuple[str, float, int]]]: list of metrics or list of list of metrics
+        """
         evolution_metrics = []
-        # if self.pbt:
         agent = self.get_agent_of_id(agent_id)
         evolution_metrics += agent.get_metrics()
-        # evolution_metrics += [('Agent/{}/Actor_Learning_Rate'.format(agent.role), agent.actor_learning_rate)]
         return [self.metrics_env[agent_id]] + evolution_metrics
 
-    def set_default_configs(self):
+    def set_default_configs(self) -> None:
+        """
+        Cleans a bit the config and set some default values.
+
+        Returns:
+            None
+        """
         assert 'Learner' in self.configs, 'No Learner config found on received config: {}'.format(self.configs)
         default_configs = {
             'evaluate': False,
@@ -439,8 +598,14 @@ class MPILearner(Learner):
                 self.configs['Agent'][attr_name] = default_val
 
     def close(self):
+        """
+        Notify the Meta Learner that we are closing, and then close all connections.
+
+        Returns:
+            None
+        """
         self.log("Started closing", verbose_level=2)
-        self.meta.send(self._get_learner_specs(), dest=0, tag=Tags.close)
+        self.meta.send(self.get_learner_specs(), dest=0, tag=Tags.close)
         for e in self.envs:
             e.Disconnect()
         # Close Environment port

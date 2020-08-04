@@ -1,9 +1,9 @@
 from enum import IntEnum
 
 class Tags(IntEnum):
-    '''
-        Tags to be used for Message Passing Interface
-    '''
+    """
+    Tags to be used for Message Passing Interface
+    """
     configs = 0
     specs = 1
 
