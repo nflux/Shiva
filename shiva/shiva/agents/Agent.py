@@ -110,11 +110,11 @@ class Agent:
     def get_metrics(self):
         raise NotImplemented
 
-    def log(self, msg, to_print=False, verbose_level=-1):
+    def log(self, msg, verbose_level=-1):
         '''If verbose_level is not given, by default will log'''
         if verbose_level <= self.configs['Admin']['log_verbosity']['Agent']:
             text = '{}\t{}'.format(self, msg)
-            logger.info(text, to_print or self.configs['Admin']['print_debug'])
+            logger.info(text, self.configs['Admin']['print_debug'])
 
     @staticmethod
     def copy_model_over(from_model, to_model):

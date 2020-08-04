@@ -110,8 +110,17 @@ class Learner(object):
     def get_id(self):
         return self.get_new_agent_id()
 
-    def log(self, msg, to_print=False, verbose_level=-1):
-        '''If verbose_level is not given, by default will log'''
+    def log(self, msg, verbose_level=-1):
+        """
+        Logging function. Uses python logger and can optionally output to terminal depending on the config `['Admin']['print_debug']`
+
+        Args:
+            msg: Message to be logged
+            verbose_level: verbose level used for the given message. Defaults to -1.
+
+        Returns:
+            None
+        """
         if verbose_level <= self.configs['Admin']['log_verbosity']['Learner']:
             text = '{}\t\t{}'.format(str(self), msg)
-            logger.info(text, to_print=to_print or self.configs['Admin']['print_debug'])
+            logger.info(text, to_print=self.configs['Admin']['print_debug'])
