@@ -1,44 +1,55 @@
 import pickle, json
 
+def save_pickle_obj(obj: object, filename: str) -> None:
+    """
+    Save object as a pickle. Soon to be deprecated.
 
-def save_pickle_obj(obj, filename):
-    '''
-        Saves a Python object
+    Args:
+        obj (object): instance to be saved
+        filename (str): Absolute path where to save including filename
 
-        Input
-            @obj        Instance to save
-            @filename   Absolute path where to save including filename
-    '''
+    Returns:
+        None
+    """
     with open(filename, 'wb') as handle:
         pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-def load_pickle_obj(filename):
-    '''
-        Loads a Python object
+def load_pickle_obj(filename: str) -> None:
+    """
+    Loads a pickle object. Soon to be deprecated.
 
-        Input
-            @filename   Absolute path to the file
-    '''
+    Args:
+        filename (str): Absolute path to the file
+
+    Returns:
+        None
+    """
     with open(filename, 'rb') as handle:
         return pickle.load(handle)
 
-def save_to_json(data, filename):
-    '''
-        Saves data to JSON
+def save_to_json(data: object, filename: str) -> None:
+    """
+    Saves data to JSON
 
-        Input
-            @data       Data to be serialized as a JSON
-            @filename   Absolute path where to save including filename
-    '''
+    Args:
+        data (object): data to be serlaized as a JSON
+        filename (str): Absolute path where to save including filename
+
+    Returns:
+        None
+    """
     with open(filename, 'w') as handle:
         json.dump(data, handle)
 
-def load_from_json(filename):
-    '''
-        Loads a JSON
+def load_from_json(filename: str) -> object:
+    """
+    Loads a JSON
 
-        Input
-            @filename   Absolute path to the file
-    '''
+    Args:
+        filename (str): Absolute path to the file
+
+    Returns:
+        None
+    """
     with open(filename, 'r') as handle:
         return json.load(handle)
