@@ -13,17 +13,19 @@ from shiva.core.communication_objects.helpers_pb2 import Empty, SimpleMessage
 from shiva.core.communication_objects.service_iohandler_pb2_grpc import IOHandlerServicer, add_IOHandlerServicer_to_server, IOHandlerStub
 from shiva.helpers.utils.Tags import Tags
 
+from typing import List, Dict, Tuple, Any, Union
+
 class IOHandlerServer(IOHandlerServicer):
-    '''
-        gRPC Server
-    '''
-
-    # for future MPI child abstraction
-    meta = MPI.COMM_SELF.Get_parent()
-    # id = MPI.COMM_SELF.Get_parent().Get_rank()
-    info = MPI.Status()
-
+    """
+    IOHandler Server class in order to avoid I/O access errors when saving and loading models.
+    Every Shiva component that need IO access will need to instantiate a stub in order to communicate with the IOHandler. This communication is based on gRPC protocol.
+    The IOHandler will prevent simultaneous I/O access from the components using specific directories.
+    """
     def __init__(self, stop_event):
+        # for future MPI child abstraction
+        self.meta = MPI.COMM_SELF.Get_parent()
+        self.info = MPI.Status()
+
         self._stop_event = stop_event
         self.configs = self.meta.bcast(None, root=0)
         self.log('Received configs with {} keys'.format(len(self.configs.keys())), verbose_level=1)
@@ -71,54 +73,75 @@ class IOHandlerServer(IOHandlerServicer):
     def __str__(self):
         return "<IOH>"
 
-def get_io_stub(*args, **kwargs):
-    class gRPC_IOHandlerStub(IOHandlerStub):
-        '''
-            gRPC Client
-        '''
+class gRPC_IOHandlerStub(IOHandlerStub):
+    def __init__(self, configs: Dict):
+        """
+        gRPC client to request IO Access
 
-        def __init__(self, configs):
-            self.configs = configs
-            self.channel = grpc.insecure_channel(self.configs['Admin']['iohandler_address'])
-            super(gRPC_IOHandlerStub, self).__init__(self.channel)
+        Args:
+            configs (Dict): a copy of the global config being used in the Shiva run
+        """
+        self.configs = configs
+        self.channel = grpc.insecure_channel(self.configs['Admin']['iohandler_address'])
+        super(gRPC_IOHandlerStub, self).__init__(self.channel)
 
-        def request_io(self, spec, url, wait_for_access=False):
-            has_access = False
-            simple_message = SimpleMessage()
-            data = {'spec': spec, 'url': url}
-            # self.log("{}:{} for {}".format(spec['type'], spec['id'], url), verbose_level=3)
-            simple_message.data = json.dumps(data, default=myconverter)
-            _request_condition = lambda x=None: not has_access if wait_for_access else False
-            while _request_condition():
-                response = self.AskIORequest(simple_message) # check if is possible to include a timeout
-                # self.log("Got {} response".format(response), verbose_level=2)
-                if response is not None:
-                    msg_back = json.loads(response.data)
-                    spec_back, has_access = msg_back['spec'], msg_back['has_access']
-            return has_access
+    def request_io(self, spec, url, wait_for_access=False):
+        has_access = False
+        simple_message = SimpleMessage()
+        data = {'spec': spec, 'url': url}
+        # self.log("{}:{} for {}".format(spec['type'], spec['id'], url), verbose_level=3)
+        simple_message.data = json.dumps(data, default=myconverter)
+        _request_condition = lambda x=None: not has_access if wait_for_access else False
+        while _request_condition():
+            response = self.AskIORequest(simple_message) # check if is possible to include a timeout
+            # self.log("Got {} response".format(response), verbose_level=2)
+            if response is not None:
+                msg_back = json.loads(response.data)
+                spec_back, has_access = msg_back['spec'], msg_back['has_access']
+        return has_access
 
-        def done_io(self, spec, url):
-            simple_message = SimpleMessage()
-            data = {'spec': spec, 'url': url}
-            simple_message.data = json.dumps(data, default=myconverter)
-            response = self.DoneIO(simple_message) # check if is possible to include a timeout
-            return None
+    def done_io(self, spec, url):
+        simple_message = SimpleMessage()
+        data = {'spec': spec, 'url': url}
+        simple_message.data = json.dumps(data, default=myconverter)
+        response = self.DoneIO(simple_message) # check if is possible to include a timeout
+        return None
 
-        def log(self, msg, verbose_level=-1):
-            '''If verbose_level is not given, by default will log'''
-            if verbose_level <= self.configs['Admin']['log_verbosity']['IOHandler']:
-                text = '{}\t\t{}'.format(str(self), msg)
-                logger.info(text, to_print=self.configs['Admin']['print_debug'])
+    def log(self, msg, verbose_level=-1):
+        '''If verbose_level is not given, by default will log'''
+        if verbose_level <= self.configs['Admin']['log_verbosity']['IOHandler']:
+            text = '{}\t\t{}'.format(str(self), msg)
+            logger.info(text, to_print=self.configs['Admin']['print_debug'])
 
-        def __str__(self):
-            return "<IOStub>"
+    def __str__(self):
+        return "<IOStub>"
 
+def get_io_stub(*args, **kwargs) -> gRPC_IOHandlerStub:
+    """
+    Function that returns a IOHandler Client
+
+    Args:
+        *args:
+        **kwargs:
+
+    Returns:
+        gRPC_IOHandlerStub
+    """
     return gRPC_IOHandlerStub(*args, **kwargs)
 
 
-'''Starting functions of the gRPC server'''
+def serve_iohandler(address: str, server_args: Tuple=(), max_workers=5):
+    """
+    Starting function of the gRPC server
 
-def serve_iohandler(address, server_args=(), max_workers=5):
+    Args:
+        address (str): address where the IO Handler will be accessible
+        server_args:
+        max_workers:
+
+    Returns:
+        None
+    """
     stop_event = threading.Event()
     options = (('grpc.so_reuseport', 1),)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers, ), options=options)
