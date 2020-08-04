@@ -33,8 +33,8 @@ class Evaluation(ABC):
             Could be rewards, or metrics specific to the environment.
         """
 
-    def log(self, msg, to_print=False, verbose_level=-1):
+    def log(self, msg, verbose_level=-1):
         """If verbose_level is not given, by default will log"""
         if verbose_level <= self.configs['Admin']['log_verbosity']['Evaluation']:
             text = "{}\t{}".format(str(self), msg)
-            logger.info(text, to_print or self.configs['Admin']['print_debug'])
+            logger.info(text, self.configs['Admin']['print_debug'])

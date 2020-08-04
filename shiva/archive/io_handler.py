@@ -2,12 +2,9 @@ from mpi4py import MPI
 import sys, time, traceback, os
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
-import numpy as np
 from shiva.core.admin import logger
 from shiva.helpers.misc import terminate_process
-import shiva.helpers.file_handler as fh
 from shiva.helpers.utils.Tags import Tags
-from shiva.core.admin import Admin
 
 class IOHandler(object):
     def __init__(self):
@@ -40,14 +37,14 @@ class IOHandler(object):
     def _get_io_specs(self):
         if self.configs['MetaLearner']['pbt']:
             return {
-            'learners_port': self.learners_port,
-            'menvs_port': self.menvs_port,
-            'evals_port': self.evals_port
+                'learners_port': self.learners_port,
+                'menvs_port': self.menvs_port,
+                'evals_port': self.evals_port
             }
         else:
             return {
-            'learners_port': self.learners_port,
-            'menvs_port': self.menvs_port,
+                'learners_port': self.learners_port,
+                'menvs_port': self.menvs_port,
             }
 
     def _connect_ports(self):

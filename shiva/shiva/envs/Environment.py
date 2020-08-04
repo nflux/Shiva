@@ -141,7 +141,7 @@ class Environment(ABC):
         """
         return (self.b-self.a)*(reward-self.min)/(self.max-self.min)
 
-    def log(self, msg, to_print=False, verbose_level=-1) -> None:
+    def log(self, msg, verbose_level=-1) -> None:
         """If verbose_level is not given, by default will log
 
         Used to output debug messages.
@@ -150,7 +150,7 @@ class Environment(ABC):
         """
         if verbose_level <= self.configs['Admin']['log_verbosity']['Env']:
             text = "{}\t\t\t{}".format(str(self), msg)
-            logger.info(text, to_print or self.configs['Admin']['print_debug'])
+            logger.info(text, self.configs['Admin']['print_debug'])
 
     def __str__(self) -> str:
         """Useful for outputting the class name.

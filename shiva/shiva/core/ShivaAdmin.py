@@ -484,11 +484,11 @@ class ShivaAdmin():
         self.log("\t{}\n".format(buffer_pickle[0]))
         return fh.load_pickle_obj(buffer_pickle[0])
 
-    def log(self, msg, to_print=False, verbose_level=-1):
+    def log(self, msg, verbose_level=-1):
         '''If verbose_level is not given, by default will log'''
         if verbose_level <= self.configs['Admin']['log_verbosity']['Admin']:
             text = '{}\t\t{}'.format(str(self), msg)
-            self.logger.info(text, to_print=to_print or self.configs['Admin']['print_debug'])
+            self.logger.info(text, self.configs['Admin']['print_debug'])
 
     def __str__(self):
         return "<Admin>"
