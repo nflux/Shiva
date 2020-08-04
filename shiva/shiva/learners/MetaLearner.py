@@ -1,54 +1,65 @@
 import numpy as np
 from shiva.core.admin import Admin, logger
+from shiva.learners.Learner import Learner
+
+from typing import List, Dict, Tuple, Any, Union
 
 class MetaLearner(object):
-    def __init__(self, configs, profile=True):
+    def __init__(self, configs: Dict[str, Any], profile: bool=True):
+        """
+        This class is the root of all Shiva processes. The Meta Learner is used to interface between the Learning pipeline and the Evaluations pipeline when PBT is used.
+
+        Args:
+            configs (Dict[str, Any]): Config to be run
+            profile (bool): this is used for the non-distributed run (could be deprecated)
+        """
         {setattr(self, k, v) for k,v in configs['MetaLearner'].items()}
         self.configs = configs
         self.manual_seed = np.random.randint(10000) if not hasattr(self, 'manual_seed') else self.manual_seed
-        self.learnerCount = 0
         if profile:
             Admin.add_meta_profile(self, self.get_folder_name())
 
-    # this would play with different hyperparameters until it found the optimal ones
-    def exploit_explore(self):
-        pass
+    @abstractmethod
+    def evolve(self) -> None:
+        """
+        Performs evolution procedures. It uses the rankings received by the evaluations in order to send a evolution config to the Learner.
+        This function is executed only when a Learner has requested an evolution config.
 
-    def genetic_crossover(self):
-        pass
+        Returns:
+            None
+        """
+        raise NotImplementedError("Method to be implemented by subclass")
 
-    def evolve(self):
-        pass
+    def create_learner(self) -> Learner:
+        """
+        Since Shiva is currently developed under a distributed architecture, this function is not being used but instead `_launch_learners` where the Learners processes are spawned.
+        This function should be used for a non-distributed architecture.
 
-    def evaluate(self):
-        pass
+        Returns:
+            Learner
+        """
+        raise NotImplementedError("Method to be implemented by subclass")
 
-    def record_metrics(self):
-        pass
+    def get_folder_name(self) -> str:
+        """
+        Format to be used for the folder name where we are gonna save all checkpoints.
 
-    def create_learner(self):
-        raise NotImplemented
+        Returns:
+            str: folder name for the run
+        """
+        return '-'.join([self.config['Algorithm']['type'], self.config['Environment']['env_name']])
 
-    def get_id(self):
-        return self.get_new_learner_id()
+    def log(self, msg, verbose_level=-1):
+        """
+        Logging function. Uses python logger and can optionally output to terminal depending on the config `['Admin']['print_debug']`
 
-    def get_new_learner_id(self):
-        id = self.learnerCount
-        self.learnerCount += 1
-        return id
+        Args:
+            msg: Message to be logged
+            verbose_level: verbose level used for the given message. Defaults to -1.
 
-    def get_folder_name(self):
-        try:
-            folder_name = '-'.join([self.config['Algorithm']['type'], self.config['Environment']['env_name']])
-        except:
-            folder_name = '-'.join([self.config['Algorithm']['type1'], self.config['Environment']['env_name']])
-        return folder_name
-
-    def save(self):
-        Admin.save(self)
-
-    def log(self, msg, to_print=False, verbose_level=-1):
-        '''If verbose_level is not given, by default will log'''
+        Returns:
+            None
+        """
         if verbose_level <= self.configs['Admin']['log_verbosity']['MetaLearner']:
             text = "{}\t\t{}".format(str(self), msg)
-            logger.info(text, to_print=to_print or self.configs['Admin']['print_debug'])
+            logger.info(text, to_print=self.configs['Admin']['print_debug'])
