@@ -6,5 +6,4 @@ buffers
 
    MultiTensorBuffer
    ReplayBuffer
-   SimpleBuffer
    TensorBuffer

@@ -45,7 +45,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
     'sphinx.ext.todo',
-    'recommonmark'
+    'recommonmark',
+    'nbsphinx'
 ]
 
 autodoc_member_order ='bysource'

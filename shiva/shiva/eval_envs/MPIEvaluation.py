@@ -10,6 +10,8 @@ from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.core.IOHandler import get_io_stub
 
+from typing import List, Dict
+
 
 class MPIEvaluation(Evaluation):
     """ Manages Instances of MPIEvalEnv, managed by MPIMultiEvalWrapper

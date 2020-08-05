@@ -14,6 +14,8 @@ from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin
 from shiva.envs.Environment import Environment
 
+from typing import List, Dict
+
 
 class MPIMultiEvaluationWrapper(Evaluation):
     """Manages one or more MPIEvaluations"""

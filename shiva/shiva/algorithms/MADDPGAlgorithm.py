@@ -387,11 +387,11 @@ class MADDPGAlgorithm(Algorithm):
 
     def copy_hyperparameters(self, evo_agent: MADDPGAgent) -> None:
         """
-        Copies the critic hyperparameters from the `evo_agent`_ to the local
+        Copies the critic hyperparameters from the `evo_agent` to the local
         Only the critic learning rate is being copied for now.
 
         Args:
-            evo_agent (MADDPGAgent):
+            evo_agent: (MADDPGAgent):
 
         Returns:
             None
@@ -402,7 +402,7 @@ class MADDPGAlgorithm(Algorithm):
 
     def copy_weight_from_agent(self, evo_agent: MADDPGAgent) -> None:
         """
-        Copies the weights of the critic network, target critic network and critic optimizer from the `evo_agent`_ to the local
+        Copies the weights of the critic network, target critic network and critic optimizer from the `evo_agent` to the local
 
         Args:
             evo_agent (MADDPGAgent):
@@ -417,10 +417,10 @@ class MADDPGAlgorithm(Algorithm):
 
     def perturb_hyperparameters(self, perturb_factor: float) -> None:
         """
-        Perturbs the local critic learning rate by the `perturb_factor`_
+        Perturbs the local critic learning rate by the `perturb_factor`
 
         Args:
-            perturb_factor (float): float value for which the local `critic_learning_rate`_ is multiplied
+            perturb_factor (float): float value for which the local `critic_learning_rate` is multiplied
 
         Returns:
             None
@@ -430,7 +430,7 @@ class MADDPGAlgorithm(Algorithm):
 
     def resample_hyperparameters(self) -> None:
         """
-        Resamples a new `critic_learning_rate`_ using a [don't know how to explain this function for which we sample a new LR]
+        Resamples a new `critic_learning_rate` using a [don't know how to explain this function for which we sample a new LR]
 
         Returns:
             None
@@ -441,7 +441,7 @@ class MADDPGAlgorithm(Algorithm):
 
     def decay_learning_rate(self) -> None:
         """
-        Decays the local `critic_learning_rate`_ using `configs['Agent']['lr_decay']['factor']`_
+        Decays the local `critic_learning_rate` using `configs['Agent']['lr_decay']['factor']`
 
         Returns:
             None
@@ -453,7 +453,7 @@ class MADDPGAlgorithm(Algorithm):
 
     def restore_learning_rate(self) -> None:
         """
-        Opposite to `decay_learning_rate()`_, restores the `critic_learning_rate`_ using `configs['Agent']['lr_decay']['factor']`_ until the maximum learning rate is reached
+        Opposite to `decay_learning_rate()`, restores the `critic_learning_rate`_ using `configs['Agent']['lr_decay']['factor']` until the maximum learning rate is reached
 
         Returns:
             None
@@ -493,7 +493,7 @@ class MADDPGAlgorithm(Algorithm):
 
     def load_central_critic(self, agent: MADDPGAgent) -> None:
         """
-        This function loads the critic from the `agent`_ input to the local critic hosted in this algorithm.
+        This function loads the critic from the `agent` input to the local critic hosted in this algorithm.
 
         Args:
             agent (MADDPGAgent): agent from which we are gonna make a copy of the critic network
@@ -571,7 +571,7 @@ class MADDPGAlgorithm(Algorithm):
 
     def set_spaces(self, observation_space: Dict[str, int], action_space: Dict[str, Dict[str, tuple]]) -> None:
         """
-        Function called during initialization to pre-process the observation and action space. Calls `set_action_space()`_
+        Function called during initialization to pre-process the observation and action space. Calls `set_action_space()`
 
         Args:
             observation_space (Dict[str, int]):

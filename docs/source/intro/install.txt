@@ -1,0 +1,34 @@
+===================
+Quick install guide
+===================
+
+Before you can use Shiva, you'll need to satisfy its requirements and install its dependencies.
+
+Requirements
+============
+
+* Ubuntu 16.04 or Mac OS
+* Python 3.7
+* Git
+* pip (Python Package Installer)
+
+
+Install Python
+==============
+
+Being a Python Web framework, Django requires Python. See
+:ref:`faq-python-version-support` for details. Python includes a lightweight
+database called SQLite_ so you won't need to set up a database just yet.
+
+.. _sqlite: https://sqlite.org/
+
+Get the latest version of Python at https://www.python.org/downloads/ or with
+your operating system's package manager.
+
+You can verify that Python is installed by typing ``python`` from your shell;
+you should see something like::
+
+    Python 3.x.y
+    [GCC 4.x] on linux
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>>

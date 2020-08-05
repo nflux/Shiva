@@ -1,7 +1,8 @@
 import os, datetime
 from typing import List
 
-def make_dir(new_folder: str, use_existing: bool=False) -> str:
+
+def make_dir(new_folder: str, use_existing: bool = False) -> str:
     """
     Creates a new folder in the file system.
     Uses `os.makedirs()`. For more details https://docs.python.org/3/library/os.html#os.makedirs
@@ -28,14 +29,15 @@ def make_dir(new_folder: str, use_existing: bool=False) -> str:
         os.makedirs(new_folder)
     return new_folder
 
-def make_dir_timestamp(new_folder: str, create_new_timestamp_folder: bool=False, name_append: str=None, use_existing: str=False) -> str:
+
+def make_dir_timestamp(new_folder: str, create_new_timestamp_folder: bool = False, name_append: str= None, use_existing: bool = False) -> str:
     """
-    This function creates a folder with a timestamp extension to the `new_folder`_ name.
+    This function creates a folder with a timestamp extension to the `new_folder` name.
 
     Args:
         new_folder (str): folder name. Can be absolute directory paths.
-        create_new_timestamp_folder: If True, a timestamp folder will be created. If False, the timestamp string will be added to the end of the `new_folder`_ name
-        name_append: Optionally add a name extension to the `new_folder`_ name
+        create_new_timestamp_folder: If True, a timestamp folder will be created. If False, the timestamp string will be added to the end of the `new_folder` name
+        name_append: Optionally add a name extension to the `new_folder` name
         use_existing: If True and a folder already exists, will pass. If False and a folder exists, the new folder will have a numerical extention to make it unique.
 
     Returns:
@@ -52,13 +54,14 @@ def make_dir_timestamp(new_folder: str, create_new_timestamp_folder: bool=False,
     new_folder = new_folder.replace(':', '')
     return make_dir(new_folder, use_existing=use_existing)
 
+
 def find_pattern_in_path(path, pattern) -> List[str]:
     """
-    This function searches for `pattern`_ in the given `path`_.
+    This function searches for `pattern` in the given `path`.
     Primarily used to load agents from a given directory or checkpoint.
 
     Args:
-        path: path string where to look for the `pattern`_
+        path: path string where to look for the `pattern`
         pattern: string pattern to be searched in the path
 
     Returns:
