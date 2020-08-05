@@ -16,9 +16,7 @@ from shiva.envs.Environment import Environment
 
 
 class MPIMultiEvaluationWrapper(Evaluation):
-    """
-
-    """
+    """Manages one or more MPIEvaluations"""
 
     def __init__(self):
         self.meta = MPI.Comm.Get_parent()
@@ -27,7 +25,12 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.sort = False # Flag for when to sort
         self.launch()
 
-    def launch(self):
+    def launch(self) -> None:
+        """ Launches the MultiEvaluationWrapper and grabs Agents to be Evaluated
+
+        Returns:
+            None
+        """
         # Receive Config from Meta
         self.configs = self.meta.bcast(None, root=0)
         super(MPIMultiEvaluationWrapper, self).__init__(self.configs)
@@ -68,7 +71,12 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.log("Start running..!!", verbose_level=1)
         self.run()
 
-    def run(self):
+    def run(self) -> None:
+        """ Sends Agents to get evaluated, waits for metrics, and ranks them based on the metrics.
+
+        Returns:
+            None
+        """
         self.initial_agent_selection()
         self._get_initial_evaluations()
 
@@ -94,13 +102,13 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.log("Sent new match {} to Eval_ID {}".format(new_match, eval_id), verbose_level=3)
 
     def _get_new_match(self) -> dict:
-        '''
+        """
             Creates a new match out of the population we have for each role
             With some probability @restrict_pairs_proba, we are strict to keep agent pairs together
                 @restrict_pairs_proba = 1, to force pairs to be evaluated together
 
             * other approach, could be of creating a pool of possible matches (both with pairs and/or broken pairs) and grab a random one from the pool
-        '''
+        """
         match = {}
         # self.restrict_pairs_proba = 1
         # restrict_pairs = lambda: np.random.uniform() < self.restrict_pairs_proba
@@ -135,15 +143,24 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 break
         return match
 
-    def get_agents_currently_being_evaluated(self):
-        '''This function assumes that Agents from same Learner MUST be evaluated together'''
+    def get_agents_currently_being_evaluated(self) -> List:
+        """This function assumes that Agents from same Learner MUST be evaluated together
+
+        Returns:
+            List of Agent IDs
+        """
         ret = []
         for eval_id, match in self.current_matches.items():
             for role, learner_spec in match.items():
                 ret += learner_spec['role2ids'][role]
         return ret
 
-    def has_pair(self, agent_id, role):
+    def has_pair(self, agent_id, role) -> List:
+        """ Checks if agent id has another agent in the same learner so they can play together.
+
+        Returns:
+            A list of agent IDs.
+        """
         learner_id = self.evaluations.at[agent_id, 'Learner_ID']
         return self.evaluations.query('Learner_ID == @learner_id')['Role'].tolist()
 
@@ -153,7 +170,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self._get_evaluations(sort=False)
 
     def _get_roles_evaluations(self, sort):
-        '''Receive Evaluation results from one Evaluation processes'''
+        """Receive Evaluation results from one Evaluation processes"""
         while self.evals.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evals, status=self.info):
             eval_id = self.info.Get_source()
             eval_match = self.current_matches[eval_id]
@@ -172,9 +189,9 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self.log("\nGot Evals {} for match {}".format(evals, eval_match), verbose_level=2)
 
     def _sort_roles(self):
-        '''Sort Evaluations and updates MetaLearner with current rankings'''
-        '''Assuming 1 evaluation metric: Average Reward'''
+        """Sort Evaluations and updates MetaLearner with current rankings"""
 
+        '''Assuming 1 evaluation metric: Average Reward'''
         # skip if we don't have everyones rankings
         if self.evaluations['Average_Reward'].isna().sum() > 0:
             return
@@ -189,16 +206,29 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.sort = False
 
     def get_role(self, agent_id):
+        """
+
+        """
         for role, role_agent_ids in self.role2ids.items():
             if agent_id in role_agent_ids:
                 return role
 
-    def get_learner_id(self, agent_id):
+    def get_learner_id(self, agent_id) -> int:
+        """ Returns the learner id that corresponds to passed agent id.
+
+        Returns:
+            Integer id representing the learner housing the agent.
+        """
         for spec in self.learners_specs:
             if agent_id in spec['agent_ids']:
                 return spec['id']
 
-    def get_learner_spec(self, agent_id):
+    def get_learner_spec(self, agent_id) -> Dict:
+        """ Returns the specs for that learner containing the agent.
+
+        Returns:
+            Dictionary of specifications.
+        """
         for spec in self.learners_specs:
             if agent_id in spec['agent_ids']:
                 return spec
@@ -270,15 +300,24 @@ class MPIMultiEvaluationWrapper(Evaluation):
         self.log('Current Rankings DataFrame: {}'.format(self.evaluations), verbose_level=2)
         self.sort = False
 
-
     def initial_agent_selection(self):
+        """ Randomly selects the initial agents to be sent to which environment.
+
+        Returns:
+            None
+        """
         for i in range(self.num_evals):
             self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))[0]
             print('Selected Evaluation Agents for Environment {}: {}'.format(i, self.agent_sel))
             self.evals.send(self.agent_sel,dest=i,tag=Tags.new_agents)
 
-    def agent_selection(self, env_rank):
-        self.agent_sel = np.reshape(np.random.choice(self.agent_ids,size = self.agents_per_env, replace=False),(-1,self.agents_per_env))
+    def agent_selection(self, env_rank) -> None:
+        """ Randomly selects the agents to be sent to which environment.
+
+        Returns:
+            None
+        """
+        self.agent_sel = np.reshape(np.random.choice(self.agent_ids, size=self.agents_per_env, replace=False), (-1, self.agents_per_env))
         print('Selected Evaluation Agents for Environment {}: {}'.format(env_rank, self.agent_sel))
         self.evals.send(self.agent_sel, dest=env_rank,tag=Tags.new_agents)
 
@@ -298,12 +337,23 @@ class MPIMultiEvaluationWrapper(Evaluation):
             'num_evals': self.num_evals
         }
 
-    def close(self):
+    def close(self) -> None:
+        """ Closes the connection with the MetaLearner.
+        Returns:
+            None
+        """
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
-    def log(self, msg, to_print=False, verbose_level=-1):
-        '''If verbose_level is not given, by default will log'''
+    def log(self, msg, to_print=False, verbose_level=-1) -> None:
+        """If verbose_level is not given, by default will log
+        Args:
+            msg: Message to be outputted
+            to_print: Whether you want it as print or debug statement
+            verbose_level: Level required for the message to be printed.
+        Returns:
+            None
+        """
         if verbose_level <= self.configs['Admin']['log_verbosity']['EvalWrapper']:
             text = "{}\t{}".format(str(self), msg)
             logger.info(text, to_print or self.configs['Admin']['print_debug'])
@@ -311,7 +361,11 @@ class MPIMultiEvaluationWrapper(Evaluation):
     def __str__(self):
         return "<MultiEval(id={})>".format(self.id)
 
-    def show_comms(self):
+    def show_comms(self) -> None:
+        """ Shows who this MultiEvalWrapper is connected to.
+        Returns:
+            None
+        """
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
         self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
         self.log("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))

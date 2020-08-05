@@ -24,7 +24,8 @@ class MPIEvaluation(Evaluation):
     def launch(self):
         """ Launches the Evaluation Instance
 
-        Gets the configs from multienvironment, connects to the IO Handler, launches the environments,
+        Gets the configs from multienvironment, connects to the IO Handler, sets up the roles, and launches
+        the environments,
 
         """
         # Receive Config from MultiEvalWrapper
@@ -57,7 +58,11 @@ class MPIEvaluation(Evaluation):
         self.log('Eval Envs have been told to start!', verbose_level=1)
         self.run()
 
-    def run(self):
+    def run(self) -> None:
+        """ Receives the metrics after each episode then averages after evaluation is done.
+        Returns:
+            None
+        """
         self.step_count = 0
 
         if 'Unity' in self.env_specs['type'] or 'ParticleEnv' in self.env_specs['type']:
@@ -66,7 +71,6 @@ class MPIEvaluation(Evaluation):
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'] ), dtype=np.float64)
         elif 'RoboCup' in self.env_specs['type']:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
-
 
         while True:
             time.sleep(self.configs['Admin']['time_sleep']['Evaluation'])
@@ -141,19 +145,27 @@ class MPIEvaluation(Evaluation):
         Roles Methods
     '''
 
-    def done_evaluating_roles(self):
+    def done_evaluating_roles(self) -> bool:
+        """ Checks if it has collected enough evaluation trajectories.
+
+        Returns:
+            A boolean.
+        """
         return len(self.eval_metrics) >= self.eval_episodes
 
     def _receive_roles_evals(self):
-        '''Receive metrics after every episode from each Environment'''
+        """Receive metrics after every episode from each Environment"""
         while self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_eval, status=self.info):
             env_source = self.info.Get_source()
             env_metrics = self.envs.recv(None, source=env_source, tag=Tags.trajectory_eval)
             self.eval_metrics.append(env_metrics)
             self.log("Got Metrics {}".format(env_metrics), verbose_level=2)
 
-    def send_roles_eval_update_agents(self):
-        '''Do averaging of metrics across all metrics received, then send'''
+    def send_roles_eval_update_agents(self) -> None:
+        """Do averaging of metrics across all metrics received, then send
+        Returns:
+            None
+        """
         evals = {role:{} for role in self.roles}
         metrics_received = []
 
@@ -204,8 +216,11 @@ class MPIEvaluation(Evaluation):
         self.eval_metrics = []
         self.log("Got match for: {}".format(self.agent_ids), verbose_level=2)
 
-    def get_role2agent(self):
-        '''Create mapping of Role->Agent_index in self.agents list'''
+    def get_role2agent(self) -> Dict:
+        """Create mapping of Role->Agent_index in self.agents list
+        Returns:
+            Dictionary mapping roles to agent index in agent list.
+        """
         self.role2agent = {}
         for role in self.env_specs['roles']:
             for ix, agent in enumerate(self.agents):
@@ -214,9 +229,10 @@ class MPIEvaluation(Evaluation):
                     break
         return self.role2agent
 
-    def load_agents(self, role2learner_spec=None):
-        """
-
+    def load_agents(self, role2learner_spec=None) -> List[object]:
+        """ This loads in the agents to be evaluated from a path specified by the IO Handler.
+        Returns:
+            A list of agents.
         """
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
@@ -275,6 +291,7 @@ class MPIEvaluation(Evaluation):
 
     def __str__(self):
         return "<Eval(id={}, device={})>".format(self.id, self.device)
+
 
 if __name__ == "__main__":
     try:
