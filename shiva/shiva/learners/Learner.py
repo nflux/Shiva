@@ -1,4 +1,6 @@
 import torch
+from abc import abstractmethod
+
 from shiva.core.admin import Admin, logger
 from shiva.core.TimeProfiler import TimeProfiler
 from shiva.helpers.config_handler import load_class
@@ -52,7 +54,7 @@ class Learner(object):
         else:
             assert False, "Learner attribute 'agent' or 'agents' was not found..."
 
-    def _process_metrics(self, agent_id: int, metrics: List[Union[List[Tuple[str, float, int]]], Tuple[str, float, int]]):
+    def _process_metrics(self, agent_id: int, metrics: List[Union[List[Tuple[str, float, int]], Tuple[str, float, int]]]):
         """
 
         Args:
@@ -115,7 +117,7 @@ class Learner(object):
         raise NotImplementedError("Method to be implemented by subclass")
 
     @abstractmethod
-    def launch(self, *args, **kwargs:
+    def launch(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
     @abstractmethod

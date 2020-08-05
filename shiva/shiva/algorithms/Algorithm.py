@@ -1,6 +1,8 @@
 import torch
+from abc import abstractmethod
+
 from shiva.core.admin import logger
-from shiva.agents import Agent
+from shiva.agents.Agent import Agent
 from shiva.buffers.ReplayBuffer import ReplayBuffer
 
 from typing import List, Dict, Tuple, Any, Union
@@ -33,9 +35,9 @@ class Algorithm:
         Updates the agents network using the data
 
         Args
-            agents (List[Agent]):      the agent who we want to update it's network
-            data (ReplayBuffer):       buffer containing the data used to train the network
-            episodic:   flag indicating if the update is episodic or per timestep
+            agents (List[Agent]): the agent who we want to update it's network
+            data (ReplayBuffer): buffer containing the data used to train the network
+            episodic: flag indicating if the update is episodic or per timestep
 
         Return
             None

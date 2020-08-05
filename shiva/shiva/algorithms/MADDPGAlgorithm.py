@@ -258,7 +258,8 @@ class MADDPGAlgorithm(Algorithm):
         self.target_critic.load_state_dict(tgt_ct_state)
 
     def update_critics(self, agents: List[MADDPGAgent], buffer: MultiAgentTensorBuffer, *args, **kwargs) -> None:
-        """Method to be revised and tested!
+        """
+        Method to be revised and tested!
         Update method when Algorithm section in config has attribute `method = "critics"`
         With this method each actor will have it's own augmented critic. It must be used in the case where the actors have different observation/action spaces and reward function.
         Each actor will have it's own critic.
@@ -400,7 +401,8 @@ class MADDPGAlgorithm(Algorithm):
         self._update_optimizer()
 
     def copy_weight_from_agent(self, evo_agent: MADDPGAgent) -> None:
-        """Copies the weights of the critic network, target critic network and critic optimizer from the `evo_agent`_ to the local
+        """
+        Copies the weights of the critic network, target critic network and critic optimizer from the `evo_agent`_ to the local
 
         Args:
             evo_agent (MADDPGAgent):
@@ -414,7 +416,8 @@ class MADDPGAlgorithm(Algorithm):
         self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
 
     def perturb_hyperparameters(self, perturb_factor: float) -> None:
-        """Perturbs the local critic learning rate by the `perturb_factor`_
+        """
+        Perturbs the local critic learning rate by the `perturb_factor`_
 
         Args:
             perturb_factor (float): float value for which the local `critic_learning_rate`_ is multiplied
@@ -461,7 +464,8 @@ class MADDPGAlgorithm(Algorithm):
         self._update_optimizer()
 
     def _update_optimizer(self) -> None:
-        """Updates the critic optimizer. Note only the learning rate is modified.
+        """
+        Updates the critic optimizer. Note only the learning rate is modified.
 
         Returns:
             None
@@ -505,7 +509,8 @@ class MADDPGAlgorithm(Algorithm):
         self.num_updates = agent.num_updates
 
     def create_agents(self) -> List[MADDPGAgent]:
-        """Not implemented
+        """
+        Not implemented
 
         Returns:
 
@@ -513,7 +518,8 @@ class MADDPGAlgorithm(Algorithm):
         raise NotImplementedError("Not implemented. This method could be creating all Roles agents at once")
 
     def create_agent_of_role(self, id: int, role: str) -> MADDPGAgent:
-        """Creates a new MADDPG
+        """
+        Creates a new MADDPG
 
         Args:
             id (int): unique ID for the agent
@@ -607,6 +613,8 @@ class MADDPGAlgorithm(Algorithm):
 
     def get_metrics(self, agent_id: int) -> List[Tuple[str, float, int]]:
         """
+        Get current metrics from the MADDPG algorithm, specifically actor and critic loss.
+
         Args:
             agent_id (int): Agent ID for which we want to the collected metrics
 

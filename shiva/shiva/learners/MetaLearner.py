@@ -1,4 +1,6 @@
 import numpy as np
+from abc import abstractmethod
+
 from shiva.core.admin import Admin, logger
 from shiva.learners.Learner import Learner
 

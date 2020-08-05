@@ -14,7 +14,7 @@ from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process, flat_1d_list
 from shiva.learners.Learner import Learner
 from shiva.agents.Agent import Agent
-from shiva.algorithm.Algorithm import Algorithm
+from shiva.algorithms.Algorithm import Algorithm
 from shiva.buffers.ReplayBuffer import ReplayBuffer
 
 from typing import List, Dict, Tuple, Any, Union
