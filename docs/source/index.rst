@@ -7,27 +7,12 @@ Everything you need to know about Shiva
    :maxdepth: 2
    :caption: Contents:
 
-   rst/modules
-
 First Steps
 ===========
-Are you new to Django or to programming? This is the place to start!
+Are you new to Shiva or to programming? This is the place to start!
 
 * **From scratch:**
   :doc:`Installation <intro/install>`
-
-* **Tutorial:**
-  :doc:`Part 1: Requests and responses <intro/tutorial01>` |
-  :doc:`Part 2: Models and the admin site <intro/tutorial02>` |
-  :doc:`Part 3: Views and templates <intro/tutorial03>` |
-  :doc:`Part 4: Forms and generic views <intro/tutorial04>` |
-  :doc:`Part 5: Testing <intro/tutorial05>` |
-  :doc:`Part 6: Static files <intro/tutorial06>` |
-  :doc:`Part 7: Customizing the admin site <intro/tutorial07>`
-
-* **Advanced Tutorials:**
-  :doc:`How to write reusable apps <intro/reusable-apps>` |
-  :doc:`Writing your first patch for Django <intro/contributing>`
 
 How the documentation is organized
 ==================================
