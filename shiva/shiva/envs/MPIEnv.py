@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import time, subprocess
 import numpy as np
 import sys, traceback
@@ -11,7 +10,7 @@ from shiva.core.admin import Admin, logger
 from shiva.core.TimeProfiler import TimeProfiler
 from shiva.helpers.utils.Tags import Tags
 from shiva.envs.Environment import Environment
-from shiva.buffers.MultiTensorBuffer import SimpleTensorBuffer
+from shiva.buffers.MultiTensorBuffer import MultiAgentTensorBuffer
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process
 
@@ -322,13 +321,17 @@ class MPIEnv(Environment):
             self.menv.send(_output_quantity, dest=0, tag=Tags.trajectory_info)
 
     def create_buffers(self):
+        self.configs['Buffer'] = {}
+        self.configs['Buffer']['batch_size'] = self.episode_max_length
+        self.configs['Buffer']['capacity'] = self.episode_max_length
+
         if 'UnityWrapperEnv1' in self.type:
             # the append of step data is done at the specific environment implementation
             def nothing(*args, **kwargs):
                 return None
             self._append_step = nothing
             self.reset_buffers = self.env.reset_buffers
-            self.env.create_buffers()
+            self.env.create_buffers(self.configs)
             self.trajectory_buffers = self.env.trajectory_buffers # change pointer
         elif 'UnityWrapperEnv012' in self.type or 'Particle' in self.type:
             '''
@@ -337,20 +340,20 @@ class MPIEnv(Environment):
                 - And each Role may have many agents instances (num_instances_per_env on Unity)
                 - Order is maintained
             '''
-            self.trajectory_buffers = [ SimpleTensorBuffer(self.configs,
-                                                           self.episode_max_length, self.episode_max_length,
-                                                           self.env.num_instances_per_role[role],
-                                                           self.env.observation_space[role],
-                                                           sum(self.env.action_space[role]['acs_space']))
-                                        for i, role in enumerate(self.env.roles)]
+            self.trajectory_buffers = [ MultiAgentTensorBuffer(self.env.num_instances_per_role[role],
+                                                               self.env.observation_space[role],
+                                                               sum(self.env.action_space[role]['acs_space']),
+                                                               self.configs)
+                                        for i, role in enumerate(self.env.roles)
+                                        ]
         elif 'Gym' in self.type:
             '''Gym - has only 1 agent per environment and 1 Role'''
             single_role_name = self.env.roles[0]
-            self.trajectory_buffers = [SimpleTensorBuffer(self.configs,
-                                                          self.episode_max_length, self.episode_max_length,
-                                                          self.env.num_agents, # = 1
-                                                          self.env.observation_space[single_role_name],
-                                                          sum(self.env.action_space[single_role_name]['acs_space']))]
+            self.trajectory_buffers = [ MultiAgentTensorBuffer(self.env.num_agents, # = 1 always
+                                                               self.env.observation_space[single_role_name],
+                                                               sum(self.env.action_space[single_role_name]['acs_space']),
+                                                               self.configs)
+                                        ]
 
     def reset_buffers(self):
         for buffer in self.trajectory_buffers:

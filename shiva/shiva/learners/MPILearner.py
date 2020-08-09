@@ -14,7 +14,6 @@ from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process, flat_1d_list
 from shiva.learners.Learner import Learner
 
-
 class MPILearner(Learner):
 
     # for future MPI child abstraction
@@ -126,6 +125,12 @@ class MPILearner(Learner):
             dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
             env_comm.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
 
+            # self.log(f"Obs {observations.shape} {observations}")
+            # self.log(f"Acs {actions}")
+            # self.log(f"Rew {rewards.shape}")
+            # self.log(f"NextObs {next_observations}")
+            # self.log(f"Dones {dones}")
+
             # self.step_count += traj_length
             self.done_count += 1
             # self.steps_per_episode = traj_length
@@ -134,6 +139,7 @@ class MPILearner(Learner):
             self._n_success_pulls += 1
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
 
+            """Metrics updates"""
             for role_ix, role in enumerate(self.traj_info['role']):
                 '''Assuming 1 agent per role here'''
                 agent_id = self.role2ids[role][0]
@@ -145,12 +151,6 @@ class MPILearner(Learner):
                 self.last_rewards[agent_id]['q'].append(self.reward_per_episode)
 
             self.last_metric_received = f"{self.traj_info['env_id']} got ObsShape {observations.shape} {self.traj_info['metrics']}"
-
-            # self.log(f"Obs {observations.shape} {observations}")
-            # self.log(f"Acs {actions}")
-            # self.log(f"Rew {rewards.shape} {rewards}")
-            # self.log(f"NextObs {next_observations}")
-            # self.log(f"Dones {dones}")
 
             '''VERY IMPORTANT Assuming each individual role has same acs/obs dimension and reward function'''
             exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.traj_info['role']), observations.shape[-1]),
@@ -299,11 +299,18 @@ class MPILearner(Learner):
         # TensorBuffer
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
         if type(self.observation_space) == dict:
-            '''Assuming roles with same obs/acs dim'''
-            buffer = buffer_class(self.configs, self.num_agents, self.observation_space[self.roles[0]],
-                                  sum(self.action_space[self.roles[0]]['acs_space']))
+            '''Assuming roles with same obs/acs dim are hosted by this Learner'''
+            buffer = buffer_class(self.num_agents,
+                                  self.observation_space[self.roles[0]],
+                                  sum(self.action_space[self.roles[0]]['acs_space']),
+                                  self.configs
+                                  )
         else:
-            buffer = buffer_class(self.configs, self.num_agents, self.observation_space, self.action_space['acs_space'])
+            buffer = buffer_class(self.num_agents,
+                                  self.observation_space,
+                                  self.action_space['acs_space'],
+                                  self.configs
+                                  )
         self.log("Buffer created of type {}".format(buffer_class), verbose_level=2)
         return buffer
 

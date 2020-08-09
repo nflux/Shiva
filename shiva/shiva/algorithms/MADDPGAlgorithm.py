@@ -146,7 +146,7 @@ class MADDPGAlgorithm(Algorithm):
                 # Update the sampled transitions' td errors
                 buffer.update_td_errors(y_i - Q_these_states_main)
                 # Fold the importance sample weights into the loss
-                critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main) * buffer.importance_sampling_weights
+                critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main).double() * buffer.importance_sampling_weights
                 # Reduce the loss to a scalar by taking the mean
                 critic_loss = torch.mean(critic_loss)
             else:

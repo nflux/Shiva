@@ -85,7 +85,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
             self.Unity.reset()
             self.metric_reset(force=True)
 
-
     def metric_reset(self, force=False, *args, **kwargs):
         '''
             To be called by Shiva Learner
@@ -318,26 +317,30 @@ class MultiAgentUnityWrapperEnv1(Environment):
     def get_rewards(self):
         return list(self.rewards.values())
 
-    def create_buffers(self):
+    def create_buffers(self, config=None):
         '''
+        IMPORTANT
             Not best approach but solves current issue with Unity step function
-            Need a buffer for each Agent as they terminate at different times and could turn the Tensor buffer into undesired shapes,
+            Need a buffer for each Agent as they *terminate at different times* and could turn the Tensor buffer into undesired shapes (not a rectangle!),
             so here we keep a separate buffer for each individual Agent in the simulation
 
             Secondary approach (possibly cheaper) could be to use a python list to collect data of current trajectory
             And convert to numpy before sending trajectory
             Test performance for Multiple environments within one single Unity simulation
         '''
+        config = self.configs if config is None else config
+        config['Buffer']['capacity'] += 1 # Unity specific...
         self.trajectory_buffers = {}
         self._ready_trajectories = {}
         for role in self.roles:
             self.trajectory_buffers[role] = {}
             self._ready_trajectories[role] = {}
             for role_agent_id in self.role_agent_ids[role]:
-                self.trajectory_buffers[role][role_agent_id] = MultiAgentTensorBuffer(self.episode_max_length+1, self.episode_max_length,
-                                                                  1, #self.num_instances_per_role[role],
-                                                                  self.observation_space[role],
-                                                                  sum(self.action_space[role]['acs_space']))
+                self.trajectory_buffers[role][role_agent_id] = MultiAgentTensorBuffer(1, # 1 because we are iterating on roles and role_agent_ids
+                                                                                      self.observation_space[role],
+                                                                                      sum(self.action_space[role]['acs_space']),
+                                                                                      config
+                                                                                      )
                 self._ready_trajectories[role][role_agent_id] = []
 
     def reset_buffers(self):

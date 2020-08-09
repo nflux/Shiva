@@ -3,12 +3,11 @@ import torch
 
 class ReplayBuffer(object):
 
-    def __init__(self, configs, num_agents, obs_dim, acs_dim):
-        try:
-            for k, v in configs['Buffer'].items():
-                setattr(self, k, v)
-        except:
-            pass
+    def __init__(self, num_agents, obs_dim, acs_dim, configs):
+        assert 'capacity' in configs['Buffer'], "Buffer needs 'capacity' attribute"
+        assert 'batch_size' in configs['Buffer'], "Buffer needs 'batch_size' attribute"
+        {setattr(self, k, v) for k, v in configs['Buffer'].items()}
+        self.prioritized = self.prioritized if hasattr(self, 'prioritized') else False # for global support on non-prioritized buffer
         self.current_index = 0
         self.size = 0
         self.num_samples = 0
@@ -21,11 +20,14 @@ class ReplayBuffer(object):
     def __len__(self):
         return self.size
 
-    def push(self):
-        assert "NotImplemented"
+    def push(self, *args, **kwargs):
+        raise NotImplementedError("To be implemented by subclass")
 
-    def sample(self):
-        assert "NotImplemented"
+    def sample(self, *args, **kwargs):
+        raise NotImplementedError("To be implemented by subclass")
 
-    def clear(self):
-        assert "NotImplemented"
+    def clear(self, *args, **kwargs):
+        raise NotImplementedError("To be implemented by subclass")
+
+    def get_metrics(self, *args, **kwargs):
+        raise NotImplementedError("To be implemented by subclass")

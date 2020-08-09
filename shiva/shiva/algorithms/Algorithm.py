@@ -22,10 +22,7 @@ class Algorithm():
         self.agents = []
         self.observation_space = obs_space
         self.action_space = acs_space
-        if self.configs['Buffer']['prioritized']:
-            self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])(reduction='none')
-        else:
-            self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
+        self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])(reduction='none' if ('prioritized' in self.configs['Buffer'] and self.configs['Buffer']['prioritized']) else 'mean')
         self.num_updates = 0
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.metrics = []
