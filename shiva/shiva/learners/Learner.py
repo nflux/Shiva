@@ -92,39 +92,30 @@ class Learner(object):
             x_value = self.done_count
         Admin.add_summary_writer(self, agent_id, metric_name, y_value, x_value)
 
-    @abstractmethod
     def checkpoint(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
-    @abstractmethod
     def update(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
-    @abstractmethod
     def step(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
-    @abstractmethod
     def create_environment(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
-    @abstractmethod
     def get_agents(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
-    @abstractmethod
     def get_algorithm(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
-    @abstractmethod
     def launch(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
-    @abstractmethod
     def exploitation(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
-    @abstractmethod
     def exploration(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
@@ -135,14 +126,13 @@ class Learner(object):
         for key in attrs:
             setattr(self, key, attrs[key])
 
-    @abstractmethod
     def close(self, *args, **kwargs):
         raise NotImplementedError("Method to be implemented by subclass")
 
     def get_id(self):
         return self.get_new_agent_id()
 
-    def log(self, msg, verbose_level=-1):
+    def log(self, msg, to_print=False, verbose_level=-1):
         """
         Logging function. Uses python logger and can optionally output to terminal depending on the config `['Admin']['print_debug']`
 

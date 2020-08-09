@@ -18,14 +18,11 @@ class ReplayBuffer(ABC):
     def __len__(self):
         return self.size
 
-    @abstractmethod
     def push(self) -> None:
         """Pushes experiences into the buffer."""
 
-    @abstractmethod
     def sample(self) -> None:
         """Samples experiences from the buffer."""
 
-    @abstractmethod
     def clear(self) -> None:
         """ Clears the buffer."""

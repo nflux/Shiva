@@ -11,9 +11,24 @@ from shiva.helpers.utils import Noise as noise
 from shiva.helpers.networks_helper import mod_optimizer
 from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
+from typing import List
 
 
 class DDPGAgent(Agent):
+    """ DDPG Agent Class
+
+    Used for getting discrete and continuous actions. Also has saving and loading functions.
+    Also has functions to modify and evolve hyper-parameters.
+
+    Args:
+        id (int): Id to identify the agent.
+        obs_space(int): Number of observations for the agent to expect.
+        acs_space(dict): Number of actions the agent is expected to produce seperate by type of action
+            space.
+        configs: Hyperparameters used to set up the agent.
+    Returns:
+        None.
+    """
     def __init__(self, id:int, obs_space:int, acs_space:dict, configs):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, configs)
         torch.manual_seed(self.manual_seed)
@@ -46,6 +61,12 @@ class DDPGAgent(Agent):
         self.instantiate_networks()
 
     def instantiate_networks(self):
+        """ Creates the networks that agent will use for inference or evaluation.
+
+        Uses the network section of the config along with acs_space and obs_space to
+        create the networks. Also creates the target networks.
+
+        """
         self.hps = ['actor_learning_rate', 'critic_learning_rate']
         self.hps += ['epsilon', 'noise_scale']
         self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
@@ -91,7 +112,20 @@ class DDPGAgent(Agent):
     #     self.critic.to(self.device)
     #     self.target_critic.to(self.device)
 
-    def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
+    def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs) -> List:
+        """ Produces a discrete action.
+
+        The action could be either an inference or evaluation action.
+
+        Args:
+             observation: State the environment is in.
+             step_count: How many total steps the agent has seen.
+             evaluate: Whether or not you want a noise free deterministic action.
+             one_hot: Whether you want a one hot encoded action or raw.
+
+        Returns:
+            A list containing probabilities for each action possible in the step.
+        """
         observation = torch.tensor(observation).to(self.device).float()
         if len(observation.shape)>1:
             self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
@@ -123,6 +157,18 @@ class DDPGAgent(Agent):
         return action.tolist()
 
     def get_continuous_action(self, observation, step_count, evaluate=False, *args, **kwargs):
+        """ Produces a continuous action.
+
+        The action could be either an inference or evaluation action.
+
+        Args:
+             observation: State the environment is in.
+             step_count: How many total steps the agent has seen.
+             evaluate: Whether or not you want a noise free deterministic action.
+
+        Returns:
+            A list containing probabilities for each action possible in the step.
+        """
         observation = torch.tensor(observation).to(self.device).float()
         if len(observation.shape)>1:
             self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
@@ -143,6 +189,18 @@ class DDPGAgent(Agent):
         return action.tolist()
 
     def get_parameterized_action(self, observation, step_count, evaluate=False):
+        """ Produces a parameterized action.
+
+        Currently not implemented. The action could be either an inference or evaluation action.
+
+        Args:
+             observation: State the environment is in.
+             step_count: How many total steps the agent has seen.
+             evaluate: Whether or not you want a noise free action.
+
+        Returns:
+            A list containing probabilities for each action possible in the step.
+        """
         raise NotImplemented
         # if self.evaluate:
         #     observation = torch.tensor(observation).to(self.device)
@@ -156,6 +214,14 @@ class DDPGAgent(Agent):
         # return action[0]
 
     def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
+        """ Produces an imitated action.
+
+        Args:
+             observation: State the environment is in.
+
+        Returns:
+            A numpy array containing probabilities for each action possible in the step.
+        """
         observation = torch.tensor(observation).to(self.device)
         action = self.actor(observation.float())
         return action[0]
@@ -168,14 +234,29 @@ class DDPGAgent(Agent):
     #     torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
     #     torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
 
-    def copy_hyperparameters(self, evo_agent):
+    def copy_hyperparameters(self, evo_agent) -> None:
+        """ Copies the hyperparameters of a passed in agent.
+
+        Args:
+            evo_agent(DDPGAgent): An evolved agent from which to copy hyperparameters from.
+
+        Returns:
+            None
+        """
         self.actor_learning_rate = evo_agent.actor_learning_rate
         self.critic_learning_rate = evo_agent.critic_learning_rate
         self._update_optimizers()
         self.epsilon = evo_agent.epsilon
         self.noise_scale = evo_agent.noise_scale
 
-    def copy_weights(self, evo_agent):
+    def copy_weights(self, evo_agent) -> None:
+        """ Used to copy this evolved agent's weights into this agent.
+
+        Args:
+            evo_agent (DDPGAgent): An evolved agent from which to copy hyperparameters from.
+        Returns:
+            None
+        """
         self.num_evolutions['truncate'] += 1
         self.actor.load_state_dict(evo_agent.actor.to(self.device).state_dict())
         self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
@@ -184,7 +265,13 @@ class DDPGAgent(Agent):
         self.actor_optimizer.load_state_dict(evo_agent.actor_optimizer.state_dict())
         self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
 
-    def perturb_hyperparameters(self, perturb_factor):
+    def perturb_hyperparameters(self, perturb_factor) -> None:
+        """ Slight mutates this agent's weights by a factor.
+        Args:
+            perturb_factor(float): Factor by which to modify agent weights.
+        Returns:
+            None
+        """
         self.num_evolutions['perturb'] += 1
         self.actor_learning_rate *= perturb_factor
         self.critic_learning_rate *= perturb_factor
@@ -192,7 +279,12 @@ class DDPGAgent(Agent):
         self.epsilon *= perturb_factor
         self.noise_scale *= perturb_factor
 
-    def resample_hyperparameters(self):
+    def resample_hyperparameters(self) -> None:
+        """ Gets new weights for this agent from a set predetermined intervals in the configs.
+
+        Returns:
+            None
+        """
         self.num_evolutions['resample'] += 1
         self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
         self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
@@ -200,13 +292,25 @@ class DDPGAgent(Agent):
         self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
         self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
 
-    def recalculate_hyperparameters(self, done_count=None):
+    def recalculate_hyperparameters(self, done_count=None)->None:
+        """ Updates the epsilon and noise hyperparameters over time.
+
+        Args:
+            done_count (int): Episodic independent value controlling the hyperparameters.
+        Returns:
+            None
+        """
         if done_count is None:
             done_count = self.done_count if self.done_count != 0 else 1
         self.update_epsilon_scale(done_count)
         self.update_noise_scale(done_count)
 
-    def decay_learning_rate(self):
+    def decay_learning_rate(self) -> None:
+        """ Decreases the critic's learning rate.
+
+        Returns:
+            None
+        """
         self.actor_learning_rate *= self.lr_decay['factor']
         if 'MADDPG' not in str(self):
             self.critic_learning_rate *= self.lr_decay['factor']
@@ -215,7 +319,12 @@ class DDPGAgent(Agent):
             self.log(f"Decay Actor LR: {self.actor_learning_rate}", verbose_level=3)
         self._update_optimizers()
 
-    def restore_learning_rate(self):
+    def restore_learning_rate(self) -> None:
+        """ Increases the critic's learning rate.
+
+        Returns:
+            None
+        """
         if self.actor_learning_rate < self.configs['Agent']['actor_learning_rate']:
             self.actor_learning_rate /= self.lr_decay['factor']
             self.log(f"Increment Actor LR {self.actor_learning_rate}", verbose_level=3)
@@ -237,8 +346,14 @@ class DDPGAgent(Agent):
         self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
         self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
 
-    def update_epsilon_scale(self, done_count=None):
-        '''To be called by the Learner before saving'''
+    def update_epsilon_scale(self, done_count=None) -> None:
+        """To be called by the Learner before saving
+        Decreases the epsilon scale.
+        Args:
+            done_count (int):
+        Returns:
+            None
+        """
         if self.hp_random is False:
             if done_count is None:
                 done_count = self.done_count
@@ -252,7 +367,13 @@ class DDPGAgent(Agent):
         return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.epsilon_episodes, (done_count - self._average_exploration_episodes_performed()), degree=self.epsilon_decay_degree))
 
     def update_noise_scale(self, done_count=None):
-        '''To be called by the Learner before saving'''
+        """To be called by the Learner before saving
+        Decreases the noise scale.
+        Args:
+            done_count (int):
+        Returns:
+            None
+        """
         if self.hp_random is False:
             if done_count is None:
                 done_count = self.done_count
@@ -267,13 +388,35 @@ class DDPGAgent(Agent):
     def _average_exploration_episodes_performed(self):
         return self.exploration_steps / (self.step_count / self.done_count) if (self.step_count != 0 and self.done_count != 0) else 0
 
-    def reset_noise(self):
+    def reset_noise(self) -> None:
+        """ Resets the Agent's OU Noise
+
+        This is super important otherwise the noise will compound.
+
+        Returns:
+            None
+        """
         self.ou_noise.reset()
 
-    def decay_value(self, start, decay_end_step, current_step_count, degree=1):
+    def decay_value(self, start, decay_end_step, current_step_count, degree=1) -> float:
+        """ Decays a value from an initial to final value.
+
+        Can be linear, or polynomial.
+
+        Returns:
+            A new float value.
+        """
         return start - start * ((current_step_count / decay_end_step) ** degree)
 
-    def is_e_greedy(self, step_count=None):
+    def is_e_greedy(self, step_count=None)-> bool:
+        """ Checks if an action should be random or inference.
+
+        Args:
+            step_count (int): Episodic counter that controls the epsilon.
+
+        Returns:
+            Boolean indicating whether or not to take a random action.
+        """
         if step_count is None:
             step_count = self.step_count
         if step_count > self.exploration_steps:
@@ -282,7 +425,15 @@ class DDPGAgent(Agent):
         else:
             return True
 
-    def is_exploring(self, current_step_count=None):
+    def is_exploring(self, current_step_count=None) -> bool:
+        """ Checks if an action should be random or inference.
+
+        Args:
+            step_count (int): Episodic counter that controls the noise.
+
+        Returns:
+            Boolean indicating whether or not to add noise to an action.
+        """
         if hasattr(self, 'exploration_episodes'):
             if current_step_count is None:
                 current_step_count = self.done_count
@@ -294,7 +445,11 @@ class DDPGAgent(Agent):
         return current_step_count < _threshold
 
     def get_metrics(self):
-        '''Used for evolution metric'''
+        """Gets the metrics so they can be passed to tensorboard.
+
+        Returns:
+             A tuple of metrics.
+        """
         return [
             ('{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate),
             ('{}/Critic_Learning_Rate'.format(self.role), self.critic_learning_rate),
@@ -303,6 +458,12 @@ class DDPGAgent(Agent):
         ]
 
     def get_module_and_classname(self):
+        """ Returns the name of the module and class name.
+
+        Returns:
+            A string representation of the module and class.
+
+        """
         return ('shiva.agents', 'DDPGAgent.DDPGAgent')
 
     def __str__(self):

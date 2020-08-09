@@ -17,7 +17,8 @@ from shiva.agents.Agent import Agent
 from shiva.algorithms.Algorithm import Algorithm
 from shiva.buffers.ReplayBuffer import ReplayBuffer
 
-from typing import List, Dict, Tuple, Any, Union
+from typing import List, Dict, Tuple, Union
+
 
 class MPILearner(Learner):
 

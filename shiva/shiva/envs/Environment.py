@@ -39,7 +39,6 @@ class Environment(ABC):
         self.max_reward = self.max_reward if hasattr(self, 'max_reward') else 1
         self.min_reward = self.min_reward if hasattr(self, 'min_reward') else -1
 
-    @abstractmethod
     def step(self, actions) -> None:
         """
         Passes in an action which is in turn passed into the environment to continue the 
@@ -58,26 +57,21 @@ class Environment(ABC):
         """ Typically can be used to launch the environment and set some initial values."""
         return True
 
-    @abstractmethod
     def get_observation(self, agent) -> None:
         """Returns an observation."""
 
-    @abstractmethod
     def get_observations(self) -> None:
         """Returns multiple observations."""
 
-    @abstractmethod
     def get_action(self) -> None:
         """ Returns an action."""
 
-    @abstractmethod
     def get_actions(self) -> None:
         """Returns multiple actions."""
-    @abstractmethod
+
     def get_reward(self) -> None:
         """Returns the reward stepwise reward."""
 
-    @abstractmethod
     def get_rewards(self) -> None:
         """Returns stepwise reward for all the agents."""
 
@@ -102,21 +96,18 @@ class Environment(ABC):
         """
         return self.step_count
 
-    @abstractmethod
     def get_metrics(self) -> None:
         """Returns the metrics relevant to the environment.
         Returns:
             None
         """
 
-    @abstractmethod
     def reset(self) -> None:
         """Resets the environment state and parameters.
         Returns:
             None
         """
 
-    @abstractmethod
     def load_viewer(self) -> None:
         """Loads the environment's renderer.
         Returns:

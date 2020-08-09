@@ -6,6 +6,7 @@ from shiva.learners.Learner import Learner
 
 from typing import List, Dict, Tuple, Any, Union
 
+
 class MetaLearner(object):
     def __init__(self, configs: Dict[str, Any], profile: bool=True):
         """
@@ -21,7 +22,6 @@ class MetaLearner(object):
         if profile:
             Admin.add_meta_profile(self, self.get_folder_name())
 
-    @abstractmethod
     def evolve(self) -> None:
         """
         Performs evolution procedures. It uses the rankings received by the evaluations in order to send a evolution config to the Learner.
@@ -51,7 +51,7 @@ class MetaLearner(object):
         """
         return '-'.join([self.config['Algorithm']['type'], self.config['Environment']['env_name']])
 
-    def log(self, msg, verbose_level=-1):
+    def log(self, msg, to_print=False,verbose_level=-1):
         """
         Logging function. Uses python logger and can optionally output to terminal depending on the config `['Admin']['print_debug']`
 
