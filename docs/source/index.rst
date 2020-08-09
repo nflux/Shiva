@@ -1,4 +1,4 @@
-Welcome to Shiva's documentation!
+Welcome to Shiva's Documentation!
 =================================
 
 Everything you need to know about Shiva
@@ -9,15 +9,16 @@ Everything you need to know about Shiva
 
 First Steps
 ===========
-Are you new to Shiva or to programming? This is the place to start!
+Are you new to Shiva? This is the place to start!
 
 * **From scratch:**
   :doc:`Installation <intro/install>`
 
-How the documentation is organized
+How the Documentation is Organized
 ==================================
 
-Django has a lot of documentation. A high-level overview of how it's organized
+We plan on expanding Shiva's documentation over time which will probably lead
+to a lot of documentation. A high-level overview of how it's organized
 will help you know where to look for certain things:
 
 * :doc:`Tutorials </intro/index>` take you by the hand through a series of

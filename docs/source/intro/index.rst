@@ -6,8 +6,8 @@ New to Shiva? Or to Reinforcement Learning in general? Well, you came to the rig
 place: read this material to quickly get up and running.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   install
-   abstracts
-   admin
+   Install
+   Abstracts
+   Admin

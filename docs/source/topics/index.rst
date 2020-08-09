@@ -8,9 +8,9 @@ place: read this material to quickly get up and running.
 .. toctree::
    :maxdepth: 1
 
-   architecture
-   algorithms
+   Algorithms
    Extending
-   networks
-   testing
-   imitation
+   Networks
+   Testing
+   Imitation
+   PPO
