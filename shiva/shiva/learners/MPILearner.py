@@ -1,5 +1,6 @@
 import sys, traceback, os, time, pickle
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch, time
 import numpy as np
@@ -26,7 +27,7 @@ class MPILearner(Learner):
         """
         Learner implementation for a distributed architecture where we can enable Population Based Training.
         """
-        
+
         # for future MPI child abstraction
         self.meta = MPI.COMM_SELF.Get_parent()
         self.id = MPI.COMM_SELF.Get_parent().Get_rank()
@@ -100,19 +101,21 @@ class MPILearner(Learner):
         Returns:
             None
         """
-        self.step_count = {agent.id:0 for agent in self.agents}
+        self.step_count = {agent.id: 0 for agent in self.agents}
         self.done_count = 0
         self.num_updates = 0
-        self.steps_per_episode = {agent.id:0 for agent in self.agents}
-        self.metrics_env = {agent.id:[] for agent in self.agents}
-        self.last_rewards = {agent.id:{'q':deque(maxlen=self.configs['Agent']['lr_decay']['average_episodes']), 'n':0} for agent in self.agents}
+        self.steps_per_episode = {agent.id: 0 for agent in self.agents}
+        self.metrics_env = {agent.id: [] for agent in self.agents}
+        self.last_rewards = {
+            agent.id: {'q': deque(maxlen=self.configs['Agent']['lr_decay']['average_episodes']), 'n': 0} for agent in
+            self.agents}
 
         self.profiler.start(["AlgUpdates", 'ExperienceReceived'])
         while self.done_count < self.episodes:
             self.check_incoming_trajectories()
             self.run_updates()
             self.run_evolution()
-            self.collect_metrics() # tensorboard
+            self.collect_metrics()  # tensorboard
 
         self.close()
 
@@ -126,14 +129,15 @@ class MPILearner(Learner):
         self.last_metric_received = None
 
         self._n_success_pulls = 0
-        self.metrics_env = {agent.id:[] for agent in self.agents}
+        self.metrics_env = {agent.id: [] for agent in self.agents}
         for _ in range(self.n_traj_pulls):
             for comm in self.envs:
                 self.receive_trajectory_numpy(comm)
         if self._n_success_pulls > 0:
             self.profiler.time('ExperienceReceived', self.done_count, output_quantity=self._n_success_pulls)
-        if self.last_metric_received is not None: # and self.done_count % 20 == 0:
-            self.log("{} {}:{}".format(self._n_success_pulls, self.done_count, self.last_metric_received), verbose_level=1)
+        if self.last_metric_received is not None:  # and self.done_count % 20 == 0:
+            self.log("{} {}:{}".format(self._n_success_pulls, self.done_count, self.last_metric_received),
+                     verbose_level=1)
 
     def receive_trajectory_numpy(self, env_comm: MPI.Comm) -> None:
         """
@@ -147,12 +151,16 @@ class MPILearner(Learner):
         """
         if env_comm.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=self.info):
             env_source = self.info.Get_source()
-            self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info) # block statement
+            self.traj_info = env_comm.recv(None, source=env_source, tag=Tags.trajectory_info)  # block statement
 
             traj_length_index = self.traj_info['length_index']
             traj_length = self.traj_info['obs_shape'][traj_length_index]
             # assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
-            assert set(self.roles).issuperset(set(self.traj_info['role'])), "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, self.traj_info['role'], self.roles)
+            assert set(self.roles).issuperset(
+                set(self.traj_info['role'])), "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id,
+                                                                                                                self.traj_info[
+                                                                                                                    'role'],
+                                                                                                                self.roles)
 
             observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
             env_comm.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
@@ -169,6 +177,12 @@ class MPILearner(Learner):
             dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
             env_comm.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
 
+            # self.log(f"Obs {observations.shape} {observations}")
+            # self.log(f"Acs {actions}")
+            # self.log(f"Rew {rewards.shape}")
+            # self.log(f"NextObs {next_observations}")
+            # self.log(f"Dones {dones}")
+
             # self.step_count += traj_length
             self.done_count += 1
             # self.steps_per_episode = traj_length
@@ -177,31 +191,29 @@ class MPILearner(Learner):
             self._n_success_pulls += 1
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
 
+            """Metrics updates"""
             for role_ix, role in enumerate(self.traj_info['role']):
                 '''Assuming 1 agent per role here'''
                 agent_id = self.role2ids[role][0]
                 self.step_count[agent_id] += traj_length
                 self.steps_per_episode[agent_id] = traj_length
                 for metric_ix, metric_set in enumerate(self.traj_info['metrics'][role_ix]):
-                    self.traj_info['metrics'][role_ix][metric_ix] += (self.done_count,) # add the x_value for tensorboard!
+                    self.traj_info['metrics'][role_ix][metric_ix] += (
+                    self.done_count,)  # add the x_value for tensorboard!
                 self.metrics_env[agent_id] += self.traj_info['metrics'][role_ix]
                 self.last_rewards[agent_id]['q'].append(self.reward_per_episode)
 
             self.last_metric_received = f"{self.traj_info['env_id']} got ObsShape {observations.shape} {self.traj_info['metrics']}"
 
-            # self.log(f"Obs {observations.shape} {observations}")
-            # self.log(f"Acs {actions}")
-            # self.log(f"Rew {rewards.shape} {rewards}")
-            # self.log(f"NextObs {next_observations}")
-            # self.log(f"Dones {dones}")
-
             '''VERY IMPORTANT Assuming each individual role has same acs/obs dimension and reward function'''
-            exp = list(map(torch.clone, (torch.from_numpy(observations).reshape(traj_length, len(self.traj_info['role']), observations.shape[-1]),
-                                         torch.from_numpy(actions).reshape(traj_length, len(self.traj_info['role']), actions.shape[-1]),
-                                         torch.from_numpy(rewards).reshape(traj_length, len(self.traj_info['role']), rewards.shape[-1]),
-                                         torch.from_numpy(next_observations).reshape(traj_length, len(self.traj_info['role']), next_observations.shape[-1]),
-                                         torch.from_numpy(dones).reshape(traj_length, len(self.traj_info['role']), dones.shape[-1])
-                                         )))
+            exp = list(map(torch.clone, (
+            torch.from_numpy(observations).reshape(traj_length, len(self.traj_info['role']), observations.shape[-1]),
+            torch.from_numpy(actions).reshape(traj_length, len(self.traj_info['role']), actions.shape[-1]),
+            torch.from_numpy(rewards).reshape(traj_length, len(self.traj_info['role']), rewards.shape[-1]),
+            torch.from_numpy(next_observations).reshape(traj_length, len(self.traj_info['role']),
+                                                        next_observations.shape[-1]),
+            torch.from_numpy(dones).reshape(traj_length, len(self.traj_info['role']), dones.shape[-1])
+            )))
             self.buffer.push(exp)
 
     def run_updates(self) -> None:
@@ -261,7 +273,9 @@ class MPILearner(Learner):
                         _decay_log += f"Restore Actor LR {agent.actor_learning_rate}"
 
         self.alg.decay_learning_rate() if _decay_or_restore_lr == -1 else self.alg.restore_learning_rate() if _decay_or_restore_lr == 1 else None
-        self.log(f"{_decay_log} / Critic LR {self.alg.critic_learning_rate} / Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}", verbose_level=1) if _decay_log != '' else None
+        self.log(
+            f"{_decay_log} / Critic LR {self.alg.critic_learning_rate} / Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}",
+            verbose_level=1) if _decay_log != '' else None
 
     def run_evolution(self) -> None:
         """
@@ -273,16 +287,20 @@ class MPILearner(Learner):
         """
         if self.pbt and self.done_count >= self.initial_evolution_episodes:
 
-            if (self.done_count - self.initial_evolution_episodes) >= (self.n_evolution_requests * self.evolution_episodes):
-                self.meta.send(self.get_learner_specs(), dest=0, tag=Tags.evolution_request) # ask for evolution configs1
+            if (self.done_count - self.initial_evolution_episodes) >= (
+                    self.n_evolution_requests * self.evolution_episodes):
+                self.meta.send(self.get_learner_specs(), dest=0,
+                               tag=Tags.evolution_request)  # ask for evolution configs1
                 self.n_evolution_requests += 1
                 # self.log("Ask for Evolution", verbose_level=3)
 
             if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.evolution_config, status=self.info):
-                self.evolution_config = self.meta.recv(None, source=self.info.Get_source(), tag=Tags.evolution_config)  # block statement
+                self.evolution_config = self.meta.recv(None, source=self.info.Get_source(),
+                                                       tag=Tags.evolution_config)  # block statement
 
                 if not self.evolve:
-                    self.log("self.evolve is set to {}! Got Evolution {}".format(self.evolve, self.evolution_config), verbose_level=1)
+                    self.log("self.evolve is set to {}! Got Evolution {}".format(self.evolve, self.evolution_config),
+                             verbose_level=1)
                     return
 
                 self.log('Got Evolution {}'.format(self.evolution_config), verbose_level=1)
@@ -312,19 +330,22 @@ class MPILearner(Learner):
         Returns:
             List[Agent]
         """
-        assert hasattr(self, 'num_agents') and self.num_agents > 0, 'Learner num_agent not specified, got {}'.format(self.num_agents)
-        self.start_agent_idx = (self.id+1) * 1000
+        assert hasattr(self, 'num_agents') and self.num_agents > 0, 'Learner num_agent not specified, got {}'.format(
+            self.num_agents)
+        self.start_agent_idx = (self.id + 1) * 1000
         self.new_agents_ids = np.arange(self.start_agent_idx, self.start_agent_idx + self.num_agents)
 
         if self.load_agents:
-            agents = Admin.load_agents(self.load_agents, absolute_path=False, load_latest=False, device=self.alg.device) # the alg determines the device
+            agents = Admin.load_agents(self.load_agents, absolute_path=False, load_latest=False,
+                                       device=self.alg.device)  # the alg determines the device
             # minor tweak on the agent id as we can have an issue when multiple learners load the same agent id (like loading a PBT session)
             for a in agents:
                 a.id += 10 * self.id
             self.alg.add_agents(agents)
             agent_creation_log = "{} agents loaded".format([str(a) for a in agents])
         elif hasattr(self, 'roles') and len(self.roles) > 0:
-            self.agents_dict = {role:self.alg.create_agent_of_role(self.new_agents_ids[ix], role) for ix, role in enumerate(self.roles)}
+            self.agents_dict = {role: self.alg.create_agent_of_role(self.new_agents_ids[ix], role) for ix, role in
+                                enumerate(self.roles)}
             agents = list(self.agents_dict.values())
             agent_creation_log = "{} agents created: {}".format(len(agents), [str(a) for a in agents])
         else:
@@ -333,7 +354,7 @@ class MPILearner(Learner):
 
         self.log(agent_creation_log, verbose_level=1)
 
-        self.role2ids = {role:[] for role in self.roles}
+        self.role2ids = {role: [] for role in self.roles}
         self.id2role = {}
         self.metrics_env = {}
         for _agent in agents:
@@ -380,13 +401,25 @@ class MPILearner(Learner):
             ReplayBuffer
         """
         buffer_class = load_class('shiva.buffers', self.configs['Buffer']['type'])
-        if type(self.action_space) == dict:
-            '''Assuming roles with same obs/acs dim'''
-            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'],
-                                  self.num_agents, self.observation_space[self.roles[0]],
-                                  sum(self.action_space[self.roles[0]]['acs_space']))
+        if type(self.observation_space) == dict:
+            '''Assuming roles with same obs/acs dim are hosted by this Learner'''
+            buffer = buffer_class(
+                self.configs['Buffer']['capacity'],
+                self.configs['Buffer']['batch_size'],
+                self.num_agents,
+                self.observation_space[self.roles[0]],
+                sum(self.action_space[self.roles[0]]['acs_space']),
+                self.configs
+            )
         else:
-            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
+            buffer = buffer_class(
+                self.configs['Buffer']['capacity'],
+                self.configs['Buffer']['batch_size'],
+                self.num_agents,
+                self.observation_space,
+                self.action_space['acs_space'],
+                self.configs
+            )
         self.log("Buffer created of type {}".format(buffer_class), verbose_level=2)
         return buffer
 
@@ -418,7 +451,8 @@ class MPILearner(Learner):
 
         if use_temp_folder:
             self.io.request_io(self.get_learner_specs(), Admin.get_learner_url(self), wait_for_access=True)
-        Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only, use_temp_folder=use_temp_folder)
+        Admin.checkpoint(self, checkpoint_num=checkpoint_num, function_only=function_only,
+                         use_temp_folder=use_temp_folder)
         if use_temp_folder:
             self.io.done_io(self.get_learner_specs(), Admin.get_learner_url(self))
 
@@ -519,7 +553,7 @@ class MPILearner(Learner):
             None
         """
         # Connect with MultiEnv
-        self.menv = MPI.COMM_WORLD.Connect(self.menv_port,  MPI.INFO_NULL)
+        self.menv = MPI.COMM_WORLD.Connect(self.menv_port, MPI.INFO_NULL)
         self.log('Connected with MultiEnvs', verbose_level=2)
 
         for i in range(self.num_menvs):
@@ -592,7 +626,7 @@ class MPILearner(Learner):
 
         assert 'Agent' in self.configs, "No Agent config given!, got {}".format(self.configs)
         default_agent_configs = {
-            'lr_decay': {'factor': 1, 'average_episodes': 100, 'wait_episodes_to_decay': 100} # no decay by default
+            'lr_decay': {'factor': 1, 'average_episodes': 100, 'wait_episodes_to_decay': 100}  # no decay by default
         }
         for attr_name, default_val in default_agent_configs.items():
             if attr_name not in self.configs['Agent']:
@@ -621,6 +655,7 @@ class MPILearner(Learner):
 
     def __str__(self):
         return "<Learner(id={})>".format(self.id)
+
 
 if __name__ == "__main__":
     try:

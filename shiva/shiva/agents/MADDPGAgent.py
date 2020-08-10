@@ -7,7 +7,6 @@ class MADDPGAgent(DDPGAgent):
     Inherits from DDPG Agents for easier implementation.
 
     """
-
     epsilon = 0
     noise_scale = 0
 

@@ -8,7 +8,6 @@ from shiva.helpers.config_handler import load_class
 from typing import List, Dict, Tuple, Any, Union
 
 class Learner(object):
-    
     def __init__(self, learner_id: int, config: Dict[str, Dict[str, Any]]):
         """
         Abstract class for the Learners.
@@ -39,24 +38,15 @@ class Learner(object):
         Returns:
             None
         """
-        if hasattr(self, 'agent'):
-            if type(self.agent) == list:
-                for agent in self.agent:
-                    metrics = self.get_metrics(agent.id) + self.alg.get_metrics(agent.id)
-                    self._process_metrics(agent.id, metrics)
-            else:
-                metrics = self.get_metrics(self.agent.id) + self.alg.get_metrics(self.agent.id)
-                self._process_metrics(self.agent.id, metrics)
-        elif hasattr(self, 'agents'):
+        if hasattr(self, 'agents'):
             for agent in self.agents:
                 metrics = self.get_metrics(agent.id) + self.alg.get_metrics(agent.id)
                 self._process_metrics(agent.id, metrics)
         else:
-            assert False, "Learner attribute 'agent' or 'agents' was not found..."
+            assert False, "Learner attribute 'agents' was not found..."
 
     def _process_metrics(self, agent_id: int, metrics: List[Union[List[Tuple[str, float, int]], Tuple[str, float, int]]]):
         """
-
         Args:
             agent_id (int): Agent ID for who we are processing the metrics
             metrics (List): list of tuple metrics OR list of list of tuple metrics
@@ -132,7 +122,7 @@ class Learner(object):
     def get_id(self):
         return self.get_new_agent_id()
 
-    def log(self, msg, to_print=False, verbose_level=-1):
+    def log(self, msg, verbose_level=-1):
         """
         Logging function. Uses python logger and can optionally output to terminal depending on the config `['Admin']['print_debug']`
 

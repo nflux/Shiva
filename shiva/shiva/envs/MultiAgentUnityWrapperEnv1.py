@@ -23,6 +23,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
     Returns:
         None
     """
+
     def __init__(self, config) -> None:
         # assert UnityEnvironment.API_VERSION == 'API-12', 'Shiva only support mlagents v12'
         self.on_policy = False
@@ -44,13 +45,13 @@ class MultiAgentUnityWrapperEnv1(Environment):
         np.random.seed(self.manual_seed)
         torch.manual_seed(self.manual_seed)
         self.Unity = UnityEnvironment(
-            file_name = self.exec,
-            base_port = self.port if hasattr(self, 'port') else 5005, # 5005 is Unity's default value
-            worker_id = self.worker_id,
-            seed = self.manual_seed,
-            side_channels = [self.channel['config'], self.channel['props']],
-            no_graphics = not self.render,
-            timeout_wait = self.timeout_wait if hasattr(self, 'timeout_wait') else 60
+            file_name=self.exec,
+            base_port=self.port if hasattr(self, 'port') else 5005,  # 5005 is Unity's default value
+            worker_id=self.worker_id,
+            seed=self.manual_seed,
+            side_channels=[self.channel['config'], self.channel['props']],
+            no_graphics=not self.render,
+            timeout_wait=self.timeout_wait if hasattr(self, 'timeout_wait') else 60
         )
         self.log(f"MANUAL SEED {self.manual_seed}")
         # https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md#environmentparameters
@@ -77,7 +78,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.RoleSpec = {role: self.Unity.get_behavior_spec(role) for role in self.roles}
 
         self.action_space = {role: self.get_action_space_from_unity_spec(self.RoleSpec[role]) for role in self.roles}
-        self.observation_space = {role: self.get_observation_space_from_unity_spec(self.RoleSpec[role]) for role in self.roles}
+        self.observation_space = {role: self.get_observation_space_from_unity_spec(self.RoleSpec[role]) for role in
+                                  self.roles}
 
         '''Init session cumulative metrics'''
         self.observations = {role: [] for role in self.roles}
@@ -91,7 +93,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.TerminalSteps = {role: None for role in self.roles}
         self.trajectory_ready_agent_ids = {role: [] for role in self.roles}
 
-        self.collect_step_data() # collect first environment state
+        self.collect_step_data()  # collect first environment state
         '''Assuming all Roles Agent IDs are given at the beginning of the first episode'''
         self.role_agent_ids = {role: self.DecisionSteps[role].agent_id.tolist() for role in self.roles}
 
@@ -116,7 +118,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """
         if force:
             self.Unity.reset()
-            self.metric_reset(force=True)
+        self.metric_reset(force=True)
 
     def metric_reset(self, force=False, *args, **kwargs) -> None:
         """ Re-initializes our metrics. Unity resets the environment on its own; called by Shiva Learner.
@@ -134,6 +136,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 self.trajectory_ready_agent_ids[role] = []
                 # maybe clear buffer?
 
+
     def reset_agent_id(self, role, agent_id) -> None:
         """ Empties the data accumulators for a specifc BehaviorName
 
@@ -146,6 +149,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.steps_per_episode[role][agent_ix] = 0
         self.reward_per_step[role][agent_ix] = 0
         self.reward_per_episode[role][agent_ix] = 0
+
 
     def step(self, actions) -> Tuple[List, List, List, Dict]:
         """ Steps in the Unity Environment
@@ -185,14 +189,15 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         '''Metrics are now updated withing self.collect_step_data()'''
         # for role in self.roles:
-            # for agent_ix, role_agent_id in enumerate(self.role_agent_ids[role]):
-                # self.steps_per_episode[role][agent_ix] += 1
-                # self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
-                # self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
-            # self.reward_total[role] += sum(self.rewards[role]) / self.num_instances_per_role[role] # total average reward
-            # self.done_count[role] += sum(self.dones[role])
+        # for agent_ix, role_agent_id in enumerate(self.role_agent_ids[role]):
+        # self.steps_per_episode[role][agent_ix] += 1
+        # self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
+        # self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
+        # self.reward_total[role] += sum(self.rewards[role]) / self.num_instances_per_role[role] # total average reward
+        # self.done_count[role] += sum(self.dones[role])
 
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
+
 
     def _unity_reshape(self, arr: np.ndarray) -> np.ndarray:
         """Unity reshape of the data - concats all same Role agents trajectories
@@ -206,103 +211,112 @@ class MultiAgentUnityWrapperEnv1(Environment):
         traj_length, num_agents, dim = arr.shape
         return np.reshape(arr, (traj_length * num_agents, dim))
 
+
     def collect_step_data(self) -> None:
-        """ Gets batches of data for the agents in the simulation.
+            """ Gets batches of data for the agents in the simulation.
 
-        Note:
-            Although this function doesn't return anything, the SARSA values are stored in internal data accumulator
-            structures.
+            Note:
+                Although this function doesn't return anything, the SARSA values are stored in internal data accumulator
+                structures.
 
-        Returns:
-            None
-        """
+            Returns:
+                None
+            """
 
-        '''per @vincentpierre (MLAgents developer) - 
-        https://forum.unity.com/threads/decisionstep-vs-terminalstep.903227/#post-5927795 If an AgentId is both in 
-        DecisionStep and TerminalStep, it means that the Agent reseted in Unity and immediately requested a decision. 
-        In your example, Agents 1, 7 and 9 had their episode terminated, started a new episode and requested a new 
-        decision. All in the same call to env.step() '''
+            '''per @vincentpierre (MLAgents developer) - 
+            https://forum.unity.com/threads/decisionstep-vs-terminalstep.903227/#post-5927795 If an AgentId is both in 
+            DecisionStep and TerminalStep, it means that the Agent reseted in Unity and immediately requested a decision. 
+            In your example, Agents 1, 7 and 9 had their episode terminated, started a new episode and requested a new 
+            decision. All in the same call to env.step() '''
 
-        for role in self.roles:
-            self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
+            for role in self.roles:
+                self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
 
-            # try:
-            #     self.log(f"Step {self.steps_per_episode[role]} Role {role} Decision: {self.DecisionSteps[role].agent_id}, Terminal: {self.TerminalSteps[role].agent_id}", verbose_level=3)
-            # except:
-            #     pass
+                # try:
+                #     self.log(f"Step {self.steps_per_episode[role]} Role {role} Decision: {self.DecisionSteps[role].agent_id}, Terminal: {self.TerminalSteps[role].agent_id}", verbose_level=3)
+                # except:
+                #     pass
 
-            if len(self.TerminalSteps[role].agent_id) > 0:
-                '''Agents that are on a Terminal Step'''
-                # self.log(f"TerminalSteps {self.TerminalSteps[role].agent_id}", verbose_level=3)
-                self.terminal_observations[role] = self._flatten_observations(self.TerminalSteps[role].obs)
-                self.trajectory_ready_agent_ids[role] += self.TerminalSteps[role].agent_id.tolist()
-                for terminal_step_agent_ix, role_agent_id in enumerate(self.TerminalSteps[role].agent_id):
-                    agent_ix = self.role_agent_ids[role].index(role_agent_id)
+                if len(self.TerminalSteps[role].agent_id) > 0:
+                    '''Agents that are on a Terminal Step'''
+                    # self.log(f"TerminalSteps {self.TerminalSteps[role].agent_id}", verbose_level=3)
+                    self.terminal_observations[role] = self._flatten_observations(self.TerminalSteps[role].obs)
+                    self.trajectory_ready_agent_ids[role] += self.TerminalSteps[role].agent_id.tolist()
+                    for terminal_step_agent_ix, role_agent_id in enumerate(self.TerminalSteps[role].agent_id):
+                        agent_ix = self.role_agent_ids[role].index(role_agent_id)
 
-                    # Append to buffer last experience
-                    exp = list(map(torch.clone, (torch.tensor([self.observations[role][agent_ix]], dtype=torch.float64),
-                                                 torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
-                                                 torch.tensor([self.TerminalSteps[role].reward[terminal_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
-                                                 torch.tensor([self.terminal_observations[role][terminal_step_agent_ix]], dtype=torch.float64),
-                                                 torch.tensor([[True]], dtype=torch.bool).unsqueeze(dim=-1)
-                                                 )))
-                    self.trajectory_buffers[role][role_agent_id].push(exp)
+                        # Append to buffer last experience
+                        exp = list(map(torch.clone, (torch.tensor([self.observations[role][agent_ix]], dtype=torch.float64),
+                                                     torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
+                                                     torch.tensor([self.TerminalSteps[role].reward[terminal_step_agent_ix]],
+                                                                  dtype=torch.float64).unsqueeze(dim=-1),
+                                                     torch.tensor([self.terminal_observations[role][terminal_step_agent_ix]],
+                                                                  dtype=torch.float64),
+                                                     torch.tensor([[True]], dtype=torch.bool).unsqueeze(dim=-1)
+                                                     )))
+                        self.trajectory_buffers[role][role_agent_id].push(exp)
 
-                    # Update terminal metrics
-                    self.done_count[role] += 1
-                    self.steps_per_episode[role][agent_ix] += 1
-                    self.reward_per_step[role][agent_ix] = self.TerminalSteps[role].reward[terminal_step_agent_ix]
-                    self.reward_per_episode[role][agent_ix] += self.TerminalSteps[role].reward[terminal_step_agent_ix]
-                    self.reward_total[role] = self.reward_total[role] + (self.reward_per_episode[role][agent_ix] / self.num_instances_per_role[role]) # Incremental Means Method
+                        # Update terminal metrics
+                        self.done_count[role] += 1
+                        self.steps_per_episode[role][agent_ix] += 1
+                        self.reward_per_step[role][agent_ix] = self.TerminalSteps[role].reward[terminal_step_agent_ix]
+                        self.reward_per_episode[role][agent_ix] += self.TerminalSteps[role].reward[terminal_step_agent_ix]
+                        self.reward_total[role] = self.reward_total[role] + (
+                                self.reward_per_episode[role][agent_ix] / self.num_instances_per_role[
+                            role])  # Incremental Means Method
 
-                    # Prepare trajectory for MPIEnv to send
-                    self._ready_trajectories[role][role_agent_id] += [[*map(self._unity_reshape, self.trajectory_buffers[role][role_agent_id].all_numpy())] + [self.get_role_metrics(role, role_agent_id, episodic=True)]]
+                        # Prepare trajectory for MPIEnv to send
+                        self._ready_trajectories[role][role_agent_id] += [
+                            [*map(self._unity_reshape, self.trajectory_buffers[role][role_agent_id].all_numpy())] + [
+                                self.get_role_metrics(role, role_agent_id, episodic=True)]]
 
-                    # Reset
-                    self.reset_agent_id(role, role_agent_id)
-                    self.trajectory_buffers[role][role_agent_id].reset()
+                        # Reset
+                        self.reset_agent_id(role, role_agent_id)
+                        self.trajectory_buffers[role][role_agent_id].reset()
 
-            # self.log(f"DecisionStep {self.DecisionSteps[role].reward} TerminalStep {self.TerminalSteps[role].reward}", verbose_level=-2)
+                # self.log(f"DecisionStep {self.DecisionSteps[role].reward} TerminalStep {self.TerminalSteps[role].reward}", verbose_level=-2)
 
-            if len(self.DecisionSteps[role].agent_id) > 0:
-                '''Agents who need a next action'''
-                # self.observations = {role:self._flatten_observations(self.DecisionSteps[role].obs) for role in self.roles} # unsure if needed to flatten observations???? This might be deprecated
-                # Should we just copy over the observations for the role?
-                self.previous_observation = self.observations.copy()
-                # Here we are just coping over the obsercations from the decisionstep for the specific role that we
-                # are currently looping through
-                self.observations[role] = self._flatten_observations(self.DecisionSteps[role].obs)
-                # self.log(f"{self.observations[role].shape}", verbose_level=1)
+                if len(self.DecisionSteps[role].agent_id) > 0:
+                    '''Agents who need a next action'''
+                    # self.observations = {role:self._flatten_observations(self.DecisionSteps[role].obs) for role in self.roles} # unsure if needed to flatten observations???? This might be deprecated
+                    # Should we just copy over the observations for the role?
+                    self.previous_observation = self.observations.copy()
+                    # Here we are just coping over the obsercations from the decisionstep for the specific role that we
+                    # are currently looping through
+                    self.observations[role] = self._flatten_observations(self.DecisionSteps[role].obs)
+                    # self.log(f"{self.observations[role].shape}", verbose_level=1)
 
-                self.rewards[role] = self.DecisionSteps[role].reward
-                self.dones[role] = [False] * len(self.DecisionSteps[role].agent_id)
-                if hasattr(self, 'raw_actions'):
-                    self.request_actions = True
+                    self.rewards[role] = self.DecisionSteps[role].reward
+                    self.dones[role] = [False] * len(self.DecisionSteps[role].agent_id)
+                    if hasattr(self, 'raw_actions'):
+                        self.request_actions = True
 
-                    for decision_step_agent_ix, role_agent_id in enumerate(self.DecisionSteps[role].agent_id):
+                        for decision_step_agent_ix, role_agent_id in enumerate(self.DecisionSteps[role].agent_id):
 
-                        # Important IF statement because if Agent_ID is on both DecisionStep and TerminalStep
-                        # means that Unity automatically resetted the agent and it's on the very first state of the Env
-                        # (where we haven't taken an action yet!)
-                        if role_agent_id not in self.TerminalSteps[role].agent_id:
+                            # Important IF statement because if Agent_ID is on both DecisionStep and TerminalStep
+                            # means that Unity automatically resetted the agent and it's on the very first state of the Env
+                            # (where we haven't taken an action yet!)
+                            if role_agent_id not in self.TerminalSteps[role].agent_id:
+                                agent_ix = self.role_agent_ids[role].index(role_agent_id)
+                                exp = list(map(torch.clone,
+                                               (torch.tensor([self.previous_observation[role][agent_ix]], dtype=torch.float64),
+                                                torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
+                                                torch.tensor([self.rewards[role][agent_ix]], dtype=torch.float64).unsqueeze(
+                                                    dim=-1),
+                                                torch.tensor([self.observations[role][agent_ix]], dtype=torch.float64),
+                                                torch.tensor([[False]], dtype=torch.bool).unsqueeze(dim=-1)
+                                                )))
+                                self.trajectory_buffers[role][role_agent_id].push(exp)
 
-                            agent_ix = self.role_agent_ids[role].index(role_agent_id)
-                            exp = list(map(torch.clone, (torch.tensor([self.previous_observation[role][agent_ix]], dtype=torch.float64),
-                                                         torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
-                                                         torch.tensor([self.rewards[role][agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
-                                                         torch.tensor([self.observations[role][agent_ix]], dtype=torch.float64),
-                                                         torch.tensor([[False]], dtype=torch.bool).unsqueeze(dim=-1)
-                                                         )))
-                            self.trajectory_buffers[role][role_agent_id].push(exp)
-
-                            # Update metrics at each agent step
-                            self.steps_per_episode[role][agent_ix] += 1
-                            self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
-                            self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
+                                # Update metrics at each agent step
+                                self.steps_per_episode[role][agent_ix] += 1
+                                self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
+                                self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
 
     def _flatten_observations(self, obs) -> np.ndarray:
         """Turns the funky (2, 16, 56) array into a (16, 112)"""
         return np.concatenate([o for o in obs], axis=-1)
+
 
     def get_metrics(self, episodic=True) -> List[Dict.values]:
         """MultiAgent Metrics
@@ -315,8 +329,11 @@ class MultiAgentUnityWrapperEnv1(Environment):
         Returns:
             A list of metric values
         """
-        metrics = {role: [self.get_role_metrics(role, role_agent_id, episodic) for role_agent_id in self.role_agent_ids[role]] for ix, role in enumerate(self.roles)}
+        metrics = {
+            role: [self.get_role_metrics(role, role_agent_id, episodic) for role_agent_id in self.role_agent_ids[role]] for
+            ix, role in enumerate(self.roles)}
         return list(metrics.values())
+
 
     def get_role_metrics(self, role: str, role_agent_id: int, episodic: bool = True) -> List[Tuple[str, Any]]:
         """ Gets the metrics for a specific role
@@ -343,6 +360,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
             ]
         return metrics
 
+
     def is_done(self, n_episodes: int = 0):
         """Check if there's any role-agent that has finished the episode
         Args:
@@ -351,6 +369,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # self.log(f"DecisionSteps {self.DecisionSteps[self.roles[0]].agent_id}")
         # self.log(f"TerminalStep {self.TerminalSteps[self.roles[0]].agent_id}")
         return sum([len(self.trajectory_ready_agent_ids[role]) for role in self.roles]) > n_episodes
+
 
     def _clean_role_actions(self, role: str, role_actions: np.ndarray) -> np.ndarray:
         """ Converts discrete action probabilities into one hot encoding
@@ -374,6 +393,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
             actions = np.array(role_actions)
         # self.log(f"Clean action: {actions}")
         return actions
+
 
     def get_action_space_from_unity_spec(self, unity_spec: Dict) -> Dict[str, Any]:
         """ Checks BehaviorSpec (Agent) has a discrete or continuous actionspace.
@@ -406,6 +426,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         else:
             assert "Something weird happened here..."
 
+
     def get_observation_space_from_unity_spec(self, unity_spec: object):
         """ This sums up the obeservation_shapes for the agents in a given BehaviorSpec
 
@@ -415,6 +436,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # flatten the obs_shape, g.e. from [(56,), (56,)] to 112
         return sum([sum(obs_shape) for obs_shape in unity_spec.observation_shapes])
 
+
     def get_observations(self) -> List[np.array]:
         """ Returns observations from the current step of each agent.
 
@@ -423,6 +445,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """
         return list(self.observations.values())
 
+
     def get_actions(self) -> List[np.array]:
         """ Returns actions from the current step of each agent.
 
@@ -430,6 +453,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
             list of np.arrays
         """
         return list(self.actions.values())
+
 
     def get_reward_episode(self) -> Dict[str, float]:
         """ Returns the episodic rewards organized in a dictionary by role names.
@@ -443,10 +467,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
             episodic_reward[role] = sum(self.reward_per_episode[role]) / len(self.reward_per_episode[role])
         return episodic_reward
 
+
     def get_rewards(self):
         return list(self.rewards.values())
 
-    def create_buffers(self) -> None:
+
+    def create_buffers(self, config=None):
         """ Makes buffers for episodic trajectories to be stored in.
 
         Todo:
@@ -460,17 +486,24 @@ class MultiAgentUnityWrapperEnv1(Environment):
         Returns:
             None
         """
+        config = self.configs if config is None else config
+        config['Buffer']['capacity'] += 1  # Unity specific...
         self.trajectory_buffers = {}
         self._ready_trajectories = {}
         for role in self.roles:
             self.trajectory_buffers[role] = {}
             self._ready_trajectories[role] = {}
             for role_agent_id in self.role_agent_ids[role]:
-                self.trajectory_buffers[role][role_agent_id] = MultiAgentTensorBuffer(self.episode_max_length+1, self.episode_max_length,
-                                                                  1, #self.num_instances_per_role[role],
-                                                                  self.observation_space[role],
-                                                                  sum(self.action_space[role]['acs_space']))
+                self.trajectory_buffers[role][role_agent_id] = MultiAgentTensorBuffer(
+                    config['capacity'],
+                    config['batch_size'],
+                    1,  # 1 because we are iterating on roles and role_agent_ids
+                    self.observation_space[role],
+                    sum(self.action_space[role]['acs_space']),
+                    config
+                )
                 self._ready_trajectories[role][role_agent_id] = []
+
 
     def reset_buffers(self) -> None:
         """ Empties the trajectory buffers for the next episode.
@@ -482,6 +515,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
             for _, role_agent_buffer in role_buffers.items():
                 role_agent_buffer.reset()
 
+
     def close(self):
         """ Closes the connection with the Unity Environment.
         Also deletes the environment attribute from the Class.
@@ -490,6 +524,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """
         self.Unity.close()
         delattr(self, 'Unity')
+
 
     def debug(self) -> None:
         """ Prints out Behavior Names, and Batched Steps
