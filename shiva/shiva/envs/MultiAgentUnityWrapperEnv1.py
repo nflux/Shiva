@@ -136,7 +136,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 self.trajectory_ready_agent_ids[role] = []
                 # maybe clear buffer?
 
-
     def reset_agent_id(self, role, agent_id) -> None:
         """ Empties the data accumulators for a specifc BehaviorName
 
@@ -149,7 +148,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.steps_per_episode[role][agent_ix] = 0
         self.reward_per_step[role][agent_ix] = 0
         self.reward_per_episode[role][agent_ix] = 0
-
 
     def step(self, actions) -> Tuple[List, List, List, Dict]:
         """ Steps in the Unity Environment
@@ -198,7 +196,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
 
-
     def _unity_reshape(self, arr: np.ndarray) -> np.ndarray:
         """Unity reshape of the data - concats all same Role agents trajectories
 
@@ -210,7 +207,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """
         traj_length, num_agents, dim = arr.shape
         return np.reshape(arr, (traj_length * num_agents, dim))
-
 
     def collect_step_data(self) -> None:
             """ Gets batches of data for the agents in the simulation.
@@ -317,7 +313,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """Turns the funky (2, 16, 56) array into a (16, 112)"""
         return np.concatenate([o for o in obs], axis=-1)
 
-
     def get_metrics(self, episodic=True) -> List[Dict.values]:
         """MultiAgent Metrics
 
@@ -333,7 +328,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
             role: [self.get_role_metrics(role, role_agent_id, episodic) for role_agent_id in self.role_agent_ids[role]] for
             ix, role in enumerate(self.roles)}
         return list(metrics.values())
-
 
     def get_role_metrics(self, role: str, role_agent_id: int, episodic: bool = True) -> List[Tuple[str, Any]]:
         """ Gets the metrics for a specific role
@@ -360,7 +354,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
             ]
         return metrics
 
-
     def is_done(self, n_episodes: int = 0):
         """Check if there's any role-agent that has finished the episode
         Args:
@@ -369,7 +362,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # self.log(f"DecisionSteps {self.DecisionSteps[self.roles[0]].agent_id}")
         # self.log(f"TerminalStep {self.TerminalSteps[self.roles[0]].agent_id}")
         return sum([len(self.trajectory_ready_agent_ids[role]) for role in self.roles]) > n_episodes
-
 
     def _clean_role_actions(self, role: str, role_actions: np.ndarray) -> np.ndarray:
         """ Converts discrete action probabilities into one hot encoding
@@ -393,7 +385,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
             actions = np.array(role_actions)
         # self.log(f"Clean action: {actions}")
         return actions
-
 
     def get_action_space_from_unity_spec(self, unity_spec: Dict) -> Dict[str, Any]:
         """ Checks BehaviorSpec (Agent) has a discrete or continuous actionspace.
@@ -426,7 +417,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         else:
             assert "Something weird happened here..."
 
-
     def get_observation_space_from_unity_spec(self, unity_spec: object):
         """ This sums up the obeservation_shapes for the agents in a given BehaviorSpec
 
@@ -436,7 +426,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # flatten the obs_shape, g.e. from [(56,), (56,)] to 112
         return sum([sum(obs_shape) for obs_shape in unity_spec.observation_shapes])
 
-
     def get_observations(self) -> List[np.array]:
         """ Returns observations from the current step of each agent.
 
@@ -445,7 +434,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """
         return list(self.observations.values())
 
-
     def get_actions(self) -> List[np.array]:
         """ Returns actions from the current step of each agent.
 
@@ -453,7 +441,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
             list of np.arrays
         """
         return list(self.actions.values())
-
 
     def get_reward_episode(self) -> Dict[str, float]:
         """ Returns the episodic rewards organized in a dictionary by role names.
@@ -467,10 +454,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
             episodic_reward[role] = sum(self.reward_per_episode[role]) / len(self.reward_per_episode[role])
         return episodic_reward
 
-
     def get_rewards(self):
         return list(self.rewards.values())
-
 
     def create_buffers(self, config=None):
         """ Makes buffers for episodic trajectories to be stored in.
@@ -495,15 +480,14 @@ class MultiAgentUnityWrapperEnv1(Environment):
             self._ready_trajectories[role] = {}
             for role_agent_id in self.role_agent_ids[role]:
                 self.trajectory_buffers[role][role_agent_id] = MultiAgentTensorBuffer(
-                    config['capacity'],
-                    config['batch_size'],
+                    config['Buffer']['capacity'],
+                    config['Buffer']['batch_size'],
                     1,  # 1 because we are iterating on roles and role_agent_ids
                     self.observation_space[role],
                     sum(self.action_space[role]['acs_space']),
                     config
                 )
                 self._ready_trajectories[role][role_agent_id] = []
-
 
     def reset_buffers(self) -> None:
         """ Empties the trajectory buffers for the next episode.
@@ -515,7 +499,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
             for _, role_agent_buffer in role_buffers.items():
                 role_agent_buffer.reset()
 
-
     def close(self):
         """ Closes the connection with the Unity Environment.
         Also deletes the environment attribute from the Class.
@@ -524,7 +507,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """
         self.Unity.close()
         delattr(self, 'Unity')
-
 
     def debug(self) -> None:
         """ Prints out Behavior Names, and Batched Steps

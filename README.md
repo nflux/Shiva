@@ -25,6 +25,35 @@ Get started with the Installation and then thru the Quickstart to see how to run
     * [UnitTests](./shiva/docs/UnitTests.md)
     * [Creating a new algorithm](./shiva/docs/Extending-Algorithm.md)
     * Creating a new environment wrapper
+    
+## Benchmarks
+
+You can use these benchmarks to test if changes made to Shiva were improvements.
+
+### Gym Cartpole
+
+#### Episodic Reward
+![](docs/images/MADDPG-CartPole-Reward.png)
+
+#### Actor Loss
+![](docs/images/MADDPG-CartPole-Actor-Loss.png)
+
+#### Critic Loss
+![](docs/images/MADDPG-CartPole-Critic-Loss.png)
+
+
+### Unity 3DBallDiscrete 
+
+We implemented a discrete version of 3DBall for discrete testing in lieu of Basic.
+
+#### Episodic Reward
+![](docs/images/MADDPG-3DBallDiscrete-Reward.png)
+
+#### Actor Loss
+![](docs/images/MADDPG-3DBallDiscrete-Actor-Loss.png)
+
+#### Critic Loss
+![](docs/images/MADDPG-3DBallDiscrete-Critic-Loss.png)
 
 ## Restrictions
 
