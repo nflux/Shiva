@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Networks &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Networks</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="networks">
+<h1>Networks<a class="headerlink" href="#networks" title="Permalink to this headline">¶</a></h1>
+<p class="rubric">Overview</p>
+<p>To enable experimentation, the networks architecture are as flexible as the config file permits. The agent implementation will create the specific network class type with the characteristics given by the config, such as the below example for an actor/critic algorithm</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Network]</span>
+
+<span class="na">actor</span>   <span class="o">=</span> <span class="s">{&#39;layers&#39;: [1024, 512, 256, 128],</span>
+<span class="s">           &#39;activation_function&#39;: [&#39;ReLU&#39;, &#39;ReLU&#39;,&#39;ReLU&#39;, &#39;ReLU&#39;],</span>
+<span class="s">           &#39;output_function&#39;: None,</span>
+<span class="s">           &#39;last_layer&#39;: True,</span>
+<span class="s">           &#39;gumbel&#39;: True}</span>
+
+<span class="na">critic</span>  <span class="o">=</span> <span class="s">{&#39;layers&#39;: [1024, 512, 256, 128],</span>
+<span class="s">           &#39;activation_function&#39;: [&#39;ReLU&#39;, &#39;ReLU&#39;,&#39;ReLU&#39;, &#39;ReLU&#39;],</span>
+<span class="s">           &#39;output_function&#39;: None,</span>
+<span class="s">           &#39;last_layer&#39;: True}</span>
+</pre></div>
+</div>
+<p>The network constructor requires the following attributes in the Network section of the config file</p>
+<ul class="simple">
+<li><p>layers            list type whose elements will indicate the layer size</p></li>
+<li><p>activation_function        list indicating the torch activation function name used on each layer</p></li>
+<li><p>output_function        optional torch activation function, default None</p></li>
+<li><p>last_layer            if last layer should be included, default True</p></li>
+<li><p>gumbel            only if SoftMaxHeadDynamicLinearNetwork class is used, default False</p></li>
+</ul>
+<p class="rubric"><a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/networks/DynamicLinearNetwork.py">DynamicLinearNetwork class</a></p>
+<p>We currently have two available types of constructors who dynamically build the network using PyTorch framework. These are:</p>
+<ul class="simple">
+<li><p>DynamicLinearSequential: creates a <a class="reference external" href="https://pytorch.org/docs/stable/nn.html#sequential">torch.nn.Sequential</a> with <a class="reference external" href="https://pytorch.org/docs/stable/nn.html#linear">linear transformations</a> on the incoming data.</p></li>
+<li><p>SoftMaxHeadDynamicLinearNetwork: similar to DynamicsLinearSequential but with the extension of handling a discrete and parameterized action space with choice of a softmaxed or gumbel output.</p></li>
+</ul>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/Networks.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Networks</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+    </div>
+  </body>
+</html>

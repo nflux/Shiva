@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Running Unity Environments &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Running Unity Environments</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="running-unity-environments">
+<h1>Running Unity Environments<a class="headerlink" href="#running-unity-environments" title="Permalink to this headline">¶</a></h1>
+<p>We are using the <a class="reference external" href="https://github.com/Unity-Technologies/ml-agents">Python API UnityEnvironment</a> provided by
+Unity. To run on Shiva, all you need is the binary file for the scene you want to load for your environment.
+Here are some requirements with regards the build, and where/how to use the API.</p>
+<p>For additional documentation, <a class="reference external" href="https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md">Unity API</a>
+is available if wanting to extend new features.</p>
+<p class="rubric">Building Scenes on Unity Editor</p>
+<ul class="simple">
+<li><p>Recommended settings for the player under <strong>Player Settings &gt; :</strong>
+- Run in background: True
+- Display Resolution Dialog: Disabled</p></li>
+<li><p>For the Prefabs/Agents
+- Make sure the <strong>Behaviour Parameters</strong> has no loaded model and it’s empty
+- Stacked observations are supported
+- Only one brain is supported (for now)
+- Actions should come in one single branch, either continuous or discrete (no parametrized)</p></li>
+<li><p>The file for the <strong>Scene_name.x86_64</strong> extension should be placed in the <strong>shiva/envs/unitybuilds/</strong> and declared in the <strong>exec</strong> attribute for the config.</p></li>
+</ul>
+<p class="rubric">Config Templates</p>
+<p>The attributes set in the config will be accessible as a class attribute for the <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/envs/MultiAgentUnityWrapperEnv1.py">UnityWrapperEnvironment class</a>.</p>
+<p>Here’s the template</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Environment]</span>
+<span class="na">device</span> <span class="o">=</span> <span class="s">&quot;gpu&quot;</span>
+<span class="na">type</span> <span class="o">=</span> <span class="s">&#39;MultiAgentUnityWrapperEnv1&#39;</span>
+<span class="na">exec</span> <span class="o">=</span> <span class="s">&#39;shiva/envs/unitybuilds/1/3DBall/3DBall.app&#39;</span>
+<span class="na">env_name</span> <span class="o">=</span> <span class="s">&#39;3DBall&#39;</span>
+<span class="na">num_envs</span> <span class="o">=</span> <span class="s">1</span>
+<span class="na">episode_max_length</span> <span class="o">=</span> <span class="s">1000</span>
+<span class="na">episodic_load_rate</span> <span class="o">=</span> <span class="s">1</span>
+<span class="na">expert_reward_range</span> <span class="o">=</span> <span class="s">{&#39;3DBall?team=0&#39;: [90, 100]}</span>
+<span class="na">render</span> <span class="o">=</span> <span class="s">False</span>
+<span class="na">port</span> <span class="o">=</span> <span class="s">5010</span>
+<span class="na">share_viewer</span> <span class="o">=</span> <span class="s">True</span>
+<span class="na">normalize</span> <span class="o">=</span> <span class="s">False</span>
+<span class="na">unity_configs</span> <span class="o">=</span> <span class="s">{}</span>
+<span class="na">unity_props</span> <span class="o">=</span> <span class="s">{}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Note that the <strong>env_name</strong> attribute must be the Brain name on Unity.</p></li>
+</ul>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/howto/Unity.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Running Unity Environments</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+    </div>
+  </body>
+</html>

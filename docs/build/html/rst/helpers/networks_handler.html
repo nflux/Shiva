@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>networks_handler module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">networks_handler module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-networks_handler">
+<span id="networks-handler-module"></span><h1>networks_handler module<a class="headerlink" href="#module-networks_handler" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="networks_handler.parse_functions">
+<code class="sig-prename descclassname">networks_handler.</code><code class="sig-name descname">parse_functions</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">package</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">funcs_str</span><span class="p">:</span> <span class="n">List<span class="p">[</span>str<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>object<span class="p">]</span><a class="headerlink" href="#networks_handler.parse_functions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Is this being used?????</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>package</strong> – package name</p></li>
+<li><p><strong>funcs_str</strong> – coming from the config file as a string     g.e. “ReLU,ReLU,Tanh”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>List of functions definitions</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">parse_functions</span><span class="p">(</span><span class="s1">&#39;torch.nn&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;ReLU&quot;</span><span class="p">,</span> <span class="s2">&quot;ReLU&quot;</span><span class="p">,</span> <span class="s2">&quot;Tanh&quot;</span><span class="p">])</span>
+<span class="go">[nn.ReLU, nn.ReLU, nn.ReLU]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="networks_handler.DynamicLinearSequential">
+<code class="sig-prename descclassname">networks_handler.</code><code class="sig-name descname">DynamicLinearSequential</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">input_dim</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">output_dim</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">layers</span><span class="p">:</span> <span class="n">List<span class="p">[</span>int<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">activ_function</span><span class="p">:</span> <span class="n">List<span class="p">[</span>object<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">last_layer</span><span class="p">:</span> <span class="n">bool</span></em>, <em class="sig-param"><span class="n">output_function</span><span class="p">:</span> <span class="n">object</span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; torch.nn.modules.container.Sequential<a class="headerlink" href="#networks_handler.DynamicLinearSequential" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new dynamic nn.Sequential network. The size of <cite>layers</cite> must be equal to the size of <cite>activ_function</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_dim</strong> (<em>int</em>) – the input dimension</p></li>
+<li><p><strong>output_dim</strong> (<em>int</em>) – the output dimension</p></li>
+<li><p><strong>layers</strong> (<em>List</em><em>[</em><em>int</em><em>]</em>) – list of the size of the hidden layers</p></li>
+<li><p><strong>activ_function</strong> (<em>List</em><em>[</em><em>object</em><em>]</em>) – list of activation function objects for each of the layers</p></li>
+<li><p><strong>last_layer</strong> (<em>bool</em>) – boolean stating if we include the last layer to the network</p></li>
+<li><p><strong>output_function</strong> (<em>object</em>) – Optional. Output function object.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>torch.nn.Sequential</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/rst/helpers/networks_handler.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">networks_handler module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Extending Shiva &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Extending Shiva</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="extending-shiva">
+<h1>Extending Shiva<a class="headerlink" href="#extending-shiva" title="Permalink to this headline">¶</a></h1>
+<p class="rubric">Implementing a new Algorithm in Shiva</p>
+<p>Shiva is a work in progress and collaborators are encouraged to implement their
+algorithms in Shiva’s framework. If you want to implement something new you can
+see what components of Shiva are reusable and what is needed to accomplish your
+goal. If, for example, you wanted to implement Soft Actor Critic, then there are
+many modules that you can reuse. Typically you need an Agent, Algorithm, Learner,
+MetaLearner, Replay Buffer (not always), and an Environment. If its a Unity
+environment then you can use our UnityWrapperEnvironment, you may also reuse the
+replay buffer, and in the case of a single agent, you can use SingleAgentMetaLearner.py.
+The things you may need to implement are the Algorithm, Agent, and Learner (if the
+training loop is drastically different from the currently available learners) classes.
+(We are planning on refactoring the code soon to become more generalized so that
+learners can be shared across various implementations).</p>
+<p>Now, you might create a SoftActorCritic.py file in the algorithms folder. Then you
+would import SoftActorCritic.py inside of the __init__.py folder inside of the algorithms
+module. Implementing SAC in Shiva may or may not require an SACLearner. If it does you’d
+have to add the corresponding SACLearner inside of the learner module and import it in
+the corresponding _init_.py file in the learner module. If you are using a Unity environment,
+you need to place your binary file and data inside of the unitybuilds/ directory inside of
+the environments module. As you are building the algorithm and learner, you can add
+whatever configurable attributes you want/need to that version of the learner or
+algorithm to have inside of the configuration file. You might call the configuration
+file SAC-3DBall ini. There are a lot of config files available for reference and we
+can add more instructions upon request.</p>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/Extending.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Extending Shiva</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+    </div>
+  </body>
+</html>

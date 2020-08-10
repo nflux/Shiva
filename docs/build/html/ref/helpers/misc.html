@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>misc module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">misc module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-misc">
+<span id="misc-module"></span><h1>misc module<a class="headerlink" href="#module-misc" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="misc.action2one_hot">
+<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">action2one_hot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action_space</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">action_idx</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">numpy</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#misc.action2one_hot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a one hot encoded numpy array</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>action_space</strong> (<em>int</em>) – how many dimensions the action space has</p></li>
+<li><p><strong>action_idx</strong> (<em>int</em>) – the index we are inserting a 1 on the resulting array</p></li>
+<li><p><strong>numpy</strong> (<em>bool</em>) – If True, return a numpy array, else returns a python list</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="misc.action2one_hot_v">
+<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">action2one_hot_v</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action_space</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">action_idx</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span> &#x2192; None._VariableFunctions.tensor<a class="headerlink" href="#misc.action2one_hot_v" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a one hot encoded torch tensor</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>action_space</strong> (<em>int</em>) – how many dimensions the action space has</p></li>
+<li><p><strong>action_idx</strong> (<em>int</em>) – the index we are inserting a 1 on the resulting array</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="misc.warn_with_traceback">
+<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">warn_with_traceback</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">message</span></em>, <em class="sig-param"><span class="n">category</span></em>, <em class="sig-param"><span class="n">filename</span></em>, <em class="sig-param"><span class="n">lineno</span></em>, <em class="sig-param"><span class="n">file</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#misc.warn_with_traceback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility for debugging</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> – </p></li>
+<li><p><strong>category</strong> – </p></li>
+<li><p><strong>filename</strong> – </p></li>
+<li><p><strong>lineno</strong> – </p></li>
+<li><p><strong>file</strong> – </p></li>
+<li><p><strong>line</strong> – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="misc.one_hot_from_logits">
+<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">one_hot_from_logits</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">logits</span></em>, <em class="sig-param"><span class="n">dim</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#misc.one_hot_from_logits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Is this being used? Not sure if I recall correctly but I remember issues with it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>logits</strong> – </p></li>
+<li><p><strong>dim</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="misc.terminate_process">
+<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">terminate_process</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#misc.terminate_process" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to pkill all processes that had been spawned by Shiva</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="misc.flat_1d_list">
+<code class="sig-prename descclassname">misc.</code><code class="sig-name descname">flat_1d_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">list</span><span class="p">:</span> <span class="n">List<span class="p">[</span>List<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; List<a class="headerlink" href="#misc.flat_1d_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a two dimenional python list into a one dimensional</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>list</strong> (<em>List</em>) – two dimensional python list</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>one dimensional list</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/ref/helpers/misc.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">misc module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+    </div>
+  </body>
+</html>

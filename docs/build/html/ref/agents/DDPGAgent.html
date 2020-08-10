@@ -1,0 +1,382 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DDPGAgent module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">DDPGAgent module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-DDPGAgent">
+<span id="ddpgagent-module"></span><h1>DDPGAgent module<a class="headerlink" href="#module-DDPGAgent" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="DDPGAgent.DDPGAgent">
+<em class="property">class </em><code class="sig-prename descclassname">DDPGAgent.</code><code class="sig-name descname">DDPGAgent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">obs_space</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">acs_space</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DDPGAgent.DDPGAgent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.agents.Agent.Agent</span></code></p>
+<p>DDPG Agent Class</p>
+<p>Used for getting discrete and continuous actions. Also has saving and loading functions.
+Also has functions to modify and evolve hyper-parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>id</strong> (<em>int</em>) – Id to identify the agent.</p></li>
+<li><p><strong>obs_space</strong> (<em>int</em>) – Number of observations for the agent to expect.</p></li>
+<li><p><strong>acs_space</strong> (<em>dict</em>) – Number of actions the agent is expected to produce seperate by type of action
+space.</p></li>
+<li><p><strong>configs</strong> – Hyperparameters used to set up the agent.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.instantiate_networks">
+<code class="sig-name descname">instantiate_networks</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DDPGAgent.DDPGAgent.instantiate_networks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the networks that agent will use for inference or evaluation.</p>
+<p>Uses the network section of the config along with acs_space and obs_space to
+create the networks. Also creates the target networks.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.get_discrete_action">
+<code class="sig-name descname">get_discrete_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">evaluate</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">one_hot</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span> &#x2192; List<a class="headerlink" href="#DDPGAgent.DDPGAgent.get_discrete_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produces a discrete action.</p>
+<p>The action could be either an inference or evaluation action.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>observation</strong> – State the environment is in.</p></li>
+<li><p><strong>step_count</strong> – How many total steps the agent has seen.</p></li>
+<li><p><strong>evaluate</strong> – Whether or not you want a noise free deterministic action.</p></li>
+<li><p><strong>one_hot</strong> – Whether you want a one hot encoded action or raw.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list containing probabilities for each action possible in the step.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.get_continuous_action">
+<code class="sig-name descname">get_continuous_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">evaluate</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DDPGAgent.DDPGAgent.get_continuous_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produces a continuous action.</p>
+<p>The action could be either an inference or evaluation action.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>observation</strong> – State the environment is in.</p></li>
+<li><p><strong>step_count</strong> – How many total steps the agent has seen.</p></li>
+<li><p><strong>evaluate</strong> – Whether or not you want a noise free deterministic action.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list containing probabilities for each action possible in the step.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.get_parameterized_action">
+<code class="sig-name descname">get_parameterized_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">evaluate</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DDPGAgent.DDPGAgent.get_parameterized_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produces a parameterized action.</p>
+<p>Currently not implemented. The action could be either an inference or evaluation action.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>observation</strong> – State the environment is in.</p></li>
+<li><p><strong>step_count</strong> – How many total steps the agent has seen.</p></li>
+<li><p><strong>evaluate</strong> – Whether or not you want a noise free action.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A list containing probabilities for each action possible in the step.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.get_imitation_action">
+<code class="sig-name descname">get_imitation_action</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="headerlink" href="#DDPGAgent.DDPGAgent.get_imitation_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produces an imitated action.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>observation</strong> – State the environment is in.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A numpy array containing probabilities for each action possible in the step.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.copy_hyperparameters">
+<code class="sig-name descname">copy_hyperparameters</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#DDPGAgent.DDPGAgent.copy_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copies the hyperparameters of a passed in agent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>evo_agent</strong> (<a class="reference internal" href="../../rst/agents/DDPGAgent.html#DDPGAgent.DDPGAgent" title="DDPGAgent.DDPGAgent"><em>DDPGAgent</em></a>) – An evolved agent from which to copy hyperparameters from.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.copy_weights">
+<code class="sig-name descname">copy_weights</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#DDPGAgent.DDPGAgent.copy_weights" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to copy this evolved agent’s weights into this agent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>evo_agent</strong> (<a class="reference internal" href="../../rst/agents/DDPGAgent.html#DDPGAgent.DDPGAgent" title="DDPGAgent.DDPGAgent"><em>DDPGAgent</em></a>) – An evolved agent from which to copy hyperparameters from.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.perturb_hyperparameters">
+<code class="sig-name descname">perturb_hyperparameters</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">perturb_factor</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#DDPGAgent.DDPGAgent.perturb_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Slight mutates this agent’s weights by a factor.
+:param perturb_factor: Factor by which to modify agent weights.
+:type perturb_factor: float</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.resample_hyperparameters">
+<code class="sig-name descname">resample_hyperparameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#DDPGAgent.DDPGAgent.resample_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets new weights for this agent from a set predetermined intervals in the configs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.recalculate_hyperparameters">
+<code class="sig-name descname">recalculate_hyperparameters</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">done_count</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#DDPGAgent.DDPGAgent.recalculate_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the epsilon and noise hyperparameters over time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>done_count</strong> (<em>int</em>) – Episodic independent value controlling the hyperparameters.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.decay_learning_rate">
+<code class="sig-name descname">decay_learning_rate</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#DDPGAgent.DDPGAgent.decay_learning_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decreases the critic’s learning rate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.restore_learning_rate">
+<code class="sig-name descname">restore_learning_rate</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#DDPGAgent.DDPGAgent.restore_learning_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increases the critic’s learning rate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.update_epsilon_scale">
+<code class="sig-name descname">update_epsilon_scale</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">done_count</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#DDPGAgent.DDPGAgent.update_epsilon_scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>To be called by the Learner before saving
+Decreases the epsilon scale.
+:param done_count:
+:type done_count: int</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.update_noise_scale">
+<code class="sig-name descname">update_noise_scale</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">done_count</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DDPGAgent.DDPGAgent.update_noise_scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>To be called by the Learner before saving
+Decreases the noise scale.
+:param done_count:
+:type done_count: int</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.reset_noise">
+<code class="sig-name descname">reset_noise</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#DDPGAgent.DDPGAgent.reset_noise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the Agent’s OU Noise</p>
+<p>This is super important otherwise the noise will compound.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.decay_value">
+<code class="sig-name descname">decay_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start</span></em>, <em class="sig-param"><span class="n">decay_end_step</span></em>, <em class="sig-param"><span class="n">current_step_count</span></em>, <em class="sig-param"><span class="n">degree</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span> &#x2192; float<a class="headerlink" href="#DDPGAgent.DDPGAgent.decay_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decays a value from an initial to final value.</p>
+<p>Can be linear, or polynomial.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A new float value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.is_e_greedy">
+<code class="sig-name descname">is_e_greedy</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">step_count</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#DDPGAgent.DDPGAgent.is_e_greedy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if an action should be random or inference.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>step_count</strong> (<em>int</em>) – Episodic counter that controls the epsilon.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Boolean indicating whether or not to take a random action.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.is_exploring">
+<code class="sig-name descname">is_exploring</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">current_step_count</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#DDPGAgent.DDPGAgent.is_exploring" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if an action should be random or inference.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>step_count</strong> (<em>int</em>) – Episodic counter that controls the noise.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Boolean indicating whether or not to add noise to an action.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.get_metrics">
+<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DDPGAgent.DDPGAgent.get_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the metrics so they can be passed to tensorboard.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A tuple of metrics.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DDPGAgent.DDPGAgent.get_module_and_classname">
+<code class="sig-name descname">get_module_and_classname</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DDPGAgent.DDPGAgent.get_module_and_classname" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the name of the module and class name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A string representation of the module and class.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/ref/agents/DDPGAgent.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">DDPGAgent module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+    </div>
+  </body>
+</html>

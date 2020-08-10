@@ -1,0 +1,214 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Environment module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Environment module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-Environment">
+<span id="environment-module"></span><h1>Environment module<a class="headerlink" href="#module-Environment" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="Environment.Environment">
+<em class="property">class </em><code class="sig-prename descclassname">Environment.</code><code class="sig-name descname">Environment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span><span class="p">:</span> <span class="n">Dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Environment.Environment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
+<p>Abstract Environment Class all environments implemented in Shiva inherit from.</p>
+<dl class="py method">
+<dt id="Environment.Environment.step">
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">actions</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Passes in an action which is in turn passed into the environment to continue the
+reinforcement training loop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.finished">
+<code class="sig-name descname">finished</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n_episodes</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#Environment.Environment.finished" title="Permalink to this definition">¶</a></dt>
+<dd><p>The environment controls when the Learner is done stepping on the Environment
+Here we evaluate the amount of episodes to be played</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.start_env">
+<code class="sig-name descname">start_env</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; bool<a class="headerlink" href="#Environment.Environment.start_env" title="Permalink to this definition">¶</a></dt>
+<dd><p>Typically can be used to launch the environment and set some initial values.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_observation">
+<code class="sig-name descname">get_observation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.get_observation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an observation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_observations">
+<code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.get_observations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns multiple observations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_action">
+<code class="sig-name descname">get_action</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.get_action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an action.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_actions">
+<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.get_actions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns multiple actions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_reward">
+<code class="sig-name descname">get_reward</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.get_reward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the reward stepwise reward.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_rewards">
+<code class="sig-name descname">get_rewards</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.get_rewards" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns stepwise reward for all the agents.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_observation_space">
+<code class="sig-name descname">get_observation_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; numpy.array<a class="headerlink" href="#Environment.Environment.get_observation_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the observation space dimension for the environment.
+:returns: Tuple of integers representing observation dimensions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_action_space">
+<code class="sig-name descname">get_action_space</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Tuple<a class="headerlink" href="#Environment.Environment.get_action_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the action space dimensions for the environment.
+:returns: Tuple of integers representing the actions dimensions.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_current_step">
+<code class="sig-name descname">get_current_step</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#Environment.Environment.get_current_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the current step in the episode.
+:returns: Current step in the episode.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.get_metrics">
+<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.get_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the metrics relevant to the environment.
+:returns: None</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the environment state and parameters.
+:returns: None</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.load_viewer">
+<code class="sig-name descname">load_viewer</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.load_viewer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the environment’s renderer.
+:returns: None</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.normalize_reward">
+<code class="sig-name descname">normalize_reward</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">reward</span></em><span class="sig-paren">)</span> &#x2192; float<a class="headerlink" href="#Environment.Environment.normalize_reward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used to normalize the reward and multiply it by a factor.</p>
+<p>Experimental.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Normalized reward multiplied by some factor given in the config.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Environment.Environment.log">
+<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Environment.Environment.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>If verbose_level is not given, by default will log</p>
+<p>Used to output debug messages.
+:returns: None</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/ref/envs/Environment.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Environment module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+    </div>
+  </body>
+</html>

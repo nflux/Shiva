@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MPIMultiEvaluationWrapper module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">MPIMultiEvaluationWrapper module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-MPIMultiEvaluationWrapper">
+<span id="mpimultievaluationwrapper-module"></span><h1>MPIMultiEvaluationWrapper module<a class="headerlink" href="#module-MPIMultiEvaluationWrapper" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper">
+<em class="property">class </em><code class="sig-prename descclassname">MPIMultiEvaluationWrapper.</code><code class="sig-name descname">MPIMultiEvaluationWrapper</code><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.eval_envs.Evaluation.Evaluation</span></code></p>
+<p>Manages one or more MPIEvaluations</p>
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.launch">
+<code class="sig-name descname">launch</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.launch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Launches the MultiEvaluationWrapper and grabs Agents to be Evaluated</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sends Agents to get evaluated, waits for metrics, and ranks them based on the metrics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_agents_currently_being_evaluated">
+<code class="sig-name descname">get_agents_currently_being_evaluated</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_agents_currently_being_evaluated" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function assumes that Agents from same Learner MUST be evaluated together</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of Agent IDs</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.has_pair">
+<code class="sig-name descname">has_pair</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span> &#x2192; List<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.has_pair" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if agent id has another agent in the same learner so they can play together.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A list of agent IDs.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_role">
+<code class="sig-name descname">get_role</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_role" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_id">
+<code class="sig-name descname">get_learner_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the learner id that corresponds to passed agent id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Integer id representing the learner housing the agent.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_spec">
+<code class="sig-name descname">get_learner_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span> &#x2192; Dict<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_spec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the specs for that learner containing the agent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Dictionary of specifications.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.initial_agent_selection">
+<code class="sig-name descname">initial_agent_selection</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.initial_agent_selection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Randomly selects the initial agents to be sent to which environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.agent_selection">
+<code class="sig-name descname">agent_selection</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">env_rank</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.agent_selection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Randomly selects the agents to be sent to which environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Closes the connection with the MetaLearner.
+:returns: None</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.log">
+<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>If verbose_level is not given, by default will log
+:param msg: Message to be outputted
+:param to_print: Whether you want it as print or debug statement
+:param verbose_level: Level required for the message to be printed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.show_comms">
+<code class="sig-name descname">show_comms</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.show_comms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shows who this MultiEvalWrapper is connected to.
+:returns: None</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/ref/eval_envs/MPIMultiEvaluationWrapper.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">MPIMultiEvaluationWrapper module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+    </div>
+  </body>
+</html>

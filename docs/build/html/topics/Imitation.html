@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Imitation Learning &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Imitation Learning</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="imitation-learning">
+<h1>Imitation Learning<a class="headerlink" href="#imitation-learning" title="Permalink to this headline">¶</a></h1>
+<p>Imitation Learning is a learning technique which aims to mimic expert behavior in order to increase the
+initial training speed and efficiency of a new agent. Our current implementation has two phases and
+can be found <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/algorithms/ImitationAlgorithm.py">here</a>.</p>
+<p class="rubric">1. Supervised Phase</p>
+<p>During the supervised learning phase, the new agent learns on prerecorded episodes from the expert.
+While this Behavior Cloning technique is useful, it has limitations. The major limitation being that
+the new agent is never exposed to dangerous states/observations, because the expert agent knows how to
+avoid such situations. For example, an expert driver is never going to end up with their car facing a
+wall, because a true expert driver knows that there is no value in steering into that position
+(aside from parking that is). To build on the value created from the supervised policy learning we move
+on to the second phase.</p>
+<p class="rubric">2. Dagger Algorithm Phase</p>
+<p>This phase is an iterative process that increases the new agents exposure to new, and potentially dangerous,
+states/observations. In this portion we let the new agent control the trajectories of the episodes and then
+correct it’s behavior with the expert agent. This is like when a teenager is learning to drive for the first
+time. The teenager is in control of the car, but either a parent or driving instructor is there to correct
+bad behavior displayed by the new driver.</p>
+<p>Dagger stands for Data Aggregation, and it works by aggregating all of the data (episodes) traversed during
+the learning process. Initially this is the prerecorded expert episodes, but at each new iteration the episodes
+lead by the new agent policies are added to the dataset. At the start of each iteration a new policy is trained
+on all of the collected data. At it’s core Dagger is supervised training a new policy with episodes created by
+an expert and previous learning iteration policies. While the technique is simple, it is a very powerful and
+effective algorithm. The main downside of the dagger algorithm is that it requires access to the expert during
+the training period.</p>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/Imitation.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Imitation Learning</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+    </div>
+  </body>
+</html>
