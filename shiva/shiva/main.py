@@ -21,7 +21,7 @@ def start_meta(metalearner_class, configs):
     finally:
         pass
 
-def main():
+def start_shiva():
 
     args = get_args()
 

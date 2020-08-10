@@ -467,7 +467,7 @@ class MADDPGAlgorithm(Algorithm):
             None
 
         """
-        self.critic_learning_rate = max(self.configs['Agent']['critic_learning_rate'], self.critic_learning_rate / self.configs['Agent']['lr_decay']['factor'])
+        self.critic_learning_rate = min(self.configs['Agent']['critic_learning_rate'], self.critic_learning_rate / self.configs['Agent']['lr_decay']['factor'])
         self.log(f"Critic LR Restored {self.critic_learning_rate}", verbose_level=3)
         self._update_optimizer()
 

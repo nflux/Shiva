@@ -307,12 +307,10 @@ class MPIEnv(Environment):
 
                 self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
                 self.log("Traj sent to {}".format(learner_ix), verbose_level=1)
-                self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=learner_ix,
-                                  tag=Tags.trajectory_observations)
+                self.learner.Send([self.observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
                 self.learner.Send([self.actions_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_actions)
                 self.learner.Send([self.rewards_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_rewards)
-                self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=learner_ix,
-                                  tag=Tags.trajectory_next_observations)
+                self.learner.Send([self.next_observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_next_observations)
                 self.learner.Send([self.done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
 
             self.done_count += 1
@@ -379,8 +377,8 @@ class MPIEnv(Environment):
                 - Order is maintained
             '''
             self.trajectory_buffers = [MultiAgentTensorBuffer(
-                self.episode_max_length,
-                self.episode_max_length,
+                self.episode_max_length+1,
+                self.episode_max_length+1,
                 self.env.num_instances_per_role[role],
                 self.env.observation_space[role],
                 sum(self.env.action_space[role]['acs_space']),
@@ -392,8 +390,8 @@ class MPIEnv(Environment):
             '''Gym - has only 1 agent per environment and 1 Role'''
             single_role_name = self.env.roles[0]
             self.trajectory_buffers = [MultiAgentTensorBuffer(
-                self.episode_max_length,
-                self.episode_max_length,
+                self.episode_max_length+1,
+                self.episode_max_length+1,
                 self.env.num_agents,  # = 1 always
                 self.env.observation_space[single_role_name],
                 sum(self.env.action_space[single_role_name]['acs_space']),

@@ -136,8 +136,7 @@ class MPILearner(Learner):
         if self._n_success_pulls > 0:
             self.profiler.time('ExperienceReceived', self.done_count, output_quantity=self._n_success_pulls)
         if self.last_metric_received is not None:  # and self.done_count % 20 == 0:
-            self.log("{} {}:{}".format(self._n_success_pulls, self.done_count, self.last_metric_received),
-                     verbose_level=1)
+            self.log("{} {}:{}".format(self._n_success_pulls, self.done_count, self.last_metric_received), verbose_level=1)
 
     def receive_trajectory_numpy(self, env_comm: MPI.Comm) -> None:
         """
@@ -156,11 +155,7 @@ class MPILearner(Learner):
             traj_length_index = self.traj_info['length_index']
             traj_length = self.traj_info['obs_shape'][traj_length_index]
             # assert role == self.roles, "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, role, self.roles)
-            assert set(self.roles).issuperset(
-                set(self.traj_info['role'])), "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id,
-                                                                                                                self.traj_info[
-                                                                                                                    'role'],
-                                                                                                                self.roles)
+            assert set(self.roles).issuperset(set(self.traj_info['role'])), "<Learner{}> Got trajectory for {} while we expect for {}".format(self.id, self.traj_info['role'], self.roles)
 
             observations = np.empty(self.traj_info['obs_shape'], dtype=np.float64)
             env_comm.Recv([observations, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_observations)
@@ -177,11 +172,11 @@ class MPILearner(Learner):
             dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
             env_comm.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
 
-            # self.log(f"Obs {observations.shape} {observations}")
-            # self.log(f"Acs {actions}")
-            # self.log(f"Rew {rewards.shape}")
-            # self.log(f"NextObs {next_observations}")
-            # self.log(f"Dones {dones}")
+            # self.log(f"Obs {observations.shape} {observations}", verbose_level=1)
+            # self.log(f"Acs {actions}", verbose_level=1)
+            # self.log(f"Rew {rewards}", verbose_level=1)
+            # self.log(f"NextObs {next_observations}", verbose_level=1)
+            # self.log(f"Dones {dones}", verbose_level=1)
 
             # self.step_count += traj_length
             self.done_count += 1
@@ -207,12 +202,11 @@ class MPILearner(Learner):
 
             '''VERY IMPORTANT Assuming each individual role has same acs/obs dimension and reward function'''
             exp = list(map(torch.clone, (
-            torch.from_numpy(observations).reshape(traj_length, len(self.traj_info['role']), observations.shape[-1]),
-            torch.from_numpy(actions).reshape(traj_length, len(self.traj_info['role']), actions.shape[-1]),
-            torch.from_numpy(rewards).reshape(traj_length, len(self.traj_info['role']), rewards.shape[-1]),
-            torch.from_numpy(next_observations).reshape(traj_length, len(self.traj_info['role']),
-                                                        next_observations.shape[-1]),
-            torch.from_numpy(dones).reshape(traj_length, len(self.traj_info['role']), dones.shape[-1])
+                torch.from_numpy(observations).reshape(traj_length, len(self.traj_info['role']), observations.shape[-1]),
+                torch.from_numpy(actions).reshape(traj_length, len(self.traj_info['role']), actions.shape[-1]),
+                torch.from_numpy(rewards).reshape(traj_length, len(self.traj_info['role']), rewards.shape[-1]),
+                torch.from_numpy(next_observations).reshape(traj_length, len(self.traj_info['role']), next_observations.shape[-1]),
+                torch.from_numpy(dones).reshape(traj_length, len(self.traj_info['role']), dones.shape[-1])
             )))
             self.buffer.push(exp)
 
