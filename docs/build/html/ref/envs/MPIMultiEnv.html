@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPIMultiEnv module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -36,99 +36,8 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="module-MPIMultiEnv">
-<span id="mpimultienv-module"></span><h1>MPIMultiEnv module<a class="headerlink" href="#module-MPIMultiEnv" title="Permalink to this headline">¶</a></h1>
-<dl class="py class">
-<dt id="MPIMultiEnv.MPIMultiEnv">
-<em class="property">class </em><code class="sig-prename descclassname">MPIMultiEnv.</code><code class="sig-name descname">MPIMultiEnv</code><a class="headerlink" href="#MPIMultiEnv.MPIMultiEnv" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.envs.Environment.Environment</span></code></p>
-<p>MPI Enabled Multi-Environment Wrapper</p>
-<p>Manages clusters of environments for experience generation.</p>
-<dl class="py method">
-<dt id="MPIMultiEnv.MPIMultiEnv.launch">
-<code class="sig-name descname">launch</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEnv.MPIMultiEnv.launch" title="Permalink to this definition">¶</a></dt>
-<dd><p>Connects to IO Handler, launches environments, grabs configuration, and connects to learners.</p>
-<p>Also receives receives initial arguments and then begins running internal loop.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MPIMultiEnv.MPIMultiEnv.run">
-<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEnv.MPIMultiEnv.run" title="Permalink to this definition">¶</a></dt>
-<dd><p>Starts running the environments and collecting the trajectories.</p>
-<p>Periodically reloads updated agents.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MPIMultiEnv.MPIMultiEnv.check_state">
-<code class="sig-name descname">check_state</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEnv.MPIMultiEnv.check_state" title="Permalink to this definition">¶</a></dt>
-<dd><p>Checks if the environment has finished an episode or if it is done running episodes.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MPIMultiEnv.MPIMultiEnv.reload_match_agents">
-<code class="sig-name descname">reload_match_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bypass_request</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEnv.MPIMultiEnv.reload_match_agents" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads in updated agents and assigns them to the appropriate environments.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MPIMultiEnv.MPIMultiEnv.get_role2agent_ix">
-<code class="sig-name descname">get_role2agent_ix</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span></em><span class="sig-paren">)</span> &#x2192; Dict<a class="headerlink" href="#MPIMultiEnv.MPIMultiEnv.get_role2agent_ix" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create Role-&gt;agent_id mapping for local usage</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Dictionary mapping agent indeces to roles.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MPIMultiEnv.MPIMultiEnv.load_agents">
-<code class="sig-name descname">load_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">role2learner_spec</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bypass_request</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>object<span class="p">]</span><a class="headerlink" href="#MPIMultiEnv.MPIMultiEnv.load_agents" title="Permalink to this definition">¶</a></dt>
-<dd><p>Loads in agents and loads updated agents when MetaLearner has updated agents.</p>
-<p>Also maps the agents to the correct role.
-:returns: List of agents</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MPIMultiEnv.MPIMultiEnv.close">
-<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEnv.MPIMultiEnv.close" title="Permalink to this definition">¶</a></dt>
-<dd><p>Closes the connections to the cluster of environments its managing.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MPIMultiEnv.MPIMultiEnv.log">
-<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEnv.MPIMultiEnv.log" title="Permalink to this definition">¶</a></dt>
-<dd><p>If verbose_level is not given, by default will log
-:returns: None</p>
-</dd></dl>
-
-</dd></dl>
-
+  <div class="section" id="mpimultienv-module">
+<h1>MPIMultiEnv module<a class="headerlink" href="#mpimultienv-module" title="Permalink to this headline">¶</a></h1>
 </div>
 
 
@@ -174,7 +83,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>

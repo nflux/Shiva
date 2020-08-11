@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OU_Noise_Exploration module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -36,8 +36,33 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="ou-noise-exploration-module">
-<h1>OU_Noise_Exploration module<a class="headerlink" href="#ou-noise-exploration-module" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-OU_Noise_Exploration">
+<span id="ou-noise-exploration-module"></span><h1>OU_Noise_Exploration module<a class="headerlink" href="#module-OU_Noise_Exploration" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="OU_Noise_Exploration.OU_Noise_Exploration">
+<em class="property">class </em><code class="sig-prename descclassname">OU_Noise_Exploration.</code><code class="sig-name descname">OU_Noise_Exploration</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action_size</span></em>, <em class="sig-param"><span class="n">config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#OU_Noise_Exploration.OU_Noise_Exploration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">utils.Base_Exploration_Strategy.Base_Exploration_Strategy</span></code></p>
+<p><a class="reference external" href="https://github.com/p-christ/Deep-Reinforcement-Learning-Algorithms-with-PyTorch/blob/master/exploration_strategies/OU_Noise_Exploration.py">https://github.com/p-christ/Deep-Reinforcement-Learning-Algorithms-with-PyTorch/blob/master/exploration_strategies/OU_Noise_Exploration.py</a></p>
+<dl class="py method">
+<dt id="OU_Noise_Exploration.OU_Noise_Exploration.perturb_action_for_exploration_purposes">
+<code class="sig-name descname">perturb_action_for_exploration_purposes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action_info</span></em><span class="sig-paren">)</span><a class="headerlink" href="#OU_Noise_Exploration.OU_Noise_Exploration.perturb_action_for_exploration_purposes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perturbs the action of the agent to encourage exploration</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="OU_Noise_Exploration.OU_Noise_Exploration.add_exploration_rewards">
+<code class="sig-name descname">add_exploration_rewards</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">reward_info</span></em><span class="sig-paren">)</span><a class="headerlink" href="#OU_Noise_Exploration.OU_Noise_Exploration.add_exploration_rewards" title="Permalink to this definition">¶</a></dt>
+<dd><p>Actions intrinsic rewards to encourage exploration</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="OU_Noise_Exploration.OU_Noise_Exploration.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#OU_Noise_Exploration.OU_Noise_Exploration.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the noise process</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 
 
@@ -83,7 +108,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>

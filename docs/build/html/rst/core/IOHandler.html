@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IOHandler module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -43,8 +43,19 @@
 <em class="property">class </em><code class="sig-prename descclassname">IOHandler.</code><code class="sig-name descname">IOHandlerServer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">stop_event</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IOHandler.IOHandlerServer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.core.communication_objects.service_iohandler_pb2_grpc.IOHandlerServicer</span></code></p>
 <p>IOHandler Server class in order to avoid I/O access errors when saving and loading models.
-Every Shiva component that need IO access will need to instantiate a stub in order to communicate with the IOHandler. This communication is based on gRPC protocol.
+Every Shiva component that need IO access will need to instantiate a stub in order to communicate with the IOHandler.
+This communication is based on gRPC protocol.
 The IOHandler will prevent simultaneous I/O access from the components using specific directories.</p>
+<dl class="py attribute">
+<dt id="IOHandler.IOHandlerServer.meta">
+<code class="sig-name descname">meta</code><em class="property"> = &lt;mpi4py.MPI.Intercomm object&gt;</em><a class="headerlink" href="#IOHandler.IOHandlerServer.meta" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="IOHandler.IOHandlerServer.info">
+<code class="sig-name descname">info</code><em class="property"> = &lt;mpi4py.MPI.Status object&gt;</em><a class="headerlink" href="#IOHandler.IOHandlerServer.info" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt id="IOHandler.IOHandlerServer.AskIORequest">
 <code class="sig-name descname">AskIORequest</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">simple_message</span><span class="p">:</span> <span class="n">shiva.core.communication_objects.helpers_pb2.SimpleMessage</span></em>, <em class="sig-param"><span class="n">context</span></em><span class="sig-paren">)</span> &#x2192; shiva.core.communication_objects.helpers_pb2.SimpleMessage<a class="headerlink" href="#IOHandler.IOHandlerServer.AskIORequest" title="Permalink to this definition">¶</a></dt>
@@ -67,48 +78,14 @@ rpc SendConfig(ConfigProto) returns (Empty);</p>
 
 </dd></dl>
 
-<dl class="py class">
-<dt id="IOHandler.gRPC_IOHandlerStub">
-<em class="property">class </em><code class="sig-prename descclassname">IOHandler.</code><code class="sig-name descname">gRPC_IOHandlerStub</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span><span class="p">:</span> <span class="n">Dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IOHandler.gRPC_IOHandlerStub" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.core.communication_objects.service_iohandler_pb2_grpc.IOHandlerStub</span></code></p>
-<dl class="py method">
-<dt id="IOHandler.gRPC_IOHandlerStub.request_io">
-<code class="sig-name descname">request_io</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spec</span></em>, <em class="sig-param"><span class="n">url</span></em>, <em class="sig-param"><span class="n">wait_for_access</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IOHandler.gRPC_IOHandlerStub.request_io" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="IOHandler.gRPC_IOHandlerStub.done_io">
-<code class="sig-name descname">done_io</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">spec</span></em>, <em class="sig-param"><span class="n">url</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IOHandler.gRPC_IOHandlerStub.done_io" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="IOHandler.gRPC_IOHandlerStub.log">
-<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IOHandler.gRPC_IOHandlerStub.log" title="Permalink to this definition">¶</a></dt>
-<dd><p>If verbose_level is not given, by default will log</p>
-</dd></dl>
-
-</dd></dl>
-
 <dl class="py function">
 <dt id="IOHandler.get_io_stub">
-<code class="sig-prename descclassname">IOHandler.</code><code class="sig-name descname">get_io_stub</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#IOHandler.gRPC_IOHandlerStub" title="IOHandler.gRPC_IOHandlerStub">IOHandler.gRPC_IOHandlerStub</a><a class="headerlink" href="#IOHandler.get_io_stub" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function that returns a IOHandler Client</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>*args</strong> – </p></li>
-<li><p><strong>**kwargs</strong> – </p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>gRPC_IOHandlerStub</p>
-</dd>
-</dl>
-</dd></dl>
+<code class="sig-prename descclassname">IOHandler.</code><code class="sig-name descname">get_io_stub</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IOHandler.get_io_stub" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py function">
 <dt id="IOHandler.serve_iohandler">
-<code class="sig-prename descclassname">IOHandler.</code><code class="sig-name descname">serve_iohandler</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">address</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">server_args</span><span class="p">:</span> <span class="n">Tuple</span> <span class="o">=</span> <span class="default_value">()</span></em>, <em class="sig-param"><span class="n">max_workers</span><span class="o">=</span><span class="default_value">5</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IOHandler.serve_iohandler" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">IOHandler.</code><code class="sig-name descname">serve_iohandler</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">address</span></em>, <em class="sig-param"><span class="n">server_args</span><span class="o">=</span><span class="default_value">()</span></em>, <em class="sig-param"><span class="n">max_workers</span><span class="o">=</span><span class="default_value">5</span></em><span class="sig-paren">)</span><a class="headerlink" href="#IOHandler.serve_iohandler" title="Permalink to this definition">¶</a></dt>
 <dd><p>Starting function of the gRPC server</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -174,7 +151,7 @@ rpc SendConfig(ConfigProto) returns (Empty);</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>

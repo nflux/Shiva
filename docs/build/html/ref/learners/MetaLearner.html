@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MetaLearner module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -40,11 +40,21 @@
 <span id="metalearner-module"></span><h1>MetaLearner module<a class="headerlink" href="#module-MetaLearner" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt id="MetaLearner.MetaLearner">
-<em class="property">class </em><code class="sig-prename descclassname">MetaLearner.</code><code class="sig-name descname">MetaLearner</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>Any<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">profile</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">MetaLearner.</code><code class="sig-name descname">MetaLearner</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span></em>, <em class="sig-param"><span class="n">profile</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py method">
+<dt id="MetaLearner.MetaLearner.exploit_explore">
+<code class="sig-name descname">exploit_explore</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.exploit_explore" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MetaLearner.MetaLearner.genetic_crossover">
+<code class="sig-name descname">genetic_crossover</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.genetic_crossover" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="MetaLearner.MetaLearner.evolve">
-<code class="sig-name descname">evolve</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MetaLearner.MetaLearner.evolve" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">evolve</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.evolve" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs evolution procedures. It uses the rankings received by the evaluations in order to send a evolution config to the Learner.
 This function is executed only when a Learner has requested an evolution config.</p>
 <dl class="field-list simple">
@@ -55,8 +65,18 @@ This function is executed only when a Learner has requested an evolution config.
 </dd></dl>
 
 <dl class="py method">
+<dt id="MetaLearner.MetaLearner.evaluate">
+<code class="sig-name descname">evaluate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MetaLearner.MetaLearner.record_metrics">
+<code class="sig-name descname">record_metrics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.record_metrics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="MetaLearner.MetaLearner.create_learner">
-<code class="sig-name descname">create_learner</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; shiva.learners.Learner.Learner<a class="headerlink" href="#MetaLearner.MetaLearner.create_learner" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">create_learner</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.create_learner" title="Permalink to this definition">¶</a></dt>
 <dd><p>Since Shiva is currently developed under a distributed architecture, this function is not being used but instead <cite>_launch_learners</cite> where the Learners processes are spawned.
 This function should be used for a non-distributed architecture.</p>
 <dl class="field-list simple">
@@ -67,8 +87,18 @@ This function should be used for a non-distributed architecture.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt id="MetaLearner.MetaLearner.get_id">
+<code class="sig-name descname">get_id</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.get_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MetaLearner.MetaLearner.get_new_learner_id">
+<code class="sig-name descname">get_new_learner_id</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.get_new_learner_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt id="MetaLearner.MetaLearner.get_folder_name">
-<code class="sig-name descname">get_folder_name</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; str<a class="headerlink" href="#MetaLearner.MetaLearner.get_folder_name" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_folder_name</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.get_folder_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Format to be used for the folder name where we are gonna save all checkpoints.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -79,6 +109,11 @@ This function should be used for a non-distributed architecture.</p>
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="py method">
+<dt id="MetaLearner.MetaLearner.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MetaLearner.MetaLearner.save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt id="MetaLearner.MetaLearner.log">
@@ -144,7 +179,7 @@ This function should be used for a non-distributed architecture.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>

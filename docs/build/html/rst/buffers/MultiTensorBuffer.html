@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MultiTensorBuffer module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -40,7 +40,7 @@
 <span id="multitensorbuffer-module"></span><h1>MultiTensorBuffer module<a class="headerlink" href="#module-MultiTensorBuffer" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt id="MultiTensorBuffer.MultiAgentTensorBuffer">
-<em class="property">class </em><code class="sig-prename descclassname">MultiTensorBuffer.</code><code class="sig-name descname">MultiAgentTensorBuffer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">capacity</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">batch_size</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">num_agents</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">obs_dim</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">acs_dim</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">configs</span><span class="p">:</span> <span class="n">Dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">MultiTensorBuffer.</code><code class="sig-name descname">MultiAgentTensorBuffer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_size</span></em>, <em class="sig-param"><span class="n">batch_size</span></em>, <em class="sig-param"><span class="n">num_agents</span></em>, <em class="sig-param"><span class="n">obs_dim</span></em>, <em class="sig-param"><span class="n">acs_dim</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.buffers.ReplayBuffer.ReplayBuffer</span></code></p>
 <p>Multi Agent Experience Replay Tensor Buffer</p>
 <blockquote>
@@ -50,12 +50,11 @@ the reinforcement learning loop. This buffer utilizes a stochastic sampling meth
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>capacity</strong> (<em>int</em>) – The maximum amount of experiences to be stored in the Replay Buffer.</p></li>
+<li><p><strong>max_size</strong> (<em>int</em>) – The maximum amount of experiences to be stored in the Replay Buffer.</p></li>
 <li><p><strong>batch_size</strong> (<em>int</em>) – The amount of transitions to be sampled very update.</p></li>
-<li><p><strong>num_agents</strong> (<em>int</em>) – The number of agents that will be using the replay buffer. For memory allocation purposes.</p></li>
-<li><p><strong>obd_dim</strong> (<em>int</em>) – The expected observation dimension size.</p></li>
-<li><p><strong>acs_dim</strong> (<em>int</em>) – The expected action dimension size.</p></li>
-<li><p><strong>configs</strong> (<em>Dict</em>) – Global configs</p></li>
+<li><p><strong>num_agents</strong> – The number of agents that will be using the replay buffer. For memory allocation purposes.</p></li>
+<li><p><strong>obd_dim</strong> – The expected observation dimension size.</p></li>
+<li><p><strong>acs_dim</strong> – The expected action dimension size.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -64,7 +63,7 @@ the reinforcement learning loop. This buffer utilizes a stochastic sampling meth
 </dl>
 <dl class="py method">
 <dt id="MultiTensorBuffer.MultiAgentTensorBuffer.push">
-<code class="sig-name descname">push</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">exps</span><span class="p">:</span> <span class="n">List</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.push" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">push</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">exps</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.push" title="Permalink to this definition">¶</a></dt>
 <dd><p>Used to store experiences in the Replay Buffer.</p>
 <p>Supports storing an entire trajectory of experiences or a single experience.</p>
 <dl class="field-list simple">
@@ -79,14 +78,15 @@ the reinforcement learning loop. This buffer utilizes a stochastic sampling meth
 
 <dl class="py method">
 <dt id="MultiTensorBuffer.MultiAgentTensorBuffer.sample">
-<code class="sig-name descname">sample</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">device</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">'cpu'</span></em><span class="sig-paren">)</span> &#x2192; Tuple<span class="p">[</span>None._VariableFunctions.tensor<span class="p">, </span>None._VariableFunctions.tensor<span class="p">, </span>None._VariableFunctions.tensor<span class="p">, </span>None._VariableFunctions.tensor<span class="p">, </span>None._VariableFunctions.tensor<span class="p">]</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.sample" title="Permalink to this definition">¶</a></dt>
-<dd><p>Gets a stochastic sample from buffer.</p>
+<code class="sig-name descname">sample</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">'cpu'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets a stochastic sample from buffer.
+:param agent_id: Used to specify what agent’s buffer to sample from.
+:type agent_id: int
+:param device: Used to specify if you want the sample to placed on cpu or gpu.
+:type device: str</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>device</strong> (<em>str</em>) – Used to specify if you want the sample to placed on cpu or gpu.</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>A tuple of tensors.</p>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A tuple of tensors.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -128,112 +128,13 @@ the reinforcement learning loop. This buffer utilizes a stochastic sampling meth
 
 <dl class="py method">
 <dt id="MultiTensorBuffer.MultiAgentTensorBuffer.reset">
-<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.reset" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.reset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Empties all the buffers and resets the buffer parameters.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>None</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.MultiAgentTensorBuffer.get_metrics">
-<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.MultiAgentTensorBuffer.get_metrics" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer">
-<em class="property">class </em><code class="sig-prename descclassname">MultiTensorBuffer.</code><code class="sig-name descname">PrioritizedMultiAgentTensorBuffer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">num_agents</span></em>, <em class="sig-param"><span class="n">obs_dim</span></em>, <em class="sig-param"><span class="n">acs_dim</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.buffers.ReplayBuffer.ReplayBuffer</span></code></p>
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.push">
-<code class="sig-name descname">push</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">exps</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.push" title="Permalink to this definition">¶</a></dt>
-<dd><p>Pushes experiences into the buffer.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.sample">
-<code class="sig-name descname">sample</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">device</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.sample" title="Permalink to this definition">¶</a></dt>
-<dd><p>Samples either stochastically or by priority depending on the config and epsilon.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.stochastic_sample">
-<code class="sig-name descname">stochastic_sample</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">'cpu'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.stochastic_sample" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.prioritized_sample">
-<code class="sig-name descname">prioritized_sample</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">device</span><span class="o">=</span><span class="default_value">'cpu'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.prioritized_sample" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.update_td_errors">
-<code class="sig-name descname">update_td_errors</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">td_errors</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.update_td_errors" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update the td error values for sampled experiences</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.normalize_td_errors">
-<code class="sig-name descname">normalize_td_errors</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">td_errors</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.normalize_td_errors" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.importance_sampling_weights">
-<em class="property">property </em><code class="sig-name descname">importance_sampling_weights</code><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.importance_sampling_weights" title="Permalink to this definition">¶</a></dt>
-<dd><p>Importance Sampling</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.update_epsilon_scale">
-<code class="sig-name descname">update_epsilon_scale</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">num_samples</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.update_epsilon_scale" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.update_beta_scale">
-<code class="sig-name descname">update_beta_scale</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">num_samples</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.update_beta_scale" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.decay_value">
-<code class="sig-name descname">decay_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start</span></em>, <em class="sig-param"><span class="n">decay_end_step</span></em>, <em class="sig-param"><span class="n">current_step_count</span></em>, <em class="sig-param"><span class="n">degree</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.decay_value" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.growth_value">
-<code class="sig-name descname">growth_value</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start</span></em>, <em class="sig-param"><span class="n">decay_end_step</span></em>, <em class="sig-param"><span class="n">current_step_count</span></em>, <em class="sig-param"><span class="n">degree</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.growth_value" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.get_metrics">
-<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span></em>, <em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.get_metrics" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.all">
-<code class="sig-name descname">all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.all" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns all buffers</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.all_numpy">
-<code class="sig-name descname">all_numpy</code><span class="sig-paren">(</span><em class="sig-param">astype=&lt;class 'numpy.float64'&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.all_numpy" title="Permalink to this definition">¶</a></dt>
-<dd><p>For data passing</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.agent_numpy">
-<code class="sig-name descname">agent_numpy</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em>, <em class="sig-param"><span class="n">reshape_fn</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.agent_numpy" title="Permalink to this definition">¶</a></dt>
-<dd><p>For data passing</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.reset">
-<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiTensorBuffer.PrioritizedMultiAgentTensorBuffer.reset" title="Permalink to this definition">¶</a></dt>
-<dd><p>Resets the buffer parameters</p>
 </dd></dl>
 
 </dd></dl>
@@ -283,7 +184,7 @@ the reinforcement learning loop. This buffer utilizes a stochastic sampling meth
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>

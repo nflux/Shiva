@@ -1,0 +1,267 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration Files &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Configuration Files</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="configuration-files">
+<h1>Configuration Files<a class="headerlink" href="#configuration-files" title="Permalink to this headline">¶</a></h1>
+<p>We store all hyperparameters as well as data needed to run the models inside of two ini configuration files, the main and agent files. The naming
+convention is that the main config is of the form</p>
+<p>Env-EnvName.ini</p>
+<p>and</p>
+<p>Agent-EnvName.ini</p>
+<p>Shiva’s architecture requires Metalearner, Learners, Algorithms, Agents, Networks, Environments, and Replay Buffers components to be able
+to run. In order to set up a run you need to configure each module in your pipeline. As such the configuration file requires a section for
+each component. We split up</p>
+<p>Therefore your configuration file might look something like this:</p>
+<p class="rubric">Test config for MADDPG Gym Cartpole</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>options within sections cannot have the same names</p>
+</div>
+</div>
+<div class="section" id="main-config-gym-cartpole-ini">
+<h1>Main Config: Gym-CartPole.ini<a class="headerlink" href="#main-config-gym-cartpole-ini" title="Permalink to this headline">¶</a></h1>
+<p class="rubric">MetaLearner Section</p>
+<p>The Metalearner oversees the learners and will be able to do population based tuning on the hyperparameters so how you want the Metalearner to run
+would be configured here.</p>
+<p>You specify the type of MetaLearner, the mode (production or evaluation), whether there is evolution, and if we are optimizing the hyperparameters.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[MetaLearner]</span>
+<span class="na">type</span>                         <span class="o">=</span>   <span class="s">&#39;MPIPBTMetaLearner&#39;</span>
+<span class="na">pbt</span>                          <span class="o">=</span>   <span class="s">False</span>
+<span class="na">num_mevals</span>                   <span class="o">=</span>   <span class="s">1</span>
+<span class="na">learners_map</span>                 <span class="o">=</span>   <span class="s">{&#39;configs/MADDPG/Agent-Cartpole.ini&#39;: [&#39;CartPole-v0&#39;]}</span>
+<span class="na">num_learners_maps</span>            <span class="o">=</span>   <span class="s">1</span>
+<span class="na">num_menvs_per_learner_map</span>    <span class="o">=</span>   <span class="s">1</span>
+<span class="na">manual_seed</span>                  <span class="o">=</span>   <span class="s">4</span>
+</pre></div>
+</div>
+<p class="rubric">Evaluation Section</p>
+<p>If you are doing evaluation you need to specify the type of environment you trained your agents in, the actual environment, the number of
+evaluation episodes, where you are loading the agent for evaluation from, what metrics you are going to measure by, and whether or not we’re
+going to render the evaluation.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Evaluation]</span>
+<span class="na">device</span>               <span class="o">=</span>   <span class="s">&quot;cpu&quot;</span>
+<span class="na">expert_population</span>    <span class="o">=</span>   <span class="s">0.2</span>
+<span class="na">num_evals</span>            <span class="o">=</span>   <span class="s">3</span>
+<span class="na">num_envs</span>             <span class="o">=</span>   <span class="s">1</span>
+<span class="na">eval_episodes</span>        <span class="o">=</span>   <span class="s">1</span>
+</pre></div>
+</div>
+<p class="rubric">Environment Section</p>
+<p>Here you specify the type of environment, the name of the environment, whether or not we are rendering the environment, and normalization values.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Environment]</span>
+<span class="na">device</span>               <span class="o">=</span>   <span class="s">&#39;gpu&#39;</span>
+<span class="na">type</span>                 <span class="o">=</span>   <span class="s">&#39;GymEnvironment&#39;</span>
+<span class="na">env_name</span>             <span class="o">=</span>   <span class="s">&#39;CartPole-v0&#39;</span>
+<span class="na">episode_max_length</span>   <span class="o">=</span>   <span class="s">200</span>
+<span class="na">expert_reward_range</span>  <span class="o">=</span>   <span class="s">{&#39;CartPole-v0&#39;: [190, 200]}</span>
+<span class="na">num_envs</span>             <span class="o">=</span>   <span class="s">1</span>
+<span class="na">render</span>               <span class="o">=</span>   <span class="s">False</span>
+<span class="na">port</span>                 <span class="o">=</span>   <span class="s">5010</span>
+<span class="na">normalize</span>            <span class="o">=</span>   <span class="s">False</span>
+<span class="na">reward_factor</span>        <span class="o">=</span>   <span class="s">0.1</span>
+<span class="na">min_reward</span>           <span class="o">=</span>   <span class="s">0</span>
+<span class="na">max_reward</span>           <span class="o">=</span>   <span class="s">1</span>
+<span class="na">episodic_load_rate</span>   <span class="o">=</span>   <span class="s">1</span>
+</pre></div>
+</div>
+<p class="rubric">Admin Section</p>
+<p>Here you need to specify where you want to save and if you want traceback warnings and if you do want to save then to what path.</p>
+<p>File management settings. Where to save runs. Whether or not to save and if you want traceback warnings.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Admin]</span>
+<span class="na">iohandler_address</span>   <span class="o">=</span> <span class="s">&#39;localhost:50001&#39;</span>
+<span class="na">print_debug</span>         <span class="o">=</span> <span class="s">True</span>
+<span class="na">save</span>                <span class="o">=</span> <span class="s">True</span>
+<span class="na">traceback</span>           <span class="o">=</span> <span class="s">True</span>
+<span class="na">directory</span>           <span class="o">=</span> <span class="s">{&#39;runs&#39;: &#39;/runs/Gym-Cartpole/&#39;}</span>
+<span class="na">profiler</span>            <span class="o">=</span> <span class="s">True</span>
+<span class="na">time_sleep</span> <span class="o">=</span> <span class="s">{&#39;MetaLearner&#39;:    0,</span>
+<span class="s">              &#39;MultiEnv&#39;:        0.01,</span>
+<span class="s">              &#39;EvalWrapper&#39;:     1,</span>
+<span class="s">              &#39;Evaluation&#39;:      0.1}</span>
+
+<span class="c1">; verbose levels for logs and terminal output</span>
+<span class="c1">;   0 deactivated</span>
+<span class="c1">;   1 debug</span>
+<span class="c1">;   2 info</span>
+<span class="c1">;   3 details</span>
+<span class="na">log_verbosity</span> <span class="o">=</span> <span class="s">{</span>
+<span class="s">    &#39;Admin&#39;:        0,</span>
+<span class="s">    &#39;IOHandler&#39;:    1,</span>
+<span class="s">    &#39;MetaLearner&#39;:  1,</span>
+<span class="s">    &#39;Learner&#39;:      3,</span>
+<span class="s">    &#39;Agent&#39;:        0,</span>
+<span class="s">    &#39;Algorithm&#39;:    0,</span>
+<span class="s">    &#39;MultiEnv&#39;:     1,</span>
+<span class="s">    &#39;Env&#39;:          1,</span>
+<span class="s">    &#39;EvalWrapper&#39;:  1,</span>
+<span class="s">    &#39;Evaluation&#39;:   3,</span>
+<span class="s">    &#39;EvalEnv&#39;:      0</span>
+<span class="s">    }</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="agent-config-agent-cartpole-ini">
+<h1>Agent Config: Agent-Cartpole.ini<a class="headerlink" href="#agent-config-agent-cartpole-ini" title="Permalink to this headline">¶</a></h1>
+<p class="rubric">Learner Section</p>
+<p>Here you need to specify the type of learner, how many episodes to run, how often to save a checkpoint, whether or not we are loading agents
+in or training a fresh batch.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Learner]</span>
+<span class="na">episodes</span>                     <span class="o">=</span> <span class="s">5000</span>
+<span class="na">evaluate</span>                     <span class="o">=</span> <span class="s">False</span>
+<span class="na">load_agents</span>                  <span class="o">=</span> <span class="s">False</span>
+<span class="na">save_checkpoint_episodes</span>     <span class="o">=</span> <span class="s">50</span>
+<span class="na">episodes_to_update</span>           <span class="o">=</span> <span class="s">1</span>
+<span class="na">n_traj_pulls</span>                 <span class="o">=</span> <span class="s">5</span>
+<span class="na">evolve</span>                       <span class="o">=</span> <span class="s">False</span>
+<span class="na">initial_evolution_episodes</span>   <span class="o">=</span> <span class="s">25</span>
+<span class="na">evolution_episodes</span>           <span class="o">=</span> <span class="s">125</span>
+<span class="na">p_value</span>                      <span class="o">=</span> <span class="s">0.05</span>
+<span class="na">perturb_factor</span>               <span class="o">=</span> <span class="s">[0.8, 1.2]</span>
+</pre></div>
+</div>
+<p class="rubric">Algorithm Section</p>
+<p>In the Algorithm section you need to specify the type of algorithm, whether or not you’re using a replay buffer, the loss function,
+regularizer, whether or not we are using recurrence, epsilon greedy strategy, and hard update frequency.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Algorithm]</span>
+<span class="na">type</span>                 <span class="o">=</span> <span class="s">&quot;MADDPGAlgorithm&quot;</span>
+<span class="na">method</span>               <span class="o">=</span> <span class="s">&quot;permutations&quot;</span>
+<span class="na">update_iterations</span>    <span class="o">=</span> <span class="s">1</span>
+<span class="na">loss_function</span>        <span class="o">=</span> <span class="s">&#39;MSELoss&#39;</span>
+<span class="na">gamma</span>                <span class="o">=</span> <span class="s">0.999</span>
+<span class="na">tau</span>                  <span class="o">=</span> <span class="s">0.01</span>
+</pre></div>
+</div>
+<p class="rubric">Replay Buffer Section</p>
+<p>You need to specify the type of the replay buffer you are using, the buffer’s capacity or max size, and the size of the batch we’ll be
+updating the networks on.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Buffer]</span>
+<span class="na">type</span>         <span class="o">=</span> <span class="s">&#39;MultiTensorBuffer.MultiAgentTensorBuffer&#39;</span>
+<span class="na">capacity</span>     <span class="o">=</span> <span class="s">10000</span>
+<span class="na">batch_size</span>   <span class="o">=</span> <span class="s">64</span>
+</pre></div>
+</div>
+<p class="rubric">Agent Section</p>
+<p>For the agent we only specify the optimizer and the learning rate.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Agent]</span>
+<span class="na">hp_random</span>            <span class="o">=</span> <span class="s">False</span>
+<span class="na">lr_factors</span>           <span class="o">=</span> <span class="s">[1000, 10000]</span>
+<span class="na">lr_uniform</span>           <span class="o">=</span> <span class="s">[1, 10]</span>
+<span class="na">epsilon_range</span>        <span class="o">=</span> <span class="s">[0, 0.5]</span>
+<span class="na">ou_range</span>             <span class="o">=</span> <span class="s">[0, 0.5]</span>
+
+<span class="na">optimizer_function</span>   <span class="o">=</span> <span class="s">&#39;Adam&#39;</span>
+<span class="na">actor_learning_rate</span>  <span class="o">=</span> <span class="s">0.001</span>
+<span class="na">critic_learning_rate</span> <span class="o">=</span> <span class="s">0.001</span>
+<span class="na">lr_decay</span>             <span class="o">=</span> <span class="s">{&#39;factor&#39;: 0.75, &#39;average_episodes&#39;: 50, &#39;wait_episodes_to_decay&#39;: 5}</span>
+<span class="na">exploration_steps</span>    <span class="o">=</span> <span class="s">1000</span>
+
+<span class="na">actions_range</span>        <span class="o">=</span> <span class="s">[-1, 1]</span>
+<span class="na">epsilon_start</span>        <span class="o">=</span> <span class="s">0.95</span>
+<span class="na">epsilon_end</span>          <span class="o">=</span> <span class="s">0.01</span>
+<span class="na">epsilon_episodes</span>     <span class="o">=</span> <span class="s">500</span>
+<span class="na">epsilon_decay_degree</span> <span class="o">=</span> <span class="s">2</span>
+
+<span class="na">noise_start</span>          <span class="o">=</span> <span class="s">0.95</span>
+<span class="na">noise_end</span>            <span class="o">=</span> <span class="s">0.1</span>
+<span class="na">noise_episodes</span>       <span class="o">=</span> <span class="s">500</span>
+<span class="na">noise_decay_degree</span>   <span class="o">=</span> <span class="s">2</span>
+</pre></div>
+</div>
+<p class="rubric">Network Section</p>
+<p>Here you need to specify the network structure.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Network]</span>
+<span class="na">actor</span>  <span class="o">=</span> <span class="s">{&#39;layers&#39;: [128], &#39;activation_function&#39;: [&#39;ReLU&#39;], &#39;output_function&#39;: None, &#39;last_layer&#39;: True}</span>
+<span class="na">critic</span> <span class="o">=</span> <span class="s">{&#39;layers&#39;: [128], &#39;activation_function&#39;: [&#39;ReLU&#39;], &#39;output_function&#39;: None, &#39;last_layer&#39;: True}</span>
+</pre></div>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Configuration Files</a></li>
+<li><a class="reference internal" href="#main-config-gym-cartpole-ini">Main Config: Gym-CartPole.ini</a></li>
+<li><a class="reference internal" href="#agent-config-agent-cartpole-ini">Agent Config: Agent-Cartpole.ini</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/howto/config-files.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Configuration Files</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

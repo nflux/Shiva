@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick install guide &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Quick install guide</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="quick-install-guide">
+<h1>Quick install guide<a class="headerlink" href="#quick-install-guide" title="Permalink to this headline">¶</a></h1>
+<p>Before you can use Shiva, you’ll need to satisfy its requirements and install its dependencies.</p>
+<div class="section" id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Ubuntu 16.04 or Mac OS</p></li>
+<li><p>Python 3.7</p></li>
+<li><p>Git</p></li>
+<li><p>pip (Python Package Installer)</p></li>
+</ul>
+</div>
+<div class="section" id="installing-shiva">
+<h2>Installing Shiva<a class="headerlink" href="#installing-shiva" title="Permalink to this headline">¶</a></h2>
+<p>In order to install Shiva, you have to get all parts of Shiva functional.</p>
+<p>Start by cloning the repo (either thru HTTP or SSH),</p>
+<p>It’s highly recommended that you create a new virtual environment for the project,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">venv</span> <span class="n">shiva_env</span>
+</pre></div>
+</div>
+<p>Activate the virtual environment,</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span> shiva_env/bin/activate
+</pre></div>
+</div>
+<p>Then we can go into the project structure and start setting up components and dependencies.</p>
+<p>Run the below command in order to install the requirements.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bash ./Control-Tasks/setup/install.sh
+</pre></div>
+</div>
+</div>
+<div class="section" id="install-openmpi">
+<h2>Install OpenMPI<a class="headerlink" href="#install-openmpi" title="Permalink to this headline">¶</a></h2>
+<p>For the ability to run inter-process communication runs,</p>
+<div class="highlight-linux notranslate"><div class="highlight"><pre><span></span>sudo apt-get install openmpi-bin openmpi-common openssh-client openssh-server libopenmpi1.3 libopenmpi-dbg libopenmpi-dev
+</pre></div>
+</div>
+</div>
+<div class="section" id="install-robocup">
+<h2>Install RoboCup<a class="headerlink" href="#install-robocup" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bash ./Control-Tasks/setup/install_robocup.sh
+</pre></div>
+</div>
+</div>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Quick install guide</a><ul>
+<li><a class="reference internal" href="#getting-started">Getting Started</a></li>
+<li><a class="reference internal" href="#installing-shiva">Installing Shiva</a></li>
+<li><a class="reference internal" href="#install-openmpi">Install OpenMPI</a></li>
+<li><a class="reference internal" href="#install-robocup">Install RoboCup</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/intro/install.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Quick install guide</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

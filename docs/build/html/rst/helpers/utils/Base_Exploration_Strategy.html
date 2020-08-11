@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Base_Exploration_Strategy module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -36,8 +36,34 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="base-exploration-strategy-module">
-<h1>Base_Exploration_Strategy module<a class="headerlink" href="#base-exploration-strategy-module" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-Base_Exploration_Strategy">
+<span id="base-exploration-strategy-module"></span><h1>Base_Exploration_Strategy module<a class="headerlink" href="#module-Base_Exploration_Strategy" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="Base_Exploration_Strategy.Base_Exploration_Strategy">
+<em class="property">class </em><code class="sig-prename descclassname">Base_Exploration_Strategy.</code><code class="sig-name descname">Base_Exploration_Strategy</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Base_Exploration_Strategy.Base_Exploration_Strategy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base abstract class for agent exploration strategies. Every exploration strategy must inherit from this class
+and implement the methods perturb_action_for_exploration_purposes and add_exploration_rewards</p>
+<dl class="py method">
+<dt id="Base_Exploration_Strategy.Base_Exploration_Strategy.perturb_action_for_exploration_purposes">
+<code class="sig-name descname">perturb_action_for_exploration_purposes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">action_info</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Base_Exploration_Strategy.Base_Exploration_Strategy.perturb_action_for_exploration_purposes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perturbs the action of the agent to encourage exploration</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Base_Exploration_Strategy.Base_Exploration_Strategy.add_exploration_rewards">
+<code class="sig-name descname">add_exploration_rewards</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">reward_info</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Base_Exploration_Strategy.Base_Exploration_Strategy.add_exploration_rewards" title="Permalink to this definition">¶</a></dt>
+<dd><p>Actions intrinsic rewards to encourage exploration</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Base_Exploration_Strategy.Base_Exploration_Strategy.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Base_Exploration_Strategy.Base_Exploration_Strategy.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resets the noise process</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 
 
@@ -83,7 +109,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>

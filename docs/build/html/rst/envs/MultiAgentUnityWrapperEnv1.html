@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MultiAgentUnityWrapperEnv1 module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -60,7 +60,7 @@ and sets up initial values in order to begin stepping in the environment.</p>
 </dl>
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.start_unity_environment">
-<code class="sig-name descname">start_unity_environment</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.start_unity_environment" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">start_unity_environment</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.start_unity_environment" title="Permalink to this definition">¶</a></dt>
 <dd><p>Loads in the binary and passes an configs and props to the Unity end.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -71,7 +71,7 @@ and sets up initial values in order to begin stepping in the environment.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.set_initial_values">
-<code class="sig-name descname">set_initial_values</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.set_initial_values" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">set_initial_values</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.set_initial_values" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets the environment ready to begin the simulation.</p>
 <p>Grabs the environment parameters, behaviors, and prepares dictionaries to store the DecisionSteps,
 TerminalSteps, and resets the metrics before beginning.</p>
@@ -84,7 +84,7 @@ TerminalSteps, and resets the metrics before beginning.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset">
-<code class="sig-name descname">reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">force</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">force</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Reset the environment and re-initialize metrics.
 :param force: Hard reset.
 :type force: bool</p>
@@ -97,7 +97,7 @@ TerminalSteps, and resets the metrics before beginning.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.metric_reset">
-<code class="sig-name descname">metric_reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">force</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.metric_reset" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">metric_reset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">force</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.metric_reset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Re-initializes our metrics. Unity resets the environment on its own; called by Shiva Learner.
 :param force: Hard reset.
 :type force: bool</p>
@@ -110,7 +110,7 @@ TerminalSteps, and resets the metrics before beginning.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_agent_id">
-<code class="sig-name descname">reset_agent_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">role</span></em>, <em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_agent_id" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">reset_agent_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">role</span></em>, <em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_agent_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>Empties the data accumulators for a specifc BehaviorName</p>
 <p>Necessary whenever an agent’s trajectory ends with either success or failure.</p>
 <dl class="field-list simple">
@@ -122,7 +122,7 @@ TerminalSteps, and resets the metrics before beginning.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.step">
-<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">actions</span></em><span class="sig-paren">)</span> &#x2192; Tuple<span class="p">[</span>List<span class="p">, </span>List<span class="p">, </span>List<span class="p">, </span>Dict<span class="p">]</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.step" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">actions</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.step" title="Permalink to this definition">¶</a></dt>
 <dd><p>Steps in the Unity Environment</p>
 <p>Takes the actions given by the agent, processes them, and steps in the Unity Environment.</p>
 <dl class="field-list simple">
@@ -134,7 +134,7 @@ TerminalSteps, and resets the metrics before beginning.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.collect_step_data">
-<code class="sig-name descname">collect_step_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.collect_step_data" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">collect_step_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.collect_step_data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets batches of data for the agents in the simulation.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -150,7 +150,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_metrics">
-<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>None.dict.values<span class="p">]</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_metrics" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_metrics" title="Permalink to this definition">¶</a></dt>
 <dd><p>MultiAgent Metrics</p>
 <p>Used for Tensorboard.</p>
 <dl class="field-list simple">
@@ -165,7 +165,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_role_metrics">
-<code class="sig-name descname">get_role_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">role</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">role_agent_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>Tuple<span class="p">[</span>str<span class="p">, </span>Any<span class="p">]</span><span class="p">]</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_role_metrics" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_role_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">role</span></em>, <em class="sig-param"><span class="n">role_agent_id</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_role_metrics" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets the metrics for a specific role</p>
 <p>Used for Tensorboard.</p>
 <dl class="field-list simple">
@@ -184,7 +184,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.is_done">
-<code class="sig-name descname">is_done</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n_episodes</span><span class="p">:</span> <span class="n">int</span> <span class="o">=</span> <span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.is_done" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">is_done</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">n_episodes</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.is_done" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if there’s any role-agent that has finished the episode
 :param n_episodes:
 :type n_episodes: int</p>
@@ -192,7 +192,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_action_space_from_unity_spec">
-<code class="sig-name descname">get_action_space_from_unity_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">unity_spec</span><span class="p">:</span> <span class="n">Dict</span></em><span class="sig-paren">)</span> &#x2192; Dict<span class="p">[</span>str<span class="p">, </span>Any<span class="p">]</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_action_space_from_unity_spec" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_action_space_from_unity_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">unity_spec</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_action_space_from_unity_spec" title="Permalink to this definition">¶</a></dt>
 <dd><p>Checks BehaviorSpec (Agent) has a discrete or continuous actionspace.</p>
 <p>Used to infer the actionspace at runtime.</p>
 <dl class="field-list simple">
@@ -213,7 +213,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observation_space_from_unity_spec">
-<code class="sig-name descname">get_observation_space_from_unity_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">unity_spec</span><span class="p">:</span> <span class="n">object</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observation_space_from_unity_spec" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_observation_space_from_unity_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">unity_spec</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observation_space_from_unity_spec" title="Permalink to this definition">¶</a></dt>
 <dd><p>This sums up the obeservation_shapes for the agents in a given BehaviorSpec</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -224,7 +224,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observations">
-<code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>numpy.array<span class="p">]</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observations" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_observations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_observations" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns observations from the current step of each agent.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -235,7 +235,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_actions">
-<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span>numpy.array<span class="p">]</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_actions" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_actions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_actions" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns actions from the current step of each agent.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -246,7 +246,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_reward_episode">
-<code class="sig-name descname">get_reward_episode</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict<span class="p">[</span>str<span class="p">, </span>float<span class="p">]</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_reward_episode" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_reward_episode</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.get_reward_episode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the episodic rewards organized in a dictionary by role names.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -263,7 +263,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.create_buffers">
-<code class="sig-name descname">create_buffers</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.create_buffers" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">create_buffers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.create_buffers" title="Permalink to this definition">¶</a></dt>
 <dd><p>Makes buffers for episodic trajectories to be stored in.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -274,7 +274,7 @@ structures.</p>
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_buffers">
-<code class="sig-name descname">reset_buffers</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_buffers" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">reset_buffers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.reset_buffers" title="Permalink to this definition">¶</a></dt>
 <dd><p>Empties the trajectory buffers for the next episode.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -293,7 +293,7 @@ Also deletes the environment attribute from the Class.
 
 <dl class="py method">
 <dt id="MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.debug">
-<code class="sig-name descname">debug</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.debug" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">debug</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MultiAgentUnityWrapperEnv1.MultiAgentUnityWrapperEnv1.debug" title="Permalink to this definition">¶</a></dt>
 <dd><p>Prints out Behavior Names, and Batched Steps</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -349,7 +349,7 @@ Also deletes the environment attribute from the Class.
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>

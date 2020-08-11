@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>&lt;no title&gt; &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">&lt;no title&gt;</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <p># Unit tests</p>
+<p>To run a Unit test session, run</p>
+<p><code class="docutils literal notranslate"><span class="pre">`bash</span>
+<span class="pre">pytest</span> <span class="pre">tests</span>
+<span class="pre">`</span></code></p>
+<p>## How to Contribute</p>
+<p>For additional information, use <a class="reference external" href="https://docs.pytest.org/en/latest/">https://docs.pytest.org/en/latest/</a></p>
+<p>Write your own test cases and locate them on the [tests folder](../tests/).</p>
+<p>The files, classes and methods that you want to be run on every test session, must have the word <strong>test</strong> on them. For example, if we have the below file tree, only 2 TestCases will be executed.</p>
+<p><a href="#id1"><span class="problematic" id="id2">``</span></a>`
+tests/</p>
+<blockquote>
+<div><p>.gitignore
+test_algorithms.py
+test_buffers.py</p>
+</div></blockquote>
+<p><a href="#id3"><span class="problematic" id="id4">``</span></a><a href="#id5"><span class="problematic" id="id6">`</span></a></p>
+<p>## Creating TestCases</p>
+<p>Create a class inheriting the <strong>unittest.TestCase</strong> class.</p>
+<p>Below sample is a good starting point.</p>
+<p><a href="#id7"><span class="problematic" id="id8">``</span></a><a href="#id9"><span class="problematic" id="id10">`</span></a>python
+from unittest import TestCase</p>
+<dl>
+<dt>class test_algorithms(TestCase):</dt><dd><p>def tearDown(self):
+‘’’</p>
+<blockquote>
+<div><p>This method is run after all the tests are finished</p>
+</div></blockquote>
+<p>‘’’</p>
+<p>def setUp(self):
+‘’’</p>
+<blockquote>
+<div><p>This method is run before all the tests execution
+For example, prepare some data structures shared among the tests in this TestCase</p>
+</div></blockquote>
+<p>‘’’</p>
+<dl class="simple">
+<dt>def test_1(self):</dt><dd></dd>
+<dt>def test_2(self):</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p><a href="#id11"><span class="problematic" id="id12">``</span></a><a href="#id13"><span class="problematic" id="id14">`</span></a></p>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/testing.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">&lt;no title&gt;</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

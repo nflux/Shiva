@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learner module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -40,11 +40,46 @@
 <span id="learner-module"></span><h1>Learner module<a class="headerlink" href="#module-Learner" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt id="Learner.Learner">
-<em class="property">class </em><code class="sig-prename descclassname">Learner.</code><code class="sig-name descname">Learner</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner_id</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">config</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>Dict<span class="p">[</span>str<span class="p">, </span>Any<span class="p">]</span><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">Learner.</code><code class="sig-name descname">Learner</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">learner_id</span></em>, <em class="sig-param"><span class="n">config</span></em>, <em class="sig-param"><span class="n">port</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py attribute">
+<dt id="Learner.Learner.num_agents_created">
+<code class="sig-name descname">num_agents_created</code><em class="property"> = 0</em><a class="headerlink" href="#Learner.Learner.num_agents_created" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Learner.Learner.ep_count">
+<code class="sig-name descname">ep_count</code><em class="property"> = 0</em><a class="headerlink" href="#Learner.Learner.ep_count" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Learner.Learner.step_count">
+<code class="sig-name descname">step_count</code><em class="property"> = 0</em><a class="headerlink" href="#Learner.Learner.step_count" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Learner.Learner.evolution_count">
+<code class="sig-name descname">evolution_count</code><em class="property"> = 0</em><a class="headerlink" href="#Learner.Learner.evolution_count" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Learner.Learner.n_evolution_requests">
+<code class="sig-name descname">n_evolution_requests</code><em class="property"> = 0</em><a class="headerlink" href="#Learner.Learner.n_evolution_requests" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Learner.Learner.checkpoints_made">
+<code class="sig-name descname">checkpoints_made</code><em class="property"> = 0</em><a class="headerlink" href="#Learner.Learner.checkpoints_made" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="Learner.Learner.device">
+<code class="sig-name descname">device</code><em class="property"> = device(type='cuda', index=0)</em><a class="headerlink" href="#Learner.Learner.device" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt id="Learner.Learner.collect_metrics">
-<code class="sig-name descname">collect_metrics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.collect_metrics" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">collect_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.collect_metrics" title="Permalink to this definition">¶</a></dt>
 <dd><p>High level function to collect metrics for all agents that this Learner owns and then send them to process to be plotted in tensorboard.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -55,47 +90,37 @@
 
 <dl class="py method">
 <dt id="Learner.Learner.checkpoint">
-<code class="sig-name descname">checkpoint</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.checkpoint" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">checkpoint</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.checkpoint" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt id="Learner.Learner.update">
-<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.update" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.update" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt id="Learner.Learner.step">
-<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.step" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.step" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt id="Learner.Learner.create_environment">
-<code class="sig-name descname">create_environment</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.create_environment" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">create_environment</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.create_environment" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt id="Learner.Learner.get_agents">
-<code class="sig-name descname">get_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.get_agents" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_agents</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.get_agents" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt id="Learner.Learner.get_algorithm">
-<code class="sig-name descname">get_algorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.get_algorithm" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_algorithm</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.get_algorithm" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt id="Learner.Learner.launch">
-<code class="sig-name descname">launch</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.launch" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Learner.Learner.exploitation">
-<code class="sig-name descname">exploitation</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.exploitation" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt id="Learner.Learner.exploration">
-<code class="sig-name descname">exploration</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.exploration" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">launch</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.launch" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -110,7 +135,7 @@
 
 <dl class="py method">
 <dt id="Learner.Learner.close">
-<code class="sig-name descname">close</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.close" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.close" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -120,19 +145,8 @@
 
 <dl class="py method">
 <dt id="Learner.Learner.log">
-<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.log" title="Permalink to this definition">¶</a></dt>
-<dd><p>Logging function. Uses python logger and can optionally output to terminal depending on the config <cite>[‘Admin’][‘print_debug’]</cite></p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>msg</strong> – Message to be logged</p></li>
-<li><p><strong>verbose_level</strong> – verbose level used for the given message. Defaults to -1.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>None</p>
-</dd>
-</dl>
+<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Learner.Learner.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>If verbose_level is not given, by default will log</p>
 </dd></dl>
 
 </dd></dl>
@@ -182,7 +196,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>

@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ReplayBuffer module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -40,31 +40,25 @@
 <span id="replaybuffer-module"></span><h1>ReplayBuffer module<a class="headerlink" href="#module-ReplayBuffer" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt id="ReplayBuffer.ReplayBuffer">
-<em class="property">class </em><code class="sig-prename descclassname">ReplayBuffer.</code><code class="sig-name descname">ReplayBuffer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">capacity</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">batch_size</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">num_agents</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">obs_dim</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">acs_dim</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">configs</span><span class="p">:</span> <span class="n">Dict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ReplayBuffer.ReplayBuffer" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
-<p>Abstract Replay Buffer class all environments implemented in Shiva inherit from.</p>
+<em class="property">class </em><code class="sig-prename descclassname">ReplayBuffer.</code><code class="sig-name descname">ReplayBuffer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_size</span></em>, <em class="sig-param"><span class="n">batch_size</span></em>, <em class="sig-param"><span class="n">num_agents</span></em>, <em class="sig-param"><span class="n">obs_dim</span></em>, <em class="sig-param"><span class="n">acs_dim</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ReplayBuffer.ReplayBuffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py method">
 <dt id="ReplayBuffer.ReplayBuffer.push">
-<code class="sig-name descname">push</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ReplayBuffer.ReplayBuffer.push" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">push</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#ReplayBuffer.ReplayBuffer.push" title="Permalink to this definition">¶</a></dt>
 <dd><p>Pushes experiences into the buffer.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="ReplayBuffer.ReplayBuffer.sample">
-<code class="sig-name descname">sample</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ReplayBuffer.ReplayBuffer.sample" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">sample</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#ReplayBuffer.ReplayBuffer.sample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Samples experiences from the buffer.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="ReplayBuffer.ReplayBuffer.clear">
-<code class="sig-name descname">clear</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ReplayBuffer.ReplayBuffer.clear" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#ReplayBuffer.ReplayBuffer.clear" title="Permalink to this definition">¶</a></dt>
 <dd><p>Clears the buffer.</p>
 </dd></dl>
-
-<dl class="py method">
-<dt id="ReplayBuffer.ReplayBuffer.get_metrics">
-<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#ReplayBuffer.ReplayBuffer.get_metrics" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 </dd></dl>
 
@@ -113,7 +107,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>

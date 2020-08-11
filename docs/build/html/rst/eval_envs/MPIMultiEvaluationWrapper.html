@@ -4,7 +4,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPIMultiEvaluationWrapper module &#8212; Shiva 0.0.1 documentation</title>
     <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -45,7 +45,7 @@
 <p>Manages one or more MPIEvaluations</p>
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.launch">
-<code class="sig-name descname">launch</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.launch" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">launch</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.launch" title="Permalink to this definition">¶</a></dt>
 <dd><p>Launches the MultiEvaluationWrapper and grabs Agents to be Evaluated</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -56,7 +56,7 @@
 
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.run">
-<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.run" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.run" title="Permalink to this definition">¶</a></dt>
 <dd><p>Sends Agents to get evaluated, waits for metrics, and ranks them based on the metrics.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -67,7 +67,7 @@
 
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_agents_currently_being_evaluated">
-<code class="sig-name descname">get_agents_currently_being_evaluated</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_agents_currently_being_evaluated" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_agents_currently_being_evaluated</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_agents_currently_being_evaluated" title="Permalink to this definition">¶</a></dt>
 <dd><p>This function assumes that Agents from same Learner MUST be evaluated together</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -78,7 +78,7 @@
 
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.has_pair">
-<code class="sig-name descname">has_pair</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span> &#x2192; List<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.has_pair" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">has_pair</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.has_pair" title="Permalink to this definition">¶</a></dt>
 <dd><p>Checks if agent id has another agent in the same learner so they can play together.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -94,7 +94,7 @@
 
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_id">
-<code class="sig-name descname">get_learner_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_id" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_learner_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the learner id that corresponds to passed agent id.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -105,7 +105,7 @@
 
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_spec">
-<code class="sig-name descname">get_learner_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span> &#x2192; Dict<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_spec" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_learner_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.get_learner_spec" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the specs for that learner containing the agent.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -127,7 +127,7 @@
 
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.agent_selection">
-<code class="sig-name descname">agent_selection</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">env_rank</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.agent_selection" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">agent_selection</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">env_rank</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.agent_selection" title="Permalink to this definition">¶</a></dt>
 <dd><p>Randomly selects the agents to be sent to which environment.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -138,14 +138,14 @@
 
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.close">
-<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.close" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.close" title="Permalink to this definition">¶</a></dt>
 <dd><p>Closes the connection with the MetaLearner.
 :returns: None</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.log">
-<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.log" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">to_print</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.log" title="Permalink to this definition">¶</a></dt>
 <dd><p>If verbose_level is not given, by default will log
 :param msg: Message to be outputted
 :param to_print: Whether you want it as print or debug statement
@@ -159,7 +159,7 @@
 
 <dl class="py method">
 <dt id="MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.show_comms">
-<code class="sig-name descname">show_comms</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.show_comms" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">show_comms</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIMultiEvaluationWrapper.MPIMultiEvaluationWrapper.show_comms" title="Permalink to this definition">¶</a></dt>
 <dd><p>Shows who this MultiEvalWrapper is connected to.
 :returns: None</p>
 </dd></dl>
@@ -211,7 +211,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2020, nFlux AI.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.2.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
     </div>
   </body>
 </html>
