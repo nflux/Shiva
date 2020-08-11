@@ -15,8 +15,9 @@ from shiva.buffers.MultiTensorBuffer import MultiAgentTensorBuffer
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process
 
-class MPIEnv(Environment):
 
+class MPIEnv(Environment):
+    """ MPI Enabled Environment Wrapper over supported Environments"""
     # for future MPI child abstraction
     menv = MPI.COMM_SELF.Get_parent()
     id = MPI.COMM_SELF.Get_parent().Get_rank()
@@ -33,6 +34,11 @@ class MPIEnv(Environment):
         self.launch()
 
     def launch(self):
+        """ Initialize environments, connects to learners, and creates buffers for experience storage.
+
+        Returns:
+            None
+        """
         self._launch_env()
         # self.log("Received config with {} keys".format(str(len(self.configs.keys()))), verbose_level=1)
         # Check in with MultiEnv
@@ -47,6 +53,11 @@ class MPIEnv(Environment):
         self.run()
 
     def run(self):
+        """ Checks for trajectories and resets the environment when they are received.
+
+        Returns:
+            None
+        """
         self.env.reset()
         self.profiler.start(['ExperienceSent'])
         self.is_running = True
@@ -67,6 +78,11 @@ class MPIEnv(Environment):
         self.close()
 
     def close(self):
+        """ Disconnects from the multi environment and learner.
+
+        Returns:
+            None
+        """
         self.log("Started closing", verbose_level=2)
         self.menv.Disconnect()
         self.log("Closed MultiEnv", verbose_level=2)
@@ -322,6 +338,11 @@ class MPIEnv(Environment):
             self.menv.send(_output_quantity, dest=0, tag=Tags.trajectory_info)
 
     def create_buffers(self):
+        """ Instantiates a tensorbuffer to store the trajectory for each episode.
+
+        Returns:
+            None
+        """
         if 'UnityWrapperEnv1' in self.type:
             # the append of step data is done at the specific environment implementation
             def nothing(*args, **kwargs):
@@ -351,6 +372,10 @@ class MPIEnv(Environment):
                                                               sum(self.env.action_space[single_role_name]['acs_space']))]
 
     def reset_buffers(self):
+        """ Empties the buffer so that the next trajectory can be stored.
+        Returns:
+            None
+        """
         for buffer in self.trajectory_buffers:
             buffer.reset()
 
@@ -396,11 +421,21 @@ class MPIEnv(Environment):
         }
 
     def print(self, msg, to_print=False):
+        """ Debugging tool to prrint messages and specify what module printed the message.
+
+        Args:
+            msg : Message that you want to be printed out
+            to_print:
+
+        Returns:
+            None
+        """
         text = "{}\t\t\t{}".format(str(self), msg)
         print(text)
 
     def __str__(self):
         return f"<Env(id={self.menv_id}-{self.id}, done_count={self.done_count})>"
+
 
 if __name__ == "__main__":
     try:

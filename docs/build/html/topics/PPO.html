@@ -57,19 +57,19 @@ environments with continuous action spaces.</p>
 as well as creates the new learning agent. The PPO learner runs the policy
 through the environment for a predetermined amount of episodes and stores the
 episodes on a buffer. These episodes are then passed to the
-<a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/algorithms/PPOAlgorithm.py">PPO Algorithm</a>
+<a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/PPOAlgorithm.py">PPO Algorithm</a>
 which will update a new policy using these episodes and the objective function
 described above. It will iterate through this process for a configured episode count.</p>
 <p class="rubric">PPO Algorithm</p>
-<p>The <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/algorithms/PPOAlgorithm.py">PPO Algorithm</a>
-is an <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/algorithms/Algorithm.py">Algorithm</a>
+<p>The <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/PPOAlgorithm.py">PPO Algorithm</a>
+is an <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/Algorithm.py">Algorithm</a>
 that controls the updating of the PPO policy. It calculates the probabilities
 for the ratio variable, as well as calculates entropy. Our implementation
 includes an Entropy Loss that helps stabilization, as well as increases exploration
 by ensuring that the policy is not too sure of a given action.</p>
 <p class="rubric">Imitation Agent</p>
-<p>The <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/agents/ImitationAgent.py">Imitation Agent</a>
-is an <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/agents/ImitationAgent.py">Agent</a>
+<p>The <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/agents/ImitationAgent.py">Imitation Agent</a>
+is an <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/agents/ImitationAgent.py">Agent</a>
 that contains the policy network that we are wanting to train, and is used
 throughout the learning process.</p>
 </div>

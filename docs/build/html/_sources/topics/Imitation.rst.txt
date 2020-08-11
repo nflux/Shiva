@@ -4,7 +4,7 @@ Imitation Learning
 
 Imitation Learning is a learning technique which aims to mimic expert behavior in order to increase the 
 initial training speed and efficiency of a new agent. Our current implementation has two phases and
-can be found `here <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/algorithms/ImitationAlgorithm.py>`_.
+can be found `here <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/ImitationAlgorithm.py>`_.
 
 .. rubric:: 1. Supervised Phase
 

@@ -26,6 +26,58 @@ Get started with the Installation and then thru the Quickstart to see how to run
     * [Creating a new algorithm](./shiva/docs/Extending-Algorithm.md)
     * Creating a new environment wrapper
 
+## Benchmarks
+
+You can use these benchmarks to test if changes made to Shiva were improvements.
+
+### Gym Cartpole
+
+#### Episodic Reward
+![](docs/images/MADDPG-CartPole-Reward.png)
+
+#### Actor Loss
+![](docs/images/MADDPG-CartPole-Actor-Loss.png)
+
+#### Critic Loss
+![](docs/images/MADDPG-CartPole-Critic-Loss.png)
+
+
+### Unity 3DBall
+
+#### Episodic Reward
+![](docs/images/MADDPG-3DBall-Reward.png)
+
+#### Actor Loss
+![](docs/images/MADDPG-3DBall-Actor-Loss.png)
+
+#### Critic Loss
+![](docs/images/MADDPG-3DBall-Critic-Loss.png)
+
+### Unity 3DBallDiscrete 
+
+We implemented a discrete version of 3DBall for discrete testing in lieu of Basic.
+
+#### Episodic Reward
+![](docs/images/MADDPG-3DBallDiscrete-Reward.png)
+
+#### Actor Loss
+![](docs/images/MADDPG-3DBallDiscrete-Actor-Loss.png)
+
+#### Critic Loss
+![](docs/images/MADDPG-3DBallDiscrete-Critic-Loss.png)
+
+
+### Unity Food Collector
+
+#### Episodic Reward
+![](docs/images/MADDPG-FoodCollector-Reward.png)
+
+#### Actor Loss
+![](docs/images/MADDPG-FoodCollector-Actor-Loss.png)
+
+#### Critic Loss
+![](docs/images/MADDPG-FoodCollector-Critic-Loss.png)
+
 ## Restrictions
 
 If you would like to contribute to Shiva, we would like you to do so by providing your own implementations of the abstract modules to maintain stability. If you have difficulties with any of the existing modules please raise an issue on the repository.

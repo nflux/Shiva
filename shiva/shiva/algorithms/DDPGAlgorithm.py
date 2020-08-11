@@ -5,6 +5,7 @@ from shiva.agents.DDPGAgent import DDPGAgent
 from shiva.algorithms.Algorithm import Algorithm
 from shiva.helpers.misc import one_hot_from_logits
 
+
 class DDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):
         '''

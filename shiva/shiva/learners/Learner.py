@@ -3,6 +3,7 @@ from shiva.core.admin import Admin, logger
 from shiva.core.TimeProfiler import TimeProfiler
 from shiva.helpers.config_handler import load_class
 
+
 class Learner(object):
     num_agents_created = 0
     ep_count = 0
@@ -13,6 +14,13 @@ class Learner(object):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     def __init__(self, learner_id, config, port=None):
+        """
+        Abstract class for the Learners.
+
+        Args:
+            learner_id (int): Unique ID for the Learner
+            config (Dict): config dictioanry to be used for the run
+        """
         {setattr(self, k, v) for k,v in config['Learner'].items()}
         self.configs = config
         self.id = learner_id
@@ -22,10 +30,12 @@ class Learner(object):
         self.profiler = TimeProfiler(self.configs, Admin.get_learner_url_summary(self))
 
     def collect_metrics(self, episodic=False):
-        '''
-            This works for Single Agent Learner
-            For Multi Agent Learner we need to implement the else statement
-        '''
+        """
+        High level function to collect metrics for all agents that this Learner owns and then send them to process to be plotted in tensorboard.
+
+        Returns:
+            None
+        """
         if hasattr(self, 'agent'):
             if type(self.agent) == list:
                 '''Multi Agent Metrics'''
@@ -57,6 +67,15 @@ class Learner(object):
         self._process_metrics(agent_id, metrics)
 
     def _process_metrics(self, agent_id, metrics):
+        """
+
+        Args:
+            agent_id (int): Agent ID for who we are processing the metrics
+            metrics (List): list of tuple metrics OR list of list of tuple metrics
+
+        Returns:
+            None
+        """
         for m in metrics:
             # self.log("Agent {}, Metric {}".format(agent_id, m))
             if type(m) == list:
@@ -68,6 +87,16 @@ class Learner(object):
                 self._add_summary_writer(agent_id, m)
 
     def _add_summary_writer(self, agent_id, metric_tuple):
+        """
+        Directly interacts with ShivaAdmin to plot to tensorboard
+
+        Args:
+            agent_id (int): Agent ID
+            metric_tuple (Tuple): tuple containing (metric name, y value, x value)
+
+        Returns:
+            None
+        """
         if len(metric_tuple) == 3:
             metric_name, y_value, x_value = metric_tuple
         elif len(metric_tuple) == 2:

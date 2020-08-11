@@ -18,7 +18,7 @@ them. You are able to inherit from them and immediately your components are conn
 to Shiva. You can click on the links to learn more about the individual components and 
 see what Shiva already as implemented.
 
-.. rubric:: `Abstract MetaLearner <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/learners/MetaLearner.py>`_
+.. rubric:: `Abstract MetaLearner <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/learners/MetaLearner.py>`_
 
 The AbstractMetalearner contains the template functions to start the entire 
 learning sequence of the agent, which contains functions like exploit explore, 
@@ -26,7 +26,7 @@ genetic crossover, evolve, evaluate, and record metrics, create learners, create
 learner id , and also the save function. It also grabs the functions decided 
 from the config files. 
 
-.. rubric:: `Abstract Learner <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/learners/Learner.py>`_
+.. rubric:: `Abstract Learner <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/learners/Learner.py>`_
 
 The AbstractLearner contains the template functions for the learning functions 
 required to learn. This includes gathering the configs for learner. The functions 
@@ -35,7 +35,7 @@ algorithm, a save function, a launch function to start the process of creating
 the agent and learning, a load function, to load agents, and a get id function 
 to help the the agent ID. 
 
-.. rubric:: `Abstract Algorithm <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/algorithms/Algorithm.py>`_
+.. rubric:: `Abstract Algorithm <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/Algorithm.py>`_
 
 The AbstractAlgorithm contains the template that all of our algorithms follows. 
 When initialized the Abstract Algorithm grabs the config settings, creates an agent 
@@ -48,18 +48,18 @@ get_action (Determines the best action for the agent from the observation),
 create_agent (creates a new agent)), id_generator (creates an ID for the agent), 
 get_agents (grabs the agents).
 
-.. rubric:: `Abstract Environment <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/envs/Environment.py>`_
+.. rubric:: `Abstract Environment <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/envs/Environment.py>`_
 
 The AbstractEnvironment is the template that allows us to grab the attributes from 
 the environment. This includes: step, observations, actions, rewards, observation 
 space, action space, current step, reset, load viewer, and normalized rewards. 
 
-.. rubric:: `Abstract Buffer <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/buffers/ReplayBuffer.py>`_
+.. rubric:: `Abstract Buffer <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/buffers/ReplayBuffer.py>`_
 
 The AbstractReplayBuffer contains the template in, which how the observations, 
 rewards, actions, and agents are stored in an agent's recent actions. 
 
-.. rubric:: `Abstract Agent <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/agents/Agent.py>`_
+.. rubric:: `Abstract Agent <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/agents/Agent.py>`_
 
 The AbstractAgent contains templates that creates agent attributes like id, 
 observation space, action space, agent configuration, and network configuration.

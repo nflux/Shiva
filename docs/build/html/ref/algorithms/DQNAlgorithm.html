@@ -36,8 +36,59 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="dqnalgorithm-module">
-<h1>DQNAlgorithm module<a class="headerlink" href="#dqnalgorithm-module" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-DQNAlgorithm">
+<span id="dqnalgorithm-module"></span><h1>DQNAlgorithm module<a class="headerlink" href="#module-DQNAlgorithm" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="DQNAlgorithm.DQNAlgorithm">
+<em class="property">class </em><code class="sig-prename descclassname">DQNAlgorithm.</code><code class="sig-name descname">DQNAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obs_space</span></em>, <em class="sig-param"><span class="n">acs_space</span></em>, <em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.algorithms.Algorithm.Algorithm</span></code></p>
+<dl class="py method">
+<dt id="DQNAlgorithm.DQNAlgorithm.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span></em>, <em class="sig-param"><span class="n">buffer</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">episodic</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the agents network using the data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agents</strong> (<em>List</em><em>[</em><a class="reference internal" href="../../rst/agents/Agent.html#Agent.Agent" title="Agent.Agent"><em>Agent</em></a><em>]</em>) – the agent who we want to update it’s network</p></li>
+<li><p><strong>buffer</strong> (<a class="reference internal" href="../../rst/buffers/ReplayBuffer.html#ReplayBuffer.ReplayBuffer" title="ReplayBuffer.ReplayBuffer"><em>ReplayBuffer</em></a>) – buffer containing trajectories to sample from</p></li>
+<li><p><strong>data</strong> (<a class="reference internal" href="../../rst/buffers/ReplayBuffer.html#ReplayBuffer.ReplayBuffer" title="ReplayBuffer.ReplayBuffer"><em>ReplayBuffer</em></a>) – buffer containing the data used to train the network</p></li>
+<li><p><strong>episodic</strong> – flag indicating if the update is episodic or per timestep</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DQNAlgorithm.DQNAlgorithm.get_loss">
+<code class="sig-name descname">get_loss</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.get_loss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="DQNAlgorithm.DQNAlgorithm.create_agent">
+<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.create_agent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new agent</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Agent</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="DQNAlgorithm.DQNAlgorithm.create_agent_of_role">
+<code class="sig-name descname">create_agent_of_role</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.create_agent_of_role" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="DQNAlgorithm.DQNAlgorithm.get_metrics">
+<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">agent_id</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#DQNAlgorithm.DQNAlgorithm.get_metrics" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </div>
 
 

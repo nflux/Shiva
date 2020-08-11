@@ -23,14 +23,14 @@ The learner controls the flow of the PPO process. It initializes the algorithm o
 as well as creates the new learning agent. The PPO learner runs the policy
 through the environment for a predetermined amount of episodes and stores the
 episodes on a buffer. These episodes are then passed to the
-`PPO Algorithm <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/algorithms/PPOAlgorithm.py>`_
+`PPO Algorithm <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/PPOAlgorithm.py>`_
 which will update a new policy using these episodes and the objective function
 described above. It will iterate through this process for a configured episode count.
 
 .. rubric:: PPO Algorithm
 
-The `PPO Algorithm <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/algorithms/PPOAlgorithm.py>`_
-is an `Algorithm <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/algorithms/Algorithm.py>`_
+The `PPO Algorithm <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/PPOAlgorithm.py>`_
+is an `Algorithm <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/Algorithm.py>`_
 that controls the updating of the PPO policy. It calculates the probabilities
 for the ratio variable, as well as calculates entropy. Our implementation
 includes an Entropy Loss that helps stabilization, as well as increases exploration
@@ -38,7 +38,7 @@ by ensuring that the policy is not too sure of a given action.
 
 .. rubric:: Imitation Agent
 
-The `Imitation Agent <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/agents/ImitationAgent.py>`_
-is an `Agent <https://github.com/nflux/Control-Tasks/blob/docs/shiva/shiva/agents/ImitationAgent.py>`_
+The `Imitation Agent <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/agents/ImitationAgent.py>`_
+is an `Agent <https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/agents/ImitationAgent.py>`_
 that contains the policy network that we are wanting to train, and is used
 throughout the learning process. 

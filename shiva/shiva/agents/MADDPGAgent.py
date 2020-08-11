@@ -1,7 +1,12 @@
 from shiva.agents.DDPGAgent import DDPGAgent
 
-class MADDPGAgent(DDPGAgent):
 
+class MADDPGAgent(DDPGAgent):
+    """ MADDPG Agent Object
+
+    Inherits from DDPG Agents for easier implementation.
+
+    """
     epsilon = 0
     noise_scale = 0
 
@@ -9,7 +14,11 @@ class MADDPGAgent(DDPGAgent):
         super(MADDPGAgent, self).__init__(id, obs_space, acs_space, configs)
 
     def get_metrics(self):
-        '''Used for evolution metric'''
+        """Gets the metrics so they can be passed to tensorboard.
+
+        Returns:
+             A tuple of metrics.
+        """
         return [
             ('{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate),
             # ('{}/Critic_Learning_Rate'.format(self.role), self.critic_learning_rate),
@@ -18,6 +27,12 @@ class MADDPGAgent(DDPGAgent):
         ]
 
     def get_module_and_classname(self):
+        """ Returns the name of the module and class name.
+
+        Returns:
+            A string representation of the module and class.
+
+        """
         return ('shiva.agents', 'MADDPGAgent.MADDPGAgent')
 
     def __str__(self):

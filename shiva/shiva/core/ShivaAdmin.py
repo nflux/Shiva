@@ -32,7 +32,8 @@ import shiva.helpers.misc as misc
 #
 ###################################################################################
 
-class ShivaAdmin():
+
+class ShivaAdmin:
 
     __folder_name__ = {
         'config':       'configs',

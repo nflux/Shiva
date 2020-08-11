@@ -12,7 +12,7 @@ Let’s use an algorithm already implemented in Shiva and deploy inside of OpenA
 
 .. code-block:: python
 
-   python3 main.py -c MADDPG/Gym-CartPole.ini
+   python3 shiva -c MADDPG/Gym-CartPole.ini
 
 This will run an MADDPG algorithm inside of a Gym environment to solve the classical reinforcement learning problem Cartpole.
 
@@ -22,7 +22,7 @@ Unity's 3DBall Environment can also be a nice sanity check. If you want to run 3
 
 .. code-block:: python
 
-   python3 main.py -c MADDPG/Unity-3DBall.ini
+   python3 shiva -c MADDPG/Unity-3DBall.ini
 
 This will run Continuous MADDPG.
 

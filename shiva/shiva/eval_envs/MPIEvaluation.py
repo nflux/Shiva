@@ -10,8 +10,11 @@ from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.core.IOHandler import get_io_stub
 
-class MPIEvaluation(Evaluation):
 
+class MPIEvaluation(Evaluation):
+    """ Manages Instances of MPIEvalEnv, managed by MPIMultiEvalWrapper
+    Hosts an agent to give actions for all the environments.
+    """
     def __init__(self):
         self.meval = MPI.Comm.Get_parent()
         self.id = self.meval.Get_rank()
@@ -19,6 +22,12 @@ class MPIEvaluation(Evaluation):
         self.launch()
 
     def launch(self):
+        """ Launches the Evaluation Instance
+
+        Gets the configs from multienvironment, connects to the IO Handler, sets up the roles, and launches
+        the environments,
+
+        """
         # Receive Config from MultiEvalWrapper
         self.configs = self.meval.bcast(None, root=0)
         super(MPIEvaluation, self).__init__(self.configs)
@@ -50,6 +59,10 @@ class MPIEvaluation(Evaluation):
         self.run()
 
     def run(self):
+        """ Receives the metrics after each episode then averages after evaluation is done.
+        Returns:
+            None
+        """
         self.step_count = 0
 
         if 'Unity' in self.env_specs['type'] or 'ParticleEnv' in self.env_specs['type']:
@@ -134,6 +147,11 @@ class MPIEvaluation(Evaluation):
     '''
 
     def done_evaluating_roles(self):
+        """ Checks if it has collected enough evaluation trajectories.
+
+        Returns:
+            A boolean.
+        """
         return len(self.eval_metrics) >= self.eval_episodes
 
     def _receive_roles_evals(self):
@@ -145,7 +163,10 @@ class MPIEvaluation(Evaluation):
             self.log("Got Metrics {}".format(env_metrics), verbose_level=2)
 
     def send_roles_eval_update_agents(self):
-        '''Do averaging of metrics across all metrics received, then send'''
+        """Do averaging of metrics across all metrics received, then send
+        Returns:
+            None
+        """
         evals = {role:{} for role in self.roles}
         metrics_received = []
 
@@ -197,7 +218,10 @@ class MPIEvaluation(Evaluation):
         self.log("Got match for: {}".format(self.agent_ids), verbose_level=2)
 
     def get_role2agent(self):
-        '''Create mapping of Role->Agent_index in self.agents list'''
+        """Create mapping of Role->Agent_index in self.agents list
+        Returns:
+            Dictionary mapping roles to agent index in agent list.
+        """
         self.role2agent = {}
         for role in self.env_specs['roles']:
             for ix, agent in enumerate(self.agents):
@@ -207,6 +231,10 @@ class MPIEvaluation(Evaluation):
         return self.role2agent
 
     def load_agents(self, role2learner_spec=None):
+        """ This loads in the agents to be evaluated from a path specified by the IO Handler.
+        Returns:
+            A list of agents.
+        """
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
 
@@ -254,11 +282,17 @@ class MPIEvaluation(Evaluation):
         }
 
     def close(self):
+        """ Close connection with MultiEvaluationWrapper
+
+        Returns:
+            None
+        """
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
     def __str__(self):
         return "<Eval(id={}, device={})>".format(self.id, self.device)
+
 
 if __name__ == "__main__":
     try:

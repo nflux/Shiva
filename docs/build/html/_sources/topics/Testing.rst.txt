@@ -13,7 +13,7 @@ To run a Unit test session, run
 
 For additional information, use https://docs.pytest.org/en/latest/
 
-Write your own test cases and locate them in the `tests folder <https://github.com/nflux/Control-Tasks/tree/docs/shiva/tests>`_.
+Write your own test cases and locate them in the `tests folder <https://github.com/nflux/Control-Tasks/tree/docs-redo/shiva/tests>`_.
 
 The files, classes and methods that you want to be run on every test session, must have the word **test** on them. For example, if we have the below file tree, only 2 TestCases will be executed.
 
