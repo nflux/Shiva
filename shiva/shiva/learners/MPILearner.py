@@ -248,13 +248,21 @@ class MPILearner(Learner):
                             self.configs['Environment']['expert_reward_range'][agent.role][1]:
                         agent.decay_learning_rate()
                         _decay_or_restore_lr = -1
-                        _decay_log += f"Decay Actor LR {agent.actor_learning_rate}"
+                        try:
+                            _decay_log += f"Decay Actor LR {agent.actor_learning_rate}"
+                        except:
+                            pass
                     else:
                         agent.restore_learning_rate()
                         _decay_or_restore_lr = 1
-                        _decay_log += f"Restore Actor LR {agent.actor_learning_rate}"
-
-        self.alg.decay_learning_rate() if _decay_or_restore_lr == -1 else self.alg.restore_learning_rate() if _decay_or_restore_lr == 1 else None
+                        try:
+                            _decay_log += f"Restore Actor LR {agent.actor_learning_rate}"
+                        except:
+                            pass
+        try:
+            self.alg.decay_learning_rate() if _decay_or_restore_lr == -1 else self.alg.restore_learning_rate() if _decay_or_restore_lr == 1 else None
+        except:
+            pass
         self.log(f"{_decay_log} / Critic LR {self.alg.critic_learning_rate} / Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}", verbose_level=1) if _decay_log != '' else None
 
     def run_evolution(self):
