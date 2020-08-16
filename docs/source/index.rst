@@ -1,7 +1,16 @@
 Welcome to Shiva's Documentation!
 =================================
 
-Everything you need to know about Shiva
+Shiva is built to be simulation-engine agnostic, its framework is abstracted to support various types of observation and
+actions spaces with different environment settings and number of agents. Additionally, Shiva is designed to support
+distributed processing across a large number of servers to support learning in complex environments with large
+observation or action spaces where multiple agents need to converge to a team policy. At the moment, Shiva supports
+popular reinforcement and imitation learning algorithms such as Deep Q-Network (DQN), Deep Deterministic Policy Gradient
+(DDPG), Proximal Policy Optimizations (PPO), Multi Agent Deep Deterministic Policy Gradient (MADDPG), Dataset
+Aggregation (DAGGER) method in addition to a few customized and hybrid model-based algorithms that leverage the dynamics
+of the environment to converge to at a faster rate. The framework is built to enable researchers to design and
+experiment with new algorithms and be able to test them at scale in different environments and scenarios with minimum
+setup on the infrastructure.
 
 .. toctree::
    :maxdepth: 2
