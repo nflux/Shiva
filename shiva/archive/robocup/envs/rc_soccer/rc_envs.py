@@ -372,7 +372,7 @@ def run_env(env,shared_exps,exp_i,env_num,ready,halt,num_updates,history,ep_num,
 
                 #############################################################################################################################################################
                 # push exp to queue
-                # log
+                # logs
                 if ep_i > 1:
                     team_avg_rew = [np.asarray(team_n_step_rewards)[:,i].sum()/float(et_i) for i in range(env.num_TA)] # divide by time step?
                     team_cum_rew = [np.asarray(team_n_step_rewards)[:,i].sum() for i in range(env.num_TA)]

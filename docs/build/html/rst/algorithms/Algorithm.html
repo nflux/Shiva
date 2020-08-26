@@ -1,0 +1,203 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithm module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Algorithm module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-Algorithm">
+<span id="algorithm-module"></span><h1>Algorithm module<a class="headerlink" href="#module-Algorithm" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="Algorithm.Algorithm">
+<em class="property">class </em><code class="sig-prename descclassname">Algorithm.</code><code class="sig-name descname">Algorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation_space</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>int<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">action_space</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>Dict<span class="p">[</span>str<span class="p">, </span>Tuple<span class="p">[</span>int<span class="p">]</span><span class="p">]</span><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">configs</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>Any<span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="Algorithm.Algorithm.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">List</span></em>, <em class="sig-param"><span class="n">buffer</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Algorithm.Algorithm.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the agents network using the data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agents</strong> (<em>List</em><em>[</em><a class="reference internal" href="../agents/Agent.html#Agent.Agent" title="Agent.Agent"><em>Agent</em></a><em>]</em>) – the agent who we want to update it’s network</p></li>
+<li><p><strong>buffer</strong> (<a class="reference internal" href="../buffers/ReplayBuffer.html#ReplayBuffer.ReplayBuffer" title="ReplayBuffer.ReplayBuffer"><em>ReplayBuffer</em></a>) – buffer containing trajectories to sample from</p></li>
+<li><p><strong>data</strong> (<a class="reference internal" href="../buffers/ReplayBuffer.html#ReplayBuffer.ReplayBuffer" title="ReplayBuffer.ReplayBuffer"><em>ReplayBuffer</em></a>) – buffer containing the data used to train the network</p></li>
+<li><p><strong>episodic</strong> – flag indicating if the update is episodic or per timestep</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.create_agent">
+<code class="sig-name descname">create_agent</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.create_agent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new agent</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Agent</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.get_num_updates">
+<code class="sig-name descname">get_num_updates</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#Algorithm.Algorithm.get_num_updates" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>number of updates performed so far</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.save_central_critic">
+<code class="sig-name descname">save_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Algorithm.Algorithm.save_central_critic" title="Permalink to this definition">¶</a></dt>
+<dd><p>When using a central critic algorithm, we use this function to save the critic into the agents so that they are properly saved in file system.
+If algorithm is not central critic, default behaviour of this function is to pass.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agent</strong> (<a class="reference internal" href="../agents/Agent.html#Agent.Agent" title="Agent.Agent"><em>Agent</em></a>) – agent where we are going to store the critic network</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.load_central_critic">
+<code class="sig-name descname">load_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Algorithm.Algorithm.load_central_critic" title="Permalink to this definition">¶</a></dt>
+<dd><p>When using a central critic algorithm, we use this function to load the central critic from the agent into the central critic network.
+If algorithm is not central critic, default behaviour of this function is to pass.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agent</strong> (<a class="reference internal" href="../agents/Agent.html#Agent.Agent" title="Agent.Agent"><em>Agent</em></a>) – agent where we are going to load the critic network</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.get_agents">
+<code class="sig-name descname">get_agents</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List<a class="headerlink" href="#Algorithm.Algorithm.get_agents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get method that returns a list of Agents for which the Algorithm has currently pointers to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List[Agents]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.id_generator">
+<code class="sig-name descname">id_generator</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; int<a class="headerlink" href="#Algorithm.Algorithm.id_generator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a new id for an agent.
+:returns: Integer agent id.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="Algorithm.Algorithm.log">
+<code class="sig-name descname">log</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">msg</span></em>, <em class="sig-param"><span class="n">verbose_level</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#Algorithm.Algorithm.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Logging function. Uses python logger and can optionally output to terminal depending on the config <cite>[‘Admin’][‘print_debug’]</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>msg</strong> – Message to be logged</p></li>
+<li><p><strong>verbose_level</strong> – verbose level used for the given message. Defaults to -1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/rst/algorithms/Algorithm.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Algorithm module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

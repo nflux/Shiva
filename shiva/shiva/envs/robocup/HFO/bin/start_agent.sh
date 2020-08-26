@@ -346,7 +346,7 @@ do
       debugopt="${debugopt} --debug_server_logging"
       ;;
 
-    --log-dir)
+    --logs-dir)
       if [ $# -lt 2 ]; then
         usage
         exit 1
@@ -356,7 +356,7 @@ do
       shift 1
       ;;
 
-    --debug-log-ext)
+    --debug-logs-ext)
       if [ $# -lt 2 ]; then
         usage
         exit 1

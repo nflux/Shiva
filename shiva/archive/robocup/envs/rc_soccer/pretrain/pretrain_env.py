@@ -35,7 +35,7 @@ class pretrain_env():
     def __init__(self, num_TNPC = 1, num_ONPC = 1, fpt = 100, untouched_time = 100, sync_mode = True, port = 6000,
                  offense_on_ball=0, fullstate = False, seed = 123, pt_log_dir="/pretrain_data",
                  ball_x_min = -0.8, ball_x_max = 0.8, ball_y_min = -0.8, ball_y_max = 0.8,
-                 verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="log",
+                 verbose = False, rcss_log_game=False, hfo_log_game=False, log_dir="logs",
                  agents_x_min=-0.8, agents_x_max=0.8, agents_y_min=-0.8, agents_y_max=0.8,
                  change_every_x=5, change_agents_x=0.1, change_agents_y=0.1, change_balls_x=0.1,
                  change_balls_y=0.1, control_rand_init=False,record=False, record_server=True,
@@ -96,7 +96,7 @@ class pretrain_env():
                               ball_x_min=-0.8, ball_x_max=0.8,
                               ball_y_min=-0.8, ball_y_max=0.8,
                               verbose=False, rcss_log_game=False,
-                              log_dir="log", pt_log_dir="/pretrain_data",
+                              log_dir="logs", pt_log_dir="/pretrain_data",
                               hfo_log_game=True,
                               agents_x_min=0.0, agents_x_max=0.0,
                               agents_y_min=0.0, agents_y_max=0.0,
@@ -128,7 +128,7 @@ class pretrain_env():
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --log-dir-pt %s --message-size 256 --tackle-cycles 1 --no-offside --offside-area-size 0"\
+                  " --logs-dir %s --logs-dir-pt %s --message-size 256 --tackle-cycles 1 --no-offside --offside-area-size 0"\
                   % (frames_per_trial, untouched_time, offense_agents,
                      defense_agents, offense_npcs, defense_npcs, port,
                      offense_on_ball, seed, ball_x_min, ball_x_max,
@@ -145,7 +145,7 @@ class pretrain_env():
             if not rcss_log_game:  cmd += " --no-logging"
             if hfo_log_game:       cmd += " --hfo-logging"
             if record:             cmd += " --record"
-            if record_server:      cmd += " --log-gen-pt" 
+            if record_server:      cmd += " --logs-gen-pt"
             if control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
                         " --change-every-x-ep %i --change-agents-x %f --change-agents-y %f"\

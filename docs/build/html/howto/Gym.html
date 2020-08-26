@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running Gym Environments &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Running Gym Environments</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="running-gym-environments">
+<h1>Running Gym Environments<a class="headerlink" href="#running-gym-environments" title="Permalink to this headline">¶</a></h1>
+<p>Gym Environments were the first environments we used to develop Shiva and often serve as sanity checks when we are testing
+new algorithms. The config guide, found <a class="reference internal" href="Configs.html"><span class="doc">here</span></a>, uses the Gym-Cartpole.ini file as the basis for the guide but we’ll go over some
+details that are glossed over there for sake of staying on topic.</p>
+<p class="rubric">OpenAI Gym Environments</p>
+<p>Shiva supports Box2D and Classic Control Gym Environments. As long as you have installed the environments following the instructions
+found in OpenAI’s Gym Repo <a class="reference external" href="https://github.com/openai/gym#installation">here</a>.</p>
+<p class="rubric">Custom Gym Environments</p>
+<p>If you happen to have created your own Gym Environment, here are some instructions on how you would hook it up with Shiva,
+after a conversation with a user who decided to do just this we implemented a simple way to interface with Shiva given that
+your environment file is properly structured.</p>
+<p><a class="reference external" href="https://medium.com/&#64;apoddar573/making-your-own-custom-environment-in-gym-c3b65ff8cdaa">Here</a> is an guide that details how you would
+set up your custom environment.</p>
+<p>Once you’ve given your custom environment the proper architecture, registered, and pip installed it you’ll be able to use it with Shiva
+by setting up the Environment section of your ini file as follows. The following example is using the environment from the article as the
+example.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>One thing to watch for that’s not mentioned in the article is that if you don’t end the environment name with -v[0-9] it will give you
+an error</p>
+</div>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[Environment]</span>
+<span class="na">device</span>               <span class="o">=</span>   <span class="s">&#39;gpu&#39;</span>
+<span class="na">type</span>                 <span class="o">=</span>   <span class="s">&#39;GymEnvironment&#39;</span>
+<span class="na">env_name</span>             <span class="o">=</span>   <span class="s">&#39;foo-v0&#39;</span>
+<span class="na">episode_max_length</span>   <span class="o">=</span>   <span class="s">100</span>
+<span class="na">expert_reward_range</span>  <span class="o">=</span>   <span class="s">{&#39;Custom-v0&#39;: [80, 100]}</span>
+<span class="na">num_envs</span>             <span class="o">=</span>   <span class="s">1</span>
+<span class="na">custom</span>               <span class="o">=</span>   <span class="s">&#39;gym_foo&#39;</span>
+<span class="na">render</span>               <span class="o">=</span>   <span class="s">False</span>
+<span class="na">port</span>                 <span class="o">=</span>   <span class="s">5010</span>
+<span class="na">normalize</span>            <span class="o">=</span>   <span class="s">False</span>
+<span class="na">reward_factor</span>        <span class="o">=</span>   <span class="s">0.1</span>
+<span class="na">min_reward</span>           <span class="o">=</span>   <span class="s">0</span>
+<span class="na">max_reward</span>           <span class="o">=</span>   <span class="s">1</span>
+<span class="na">episodic_load_rate</span>   <span class="o">=</span>   <span class="s">1</span>
+</pre></div>
+</div>
+<p>In order to use your custom environemt it has be imported so in the custom hyperparameter type in the name of your custom gym environment module.</p>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/howto/Gym.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Running Gym Environments</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

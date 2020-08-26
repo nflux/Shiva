@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import torch
 import copy
 import pickle
@@ -6,184 +7,465 @@ from torch.distributions import Categorical
 from torch.nn.functional import softmax
 from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.Agent import Agent
-from shiva.utils import Noise as noise
-from shiva.helpers.misc import action2one_hot
+from shiva.helpers.utils import Noise as noise
+from shiva.helpers.networks_helper import mod_optimizer
+from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
+
 class DDPGAgent(Agent):
-    def __init__(self, id, obs_dim, action_dim, param_ix, agent_config: dict, networks: dict):
-        super(DDPGAgent, self).__init__(id, obs_dim, action_dim, agent_config, networks)
-        try:
-            torch.manual_seed(self.manual_seed)
-            np.random.seed(self.manual_seed)
-        except:
-            torch.manual_seed(5)
-            np.random.seed(5)
+    """ DDPG Agent Class
 
-        self.id = id
+    Used for getting discrete and continuous actions. Also has saving and loading functions.
+    Also has functions to modify and evolve hyper-parameters.
 
-        self.actor = SoftMaxHeadDynamicLinearNetwork(obs_dim, action_dim, param_ix, networks['actor'])
+    Args:
+        id (int): Id to identify the agent.
+        obs_space(int): Number of observations for the agent to expect.
+        acs_space(dict): Number of actions the agent is expected to produce seperate by type of action
+            space.
+        configs: Hyperparameters used to set up the agent.
+    Returns:
+        None.
+    """
+    def __init__(self, id:int, obs_space:int, acs_space:dict, configs):
+        super(DDPGAgent, self).__init__(id, obs_space, acs_space, configs)
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
+        self.log(f"MANUAL SEED {self.manual_seed}")
+
+        self.discrete = acs_space['discrete']
+        self.continuous = acs_space['continuous']
+        self.param = acs_space['discrete']
+
+        if self.continuous == 0:
+            self.action_space = 'discrete'
+            self.actor_input = obs_space
+            self.actor_output = self.discrete
+            self.get_action = self.get_discrete_action
+        elif self.discrete == 0:
+            self.action_space = 'continuous'
+            self.actor_input = obs_space
+            self.actor_output = self.continuous
+            self.get_action = self.get_continuous_action
+            if not hasattr(self, 'actions_range'):
+                self.actions_range = [-1, 1]
+        else:
+            raise NotImplemented
+            # self.action_space = 'parametrized'
+            # self.actor_input = obs_space
+            # self.actor_output = self.discrete + self.param
+            # self.get_action = self.get_parameterized_action
+
+        self.instantiate_networks()
+
+    def instantiate_networks(self) -> None:
+        """ Creates the networks that agent will use for inference or evaluation.
+
+        Uses the network section of the config along with acs_space and obs_space to
+        create the networks. Also creates the target networks.
+
+        Returns:
+            None
+        """
+        self.hps = ['actor_learning_rate', 'critic_learning_rate']
+        self.hps += ['epsilon', 'noise_scale']
+        self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
+
+        self.ou_noise = noise.OUNoiseTorch(sum(self.actor_output), self.noise_scale)
+        self.hp_random = self.hp_random if hasattr(self, 'hp_random') else False
+
+        if self.hp_random:
+            self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
+            self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
+            self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+            self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+        else:
+            self.epsilon = self.epsilon_start
+            self.noise_scale = self.noise_start
+            self.actor_learning_rate = self.agent_config['actor_learning_rate']
+            self.critic_learning_rate = self.agent_config['critic_learning_rate']
+
+        if 'MADDPG' not in str(self):
+            self.critic_input_size = self.actor_input + sum(self.actor_output)
+
+        self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
+
+        if self.action_space == 'continuous':
+            self.actor = DynamicLinearNetwork(self.actor_input, sum(self.actor_output), self.networks_config['actor'])
+            self.exploration_policy = torch.distributions.uniform.Uniform(low=self.actions_range[0], high=self.actions_range[1])
+        elif self.action_space == 'discrete':
+            self.actor = SoftMaxHeadDynamicLinearNetwork(self.actor_input, self.actor_output, self.actor_output, self.networks_config['actor'])
+            self.exploration_policy = torch.distributions.uniform.Uniform(low=0, high=1)
+
         self.target_actor = copy.deepcopy(self.actor)
-
-        self.critic = DynamicLinearNetwork(obs_dim + action_dim, 1, networks['critic'])
+        '''If want to save memory on an MADDPG (not multicritic) run, put critic networks inside if statement'''
+        self.critic = DynamicLinearNetwork(self.critic_input_size, 1, self.networks_config['critic'])
         self.target_critic = copy.deepcopy(self.critic)
-
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
 
-        self.ou_noise = noise.OUNoise(action_dim, self.exploration_noise)
-        self.acs_discrete = action_dim
+    # It's now in the Abstract Agent
+    # def to_device(self, device):
+    #     self.device = device
+    #     self.actor.to(self.device)
+    #     self.target_actor.to(self.device)
+    #     self.critic.to(self.device)
+    #     self.target_critic.to(self.device)
 
+    def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
+        """ Produces a discrete action.
 
-    def get_action(self, observation, step_count, evaluate=False):
-        if self.action_space == 'discrete':
-            return self.get_discrete_action(observation, step_count, evaluate)
-        elif self.action_space == 'continuous':
-            return self.get_continuous_action(observation, step_count, evaluate)
-        elif self.action_space == 'parameterized':
-            assert "DDPG Parametrized NotImplemented"
-            pass
-            return self.get_parameterized_action(observation, evaluate)
+        The action could be either an inference or evaluation action.
 
-    def get_discrete_action(self, observation, step_count, evaluate):
+        Args:
+             observation: State the environment is in.
+             step_count: How many total steps the agent has seen.
+             evaluate: Whether or not you want a noise free deterministic action.
+             one_hot: Whether you want a one hot encoded action or raw.
+
+        Returns:
+            A list containing probabilities for each action possible in the step.
+        """
+        observation = torch.tensor(observation).to(self.device).float()
+        if len(observation.shape)>1:
+            self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
+        else:
+            self._output_dimension = (sum(self.actor_output),)
+        self.ou_noise.set_output_dim(self._output_dimension)
+
         if evaluate:
-            action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-            # action = torch.argmax(action)
-            # action = action2one_hot(self.acs_discrete, action.item())
+            action = self.actor(observation).detach().cpu()
         else:
-            if step_count < self.exploration_steps:
-                self.ou_noise.set_scale(self.exploration_noise)
-                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
-                action += self.ou_noise.noise()
-                action = softmax(torch.from_numpy(action), dim=-1)
-
+            if self.is_exploring(step_count) or self.is_e_greedy(step_count):
+                action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
+                _action_debug = "Random: {}".format(action)
             else:
-                self.ou_noise.set_scale(self.training_noise)
-                action = self.actor(torch.tensor(observation).to(self.device).float()).detach()
-                action = action.cpu().numpy() + self.ou_noise.noise()
-                action = softmax(torch.from_numpy(action), dim=-1)
+                action = self.actor(observation).detach().cpu() + self.ou_noise.noise()
+                # Normalize each individual branch
+                _cum_ix = 0
+                for ac_dim in self.actor_output:
+                    _branch_action = torch.abs(action[_cum_ix:ac_dim+_cum_ix])
+                    action[_cum_ix:ac_dim+_cum_ix] = _branch_action / _branch_action.sum()
+                    _cum_ix += ac_dim
+                _action_debug = "Net: {}".format(action)
 
+            self.log(f"Obs {observation.shape} Acs {action.shape}\nObs {observation} Acs {_action_debug}", verbose_level=3)
+        # if one_hot:
+        #     action = action2one_hot(action.shape[0], torch.argmax(action).item())
+
+        # until this point the action was a tensor, we are returning a python list - needs to be checked.
         return action.tolist()
-            
-    def get_continuous_action(self,observation, step_count, evaluate):
+
+    def get_continuous_action(self, observation, step_count, evaluate=False, *args, **kwargs):
+        """ Produces a continuous action.
+
+        The action could be either an inference or evaluation action.
+
+        Args:
+             observation: State the environment is in.
+             step_count: How many total steps the agent has seen.
+             evaluate: Whether or not you want a noise free deterministic action.
+
+        Returns:
+            A list containing probabilities for each action possible in the step.
+        """
+        observation = torch.tensor(observation).to(self.device).float()
+        if len(observation.shape)>1:
+            self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
+        else:
+            self._output_dimension = (sum(self.actor_output),)
+        self.ou_noise.set_output_dim(self._output_dimension)
+
         if evaluate:
-            observation = torch.tensor(observation).float().to(self.device)
-            action = self.actor(observation)
+            action = self.actor(observation).detach()
         else:
-            if step_count < self.exploration_steps:
-                self.ou_noise.set_scale(self.exploration_noise)
-                action = np.array([np.random.uniform(0,1) for _ in range(self.acs_discrete)])
-                action += self.ou_noise.noise()
+            if self.is_exploring(step_count) or self.is_e_greedy(step_count):
+                action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
+                self.log(f"** Random action {action.tolist()}", verbose_level=1)
             else:
-                observation = torch.tensor(observation).float().to(self.device)
-                action = self.actor(observation)
-                self.ou_noise.set_scale(self.training_noise)
-                action += torch.tensor(self.ou_noise.noise()).float().to(self.device)
-                action = np.clip(action.cpu().detach().numpy(),-1,1)
+                action = self.actor(observation).detach().cpu() + self.ou_noise.noise()
+                action = torch.clamp(action, min=self.actions_range[0], max=self.actions_range[1])
+                self.log(f"Network action {action.tolist()}", verbose_level=1)
         return action.tolist()
 
-    def get_parameterized_action(self, observation, step_count, evaluate):
-        assert "Parametrized DDPG NotImplemented"
-        if evaluate or step_count > self.exploration_steps:
-            pass
-        else:
-            pass
-        pass
-        # return action.tolist()
+    def get_parameterized_action(self, observation, step_count, evaluate=False) -> None:
+        """ Produces a parameterized action.
 
-    def find_best_imitation_action(self, observation: np.ndarray) -> np.ndarray:
+        Currently not implemented. The action could be either an inference or evaluation action.
+
+        Args:
+             observation: State the environment is in.
+             step_count: How many total steps the agent has seen.
+             evaluate: Whether or not you want a noise free action.
+
+        Returns:
+            A list containing probabilities for each action possible in the step.
+        """
+        raise NotImplemented
+        # if self.evaluate:
+        #     observation = torch.tensor(observation).to(self.device)
+        #     action = self.actor(observation.float())
+        # else:
+        #     # if step_count > self.exploration_steps:
+        #     # else:
+        #     observation = torch.tensor(observation).to(self.device)
+        #     action = self.actor(observation.float())
+        # # return action.tolist()
+        # return action[0]
+
+    def get_imitation_action(self, observation: np.ndarray) -> np.ndarray:
+        """ Produces an imitated action.
+
+        Args:
+             observation: State the environment is in.
+
+        Returns:
+            A numpy array containing probabilities for each action possible in the step.
+        """
         observation = torch.tensor(observation).to(self.device)
-        action = self.actor(observation.float()).cpu().data.numpy()
-        action = np.clip(action, -1,1)
-        # print('actor action shape', action.shape)
+        action = self.actor(observation.float())
         return action[0]
 
-    def save(self, save_path, step):
-        torch.save(self.actor, save_path + 'actor.pth')
-        torch.save(self.target_actor, save_path + 'target_actor.pth')
-        torch.save(self.critic, save_path + 'critic.pth')
-        torch.save(self.target_critic, save_path + 'target_critic.pth')
+    # def save(self, save_path, step):
+    #     torch.save(self.actor, save_path + '/actor.pth')
+    #     torch.save(self.target_actor, save_path + '/target_actor.pth')
+    #     torch.save(self.critic, save_path + '/critic.pth')
+    #     torch.save(self.target_critic, save_path + '/target_critic.pth')
+    #     torch.save(self.actor_optimizer, save_path + '/actor_optimizer.pth')
+    #     torch.save(self.critic_optimizer, save_path + '/critic_optimizer.pth')
 
-    def save_agent(self, save_path, step):
-        torch.save(self.actor.state_dict(), save_path + 'actor.pth')
-        torch.save(self.target_actor.state_dict(), save_path + 'target_actor.pth')
-        torch.save(self.critic.state_dict(), save_path + 'critic.pth')
-        torch.save(self.target_critic.state_dict(), save_path + 'target_critic.pth')
-        torch.save(self.actor_optimizer.state_dict(), save_path + 'actor_optimizer.pth')
-        torch.save(self.critic_optimizer.state_dict(), save_path + 'critic_optimizer.pth')
+    def copy_hyperparameters(self, evo_agent) -> None:
+        """ Copies the hyperparameters of a passed in agent.
 
-    def load(self, save_path):
-        self.actor.load_state_dict(torch.load(save_path + 'actor.pth'))
-        self.actor.train()
-        self.target_actor.load_state_dict(torch.load(save_path + 'target_actor.pth'))
-        self.target_actor.train()
-        self.critic.load_state_dict(torch.load(save_path + 'critic.pth'))
-        self.critic.train()
-        self.target_critic.load_state_dict(torch.load(save_path + 'target_critic.pth'))
-        self.target_critic.train()
-        self.actor_optimizer.load_state_dict(torch.load(save_path + 'actor_optimizer.pth'))
-        self.critic_optimizer.load_state_dict(torch.load(save_path + 'critic_optimizer.pth'))
-        
+        Args:
+            evo_agent(DDPGAgent): An evolved agent from which to copy hyperparameters from.
+
+        Returns:
+            None
+        """
+        self.actor_learning_rate = evo_agent.actor_learning_rate
+        self.critic_learning_rate = evo_agent.critic_learning_rate
+        self._update_optimizers()
+        self.epsilon = evo_agent.epsilon
+        self.noise_scale = evo_agent.noise_scale
+
+    def copy_weights(self, evo_agent) -> None:
+        """ Used to copy this evolved agent's weights into this agent.
+
+        Args:
+            evo_agent (DDPGAgent): An evolved agent from which to copy hyperparameters from.
+        Returns:
+            None
+        """
+        self.num_evolutions['truncate'] += 1
+        self.actor.load_state_dict(evo_agent.actor.to(self.device).state_dict())
+        self.target_actor.load_state_dict(evo_agent.target_actor.to(self.device).state_dict())
+        self.critic.load_state_dict(evo_agent.critic.to(self.device).state_dict())
+        self.target_critic.load_state_dict(evo_agent.target_critic.to(self.device).state_dict())
+        self.actor_optimizer.load_state_dict(evo_agent.actor_optimizer.state_dict())
+        self.critic_optimizer.load_state_dict(evo_agent.critic_optimizer.state_dict())
+
+    def perturb_hyperparameters(self, perturb_factor) -> None:
+        """ Slight mutates this agent's weights by a factor.
+        Args:
+            perturb_factor(float): Factor by which to modify agent weights.
+        Returns:
+            None
+        """
+        self.num_evolutions['perturb'] += 1
+        self.actor_learning_rate *= perturb_factor
+        self.critic_learning_rate *= perturb_factor
+        self._update_optimizers()
+        self.epsilon *= perturb_factor
+        self.noise_scale *= perturb_factor
+
+    def resample_hyperparameters(self) -> None:
+        """ Gets new weights for this agent from a set predetermined intervals in the configs.
+
+        Returns:
+            None
+        """
+        self.num_evolutions['resample'] += 1
+        self.actor_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+        self.critic_learning_rate = np.random.uniform(self.agent_config['lr_uniform'][0], self.agent_config['lr_uniform'][1]) / np.random.choice(self.agent_config['lr_factors'])
+        self._update_optimizers()
+        self.epsilon = np.random.uniform(self.epsilon_range[0], self.epsilon_range[1])
+        self.noise_scale = np.random.uniform(self.ou_range[0], self.ou_range[1])
+
+    def recalculate_hyperparameters(self, done_count=None) -> None:
+        """ Updates the epsilon and noise hyperparameters over time.
+
+        Args:
+            done_count (int): Episodic independent value controlling the hyperparameters.
+        Returns:
+            None
+        """
+        if done_count is None:
+            done_count = self.done_count if self.done_count != 0 else 1
+        self.update_epsilon_scale(done_count)
+        self.update_noise_scale(done_count)
+
+    def decay_learning_rate(self) -> None:
+        """ Increases the critics' learning rate.
+
+        Returns:
+            None
+        """
+        self.actor_learning_rate *= self.lr_decay['factor']
+        if 'MADDPG' not in str(self):
+            self.critic_learning_rate *= self.lr_decay['factor']
+            self.log(f"Decay Actor and Critic LR: {self.actor_learning_rate} {self.critic_learning_rate}", verbose_level=3)
+        else:
+            self.log(f"Decay Actor LR: {self.actor_learning_rate}", verbose_level=3)
+        self._update_optimizers()
+
+    def restore_learning_rate(self) -> None:
+        """ Increases the networks' learning rate.
+
+        Returns:
+            None
+        """
+        if self.actor_learning_rate < self.configs['Agent']['actor_learning_rate']:
+            self.actor_learning_rate /= self.lr_decay['factor']
+            self.log(f"Increment Actor LR {self.actor_learning_rate}", verbose_level=3)
+        else:
+            self.actor_learning_rate = self.configs['Agent']['actor_learning_rate']
+            self.log(f"Actor LR Restored {self.actor_learning_rate}", verbose_level=3)
+
+        if 'MADDPG' not in str(self):
+            if self.critic_learning_rate < self.configs['Agent']['critic_learning_rate']:
+                self.critic_learning_rate /= self.lr_decay['factor']
+                self.log(f"Increment Critic LR {self.actor_learning_rate}", verbose_level=3)
+            else:
+                self.critic_learning_rate = self.configs['Agent']['critic_learning_rate']
+            self.log(f"Critic LR Restored {self.actor_learning_rate}", verbose_level=3)
+
+        self._update_optimizers()
+
+    def _update_optimizers(self):
+        self.actor_optimizer = mod_optimizer(self.actor_optimizer, {'lr': self.actor_learning_rate})
+        self.critic_optimizer = mod_optimizer(self.critic_optimizer, {'lr': self.critic_learning_rate})
+
+    def update_epsilon_scale(self, done_count=None) -> None:
+        """To be called by the Learner before saving
+        Decreases the epsilon scale.
+        Args:
+            done_count (int):
+        Returns:
+            None
+        """
+        if self.hp_random is False:
+            if done_count is None:
+                done_count = self.done_count
+            # if self.is_exploring():
+            #     return self.epsilon_start
+            self.epsilon = self._get_epsilon_scale(done_count)
+
+    def _get_epsilon_scale(self, done_count=None):
+        if done_count is None:
+            done_count = self.done_count
+        return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.epsilon_episodes, (done_count - self._average_exploration_episodes_performed()), degree=self.epsilon_decay_degree))
+
+    def update_noise_scale(self, done_count=None) -> None:
+        """To be called by the Learner before saving
+        Decreases the noise scale.
+        Args:
+            done_count (int):
+        Returns:
+            None
+        """
+        if self.hp_random is False:
+            if done_count is None:
+                done_count = self.done_count
+            self.noise_scale = self._get_noise_scale(done_count)
+            self.ou_noise.set_scale(self.noise_scale)
+
+    def _get_noise_scale(self, done_count=None):
+        if done_count is None:
+            done_count = self.done_count
+        return max(self.noise_end, self.decay_value(self.noise_start, self.noise_episodes, (done_count - (self._average_exploration_episodes_performed())), degree=self.noise_decay_degree))
+
+    def _average_exploration_episodes_performed(self):
+        return self.exploration_steps / (self.step_count / self.done_count) if (self.step_count != 0 and self.done_count != 0) else 0
+
+    def reset_noise(self) -> None:
+        """ Resets the Agent's OU Noise
+
+        This is super important otherwise the noise will compound.
+
+        Returns:
+            None
+        """
+        self.ou_noise.reset()
+
+    def decay_value(self, start, decay_end_step, current_step_count, degree=1) -> float:
+        """ Decays a value from an initial to final value.
+
+        Can be linear, or polynomial.
+
+        Returns:
+            A new float value.
+        """
+        return start - start * ((current_step_count / decay_end_step) ** degree)
+
+    def is_e_greedy(self, step_count=None) -> bool:
+        """ Checks if an action should be random or inference.
+
+        Args:
+            step_count (int): Episodic counter that controls the epsilon.
+
+        Returns:
+            Boolean indicating whether or not to take a random action.
+        """
+        if step_count is None:
+            step_count = self.step_count
+        if step_count > self.exploration_steps:
+            step_count = step_count - self.exploration_steps # don't count explorations steps
+            return random.uniform(0, 1) < self.epsilon
+        else:
+            return True
+
+    def is_exploring(self, current_step_count=None) -> bool:
+        """ Checks if an action should be random or inference.
+
+        Args:
+            step_count (int): Episodic counter that controls the noise.
+
+        Returns:
+            Boolean indicating whether or not to add noise to an action.
+        """
+        if hasattr(self, 'exploration_episodes'):
+            if current_step_count is None:
+                current_step_count = self.done_count
+            _threshold = self.exploration_episodes
+        else:
+            if current_step_count is None:
+                current_step_count = self.step_count
+            _threshold = self.exploration_steps
+        return current_step_count < _threshold
+
+    def get_metrics(self):
+        """Gets the metrics so they can be passed to tensorboard.
+
+        Returns:
+             A tuple of metrics.
+        """
+        return [
+            ('{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate),
+            ('{}/Critic_Learning_Rate'.format(self.role), self.critic_learning_rate),
+            ('{}/Epsilon'.format(self.role), self.epsilon),
+            ('{}/Noise_Scale'.format(self.role), self.noise_scale),
+        ]
+
+    def get_module_and_classname(self):
+        """ Returns the name of the module and class name.
+
+        Returns:
+            A string representation of the module and class.
+
+        """
+        return ('shiva.agents', 'DDPGAgent.DDPGAgent')
+
     def __str__(self):
-        return 'DDPGAgent'
-
-
-    # def save_agent(self, save_path,step):
-
-    #     torch.save({
-    #         'actor': self.actor.state_dict(),
-    #         'critic': self.critic.state_dict(),
-    #         'target_actor' : self.target_actor.state_dict(),
-    #         'target_critic' : self.target_critic.state_dict(),
-    #         'agent' : self
-    #     }, save_path + '/agent.pth')
-
-    # def load(self,save_path):
-    #     print(save_path)
-    #     model = torch.load(save_path + '/agent.pth')
-    #     self.agent = model['agent']
-    #     self.target_critic.load_state_dict(model['target_critic'])
-    #     self.target_actor.load_state_dict(model['target_actor'])
-    #     self.critic.load_state_dict(model['critic'])
-    #     self.actor.load_state_dict( model['actor'])     
-
-    # # Gets actions with a linearly decreasing e greedy strat
-    # def get_action(self, observation) -> np.ndarray: # maybe a torch.tensor
-    #     # print('get action')
-    #     # if step_count < self.exploration_steps:
-    #     if True:
-    #         self.ou_noise.set_scale(self.exploration_noise)
-    #         action = np.array([np.random.uniform(0,1) for _ in range(self.discrete+self.param)])
-    #         action += self.ou_noise.noise()
-    #         action = np.concatenate([ np_softmax(action[:self.discrete]), action[self.discrete:] ])
-    #         self.action = np.clip(action, -1, 1)
-    #         # print('random action shape', action[:self.acs_space['discrete']].sum(), action.shape)
-    #         return self.action
-
-    #     else:
-
-    #         self.ou_noise.set_scale(self.training_noise)
-    #         observation = torch.tensor([observation]).to(self.device)
-    #         action = agent.get_action(observation.float()).cpu().data.numpy()
-
-    #         # print("Network Output (after softmax):", action)
-    #         # input()
-
-    #         # useful for debugging
-    #         # if step_count % 100 == 0:
-    #             # print(action)
-
-    #         # action += self.ou_noise.noise()
-    #         # action = np.clip(action, -1,1)
-    #         # print('actor action shape', action.shape)
-
-    #         size = len(action.shape)
-    #         if size == 3:
-    #             self.action = action[0, 0]
-    #             return action[0, 0]
-    #         elif size == 2:
-    #             self.action = action[0]
-    #             return action[0]
-    #         else:    
-    #             self.action = action
-    #             return action
+        return f"'<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} noise/epsilon={round(self.noise_scale, 2)}/{round(self.epsilon, 2)} device={self.device})>'"

@@ -40,6 +40,13 @@ Run the below command in order to install the requirements.
 bash ./Control-Tasks/setup/install.sh
 ```
 
+## Install OpenMPI
+
+For the ability to run inter-process communication runs,
+```bash
+sudo apt-get install openmpi-bin openmpi-common openssh-client openssh-server libopenmpi1.3 libopenmpi-dbg libopenmpi-dev
+```
+
 ## Install RoboCup
 
 ```bash

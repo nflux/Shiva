@@ -14,7 +14,7 @@ Dagger stands for Data Aggregation, and it works by aggregating all of the data 
 
 # Used Classes
 
-## [Imitation Learner](../shiva/learners/SingleAgentImitationLearner.py)
+## [Imitation Learner](../archive/SingleAgentImitationLearner.py)
 
 The ImitationLearner controls the flow of the imitation process. It initializes the algorithm objects, as well as creates the new learning agents and loads the expert agent. The two major components to this file are the `self.supervised_update()` and
 `self.imitation_update()` functions. The former fills a replay buffer with episodes driven by the expert agent. The subsequent function calls step through the environment, collect feedback, and write the results to a Tensorboard summary writer. It then trains an initial policy on the collected data. The latter adds episodes controlled by the imitating policy to the buffer, and trains a new policy on all the data aggregated on the buffer. It goes through this imitation process by a predetermined iteration count dictated by the [ini file](https://github.com/nflux/Control-Tasks/blob/demo/shiva/configs/Dagger.ini).

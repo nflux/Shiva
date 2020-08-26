@@ -44,7 +44,7 @@ class RoboCupBotEnv:
                   " --defense-agents %i --offense-npcs %i --defense-npcs %i"\
                   " --port %i --offense-on-ball %i --seed %i --ball-x-min %f"\
                   " --ball-x-max %f --ball-y-min %f --ball-y-max %f"\
-                  " --log-dir %s --message-size 256 --tackle-cycles 1 --no-offside --offside-area-size 0"\
+                  " --logs-dir %s --message-size 256 --tackle-cycles 1 --no-offside --offside-area-size 0"\
                   % (self.seed, self.fpt, self.untouched_time, self.leftagents,
                      self.rightagents, self.leftbots, self.rightbots, self.port,
                      self.offense_on_ball, self.seed, self.ball_x_min, self.ball_x_max,
@@ -61,7 +61,7 @@ class RoboCupBotEnv:
             if not self.rcss_log_game:  cmd += " --no-logging"
             if self.hfo_log_game:       cmd += " --hfo-logging"
             if self.record:             cmd += " --record"
-            if self.record_server:      cmd += " --log-gen-pt"
+            if self.record_server:      cmd += " --logs-gen-pt"
             if self.run_imit:           cmd += " --run-imit"
             if self.control_rand_init:
                 cmd += " --agents-x-min %f --agents-x-max %f --agents-y-min %f --agents-y-max %f"\
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--port", required=True, type=int, help='Port for RoboCup Server')
     args = parser.parse_args()
 
-    bot_config_file = os.getcwd() + '/configs/DDPG-Robocup-Imitation.ini'
+    bot_config_file = os.getcwd() + '/configs/BotEnv.ini'
     config = load_config_file_2_dict(bot_config_file)
     bot_env = RoboCupBotEnv(config['BotEnv'], args.port)
     bot_env.run()

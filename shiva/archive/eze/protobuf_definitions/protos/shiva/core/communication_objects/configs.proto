@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/enums.proto";
+
+package communication_objects;
+
+message ConfigProto {
+    ComponentType type = 1;
+    LoadType load_type = 2;
+    string load_path = 3;
+    string data = 4;
+}

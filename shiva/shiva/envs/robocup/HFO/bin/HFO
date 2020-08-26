@@ -112,7 +112,7 @@ def main(args):
                     args.min_agents_y, args.max_agents_y,
                     args.change_every_x_ep, args.change_agents_x, args.change_agents_y,
                     args.change_balls_x, args.change_balls_y, args.control_rand_init,
-                    args.messageSize, args.verbose, args.tackle_cycles, 
+                    args.messageSize, args.verbose, args.tackle_cycles,
                     args.offside, args.offside_area_size, args.forbid_offside_kickoff,
                     args.server_log, args.run_imit)
 
@@ -207,8 +207,8 @@ def parseArgs():
                  default=True, help='Disable rcssserver logging.')
   p.add_argument('--hfo-logging', dest='hfo_logging', action='store_true', default=False,
                  help="Do .hfo logging even if no other logging")
-  p.add_argument('--log-dir', dest='logDir', default='log/',
-                 help='Directory to store logs. Default: log/')
+  p.add_argument('--logs-dir', dest='logDir', default='logs/',
+                 help='Directory to store logs. Default: logs/')
   p.add_argument('--record', dest='record', action='store_true',
                  help='Record logs of states and actions.')
   p.add_argument('--offense-on-ball', dest='offenseOnBall', type=int,
@@ -263,7 +263,7 @@ def parseArgs():
                   default=0, help='Offside area size')
   p.add_argument('--allow-offside-kickoff', dest='forbid_offside_kickoff', action='store_false',
                     default=True, help='allow offside kickoff')
-  p.add_argument('--log-gen-pt', dest='server_log', action='store_true',
+  p.add_argument('--logs-gen-pt', dest='server_log', action='store_true',
                     help='allow logging of general pre-training')
   p.add_argument('--run-imit', dest='run_imit', action='store_true', default=False, help='option to run imitation')
   p.add_argument('--run-bots', dest='run_bots', action='store_true', default=False, help='option to run imitation')

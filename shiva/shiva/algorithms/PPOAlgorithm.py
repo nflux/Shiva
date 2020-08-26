@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.functional as F
 import utils.Noise as noise
-from torch.nn.functional import softmax
+from torch.nn import Softmax as Softmax
 from agents.PPOAgent import PPOAgent
 from .Algorithm import Algorithm
 from torch.distributions import Categorical
@@ -12,26 +12,24 @@ from shiva.agents.PPOAgent import PPOAgent
 from shiva.algorithms.Algorithm import Algorithm
 
 class PPOAlgorithm(Algorithm):
-    def __init__(self,obs_space, acs_space, action_space_discrete,action_space_continuous,configs):
+    def __init__(self,obs_space, acs_space,configs):
 
         super(PPOAlgorithm, self).__init__(obs_space,acs_space,configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
-        self.epsilon_clip = configs[0]['epsilon_clip']
-        self.gamma = configs[0]['gamma']
-        self.gae_lambda = configs[0]['lambda']
+        #self.epsilon_clip = configs[0]['epsilon_clip']
+        #self.gamma = configs[0]['gamma']
+        #self.gae_lambda = configs[0]['lambda']
         self.policy_loss = 0
         self.value_loss = 0
         self.entropy_loss = 0
         self.loss = 0
         self.acs_space = acs_space
         self.obs_space = obs_space
-        self.acs_discrete = action_space_discrete
-        self.acs_continuous = action_space_continuous
-        # self.softmax = Softmax(dim=-1)
+        self.softmax = Softmax(dim=-1)
 
 
-    def update(self, agent,buffer, step_count):
+    def update(self, agent,buffer, step_count,episodic=False):
         '''
             Getting a Batch from the Replay Buffer
         '''
@@ -39,17 +37,18 @@ class PPOAlgorithm(Algorithm):
         minibatch = buffer.full_buffer()
 
         # Batch of Experiences
-        states, actions, rewards,logprobs, next_states, dones = minibatch
+        states, actions, rewards, next_states, done_masks,logprobs = minibatch
 
         # Make everything a tensor and send to gpu if available
-        states = torch.tensor(states).to(self.device)
-        actions = torch.tensor(actions).to(self.device)
+        '''states = torch.tensor(states).to(self.device)
+        actions = torch.tensor(np.argmax(actions, axis=-1)).to(self.device).long()
         rewards = torch.tensor(rewards).to(self.device)
         next_states = torch.tensor(next_states).to(self.device)
-        done_masks = torch.ByteTensor(dones).to(self.device)
+        done_masks = torch.tensor(dones, dtype=torch.bool).view(-1,1).to(self.device)'''
         #Calculate approximated state values and next state values using the critic
         values = agent.critic(states.float()).to(self.device)
         next_values = agent.critic(next_states.float()).to(self.device)
+        actions = torch.argmax(actions,dim=1)
 
 
         new_rewards = []
@@ -71,22 +70,21 @@ class PPOAlgorithm(Algorithm):
         #Normalize the advantages
         advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
         #Calculate log probabilites of the old policy for the policy objective
-        '''old_action_probs = old_agent.actor(states.float())
-        dist = Categorical(old_action_probs)
-        old_log_probs = dist.log_prob(actions)'''
-        old_log_probs = torch.from_numpy(logprobs).float().detach()
+        if type(logprobs) == np.ndarray:
+            old_log_probs = torch.from_numpy(logprobs).float().detach().to(self.device)
+        else:
+            old_log_probs = logprobs.clone().detach().to(self.device)
 
         #Update model weights for a configurable amount of epochs
-        for epoch in range(self.configs[0]['update_epochs']):
+        for epoch in range(self.update_epochs):
             values = agent.critic(states.float()).to(self.device)
             #Calculate Discounted Rewards and Advantages using the General Advantage Equation
 
             #Calculate log probabilites of the new policy for the policy objective
-            current_action_probs = agent.actor(states.float())
+            current_action_probs = self.softmax(agent.actor(states.float()))
             # print(current_action_probs)
             dist2 = Categorical(current_action_probs)
-            print(actions[:,0])
-            log_probs = dist2.log_prob(actions[:,0])
+            log_probs = dist2.log_prob(actions)
             #Use entropy to encourage further exploration by limiting how sure
             #the policy is of a particular action
             entropy = dist2.entropy()
@@ -98,7 +96,7 @@ class PPOAlgorithm(Algorithm):
             #Zero Optimizer, Calculate Losses, Backpropagate Gradients
             agent.optimizer.zero_grad()
             self.policy_loss = -torch.min(surr1,surr2).mean()
-            self.entropy_loss = -(self.configs[0]['beta']*entropy).mean()
+            self.entropy_loss = -(self.beta*entropy).mean()
             self.value_loss = self.loss_calc(values, new_rewards.unsqueeze(dim=-1))
             self.loss = self.policy_loss + self.value_loss + self.entropy_loss
             self.loss.backward()
@@ -118,8 +116,8 @@ class PPOAlgorithm(Algorithm):
             metrics = []
         return metrics
 
-    def create_agent(self):
-        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete,self.acs_continuous, self.configs[1],self.configs[2])
+    def create_agent(self,id=0):
+        self.agent = PPOAgent(id, self.obs_space, self.acs_space, self.configs['Agent'],self.configs['Network'])
         return self.agent
 
     def __str__(self):

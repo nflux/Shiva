@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/configs.proto";
+import "shiva/core/communication_objects/helpers.proto";
+
+package communication_objects;
+
+service MultiEnvironment {
+    rpc SendSpecs(SimpleMessage) returns (Empty); // used for the single environments to check-in
+    rpc GetSpecs(SimpleMessage) returns (SimpleMessage);
+    rpc GetActions(SimpleMessage) returns (SimpleMessage);
+    rpc SendConfig(ConfigProto) returns (Empty);
+}

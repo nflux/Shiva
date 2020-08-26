@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-File: Communicator.py
+File: ShivaCommunicator.py
 Author: Samuel Barrett
 Description: some classes for socket communication
 Created:  2010-11-07

@@ -189,8 +189,10 @@ Strategy::read( const std::string & formation_dir )
 {
 #ifdef __APPLE__
     static bool s_initialized = false;
+    std::cerr << 'It definitely equals False';
 #else
     static thread_local bool s_initialized = false;
+    std::cerr << 'It definitely equals False';
 #endif
 
     if ( s_initialized )

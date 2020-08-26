@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPIPBTMetaLearner module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">MPIPBTMetaLearner module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-MPIPBTMetaLearner">
+<span id="mpipbtmetalearner-module"></span><h1>MPIPBTMetaLearner module<a class="headerlink" href="#module-MPIPBTMetaLearner" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner">
+<em class="property">class </em><code class="sig-prename descclassname">MPIPBTMetaLearner.</code><code class="sig-name descname">MPIPBTMetaLearner</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">configs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.learners.MetaLearner.MetaLearner</span></code></p>
+<dl class="py attribute">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.id">
+<code class="sig-name descname">id</code><em class="property"> = 0</em><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.info">
+<code class="sig-name descname">info</code><em class="property"> = &lt;mpi4py.MPI.Status object&gt;</em><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.info" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.launch">
+<code class="sig-name descname">launch</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.launch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Launches Shiva components in their own MPI process:
+* Administrative: IOHandler
+* Training components: MPIMultiEnv, MPILearner
+* Evaluation components: MPIMultiEvaluationWrapper (when PBT is enabled)</p>
+<p>And then the infinite loop under the <a href="#id1"><span class="problematic" id="id2">`run`_</span></a> method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Infinite loop for the high level operations for meta learning purposes where we interface between the Learner and Evaluation when PBT is enabled.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.check_states">
+<code class="sig-name descname">check_states</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.check_states" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function would check the state of all the components. Might need some work, although for now checks if one of the Learners has closed and sets the <a href="#id3"><span class="problematic" id="id4">`is_running`_</span></a> flag accordingly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to be called when a process withing the pipeline has crashed or closed. Currently, we only check state for the Learners.
+This will send a message to all existing processes and tell them to terminate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.start_evals">
+<code class="sig-name descname">start_evals</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.start_evals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Executes the high level operations to create a new evolution config to be handled to the Learners who request an evolution config.
+It will proceed only if: PBT is enabled, a Learner has requested a config and we have received at least 1 Ranking from the Evaluation pipeline.
+If so, will create a evolution config for the Learner and send it. It will never sent a Evolution config to a Learner twice if we haven’t received new Rankings between both requests.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_multieval_metrics">
+<code class="sig-name descname">get_multieval_metrics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_multieval_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receive new rankings from MPIMultiEvaluationWrapper</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.review_training_matches">
+<code class="sig-name descname">review_training_matches</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.review_training_matches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates new pairs of training matches and sends them to the MultiEnvs to load.
+It’s used during initialization but not being used during runtime. Would be better to have a match making process using ELO score.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_training_matches">
+<code class="sig-name descname">get_training_matches</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_training_matches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates unique pairs of training matches for the currently running MultiEnvs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>list of training matches. Each training match is a Dict that maps role names to Learner specs.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>List[Dict[str, Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.has_pair">
+<code class="sig-name descname">has_pair</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.has_pair" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if the given Agent ID and Role has an exclusive that needs to be paired with. This is the case when one of the Agents is under a centralized critic.
+This function could be potentially used for pair matching. Not currently being used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agent_id</strong> (<em>int</em>) – Agent ID for which we want to check if it has a pair</p></li>
+<li><p><strong>role</strong> (<em>str</em>) – role name for the agent who we are trying to find a pair</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>bool indicates if a pair was found. If a pair was found the second argument contains a list of the Agent IDs that are possible pairs.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Tuple[bool, List[int]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_role">
+<code class="sig-name descname">get_role</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_role" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function returns the role name for a fiven Agent ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agent_id</strong> (<em>int</em>) – Agent ID for who we are trying to find the role name.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>role name</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_id">
+<code class="sig-name descname">get_learner_id</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function returns the Learner ID who owns the given Agent ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agent_id</strong> (<em>int</em>) – Agent ID for who we are trying to get the Learner ID</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Learner ID that owns the given Agent ID</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_spec">
+<code class="sig-name descname">get_learner_spec</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MPIPBTMetaLearner.MPIPBTMetaLearner.get_learner_spec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Similar to <a href="#id5"><span class="problematic" id="id6">`get_learner_id`_</span></a> but instead returns the Learner Spec. To learn more about the Learner Spec go to <cite>Learner.get_learner_specs</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agent_id</strong> (<em>int</em>) – Agent ID for who are trying to get the Learner Spec</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>for more details about this Spec go to <cite>Learner.get_learner_specs</cite></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Dict[str, Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/ref/learners/MPIPBTMetaLearner.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">MPIPBTMetaLearner module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

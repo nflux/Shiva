@@ -5,7 +5,7 @@ import torch
 from copy import deepcopy
 
 import logging
-# logging.basicConfig(filename='example.log', level=logging.DEBUG)
+# logging.basicConfig(filename='example.logs', level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
 
 from shiva.helpers.config_handler import load_class, load_config_file_2_dict

@@ -1,0 +1,367 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MADDPGAlgorithm module &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">MADDPGAlgorithm module</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-MADDPGAlgorithm">
+<span id="maddpgalgorithm-module"></span><h1>MADDPGAlgorithm module<a class="headerlink" href="#module-MADDPGAlgorithm" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm">
+<em class="property">class </em><code class="sig-prename descclassname">MADDPGAlgorithm.</code><code class="sig-name descname">MADDPGAlgorithm</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation_space</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>int<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">action_space</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>Dict<span class="p">[</span>str<span class="p">, </span>Tuple<span class="p">[</span>int<span class="p">]</span><span class="p">]</span><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">configs</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>Any<span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">shiva.algorithms.Algorithm.Algorithm</span></code></p>
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span></em>, <em class="sig-param"><span class="n">buffer</span></em>, <em class="sig-param"><span class="n">step_count</span></em>, <em class="sig-param"><span class="n">episodic</span></em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the corresponding update method for a number of times specified by the config.
+See MADDPG config explanation for the available update methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agents</strong> (<em>List</em><em>[</em><a class="reference internal" href="../agents/MADDPGAgent.html#MADDPGAgent.MADDPGAgent" title="MADDPGAgent.MADDPGAgent"><em>MADDPGAgent</em></a><em>]</em>) – List of agents to be updated</p></li>
+<li><p><strong>buffer</strong> (<a class="reference internal" href="../buffers/MultiTensorBuffer.html#MultiTensorBuffer.MultiAgentTensorBuffer" title="MultiTensorBuffer.MultiAgentTensorBuffer"><em>MultiAgentTensorBuffer</em></a>) – only buffers that have a <cite>sample()</cite> method that returns a 5 elements tuple in the order specified by the MultiAgentTensorBuffer (link)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.update_permutes">
+<code class="sig-name descname">update_permutes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">buffer</span><span class="p">:</span> <span class="n">object</span></em>, <em class="sig-param"><span class="n">step_count</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.update_permutes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update method when Algorithm section in config has attribute <cite>method = “permutations”</cite>
+This method performs permutations on the observations, actions and target reward for a single central augmented critic.
+By doing permutations we can reuse a same transition datapoint as many times as permutations are there possible with the number of actors being updates.</p>
+<p>Note that this method only works when the agents have the same observation space, action spaces and reward function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agents</strong> (<em>List</em><em>[</em><a class="reference internal" href="../agents/MADDPGAgent.html#MADDPGAgent.MADDPGAgent" title="MADDPGAgent.MADDPGAgent"><em>MADDPGAgent</em></a><em>]</em>) – </p></li>
+<li><p><strong>buffer</strong> (<a class="reference internal" href="../buffers/MultiTensorBuffer.html#MultiTensorBuffer.MultiAgentTensorBuffer" title="MultiTensorBuffer.MultiAgentTensorBuffer"><em>MultiAgentTensorBuffer</em></a>) – only buffers that have a <cite>sample()</cite> method that returns a 5 elements tuple in the order specified by the MultiAgentTensorBuffer (link)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.update_critics">
+<code class="sig-name descname">update_critics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em>, <em class="sig-param"><span class="n">buffer</span><span class="p">:</span> <span class="n">object</span></em>, <em class="sig-param"><span class="n">step_count</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">episodic</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.update_critics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to be revised and tested!
+Update method when Algorithm section in config has attribute <cite>method = “critics”</cite>
+With this method each actor will have it’s own augmented critic. It must be used in the case where the actors have different observation/action spaces and reward function.
+Each actor will have it’s own critic.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>agents</strong> (<em>List</em><em>[</em><a class="reference internal" href="../agents/MADDPGAgent.html#MADDPGAgent.MADDPGAgent" title="MADDPGAgent.MADDPGAgent"><em>MADDPGAgent</em></a><em>]</em>) – List of agents to be updated</p></li>
+<li><p><strong>buffer</strong> (<a class="reference internal" href="../buffers/MultiTensorBuffer.html#MultiTensorBuffer.MultiAgentTensorBuffer" title="MultiTensorBuffer.MultiAgentTensorBuffer"><em>MultiAgentTensorBuffer</em></a>) – only buffers that have a <cite>sample()</cite> method that returns a 5 elements tuple in the order specified by the MultiAgentTensorBuffer (link)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.evolve">
+<code class="sig-name descname">evolve</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evol_config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.evolve" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.copy_hyperparameters">
+<code class="sig-name descname">copy_hyperparameters</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.copy_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copies the critic hyperparameters from the <cite>evo_agent</cite> to the local
+Only the critic learning rate is being copied for now.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>evo_agent</strong> – (MADDPGAgent):</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.copy_weight_from_agent">
+<code class="sig-name descname">copy_weight_from_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">evo_agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.copy_weight_from_agent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copies the weights of the critic network, target critic network and critic optimizer from the <cite>evo_agent</cite> to the local</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>evo_agent</strong> (<a class="reference internal" href="../agents/MADDPGAgent.html#MADDPGAgent.MADDPGAgent" title="MADDPGAgent.MADDPGAgent"><em>MADDPGAgent</em></a>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.perturb_hyperparameters">
+<code class="sig-name descname">perturb_hyperparameters</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">perturb_factor</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.perturb_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perturbs the local critic learning rate by the <cite>perturb_factor</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>perturb_factor</strong> (<em>float</em>) – float value for which the local <cite>critic_learning_rate</cite> is multiplied</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.resample_hyperparameters">
+<code class="sig-name descname">resample_hyperparameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.resample_hyperparameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resamples a new <cite>critic_learning_rate</cite> using a [don’t know how to explain this function for which we sample a new LR]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.decay_learning_rate">
+<code class="sig-name descname">decay_learning_rate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.decay_learning_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decays the local <cite>critic_learning_rate</cite> using <cite>configs[‘Agent’][‘lr_decay’][‘factor’]</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.restore_learning_rate">
+<code class="sig-name descname">restore_learning_rate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.restore_learning_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Opposite to <cite>decay_learning_rate()</cite>, restores the <a href="#id1"><span class="problematic" id="id2">`critic_learning_rate`_</span></a> using <cite>configs[‘Agent’][‘lr_decay’][‘factor’]</cite> until the maximum learning rate is reached</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.save_central_critic">
+<code class="sig-name descname">save_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.save_central_critic" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used to save the central critic (hosted in the algorithm) in the agents. This enables the critic evolution across learners.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agent</strong> (<a class="reference internal" href="../agents/MADDPGAgent.html#MADDPGAgent.MADDPGAgent" title="MADDPGAgent.MADDPGAgent"><em>MADDPGAgent</em></a>) – agent that is gonna host a copy of our local critic network</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.load_central_critic">
+<code class="sig-name descname">load_central_critic</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.load_central_critic" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function loads the critic from the <cite>agent</cite> input to the local critic hosted in this algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agent</strong> (<a class="reference internal" href="../agents/MADDPGAgent.html#MADDPGAgent.MADDPGAgent" title="MADDPGAgent.MADDPGAgent"><em>MADDPGAgent</em></a>) – agent from which we are gonna make a copy of the critic network</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.create_agents">
+<code class="sig-name descname">create_agents</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.create_agents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Not implemented</p>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.create_agent_of_role">
+<code class="sig-name descname">create_agent_of_role</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">id</span></em>, <em class="sig-param"><span class="n">role</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.create_agent_of_role" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new MADDPG</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>id</strong> (<em>int</em>) – unique ID for the agent</p></li>
+<li><p><strong>role</strong> (<em>str</em>) – role name of the agent</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>MADDPGAgent</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.add_agent">
+<code class="sig-name descname">add_agent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agent</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.add_agent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function currently being used when loading agents. This way the algorithm can have a pointer to them.
+May be deprecated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agent</strong> (<a class="reference internal" href="../agents/MADDPGAgent.html#MADDPGAgent.MADDPGAgent" title="MADDPGAgent.MADDPGAgent"><em>MADDPGAgent</em></a>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.add_agents">
+<code class="sig-name descname">add_agents</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">agents</span><span class="p">:</span> <span class="n">list</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.add_agents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function currently being used when loading agents. This way the algorithm can have a pointer to them.
+May be deprecated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agents</strong> (<em>List</em><em>[</em><a class="reference internal" href="../agents/MADDPGAgent.html#MADDPGAgent.MADDPGAgent" title="MADDPGAgent.MADDPGAgent"><em>MADDPGAgent</em></a><em>]</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.set_spaces">
+<code class="sig-name descname">set_spaces</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">observation_space</span></em>, <em class="sig-param"><span class="n">action_space</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.set_spaces" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function called during initialization to pre-process the observation and action space. Calls <cite>set_action_space()</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>observation_space</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>int</em><em>]</em>) – </p></li>
+<li><p><strong>action_space</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Dict</em><em>[</em><em>str</em><em>, </em><em>tuple</em><em>]</em><em>]</em>) – This is the action space dictionary that our Environment wrappers output (link to Environment)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.set_action_space">
+<code class="sig-name descname">set_action_space</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">roles_action_space</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.set_action_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function called during initialization to pre-process the action space.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>roles_action_space</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Dict</em><em>[</em><em>str</em><em>, </em><em>tuple</em><em>]</em><em>]</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="MADDPGAlgorithm.MADDPGAlgorithm.get_metrics">
+<code class="sig-name descname">get_metrics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">episodic</span></em>, <em class="sig-param"><span class="n">agent_id</span></em><span class="sig-paren">)</span><a class="headerlink" href="#MADDPGAlgorithm.MADDPGAlgorithm.get_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get current metrics from the MADDPG algorithm, specifically actor and critic loss.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>agent_id</strong> (<em>int</em>) – Agent ID for which we want to the collected metrics</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Returns a list of tuples for the Tensorboard.
+Each tuple is of the form (metric_name, y_value, x_value)</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">algorithm</span><span class="o">.</span><span class="n">get_metrics</span><span class="p">(</span><span class="n">agent_id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">[(&#39;Critic_loss&#39;, 0.002, 10), (&#39;Actor_loss&#39;, 0.11, 10), (&#39;Critic_loss&#39;, 0.05, 11), (&#39;Actor_loss&#39;, 0.6, 11)]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/rst/algorithms/MADDPGAlgorithm.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">MADDPGAlgorithm module</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>

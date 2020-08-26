@@ -3,48 +3,51 @@ import torch
 import torch.functional as F
 from torch.distributions import Categorical
 from torch.distributions.normal import Normal
-import math
-
 from shiva.utils import Noise as noise
 from shiva.agents.PPOAgent import PPOAgent
 from shiva.algorithms.Algorithm import Algorithm
 
 class ContinuousPPOAlgorithm(Algorithm):
-    def __init__(self,obs_space, acs_space, action_space_discrete, action_space_continuous, configs):
+    def __init__(self,obs_space, acs_space, configs):
         super(ContinuousPPOAlgorithm, self).__init__(obs_space,acs_space,configs)
-        torch.manual_seed(self.configs[0]['manual_seed'])
-        self.epsilon_clip = configs[0]['epsilon_clip']
-        self.gamma = configs[0]['gamma']
-        self.gae_lambda = configs[0]['lambda']
-        self.grad_clip = configs[0]['grad_clip']
+        torch.manual_seed(self.manual_seed)
+        np.random.seed(self.manual_seed)
+        #self.epsilon_clip = configs[0]['epsilon_clip']
+        #self.gamma = configs[0]['gamma']
+        #self.gae_lambda = configs[0]['lambda']
+        #self.grad_clip = configs[0]['grad_clip']
         self.policy_loss = 0
         self.value_loss = 0
         self.entropy_loss = 0
+        self.ratio_mean = 0
+        self.sigma_mean = 0
+        self.logstd_mean = 0
+        self.mu_mean = 0
         self.loss = 0
         self.acs_space = acs_space
         self.obs_space = obs_space
-        self.acs_discrete = action_space_discrete
-        self.acs_continuous = action_space_continuous
 
 
-    def update(self, agent,buffer, step_count):
+    def update(self, agent,buffer, step_count,episodic=True):
         '''
             Getting a Batch from the Replay Buffer
         '''
+        self.step_count = step_count
         minibatch = buffer.full_buffer()
         # Batch of Experiences
-        states, actions, rewards, logprobs, next_states, dones = minibatch
-
+        states, actions, rewards, next_states, dones, old_log_probs = minibatch
         # Make everything a tensor and send to gpu if available
-        states = torch.tensor(states).to(self.device)
-        actions = torch.tensor(actions).float().to(self.device)
-        rewards = torch.tensor(rewards).to(self.device)
-        next_states = torch.tensor(next_states).to(self.device)
+        states = torch.cat([states[i] for i in range(len(states))]).to(self.device)
+        actions = torch.cat([actions[i] for i in range(len(actions))]).float().to(self.device)
+        rewards = torch.cat([rewards[i] for i in range(len(rewards))]).to(self.device)
+        next_states = torch.cat([next_states[i] for i in range(len(next_states))]).to(self.device)
+        old_log_probs = torch.cat([old_log_probs[i] for i in range(len(old_log_probs))]).to(self.device)
         # done_masks = torch.tensor(dones, dtype=np.bool).to(self.device)
-        done_masks = torch.ByteTensor(dones).to(self.device)
+        done_masks = torch.cat([dones[i] for i in range(len(dones))]).to(self.device)
+
         #Calculate approximated state values and next state values using the critic
-        values = agent.critic(agent.policy_base(states.float())).to(self.device)
-        next_values = agent.critic(agent.policy_base(next_states.float())).to(self.device)
+        values = agent.critic(states.float()).to(self.device)
+        next_values = agent.critic(next_states.float()).to(self.device)
 
 
         #Calculate Discounted Rewards and Advantages using the General Advantage Equation
@@ -61,51 +64,69 @@ class ContinuousPPOAlgorithm(Algorithm):
                 gae = delta + self.gamma * self.gae_lambda * gae
             new_rewards.insert(0,gae+values[i])
             advantage.insert(0,gae)
+
+
         #Format discounted rewards and advantages for torch use
         new_rewards = torch.tensor(new_rewards).float().to(self.device)
-        advantage = torch.tensor(advantage).float()
+        advantage = torch.tensor(advantage).float().to(self.device)
         #Normalize the advantages
-        advantage = (advantage - torch.mean(advantage)) / torch.std(advantage)
+        advantage = (advantage - torch.mean(advantage)) / (torch.std(advantage) + 1e-5)
+        #Temporarily used for different return types from single and multienv implementations
+        '''if type(logprobs) == np.ndarray:
+            old_log_probs = torch.from_numpy(logprobs).float().sum(-1,keepdim=True).detach().to(self.device)
+        else:
+            old_log_probs = logprobs.clone().detach().sum(-1,keepdim=True).to(self.device)'''
 
-        old_log_probs = torch.from_numpy(logprobs)
+
 
         #Update model weights for a configurable amount of epochs
-        for epoch in range(self.configs[0]['update_epochs']):
-            agent.critic_optimizer.zero_grad()
-            values = agent.critic(agent.policy_base(states.float()))
-            self.value_loss = self.loss_calc(values,new_rewards.unsqueeze(dim=-1))
-            self.value_loss.backward()
-            agent.critic_optimizer.step()
+        for epoch in range(self.update_epochs):
+            indices = np.random.permutation(range(len(states)))
+            for idx in np.arange(0,len(states),self.batch_size):
+                values = agent.critic(states[indices[idx:idx+self.batch_size]].float())
+                self.value_loss = self.value_coef* self.loss_calc(values,new_rewards[indices[idx:idx+self.batch_size]].unsqueeze(dim=-1))
+                #Estmate means for approximated Normal Distributions
+                mu = agent.mu(states[indices[idx:idx+self.batch_size]].float()).squeeze(0)
+                #Log standard Deviations for estimated Normal Distributions
+                logstd = agent.logstd.expand_as(mu)
+                self.logstd_mean = logstd.mean()
+                self.mu_mean = mu.mean()
+                #Formatting for Distribution
+                if len(mu.shape) == 2: mu = mu.squeeze(-1)
+                if len(logstd.shape) == 2: logstd = logstd.squeeze(-1)
+                dist= Normal(mu,logstd.exp())
+                new_log_probs = dist.log_prob(actions[indices[idx:idx+self.batch_size]]).sum(-1,keepdim=True)
+                entropy = dist.entropy().sum(-1).mean()
+                #Ratios for PPO Objective Function
+                self.ratios = torch.exp(new_log_probs.double() - old_log_probs[indices[idx:idx+self.batch_size]].double()).float()
+                #Positive advantage pushes distribution towards action, negative advantage pushes away from action
+                surr1 = self.ratios * advantage[indices[idx:idx+self.batch_size]].unsqueeze(dim=-1)
+                surr2 = torch.clamp(self.ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage[indices[idx:idx+self.batch_size]].unsqueeze(dim=-1)
+                self.ratio_mean = self.ratios.mean()
+                #Optimize Parameters
+                agent.optimizer.zero_grad()
+                self.entropy_loss = -(self.beta*entropy)
+                self.policy_loss =  -torch.min(surr1,surr2).mean()
+                self.loss =  self.policy_loss +  self.entropy_loss + self.value_loss
+                self.loss.backward()
+                #torch.nn.utils.clip_grad_norm_(agent.parameters(), self.grad_clip)
+                agent.optimizer.step()
 
 
-            agent.actor_optimizer.zero_grad()
-            mu_new = agent.mu(agent.policy_base(states.float()))
-            sigma_new = torch.sqrt(agent.var(agent.policy_base(states.float())))
-            #log_std = agent.log_std.expand_as(mu_new)
-            #cov_mat = torch.diag(agent.var)
-            dist2 = Normal(mu_new,sigma_new)
-            new_log_probs = dist2.log_prob(actions)
-            entropy = dist2.entropy().sum(-1).mean()
-
-            penalty = (dist2.cdf(-1) + 1 - dist2.cdf(1)).mean().requires_grad_(True)
-            #new_log_probs = self.log_probs(mu_new,var_new,actions).float()
-            ratios = torch.exp(new_log_probs.double() - old_log_probs.double()).float()
-            surr1 = ratios * advantage.unsqueeze(dim=-1)
-            surr2 = torch.clamp(ratios,1.0-self.epsilon_clip,1.0+self.epsilon_clip) * advantage.unsqueeze(dim=-1)
-            #entropy = (torch.log(2*math.pi*var_new) +1)/2
-            self.entropy_loss = -(self.configs[0]['beta']*entropy)
-            self.policy_loss =  -torch.min(surr1,surr2).mean() + penalty + self.entropy_loss
-            self.policy_loss.backward()
-            #torch.nn.utils.clip_grad_norm(agent.optimizer.parameters(), self.grad_clip)
-            agent.actor_optimizer.step()
+        print('Done updating')
+        #print(len(buffer))
+        buffer.clear_buffer()
 
     def get_metrics(self, episodic=False):
         if not episodic:
             metrics = [
-                ('Algorithm/Loss_per_Step', self.loss),
+                #('Algorithm/Loss_per_Step', self.loss),
                 ('Algorithm/Policy_Loss_per_Step', self.policy_loss),
                 ('Algorithm/Value_Loss_per_Step', self.value_loss),
                 ('Algorithm/Entropy_Loss_per_Step', self.entropy_loss),
+                ('Algorithm/Ratios', self.ratio_mean),
+                ('Algorithm/Var', self.logstd_mean),
+                ('Algorithm/Mu', self.mu_mean),
             ]
         else:
             metrics = []
@@ -120,8 +141,8 @@ class ContinuousPPOAlgorithm(Algorithm):
     def get_critic_loss(self):
         return self.critic_loss
 
-    def create_agent(self):
-        self.agent = PPOAgent(self.id_generator(), self.obs_space, self.acs_discrete, self.acs_continuous, self.configs[1], self.configs[2])
+    def create_agent(self,id=0):
+        self.agent = PPOAgent(id, self.obs_space, self.acs_space, self.configs['Agent'], self.configs['Network'])
         return self.agent
 
     def __str__(self):

@@ -6,21 +6,21 @@
 *   __init__ 
     *   [Link to Code](../shiva/metalearners/__init__.py)
 *   MetaLearner
-    *   [Link to Code](../shiva/metalearners/MetaLearner.py)
+    *   [Link to Code](../shiva/learners/MetaLearner.py)
 *   MultipleAgentMetaLearner
-    *   [Link to Code](../shiva/metalearners/MultipleAgentMetaLearner.py)
+    *   [Link to Code](../archive/MultipleAgentMetaLearner.py)
 *   SingleAgentMetaLearner
-    *   [Link to Code](../shiva/metalearners/SingleAgentMetaLearner.py)
+    *   [Link to Code](../archive/SingleAgentMetaLearner.py)
 
 ## MetaLearner
 ___
-[Go to Code](../shiva/metalearners/MetaLearner.py)
+[Go to Code](../shiva/learners/MetaLearner.py)
 
 Abstract class all MetaLearners inherit from.
 
 ## MultipleAgentMetaLearner
 ___
-[Go to Code](../shiva/metalearners/MultipleAgentMetaLearner.py)
+[Go to Code](../archive/MultipleAgentMetaLearner.py)
 ### Config Set Up     
 ```
 [MetaLearner]
@@ -41,7 +41,7 @@ perturbation_factors = [0.8,1.2]
 
 ## SingleAgentMetaLearner
 ___
-[Go to Code](../shiva/metalearners/SingleAgentMetaLearner.py)
+[Go to Code](../archive/SingleAgentMetaLearner.py)
 ### Config Set Up     
 ```
 [MetaLearner]

@@ -1,9 +1,12 @@
 import copy, os
 import numpy as np
 import torch
+from torch.nn.functional import softmax
 
 from shiva.agents.Agent import Agent
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
+from shiva.utils import Noise as noise
+from shiva.helpers.calc_helper import np_softmax
 
 class TD3Agent(Agent):
     def __init__(self, id, obs_dim, action_dim, agent_config: dict, networks: dict):
@@ -16,6 +19,11 @@ class TD3Agent(Agent):
             np.random.seed(5)
 
         self.id = id
+
+        if not hasattr(self, 'random_min'):
+            self.random_min = -1
+        if not hasattr(self, 'random_max'):
+            self.random_max = 1
 
         self.actor = DynamicLinearNetwork(obs_dim, action_dim, networks['actor'])
         self.target_actor = DynamicLinearNetwork(obs_dim, action_dim, networks['actor'])
@@ -33,8 +41,64 @@ class TD3Agent(Agent):
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_lr, eps=self.eps)
         self.critic_optimizer_2 = self.optimizer_function(params=self.critic_2.parameters(), lr=self.critic_2_lr, eps=self.eps)
 
-    def get_action(self, observation):
-        return self.actor(observation)
+        self.ou_noise = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+        self.ou_noise_critic = noise.OUNoise(self.acs_space, self.noise_scale, self.noise_mu, self.noise_theta, self.noise_sigma)
+
+        self.action = self.get_random_action()
+
+    def get_action(self, observation, step_count):
+        if not torch.is_tensor(observation):
+            observation = torch.tensor(observation).float()
+
+        if step_count < self.exploration_steps:
+            '''Exploration random action'''
+            # check if obs is a batch!
+            if len(observation.shape) > 1:
+                # print('random batch action')
+                action = [self.get_random_action() for _ in range(observation.shape[0])]
+                if self.softmax_action:
+                    action = [np_softmax(a) for a in action]
+                self.action = action # for tensorboard
+            else:
+                # print("random act")
+                action = self.get_random_action()
+                if self.softmax_action:
+                    action = np_softmax(action)
+                self.action = [action] # for tensorboard
+            # print("Random:", action)
+        else:
+            """Picks an action using the actor network and then adds some noise to it to ensure exploration"""
+            self.actor.eval()
+            with torch.no_grad():
+                obs = torch.tensor(observation, dtype=torch.float).to(self.device)
+                action = self.actor(obs).cpu()
+                if self.softmax_action:
+                    action = softmax(action, dim=-1)
+                action = action.data.numpy()
+            self.actor.train()
+            if len(observation.shape) > 1:
+                # print('batch action')
+                action = [list(act + self.ou_noise.noise()) for act in action]
+                # for only positive actions
+                # action = [list(np.absolute(act + self.ou_noise.noise())) for act in action]
+                if self.normalize_action:
+                    action = [act / act.sum() for act in action]
+
+                self.action = action # for tensorboard
+            else:
+                # print('single action')
+                action = action + self.ou_noise.noise()
+                # for positive actions
+                # action = np.absolute(action + self.ou_noise.noise())
+                if self.normalize_action:
+                    action = action / action.sum()
+                action = action.tolist()
+                self.action = [action] # for tensorboard
+            # print("Net:", action)
+        return action
+
+    def get_random_action(self):
+        return np.array([np.random.uniform(self.random_min, self.random_max) for _ in range(self.acs_space)]).tolist()
 
     def save(self, save_path, step):
         torch.save(self.actor, save_path + '/actor.pth')
@@ -44,11 +108,10 @@ class TD3Agent(Agent):
         torch.save(self.critic_2, save_path + '/critic_2.pth')
         torch.save(self.target_critic_2, save_path + '/target_critic_2.pth')
 
-    def load_net(self, load_path):
-        network = torch.load(load_path)
-        attr = os.path.split('/')[-1].replace('.pth', '')
-        setattr(self, attr, network)
-
+    # def load_net(self, load_path):
+    #     network = torch.load(load_path)
+    #     attr = os.path.split('/')[-1].replace('.pth', '')
+    #     setattr(self, attr, network)
 
     def __str__(self):
         return 'TD3Agent'

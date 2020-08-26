@@ -1,11 +1,14 @@
 import numpy as np
 
-def np_softmax(x):
+def np_softmax(x: np.ndarray, axis: int=0) -> np.ndarray:
     """
-    Compute softmax values for each sets of scores in x.
-    
-    Rows are scores for each class. 
-    Columns are predictions (samples).
+    Numpy approach to compute softmax values for each sets of scores in x
+
+    Args:
+        x (np.ndarray): numpy array to be softmaxed
+        axis (int): axis where we are applying the softmax
+
+    Returns:
+        np.ndarray: new numpy array with the softmax values
     """
-    scoreMatExp = np.exp(np.asarray(x))
-    return scoreMatExp / scoreMatExp.sum(0)
+    return np.exp(x) / np.sum(np.exp(x), axis=axis)

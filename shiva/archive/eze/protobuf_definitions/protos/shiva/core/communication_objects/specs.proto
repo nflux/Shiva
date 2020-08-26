@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+import "shiva/core/communication_objects/enums.proto";
+
+package communication_objects;
+
+message ActionSpaceProto {
+    int32 discrete = 1;
+    int32 param = 2;
+    int32 acs_space = 3;
+}
+
+message EnvSpecsProto {
+    int32 observation_space = 1;
+    ActionSpaceProto action_space = 2;
+    int32 num_agents = 3;
+}
+
+message MultiEnvSpecsProto {
+    EnvSpecsProto env_specs = 1;
+    int32 num_envs = 2;
+}
+
+message LearnerSpecsProto {
+    string data = 1;
+}
+
+// Message used for components to Check-In and send initial parameters in between modules
+message SpecsProto {
+    int32 id = 1;
+    ComponentType type = 2;
+    StatusType status = 3;
+    string address = 4;
+    oneof data {
+        EnvSpecsProto env = 5;
+        MultiEnvSpecsProto menv = 6;
+        LearnerSpecsProto learner = 7;
+    }
+    string extra = 8;
+}

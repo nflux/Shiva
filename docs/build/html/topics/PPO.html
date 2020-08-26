@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPO (Proximal Policy Optimization) &#8212; Shiva 0.0.1 documentation</title>
+    <link rel="stylesheet" href="../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">PPO (Proximal Policy Optimization)</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ppo-proximal-policy-optimization">
+<h1>PPO (Proximal Policy Optimization)<a class="headerlink" href="#ppo-proximal-policy-optimization" title="Permalink to this headline">¶</a></h1>
+<p>The PPO algorithm is a Policy Gradient method that seeks to improve on the A2C
+algorithm by implementing a surrogate objective function and loss clipping to
+prevent the policy updates from moving too far in any direction away from the
+previous policy. PPO first takes the ratio of the policy output for an action
+taken a time t(the ratio of the probabilities of taking that action) from the
+current policy over the old policy. It multiplies this by a an advantage function,
+which is just a function of the actual state values and the approximated state
+values. The full loss function then takes the minimum of this value and 1 +-
+a clipped value multiplied by the above surrogate objective function. This
+clipping merely keeps the updated policy within a given distance from the previous
+policy. This implementation adds stability and decreases variance to the policy gradient
+method. It currently is one of the best performing Reinforcement Learning
+algorithms on a wide variety of applications due to its ability to do well
+environments with continuous action spaces.</p>
+<p class="rubric">PPO Learner</p>
+<p>The learner controls the flow of the PPO process. It initializes the algorithm object,
+as well as creates the new learning agent. The PPO learner runs the policy
+through the environment for a predetermined amount of episodes and stores the
+episodes on a buffer. These episodes are then passed to the
+<a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/PPOAlgorithm.py">PPO Algorithm</a>
+which will update a new policy using these episodes and the objective function
+described above. It will iterate through this process for a configured episode count.</p>
+<p class="rubric">PPO Algorithm</p>
+<p>The <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/PPOAlgorithm.py">PPO Algorithm</a>
+is an <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/algorithms/Algorithm.py">Algorithm</a>
+that controls the updating of the PPO policy. It calculates the probabilities
+for the ratio variable, as well as calculates entropy. Our implementation
+includes an Entropy Loss that helps stabilization, as well as increases exploration
+by ensuring that the policy is not too sure of a given action.</p>
+<p class="rubric">Imitation Agent</p>
+<p>The <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/agents/ImitationAgent.py">Imitation Agent</a>
+is an <a class="reference external" href="https://github.com/nflux/Control-Tasks/blob/docs-redo/shiva/shiva/agents/ImitationAgent.py">Agent</a>
+that contains the policy network that we are wanting to train, and is used
+throughout the learning process.</p>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/topics/PPO.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">Shiva 0.0.1 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">PPO (Proximal Policy Optimization)</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2020, nFlux AI.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>
