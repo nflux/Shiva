@@ -1,11 +1,10 @@
 import numpy as np
 import torch
 from torch.nn.functional import softmax
-from shiva.utils import Noise as noise
-from shiva.helpers.calc_helper import np_softmax
 from shiva.agents.DDPGAgent import DDPGAgent
 from shiva.algorithms.Algorithm import Algorithm
 from shiva.helpers.misc import one_hot_from_logits
+
 
 class DDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: dict, configs: dict):

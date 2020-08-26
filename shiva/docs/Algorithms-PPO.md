@@ -17,7 +17,7 @@ algorithms on a wide variety of applications due to its ability to do well
 environments with continuous action spaces.
 
 ## PPO Learner
-The [PPOLearner](../shiva/learners/SingleAgentPPOLearner.py)
+The [PPOLearner](../archive/SingleAgentPPOLearner.py)
 controls the flow of the PPO process. It initializes the algorithm object,
 as well as creates the new learning agent. The PPO learner runs the policy
 through the environment for a predetermined amount of episodes and stores the

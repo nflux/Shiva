@@ -11,13 +11,16 @@ import numpy as np
 from shiva.core.admin import logger
 from shiva.core.communication_objects.helpers_pb2 import Empty, SimpleMessage
 from shiva.core.communication_objects.service_iohandler_pb2_grpc import IOHandlerServicer, add_IOHandlerServicer_to_server, IOHandlerStub
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
+
 
 class IOHandlerServer(IOHandlerServicer):
-    '''
-        gRPC Server
-    '''
-
+    """
+    IOHandler Server class in order to avoid I/O access errors when saving and loading models.
+    Every Shiva component that need IO access will need to instantiate a stub in order to communicate with the IOHandler.
+    This communication is based on gRPC protocol.
+    The IOHandler will prevent simultaneous I/O access from the components using specific directories.
+    """
     # for future MPI child abstraction
     meta = MPI.COMM_SELF.Get_parent()
     # id = MPI.COMM_SELF.Get_parent().Get_rank()
@@ -72,12 +75,15 @@ class IOHandlerServer(IOHandlerServicer):
         return "<IOH>"
 
 def get_io_stub(*args, **kwargs):
-    class gRPC_IOHandlerStub(IOHandlerStub):
-        '''
-            gRPC Client
-        '''
 
+    class gRPC_IOHandlerStub(IOHandlerStub):
         def __init__(self, configs):
+            """
+            gRPC client to request IO Access
+
+            Args:
+                configs (Dict): a copy of the global config being used in the Shiva run
+            """
             self.configs = configs
             self.channel = grpc.insecure_channel(self.configs['Admin']['iohandler_address'])
             super(gRPC_IOHandlerStub, self).__init__(self.channel)
@@ -119,6 +125,17 @@ def get_io_stub(*args, **kwargs):
 '''Starting functions of the gRPC server'''
 
 def serve_iohandler(address, server_args=(), max_workers=5):
+    """
+    Starting function of the gRPC server
+
+    Args:
+        address (str): address where the IO Handler will be accessible
+        server_args:
+        max_workers:
+
+    Returns:
+        None
+    """
     stop_event = threading.Event()
     options = (('grpc.so_reuseport', 1),)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers, ), options=options)

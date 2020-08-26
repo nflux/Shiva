@@ -1,9 +1,8 @@
 import torch
-
-
 from shiva.core.admin import Admin, logger
 from shiva.core.TimeProfiler import TimeProfiler
 from shiva.helpers.config_handler import load_class
+
 
 class Learner(object):
     num_agents_created = 0
@@ -15,6 +14,13 @@ class Learner(object):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     def __init__(self, learner_id, config, port=None):
+        """
+        Abstract class for the Learners.
+
+        Args:
+            learner_id (int): Unique ID for the Learner
+            config (Dict): config dictioanry to be used for the run
+        """
         {setattr(self, k, v) for k,v in config['Learner'].items()}
         self.configs = config
         self.id = learner_id
@@ -23,26 +29,13 @@ class Learner(object):
         Admin.add_learner_profile(self, function_only=True)
         self.profiler = TimeProfiler(self.configs, Admin.get_learner_url_summary(self))
 
-    def __getstate__(self):
-        d = dict(self.__dict__)
-        attributes_to_ignore = ['env', 'envs', 'eval', 'queue', 'queues', 'miniBuffer']
-        return [] # Ezequiel: Unsure who added this but needs documentation - maybe because we don't need anything when save/loading the Learner?
-        for t in d:
-            if t not in attributes_to_ignore:
-                # print(t)
-                pass
-        for a in attributes_to_ignore:
-            try:
-                del d[a]
-            except:
-                pass
-        return d
-
     def collect_metrics(self, episodic=False):
-        '''
-            This works for Single Agent Learner
-            For Multi Agent Learner we need to implement the else statement
-        '''
+        """
+        High level function to collect metrics for all agents that this Learner owns and then send them to process to be plotted in tensorboard.
+
+        Returns:
+            None
+        """
         if hasattr(self, 'agent'):
             if type(self.agent) == list:
                 '''Multi Agent Metrics'''
@@ -61,22 +54,28 @@ class Learner(object):
             assert False, "Learner attribute 'agent' or 'agents' was not found..."
 
     def _collect_metrics(self, agent_id, episodic):
-        if hasattr(self, 'MULTI_ENV_FLAG'):
-            try:
-                metrics = self.get_metrics(episodic, agent_id)
-            except:
-                metrics = self.get_metrics(episodic)
+        try:
+            metrics = self.get_metrics(episodic, agent_id)
+        except:
+            metrics = self.get_metrics(episodic)
 
-            if not self.evaluate:
-                try:
-                    metrics += self.alg.get_metrics(episodic, agent_id)
-                except:
-                    metrics += self.alg.get_metrics(episodic)
-            self._process_metrics(agent_id, metrics)
-        else:
-            assert False, "Testing if this if statement is unnecessary"
+        if not self.evaluate:
+            try:
+                metrics += self.alg.get_metrics(episodic, agent_id)
+            except:
+                metrics += self.alg.get_metrics(episodic)
+        self._process_metrics(agent_id, metrics)
 
     def _process_metrics(self, agent_id, metrics):
+        """
+
+        Args:
+            agent_id (int): Agent ID for who we are processing the metrics
+            metrics (List): list of tuple metrics OR list of list of tuple metrics
+
+        Returns:
+            None
+        """
         for m in metrics:
             # self.log("Agent {}, Metric {}".format(agent_id, m))
             if type(m) == list:
@@ -88,6 +87,16 @@ class Learner(object):
                 self._add_summary_writer(agent_id, m)
 
     def _add_summary_writer(self, agent_id, metric_tuple):
+        """
+        Directly interacts with ShivaAdmin to plot to tensorboard
+
+        Args:
+            agent_id (int): Agent ID
+            metric_tuple (Tuple): tuple containing (metric name, y value, x value)
+
+        Returns:
+            None
+        """
         if len(metric_tuple) == 3:
             metric_name, y_value, x_value = metric_tuple
         elif len(metric_tuple) == 2:

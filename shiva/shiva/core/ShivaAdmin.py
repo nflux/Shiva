@@ -32,7 +32,8 @@ import shiva.helpers.misc as misc
 #
 ###################################################################################
 
-class ShivaAdmin():
+
+class ShivaAdmin:
 
     __folder_name__ = {
         'config':       'configs',
@@ -328,7 +329,7 @@ class ShivaAdmin():
         self.add_learner_profile(learner) # will only add if was not profiled before
         # save learner pickle
         learner_data_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['checkpoint'][-1], self.__folder_name__['learner_data']), use_existing=True )
-        fh.save_pickle_obj(learner, os.path.join(learner_data_dir, 'learner_cls.pickle'))
+        # fh.save_pickle_obj(learner, os.path.join(learner_data_dir, 'learner_cls.pickle'))
         # save buffer
         # fh.save_pickle_obj(learner.buffer, os.path.join(learner_data_dir, 'buffer_cls.pickle'))
         # save learner current config status
@@ -403,18 +404,49 @@ class ShivaAdmin():
         LOAD METHODS
     '''
 
-    def _load_agents(self, path, absolute_path=True, load_latest=True, device=torch.device('cpu')) -> list:
+    def load_agents(self, path:str, absolute_path=True, load_latest=True, device=torch.device('cpu')) -> list:
+        '''
+        Loads agents from sratch, initializing new Agent object
+        '''
         _path = path
         if load_latest and self.__folder_name__['latest'] not in path:
             _path = os.path.join(path, self.__folder_name__['latest'])
-        return self._load_agents_states(_path, absolute_path=absolute_path, device=device)
+        agents_states = self._load_agents_states(_path, absolute_path=absolute_path, device=device)
+        agents = []
+        for state_dict in agents_states:
+            agent_state_dict = torch.load(state_dict, map_location=device)
+            _new_agent = self.__create_agent_from_state_dict__(agent_state_dict)
+            agents.append(_new_agent)
+        return agents
 
-    def _load_agent_of_id(self, path, agent_id, absolute_path=True, device=torch.device('cpu')):
-        return self._load_agents_states(path, agent_id, absolute_path=absolute_path, device=device)
+    def load_agent_of_id(self, path:str, agent_id:int, absolute_path=True, device=torch.device('cpu')):
+        '''Loads agent of some ID'''
+        agents_states = self._load_agents_states(path, agent_id=agent_id, absolute_path=absolute_path, device=device)
+        agents = []
+        for state_dict in agents_states:
+            agent_state_dict = torch.load(state_dict, map_location=device)
+            _new_agent = self.__create_agent_from_state_dict__(agent_state_dict)
+            agents.append(_new_agent)
+        return agents
 
-    '''
-        States Handling of Agents
-    '''
+    def reload_agents(self, agents:list, path:str, absolute_path=True, load_latest=True, device=torch.device('cpu')) -> list:
+        '''
+        Loads new agent states
+        '''
+        if len(agents) == 0 or agents[0] == None:
+            '''First time loading... use load_agents directly'''
+            return self.load_agents(path, absolute_path=absolute_path, load_latest=load_latest, device=device)
+        else:
+            _path = path
+            if load_latest and self.__folder_name__['latest'] not in path:
+                _path = os.path.join(path, self.__folder_name__['latest'])
+            for a in agents:
+                agents_states = self._load_agents_states(_path, agent_id=a.id, absolute_path=absolute_path, device=device)
+                assert len(agents_states) == 1, "mmmmm something weird here because we should find only 1 state dict"
+                agent_state_dict = torch.load(agents_states[0], map_location=device)
+                a.load_state_dict(agent_state_dict)
+            return agents
+
 
     def _load_agents_states(self, path, agent_id=None, absolute_path=True, device=torch.device('cpu')) -> list:
         '''
@@ -425,17 +457,13 @@ class ShivaAdmin():
         '''
         if not absolute_path:
             path = '/'.join([self.base_url, path])
-        agents = []
         agents_states = dh.find_pattern_in_path(path, '{id}.state'.format(id=agent_id if agent_id is not None else ''))
         assert len(agents_states) > 0, "No agents found in {} with agent_id {}".format(path, agent_id)
         self.log("Found to load {}".format(agents_states), verbose_level=2)
-        for state_dict in agents_states:
-            agent_state_dict = torch.load(state_dict, map_location=device)
-            _new_agent = self.__create_agent_from_state_dict__(agent_state_dict)
-            agents.append(_new_agent)
-        return agents
+        return agents_states
 
     def __create_agent_from_state_dict__(self, state_dict):
+        '''Instantiate new agent object and load it's attributes'''
         '''This does the actual mechanics of loading - low level'''
         _new_agent_class = ch.load_class(state_dict['class_module'], state_dict['class_name'])
         _new_agent = _new_agent_class(*state_dict['inits'])

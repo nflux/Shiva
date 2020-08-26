@@ -4,14 +4,19 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import numpy as np
 from mpi4py import MPI
 
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.core.IOHandler import get_io_stub
 from shiva.envs.Environment import Environment
 from shiva.helpers.misc import terminate_process, flat_1d_list
 
-class MPIMultiEnv(Environment):
 
+class MPIMultiEnv(Environment):
+    """ MPI Enabled Multi-Environment Wrapper
+
+    Manages clusters of environments for experience generation.
+
+    """
     # for future MPI child abstraction
     meta = MPI.COMM_SELF.Get_parent()
     id = MPI.COMM_SELF.Get_parent().Get_rank()
@@ -25,7 +30,14 @@ class MPIMultiEnv(Environment):
         Admin.init(self.configs)
         self.launch()
 
-    def launch(self):
+    def launch(self) -> None:
+        """ Connects to IO Handler, launches environments, grabs configuration, and connects to learners.
+
+        Also receives receives initial arguments and then begins running internal loop.
+
+        Returns:
+            None
+        """
         self._connect_io_handler()
 
         if hasattr(self, 'device') and self.device == 'gpu':
@@ -52,18 +64,26 @@ class MPIMultiEnv(Environment):
             If obs/acs dimensions for all roles are the same, then we can do MPI
         '''
         if 'Unity' in self.type or 'ParticleEnv' in self.type:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
+            obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0],)
         elif 'Gym' in self.type:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'] ), dtype=np.float64)
-        elif 'RoboCup' in self.type:
-            self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
+            obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'][self.env_specs['roles'][0]],)
+        else:
+            assert False, "Environment needs implementation"
 
-        # Give start flag!
+        self._obs_recv_buffer = np.empty(obs_recv_dim, dtype=np.float64)
+
+        # Give start flag to the individual Environments
         self.envs.bcast([True], root=MPI.ROOT)
-
         self.run()
 
-    def run(self):
+    def run(self) -> None:
+        """ Starts running the environments and collecting the trajectories.
+
+        Periodically reloads updated agents.
+
+        Returns:
+            None
+        """
         self._time_to_load = False
         self.is_running = True
         while self.is_running:
@@ -74,7 +94,13 @@ class MPIMultiEnv(Environment):
             self.reload_match_agents()
         self.close()
 
-    def _step_python(self):
+    def _step_python(self) -> None:
+        """ Sends actions to the environments and stores the action trajectories in python lists.
+        Has separate ways of handling the actions for each environment that is supported.
+
+        Returns:
+            None
+        """
         self._obs_recv_buffer = np.array(self.envs.gather(None, root=MPI.ROOT))
 
         if 'Unity' in self.type:
@@ -83,14 +109,8 @@ class MPIMultiEnv(Environment):
             for env_observations in self._obs_recv_buffer:
                 env_actions = []
                 for role_ix, role_name in enumerate(self.env_specs['roles']):
-                    # role_actions = []
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
-                    # try batching all role observations to the agent
-                    # role_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
-                    # for o in role_obs:
-                    #     role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
-                    # env_actions.append(role_actions)
                     env_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
                 actions.append(env_actions)
         elif 'Particle' in self.type:
@@ -126,12 +146,14 @@ class MPIMultiEnv(Environment):
         else:
             self.envs.scatter([False] * self.num_envs, root=MPI.ROOT)
 
-    def _step_numpy(self):
-        '''
+    def _step_numpy(self) -> None:
+        """Sends actions to the environments and stores the action trajectories in numpy arrays.
             For Numpy step, is required that
             - all agents observations are the same shape
             - all agents actions are the same shape
-        '''
+        Returns:
+            None
+        """
         self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
 
@@ -148,7 +170,6 @@ class MPIMultiEnv(Environment):
                         role_actions.append(self.agents[agent_ix].get_action(o, self.step_count))
                     env_actions.append(role_actions)
                 actions.append(env_actions)
-            # actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
         elif 'Gym' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
             actions = []
@@ -162,7 +183,6 @@ class MPIMultiEnv(Environment):
                     role_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count))
                     env_actions.append(role_actions)
                 actions.append(env_actions)
-            # actions = [ [ [self.agents[ix].get_action(o, self.step_count, self.learners_specs[ix]['evaluate']) for o in obs] for ix, obs in enumerate(env_observations) ] for env_observations in self._obs_recv_buffer]
         elif 'RoboCup' in self.type:
             actions = [[agent.get_action(obs, self.step_count, self.device) for agent, obs in zip(self.agents, observations)] for observations in self._obs_recv_buffer]
 
@@ -170,7 +190,12 @@ class MPIMultiEnv(Environment):
         self.log("Obs {} Acs {}".format(self._obs_recv_buffer, self.actions), verbose_level=3)
         self.envs.Scatter([actions, MPI.DOUBLE], None, root=MPI.ROOT)
 
-    def check_state(self):
+    def check_state(self) -> None:
+        """ Checks if the environment has finished an episode or if it is done running episodes.
+
+        Returns:
+            None
+        """
         while self.envs.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.trajectory_info, status=self.info):
             done_count = self.envs.recv(None, source=self.info.Get_source(), tag=Tags.trajectory_info)
             # self.log(f"Recv from Env {self.info.Get_source()} {done_count}")
@@ -183,7 +208,12 @@ class MPIMultiEnv(Environment):
             # used only to stop the whole session, for running profiling experiments..
             self.is_running = False
 
-    def reload_match_agents(self, bypass_request=False):
+    def reload_match_agents(self, bypass_request=False) -> None:
+        """ Loads in updated agents and assigns them to the appropriate environments.
+
+        Returns:
+            None
+        """
         # if self.step_count % (self.episode_max_length * self.num_envs) == 0:
         if self.meta.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.new_agents, status=self.info):
             '''In case a new match is received from MetaLearner'''
@@ -197,7 +227,7 @@ class MPIMultiEnv(Environment):
             self._time_to_load = False
 
     def _receive_match(self, bypass_request=False):
-        '''New match from the single MetaLearner'''
+        """New match from the single MetaLearner"""
         self.role2learner_spec = self.meta.recv(None, source=0, tag=Tags.new_agents)
         self.log("Received Training Match {}".format(self.role2learner_spec), verbose_level=2)
         self._update_match_data(self.role2learner_spec, bypass_request=bypass_request)
@@ -211,7 +241,11 @@ class MPIMultiEnv(Environment):
             self.envs.send(role2learner_spec, dest=env_id, tag=Tags.new_agents)
 
     def get_role2agent_ix(self, agents):
-        '''Create Role->agent_id mapping for local usage'''
+        """Create Role->agent_id mapping for local usage
+
+        Returns:
+            Dictionary mapping agent indeces to roles.
+        """
         self.role2agent = {}
         for role in self.env_specs['roles']:
             for ix, agent in enumerate(agents):
@@ -221,6 +255,12 @@ class MPIMultiEnv(Environment):
         return self.role2agent
 
     def load_agents(self, role2learner_spec=None, bypass_request=False):
+        """ Loads in agents and loads updated agents when MetaLearner has updated agents.
+
+        Also maps the agents to the correct role.
+        Returns:
+            List of agents
+        """
         if role2learner_spec is None:
             role2learner_spec = self.role2learner_spec
 
@@ -232,7 +272,8 @@ class MPIMultiEnv(Environment):
 
                 if not bypass_request:
                     self.io.request_io(self._get_menv_specs(), learner_spec['load_path'], wait_for_access=True)
-                learner_agents = Admin._load_agents(learner_spec['load_path'], device=self.device, load_latest=True)
+                # learner_agents = Admin.load_agents(learner_spec['load_path'], device=self.device, load_latest=True)
+                learner_agents = Admin.reload_agents(agents, learner_spec['load_path'], device=self.device, load_latest=True)
                 if not bypass_request:
                     self.io.done_io(self._get_menv_specs(), learner_spec['load_path'])
 
@@ -291,6 +332,11 @@ class MPIMultiEnv(Environment):
         self.io = get_io_stub(self.configs)
 
     def close(self):
+        """ Closes the connections to the cluster of environments its managing.
+
+        Returns:
+            None
+        """
         self.log("Started closing", verbose_level=2)
         for i in range(self.num_envs):
             self.envs.send(True, dest=i, tag=Tags.close)
@@ -304,19 +350,16 @@ class MPIMultiEnv(Environment):
         exit(0)
 
     def log(self, msg, to_print=False, verbose_level=-1):
-        '''If verbose_level is not given, by default will log'''
+        """If verbose_level is not given, by default will log
+        Returns:
+            None
+        """
         if verbose_level <= self.configs['Admin']['log_verbosity']['MultiEnv']:
             text = '{}\t{}'.format(str(self), msg)
             logger.info(text, to_print or self.configs['Admin']['print_debug'])
 
     def __str__(self):
         return "<MultiEnv(id={}({}), episodes={} device={})>".format(self.id, self.num_envs, self.done_count, self.device)
-
-    def show_comms(self):
-        self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
-        self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
-        self.log("META = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
-        # self.log("LEARNER = Inter: {} / Intra: {}".format(self.learners.Is_inter(), self.learners.Is_intra()))
 
 
 if __name__ == "__main__":

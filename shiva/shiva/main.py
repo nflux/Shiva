@@ -1,5 +1,4 @@
 import sys, os, argparse, traceback, datetime, time
-from mpi4py import MPI
 from shiva.core.admin import Admin, logger
 from shiva.helpers.config_handler import load_config_file_2_dict, load_class
 from shiva.helpers.misc import terminate_process
@@ -32,13 +31,13 @@ if 'configs_set' in configs['MetaLearner']:
         run_config = load_config_file_2_dict(os.path.join(os.getcwd(), 'configs', c))
         run_config['Admin']['directory']['runs'] = os.path.join('/', 'runs', _run_root_dir, 'run-{}-{}'.format(ix, _run_type))
         Admin.init(run_config['Admin'])  # Admin is instantiated at shiva.core.admin for project global access
-        metalearner_class = load_class("shiva.metalearners", run_config['MetaLearner']['type'])
+        metalearner_class = load_class("shiva.learners", run_config['MetaLearner']['type'])
         start_meta(metalearner_class, run_config)
         print("\n%%% END WITH {} %%%".format(c))
         time.sleep(5)
 else:
     Admin.init(configs['Admin'])  # Admin is instantiated at shiva.core.admin for project global access
-    metalearner_class = load_class("shiva.metalearners", configs['MetaLearner']['type'])
+    metalearner_class = load_class("shiva.learners", configs['MetaLearner']['type'])
     start_meta(metalearner_class, configs)
 
 exit(0)

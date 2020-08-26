@@ -2,11 +2,9 @@ import numpy as np
 import gym
 
 from multiagent.environment import MultiAgentEnv
-from multiagent.policy import InteractivePolicy
 import multiagent.scenarios as scenarios
 
 from shiva.envs.Environment import Environment
-from shiva.helpers.misc import action2one_hot
 
 class MultiAgentParticleEnv(Environment):
     _GYM_VERSION_ = '0.10.5'

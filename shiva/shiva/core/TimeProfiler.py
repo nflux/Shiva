@@ -6,6 +6,7 @@ from datetime import datetime
 from tensorboardX import SummaryWriter
 import shiva.helpers.dir_handler as dh
 
+
 class TimeProfiler:
     _ti = {}
     _tf = {}

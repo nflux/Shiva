@@ -1,10 +1,11 @@
 import configparser, ast, os
 from importlib import import_module
 
+
 def parse_configs(url: str) -> list:
-    '''
+    """
         Returns a list of config files that are read at the given url
-    '''
+    """
     _return = []
     for f in os.listdir(url):
         f = os.path.join(url, f)
@@ -15,7 +16,17 @@ def parse_configs(url: str) -> list:
                 _return.append(load_config_file_2_dict(subf))
     return _return
 
+
 def load_class(module_path, file_name) -> object:
+    """
+
+    Args:
+        module_path (str): module name
+        file_name (str): file name containing the class we want to be imported.
+
+    Returns:
+        object: usually a class definition that wants to be instantiated
+    """
     if '.' in file_name:
         # if file contains multiple classes
         file, class_name = file_name.split('.')
@@ -30,21 +41,17 @@ def load_class(module_path, file_name) -> object:
         cls = getattr(module, file_name)
     return cls
 
+
 def load_config_file_2_dict(_FILENAME: str) -> dict:
-    '''
-        Input
-            directory where the .ini file is
+    """
+    Converts the .ini file into a usable dictionary. All data types like int, float, bool, dict, lists, tuples seem to be supported.
 
-        Converts a config file into a meaninful dictionary
-            DataTypes that reads
+    Args:
+        _FILENAME: full/absolute path to the .ini file
 
-                lists of the format [20,30,10], both integers and floats
-                floats when a . is found
-                booleans valid by configparser .getboolean()
-                integer
-                strings
-
-    '''
+    Returns:
+        Dict
+    """
     parser = configparser.ConfigParser()
     parser.read(_FILENAME)
     r = {}
@@ -56,14 +63,34 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
     r['_filename_'] = _FILENAME
     return r
 
+
 def is_iterable(ob):
+    """
+    Check if the given object is an iterable or not.
+
+    Args:
+        ob (object): object to be evaluated
+
+    Returns:
+        bool
+    """
     try:
         some_object_iterator = iter(ob)
         return True
     except TypeError as te:
         return False
 
+
 def dtype_2_configstr(val: object):
+    """
+    Converts the `val` into a string.
+
+    Args:
+        val (Union[str, Dict, List, bool, int, float]): object to be converted
+
+    Returns:
+        str: string value of `val`
+    """
     # string
     if type(val) == str:
         return "{}{}{}".format('"', val, '"')
@@ -79,6 +106,16 @@ def dtype_2_configstr(val: object):
 
 
 def save_dict_2_config_file(config_dict: dict, file_path: str):
+    """
+    Saves the given `config_dict` into a .ini file. Really good if used after using `load_config_file_2_dict`
+
+    Args:
+        config_dict (Dict): config dictionary to be saved
+        file_path (str): file path where we want to save the .ini file
+
+    Returns:
+        None
+    """
     config = configparser.ConfigParser()
     if type(config_dict) == list:
         assert False, "Not expecting a list"
@@ -116,5 +153,15 @@ def save_dict_2_config_file(config_dict: dict, file_path: str):
 
 
 def merge_dicts(dict1, dict2):
+    """
+    Merge two dictionaries.
+
+    Args:
+        dict1 (Dict):
+        dict2 (Dict):
+
+    Returns:
+        Dict
+    """
     res = {**dict1, **dict2}
     return res

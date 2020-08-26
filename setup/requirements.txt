@@ -2,9 +2,9 @@ future==0.17.1
 grpcio==1.24.1
 gym==0.17.2
 numpy==1.17.2
-tensorboard==1.15.0
+tensorboard==2.3.0
 tensorboardX==1.8
-torch==1.2.0
+torch==1.6.0
 pickle-mixin==1.0.2
 mlagents-envs==0.16.0
 mpi4py==3.0.3

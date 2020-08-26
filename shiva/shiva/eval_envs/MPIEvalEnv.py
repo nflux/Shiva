@@ -7,7 +7,7 @@ sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 from mpi4py import MPI
 import time
 
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process
@@ -23,6 +23,11 @@ class MPIEvalEnv(Environment):
         self.launch()
 
     def launch(self):
+        """ Launches environments, creates buffers, tells MPIEvaluation it started.
+
+        Return:
+            None
+        """
         # Receive Config from MPI Evaluation Object
         self.configs = self.eval.bcast(None, root=0)
         super(MPIEvalEnv, self).__init__(self.configs)
@@ -42,6 +47,11 @@ class MPIEvalEnv(Environment):
         self.run()
 
     def run(self):
+        """ Starts environments and collects trajectories.
+
+        Returns:
+            None
+        """
         self.env.reset()
 
         while True:
@@ -134,6 +144,11 @@ class MPIEvalEnv(Environment):
         self.log('Eval Reward: {}'.format(episode_reward), verbose_level=2)
 
     def create_buffers(self):
+        """ Creates numpy buffers to store episodic rewards
+
+        Returns:
+            None
+        """
         if 'Unity' in self.type or 'ParticleEnv' in self.type:
             pass
             # self.episode_rewards = np.zeros((len(self.env.roles), self.episode_max_length))
@@ -146,6 +161,11 @@ class MPIEvalEnv(Environment):
             for i in range(self.num_agents): self.reward_idxs[i] = 0
 
     def reset_buffers(self):
+        """ Empties the buffers after finishing a trajectory.
+
+        Returns:
+            None
+        """
         if 'Unity' in self.type:
             pass
             # self.episode_rewards.fill(0)
@@ -186,11 +206,24 @@ class MPIEvalEnv(Environment):
         }
 
     def close(self):
+        """ Closes the connection with MPIEvaluation
+
+        Returns:
+            None
+        """
         comm = MPI.Comm.Get_parent()
         comm.Disconnect()
 
     def log(self, msg, to_print=False, verbose_level=-1):
-        '''If verbose_level is not given, by default will log'''
+        """If verbose_level is not given, by default will log
+        Args:
+            msg: Message to be loged
+            to_print: Whether to print it
+            verbose_level: When to print it
+
+        Returns:
+            None
+        """
         if verbose_level <= self.configs['Admin']['log_verbosity']['EvalEnv']:
             text = "{}\t\t\t{}".format(str(self), msg)
             logger.info(text, to_print or self.configs['Admin']['print_debug'])
@@ -199,9 +232,14 @@ class MPIEvalEnv(Environment):
         return "<EvalEnv(id={})>".format(self.id)
 
     def show_comms(self):
+        """ Shows what MPIEvaluation this EvalEnv is connection to.
+        Returns:
+            None
+        """
         self.log("SELF = Inter: {} / Intra: {}".format(MPI.COMM_SELF.Is_inter(), MPI.COMM_SELF.Is_intra()))
         self.log("WORLD = Inter: {} / Intra: {}".format(MPI.COMM_WORLD.Is_inter(), MPI.COMM_WORLD.Is_intra()))
         self.log("MENV = Inter: {} / Intra: {}".format(MPI.Comm.Get_parent().Is_inter(), MPI.Comm.Get_parent().Is_intra()))
+
 
 if __name__ == "__main__":
     try:

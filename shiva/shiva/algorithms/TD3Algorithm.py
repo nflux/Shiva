@@ -4,9 +4,6 @@ import time
 
 from shiva.agents.TD3Agent import TD3Agent
 from shiva.algorithms.Algorithm import Algorithm
-# from utils.Gaussian_Exploration import Gaussian_Exploration
-# from utils.OU_Noise_Exploration import OU_Noise_Exploration
-# from shiva.utils import Noise as noise
 
 class TD3Algorithm(Algorithm):
     def __init__(self, observation_space: int, action_space: int, configs: dict):

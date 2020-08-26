@@ -5,7 +5,7 @@ The abstracts are our super classes that contains the templates and functions th
 
 Following this pattern makes your components modular enough to be reusable and easily debugged. You can look at them like they are all templates of reinforcement learning objects that work together to build a model. They are like interfaces in that they define what parameters and functions are expected from an objects that inherit from them. You are able to inherit from them and immediately your components are connected to Shiva. You can click on the links to learn more about the individual components and see what Shiva already as implemented.
 
-### [AbstractMetaLearner](../shiva/metalearners/MetaLearner.py)
+### [AbstractMetaLearner](../shiva/learners/MetaLearner.py)
  * The AbstractMetalearner contains the template functions to start the entire learning sequence of the agent, which contains functions like exploit explore, genetic crossover, evolve, evaluate, and record metrics, create learners, creates learner id , and also the save function. It also grabs the functions decided from the config files. 
 ### [AbstractLearner](../shiva/learners/Learner.py)
  * The AbstractLearner contains the template functions for the learning functions required to learn. This includes gathering the configs for learner. The functions include update, steps, create environment, getting the agents. getting the algorithm, a save function, a launch function to start the process of creating the agent and learning, a load function, to load agents, and a get id function to help the the agent ID. 

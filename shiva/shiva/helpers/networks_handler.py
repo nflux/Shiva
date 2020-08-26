@@ -4,26 +4,38 @@ import torch.nn as nn
 
 
 def parse_functions(package, funcs_str):
-    '''
-        Input
-            @func_str       coming from the config file as a string     g.e. "ReLU,ReLU,Tanh"
-            @package        optional when using other package as TF
-        Return
-            List of function definitions        g.e. [nn.ReLU, nn.ReLU, nn.Tanh]
-    '''
+    """
+    Is this being used?????
+
+    Args:
+        package: package name
+        funcs_str: coming from the config file as a string     g.e. "ReLU,ReLU,Tanh"
+
+    Returns:
+        List of functions definitions
+
+    Example:
+        >>> parse_functions('torch.nn', ["ReLU", "ReLU", "Tanh"])
+        [nn.ReLU, nn.ReLU, nn.ReLU]
+    """
     return [misc.handle_package(package, f) for f in funcs_str]
 
+
 def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function: list, last_layer:bool, output_function: object=None):
-    '''
-        Function that returns a nn.Sequential object determined by the inputs (essentially coming from config)
-        obs_dim
-        Input
-            @input_dim
-            @output_dim
-            @layers             an iterable of layer sizes                                          g.e. [20,50,20]
-            @activ_function     an iterable of function definitions to be used on each layer        g.e. [nn.ReLU, nn.ReLU, nn.Tanh]
-            @output_function    a function definition that will transform the network output        g.e. nn.Tanh
-    '''
+    """
+    Creates a new dynamic nn.Sequential network. The size of `layers` must be equal to the size of `activ_function`.
+
+    Args:
+        input_dim (int): the input dimension
+        output_dim (int): the output dimension
+        layers (List[int]): list of the size of the hidden layers
+        activ_function (List[object]): list of activation function objects for each of the layers
+        last_layer (bool): boolean stating if we include the last layer to the network
+        output_function (object): Optional. Output function object.
+
+    Returns:
+        torch.nn.Sequential
+    """
     assert hasattr(layers, '__iter__'), f"@layers input must be iterable - try a list or set, got {layers}"
     assert len(layers) > 0, f"@layers input is empty, got {layers}"
     assert len(activ_function) == 1 or (len(activ_function) > 1 and len(activ_function) == len(layers)), '@layers and @activ_function must be same size if more than one @activ_function is given'

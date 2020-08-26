@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import time, subprocess
 import numpy as np
-import sys, time, traceback
+import sys, traceback
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 from mpi4py import MPI
@@ -9,14 +9,15 @@ import torch
 
 from shiva.core.admin import Admin, logger
 from shiva.core.TimeProfiler import TimeProfiler
-from shiva.utils.Tags import Tags
+from shiva.helpers.utils.Tags import Tags
 from shiva.envs.Environment import Environment
 from shiva.buffers.MultiTensorBuffer import MultiAgentTensorBuffer
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process
 
-class MPIEnv(Environment):
 
+class MPIEnv(Environment):
+    """ MPI Enabled Environment Wrapper over supported Environments"""
     # for future MPI child abstraction
     menv = MPI.COMM_SELF.Get_parent()
     id = MPI.COMM_SELF.Get_parent().Get_rank()
@@ -28,10 +29,16 @@ class MPIEnv(Environment):
         # Receive Config from MultiEnv
         self.configs = self.menv.bcast(None, root=0)
         self.menv_id = self.configs['MultiEnv']['id']
+        self.configs['Environment']['manual_seed'] += self.menv_id * 100 + self.id
         super(MPIEnv, self).__init__(self.configs)
         self.launch()
 
     def launch(self):
+        """ Initialize environments, connects to learners, and creates buffers for experience storage.
+
+        Returns:
+            None
+        """
         self._launch_env()
         # self.log("Received config with {} keys".format(str(len(self.configs.keys()))), verbose_level=1)
         # Check in with MultiEnv
@@ -46,6 +53,11 @@ class MPIEnv(Environment):
         self.run()
 
     def run(self):
+        """ Checks for trajectories and resets the environment when they are received.
+
+        Returns:
+            None
+        """
         self.env.reset()
         self.profiler.start(['ExperienceSent'])
         self.is_running = True
@@ -66,6 +78,11 @@ class MPIEnv(Environment):
         self.close()
 
     def close(self):
+        """ Disconnects from the multi environment and learner.
+
+        Returns:
+            None
+        """
         self.log("Started closing", verbose_level=2)
         self.menv.Disconnect()
         self.log("Closed MultiEnv", verbose_level=2)
@@ -321,6 +338,11 @@ class MPIEnv(Environment):
             self.menv.send(_output_quantity, dest=0, tag=Tags.trajectory_info)
 
     def create_buffers(self):
+        """ Instantiates a tensorbuffer to store the trajectory for each episode.
+
+        Returns:
+            None
+        """
         if 'UnityWrapperEnv1' in self.type:
             # the append of step data is done at the specific environment implementation
             def nothing(*args, **kwargs):
@@ -339,16 +361,21 @@ class MPIEnv(Environment):
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
                                                               self.env.num_instances_per_role[role],
                                                               self.env.observation_space[role],
-                                                              self.env.action_space[role]['acs_space']) \
+                                                              sum(self.env.action_space[role]['acs_space'])) \
                                        for i, role in enumerate(self.env.roles) ]
         elif 'Gym' in self.type:
-            '''Gym - has only 1 agent per environment and no roles'''
+            '''Gym - has only 1 agent per environment and 1 Role'''
+            single_role_name = self.env.roles[0]
             self.trajectory_buffers = [ MultiAgentTensorBuffer(self.episode_max_length, self.episode_max_length,
-                                                              self.env.num_agents,
-                                                              self.env.observation_space,
-                                                              self.env.action_space['acs_space'])]
+                                                              self.env.num_agents, # = 1
+                                                              self.env.observation_space[single_role_name],
+                                                              sum(self.env.action_space[single_role_name]['acs_space']))]
 
     def reset_buffers(self):
+        """ Empties the buffer so that the next trajectory can be stored.
+        Returns:
+            None
+        """
         for buffer in self.trajectory_buffers:
             buffer.reset()
 
@@ -394,11 +421,21 @@ class MPIEnv(Environment):
         }
 
     def print(self, msg, to_print=False):
+        """ Debugging tool to prrint messages and specify what module printed the message.
+
+        Args:
+            msg : Message that you want to be printed out
+            to_print:
+
+        Returns:
+            None
+        """
         text = "{}\t\t\t{}".format(str(self), msg)
         print(text)
 
     def __str__(self):
         return f"<Env(id={self.menv_id}-{self.id}, done_count={self.done_count})>"
+
 
 if __name__ == "__main__":
     try:
