@@ -58,6 +58,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
         for param_name, param_value in self.unity_props.items():
             self.channel['props'].set_float_parameter(param_name, param_value)
         self.Unity.reset()
+
+        if hasattr(self, 'skip_episodes'):
+            self.log(f"Skipping {self.skip_episodes} episodes. Force restarting.")
+            for i in range(self.skip_episodes):
+                self.Unity.reset()
+
         self.log("Unity env started with behaviours: {}".format(self.Unity.get_behavior_names()))
 
     def set_initial_values(self):
@@ -108,9 +114,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
         self.metric_reset()
 
     def reset(self, force=False, *args, **kwargs):
-        """ Reset the environment and re-initialize metrics.
+        """ Unity environment resets on it's own, but if `force` is True then will force restart and local metrics will restart as well.
         Args:
-            force (bool): Hard reset.
+            force (bool): Default false. If True, Unity.reset() will be called and local metric collection will be restarted.
         Returns:
             None
         """
@@ -157,12 +163,14 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """
         self.raw_actions = {}
         self.actions = {}
+        self.log(f"All Actions: {np.array(actions).shape}")
         for ix, role in enumerate(self.roles):
             self.raw_actions[role] = np.array(actions[ix])
             self.actions[role] = self._clean_role_actions(role, actions[ix])
+            # self.log(f"Role {role}")
+            # self.log(f"Raw {self.raw_actions[role].shape} {self.raw_actions[role]}", verbose_level=0)
+            # self.log(f"Cleaned {self.actions[role].shape} {self.actions[role]}", verbose_level=0)
             self.Unity.set_actions(role, self.actions[role])
-            # self.log(f"{self.raw_actions[role].shape} {self.raw_actions[role]}", verbose_level=1)
-            # self.log(f"{self.actions[role].shape} {self.actions[role]}", verbose_level=1)
         self.Unity.step()
 
         self.request_actions = False
@@ -224,10 +232,10 @@ class MultiAgentUnityWrapperEnv1(Environment):
         for role in self.roles:
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
 
-            # try:
-            #     self.log(f"Step {self.steps_per_episode[role]} Role {role} Decision: {self.DecisionSteps[role].agent_id}, Terminal: {self.TerminalSteps[role].agent_id}", verbose_level=3)
-            # except:
-            #     pass
+            try:
+                self.log(f"Step {self.steps_per_episode[role]} Role {role} Decision: {self.DecisionSteps[role].agent_id}, Terminal: {self.TerminalSteps[role].agent_id}", verbose_level=0)
+            except:
+                pass
 
             if len(self.TerminalSteps[role].agent_id) > 0:
                 '''Agents that are on a Terminal Step'''
@@ -293,6 +301,24 @@ class MultiAgentUnityWrapperEnv1(Environment):
                             self.steps_per_episode[role][agent_ix] += 1
                             self.reward_per_step[role][agent_ix] = self.rewards[role][agent_ix]
                             self.reward_per_episode[role][agent_ix] += self.rewards[role][agent_ix]
+
+            # Here we check if one of the Roles died and did not respawn: this means is not in DecisionStep nor TerminalStep.
+            # Some environments dont respawn the agents immediately g.e. ICT Skirmish
+
+
+    def _get_expected_action_shape(self, role: str) -> tuple:
+        """Returns the expected shape of the action for the given role.
+
+        Args:
+            role (str): role name
+
+        Returns:
+            Tuple for the expected shape where index 0 is the number of agents for that role and index 1 is the expected action dimension for that agent.
+        """
+        return (len(self.Unity._env_state[role][0]), self.Unity._env_specs[role].action_size)
+
+    def is_expecting_empty_action(self, role: str) -> bool:
+        return self._get_expected_action_shape(role)[0] == 0
 
     def _flatten_observations(self, obs):
         """Turns the funky (2, 16, 56) array into a (16, 112)"""
