@@ -47,7 +47,7 @@ For the ability to run inter-process communication runs,
 sudo apt-get install openmpi-bin openmpi-common openssh-client openssh-server libopenmpi1.3 libopenmpi-dbg libopenmpi-dev
 ```
 
-## Install RoboCup
+## Install RoboCup (optional if running the soccer environment)
 
 ```bash
 bash ./Control-Tasks/setup/install_robocup.sh
