@@ -1,8 +1,18 @@
 # Shiva
 
-Deep Reinforcement pipeline leveraging population based training for continuous and discrete action spaces. Adaptable to game environments by creating a game specific environment wrapper.
+Shiva is built to be simulation-engine agnostic, its framework is abstracted to support various types of observation and 
+actions spaces with different environment settings and number of agents. Additionally, Shiva is designed to support 
+distributed processing across a large number of servers to support learning in complex environments with large 
+observation or action spaces where multiple agents need to converge to a team policy. At the moment, Shiva supports 
+popular reinforcement and imitation learning algorithms such as Deep Q-Network (DQN), Deep Deterministic Policy Gradient 
+(DDPG), Proximal Policy Optimizations (PPO), Multi Agent Deep Deterministic Policy Gradient (MADDPG), Dataset 
+Aggregation (DAGGER) method in addition to a few customized and hybrid model-based algorithms that leverage the dynamics 
+of the environment to converge to at a faster rate. The framework is built to enable researchers to design and 
+experiment with new algorithms and be able to test them at scale in different environments and scenarios with minimum 
+setup on the infrastructure.
 
-Get started with the Installation and then thru the Quickstart to see how to run a session. The Tutorial section goes in more details about Shiva to familiarize with it's components and then be able to extend new algorithms.
+Get started with the Installation and then thru the Quickstart to see how to run a session. The Tutorial section goes in 
+more details about Shiva to familiarize with it's components and then be able to extend new algorithms.
 
 ## Table of Content
 
@@ -29,54 +39,6 @@ Get started with the Installation and then thru the Quickstart to see how to run
 ## Benchmarks
 
 You can use these benchmarks to test if changes made to Shiva were improvements.
-
-### Gym Cartpole
-
-#### Episodic Reward
-![](docs/images/MADDPG-CartPole-Reward.png)
-
-#### Actor Loss
-![](docs/images/MADDPG-CartPole-Actor-Loss.png)
-
-#### Critic Loss
-![](docs/images/MADDPG-CartPole-Critic-Loss.png)
-
-
-### Unity 3DBall
-
-#### Episodic Reward
-![](docs/images/MADDPG-3DBall-Reward.png)
-
-#### Actor Loss
-![](docs/images/MADDPG-3DBall-Actor-Loss.png)
-
-#### Critic Loss
-![](docs/images/MADDPG-3DBall-Critic-Loss.png)
-
-### Unity 3DBallDiscrete 
-
-We implemented a discrete version of 3DBall for discrete testing in lieu of Basic.
-
-#### Episodic Reward
-![](docs/images/MADDPG-3DBallDiscrete-Reward.png)
-
-#### Actor Loss
-![](docs/images/MADDPG-3DBallDiscrete-Actor-Loss.png)
-
-#### Critic Loss
-![](docs/images/MADDPG-3DBallDiscrete-Critic-Loss.png)
-
-
-### Unity Food Collector
-
-#### Episodic Reward
-![](docs/images/MADDPG-FoodCollector-Reward.png)
-
-#### Actor Loss
-![](docs/images/MADDPG-FoodCollector-Actor-Loss.png)
-
-#### Critic Loss
-![](docs/images/MADDPG-FoodCollector-Critic-Loss.png)
 
 ## Restrictions
 
