@@ -213,6 +213,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
         Returns:
             np.array: actions with masking applied
         """
+        if self.DecisionSteps[role].action_mask is None:
+            return role_actions
         # Apply action masking and overwrite raw_action which will be stored in the buffer
         this_role_action_mask = np.array(self.DecisionSteps[role].action_mask)
         # this_role_action_mask shape = (number of branches, number of agents for this role, action space masking)
