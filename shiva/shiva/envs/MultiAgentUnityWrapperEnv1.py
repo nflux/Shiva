@@ -59,7 +59,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
             self.channel['props'].set_float_parameter(param_name, param_value)
         self.Unity.reset()
 
-        if hasattr(self, 'skip_episodes'):
+        if hasattr(self, 'skip_episodes') and self.skip_episodes > 0:
             self.log(f"Skipping {self.skip_episodes} episodes. Force restarting.")
             for i in range(self.skip_episodes):
                 self.Unity.reset()
@@ -162,15 +162,14 @@ class MultiAgentUnityWrapperEnv1(Environment):
             A tuple of lists of Observations, Rewards, Done Flags, and an Empty Dict for Legacy reasons.
         """
         self.raw_actions = {}
-        self.actions = {}
-        self.log(f"All Actions: {np.array(actions).shape}")
+        self.actions4Unity = {}
+        self.log(f"Raw Actions: {np.array(actions).shape}")
         for ix, role in enumerate(self.roles):
-            self.raw_actions[role] = np.array(actions[ix])
-            self.actions[role] = self._clean_role_actions(role, actions[ix])
-            # self.log(f"Role {role}")
-            # self.log(f"Raw {self.raw_actions[role].shape} {self.raw_actions[role]}", verbose_level=0)
-            # self.log(f"Cleaned {self.actions[role].shape} {self.actions[role]}", verbose_level=0)
-            self.Unity.set_actions(role, self.actions[role])
+            self.raw_actions[role] = self._apply_action_masking(role, np.array(actions[ix]))
+            # self.log(f"Role {role} Masked {self.raw_actions[role]}")
+            self.actions4Unity[role] = self._clean_role_actions(role, self.raw_actions[role])
+            self.log(f"Role {role} Cleaned {self.actions4Unity[role]}")
+            self.Unity.set_actions(role, self.actions4Unity[role])
         self.Unity.step()
 
         self.request_actions = False
@@ -201,6 +200,55 @@ class MultiAgentUnityWrapperEnv1(Environment):
             # self.done_count[role] += sum(self.dones[role])
 
         return list(self.observations.values()), list(self.rewards.values()), list(self.dones.values()), {}
+
+    def _apply_action_masking(self, role: str, role_actions: np.array) -> np.array:
+        """
+        Apply masking for each action branch of each agent of the given role.
+        This places a 0 on the indexes for the actions that are not available.
+
+        Args:
+            role (str): role name
+            role_actions (np.array): array whos dimension is (number of agents for this role, flat action dimension)
+
+        Returns:
+            np.array: actions with masking applied
+        """
+        # Apply action masking and overwrite raw_action which will be stored in the buffer
+        this_role_action_mask = np.array(self.DecisionSteps[role].action_mask)
+        # this_role_action_mask shape = (number of branches, number of agents for this role, action space masking)
+        for agent_ix, agent_id in enumerate(self.role_agent_ids[role]):
+            this_agent_mask = this_role_action_mask[:, agent_ix, :]
+            # self.log(f"Agent ID {agent_id} Mask {this_agent_mask}")
+            _cum_ix = 0
+            for branch_number, ac_dim in enumerate(self.RoleSpec[role].action_shape):
+                role_actions[agent_ix, _cum_ix:ac_dim+_cum_ix][this_agent_mask[branch_number]] = 0
+                _cum_ix += ac_dim
+        return role_actions
+
+    def _clean_role_actions(self, role: str, role_actions: np.array) -> np.array:
+        """
+        For discrete actions, it converts the action probabilities into discrete action selections (argmax) for each possible branch. For examples, [0.2, 0.7, 0.1] => [1]
+        For continuous actions, it just converts it to numpy.
+
+        Args:
+            role (str): name of the role
+            role_actions (np.array]): this array dimension should be of shape (number of agents for this role, action space)
+
+        Returns:
+            np.array ready for Unity
+        """
+        if self.RoleSpec[role].is_action_discrete():
+            role_actions = np.array(role_actions)
+            actions = np.zeros(shape=(len(self.role_agent_ids[role]), len(self.RoleSpec[role].action_shape)))
+            for agent_ix, agent_id in enumerate(self.role_agent_ids[role]):
+                _cum_ix = 0
+                for ac_ix, ac_dim in enumerate(self.RoleSpec[role].action_shape):
+                    actions[agent_ix, ac_ix] = np.argmax(role_actions[agent_ix, _cum_ix:ac_dim + _cum_ix])
+                    _cum_ix += ac_dim
+        elif type(role_actions) != np.ndarray:
+            actions = np.array(role_actions)
+        # self.log(f"Clean action: {actions}")
+        return actions
 
     def _unity_reshape(self, arr):
         """Unity reshape of the data - concats all same Role agents trajectories
@@ -278,6 +326,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 # self.log(f"{self.observations[role].shape}", verbose_level=1)
                 self.rewards[role] = self.DecisionSteps[role].reward
                 self.dones[role] = [False] * len(self.DecisionSteps[role].agent_id)
+
+                '''If it's the first time we are collecting data, this IF statement will be False as we don't have an action to store into the buffer yet'''
                 if hasattr(self, 'raw_actions'):
                     self.request_actions = True
 
@@ -304,7 +354,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
             # Here we check if one of the Roles died and did not respawn: this means is not in DecisionStep nor TerminalStep.
             # Some environments dont respawn the agents immediately g.e. ICT Skirmish
-
 
     def _get_expected_action_shape(self, role: str) -> tuple:
         """Returns the expected shape of the action for the given role.
@@ -372,29 +421,6 @@ class MultiAgentUnityWrapperEnv1(Environment):
         # self.log(f"TerminalStep {self.TerminalSteps[self.roles[0]].agent_id}")
         return sum([len(self.trajectory_ready_agent_ids[role]) for role in self.roles]) > n_episodes
 
-    def _clean_role_actions(self, role, role_actions):
-        """ Converts discrete action probabilities into one hot encoding
-            Input dimension is (num_agents_for_this_role, action_space)
-
-            Get the argmax when the Action Space is Discrete
-            else, make sure it's numpy array
-
-        Returns:
-            Numpy N-Dimension Array
-        """
-        if self.RoleSpec[role].is_action_discrete():
-            role_actions = np.array(role_actions)
-            actions = np.zeros(shape=(len(self.role_agent_ids[role]), len(self.RoleSpec[role].action_shape)))
-            for agent_ix, agent_id in enumerate(self.role_agent_ids[role]):
-                _cum_ix = 0
-                for ac_ix, ac_dim in enumerate(self.RoleSpec[role].action_shape):
-                    actions[agent_ix, ac_ix] = np.argmax(role_actions[agent_ix, _cum_ix:ac_dim + _cum_ix])
-                    _cum_ix += ac_dim
-        elif type(role_actions) != np.ndarray:
-            actions = np.array(role_actions)
-        # self.log(f"Clean action: {actions}")
-        return actions
-
     def get_action_space_from_unity_spec(self, unity_spec):
         """ Checks BehaviorSpec (Agent) has a discrete or continuous actionspace.
 
@@ -449,7 +475,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         Returns:
             list of np.arrays
         """
-        return list(self.actions.values())
+        return list(self.raw_actions.values())
 
     def get_reward_episode(self, roles=False):
         """ Returns the episodic rewards organized in a dictionary by role names.
