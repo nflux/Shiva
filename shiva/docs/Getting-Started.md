@@ -37,7 +37,7 @@ Then we can go into the project structure and start setting up components and de
 
 Run the below command in order to install the requirements.
 ```bash
-bash ./Control-Tasks/setup/install.sh
+pip install -r Control-Tasks/setup/requirements.txt
 ```
 
 ## Install OpenMPI
