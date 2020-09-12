@@ -43,3 +43,7 @@ You can use these benchmarks to test if changes made to Shiva were improvements.
 ## Restrictions
 
 If you would like to contribute to Shiva, we would like you to do so by providing your own implementations of the abstract modules to maintain stability. If you have difficulties with any of the existing modules please raise an issue on the repository.
+
+## License
+
+[Apache License 2.0](LICENSE)
