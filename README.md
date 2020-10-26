@@ -54,7 +54,7 @@ If you would like to contribute to Shiva, we would like you to do so by providin
    * Travis Hamm
    * Daniel Tellier
    * Joshua Kristanto
-* ICT / DoD
+* University of Southern California, Institute of Creative Technology (USC ICT)
    * Volkan Ustun
    * Rajay Kumar
 * CSUN NSF Grant # 1842386
