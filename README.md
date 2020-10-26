@@ -46,7 +46,7 @@ If you would like to contribute to Shiva, we would like you to do so by providin
 
 ## Credits
 
-* nFlux
+* nFlux AI
    * Seyed Sajjadi
    * Andrew Miller
    * Ezequiel Donovan
