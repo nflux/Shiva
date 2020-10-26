@@ -47,7 +47,7 @@ If you would like to contribute to Shiva, we would like you to do so by providin
 ## Credits
 
 * nFlux
-   * Seyyed Sajjadi
+   * Seyed Sajjadi
    * Andrew Miller
    * Ezequiel Donovan
    * Jorge Martinez
@@ -55,6 +55,8 @@ If you would like to contribute to Shiva, we would like you to do so by providin
    * Daniel Tellier
    * Joshua Kristanto
 * ICT / DoD
+   * Volkan Ustun
+   * Rajay Kumar
 * CSUN NSF Grant # 1842386
 
 ## License
