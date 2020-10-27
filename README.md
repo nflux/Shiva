@@ -44,6 +44,21 @@ You can use these benchmarks to test if changes made to Shiva were improvements.
 
 If you would like to contribute to Shiva, we would like you to do so by providing your own implementations of the abstract modules to maintain stability. If you have difficulties with any of the existing modules please raise an issue on the repository.
 
+## Credits
+
+* nFlux AI
+   * Seyed Sajjadi
+   * Andrew Miller
+   * Ezequiel Donovan
+   * Jorge Martinez
+   * Travis Hamm
+   * Daniel Tellier
+   * Joshua Kristanto
+* University of Southern California, Institute of Creative Technology (USC ICT)
+   * Volkan Ustun
+   * Rajay Kumar
+* CSUN NSF Grant # 1842386
+
 ## License
 
 [Apache License 2.0](LICENSE)
