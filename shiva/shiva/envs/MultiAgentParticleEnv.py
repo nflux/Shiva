@@ -133,10 +133,10 @@ class MultiAgentParticleEnv(Environment):
         '''All Action Spaces are Discrete - unless new environment is created by us'''
         if self.env.discrete_action_space:
             action_space = {
-                'discrete': agent_action_space.n,
+                'discrete': (agent_action_space.n,),
                 'continuous': 0,
                 'param': 0,
-                'acs_space': agent_action_space.n
+                'acs_space': (agent_action_space.n,)
             }
         else:
             assert "Continuous Action Space for the Particle Environment is not implemented"

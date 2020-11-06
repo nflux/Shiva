@@ -273,7 +273,7 @@ class MPIMultiEnv(Environment):
                 if not bypass_request:
                     self.io.request_io(self._get_menv_specs(), learner_spec['load_path'], wait_for_access=True)
                 # learner_agents = Admin.load_agents(learner_spec['load_path'], device=self.device, load_latest=True)
-                learner_agents = Admin.reload_agents(agents, learner_spec['load_path'], device=self.device, load_latest=True)
+                learner_agents = Admin.reload_agents(agents, learner_spec, device=self.device, load_latest=True)
                 if not bypass_request:
                     self.io.done_io(self._get_menv_specs(), learner_spec['load_path'])
 
@@ -282,8 +282,9 @@ class MPIMultiEnv(Environment):
                     a.to_device(self.device)
                     agents[self.env_specs['roles'].index(a.role)] = a
 
-        if self.episodic_load_rate > 0 or (self.step_count % 500 == 0):
-            self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
+        # if self.episodic_load_rate > 0 or (self.step_count % 500 == 0):
+        #     self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
+        self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
         return agents
 
     def _receive_learner_spec(self, learner_ix):

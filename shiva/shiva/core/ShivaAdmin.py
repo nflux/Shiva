@@ -429,18 +429,24 @@ class ShivaAdmin:
             agents.append(_new_agent)
         return agents
 
-    def reload_agents(self, agents:list, path:str, absolute_path=True, load_latest=True, device=torch.device('cpu')) -> list:
+    def reload_agents(self, agents:list, learner_spec:dict, absolute_path=True, load_latest=True, device=torch.device('cpu')) -> list:
         '''
         Loads new agent states
         '''
+        path = learner_spec['load_path']
         if len(agents) == 0 or agents[0] == None:
             '''First time loading... use load_agents directly'''
+            self.log(f"Here {path}")
             return self.load_agents(path, absolute_path=absolute_path, load_latest=load_latest, device=device)
         else:
+            self.log(f"ELSE Here {path}")
+            self.log(f"{[str(a) for a in agents]}")
             _path = path
             if load_latest and self.__folder_name__['latest'] not in path:
                 _path = os.path.join(path, self.__folder_name__['latest'])
             for a in agents:
+                if a.id not in learner_spec['agent_ids']:
+                    continue
                 agents_states = self._load_agents_states(_path, agent_id=a.id, absolute_path=absolute_path, device=device)
                 assert len(agents_states) == 1, "mmmmm something weird here because we should find only 1 state dict"
                 agent_state_dict = torch.load(agents_states[0], map_location=device)
