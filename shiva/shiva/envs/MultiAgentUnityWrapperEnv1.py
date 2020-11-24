@@ -170,7 +170,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
             self.actions4Unity[role] = self._clean_role_actions(role, self.raw_actions[role])
             # self.log(f"Role {role} Cleaned {self.actions4Unity[role]}")
             self.Unity.set_actions(role, self.actions4Unity[role])
+        # self.log(f"Before Unity.Step({self.steps_per_episode[self.roles[0]]})")
         self.Unity.step()
+        # self.log(f"After Unity.Step({self.steps_per_episode[self.roles[0]]})")
 
         self.request_actions = False
         while not self.request_actions:
@@ -178,6 +180,11 @@ class MultiAgentUnityWrapperEnv1(Environment):
             if not self.request_actions:
                 # step until we get a DecisionStep (we need an action)
                 self.Unity.step()
+
+        # for i, r in enumerate(self.roles):
+        #     if np.array_equal(self.previous_observation[r], self.observations[r]):
+        #         self.log(f"Equality for {r}")
+
         '''
             Metrics collection
                 Episodic # of steps             self.steps_per_episode
@@ -283,7 +290,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
 
             try:
-                self.log(f"Step {self.steps_per_episode[role]} Role {role} Decision: {self.DecisionSteps[role].agent_id}, Terminal: {self.TerminalSteps[role].agent_id}", verbose_level=0)
+                self.log(f"Step {self.steps_per_episode[role]} Role {role} Decision: {self.DecisionSteps[role].agent_id}, Terminal: {self.TerminalSteps[role].agent_id}", verbose_level=2)
             except:
                 pass
 

@@ -97,7 +97,7 @@ class GymEnvironment(Environment):
 
         return self.obs, self.rew, self.done, {'raw_reward': self.reward_per_step, 'action': action}
 
-    def reset(self, *args, **kwargs):
+    def reset(self, force=False, *args, **kwargs):
         """Reset episode metrics at the end of an episode or trajectory.
 
         Return:
@@ -108,6 +108,10 @@ class GymEnvironment(Environment):
         self.reward_per_episode = 0
         self.done = False
         self.obs = self.transform_observation_space(self.env.reset())
+        if force:
+            self.step_count = 0
+            self.done_count = 0
+            self.reward_total = 0
 
     def get_metrics(self, episodic):
         """ Retrieve environment metrics.
@@ -135,14 +139,19 @@ class GymEnvironment(Environment):
         return [metrics] # single role metrics!
         # return metrics
 
-    def is_done(self):
+    def is_done(self, n_episodes=None):
         """Check if the episode/trajectory has completed.
+
+        Args:
+            n_episodes (int):
 
         Returns:
             (boolean)
 
             A done flag indicating whether the episode is over.
         """
+        if n_episodes is not None:
+            return self.done_count > n_episodes
         return self.done
 
     def transform_observation_space(self, raw_obs):

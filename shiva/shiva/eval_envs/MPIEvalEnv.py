@@ -60,7 +60,7 @@ class MPIEvalEnv(Environment):
                 # self._step_numpy()
                 if self.env.is_done(n_episodes=self.configs['Evaluation']['eval_episodes']):
                     self.send_evaluations()
-                    self.env.reset(force=False)
+                    self.env.reset(force=True)
 
                 # if self.eval.Iprobe(source=MPI.ANY_SOURCE, tag=Tags.clear_buffers, status=self.info):
                 #     _ = self.eval.recv(None, source=self.info.Get_source(), tag=Tags.clear_buffers)
@@ -117,6 +117,7 @@ class MPIEvalEnv(Environment):
                         for metric_name, value in agent_metric:
                             if metric_name == 'Reward/Per_Episode':
                                 reward_per_episode[role].append(value)
+                # print(reward_per_episode)
                 reward_per_episode[role] = sum(reward_per_episode[role]) / len(reward_per_episode[role])
             metric = {
                 'reward_per_episode': reward_per_episode

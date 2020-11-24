@@ -436,11 +436,9 @@ class ShivaAdmin:
         path = learner_spec['load_path']
         if len(agents) == 0 or agents[0] == None:
             '''First time loading... use load_agents directly'''
-            self.log(f"Here {path}")
             return self.load_agents(path, absolute_path=absolute_path, load_latest=load_latest, device=device)
         else:
-            self.log(f"ELSE Here {path}")
-            self.log(f"{[str(a) for a in agents]}")
+            # self.log(f"{[str(a) for a in agents]}")
             _path = path
             if load_latest and self.__folder_name__['latest'] not in path:
                 _path = os.path.join(path, self.__folder_name__['latest'])

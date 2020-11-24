@@ -68,7 +68,7 @@ class MPIEvaluation(Evaluation):
         if 'Unity' in self.env_specs['type'] or 'ParticleEnv' in self.env_specs['type']:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         elif 'Gym' in self.env_specs['type']:
-            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'] ), dtype=np.float64)
+            self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         elif 'RoboCup' in self.env_specs['type']:
             self._obs_recv_buffer = np.empty((self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space']), dtype=np.float64)
 
@@ -97,7 +97,7 @@ class MPIEvaluation(Evaluation):
                     # for o in role_obs:
                     #     role_actions.append(self.agents[agent_ix].get_action(o, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
                     # env_actions.append(role_actions)
-                    env_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=not self.allow_noise))
+                    env_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=True))
                 actions.append(env_actions)
         elif 'Particle' in self.env_specs['type']:
             actions = []
@@ -106,7 +106,7 @@ class MPIEvaluation(Evaluation):
                 for role_ix, role_name in enumerate(self.env_specs['roles']):
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
-                    role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=not self.allow_noise)
+                    role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=True)
                     env_actions.append(role_actions)
                 actions.append(env_actions)
         elif 'Gym' in self.env_specs['type']:
@@ -116,7 +116,7 @@ class MPIEvaluation(Evaluation):
             agent_ix = self.role2agent[role_name]
             for role_obs in self._obs_recv_buffer:
                 env_actions = []
-                role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=not self.allow_noise)
+                role_actions = self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=True)
                 env_actions.append(role_actions)
                 actions.append(env_actions)
         self.actions = np.array(actions)
@@ -195,7 +195,7 @@ class MPIEvaluation(Evaluation):
 
                 if metric_name == 'reward_per_episode':
                     self.io.request_io(self._get_eval_specs(), file_path, wait_for_access=True)
-                    file_name = f"{file_path}/Agent_{str(self.agents[self.role2agent[role]].id)}.npy"
+                    file_name = f"{file_path}Agent_{str(self.agents[self.role2agent[role]].id)}.npy"
                     np.save(file_name, np.array(evals[role][metric_name]))
                     self.io.done_io(self._get_eval_specs(), file_path)
 
@@ -253,7 +253,7 @@ class MPIEvaluation(Evaluation):
                 agent_id = learner_spec['role2ids'][role][0]
 
                 self.io.request_io(self._get_eval_specs(), learner_spec['load_path'], wait_for_access=True)
-                agent = Admin._load_agent_of_id(learner_spec['load_path'], agent_id, device=self.device)[0]
+                agent = Admin.load_agent_of_id(learner_spec['load_path'], agent_id, device=self.device)[0]
                 self.io.done_io(self._get_eval_specs(), learner_spec['load_path'])
 
                 agent.to_device(self.device)

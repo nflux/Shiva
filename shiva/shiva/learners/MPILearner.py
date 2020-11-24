@@ -2,6 +2,7 @@ import sys, traceback, os, time, pickle
 from pathlib import Path
 sys.path.append(str(Path(__file__).absolute().parent.parent.parent))
 import torch, time
+torch.set_printoptions(profile="full")
 import numpy as np
 from scipy import stats
 from collections import deque
@@ -167,7 +168,14 @@ class MPILearner(Learner):
             self.done_count += 1
             # self.steps_per_episode = traj_length
             # below metric could be a potential issue when Learner controls multiple agents and receives individual trajectories for them
-            self.reward_per_episode = sum(rewards.squeeze())
+
+            # self.reward_per_episode = sum(rewards.squeeze())
+            rs = rewards.squeeze()
+            if (rs.size != 1):
+                self.reward_per_episode = sum(rs)
+            else:
+                self.reward_per_episode = rs
+
             self._n_success_pulls += 1
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
 
@@ -196,6 +204,32 @@ class MPILearner(Learner):
                                          torch.from_numpy(next_observations).reshape(traj_length, len(self.traj_info['role']), next_observations.shape[-1]),
                                          torch.from_numpy(dones).reshape(traj_length, len(self.traj_info['role']), dones.shape[-1])
                                          )))
+
+            # rewarding_ixs = []
+            # value = 5.0
+            # for i in range(rewards.shape[1]):
+            #     if rewards[0, i, 0] == value:
+            #         rewarding_ixs += [i]
+            #
+            #
+            # obs_ixs_with_1 = []
+            # next_obs_ixs_with_1 = []
+            # for ix in rewarding_ixs:
+            #     for j in range(next_observations.shape[2]):
+            #         if observations[0, ix, j] == 1.0:
+            #             obs_ixs_with_1 += [j]
+            #         if next_observations[0, ix, j] == 1.0:
+            #             next_obs_ixs_with_1 += [j]
+            #
+            # self.log(rewards)
+            # self.log(f"Found Rewarding IXs {rewarding_ixs}")
+            # self.log(observations[0, rewarding_ixs, :])
+            # self.log(rewards[0, rewarding_ixs, :])
+            # self.log(next_observations[0, rewarding_ixs, :])
+            #
+            # self.log(f"Observation IXs where there is a 1: {obs_ixs_with_1}")
+            # self.log(f"NextObs IXs where there is a 1: {next_obs_ixs_with_1}")
+
             self.buffer.push(exp)
 
     def run_updates(self):
@@ -442,12 +476,12 @@ class MPILearner(Learner):
 
             my_eval_path = f"{Admin.get_learner_url(self)}/evaluations/"
             self.io.request_io(self._get_learner_specs(), my_eval_path, wait_for_access=True)
-            evals = np.load(f"{my_eval_path}/Agent_{evo_config['agent_id']}.npy")
+            evals = np.load(f"{my_eval_path}Agent_{evo_config['agent_id']}.npy")
             self.io.done_io(self._get_learner_specs(), my_eval_path)
 
             evo_path = f"{evo_config['load_path']}/evaluations/"
             self.io.request_io(self._get_learner_specs(), evo_path, wait_for_access=True)
-            evo_evals = np.load(f"{evo_path}/Agent_{evo_config['evo_agent_id']}.npy")
+            evo_evals = np.load(f"{evo_path}Agent_{evo_config['evo_agent_id']}.npy")
             self.io.done_io(self._get_learner_specs(), evo_path)
 
             if self.welch_T_Test(evals, evo_evals):
