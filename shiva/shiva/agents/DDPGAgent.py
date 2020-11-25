@@ -32,7 +32,7 @@ class DDPGAgent(Agent):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, configs)
         torch.manual_seed(self.manual_seed)
         np.random.seed(self.manual_seed)
-        self.log(f"MANUAL SEED {self.manual_seed}")
+        self.log(f"MANUAL SEED {self.manual_seed}", verbose_level=2)
 
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']

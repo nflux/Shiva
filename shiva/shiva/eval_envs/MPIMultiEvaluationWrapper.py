@@ -128,7 +128,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
             possible_ids = list(set(ids_with_min_num_evals) - set(_take_out))
             if len(possible_ids) == 0:
                 possible_ids = ids_with_min_num_evals
-            agent_id = np.random.choice(possible_ids)
+            # agent_id = np.random.choice(possible_ids)
+            agent_id = possible_ids[0]
 
             match[role] = self.get_learner_spec(agent_id)
 

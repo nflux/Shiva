@@ -244,7 +244,11 @@ class MPILearner(Learner):
                 and (self.done_count % self.episodes_to_update == 0) \
                 and len(self.buffer) > self.buffer.batch_size:
 
-            self.run_lr_decay()
+            if not self.evolve:
+                # Might need to have another criteria for when to decay LR when using PBT
+                self.run_recalculate_hyperparameters()
+            elif self.done_count % self.configs['Agent']['lr_decay']['average_episodes'] == 0:
+                self.log(f"ID {self.agents[0].id} Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {sum(self.last_rewards[self.agents[0].id]['q']) / len(self.last_rewards[self.agents[0].id]['q'])}")
 
             self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
             self.num_updates = self.alg.get_num_updates()
@@ -257,9 +261,15 @@ class MPILearner(Learner):
             if self.done_count >= self.checkpoints_made * self.save_checkpoint_episodes:
                 self.checkpoint(checkpoint_num=self.done_count, function_only=True, use_temp_folder=False)
 
-    def run_lr_decay(self):
+            for agent in self.agents:
+                agent.step_count = self.step_count[agent.id]
+                agent.done_count = self.done_count
+                agent.num_updates = self.num_updates
+
+    def run_recalculate_hyperparameters(self):
         """
-        Check if we need to do Learning Rate decay by looking at the last mean rewards. See Learner config explanation for more details on usage.
+        Check if hyperparameters need to be updated (decay or restore).
+        See Learner config explanation for more details on usage.
 
         Returns:
             None
@@ -267,9 +277,6 @@ class MPILearner(Learner):
         _decay_or_restore_lr = 0  # -1 to decay, 1 to restore, 0 to do nothing
         _decay_log = ""
         for agent in self.agents:
-            agent.step_count = self.step_count[agent.id]
-            agent.done_count = self.done_count
-            agent.num_updates = self.num_updates
             # update this HPs so that they show up on tensorboard
             agent.recalculate_hyperparameters()
             if 'lr_decay' in self.configs['Agent'] and self.configs['Agent']:
@@ -479,7 +486,7 @@ class MPILearner(Learner):
             evals = np.load(f"{my_eval_path}Agent_{evo_config['agent_id']}.npy")
             self.io.done_io(self._get_learner_specs(), my_eval_path)
 
-            evo_path = f"{evo_config['load_path']}/evaluations/"
+            evo_path = f"{evo_config['evo_path']}/evaluations/"
             self.io.request_io(self._get_learner_specs(), evo_path, wait_for_access=True)
             evo_evals = np.load(f"{evo_path}Agent_{evo_config['evo_agent_id']}.npy")
             self.io.done_io(self._get_learner_specs(), evo_path)

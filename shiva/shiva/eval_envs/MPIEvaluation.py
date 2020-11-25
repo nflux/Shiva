@@ -7,6 +7,7 @@ import numpy as np
 from shiva.eval_envs.Evaluation import Evaluation
 from shiva.helpers.misc import terminate_process, flat_1d_list
 from shiva.helpers.utils.Tags import Tags
+from shiva.helpers.dir_handler import make_dir
 from shiva.core.admin import Admin, logger
 from shiva.core.IOHandler import get_io_stub
 
@@ -35,8 +36,8 @@ class MPIEvaluation(Evaluation):
 
         self._connect_io_handler()
 
-        if hasattr(self, 'device') and self.device == 'gpu':
-            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        if hasattr(self, 'device') and 'cuda' in self.device:
+            self.device = torch.device(self.device if torch.cuda.is_available() else "cpu")
         else:
             self.device = torch.device('cpu')
 
@@ -189,7 +190,7 @@ class MPIEvaluation(Evaluation):
         for role in self.roles:
             learner_spec = self.role2learner_spec[role]
             file_path = f"{learner_spec['load_path']}/evaluations/"
-
+            make_dir(file_path, use_existing=True)
             for metric_name in metrics_received:
                 evals[role][metric_conversion[metric_name]] = np.mean(evals[role][metric_name])
 

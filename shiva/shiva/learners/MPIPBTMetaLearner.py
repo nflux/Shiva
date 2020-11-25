@@ -345,7 +345,7 @@ class MPIPBTMetaLearner(MetaLearner):
         if self.pbt:
             self.rankings_size = {role:len(self.role2ids[role]) for role in self.roles} # total population for each role
             self.top_20 = {role:int(self.rankings_size[role] * self.configs['Evaluation']['expert_population']) for role in self.roles}
-            self.bottom_20 = {role:int(self.rankings_size[role] * (1-self.configs['Evaluation']['expert_population'])) for role in self.roles}
+            self.bottom_20 = {role:int(self.rankings_size[role] * (1-self.configs['Evaluation']['expert_population']) - 1) for role in self.roles}
             self.evolve = self._roles_evolve
             self.evols_sent = {l_spec['id']:False for l_spec in self.learners_specs}
 
@@ -393,7 +393,7 @@ class MPIPBTMetaLearner(MetaLearner):
         Returns:
             List[Dict[str, Dict[str, Union[List, Dict]]]]: A list of config dictionaries.
         """
-        self.learner_configs = []
+        self.learners_configs = []
         if hasattr(self, 'learners_map'):
             self.roles = self.configs['MultiEnv'][0]['env_specs']['roles']
             '''First check that all Agents Roles are assigned to a Learner'''
@@ -403,21 +403,24 @@ class MPIPBTMetaLearner(MetaLearner):
                 else:
                     assert "Agent Roles {} is not being assigned to any Learner\nUse the 'learners_map' attribute on the [MetaLearner] section".format(roles)
             '''Do some preprocessing before spreading the config'''
-            # load each one of the configs and keeping same order
-            self.learners_configs = []
-            for learner_ix, (config_path, learner_roles) in enumerate(self.learners_map.items()):
+            learners_config_path = list(self.learners_map.keys())
+            learners_roles = list(self.learners_map.values())
+            for learner_ix in range(self.num_learners):
+                config_path = learners_config_path[learner_ix % self.num_learners_per_map]
+                learner_roles = learners_roles[learner_ix % self.num_learners_per_map]
+
                 learner_config = load_config_file_2_dict(config_path)
                 learner_config = merge_dicts(self.configs, learner_config)
-                self.log("Learner {} with roles {}".format(len(self.learners_configs), learner_roles), verbose_level=2)
+                self.log("Learner {} with roles {learner_roles}", verbose_level=-1)
                 learner_config['Learner']['roles'] = learner_roles
                 learner_config['Learner']['pbt'] = self.pbt
                 learner_config['Algorithm']['manual_seed'] = self.manual_seed + learner_ix if 'manual_seed' not in learner_config['Algorithm'] else learner_config['Algorithm']['manual_seed']
                 learner_config['Agent']['manual_seed'] = learner_config['Algorithm']['manual_seed'] if 'manual_seed' not in learner_config['Agent'] else learner_config['Agent']['manual_seed']
                 learner_config['Agent']['pbt'] = self.pbt
                 self.learners_configs.append(learner_config)
-            self.learners_configs = self.learners_configs * self.num_learners_maps
         elif 'Learner' in self.configs:
             self.learners_configs = [self.configs.copy() for _ in range(self.num_learners)]
+            self.log("Wrong if")
         else:
             assert "Error processing Learners Configs"
         return self.learners_configs

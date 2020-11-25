@@ -37,6 +37,7 @@ class Agent:
         except:
             self.log("No optimizer", to_print=True)
         self.policy = None
+        
         self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.state_attrs = ['step_count', 'done_count', 'num_updates', 'num_evolutions', 'role', 'manual_seed']
