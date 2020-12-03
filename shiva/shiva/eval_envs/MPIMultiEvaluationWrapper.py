@@ -107,6 +107,10 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 @restrict_pairs_proba = 1, to force pairs to be evaluated together
 
             * other approach, could be of creating a pool of possible matches (both with pairs and/or broken pairs) and grab a random one from the pool
+
+            The match config returned is a dict whose keys are @roles and values are the @learner_specs for that role
+            Returns
+                Dict[str, Dict]: match object with @roles as keys and @learner_specs as their values
         """
         match = {}
         # self.restrict_pairs_proba = 1
@@ -128,8 +132,8 @@ class MPIMultiEvaluationWrapper(Evaluation):
             possible_ids = list(set(ids_with_min_num_evals) - set(_take_out))
             if len(possible_ids) == 0:
                 possible_ids = ids_with_min_num_evals
-            # agent_id = np.random.choice(possible_ids)
-            agent_id = possible_ids[0]
+            agent_id = np.random.choice(possible_ids)
+            self.evaluations.at[agent_id, 'Num_Evaluations'] += 1
 
             match[role] = self.get_learner_spec(agent_id)
 
@@ -138,6 +142,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self.log("Found pair for {} to be {}".format(agent_id, pairs_roles), verbose_level=3)
             for role_of_pair in pairs_roles:
                 match[role_of_pair] = match[role]
+                self.evaluations.at[match[role]['role2ids'][role_of_pair][0], 'Num_Evaluations'] += 1
 
             if match_is_full(match):
                 break
@@ -182,7 +187,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
                 agent_id = eval_match[role]['role2ids'][role][0]
                 for metric_name, value in metrics.items():
                     self.evaluations.at[agent_id, metric_name] = value
-                    self.evaluations.at[agent_id, 'Num_Evaluations'] += 1
+                    # self.evaluations.at[agent_id, 'Num_Evaluations'] += 1
             self.sort = sort
             self.ready = True
             self._send_new_match(eval_id)

@@ -414,8 +414,13 @@ class MPILearner(Learner):
         """
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         self.configs['Algorithm']['roles'] = self.roles if hasattr(self, 'roles') else []
+        if type(self.configs['Algorithm']['device']) == list:
+            # A list of GPUs was given for the Learners/Algorithm, choose one
+            gpu_ix = int(self.id % len(self.configs['Algorithm']['device']))
+            gpu_chosen = self.configs['Algorithm']['device'][gpu_ix]
+            self.configs['Algorithm']['device'] = gpu_chosen
         alg = algorithm_class(self.observation_space, self.action_space, self.configs)
-        self.log("Algorithm created of type {}".format(algorithm_class), verbose_level=2)
+        self.log("Created ".format(str(alg)), verbose_level=-1)
         return alg
 
     def create_buffer(self):

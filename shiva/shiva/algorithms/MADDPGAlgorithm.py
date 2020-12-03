@@ -627,4 +627,4 @@ class MADDPGAlgorithm(Algorithm):
         # return metrics
 
     def __str__(self):
-        return '<MADDPGAlgorithm(n_agents={}, num_updates={}, method={})>'.format(self.agentCount, self.num_updates, self.method)
+        return '<MADDPGAlgorithm(n_agents={}, num_updates={}, method={}, device={})>'.format(self.agentCount, self.num_updates, self.method, self.device)
