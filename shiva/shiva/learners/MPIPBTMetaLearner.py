@@ -3,7 +3,7 @@ import numpy as np
 from mpi4py import MPI
 
 from shiva.learners.MetaLearner import MetaLearner
-from shiva.helpers.config_handler import load_config_file_2_dict, merge_dicts
+from shiva.helpers.config_handler import load_config_file_2_dict, file_exists, merge_dicts
 from shiva.helpers.utils.Tags import Tags
 
 
@@ -401,7 +401,8 @@ class MPIPBTMetaLearner(MetaLearner):
                 if roles in set(self.learners_map.keys()):
                     pass
                 else:
-                    assert "Agent Roles {} is not being assigned to any Learner\nUse the 'learners_map' attribute on the [MetaLearner] section".format(roles)
+                    assert f"Agent Roles {roles} is not being assigned to any Learner\nUse the 'learners_map' attribute on the [MetaLearner] section"
+
             '''Do some preprocessing before spreading the config'''
             learners_config_path = list(self.learners_map.keys())
             learners_roles = list(self.learners_map.values())
@@ -409,9 +410,14 @@ class MPIPBTMetaLearner(MetaLearner):
                 config_path = learners_config_path[learner_ix % self.num_learners_per_map]
                 learner_roles = learners_roles[learner_ix % self.num_learners_per_map]
 
+                # See if there is another config with extension for example '-L0', '-L1', or in general '-L(some-int)'
+                config_path_opt = config_path[:config_path.find('.ini')] + f'-L{learner_ix}' + config_path[config_path.find('.ini'):]
+                if hasattr(self, 'multi_hps') and self.multi_hps and file_exists(config_path_opt):
+                    config_path = config_path_opt
+
                 learner_config = load_config_file_2_dict(config_path)
                 learner_config = merge_dicts(self.configs, learner_config)
-                self.log("Learner {} with roles {learner_roles}", verbose_level=-1)
+                self.log(f"Learner {learner_ix} with roles {learner_roles}", verbose_level=-1)
                 learner_config['Learner']['roles'] = learner_roles
                 learner_config['Learner']['pbt'] = self.pbt
                 learner_config['Algorithm']['manual_seed'] = self.manual_seed + learner_ix if 'manual_seed' not in learner_config['Algorithm'] else learner_config['Algorithm']['manual_seed']

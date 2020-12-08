@@ -28,7 +28,7 @@ class Algorithm:
         if hasattr(self, 'device') and 'cuda' in self.device:
             self.device = torch.device(self.device if torch.cuda.is_available() else "cpu")
         else:
-            self.device = torch.device('cpu')
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.metrics = []
 
     def update(self, agents: List, buffer, *args, **kwargs) -> None:

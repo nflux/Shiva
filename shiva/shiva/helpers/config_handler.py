@@ -63,6 +63,8 @@ def load_config_file_2_dict(_FILENAME: str) -> dict:
     r['_filename_'] = _FILENAME
     return r
 
+def file_exists(file_url):
+    return os.path.exists(file_url)
 
 def is_iterable(ob):
     """
