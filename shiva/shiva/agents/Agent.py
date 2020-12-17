@@ -39,7 +39,7 @@ class Agent:
         self.policy = None
         
         self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+        self.hp_random = self.hp_random if hasattr(self, 'hp_random') else False
         self.state_attrs = ['step_count', 'done_count', 'num_updates', 'num_evolutions', 'role', 'manual_seed']
         self.net_names = []
         self.hps = []

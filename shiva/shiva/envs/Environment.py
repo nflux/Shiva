@@ -2,7 +2,6 @@ import torch
 import numpy as np
 from shiva.core.admin import logger
 
-
 class Environment:
     """ Abstract Environment Class all environments implemented in Shiva inherit from.
     """
@@ -17,6 +16,8 @@ class Environment:
     reward_per_step = 0
     reward_per_episode = 0
     reward_total = 0
+
+    action_selection_mode = 'argmax'
 
     total_episodes_to_play = None
 
@@ -105,6 +106,20 @@ class Environment:
             None
         """
         pass
+
+    def action_selection(self, action) -> float:
+        """Function performs the action selection at the Environment level determined by the config parameter 'action_selection_mode'
+        Options for 'action_selection_mode' are 'argmax' or 'sample'
+
+        Returns:
+            float value of the action chosen
+        """
+        if self.action_selection_mode == 'argmax':
+            return np.argmax(action).item()
+        elif self.action_selection_mode == 'sample':
+            return torch.distributions.Categorical(torch.from_numpy(action)).sample().item()
+        else:
+            assert False, f"Invalid 'action_selection_mode', got {self.action_selection_mode}. Only 'argmax' or 'sample' as implemented."
 
     def reset(self):
         """Resets the environment state and parameters.

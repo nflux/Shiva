@@ -252,7 +252,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
             for agent_ix, agent_id in enumerate(self.role_agent_ids[role]):
                 _cum_ix = 0
                 for ac_ix, ac_dim in enumerate(self.RoleSpec[role].action_shape):
-                    actions[agent_ix, ac_ix] = np.argmax(role_actions[agent_ix, _cum_ix:ac_dim + _cum_ix])
+                    actions[agent_ix, ac_ix] = self.action_selection(role_actions[agent_ix, _cum_ix:ac_dim + _cum_ix])
                     _cum_ix += ac_dim
         elif type(role_actions) != np.ndarray:
             actions = np.array(role_actions)

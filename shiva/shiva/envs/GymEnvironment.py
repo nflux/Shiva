@@ -34,7 +34,7 @@ class GymEnvironment(Environment):
 
         self.temp_done_counter = 0
 
-    def step(self, action, discrete_select='argmax'):
+    def step(self, action):
         """ Takes an action in the environment.
 
         Note:
@@ -64,10 +64,7 @@ class GymEnvironment(Environment):
             '''Discrete, argmax or sample from distribution'''
             if not torch.is_tensor(action):
                 action = torch.from_numpy(action)
-            if discrete_select == 'argmax':
-                action4Gym = torch.argmax(action).item()
-            elif discrete_select == 'sample':
-                action4Gym = Categorical(action).sample().item()
+            action4Gym = self.action_selection(action)
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         else:
             '''Continuous actions'''
