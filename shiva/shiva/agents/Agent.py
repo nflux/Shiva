@@ -1,4 +1,5 @@
 import torch
+import random
 from shiva.core.admin import logger
 
 class Agent:
@@ -53,6 +54,35 @@ class Agent:
 
     def instantiate_networks(self):
         raise NotImplemented
+
+    def is_e_greedy(self) -> bool:
+        """ Checks if an action should be random or inference.
+
+        Returns:
+            Boolean indicating whether or not to take a random action.
+        """
+        if self.is_exploring():
+            return True
+        return random.uniform(0, 1) < self.epsilon if hasattr(self, 'epsilon') else False
+
+    def is_exploring(self, current_step_count=None) -> bool:
+        """ Checks if an action should be random or inference.
+
+        Args:
+            step_count (int): Episodic counter that controls the noise.
+
+        Returns:
+            Boolean indicating whether or not to add noise to an action.
+        """
+        if hasattr(self, 'exploration_episodes'):
+            if current_step_count is None:
+                current_step_count = self.done_count
+            _threshold = self.exploration_episodes
+        else:
+            if current_step_count is None:
+                current_step_count = self.step_count
+            _threshold = self.exploration_steps
+        return current_step_count < _threshold
 
     def to_device(self, device):
         assert hasattr(self, 'net_names'), "Need this attribute to turn networks to a device"

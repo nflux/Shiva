@@ -2,14 +2,12 @@ import numpy as np
 import random
 import torch
 import copy
-import pickle
 from torch.distributions import Categorical
 from torch.nn.functional import softmax
-from shiva.helpers.calc_helper import np_softmax
+from shiva.helpers.calc_helper import two_point_formula
 from shiva.agents.Agent import Agent
 from shiva.helpers.utils import Noise as noise
 from shiva.helpers.networks_helper import mod_optimizer
-from shiva.helpers.misc import action2one_hot, action2one_hot_v
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 
@@ -137,7 +135,7 @@ class DDPGAgent(Agent):
         if evaluate:
             action = self.actor(observation).detach().cpu()
         else:
-            if self.is_exploring(step_count) or self.is_e_greedy(step_count):
+            if self.is_exploring() or self.is_e_greedy():
                 action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
                 _action_debug = "Random: {}".format(action)
             else:
@@ -180,7 +178,7 @@ class DDPGAgent(Agent):
         if evaluate:
             action = self.actor(observation).detach()
         else:
-            if self.is_exploring(step_count) or self.is_e_greedy(step_count):
+            if self.is_exploring() or self.is_e_greedy(step_count):
                 action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
                 self.log(f"** Random action {action.tolist()}", verbose_level=1)
             else:
@@ -365,7 +363,11 @@ class DDPGAgent(Agent):
     def _get_epsilon_scale(self, done_count=None):
         if done_count is None:
             done_count = self.done_count
-        return max(self.epsilon_end, self.decay_value(self.epsilon_start, self.epsilon_episodes, (done_count - self._average_exploration_episodes_performed()), degree=self.epsilon_decay_degree))
+        est_exploration_episodes = self.average_exploration_episodes_performed() if not hasattr(self, 'exploration_episodes') else self.exploration_episodes
+        new_scale = two_point_formula(self.done_count, (est_exploration_episodes, self.epsilon_start), (est_exploration_episodes+self.epsilon_episodes, self.epsilon_end))
+        new_scale = min(new_scale, self.epsilon_start)
+        new_scale = max(new_scale, self.epsilon_end)
+        return new_scale
 
     def update_noise_scale(self, done_count=None) -> None:
         """To be called by the Learner before saving
@@ -384,10 +386,18 @@ class DDPGAgent(Agent):
     def _get_noise_scale(self, done_count=None):
         if done_count is None:
             done_count = self.done_count
-        return max(self.noise_end, self.decay_value(self.noise_start, self.noise_episodes, (done_count - (self._average_exploration_episodes_performed())), degree=self.noise_decay_degree))
+        est_exploration_episodes = self.average_exploration_episodes_performed() if not hasattr(self, 'exploration_episodes') else self.exploration_episodes
+        new_scale = two_point_formula(self.done_count, (est_exploration_episodes, self.noise_start), (est_exploration_episodes+self.noise_episodes, self.noise_end))
+        new_scale = min(new_scale, self.noise_start)
+        new_scale = max(new_scale, self.noise_end)
+        return new_scale
 
-    def _average_exploration_episodes_performed(self):
-        return self.exploration_steps / (self.step_count / self.done_count) if (self.step_count != 0 and self.done_count != 0) else 0
+    def average_exploration_episodes_performed(self):
+        return self.exploration_steps / self.average_episode_length if self.average_episode_length != 0 else 0
+
+    @property
+    def average_episode_length(self):
+        return self.step_count / self.done_count if self.done_count != 0 else 0
 
     def reset_noise(self) -> None:
         """ Resets the Agent's OU Noise
@@ -398,52 +408,6 @@ class DDPGAgent(Agent):
             None
         """
         self.ou_noise.reset()
-
-    def decay_value(self, start, decay_end_step, current_step_count, degree=1) -> float:
-        """ Decays a value from an initial to final value.
-
-        Can be linear, or polynomial.
-
-        Returns:
-            A new float value.
-        """
-        return start - start * ((current_step_count / decay_end_step) ** degree)
-
-    def is_e_greedy(self, step_count=None) -> bool:
-        """ Checks if an action should be random or inference.
-
-        Args:
-            step_count (int): Episodic counter that controls the epsilon.
-
-        Returns:
-            Boolean indicating whether or not to take a random action.
-        """
-        if step_count is None:
-            step_count = self.step_count
-        if step_count > self.exploration_steps:
-            step_count = step_count - self.exploration_steps # don't count explorations steps
-            return random.uniform(0, 1) < self.epsilon
-        else:
-            return True
-
-    def is_exploring(self, current_step_count=None) -> bool:
-        """ Checks if an action should be random or inference.
-
-        Args:
-            step_count (int): Episodic counter that controls the noise.
-
-        Returns:
-            Boolean indicating whether or not to add noise to an action.
-        """
-        if hasattr(self, 'exploration_episodes'):
-            if current_step_count is None:
-                current_step_count = self.done_count
-            _threshold = self.exploration_episodes
-        else:
-            if current_step_count is None:
-                current_step_count = self.step_count
-            _threshold = self.exploration_steps
-        return current_step_count < _threshold
 
     def get_metrics(self):
         """Gets the metrics so they can be passed to tensorboard.
