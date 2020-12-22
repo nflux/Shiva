@@ -103,7 +103,8 @@ class MPILearner(Learner):
         self.last_rewards = {agent.id:{'q':deque(maxlen=self.configs['Agent']['lr_decay']['average_episodes']), 'n':0} for agent in self.agents}
 
         self.profiler.start(["AlgUpdates", 'ExperienceReceived'])
-        while self.done_count < self.episodes:
+        # while self.done_count < self.episodes:
+        while True:
             self.check_incoming_trajectories()
             self.run_updates()
             self.run_evolution()
