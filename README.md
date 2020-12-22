@@ -14,7 +14,7 @@ setup on the infrastructure.
 Get started with the Installation and then thru the Quickstart to see how to run a session. The Tutorial section goes in 
 more details about Shiva to familiarize with it's components and then be able to extend new algorithms.
 
-## Table of Content
+## Table of Contents
 
 1. [Requirements and Installation](./shiva/docs/Getting-Started.md)
 2. [Quickstart](./shiva/docs/Quick-Start.md)
