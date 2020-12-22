@@ -64,6 +64,9 @@ class GymEnvironment(Environment):
             '''Discrete, argmax or sample from distribution'''
             if not torch.is_tensor(action):
                 action = torch.from_numpy(action)
+            if self.env.action_mask is not None:
+                for action_index, action_masking in enumerate(self.env.action_mask):
+                    action[0][action_index] *= int(action_masking)
             action4Gym = self.action_selection(action)
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         else:
