@@ -58,6 +58,7 @@ If you would like to contribute to Shiva, we would like you to do so by providin
    * Volkan Ustun
    * Rajay Kumar
 * CSUN NSF Grant # 1842386
+   * Carol Shubin
 
 ## License
 
