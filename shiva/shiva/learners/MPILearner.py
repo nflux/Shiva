@@ -666,9 +666,13 @@ class MPILearner(Learner):
             if attr_name not in self.configs['Agent']:
                 self.configs['Agent'][attr_name] = default_val
 
+        assert 'Algorithm' in self.configs, "No Algorithm config given~, got {}".format(self.configs)
         default_algorithm_configs = {
             'device': torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         }
+        for attr_name, default_val in default_algorithm_configs.items():
+            if attr_name not in self.configs['Algorithm']:
+                self.configs['Algorithm'][attr_name] = default_val
 
     def close(self):
         """
