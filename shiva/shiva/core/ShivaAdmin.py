@@ -434,7 +434,8 @@ class ShivaAdmin:
         Loads new agent states
         '''
         path = learner_spec['load_path']
-        if len(agents) == 0 or agents[0] == None:
+
+        if agents[0] is None:
             '''First time loading... use load_agents directly'''
             return self.load_agents(path, absolute_path=absolute_path, load_latest=load_latest, device=device)
         else:

@@ -171,16 +171,19 @@ class MPILearner(Learner):
             # below metric could be a potential issue when Learner controls multiple agents and receives individual trajectories for them
 
             # self.reward_per_episode = sum(rewards.squeeze())
-            rs = rewards.squeeze()
-            if (rs.size != 1):
-                self.reward_per_episode = sum(rs)
-            else:
-                self.reward_per_episode = rs
+            # rs = rewards.squeeze()
+            # if (rs.size != 1):
+            #     self.reward_per_episode = sum(rs)
+            # else:
+            #     self.reward_per_episode = rs
+            # print(rs.shape)
+            # print(rewards.shape)
 
             self._n_success_pulls += 1
             self.log("Got TrajectoryInfo\n{}".format(self.traj_info), verbose_level=3)
 
             for role_ix, role in enumerate(self.traj_info['role']):
+                reward_per_episode = sum(rewards[role_ix, :, 0]).item()
                 '''Assuming 1 agent per role here'''
                 agent_id = self.role2ids[role][0]
                 self.step_count[agent_id] += traj_length
@@ -188,7 +191,7 @@ class MPILearner(Learner):
                 for metric_ix, metric_set in enumerate(self.traj_info['metrics'][role_ix]):
                     self.traj_info['metrics'][role_ix][metric_ix] += (self.done_count,) # add the x_value for tensorboard!
                 self.metrics_env[agent_id] += self.traj_info['metrics'][role_ix]
-                self.last_rewards[agent_id]['q'].append(self.reward_per_episode)
+                self.last_rewards[agent_id]['q'].append(reward_per_episode)
 
             self.last_metric_received = f"{self.traj_info['env_id']} got ObsShape {observations.shape} {self.traj_info['metrics']}"
 
@@ -280,32 +283,29 @@ class MPILearner(Learner):
         for agent in self.agents:
             # update this HPs so that they show up on tensorboard
             agent.recalculate_hyperparameters()
-            if 'lr_decay' in self.configs['Agent'] and self.configs['Agent']:
-                if not agent.is_exploring() and self.done_count > (
-                        self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] * self.last_rewards[agent.id]['n']):
-                    self.last_rewards[agent.id]['n'] = self.done_count // self.configs['Agent']['lr_decay'][
-                        'wait_episodes_to_decay'] + 1
+            if 'lr_decay' in self.configs['Agent']:
+                if not agent.is_exploring() and self.done_count > (self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] * self.last_rewards[agent.id]['n']):
+                    self.last_rewards[agent.id]['n'] = self.done_count // self.configs['Agent']['lr_decay']['wait_episodes_to_decay'] + 1
                     agent_ave_reward = sum(self.last_rewards[agent.id]['q']) / len(self.last_rewards[agent.id]['q'])
-                    if self.configs['Environment']['expert_reward_range'][agent.role][0] <= agent_ave_reward <= \
-                            self.configs['Environment']['expert_reward_range'][agent.role][1]:
+                    if self.configs['Environment']['expert_reward_range'][agent.role][0] <= agent_ave_reward <= self.configs['Environment']['expert_reward_range'][agent.role][1]:
                         agent.decay_learning_rate()
                         _decay_or_restore_lr = -1
                         try:
-                            _decay_log += f"Decay Actor LR {agent.actor_learning_rate}"
+                            _decay_log += f"Decay Actor {agent.id} LR {agent.actor_learning_rate} with Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}\n"
                         except:
                             pass
                     else:
                         agent.restore_learning_rate()
                         _decay_or_restore_lr = 1
                         try:
-                            _decay_log += f"Restore Actor LR {agent.actor_learning_rate}"
+                            _decay_log += f"Restore Actor {agent.id} LR {agent.actor_learning_rate} with Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}\n"
                         except:
                             pass
         try:
             self.alg.decay_learning_rate() if _decay_or_restore_lr == -1 else self.alg.restore_learning_rate() if _decay_or_restore_lr == 1 else None
         except:
             pass
-        self.log(f"{_decay_log} / Critic LR {self.alg.critic_learning_rate} / Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {agent_ave_reward}", verbose_level=1) if _decay_log != '' else None
+        self.log(f"{_decay_log}\nCentralCritic LR {self.alg.critic_learning_rate}", verbose_level=1)# if _decay_log != '' else None
 
     def run_evolution(self):
         """
@@ -369,27 +369,29 @@ class MPILearner(Learner):
             for a in agents:
                 a.id += 10 * self.id
             self.alg.add_agents(agents)
-            agent_creation_log = "{} agents loaded".format([str(a) for a in agents])
+            agent_creation_log = "{agents_strs} agents loaded"
         elif hasattr(self, 'roles') and len(self.roles) > 0:
             self.agents_dict = {role:self.alg.create_agent_of_role(self.new_agents_ids[ix], role) for ix, role in enumerate(self.roles)}
             agents = list(self.agents_dict.values())
-            agent_creation_log = "{} agents created: {}".format(len(agents), [str(a) for a in agents])
+            agent_creation_log = "{agents_strs} agents created"
         else:
             agents = [self.alg.create_agent(ix) for ix in self.new_agents_ids]
-            agent_creation_log = "{} agents created: {}".format(len(agents), [str(a) for a in agents])
-
-        self.log(agent_creation_log, verbose_level=1)
+            agent_creation_log = "{agents_strs} agents created"
 
         self.role2ids = {role:[] for role in self.roles}
         self.id2role = {}
         self.metrics_env = {}
         for _agent in agents:
+            if 'roles_remap' in self.configs['Environment']:
+                _agent.role = self.configs['Environment']['roles_remap'][_agent.role]
             _agent.to_device(self.alg.device)
             _agent.evaluate = self.evaluate
             self.role2ids[_agent.role] += [_agent.id]
             self.metrics_env[_agent.id] = []
             self.id2role[_agent.id] = _agent.role
             _agent.recalculate_hyperparameters()
+
+        self.log(agent_creation_log.format(agents_strs=[str(a) for a in agents]), verbose_level=1)
         return agents
 
     def get_agent_of_id(self, id):
@@ -663,6 +665,10 @@ class MPILearner(Learner):
         for attr_name, default_val in default_agent_configs.items():
             if attr_name not in self.configs['Agent']:
                 self.configs['Agent'][attr_name] = default_val
+
+        default_algorithm_configs = {
+            'device': torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        }
 
     def close(self):
         """

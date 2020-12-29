@@ -266,14 +266,22 @@ class MPIMultiEnv(Environment):
 
         _force_load = not hasattr(self, 'agents')
         agents = self.agents if hasattr(self, 'agents') else [None for i in range(len(self.env_specs['roles']))]
+        learners_looped = []
+
         for role, learner_spec in role2learner_spec.items():
             '''During runtime loops we only need to load the agents that are not being evaluated'''
+            if learner_spec['id'] in learners_looped:
+                continue
+            learners_looped += [learner_spec['id']]
             if _force_load or not learner_spec['evaluate']:
 
                 if not bypass_request:
                     self.io.request_io(self._get_menv_specs(), learner_spec['load_path'], wait_for_access=True)
                 # learner_agents = Admin.load_agents(learner_spec['load_path'], device=self.device, load_latest=True)
-                learner_agents = Admin.reload_agents(agents, learner_spec, device=self.device, load_latest=True)
+                learner_agents_ix = [self.env_specs['roles'].index(r) for r in learner_spec['roles']]
+                learner_agents = [agents[i] for i in learner_agents_ix]
+                learner_agents = Admin.reload_agents(learner_agents, learner_spec, device=self.device, load_latest=True)
+
                 if not bypass_request:
                     self.io.done_io(self._get_menv_specs(), learner_spec['load_path'])
 
@@ -281,6 +289,8 @@ class MPIMultiEnv(Environment):
                     '''Force Agent to use self.device'''
                     a.to_device(self.device)
                     agents[self.env_specs['roles'].index(a.role)] = a
+
+            # self.log(f"Agents in place: {[str(a) for a in agents]} role {role} ix {self.env_specs['roles'].index(role)}")
 
         # if self.episodic_load_rate > 0 or (self.step_count % 500 == 0):
         #     self.log("Loaded {}".format([str(agent) for agent in agents]), verbose_level=1)
