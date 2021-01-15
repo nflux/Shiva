@@ -88,10 +88,11 @@ class Agent:
         assert hasattr(self, 'net_names'), "Need this attribute to turn networks to a device"
         self.device = device
         for net_name in self.net_names:
+            nn_instance = getattr(self, net_name)
             if 'optimizer' in net_name:
-                continue
-            nn = getattr(self, net_name)
-            nn.to(self.device)
+                self.optimizer_to(nn_instance, self.device)
+            else:
+                nn_instance.to(self.device)
 
     def save(self, save_path, step):
         '''
@@ -160,3 +161,17 @@ class Agent:
         for g in optim.param_groups:
             # print(g['lr'])
             g['lr'] = lr
+
+    def optimizer_to(self, optim, device):
+        for param in optim.state.values():
+            # Not sure there are any global tensors in the state dict
+            if isinstance(param, torch.Tensor):
+                param.data = param.data.to(device)
+                if param._grad is not None:
+                    param._grad.data = param._grad.data.to(device)
+            elif isinstance(param, dict):
+                for subparam in param.values():
+                    if isinstance(subparam, torch.Tensor):
+                        subparam.data = subparam.data.to(device)
+                        if subparam._grad is not None:
+                            subparam._grad.data = subparam._grad.data.to(device)
