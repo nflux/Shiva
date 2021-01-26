@@ -223,14 +223,16 @@ class MultiAgentUnityWrapperEnv1(Environment):
         if self.DecisionSteps[role].action_mask is None:
             return role_actions
         # Apply action masking and overwrite raw_action which will be stored in the buffer
-        this_role_action_mask = np.array(self.DecisionSteps[role].action_mask)
+        # this_role_action_mask = self.DecisionSteps[role].action_mask: List[np.array]
         # this_role_action_mask shape = (number of branches, number of agents for this role, action space masking)
         for agent_ix, agent_id in enumerate(self.role_agent_ids[role]):
-            this_agent_mask = this_role_action_mask[:, agent_ix, :]
+            # this_agent_mask = this_role_action_mask[:, agent_ix, :]
             # self.log(f"Agent ID {agent_id} Mask {this_agent_mask}")
             _cum_ix = 0
             for branch_number, ac_dim in enumerate(self.RoleSpec[role].action_shape):
-                role_actions[agent_ix, _cum_ix:ac_dim+_cum_ix][this_agent_mask[branch_number]] = 0
+                this_agent_branch_mask = self.DecisionSteps[role].action_mask[branch_number][agent_ix]
+                # role_actions[agent_ix, _cum_ix:ac_dim+_cum_ix][this_agent_mask[branch_number]] = 0
+                role_actions[agent_ix, _cum_ix:ac_dim+_cum_ix][this_agent_branch_mask] = 0
                 _cum_ix += ac_dim
         return role_actions
 
