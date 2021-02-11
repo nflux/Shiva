@@ -40,8 +40,11 @@ class MPIMultiEnv(Environment):
         """
         self._connect_io_handler()
 
-        if hasattr(self, 'device') and 'cuda' in self.device:
-            self.device = torch.device(self.device if torch.cuda.is_available() else "cpu")
+        if hasattr(self, 'device'):
+            if type(self.device) == list:
+                self.device = torch.device(self.device[self.id % len(self.device)])
+            else:
+                self.device = torch.device(self.device if torch.cuda.is_available() else "cpu")
         else:
             self.device = torch.device('cpu')
 
