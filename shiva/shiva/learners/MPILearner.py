@@ -305,7 +305,7 @@ class MPILearner(Learner):
             self.alg.decay_learning_rate() if _decay_or_restore_lr == -1 else self.alg.restore_learning_rate() if _decay_or_restore_lr == 1 else None
         except:
             pass
-        self.log(f"{_decay_log}\nCentralCritic LR {self.alg.critic_learning_rate}", verbose_level=1)# if _decay_log != '' else None
+        # self.log(f"{_decay_log}\nCentralCritic LR {self.alg.critic_learning_rate}", verbose_level=1)# if _decay_log != '' else None
 
     def run_evolution(self):
         """

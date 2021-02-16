@@ -164,7 +164,6 @@ class MultiAgentUnityWrapperEnv12(Environment):
             self.raw_actions[role] = self._apply_action_masking(role, np.array(actions[ix]))
             # self.log(f"Role {role} Masked {self.raw_actions[role]}")
             self.actions4Unity[role] = self._clean_role_actions(role, self.raw_actions[role])
-            self.log(f"Role {role} Cleaned {self.actions4Unity[role]}")
             self.Unity.set_actions(role, self.actions4Unity[role])
         # self.log(f"Before Unity.Step({self.steps_per_episode[self.roles[0]]})")
         self.Unity.step()
@@ -254,10 +253,12 @@ class MultiAgentUnityWrapperEnv12(Environment):
                     actions[agent_ix, ac_ix] = self.action_selection(role_actions[agent_ix, _cum_ix:ac_dim + _cum_ix])
                     _cum_ix += ac_dim
             UnityActionTuple.add_discrete(actions)
+            self.log(f"Role {role} Cleaned {actions}", verbose_level=2)
         # elif type(role_actions) != np.ndarray:
         else:
             # actions = np.array(role_actions)
             UnityActionTuple.add_continuous(role_actions)
+            self.log(f"Role {role} Cleaned {role_actions}", verbose_level=2)
         # self.log(f"Clean action: {actions}")
         # return actions
         return UnityActionTuple
