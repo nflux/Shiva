@@ -25,7 +25,7 @@ class Algorithm:
         self.action_space = action_space
         self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])()
         self.num_updates = 0
-        if hasattr(self, 'device') and 'cuda' in self.device:
+        if hasattr(self, 'device'):
             self.device = torch.device(self.device if torch.cuda.is_available() else "cpu")
         else:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

@@ -417,11 +417,14 @@ class MPILearner(Learner):
         """
         algorithm_class = load_class('shiva.algorithms', self.configs['Algorithm']['type'])
         self.configs['Algorithm']['roles'] = self.roles if hasattr(self, 'roles') else []
-        if type(self.configs['Algorithm']['device']) == list:
-            # A list of GPUs was given for the Learners/Algorithm, choose one
-            gpu_ix = int(self.id % len(self.configs['Algorithm']['device']))
-            gpu_chosen = self.configs['Algorithm']['device'][gpu_ix]
-            self.configs['Algorithm']['device'] = gpu_chosen
+        if 'device' in self.configs['Algorithm']:
+            if type(self.configs['Algorithm']['device']) == list:
+                # A list of GPUs was given for the Learners/Algorithm, choose one
+                gpu_ix = int(self.id % len(self.configs['Algorithm']['device']))
+                gpu_chosen = self.configs['Algorithm']['device'][gpu_ix]
+                self.configs['Algorithm']['device'] = gpu_chosen
+        else:
+            self.configs['Algorithm']['device'] = torch.device("gpu" if torch.cuda.is_available() else "cpu")
         alg = algorithm_class(self.observation_space, self.action_space, self.configs)
         self.log("Created ".format(str(alg)), verbose_level=-1)
         return alg
