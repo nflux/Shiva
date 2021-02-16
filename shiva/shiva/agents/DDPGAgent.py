@@ -178,7 +178,7 @@ class DDPGAgent(Agent):
         if evaluate:
             action = self.actor(observation).detach()
         else:
-            if self.is_exploring() or self.is_e_greedy(step_count):
+            if self.is_exploring() or self.is_e_greedy():
                 action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
                 self.log(f"** Random action {action.tolist()}", verbose_level=1)
             else:
