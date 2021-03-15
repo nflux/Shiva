@@ -20,7 +20,7 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             The amount of transitions to be sampled very update.
         num_agents:
             The number of agents that will be using the replay buffer. For memory allocation purposes.
-        obd_dim:
+        obs_dim:
             The expected observation dimension size.
         acs_dim:
             The expected action dimension size.
@@ -38,11 +38,11 @@ class MultiAgentTensorBuffer(ReplayBuffer):
 
         Args:
             exps (List):
-                A list of Observations, Actions, Rewards, Next Observations, and Done Flags.
+                A list of Observations, Actions, Rewards, Next Observations, Done Flags, Current state action mask, Next state action mask
         Returns:
             None
         """
-        obs, ac, rew, next_obs, done = exps
+        obs, ac, rew, next_obs, done, acs_mask, next_acs_mask = exps
         #         print("Received action:\n", ac)
         # print("Obs shape {} Acs shape {} Rew shape {} Next Obs shape {} Dones shape {}".format(obs.shape, ac.shape, rew.shape, next_obs.shape, done.shape))
         nentries = len(obs)
@@ -53,6 +53,8 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             self.rew_buffer = bh.roll(self.rew_buffer, rollover)
             self.done_buffer = bh.roll(self.done_buffer, rollover)
             self.next_obs_buffer = bh.roll(self.next_obs_buffer, rollover)
+            self.acs_mask_buffer = bh.roll(self.acs_mask_buffer, rollover)
+            self.next_acs_mask_buffer = bh.roll(self.next_acs_mask_buffer, rollover)
             self.current_index = 0
             self.size = self.max_size
             # print("Roll!")
@@ -62,6 +64,8 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         self.rew_buffer[self.current_index:self.current_index + nentries, :, :] = rew
         self.done_buffer[self.current_index:self.current_index + nentries, :, :] = done
         self.next_obs_buffer[self.current_index:self.current_index + nentries, :, :] = next_obs
+        self.acs_mask_buffer[self.current_index:self.current_index + nentries, :, :] = acs_mask
+        self.next_acs_mask_buffer[self.current_index:self.current_index + nentries, :, :] = next_acs_mask
 
         # print("From in-buffer Obs {}".format(self.obs_buffer[self.current_index:self.current_index + nentries, :, :]))
         # print("From in-buffer Acs {}".format(self.acs_buffer[self.current_index:self.current_index + nentries, :, :]))
@@ -91,7 +95,9 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             cast(self.acs_buffer[inds, :, :].float()),
             cast(self.rew_buffer[inds, :, :].float()),
             cast_obs(self.next_obs_buffer[inds, :, :].float()),
-            cast(self.done_buffer[inds, :, :])
+            cast(self.done_buffer[inds, :, :]),
+            cast(self.acs_mask_buffer[inds, :, :]),
+            cast(self.next_acs_mask_buffer[inds, :, :])
         )
         # else:
         #     return (
@@ -115,7 +121,9 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             self.acs_buffer[:self.current_index, :, :],
             self.rew_buffer[:self.current_index, :, :],
             self.next_obs_buffer[:self.current_index, :, :],
-            self.done_buffer[:self.current_index, :, :]
+            self.done_buffer[:self.current_index, :, :],
+            self.acs_mask_buffer[:self.current_index, :, :],
+            self.next_acs_mask_buffer[:self.current_index, :, :]
         ]
 
     def all_numpy(self, astype=np.float64):
@@ -131,7 +139,9 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             self.acs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
             self.rew_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
             self.next_obs_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
-            self.done_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype)
+            self.done_buffer[:self.current_index, :, :].cpu().detach().numpy().astype(astype),
+            self.acs_mask_buffer[:self.current_index, :, :].cpu().detach().numpy(),
+            self.next_acs_mask_buffer[:self.current_index, :, :].cpu().detach().numpy()
         ])
 
     def agent_numpy(self, agent_id, reshape_fn=None):
@@ -145,7 +155,9 @@ class MultiAgentTensorBuffer(ReplayBuffer):
             self.acs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
             self.rew_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
             self.next_obs_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
-            self.done_buffer[:self.current_index, agent_id, :].cpu().detach().numpy()
+            self.done_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.acs_mask_buffer[:self.current_index, agent_id, :].cpu().detach().numpy(),
+            self.next_acs_mask_buffer[:self.current_index, agent_id, :].cpu().detach().numpy()
         ]
 
     def reset(self):
@@ -159,5 +171,7 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         self.rew_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.float64, requires_grad=False)
         self.next_obs_buffer = torch.zeros((self.max_size, self.num_agents, self.obs_dim), dtype=torch.float64, requires_grad=False)
         self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.bool, requires_grad=False)
+        self.acs_mask_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), dtype=torch.bool, requires_grad=False).astype(np.bool)
+        self.next_acs_mask_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), dtype=torch.bool, requires_grad=False).astype(np.bool)
         self.current_index = 0
         self.size = 0
