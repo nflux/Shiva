@@ -106,7 +106,8 @@ class MPIEnv(Environment):
     def _step_python(self):
         self.step_count += 1
         self.observations = self.env.get_observations()
-        self.menv.gather(self.observations, root=0)
+        self.current_action_mask = [self.env.get_action_masking(role) for role in self.roles]
+        self.menv.gather([self.observations, self.current_action_mask], root=0)
         self.actions = self.menv.scatter(None, root=0)
         if self.actions == False:
             # disconnect signal

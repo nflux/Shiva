@@ -111,7 +111,7 @@ class DDPGAgent(Agent):
     #     self.critic.to(self.device)
     #     self.target_critic.to(self.device)
 
-    def get_discrete_action(self, observation, step_count, evaluate=False, one_hot=False, *args, **kwargs):
+    def get_discrete_action(self, observation, acs_mask, step_count, evaluate=False, one_hot=False, *args, **kwargs):
         """ Produces a discrete action.
 
         The action could be either an inference or evaluation action.
@@ -125,6 +125,7 @@ class DDPGAgent(Agent):
         Returns:
             A list containing probabilities for each action possible in the step.
         """
+        print(observation, acs_mask)
         observation = torch.tensor(observation).to(self.device).float()
         if len(observation.shape)>1:
             self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
@@ -140,6 +141,7 @@ class DDPGAgent(Agent):
                 _action_debug = "Random: {}".format(action)
             else:
                 action = self.actor(observation).detach().cpu() + self.ou_noise.noise()
+                action[acs_mask] = 0
                 # Normalize each individual branch
                 _cum_ix = 0
                 for ac_dim in self.actor_output:
@@ -432,4 +434,4 @@ class DDPGAgent(Agent):
         return ('shiva.agents', 'DDPGAgent.DDPGAgent')
 
     def __str__(self):
-        return f"'<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} noise/epsilon={round(self.noise_scale, 2)}/{round(self.epsilon, 2)} device={self.device})>'"
+        return f"<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} noise/epsilon={round(self.noise_scale, 2)}/{round(self.epsilon, 2)} device={self.device})>"

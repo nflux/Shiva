@@ -289,6 +289,7 @@ class MultiAgentUnityWrapperEnv1(Environment):
         In your example, Agents 1, 7 and 9 had their episode terminated, started a new episode and requested a new decision. All in the same call to env.step()
         """
         for role in self.roles:
+            role_previous_acs_mask = self.get_current_action_masking(role)
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
 
             try:
@@ -311,7 +312,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
                                                  torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
                                                  torch.tensor([_last_step_reward], dtype=torch.float64).unsqueeze(dim=-1),
                                                  torch.tensor([self.terminal_observations[role][terminal_step_agent_ix]], dtype=torch.float64),
-                                                 torch.tensor([[True]], dtype=torch.bool).unsqueeze(dim=-1)
+                                                 torch.tensor([[True]], dtype=torch.bool).unsqueeze(dim=-1),
+                                                 torch.tensor(role_previous_acs_mask[agent_ix, :]),
+                                                 torch.zeros(sum(self.action_space[role]['acs_space'])).type(torch.bool)
                                                  )))
                     self.trajectory_buffers[role][role_agent_id].push(exp)
 
@@ -333,14 +336,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
 
             if len(self.DecisionSteps[role].agent_id) > 0:
                 '''Agents who need a next action'''
-                # self.observations = {role:self._flatten_observations(self.DecisionSteps[role].obs) for role in self.roles} # unsure if needed to flatten observations???? This might be deprecated
                 self.previous_observation = self.observations.copy()
                 self.observations[role] = self._flatten_observations(self.DecisionSteps[role].obs)
+                role_current_acs_mask = self.get_current_action_masking(role)
                 # self.log(f"{self.observations[role].shape}", verbose_level=1)
 
                 self.rewards[role] = self.normalize_reward(self.DecisionSteps[role].reward) if self.normalize else self.DecisionSteps[role].reward
-                # self.rewards[role] = self.DecisionSteps[role].reward
-
                 self.dones[role] = [False] * len(self.DecisionSteps[role].agent_id)
 
                 '''If it's the first time we are collecting data, this IF statement will be False as we don't have an action to store into the buffer yet'''
@@ -359,7 +360,9 @@ class MultiAgentUnityWrapperEnv1(Environment):
                                                          torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
                                                          torch.tensor([self.rewards[role][agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
                                                          torch.tensor([self.observations[role][agent_ix]], dtype=torch.float64),
-                                                         torch.tensor([[False]], dtype=torch.bool).unsqueeze(dim=-1)
+                                                         torch.tensor([[False]], dtype=torch.bool).unsqueeze(dim=-1),
+                                                         torch.tensor(role_previous_acs_mask[agent_ix, :]),
+                                                         torch.tensor(role_current_acs_mask[agent_ix, :])
                                                          )))
                             self.trajectory_buffers[role][role_agent_id].push(exp)
 
@@ -492,6 +495,17 @@ class MultiAgentUnityWrapperEnv1(Environment):
             list of np.arrays
         """
         return list(self.raw_actions.values())
+
+    def get_current_action_masking(self, role: str) -> np.array:
+        """Returned format is [number_of_agents_for_role, flattened action_space]"""
+        empty_mask = np.zeros((self.num_instances_per_role[role], sum(self.action_space[role]['acs_space']))).astype(np.bool)
+        if not hasattr(self.DecisionSteps[role], 'action_mask'):
+            return empty_mask
+        m = self.DecisionSteps[role].action_mask
+        if m == None:
+            return empty_mask
+        else:
+            return np.concatenate(self.DecisionSteps[role].action_mask, axis=-1)
 
     def get_reward_episode(self, roles=False):
         """ Returns the episodic rewards organized in a dictionary by role names.

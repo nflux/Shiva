@@ -104,7 +104,9 @@ class MPIMultiEnv(Environment):
         Returns:
             None
         """
-        self._obs_recv_buffer = np.array(self.envs.gather(None, root=MPI.ROOT))
+        self._recv_buffer = np.array(self.envs.gather(None, root=MPI.ROOT))
+        print(self._recv_buffer)
+        self._obs_recv_buffer, self._acs_mask = self._recv_buffer
 
         if 'Unity' in self.type:
             # N sets of Roles
@@ -114,7 +116,7 @@ class MPIMultiEnv(Environment):
                 for role_ix, role_name in enumerate(self.env_specs['roles']):
                     role_obs = env_observations[role_ix]
                     agent_ix = self.role2agent[role_name]
-                    env_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
+                    env_actions.append(self.agents[agent_ix].get_action(role_obs, self._acs_mask[role_ix], self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate']))
                 actions.append(env_actions)
         elif 'Particle' in self.type:
             # 1 set of Roles
