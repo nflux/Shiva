@@ -18,24 +18,26 @@ class Tags(IntEnum):
     trajectory_next_observations = 6
     trajectory_dones = 7
     trajectory_eval = 8
+    trajectory_actions_mask = 9
+    trajectory_next_actions_mask = 10
 
-    new_agents_request = 9
-    new_agents = 10
-    clear_buffers = 11
+    new_agents_request = 100
+    new_agents = 101
+    clear_buffers = 110
     #For updated rankings
-    rankings = 12
-    new_pbt_agents = 13
-    save_agents = 14
+    rankings = 120
+    new_pbt_agents = 130
+    save_agents = 140
 
-    evolution = 20
-    evolution_config = 21
-    evolution_request = 22
+    evolution = 200
+    evolution_config = 210
+    evolution_request = 220
 
-    agent_id = 30
-    evals = 40
-    io_config = 50
-    io_learner_request = 51
-    io_menv_request = 52
-    io_eval_request = 53
+    agent_id = 300
+    evals = 400
+    io_config = 500
+    io_learner_request = 510
+    io_menv_request = 520
+    io_eval_request = 530
 
     close = 999

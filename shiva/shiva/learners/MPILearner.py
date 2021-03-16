@@ -165,6 +165,12 @@ class MPILearner(Learner):
             dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
             env_comm.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
 
+            actions_mask = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
+            env_comm.Recv([actions_mask, MPI.BOOL], source=env_source, tag=Tags.trajectory_actions_mask)
+
+            next_actions_mask = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
+            env_comm.Recv([next_actions_mask, MPI.BOOL], source=env_source, tag=Tags.trajectory_next_actions_mask)
+
             # self.step_count += traj_length
             self.done_count += 1
             # self.steps_per_episode = traj_length
@@ -206,7 +212,9 @@ class MPILearner(Learner):
                                          torch.from_numpy(actions).reshape(traj_length, len(self.traj_info['role']), actions.shape[-1]),
                                          torch.from_numpy(rewards).reshape(traj_length, len(self.traj_info['role']), rewards.shape[-1]),
                                          torch.from_numpy(next_observations).reshape(traj_length, len(self.traj_info['role']), next_observations.shape[-1]),
-                                         torch.from_numpy(dones).reshape(traj_length, len(self.traj_info['role']), dones.shape[-1])
+                                         torch.from_numpy(dones).reshape(traj_length, len(self.traj_info['role']), dones.shape[-1]),
+                                         torch.from_numpy(actions_mask).reshape(traj_length, len(self.traj_info['role']), actions.shape[-1]),
+                                         torch.from_numpy(next_actions_mask).reshape(traj_length, len(self.traj_info['role']), actions.shape[-1]),
                                          )))
 
             # rewarding_ixs = []

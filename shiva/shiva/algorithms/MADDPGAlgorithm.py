@@ -110,7 +110,7 @@ class MADDPGAlgorithm(Algorithm):
             None
 
         """
-        bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones = buffer.sample(device=self.device)
+        bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones, bf_actions_mask, bf_next_actions_mask = buffer.sample(device=self.device)
         dones = bf_dones.bool()
 
         # self.log(f"Obs {bf_states}", verbose_level=2)
@@ -142,6 +142,9 @@ class MADDPGAlgorithm(Algorithm):
             rewards = permutate_f(bf_rewards.to(self.device))
             next_states = permutate_f(bf_next_states.to(self.device))
             dones = permutate_f(dones.to(self.device))
+            actions_mask = permutate_f(bf_actions_mask.to(self.device))
+            next_actions_mask = permutate_f(bf_next_actions_mask.to(self.device))
+
             dones_mask = dones[:, 0, :].view(-1, 1).to(self.device)
 
             '''Assuming all agents have the same obs_dim!'''
@@ -159,6 +162,7 @@ class MADDPGAlgorithm(Algorithm):
                 '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
                 # this iteration might not be following the same permutation order - at least is from a different _agent.target_actor
                 next_state_actions_target = torch.cat([one_hot_from_logits(agents[perms[_ix]].target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
+
                 # self.log('OneHot next_state_actions_target {}'.format(next_state_actions_target))
             elif self.action_space[agent.role]['type'] == 'continuous':
                 next_state_actions_target = torch.cat([agents[perms[_ix]].target_actor(next_states[:, _ix, :]) for _ix, _agent in enumerate(agents)], dim=1)

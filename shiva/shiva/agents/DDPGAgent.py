@@ -125,7 +125,8 @@ class DDPGAgent(Agent):
         Returns:
             A list containing probabilities for each action possible in the step.
         """
-        print(observation, acs_mask)
+        # print(str(self), observation, acs_mask)
+
         observation = torch.tensor(observation).to(self.device).float()
         if len(observation.shape)>1:
             self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
@@ -140,7 +141,9 @@ class DDPGAgent(Agent):
                 action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
                 _action_debug = "Random: {}".format(action)
             else:
+                # Forward pass
                 action = self.actor(observation).detach().cpu() + self.ou_noise.noise()
+                # Mask actions
                 action[acs_mask] = 0
                 # Normalize each individual branch
                 _cum_ix = 0
@@ -157,7 +160,7 @@ class DDPGAgent(Agent):
         # until this point the action was a tensor, we are returning a python list - needs to be checked.
         return action.tolist()
 
-    def get_continuous_action(self, observation, step_count, evaluate=False, *args, **kwargs):
+    def get_continuous_action(self, observation, acs_mask, step_count, evaluate=False, *args, **kwargs):
         """ Produces a continuous action.
 
         The action could be either an inference or evaluation action.

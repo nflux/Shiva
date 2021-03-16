@@ -171,7 +171,7 @@ class MultiAgentTensorBuffer(ReplayBuffer):
         self.rew_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.float64, requires_grad=False)
         self.next_obs_buffer = torch.zeros((self.max_size, self.num_agents, self.obs_dim), dtype=torch.float64, requires_grad=False)
         self.done_buffer = torch.zeros((self.max_size, self.num_agents, 1), dtype=torch.bool, requires_grad=False)
-        self.acs_mask_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), dtype=torch.bool, requires_grad=False).astype(np.bool)
-        self.next_acs_mask_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), dtype=torch.bool, requires_grad=False).astype(np.bool)
+        self.acs_mask_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), dtype=torch.bool, requires_grad=False)
+        self.next_acs_mask_buffer = torch.zeros((self.max_size, self.num_agents, self.acs_dim), dtype=torch.bool, requires_grad=False)
         self.current_index = 0
         self.size = 0
