@@ -299,7 +299,7 @@ class MultiAgentUnityWrapperEnv12(Environment):
 
             try:
                 self.log(f"Role {role} Step {self.steps_per_episode[role]} Decision: {self.DecisionSteps[role].agent_id}, Terminal: {self.TerminalSteps[role].agent_id}", verbose_level=2)
-                self.log(f"CurrAcsMask {self.current_acs_mask[role]}")
+                # self.log(f"CurrAcsMask {self.current_acs_mask[role]}")
             except:
                 pass
 

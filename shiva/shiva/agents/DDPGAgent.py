@@ -8,6 +8,7 @@ from shiva.helpers.calc_helper import two_point_formula
 from shiva.agents.Agent import Agent
 from shiva.helpers.utils import Noise as noise
 from shiva.helpers.networks_helper import mod_optimizer
+from shiva.helpers.torch_helper import normalize_branches
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork, SoftMaxHeadDynamicLinearNetwork
 
 
@@ -126,9 +127,10 @@ class DDPGAgent(Agent):
             A list containing probabilities for each action possible in the step.
         """
         # print(str(self), observation, acs_mask)
-
         observation = torch.tensor(observation).to(self.device).float()
-        if len(observation.shape)>1:
+        acs_mask = torch.tensor(acs_mask).cpu()
+
+        if len(observation.shape) > 1:
             self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))
         else:
             self._output_dimension = (sum(self.actor_output),)
@@ -139,21 +141,24 @@ class DDPGAgent(Agent):
         else:
             if self.is_exploring() or self.is_e_greedy():
                 action = self.exploration_policy.sample(torch.Size([*self._output_dimension]))
-                _action_debug = "Random: {}".format(action)
+                _action_debug = "Random: "
             else:
                 # Forward pass
                 action = self.actor(observation).detach().cpu() + self.ou_noise.noise()
-                # Mask actions
-                action[acs_mask] = 0
-                # Normalize each individual branch
-                _cum_ix = 0
-                for ac_dim in self.actor_output:
-                    _branch_action = torch.abs(action[_cum_ix:ac_dim+_cum_ix])
-                    action[_cum_ix:ac_dim+_cum_ix] = _branch_action / _branch_action.sum()
-                    _cum_ix += ac_dim
-                _action_debug = "Net: {}".format(action)
+                _action_debug = "Net: "
+        # print(f"Before mask", action)
+        # Mask actions
+        action[acs_mask] = 0
+        # Normalize each individual branch
+        action = normalize_branches(action, self.actor_output)
+        # _cum_ix = 0
+        # for ac_dim in self.actor_output:
+        #     _branch_action = torch.abs(action[:, _cum_ix:ac_dim+_cum_ix])
+        #     # print(ac_dim, _branch_action)
+        #     action[:, _cum_ix:ac_dim+_cum_ix] = _branch_action / _branch_action.sum(dim=-1).reshape(-1, 1)
+        #     _cum_ix += ac_dim
 
-            self.log(f"Obs {observation.shape} Acs {action.shape}\nObs {observation} Acs {_action_debug}", verbose_level=3)
+        self.log(f"Obs {observation.shape} Acs {action.shape}\nObs {observation}\nAcs {_action_debug}{action}", verbose_level=3)
         # if one_hot:
         #     action = action2one_hot(action.shape[0], torch.argmax(action).item())
 

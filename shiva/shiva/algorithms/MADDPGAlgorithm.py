@@ -8,10 +8,12 @@ from shiva.algorithms.Algorithm import Algorithm
 from shiva.helpers.networks_helper import mod_optimizer
 from shiva.networks.DynamicLinearNetwork import DynamicLinearNetwork
 from shiva.helpers.misc import one_hot_from_logits
+from shiva.helpers.torch_helper import normalize_branches
 from typing import Dict, Tuple, List, Union, Any
 from itertools import permutations
 from functools import partial
 
+torch.autograd.set_detect_anomaly(True)
 
 class MADDPGAlgorithm(Algorithm):
     def __init__(self, observation_space: Dict[str, int], action_space: Dict[str, Dict[str, Tuple[Union[int]]]], configs: Dict[str, Any]) -> None:
@@ -77,6 +79,8 @@ class MADDPGAlgorithm(Algorithm):
         if self.configs['MetaLearner']['pbt']:
             self.resample_hyperparameters()
 
+        self.gumbel = partial(torch.nn.functional.gumbel_softmax, tau=1, hard=True, dim=-1)
+
     def update(self, agents, buffer, step_count, episodic) -> None:
         """
         Runs the corresponding update method for a number of times specified by the config.
@@ -137,10 +141,10 @@ class MADDPGAlgorithm(Algorithm):
             agent = agents[agent_ix]
 
             permutate_f = partial(_permutate, p=perms, dim=0)
-            states = permutate_f(bf_states.to(self.device))
+            states = permutate_f(bf_states.to(self.device).float())
             actions = permutate_f(bf_actions.to(self.device))
             rewards = permutate_f(bf_rewards.to(self.device))
-            next_states = permutate_f(bf_next_states.to(self.device))
+            next_states = permutate_f(bf_next_states.to(self.device).float())
             dones = permutate_f(dones.to(self.device))
             actions_mask = permutate_f(bf_actions_mask.to(self.device))
             next_actions_mask = permutate_f(bf_next_actions_mask.to(self.device))
@@ -157,26 +161,38 @@ class MADDPGAlgorithm(Algorithm):
             # Zero the gradient
             self.critic_optimizer.zero_grad()
 
-            # The actions that target actor would do in the next state & concat actions
-            if self.action_space[agent.role]['type'] == 'discrete':
-                '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
-                # this iteration might not be following the same permutation order - at least is from a different _agent.target_actor
-                next_state_actions_target = torch.cat([one_hot_from_logits(agents[perms[_ix]].target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
-
-                # self.log('OneHot next_state_actions_target {}'.format(next_state_actions_target))
-            elif self.action_space[agent.role]['type'] == 'continuous':
-                next_state_actions_target = torch.cat([agents[perms[_ix]].target_actor(next_states[:, _ix, :]) for _ix, _agent in enumerate(agents)], dim=1)
+            # # The actions that target actor would do in the next state & concat actions
+            # if self.action_space[agent.role]['type'] == 'discrete':
+            #     '''Assuming Discrete Action Space ONLY here - if continuous need to one-hot only the discrete side'''
+            #     next_state_actions_target = torch.cat([one_hot_from_logits(agents[perms[_ix]].target_actor(next_states[:, _ix, :])) for _ix, _agent in enumerate(agents)], dim=1)
+            # elif self.action_space[agent.role]['type'] == 'continuous':
+            #     next_state_actions_target = torch.cat([agents[perms[_ix]].target_actor(next_states[:, _ix, :]) for _ix, _agent in enumerate(agents)],dim=1)
+            aux = []
+            for _ix in range(len(agents)):
+                a = agents[perms[_ix]]
+                logits = a.target_actor(next_states[:, _ix, :])
+                # Apply mask
+                # logits = torch.where(next_actions_mask[:, _ix, :], torch.tensor(0.).to(self.device), logits)
+                logits[next_actions_mask[:, _ix, :]] = 0
+                # Renormalize each branch
+                # logits = normalize_branches(logits, a.actor_output, one_hot_from_logits if a.action_space == "discrete" else None)
+                _cum_ix = 0
+                for ac_dim in a.actor_output:
+                    _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone().abs()
+                    _normalized_actions = _branch_action / _branch_action.sum(-1).reshape(-1, 1)
+                    if a.action_space == 'continuous':
+                        logits[:, _cum_ix:ac_dim+_cum_ix] = _normalized_actions
+                    else:
+                        logits[:, _cum_ix:ac_dim+_cum_ix] = one_hot_from_logits(_normalized_actions)
+                    _cum_ix += ac_dim
+                aux += [logits]
+            next_state_actions_target = torch.cat(aux, dim=1)
 
             Q_next_states_target = self.target_critic(torch.cat( [next_states.reshape(batch_size, num_agents*obs_dim).float(), next_state_actions_target.float()] , dim=1))
-            # self.log('Q_next_states_target {}'.format(Q_next_states_target.shape))
             Q_next_states_target[dones_mask] = 0.0
-            # self.log('Q_next_states_target {}'.format(Q_next_states_target.shape))
-            # self.log('rewards {}'.format(rewards))
             # Use the Bellman equation.
             # Reward to predict is always index 0 from the already permuted rewards array
             y_i = rewards[:, 0, :] + self.gamma * Q_next_states_target
-            # self.log("Rewards Agent ID {} {}".format(ix, rewards[:, 0, :].view(1, -1)))
-            # self.log('y_i {}'.format(y_i.shape))
 
             # Get Q values of the batch from states and actions.
             Q_these_states_main = self.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), actions.reshape(batch_size, num_agents*acs_dim).float()], dim=1))
@@ -201,24 +217,44 @@ class MADDPGAlgorithm(Algorithm):
             # agent.actor_optimizer.zero_grad()
 
             # Get the actions the main actor would take from the initial states
-            if self.action_space[agent.role]['type'] == "discrete":
-                '''Option 1: grab new actions only for the current agent and keep original ones from the others..'''
-                # current_state_actor_actions = actions
-                # current_state_actor_actions[:, 0, :] = agent.actor(states[:, 0, :].float(), gumbel=True)
-                '''Option 2: grab new actions from every agent: this might be destabilizer'''
-                current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
-            elif self.action_space[agent.role]['type'] == "continuous":
-                current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float()) for _ix, _agent in enumerate(agents)], dim=1)
+            # if self.action_space[agent.role]['type'] == "discrete":
+            #     '''Option 1: grab new actions only for the current agent and keep original ones from the others..'''
+            #     # current_state_actor_actions = actions
+            #     # current_state_actor_actions[:, 0, :] = agent.actor(states[:, 0, :].float(), gumbel=True)
+            #     '''Option 2: grab new actions from every agent: this might be destabilizer'''
+            #     current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float(), gumbel=True) for _ix, _agent in enumerate(agents)], dim=1)
+            # elif self.action_space[agent.role]['type'] == "continuous":
+            #     current_state_actor_actions = torch.cat([agents[perms[_ix]].actor(states[:, _ix, :].float()) for _ix, _agent in enumerate(agents)], dim=1)
+            aux = []
+            for _ix in range(len(agents)):
+                a = agents[perms[_ix]]
+                logits = a.actor(states[:, _ix, :])
+                # Apply mask
+                # logits = torch.where(actions_mask[:, _ix, :], torch.tensor([0.]).to(self.device), logits)
+                logits[actions_mask[:, _ix, :]] = 0
+                # Renormalize each branch
+                # logits = normalize_branches(logits, a.actor_output, self.gumbel if a.action_space == "discrete" else None)
+                _cum_ix = 0
+                for ac_dim in a.actor_output:
+                    _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone().abs()
+                    if a.action_space == 'continuous':
+                        _normalized_actions = _branch_action / _branch_action.sum(-1).reshape(-1, 1)
+                        logits[:, _cum_ix:ac_dim+_cum_ix] = _normalized_actions
+                    else:
+                        logits[:, _cum_ix:ac_dim+_cum_ix] = self.gumbel(_branch_action)
+                    _cum_ix += ac_dim
+                aux += [logits]
+            current_state_actor_actions = torch.cat(aux, dim=1)
 
             # Calculate Q value for taking those actions in those states
-            # self.log("current_state_actor_actions {}".format(current_state_actor_actions.shape))
+            # self.log(f"current_state_actor_actions {current_state_actor_actions.shape} {current_state_actor_actions}")
             # self.log("states {}".format(states.shape))
             actor_loss_value = self.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), current_state_actor_actions.float()], dim=1))
             # entropy_reg = (-torch.log_softmax(current_state_actor_actions, dim=2).mean() * 1e-3)/1.0 # regularize using logs probabilities
             # penalty for going beyond the bounded interval
-            param_reg = torch.clamp((current_state_actor_actions ** 2) - torch.ones_like(current_state_actor_actions), min=0.0).mean()
+            # param_reg = torch.clamp((current_state_actor_actions ** 2) - torch.ones_like(current_state_actor_actions), min=0.0).mean()
             # Make the Q-value negative and add a penalty if Q > 1 or Q < -1 and entropy for richer exploration
-            actor_loss = -actor_loss_value.mean() + param_reg  # + entropy_reg
+            actor_loss = -actor_loss_value.mean()# + param_reg  # + entropy_reg
             # Backward Propogation!
             actor_loss.backward()
             # Update the weights in the direction of the gradient.
