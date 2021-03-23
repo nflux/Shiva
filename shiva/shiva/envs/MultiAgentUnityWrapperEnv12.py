@@ -295,7 +295,6 @@ class MultiAgentUnityWrapperEnv12(Environment):
         for role in self.roles:
             # role_previous_acs_mask = self.get_current_action_masking(role)
             self.DecisionSteps[role], self.TerminalSteps[role] = self.Unity.get_steps(role)
-            self.current_acs_mask[role] = self.get_current_action_masking(role)
 
             try:
                 self.log(f"Role {role} Step {self.steps_per_episode[role]} Decision: {self.DecisionSteps[role].agent_id}, Terminal: {self.TerminalSteps[role].agent_id}", verbose_level=2)
@@ -320,7 +319,7 @@ class MultiAgentUnityWrapperEnv12(Environment):
                                                  torch.tensor([self.terminal_observations[role][terminal_step_agent_ix]], dtype=torch.float64),
                                                  torch.tensor([[True]], dtype=torch.bool).unsqueeze(dim=-1),
                                                  torch.tensor(self.prev_acs_mask[role][terminal_step_agent_ix, :]),
-                                                 torch.tensor(self.current_acs_mask[role][terminal_step_agent_ix, :])
+                                                 torch.tensor(self.get_empty_masks(role)[terminal_step_agent_ix, :])
                                                  )))
                     self.trajectory_buffers[role][role_agent_id].push(exp)
 
@@ -345,6 +344,7 @@ class MultiAgentUnityWrapperEnv12(Environment):
                 # self.observations = {role:self._flatten_observations(self.DecisionSteps[role].obs) for role in self.roles} # unsure if needed to flatten observations???? This might be deprecated
                 self.previous_observation = self.observations.copy()
                 self.observations[role] = self._flatten_observations(self.DecisionSteps[role].obs)
+                self.current_acs_mask[role] = self.get_current_action_masking(role)
                 # self.log(f"{self.observations[role].shape}", verbose_level=1)
 
                 self.rewards[role] = self.normalize_reward(self.DecisionSteps[role].reward) if self.normalize else self.DecisionSteps[role].reward
@@ -380,7 +380,6 @@ class MultiAgentUnityWrapperEnv12(Environment):
 
             # Here we check if one of the Roles died and did not respawn: this means is not in DecisionStep nor TerminalStep.
             # Some environments dont respawn the agents immediately g.e. ICT Skirmish
-
             self.prev_acs_mask = self.current_acs_mask.copy()
 
     def _get_expected_action_shape(self, role: str) -> tuple:
@@ -511,11 +510,14 @@ class MultiAgentUnityWrapperEnv12(Environment):
         """Returned format is [number_of_agents_for_role, flattened action_space]"""
         m = self.DecisionSteps[role].action_mask
         if m == None:
-            num_instances_per_role = self.num_instances_per_role[role] if hasattr(self, 'num_instances_per_role') else len(self.DecisionSteps[role].agent_id)
-            empty_mask = np.zeros((num_instances_per_role, sum(self.action_space[role]['acs_space']))).astype(np.bool)
-            return empty_mask
+            return self.get_empty_masks(role)
         else:
             return np.concatenate(self.DecisionSteps[role].action_mask, axis=-1)
+
+    def get_empty_masks(self, role: str):
+        num_instances_per_role = self.num_instances_per_role[role] if hasattr(self, 'num_instances_per_role') else len(self.DecisionSteps[role].agent_id)
+        empty_mask = np.zeros((num_instances_per_role, sum(self.action_space[role]['acs_space']))).astype(np.bool)
+        return empty_mask
 
     def get_reward_episode(self, roles=False):
         """ Returns the episodic rewards organized in a dictionary by role names.

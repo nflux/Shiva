@@ -165,10 +165,10 @@ class MPILearner(Learner):
             dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
             env_comm.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
 
-            actions_mask = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
+            actions_mask = np.empty(self.traj_info['acs_shape'], dtype=np.bool)
             env_comm.Recv([actions_mask, MPI.BOOL], source=env_source, tag=Tags.trajectory_actions_mask)
 
-            next_actions_mask = np.empty(self.traj_info['acs_shape'], dtype=np.float64)
+            next_actions_mask = np.empty(self.traj_info['acs_shape'], dtype=np.bool)
             env_comm.Recv([next_actions_mask, MPI.BOOL], source=env_source, tag=Tags.trajectory_next_actions_mask)
 
             # self.step_count += traj_length
@@ -201,8 +201,10 @@ class MPILearner(Learner):
 
             self.last_metric_received = f"{self.traj_info['env_id']} got ObsShape {observations.shape} {self.traj_info['metrics']}"
 
-            # self.log(f"Obs {observations.shape} {observations}")
-            # self.log(f"Acs {actions}")
+            self.log(f"Obs {observations.shape} {observations}")
+            self.log(f"Acs {actions}")
+            self.log(f"AcsMask {actions_mask}")
+            self.log(f"NextAcsMask {next_actions_mask}")
             # self.log(f"Rew {rewards.shape} {rewards}")
             # self.log(f"NextObs {next_observations}")
             # self.log(f"Dones {dones}")

@@ -150,6 +150,9 @@ class MADDPGAlgorithm(Algorithm):
             next_actions_mask = permutate_f(bf_next_actions_mask.to(self.device))
 
             dones_mask = dones[:, 0, :].view(-1, 1).to(self.device)
+            # print("States", states)
+            # print("Actions", actions)
+            # print("AcsMask", actions_mask)
 
             '''Assuming all agents have the same obs_dim!'''
             batch_size, num_agents, obs_dim = states.shape
