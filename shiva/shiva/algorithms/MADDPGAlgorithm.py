@@ -201,11 +201,11 @@ class MADDPGAlgorithm(Algorithm):
             Q_these_states_main = self.critic(torch.cat([states.reshape(batch_size, num_agents*obs_dim).float(), actions.reshape(batch_size, num_agents*acs_dim).float()], dim=1))
             # self.log('Q_these_states_main {}'.format(Q_these_states_main))
 
-            # Calculate the loss.
+            # Calculate the loss
             critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
             # Backward propagation!
             critic_loss.backward()
-            # Update the weights in the direction of the gradient.
+            # Update the weights in the direction of the gradient
             self.critic_optimizer.step()
             # Tensorboard
             # self.critic_loss[agent.id] = critic_loss.item()
