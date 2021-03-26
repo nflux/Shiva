@@ -116,7 +116,8 @@ class MPIEnv(Environment):
             self.log("Shape Obs {} Act {}".format(np.array(self.observations).shape, np.array(self.actions).shape), verbose_level=3)
             self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=4)
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-
+            if 'Gym' in self.type or 'GymMultiple' in self.type:
+                self.next_action_mask = [self.env.get_current_action_masking(role) for role in self.env.roles]
     # def _step_numpy(self):
     #     self.step_count += 1
     #     self.observations = self.env.get_observations()
@@ -150,12 +151,26 @@ class MPIEnv(Environment):
                                              )))
                 # buffer.push(exp)
                 self.trajectory_buffers[ix].push(exp)
+        elif 'GymMultiple' in self.type:
+            for ix, role in enumerate(self.env.roles):
+                '''Order is maintained, each ix is for each Agent Role'''
+                exp = list(map(torch.clone, (torch.tensor([self.observations[ix]]),
+                                             torch.tensor([self.actions[ix]]),
+                                             torch.tensor([self.rewards[ix]]).unsqueeze(dim=-1),
+                                             torch.tensor([self.next_observations[ix]]),
+                                             torch.tensor([self.dones[ix]], dtype=torch.bool).unsqueeze(dim=-1),
+                                             torch.tensor([self.current_action_mask[ix]]),
+                                             torch.tensor([self.next_action_mask[ix]])
+                                             )))
+                self.trajectory_buffers[ix].push(exp)
         elif 'Gym' in self.type:
             exp = list(map(torch.clone, (torch.from_numpy(self.observations).unsqueeze(dim=0),
                                          torch.tensor(self.actions).unsqueeze(dim=0),
                                          torch.tensor(self.rewards).reshape(1, 1, 1),
                                          torch.from_numpy(self.next_observations).unsqueeze(dim=0),
-                                         torch.tensor(self.dones, dtype=torch.bool).reshape(1, 1, 1)
+                                         torch.tensor(self.dones, dtype=torch.bool).reshape(1, 1, 1),
+                                         torch.tensor(self.current_action_mask).unsqueeze(dim=0),
+                                         torch.tensor(self.next_action_mask).unsqueeze(dim=0)
                                          )))
             self.trajectory_buffers[0].push(exp)
         elif 'RoboCup' in self.type:
@@ -249,7 +264,72 @@ class MPIEnv(Environment):
                         self.learner.Send([actions_mask_buffer, MPI.BOOL], dest=learner_ix, tag=Tags.trajectory_actions_mask)
                         self.learner.Send([next_actions_mask_buffer, MPI.BOOL], dest=learner_ix, tag=Tags.trajectory_next_actions_mask)
 
-        elif 'UnityWrapperEnv012' in self.type or 'Gym' in self.type or 'Particle' in self.type:
+        elif 'GymMultiple' in self.type or 'Gym' in self.type:
+            for role, learner_spec in self.role2learner_spec.items():
+                learner_ix = learner_spec['id']
+                if learners_sent[learner_ix]:
+                    continue
+                learners_sent[learner_ix] = True
+
+                _observations_buffer = []
+                _actions_buffer = []
+                _rewards_buffer = []
+                _next_observations_buffer = []
+                _done_buffer = []
+                _action_mask_buffer = []
+                _next_action_mask_buffer = []
+                _metrics = []
+
+                for ix, role in enumerate(learner_spec['roles']):
+                    role_ix = self.env.roles.index(role)
+                    obs, acs, rew, nobs, don, msk, nmsk = map(self._unity_reshape, self.trajectory_buffers[role_ix].all_numpy())
+                    _observations_buffer.append(obs)
+                    _actions_buffer.append(acs)
+                    _rewards_buffer.append(rew)
+                    _next_observations_buffer.append(nobs)
+                    _done_buffer.append(don)
+                    _action_mask_buffer.append(msk)
+                    _next_action_mask_buffer.append(nmsk)
+                    _metrics.append(metrics[role_ix])  # accumulate the metrics for each role of this learner
+
+                observations_buffer = np.array(_observations_buffer)
+                actions_buffer = np.array(_actions_buffer)  # NOTE this will fail if we have 1 learner handling 2 roles with diff acs space
+                rewards_buffer = np.array(_rewards_buffer)
+                next_observations_buffer = np.array(_next_observations_buffer)
+                done_buffer = np.array(_done_buffer)
+                action_mask_buffer = np.array(_action_mask_buffer)
+                next_action_mask_buffer = np.array(_next_action_mask_buffer)
+
+                trajectory_info = {
+                    'env_id': str(self),
+                    'role': learner_spec['roles'],
+                    'length_index': 1,
+                    # index where the Learner can infer the trajectory length from the shape tuples below
+                    'obs_shape': observations_buffer.shape,
+                    'acs_shape': actions_buffer.shape,
+                    'rew_shape': rewards_buffer.shape,
+                    'done_shape': done_buffer.shape,
+                    'metrics': metrics
+                }
+
+                self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
+                self.log("Traj sent to learner:{}".format(learner_ix), verbose_level=1)
+
+                self.learner.Send([observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
+                self.learner.Send([actions_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_actions)
+                self.learner.Send([rewards_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_rewards)
+                self.learner.Send([next_observations_buffer, MPI.DOUBLE], dest=learner_ix,
+                                  tag=Tags.trajectory_next_observations)
+                self.learner.Send([done_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_dones)
+                self.learner.Send([action_mask_buffer, MPI.BOOL], dest=learner_ix, tag=Tags.trajectory_actions_mask)
+                self.learner.Send([next_action_mask_buffer, MPI.BOOL], dest=learner_ix,
+                                  tag=Tags.trajectory_next_actions_mask)
+
+            self.done_count += 1
+            _output_quantity = len(learners_sent.keys())
+            self.reset_buffers()
+
+        elif 'UnityWrapperEnv012' in self.type or 'Particle' in self.type:
             for role, learner_spec in self.role2learner_spec.items():
                 learner_ix = learner_spec['id']
                 if learners_sent[learner_ix]:

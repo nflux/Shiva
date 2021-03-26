@@ -30,6 +30,9 @@ class GymEnvironment(Environment):
 
         self.action_space = {self.roles[0]: self.get_gym_action_space()}
         self.observation_space = {self.roles[0]: self.get_gym_observation_space()}
+
+        self.current_acs_mask = {self.roles[0]: self.get_gym_action_space()}
+        self.prev_acs_mask = {self.roles[0]: self.get_gym_action_space()}
         self.reset()
 
         self.temp_done_counter = 0
@@ -64,10 +67,30 @@ class GymEnvironment(Environment):
             '''Discrete, argmax or sample from distribution'''
             if not torch.is_tensor(action):
                 action = torch.from_numpy(action)
-            if hasattr(self.env, 'action_mask') and self.env.action_mask is not None:
-                for action_index, action_masking in enumerate(self.env.action_mask):
-                    action[0][action_index] *= int(action_masking)
-            action4Gym = self.action_selection(action)
+            # self.action_mask = self.get_current_action_masking()
+            # for act_ind, masking in enumerate(self.action_mask):
+            #     if masking:
+            #         action[0][act_ind] = 0
+            self.log("GymEnv action masking:{} acs:{}".format(self.get_current_action_masking(), action), verbose_level=4)
+
+            # if self.env.action_space.shape == ():
+            if isinstance(self.env.action_space, gym.spaces.Discrete):
+                action4Gym = self.action_selection(action)
+            # MultiDiscrete branch actions
+            # elif self.env.action_space.shape[0]:
+            elif isinstance(self.env.action_space, gym.spaces.MultiDiscrete):
+                # set index boundaries for each action branch
+                dims = self.env.action_space.shape[0]
+                bds = [0] * dims
+                for idx in range(dims):
+                    bds[idx] = sum(self.env.action_space.nvec[:idx + 1])
+                bd_ = [0] + bds[:-1]
+                # get actions for gym
+                act_list = []
+                for idx in range(dims):
+                    act_list.append(self.action_selection(torch.FloatTensor([action[0][bd_[idx]:bds[idx]].tolist()])))
+                action4Gym = np.asarray(tuple(act_list))
+                self.log("Action_pros {} dims:{} acts:{}".format(action, bds, action4Gym), verbose_level=4)
             self.obs, self.reward_per_step, self.done, info = self.env.step(action4Gym)
         else:
             '''Continuous actions'''
@@ -95,6 +118,9 @@ class GymEnvironment(Environment):
         self.reward_per_episode += self.rew
         self.reward_total += self.rew
 
+        self.prev_acs_mask = self.current_acs_mask.copy()
+        self.current_acs_mask = self.get_current_action_masking()
+
         return self.obs, self.rew, self.done, {'raw_reward': self.reward_per_step, 'action': action}
 
     def reset(self, force=False, *args, **kwargs):
@@ -112,6 +138,17 @@ class GymEnvironment(Environment):
             self.step_count = 0
             self.done_count = 0
             self.reward_total = 0
+
+    def get_current_action_masking(self, role=None):
+        if hasattr(self.env, 'masked') and self.env.masked is True:
+            current_action_mask = self.env.action_mask
+        else:
+            current_action_mask = self.get_empty_masks()
+        return current_action_mask
+
+    def get_empty_masks(self):
+        empty_mask = np.zeros(sum(self.action_space['acs_space']), dtype=np.bool_)
+        return empty_mask
 
     def get_metrics(self, episodic):
         """ Retrieve environment metrics.
@@ -226,7 +263,8 @@ class GymEnvironment(Environment):
         >>> np.shape(np.array([1,2]))
         (2,)
         """
-        return self.env.action_space.shape == ()
+        # return self.env.action_space.shape == ()
+        return isinstance(self.env.action_space, gym.spaces.Discrete) or isinstance(self.env.action_space, gym.spaces.MultiDiscrete)
 
     def get_gym_action_space(self):
         """ Returns a dictionary describing the action space.
@@ -234,12 +272,20 @@ class GymEnvironment(Environment):
         Returns:
             (dict)
         """
-        if self.is_action_space_discrete():
+        if isinstance(self.env.action_space, gym.spaces.Discrete):
             return {
                 'discrete': (self.env.action_space.n,),
                 'continuous': 0,
                 'param': 0,
                 'acs_space': (self.env.action_space.n,),
+                'actions_range': []
+            }
+        elif isinstance(self.env.action_space, gym.spaces.MultiDiscrete):
+            return {
+                'discrete': tuple(self.env.action_space.nvec),
+                'continuous': 0,
+                'param': 0,
+                'acs_space': tuple(self.env.action_space.nvec),
                 'actions_range': []
             }
         else:
