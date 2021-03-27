@@ -141,8 +141,7 @@ class MPIMultiEnv(Environment):
             agent_ix = self.role2agent[role_name]
             for env_state in self._recv_envs_buffer:
                 env_actions = []
-                env_obs, env_acs_mask = env_state
-                role_obs = env_obs[role_ix]
+                role_obs, env_acs_mask = env_state
                 role_acs_mask = env_acs_mask[role_ix]
                 role_actions = self.agents[agent_ix].get_action(role_obs, role_acs_mask, self.step_count, evaluate=self.role2learner_spec[role_name]['evaluate'])
                 env_actions.append(role_actions)

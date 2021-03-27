@@ -129,6 +129,7 @@ class DDPGAgent(Agent):
         # print(str(self), observation, acs_mask)
         observation = torch.tensor(observation).to(self.device).float()
         acs_mask = torch.tensor(acs_mask).cpu()
+        self.log(f"Observation {observation} Masking {acs_mask}", verbose_level=4)
 
         if len(observation.shape) > 1:
             self._output_dimension = (*observation.shape[:-1], sum(self.actor_output))

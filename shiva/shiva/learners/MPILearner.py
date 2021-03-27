@@ -201,10 +201,10 @@ class MPILearner(Learner):
 
             self.last_metric_received = f"{self.traj_info['env_id']} got ObsShape {observations.shape} {self.traj_info['metrics']}"
 
-            self.log(f"Obs {observations.shape} {observations}")
-            self.log(f"Acs {actions}")
-            self.log(f"AcsMask {actions_mask}")
-            self.log(f"NextAcsMask {next_actions_mask}")
+            self.log(f"Obs {observations.shape} {observations}", verbose_level=3)
+            self.log(f"Acs {actions}", verbose_level=3)
+            self.log(f"AcsMask {actions_mask}", verbose_level=3)
+            self.log(f"NextAcsMask {next_actions_mask}", verbose_level=3)
             # self.log(f"Rew {rewards.shape} {rewards}")
             # self.log(f"NextObs {next_observations}")
             # self.log(f"Dones {dones}")
