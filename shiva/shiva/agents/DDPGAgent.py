@@ -160,7 +160,8 @@ class DDPGAgent(Agent):
         #     action[:, _cum_ix:ac_dim+_cum_ix] = _branch_action / _branch_action.sum(dim=-1).reshape(-1, 1)
         #     _cum_ix += ac_dim
 
-        self.log(f"Obs {observation.shape} Acs {action.shape}\nObs {observation}\nMask {acs_mask}\nAcs {_action_debug}{action}", verbose_level=3)
+        self.log(f"Obs {observation.shape}\nObs {observation}", verbose_level=3)
+        self.log(f"Acs {action.shape}\nMask {acs_mask}\nAcs {_action_debug}{action}", verbose_level=3)
         # if one_hot:
         #     action = action2one_hot(action.shape[0], torch.argmax(action).item())
 

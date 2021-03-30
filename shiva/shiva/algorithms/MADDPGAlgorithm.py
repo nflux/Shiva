@@ -182,6 +182,7 @@ class MADDPGAlgorithm(Algorithm):
                 _cum_ix = 0
                 for ac_dim in a.actor_output:
                     _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone().abs()
+                    """To rethink about here: what if we reapply softmax instead of regular normalization?"""
                     _normalized_actions = _branch_action / _branch_action.sum(-1).reshape(-1, 1)
                     if a.action_space == 'continuous':
                         logits[:, _cum_ix:ac_dim+_cum_ix] = _normalized_actions
@@ -202,6 +203,12 @@ class MADDPGAlgorithm(Algorithm):
             # self.log('Q_these_states_main {}'.format(Q_these_states_main))
 
             # Calculate the loss
+
+            if y_i.isnan().sum().item() > 0 or Q_these_states_main.isnan().sum().item() > 0:
+                print(y_i)
+                print(Q_these_states_main)
+                assert False, "NaNs found"
+
             critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
             # Backward propagation!
             critic_loss.backward()
