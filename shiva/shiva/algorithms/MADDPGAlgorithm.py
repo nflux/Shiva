@@ -176,12 +176,12 @@ class MADDPGAlgorithm(Algorithm):
                 logits = a.target_actor(next_states[:, _ix, :])
                 # Apply mask
                 # logits = torch.where(next_actions_mask[:, _ix, :], torch.tensor(0.).to(self.device), logits)
-                logits[next_actions_mask[:, _ix, :]] = 0
+                logits[next_actions_mask[:, _ix, :]] = 0.
                 # Renormalize each branch
                 # logits = normalize_branches(logits, a.actor_output, one_hot_from_logits if a.action_space == "discrete" else None)
                 _cum_ix = 0
                 for ac_dim in a.actor_output:
-                    _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone().abs()
+                    _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone().clamp(min=0.000000001)
                     """To rethink about here: what if we reapply softmax instead of regular normalization?"""
                     _normalized_actions = _branch_action / _branch_action.sum(-1).reshape(-1, 1)
                     if a.action_space == 'continuous':
@@ -189,6 +189,20 @@ class MADDPGAlgorithm(Algorithm):
                     else:
                         logits[:, _cum_ix:ac_dim+_cum_ix] = one_hot_from_logits(_normalized_actions)
                     _cum_ix += ac_dim
+
+                # Handle edge cases where network chooses unavailable actions and gives 0 proba to available actions
+                logits[next_actions_mask[:, _ix, :]] = 0.
+                _cum_ix = 0
+                for ac_dim in a.actor_output:
+                    _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone().clamp(min=0.000000001)
+                    """To rethink about here: what if we reapply softmax instead of regular normalization?"""
+                    _normalized_actions = _branch_action / _branch_action.sum(-1).reshape(-1, 1)
+                    if a.action_space == 'continuous':
+                        logits[:, _cum_ix:ac_dim+_cum_ix] = _normalized_actions
+                    else:
+                        logits[:, _cum_ix:ac_dim+_cum_ix] = one_hot_from_logits(_normalized_actions)
+                    _cum_ix += ac_dim
+
                 aux += [logits]
             next_state_actions_target = torch.cat(aux, dim=1)
 
@@ -246,13 +260,26 @@ class MADDPGAlgorithm(Algorithm):
                 # logits = normalize_branches(logits, a.actor_output, self.gumbel if a.action_space == "discrete" else None)
                 _cum_ix = 0
                 for ac_dim in a.actor_output:
-                    _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone().abs()
+                    _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone().clamp(min=0.000000001)
                     if a.action_space == 'continuous':
                         _normalized_actions = _branch_action / _branch_action.sum(-1).reshape(-1, 1)
                         logits[:, _cum_ix:ac_dim+_cum_ix] = _normalized_actions
                     else:
                         logits[:, _cum_ix:ac_dim+_cum_ix] = self.gumbel(_branch_action)
                     _cum_ix += ac_dim
+
+                # Handle edge cases where network chooses unavailable actions and gives 0 proba to available actions
+                logits[actions_mask[:, _ix, :]] = 0
+                _cum_ix = 0
+                for ac_dim in a.actor_output:
+                    _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone().clamp(min=0.000000001)
+                    if a.action_space == 'continuous':
+                        _normalized_actions = _branch_action / _branch_action.sum(-1).reshape(-1, 1)
+                        logits[:, _cum_ix:ac_dim+_cum_ix] = _normalized_actions
+                    else:
+                        logits[:, _cum_ix:ac_dim+_cum_ix] = self.gumbel(_branch_action)
+                    _cum_ix += ac_dim
+
                 aux += [logits]
             current_state_actor_actions = torch.cat(aux, dim=1)
 

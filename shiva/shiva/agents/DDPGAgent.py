@@ -4,6 +4,7 @@ import torch
 import copy
 from torch.distributions import Categorical
 from torch.nn.functional import softmax
+from functools import partial
 from shiva.helpers.calc_helper import two_point_formula
 from shiva.agents.Agent import Agent
 from shiva.helpers.utils import Noise as noise
@@ -71,6 +72,7 @@ class DDPGAgent(Agent):
         self.hps += ['epsilon', 'noise_scale']
         self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
 
+        self.softmax = partial(softmax, dim=-1)
         self.ou_noise = noise.OUNoiseTorch(sum(self.actor_output), self.noise_scale)
         self.hp_random = self.hp_random if hasattr(self, 'hp_random') else False
 
@@ -150,8 +152,9 @@ class DDPGAgent(Agent):
         # print(f"Before mask", action)
         # Mask actions
         action[acs_mask] = 0
-        # self.log(f"Mask {acs_mask}")
-        # Normalize each individual branch
+        action = normalize_branches(action, self.actor_output)
+        # Handle edge cases where network chooses unavailable actions and gives 0 proba to available actions
+        action[acs_mask] = 0
         action = normalize_branches(action, self.actor_output)
         # _cum_ix = 0
         # for ac_dim in self.actor_output:
