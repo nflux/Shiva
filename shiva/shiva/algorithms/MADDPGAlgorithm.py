@@ -52,9 +52,7 @@ class MADDPGAlgorithm(Algorithm):
                 Critic would think they are just one agent but looking at many datapoints (each agent is a diff datapoint)
                 Agents should have the same Action Space
         '''
-        self.critic_input_size = 0
-        for role in self.roles:
-            self.critic_input_size += sum(self.action_space[role]['acs_space']) + self.observation_space[role]
+        self.critic_input_size = sum([sum(self.action_space[role]['acs_space']) + self.observation_space[role] for role in self.roles])
 
         if self.method == "permutations":
             '''Single Local Critic'''

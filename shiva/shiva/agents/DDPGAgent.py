@@ -68,12 +68,12 @@ class DDPGAgent(Agent):
         Returns:
             None
         """
-        self.hps = ['actor_learning_rate', 'critic_learning_rate']
-        self.hps += ['epsilon', 'noise_scale']
-        self.hps += ['epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes']
+        self.register_params(['actor_learning_rate', 'critic_learning_rate', 'lr_decay',
+                              'epsilon', 'noise_scale',
+                              'epsilon_start', 'epsilon_end', 'epsilon_episodes', 'noise_start', 'noise_end', 'noise_episodes'])
 
         self.softmax = partial(softmax, dim=-1)
-        self.ou_noise = noise.OUNoiseTorch(sum(self.actor_output), self.noise_scale)
+        self.ou_noise = noise.OUNoiseTorch(sum(self.actor_output))
         self.hp_random = self.hp_random if hasattr(self, 'hp_random') else False
 
         if self.hp_random:
@@ -87,10 +87,11 @@ class DDPGAgent(Agent):
             self.actor_learning_rate = self.agent_config['actor_learning_rate']
             self.critic_learning_rate = self.agent_config['critic_learning_rate']
 
-        if 'MADDPG' not in str(self):
+        if 'critic_input_size' not in self.configs['Agent']:
             self.critic_input_size = self.actor_input + sum(self.actor_output)
+        self.register_states(['critic_input_size'])
 
-        self.net_names = ['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer']
+        self.register_networks(['actor', 'target_actor', 'critic', 'target_critic', 'actor_optimizer', 'critic_optimizer'])
 
         if self.action_space == 'continuous':
             self.actor = DynamicLinearNetwork(self.actor_input, sum(self.actor_output), self.networks_config['actor'])
@@ -105,14 +106,6 @@ class DDPGAgent(Agent):
         self.target_critic = copy.deepcopy(self.critic)
         self.actor_optimizer = self.optimizer_function(params=self.actor.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = self.optimizer_function(params=self.critic.parameters(), lr=self.critic_learning_rate)
-
-    # It's now in the Abstract Agent
-    # def to_device(self, device):
-    #     self.device = device
-    #     self.actor.to(self.device)
-    #     self.target_actor.to(self.device)
-    #     self.critic.to(self.device)
-    #     self.target_critic.to(self.device)
 
     def get_discrete_action(self, observation, acs_mask, step_count, evaluate=False, one_hot=False, *args, **kwargs):
         """ Produces a discrete action.

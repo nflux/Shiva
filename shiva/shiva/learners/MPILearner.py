@@ -378,8 +378,16 @@ class MPILearner(Learner):
             # minor tweak on the agent id as we can have an issue when multiple learners load the same agent id (like loading a PBT session)
             for a in agents:
                 a.id += 10 * self.id
-            self.alg.add_agents(agents)
             agent_creation_log = "{agents_strs} agents loaded"
+
+            # Overwrite hyperparameters only if specified
+            if hasattr(self, 'overwrite_hps') and self.overwrite_hps:
+                self.log("Overwritting agents hyperparameters")
+                for _agent in agents:
+                    _agent.overwrite_hps_from_config(self.configs)
+
+            self.alg.add_agents(agents)  # Algorithm keeps reference to agents, and reloads central critic if needed
+
         elif hasattr(self, 'roles') and len(self.roles) > 0:
             self.agents_dict = {role:self.alg.create_agent_of_role(self.new_agents_ids[ix], role) for ix, role in enumerate(self.roles)}
             agents = list(self.agents_dict.values())
@@ -660,6 +668,7 @@ class MPILearner(Learner):
         """
         assert 'Learner' in self.configs, 'No Learner config found on received config: {}'.format(self.configs)
         default_configs = {
+            'load_agents': False,
             'evaluate': False,
             'n_traj_pulls': 1,
             'episodes': float('inf')

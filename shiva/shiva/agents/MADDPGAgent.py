@@ -7,8 +7,8 @@ class MADDPGAgent(DDPGAgent):
     Inherits from DDPG Agents for easier implementation.
 
     """
-    epsilon = 0
-    noise_scale = 0
+    # epsilon = 0
+    # noise_scale = 0
 
     def __init__(self, id: int, obs_space: int, acs_space: dict, configs: dict):
         super(MADDPGAgent, self).__init__(id, obs_space, acs_space, configs)

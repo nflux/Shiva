@@ -10,6 +10,10 @@ class Agent:
     num_updates = 0
     num_evolutions = {'truncate': 0, 'perturb': 0, 'resample': 0}
     role = None
+    # For saving/loading references
+    hps = []
+    state_attrs = []
+    net_names = []
     
     def __init__(self, id, obs_space, acs_space, configs):
         '''
@@ -41,10 +45,42 @@ class Agent:
         
         self.device = torch.device('cpu') #torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.hp_random = self.hp_random if hasattr(self, 'hp_random') else False
-        self.state_attrs = ['step_count', 'done_count', 'num_updates', 'num_evolutions', 'role', 'manual_seed']
-        self.net_names = []
-        self.hps = []
+
+        self.register_states(['step_count', 'done_count', 'num_updates', 'num_evolutions', 'role', 'manual_seed'])
+        self.register_networks([])
+        self.register_params(['exploration_steps'])
+
         self.save_filename = "{id}.state"
+
+    def register_params(self, params: list):
+        if len(params) > 0:
+            self.hps += params
+
+    def register_states(self, params: list):
+        if len(params) > 0:
+            self.state_attrs += params
+
+    def register_networks(self, params: list):
+        if len(params) > 0:
+            self.net_names += params
+
+    def overwrite_hps_from_config(self, configs):
+        self.configs['Agent'] = configs['Agent']
+        self.agent_config = configs['Agent']
+        for param_name in self.hps:
+            if param_name in self.configs['Agent']:
+                setattr(self, param_name, self.configs['Agent'][param_name])
+            else:
+                self.log(f"Overwriting param {param_name}, but not found in given config")
+        # Restart some state counters
+        # g.e. if we want to load agent and still do exploration phase
+        self.reset_counters()
+        # Update optimizers in case learning rates changed, function is defined on each implementation
+        self._update_optimizers()
+
+    def reset_counters(self):
+        self.step_count = 0
+        self.done_count = 0
 
     def reset_noise(self):
         pass
