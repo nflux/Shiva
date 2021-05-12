@@ -44,6 +44,7 @@ class MPIMultiEvaluationWrapper(Evaluation):
             self._sort_evals = getattr(self, '_sort_robocup')
             self._get_evaluations = getattr(self, '_get_robocup_evaluations')
         elif 'Gym' in self.configs['Environment']['type'] \
+                or 'MultiAgentGraphEnv' in self.configs['Environment']['type'] \
                 or 'Unity' in self.configs['Environment']['type'] \
                 or 'ParticleEnv' in self.configs['Environment']['type']:
             '''Here Evaluation metrics are hardcoded'''

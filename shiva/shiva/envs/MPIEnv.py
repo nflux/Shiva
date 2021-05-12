@@ -116,7 +116,7 @@ class MPIEnv(Environment):
             self.log("Shape Obs {} Act {}".format(np.array(self.observations).shape, np.array(self.actions).shape), verbose_level=3)
             self.log("Obs {} Act {} Rew {}".format(self.observations, self.actions, self.rewards), verbose_level=4)
             self.next_observations, self.rewards, self.dones, _ = self.env.step(self.actions)
-            if 'Gym' in self.type or 'GymMultiple' in self.type:
+            if 'Gym' in self.type or 'MultiAgentGraphEnv' in self.type:
                 self.next_action_mask = [self.env.get_current_action_masking(role) for role in self.env.roles]
     # def _step_numpy(self):
     #     self.step_count += 1
@@ -151,7 +151,7 @@ class MPIEnv(Environment):
                                              )))
                 # buffer.push(exp)
                 self.trajectory_buffers[ix].push(exp)
-        elif 'GymMultiple' in self.type:
+        elif 'MultiAgentGraphEnv' in self.type:
             for ix, role in enumerate(self.env.roles):
                 '''Order is maintained, each ix is for each Agent Role'''
                 exp = list(map(torch.clone, (torch.tensor([self.observations[ix]]),
@@ -264,7 +264,7 @@ class MPIEnv(Environment):
                         self.learner.Send([actions_mask_buffer, MPI.BOOL], dest=learner_ix, tag=Tags.trajectory_actions_mask)
                         self.learner.Send([next_actions_mask_buffer, MPI.BOOL], dest=learner_ix, tag=Tags.trajectory_next_actions_mask)
 
-        elif 'GymMultiple' in self.type or 'Gym' in self.type:
+        elif 'MultiAgentGraphEnv' in self.type or 'Gym' in self.type:
             for role, learner_spec in self.role2learner_spec.items():
                 learner_ix = learner_spec['id']
                 if learners_sent[learner_ix]:
@@ -309,11 +309,12 @@ class MPIEnv(Environment):
                     'acs_shape': actions_buffer.shape,
                     'rew_shape': rewards_buffer.shape,
                     'done_shape': done_buffer.shape,
-                    'metrics': metrics
+                    'metrics': _metrics
                 }
 
                 self.learner.send(trajectory_info, dest=learner_ix, tag=Tags.trajectory_info)
                 self.log("Traj sent to learner:{}".format(learner_ix), verbose_level=1)
+                self.log("Traj info:{}".format(trajectory_info), verbose_level=3)
 
                 self.learner.Send([observations_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_observations)
                 self.learner.Send([actions_buffer, MPI.DOUBLE], dest=learner_ix, tag=Tags.trajectory_actions)
@@ -435,7 +436,7 @@ class MPIEnv(Environment):
             self.reset_buffers = self.env.reset_buffers
             self.env.create_buffers()
             self.trajectory_buffers = self.env.trajectory_buffers # change pointer
-        elif 'UnityWrapperEnv012' in self.type or 'Particle' in self.type:
+        elif 'UnityWrapperEnv012' in self.type or 'Particle' in self.type or 'MultiAgentGraphEnv' in self.type:
             '''
                 Need a buffer for each Agent Role
                 - Agent roles may have different act/obs spaces and number of agent role

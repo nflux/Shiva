@@ -45,6 +45,7 @@ class MPIEvaluation(Evaluation):
         self.meval.gather(self._get_eval_specs(), root=0) # checkin with MultiEvalWrapper
 
         if 'Gym' in self.configs['Environment']['type'] \
+                or 'MultiAgentGraphEnv' in self.configs['Environment']['type'] \
                 or 'Unity' in self.configs['Environment']['type'] \
                 or 'ParticleEnv' in self.configs['Environment']['type']:
             self._receive_new_match() # receive first match
@@ -66,7 +67,7 @@ class MPIEvaluation(Evaluation):
         """
         self.step_count = 0
 
-        if 'Unity' in self.env_specs['type'] or 'ParticleEnv' in self.env_specs['type']:
+        if 'Unity' in self.env_specs['type'] or 'ParticleEnv' in self.env_specs['type'] or 'MultiAgentGraphEnv' in self.env_specs['type']:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
         elif 'Gym' in self.env_specs['type']:
             self._obs_recv_buffer = np.empty(( self.num_envs, self.env_specs['num_agents'], list(self.env_specs['observation_space'].values())[0] ), dtype=np.float64)
@@ -100,7 +101,7 @@ class MPIEvaluation(Evaluation):
                     # env_actions.append(role_actions)
                     env_actions.append(self.agents[agent_ix].get_action(role_obs, self.step_count, evaluate=True))
                 actions.append(env_actions)
-        elif 'Particle' in self.env_specs['type']:
+        elif 'Particle' in self.env_specs['type'] or 'MultiAgentGraphEnv' in self.env_specs['type']:
             actions = []
             for env_observations in self._obs_recv_buffer:
                 env_actions = []
@@ -127,7 +128,7 @@ class MPIEvaluation(Evaluation):
     def _step_numpy(self):
         self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
-        if 'Unity' in self.env_specs['type']:
+        if 'Unity' in self.env_specs['type'] or 'MultiAgentGraphEnv' in self.env_specs['type']:
             actions = [[[self.agents[ix].get_action(o, self.step_count, evaluate=True) for o in obs] for ix, obs in
                         enumerate(env_observations)] for env_observations in self._obs_recv_buffer]
             self.actions = np.array(actions)

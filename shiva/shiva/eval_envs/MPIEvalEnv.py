@@ -35,7 +35,7 @@ class MPIEvalEnv(Environment):
         self.eval.gather(self._get_env_specs(), root=0)
 
         '''Set function to be run'''
-        if 'Gym' in self.type or 'Unity' in self.type or 'ParticleEnv' in self.type:
+        if 'Gym' in self.type or 'Unity' in self.type or 'ParticleEnv' in self.type or 'MultiAgentGraphEnv' in self.type:
             self.send_evaluations = self._send_eval_roles
         elif 'RoboCup' in self.type:
             self.send_evaluations = self._send_eval_robocup
@@ -80,7 +80,7 @@ class MPIEvalEnv(Environment):
         send_obs_buffer = np.array(self.observations, dtype=np.float64)
         self.eval.Gather([send_obs_buffer, MPI.DOUBLE], None, root=0)
 
-        if 'Gym' in self.type or 'Unity' in self.type or 'ParticleEnv' in self.type:
+        if 'Gym' in self.type or 'Unity' in self.type or 'ParticleEnv' in self.type or 'MultiAgentGraphEnv' in self.type:
             self.actions = self.eval.scatter(None, root=0)
             self.next_observations, self.rewards, _, _ = self.env.step(self.actions.tolist())
         # elif 'Gym' in self.type:
@@ -150,7 +150,7 @@ class MPIEvalEnv(Environment):
         Returns:
             None
         """
-        if 'Unity' in self.type or 'ParticleEnv' in self.type:
+        if 'Unity' in self.type or 'ParticleEnv' in self.type or 'MultiAgentGraphEnv' in self.type:
             pass
             # self.episode_rewards = np.zeros((len(self.env.roles), self.episode_max_length))
         elif 'Gym' in self.type:
@@ -167,7 +167,7 @@ class MPIEvalEnv(Environment):
         Returns:
             None
         """
-        if 'Unity' in self.type:
+        if 'Unity' in self.type or 'MultiAgentGraphEnv' in self.type:
             pass
             # self.episode_rewards.fill(0)
         elif 'Gym' in self.type:

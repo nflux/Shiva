@@ -132,6 +132,7 @@ class DDPGAgent(Agent):
             self._output_dimension = (sum(self.actor_output),)
         self.ou_noise.set_output_dim(self._output_dimension)
 
+        _action_debug = ""
         if evaluate:
             action = self.actor(observation).detach().cpu()
         else:

@@ -71,7 +71,7 @@ class GymEnvironment(Environment):
             # for act_ind, masking in enumerate(self.action_mask):
             #     if masking:
             #         action[0][act_ind] = 0
-            self.log("GymEnv action masking:{} acs:{}".format(self.get_current_action_masking(), action), verbose_level=4)
+            self.log("GymEnv action mask:{} acs:{}".format(self.get_current_action_masking(), action), verbose_level=4)
 
             # if self.env.action_space.shape == ():
             if isinstance(self.env.action_space, gym.spaces.Discrete):

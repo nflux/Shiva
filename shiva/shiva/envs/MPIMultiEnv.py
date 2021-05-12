@@ -66,7 +66,7 @@ class MPIMultiEnv(Environment):
             Check if we can do a numpy step instead of python list
             If obs/acs dimensions for all roles are the same, then we can do MPI
         '''
-        if 'Unity' in self.type or 'ParticleEnv' in self.type:
+        if 'Unity' in self.type or 'ParticleEnv' in self.type or 'MultiAgentGraphEnv' in self.type:
             obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['num_instances_per_env'], list(self.env_specs['observation_space'].values())[0],)
         elif 'Gym' in self.type:
             obs_recv_dim = (self.num_envs, self.env_specs['num_agents'], self.env_specs['observation_space'][self.env_specs['roles'][0]],)
@@ -111,7 +111,7 @@ class MPIMultiEnv(Environment):
         # print(self._obs_recv_buffer)
         # print(self._acs_mask)
 
-        if 'Unity' in self.type:
+        if 'Unity' in self.type or 'MultiAgentGraphEnv' in self.type:
             # N sets of Roles
             actions = []
             for env_state in self._recv_envs_buffer:
@@ -169,7 +169,7 @@ class MPIMultiEnv(Environment):
         self.envs.Gather(None, [self._obs_recv_buffer, MPI.DOUBLE], root=MPI.ROOT)
         self.step_count += self.env_specs['num_instances_per_env'] * self.num_envs
 
-        if 'Unity' in self.type or 'Particle' in self.type:
+        if 'Unity' in self.type or 'Particle' in self.type or 'MultiAgentGraphEnv' in self.type:
             '''self._obs_recv_buffer receives data from many MPIEnv.py'''
             actions = []
             for env_observations in self._obs_recv_buffer:
@@ -389,7 +389,7 @@ if __name__ == "__main__":
     try:
         menv = MPIMultiEnv()
     except Exception as e:
-        msg = "<MultiEnv(id={}) error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
+        msg = "<MultiEnv(id={}) error: {}".format(MPI.Comm.Get_parent().Get_rank(), tracefck.format_exc())
         print(msg)
         logger.info(msg, True)
         terminate_process()
