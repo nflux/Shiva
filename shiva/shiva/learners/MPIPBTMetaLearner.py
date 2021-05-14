@@ -5,6 +5,7 @@ from mpi4py import MPI
 from shiva.learners.MetaLearner import MetaLearner
 from shiva.helpers.config_handler import load_config_file_2_dict, file_exists, merge_dicts
 from shiva.helpers.utils.Tags import Tags
+from shiva.helpers.misc import flat_1d_list
 
 
 class MPIPBTMetaLearner(MetaLearner):
@@ -396,12 +397,10 @@ class MPIPBTMetaLearner(MetaLearner):
         self.learners_configs = []
         if hasattr(self, 'learners_map'):
             self.roles = self.configs['MultiEnv'][0]['env_specs']['roles']
+            given_learner_map_roles = flat_1d_list([v for k, v in self.learners_map.items()])
             '''First check that all Agents Roles are assigned to a Learner'''
-            for ix, roles in enumerate(self.roles):
-                if roles in set(self.learners_map.keys()):
-                    pass
-                else:
-                    assert f"Agent Roles {roles} is not being assigned to any Learner\nUse the 'learners_map' attribute on the [MetaLearner] section"
+            for ix, role_name in enumerate(self.roles):
+                assert role_name in given_learner_map_roles, f"Agent Roles {role_name} is not being assigned to any Learner\nUse the 'learners_map' attribute on the [MetaLearner] section"
 
             '''Do some preprocessing before spreading the config'''
             learners_config_path = list(self.learners_map.keys())
