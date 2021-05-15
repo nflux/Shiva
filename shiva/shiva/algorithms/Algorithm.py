@@ -101,6 +101,20 @@ class Algorithm:
         self.agentCount += 1
         return agent_id
 
+    def add_agent(self, *args, **kwargs):
+        """
+        Function currently being used when loading agents. This way the algorithm can have a pointer to them.
+        May be deprecated.
+
+        Args:
+            agent (Agent):
+
+        Returns:
+            None
+
+        """
+        self.agentCount += 1
+
     def log(self, msg, verbose_level=-1) -> None:
         """
         Logging function. Uses python logger and can optionally output to terminal depending on the config `['Admin']['print_debug']`

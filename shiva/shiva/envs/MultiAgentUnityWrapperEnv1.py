@@ -163,12 +163,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
         """
         self.raw_actions = {}
         self.actions4Unity = {}
-        self.log(f"Raw Actions: {np.array(actions).shape}")
+        # self.log(f"Raw Actions: {np.array(actions).shape}")
         for ix, role in enumerate(self.roles):
             self.raw_actions[role] = self._apply_action_masking(role, np.array(actions[ix]))
             # self.log(f"Role {role} Masked {self.raw_actions[role]}")
             self.actions4Unity[role] = self._clean_role_actions(role, self.raw_actions[role])
-            self.log(f"Role {role} Cleaned {self.actions4Unity[role]}")
+            # self.log(f"Role {role} Cleaned {self.actions4Unity[role]}")
             self.Unity.set_actions(role, self.actions4Unity[role])
         self.Unity.step()
 
@@ -295,10 +295,12 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 for terminal_step_agent_ix, role_agent_id in enumerate(self.TerminalSteps[role].agent_id):
                     agent_ix = self.role_agent_ids[role].index(role_agent_id)
 
+                    _last_step_reward = self.normalize_reward(self.TerminalSteps[role].reward[terminal_step_agent_ix]) if self.normalize else self.TerminalSteps[role].reward[terminal_step_agent_ix]
+
                     # Append to buffer last experience
                     exp = list(map(torch.clone, (torch.tensor([self.observations[role][agent_ix]], dtype=torch.float64),
                                                  torch.tensor([self.raw_actions[role][agent_ix]], dtype=torch.float64),
-                                                 torch.tensor([self.TerminalSteps[role].reward[terminal_step_agent_ix]], dtype=torch.float64).unsqueeze(dim=-1),
+                                                 torch.tensor([_last_step_reward], dtype=torch.float64).unsqueeze(dim=-1),
                                                  torch.tensor([self.terminal_observations[role][terminal_step_agent_ix]], dtype=torch.float64),
                                                  torch.tensor([[True]], dtype=torch.bool).unsqueeze(dim=-1)
                                                  )))
@@ -307,8 +309,8 @@ class MultiAgentUnityWrapperEnv1(Environment):
                     # Update terminal metrics
                     self.done_count[role] += 1
                     self.steps_per_episode[role][agent_ix] += 1
-                    self.reward_per_step[role][agent_ix] = self.TerminalSteps[role].reward[terminal_step_agent_ix]
-                    self.reward_per_episode[role][agent_ix] += self.TerminalSteps[role].reward[terminal_step_agent_ix]
+                    self.reward_per_step[role][agent_ix] = _last_step_reward # self.TerminalSteps[role].reward[terminal_step_agent_ix]
+                    self.reward_per_episode[role][agent_ix] += _last_step_reward # self.TerminalSteps[role].reward[terminal_step_agent_ix]
                     self.reward_total[role] = self.reward_total[role] + (self.reward_per_episode[role][agent_ix] / self.num_instances_per_role[role]) # Incremental Means Method
 
                     # Prepare trajectory for MPIEnv to send
@@ -326,7 +328,10 @@ class MultiAgentUnityWrapperEnv1(Environment):
                 self.previous_observation = self.observations.copy()
                 self.observations[role] = self._flatten_observations(self.DecisionSteps[role].obs)
                 # self.log(f"{self.observations[role].shape}", verbose_level=1)
-                self.rewards[role] = self.DecisionSteps[role].reward
+
+                self.rewards[role] = self.normalize_reward(self.DecisionSteps[role].reward) if self.normalize else self.DecisionSteps[role].reward
+                # self.rewards[role] = self.DecisionSteps[role].reward
+
                 self.dones[role] = [False] * len(self.DecisionSteps[role].agent_id)
 
                 '''If it's the first time we are collecting data, this IF statement will be False as we don't have an action to store into the buffer yet'''
