@@ -12,7 +12,7 @@ from shiva.helpers.utils.Tags import Tags
 from shiva.core.admin import Admin, logger
 from shiva.core.IOHandler import get_io_stub
 from shiva.helpers.config_handler import load_class
-from shiva.helpers.misc import terminate_process, flat_1d_list
+from shiva.helpers.misc import terminate_process
 from shiva.learners.Learner import Learner
 
 
