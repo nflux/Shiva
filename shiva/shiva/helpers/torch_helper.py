@@ -69,12 +69,12 @@ def gumbel_softmax(logits, masks, tau=1, hard=False, eps=1e-10, dim=-1):
     gumbels = -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()  # ~Gumbel(0,1)
     gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
     y_soft = gumbels.softmax(dim)
-    y_soft = y_soft.masked_fill(masks, 0.)
-    y_soft = y_soft / y_soft.sum(dim=-1).reshape(-1, 1)
+    y_soft_masked = y_soft.masked_fill(masks, 0.)
+    y_soft_masked = y_soft_masked / y_soft_masked.sum(dim=-1).reshape(-1, 1)
 
     if hard:
         # Straight through.
-        index = y_soft.max(dim, keepdim=True)[1]
+        index = y_soft_masked.max(dim, keepdim=True)[1]
         y_hard = torch.zeros_like(logits, memory_format=torch.legacy_contiguous_format).scatter_(dim, index, 1.0)
         ret = y_hard - y_soft.detach() + y_soft
     else:
