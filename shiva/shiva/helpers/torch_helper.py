@@ -18,7 +18,7 @@ def normalize_branches(t: torch.tensor, action_space: tuple, f=None):
         acc += size
     return t
 
-def gumbel_softmax(logits, masks, tau=1, hard=False, eps=1e-10, dim=-1):
+def gumbel_softmax(logits, tau=1, hard=False, eps=1e-10, dim=-1):
     # type: (Tensor, float, bool, float, int) -> Tensor
     r"""
     Samples from the Gumbel-Softmax distribution (`Link 1`_  `Link 2`_) and optionally discretizes.
@@ -69,8 +69,8 @@ def gumbel_softmax(logits, masks, tau=1, hard=False, eps=1e-10, dim=-1):
     gumbels = -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()  # ~Gumbel(0,1)
     gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
     y_soft = gumbels.softmax(dim)
-    y_soft = y_soft.masked_fill(masks, 0.)
-    y_soft = y_soft / y_soft.sum(dim=-1).reshape(-1, 1)
+    # y_soft = y_soft.masked_fill(masks, 0.)
+    # y_soft = y_soft / y_soft.sum(dim=-1).reshape(-1, 1)
 
     if hard:
         # Straight through.

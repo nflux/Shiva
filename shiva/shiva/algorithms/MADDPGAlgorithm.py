@@ -77,8 +77,8 @@ class MADDPGAlgorithm(Algorithm):
         if self.configs['MetaLearner']['pbt']:
             self.resample_hyperparameters()
 
-        # self.gumbel = partial(torch.nn.functional.gumbel_softmax, tau=1, hard=True, dim=-1)
-        self.gumbel = partial(gumbel_softmax, tau=1, hard=True, dim=-1)
+        self.gumbel = partial(torch.nn.functional.gumbel_softmax, tau=1, hard=True, dim=-1)
+        # self.gumbel = partial(gumbel_softmax, tau=1, hard=True, dim=-1)
 
     def update(self, agents, buffer, step_count, episodic) -> None:
         """
@@ -254,13 +254,14 @@ class MADDPGAlgorithm(Algorithm):
                 logits = a.actor(states[:, _ix, :], softmax=False)
                 # Apply mask
                 # logits[actions_mask[:, _ix, :]] = 0
+                logits.masked_fill_(actions_mask[:, _ix, :], float('-inf'))
 
                 # Renormalize each branch
                 _cum_ix = 0
                 for ac_dim in a.actor_output:
                     _branch_action = logits[:, _cum_ix:ac_dim+_cum_ix].clone()#.clamp(min=0.000000001)
                     _branch_mask = actions_mask[:, _ix, _cum_ix:ac_dim+_cum_ix]
-                    logits[:, _cum_ix:ac_dim+_cum_ix] = self.gumbel(_branch_action, _branch_mask)
+                    logits[:, _cum_ix:ac_dim+_cum_ix] = self.gumbel(_branch_action)
                     _cum_ix += ac_dim
 
                 # Handle edge cases where network chooses unavailable actions and gives 0 proba to available actions
