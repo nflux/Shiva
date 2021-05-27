@@ -389,7 +389,7 @@ if __name__ == "__main__":
     try:
         menv = MPIMultiEnv()
     except Exception as e:
-        msg = "<MultiEnv(id={}) error: {}".format(MPI.Comm.Get_parent().Get_rank(), tracefck.format_exc())
+        msg = "<MultiEnv(id={}) error: {}".format(MPI.Comm.Get_parent().Get_rank(), traceback.format_exc())
         print(msg)
         logger.info(msg, True)
         terminate_process()
