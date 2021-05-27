@@ -76,13 +76,15 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
                 self.branch_net_names += [branch_name]
             self.forward = self._forward_multi_branch
 
-    def _forward_multi_branch(self, x, gumbel=False):
+    def _forward_multi_branch(self, x, gumbel=False, softmax=True):
         # parametrized branched actions not supported here
         _shared_output = self.shared_net(x)
         if gumbel:
             return torch.cat([self.gumbel(getattr(self, _branch_name)(_shared_output)) for _branch_name in self.branch_net_names], dim=-1)
-        else:
+        elif softmax:
             return torch.cat([self.softmax(getattr(self, _branch_name)(_shared_output)) for _branch_name in self.branch_net_names], dim=-1)
+        else:
+            return torch.cat([getattr(self, _branch_name)(_shared_output) for _branch_name in self.branch_net_names], dim=-1)
 
     def _forward_single_branch(self, x, gumbel=False, onehot=False):
         a = self.shared_net(x)
