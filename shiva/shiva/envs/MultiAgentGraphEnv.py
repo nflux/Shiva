@@ -27,8 +27,10 @@ class MultiAgentGraphEnv(Environment):
         self.num_instances_per_role = {role: 1 for role in self.roles}
         self.num_instances_per_env = 1
 
-        self.observation_space = {role: self.get_observation_space_from_env(self.env.observation_space[ix]) for ix, role in enumerate(self.roles)}
-        self.action_space = {role: self.get_action_space_from_env(self.env.action_space[ix]) for ix, role in enumerate(self.roles)}
+        self.observation_space = {role: self.get_observation_space_from_env(self.env.observation_space[ix])
+                                  for ix, role in enumerate(self.roles)}
+        self.action_space = {role: self.get_action_space_from_env(self.env.action_space[ix])
+                             for ix, role in enumerate(self.roles)}
         self.current_acs_mask = {role: [] for role in self.roles}
         self.prev_acs_mask = {role: [] for role in self.roles}
 
@@ -64,13 +66,13 @@ class MultiAgentGraphEnv(Environment):
         # generate list of actions for each agent and send to env
         # if not torch.is_tensor(_actions):
         #     _actions = torch.tensor(_actions)
-        action4gym = []
+        action4env = []
         for idx, role in enumerate(self.roles):
             # process Discrete and MultiDiscrete action space
             if self.action_space[role]['continuous'] == 0:
                 _act_dims = len(self.action_space[role]['acs_space'])
                 if _act_dims == 1:
-                    action4gym.append(self.action_selection(_actions[idx]))
+                    action4env.append(self.action_selection(_actions[idx]))
                 # process branched actions
                 elif _act_dims > 1:
                     # set start and end indexing boundaries for each action branch
@@ -85,16 +87,16 @@ class MultiAgentGraphEnv(Environment):
                     for _ in range(_act_dims):
                         act_prob = acts_prob[_bound_s[_]:_bound_e[_]]
                         agent_acts.append(self.action_selection(act_prob))
-                    self.log("action for agent:{} raw:{} 4gym:{}".format(role, acts_prob, agent_acts), verbose_level=4)
-                    action4gym.append(agent_acts)
+                    self.log("action for agent:{} raw:{} 4env:{}".format(role, acts_prob, agent_acts), verbose_level=4)
+                    action4env.append(agent_acts)
                 else:
                     assert "Unexpected action space shape:{}".format(self.action_space[role]['acs_space'])
             else:
                 assert "Do not support action space:{}".format(self.action_space[role])
-            self.actions[role] = action4gym[idx]
-        self.log("actions4gym:{}".format(action4gym), verbose_level=4)
+            self.actions[role] = action4env[idx]
+        self.log("actions4gym:{}".format(action4env), verbose_level=4)
         # run step function inside env scenario, update states based on given actions
-        obs, rewards, dones, _ = self.env.step(action4gym)
+        obs, rewards, dones, _ = self.env.step(action4env)
 
         self.prev_acs_mask = self.current_acs_mask.copy()
         self.current_acs_mask = self.get_current_action_masking()
@@ -117,7 +119,8 @@ class MultiAgentGraphEnv(Environment):
         return self.steps_per_episode >= self.episode_max_length
 
     def get_current_action_masking(self, per_role=None):
-        if "invalid_masked" in self.env.configs and self.env.configs["invalid_masked"] is True:
+        if hasattr(self.env, "invalid_masked") and self.env.invalid_masked is True:
+            # if "invalid_masked" in self.env.configs and self.env.configs["invalid_masked"] is True:
             _action_mask = self.env.action_mask
         else:
             _action_mask = self.get_empty_masks()
@@ -151,7 +154,7 @@ class MultiAgentGraphEnv(Environment):
                 'actions_range': []
             }
         else:
-            assert "[GymEnv] Only support Discrete and MultiDiscrete action spaces"
+            assert "[SpaceErr] Only support Discrete and MultiDiscrete action spaces"
 
     def get_observation_space_from_env(self, agent_obs_space) -> int:  # unfold gym.space
         observation_space = 1
@@ -205,12 +208,19 @@ class MultiAgentGraphEnv(Environment):
         return metrics
 
     def passing_configs(self, config, **kwargs):
-        # TODO>>> define config args; check env_name & configs
-        env_configs = self.configs['Environment']["gym_config"] if "gym_config" in self.configs['Environment'] else {}
+        """ pass env related configs """
+        if isinstance(self.configs['Environment']["gym_config"], list):
+            menv_id = self.configs['MultiEnv']['id']
+            num_configs = len(self.configs['Environment']["gym_config"])
+            # assert num_configs == self.configs['MultiEnv']['num_envs'], "list size mismatch. Check Env::Config pairs."
+            env_configs = self.configs['Environment']["gym_config"][menv_id % num_configs]
+        else:
+            env_configs = self.configs['Environment']["gym_config"] if "gym_config" in self.configs[
+                'Environment'] else {}
+        # set up default values
         if "env_path" not in env_configs:
             env_configs["env_path"] = "../../squad/"
-        if "max_step" not in env_configs:
-            env_configs["max_step"] = self.episode_max_length
+        env_configs["max_step"] = self.episode_max_length
         self.log("passing configs:{}".format(env_configs), verbose_level=4)
         return env_configs
 
