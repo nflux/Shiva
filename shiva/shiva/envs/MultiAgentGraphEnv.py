@@ -116,7 +116,7 @@ class MultiAgentGraphEnv(Environment):
         return self.observations, self.rewards, self.dones, {'action': self.actions}
 
     def is_done(self):
-        return self.steps_per_episode >= self.episode_max_length
+        return self.steps_per_episode >= self.episode_max_length or all(done is True for done in self.dones.values())
 
     def get_current_action_masking(self, per_role=None):
         if hasattr(self.env, "invalid_masked") and self.env.invalid_masked is True:
