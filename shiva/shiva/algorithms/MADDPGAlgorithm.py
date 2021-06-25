@@ -139,7 +139,7 @@ class MADDPGAlgorithm(Algorithm):
 
         '''Do all permutations of experiences to concat for the 1 single critic'''
         possible_permutations = set(permutations(np.arange(len(agents))))
-        losses_column = [] # accumulate the critic losses column vector from minibatch
+        errors_column = [] # accumulate the critic losses column vector from minibatch
         for perms_ix, perms in enumerate(possible_permutations):
             agent_ix = perms[0]
             agent = agents[agent_ix]
@@ -228,12 +228,9 @@ class MADDPGAlgorithm(Algorithm):
             #     print(Q_these_states_main)
             #     assert False, "NaNs found"
 
-            if buffer.prioritized:
-                td_error = y_i.detach() - Q_these_states_main
-                losses_column += [td_error.clone().detach().cpu().reshape(-1, 1).abs()]
-                critic_loss = (td_error*sample_weights).mean()
-            else:
-                critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main).mean()
+            sqerror = self.loss_calc(y_i.detach(), Q_these_states_main)
+            errors_column += [sqerror.clone().detach().cpu().reshape(-1, 1).abs()]
+            critic_loss = (sqerror*sample_weights).mean()
             # Backward propagation!
             critic_loss.backward()
             # Update the weights in the direction of the gradient
@@ -311,11 +308,11 @@ class MADDPGAlgorithm(Algorithm):
         self.soft_update_targets(agents)
 
         if buffer.prioritized:
-            new_sample_priorities = torch.hstack(losses_column)
+            new_sample_priorities = torch.hstack(errors_column)
             # Since we got column vectors of losses for each permutation,
             # we need to decide how to reduce the priority for each transition
 
-            # 1) Mean of TD error
+            # 1) Mean for multi-agent TD error
             new_sample_priorities = new_sample_priorities.mean(-1)
             # 2) L2 norm of TD error
             # new_sample_priorities = torch.norm(new_sample_priorities, p=2, dim=-1)
