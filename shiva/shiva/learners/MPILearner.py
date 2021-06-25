@@ -14,6 +14,7 @@ from shiva.core.IOHandler import get_io_stub
 from shiva.helpers.config_handler import load_class
 from shiva.helpers.misc import terminate_process
 from shiva.learners.Learner import Learner
+from shiva.helpers.calc_helper import two_point_formula
 
 
 class MPILearner(Learner):
@@ -165,10 +166,10 @@ class MPILearner(Learner):
             dones = np.empty(self.traj_info['done_shape'], dtype=np.float64)
             env_comm.Recv([dones, MPI.DOUBLE], source=env_source, tag=Tags.trajectory_dones)
 
-            actions_mask = np.empty(self.traj_info['acs_shape'], dtype=np.bool)
+            actions_mask = np.empty(self.traj_info['acs_shape'], dtype=bool)
             env_comm.Recv([actions_mask, MPI.BOOL], source=env_source, tag=Tags.trajectory_actions_mask)
 
-            next_actions_mask = np.empty(self.traj_info['acs_shape'], dtype=np.bool)
+            next_actions_mask = np.empty(self.traj_info['acs_shape'], dtype=bool)
             env_comm.Recv([next_actions_mask, MPI.BOOL], source=env_source, tag=Tags.trajectory_next_actions_mask)
 
             # self.step_count += traj_length
@@ -263,6 +264,21 @@ class MPILearner(Learner):
                 self.run_recalculate_hyperparameters()
             elif self.done_count % self.configs['Agent']['lr_decay']['average_episodes'] == 0:
                 self.log(f"ID {self.agents[0].id} Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {sum(self.last_rewards[self.agents[0].id]['q']) / len(self.last_rewards[self.agents[0].id]['q'])}")
+
+            # Uncomment in case we want to decay Alpha or Beta from the Prioritized Buffer
+            if self.buffer.prioritized:
+                # # Decay betta only if we are passed exploration phase
+                # # Assuming self.agents have same number of exploration episodes, so we can grab agents[0]
+                # est_exploration_episodes = self.agents[0].exploration_episodes_performed()
+                # new_beta = two_point_formula(self.done_count,
+                #                               (est_exploration_episodes, self.configs['Buffer']['beta_start']),
+                #                               (est_exploration_episodes + self.configs['Buffer']['beta_episodes'],
+                #                                self.configs['Buffer']['beta_end']))
+                # new_beta = min(new_beta, self.configs['Buffer']['beta_start'])
+                # new_beta = max(new_beta, self.configs['Buffer']['beta_end'])
+                beta = self.configs['Buffer']['beta']
+                # self.log(f"Set Buffer beta {beta}")
+                self.buffer.set_beta(beta)
 
             self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
             self.num_updates = self.alg.get_num_updates()
@@ -460,9 +476,13 @@ class MPILearner(Learner):
             '''Assuming roles with same obs/acs dim'''
             buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'],
                                   self.num_agents, self.observation_space[self.roles[0]],
-                                  sum(self.action_space[self.roles[0]]['acs_space']))
+                                  sum(self.action_space[self.roles[0]]['acs_space']),
+                                  self.configs['Buffer']['alpha'])
         else:
-            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'], self.num_agents, self.observation_space, self.action_space['acs_space'])
+            buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'],
+                                  self.num_agents, self.observation_space,
+                                  self.action_space['acs_space'],
+                                  self.configs['Buffer']['alpha'])
         self.log("Buffer created of type {}".format(buffer_class), verbose_level=2)
         return buffer
 

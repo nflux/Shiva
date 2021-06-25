@@ -14,6 +14,7 @@ class ReplayBuffer(object):
         self.acs_dim = acs_dim
         self.rew_dim = 1
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.prioritized = False
 
     def __len__(self):
         return self.size
