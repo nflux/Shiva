@@ -113,7 +113,13 @@ class MADDPGAlgorithm(Algorithm):
             None
 
         """
-        bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones, bf_actions_mask, bf_next_actions_mask = buffer.sample(device=self.device)
+        minibatch = buffer.sample(device=self.device)
+        if buffer.prioritized:
+            bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones, bf_actions_mask, bf_next_actions_mask, sample_weights, sample_idxs = minibatch
+            critic_loss_multiplier = lambda critic_loss: critic_loss*sample_weights
+        else:
+            bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones, bf_actions_mask, bf_next_actions_mask = minibatch
+            critic_loss_multiplier = lambda x: x
         dones = bf_dones.bool()
 
         # self.log(f"Obs {bf_states}", verbose_level=2)
@@ -135,6 +141,7 @@ class MADDPGAlgorithm(Algorithm):
 
         '''Do all permutations of experiences to concat for the 1 single critic'''
         possible_permutations = set(permutations(np.arange(len(agents))))
+        losses_column = [] # accumulate the critic losses column vector from minibatch
         for perms_ix, perms in enumerate(possible_permutations):
             agent_ix = perms[0]
             agent = agents[agent_ix]
@@ -217,12 +224,15 @@ class MADDPGAlgorithm(Algorithm):
 
             # Calculate the loss
 
-            if y_i.isnan().sum().item() > 0 or Q_these_states_main.isnan().sum().item() > 0:
-                print(y_i)
-                print(Q_these_states_main)
-                assert False, "NaNs found"
+            # Find Nans?
+            # if y_i.isnan().sum().item() > 0 or Q_these_states_main.isnan().sum().item() > 0:
+            #     print(y_i)
+            #     print(Q_these_states_main)
+            #     assert False, "NaNs found"
 
             critic_loss = self.loss_calc(y_i.detach(), Q_these_states_main)
+            losses_column += [critic_loss.cpu().reshape(-1, 1)]
+            critic_loss = critic_loss_multiplier(critic_loss).mean()
             # Backward propagation!
             critic_loss.backward()
             # Update the weights in the direction of the gradient
@@ -296,25 +306,21 @@ class MADDPGAlgorithm(Algorithm):
             self._metrics[agent.id] += [('Algorithm/Critic_Loss', critic_loss.item(), self.num_updates)]
             self._metrics[agent.id] += [('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)]
 
-        '''
-            After all Actor updates, soft update Target Networks
-        '''
-        for agent in agents:
-            # Update Target Actor
-            ac_state = agent.actor.state_dict()
-            tgt_ac_state = agent.target_actor.state_dict()
+        self.soft_update_targets(agents)
 
-            for k, v in ac_state.items():
-                tgt_ac_state[k] = v * self.tau + (1 - self.tau) * tgt_ac_state[k]
-            agent.target_actor.load_state_dict(tgt_ac_state)
+        if buffer.prioritized:
+            new_sample_priorities = torch.hstack(losses_column)
+            # Since we got column vectors of losses for each permutation,
+            # we need to decide how to reduce the priority for each transition
 
-        # Update Target Critic
-        ct_state = self.critic.state_dict()
-        tgt_ct_state = self.target_critic.state_dict()
+            # 1) Mean of TD error
+            new_sample_priorities = new_sample_priorities.mean(-1)
+            # 2) L2 norm of TD error
+            # new_sample_priorities = torch.norm(new_sample_priorities, p=2, dim=-1)
+            # 3) Max of TD error
+            # new_sample_priorities, _ = torch.max(new_sample_priorities, dim=-1)
+            buffer.update_priorities(sample_idxs, new_sample_priorities.detach().cpu().numpy())
 
-        for k, v in ct_state.items():
-            tgt_ct_state[k] = v * self.tau + (1 - self.tau) * tgt_ct_state[k]
-        self.target_critic.load_state_dict(tgt_ct_state)
 
     def update_critics(self, agents: list, buffer: object, step_count: int, episodic=False):
         """
@@ -442,6 +448,24 @@ class MADDPGAlgorithm(Algorithm):
             for k, v in ct_state.items():
                 tgt_ct_state[k] = v * self.tau + (1 - self.tau) * tgt_ct_state[k]
             agent.target_critic.load_state_dict(tgt_ct_state)
+
+    def soft_update_targets(self, agents):
+        for agent in agents:
+            # Update Target Actor
+            ac_state = agent.actor.state_dict()
+            tgt_ac_state = agent.target_actor.state_dict()
+
+            for k, v in ac_state.items():
+                tgt_ac_state[k] = v * self.tau + (1 - self.tau) * tgt_ac_state[k]
+            agent.target_actor.load_state_dict(tgt_ac_state)
+
+        # Update Target Critic
+        ct_state = self.critic.state_dict()
+        tgt_ct_state = self.target_critic.state_dict()
+
+        for k, v in ct_state.items():
+            tgt_ct_state[k] = v * self.tau + (1 - self.tau) * tgt_ct_state[k]
+        self.target_critic.load_state_dict(tgt_ct_state)
 
     def evolve(self, evol_config):
         pass

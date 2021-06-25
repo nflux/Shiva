@@ -373,7 +373,7 @@ class DDPGAgent(Agent):
     def _get_epsilon_scale(self, done_count=None):
         if done_count is None:
             done_count = self.done_count
-        est_exploration_episodes = self.average_exploration_episodes_performed() if not hasattr(self, 'exploration_episodes') else self.exploration_episodes
+        est_exploration_episodes = self.exploration_episodes_performed()
         new_scale = two_point_formula(self.done_count, (est_exploration_episodes, self.epsilon_start), (est_exploration_episodes+self.epsilon_episodes, self.epsilon_end))
         new_scale = min(new_scale, self.epsilon_start)
         new_scale = max(new_scale, self.epsilon_end)
@@ -396,13 +396,15 @@ class DDPGAgent(Agent):
     def _get_noise_scale(self, done_count=None):
         if done_count is None:
             done_count = self.done_count
-        est_exploration_episodes = self.average_exploration_episodes_performed() if not hasattr(self, 'exploration_episodes') else self.exploration_episodes
+        est_exploration_episodes = self.exploration_episodes_performed()
         new_scale = two_point_formula(self.done_count, (est_exploration_episodes, self.noise_start), (est_exploration_episodes+self.noise_episodes, self.noise_end))
         new_scale = min(new_scale, self.noise_start)
         new_scale = max(new_scale, self.noise_end)
         return new_scale
 
-    def average_exploration_episodes_performed(self):
+    def exploration_episodes_performed(self):
+        if hasattr(self, 'exploration_episodes'):
+            return self.exploration_episodes
         return self.exploration_steps / self.average_episode_length if self.average_episode_length != 0 else 0
 
     @property

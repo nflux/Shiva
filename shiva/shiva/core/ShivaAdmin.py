@@ -78,7 +78,8 @@ class ShivaAdmin:
         self._meta_learner_dir = ''
         self._learner_dir = {}
         self._agent_dir = {}
-        self.writer = {}
+        self.writer_learner = {}
+        self.writer_agent = {}
 
     def _set_dirs_attrs(self) -> None:
         '''
@@ -139,7 +140,8 @@ class ShivaAdmin:
             new_dir = dh.make_dir( os.path.join(self._learner_dir[learner.id]['base'], self.__folder_name__['summary']) )
             self._learner_dir[learner.id]['summary'] = new_dir
             self._agent_dir[learner.id] = {}
-            self.writer[learner.id] = {} # this will be a dictionary whos key is an agent.id that maps to a unique tensorboard file for that agent
+            self.writer_learner[learner.id] = SummaryWriter(logdir=self._learner_dir[learner.id]['summary'])
+            self.writer_agent[learner.id] = {} # this will be a dictionary whos key is an agent.id that maps to a unique tensorboard file for that agent
 
     def checkpoint(self, learner, checkpoint_num=None, function_only=False, use_temp_folder=False):
         '''
@@ -238,9 +240,9 @@ class ShivaAdmin:
                 @agent              Agent who we want to records the metrics
         '''
         if not self.need_to_save: return
-        if agent.id not in self.writer[learner.id]:
+        if agent.id not in self.writer_agent[learner.id]:
             new_dir = dh.make_dir( os.path.join( self._learner_dir[learner.id]['summary'], self.__folder_name__['agent'].format(id=str(agent.id), role=agent.role) ) )
-            self.writer[learner.id][agent.id] = SummaryWriter(
+            self.writer_agent[learner.id][agent.id] = SummaryWriter(
                 logdir = new_dir,
                 # filename_suffix = '-' + self.__folder_name__['agent'].format(id=str(agent.id))
             )
@@ -257,11 +259,15 @@ class ShivaAdmin:
         '''
         if not self.need_to_save: return
         # self.log("{} {} {} {} {}".format(learner.id, agent, scalar_name, value_y, value_x), verbose_level=1)
-        if type(agent) == np.int64 or type(agent) == int:
+        if agent is None:
+            '''No agent was specified, use Learner tensorboard'''
+            self.writer_learner[learner.id].add_scalar(scalar_name, value_y, value_x)
+        elif type(agent) == np.int64 or type(agent) == int:
             '''Agent ID was sent'''
-            self.writer[learner.id][agent].add_scalar(scalar_name, value_y, value_x)
+            self.writer_agent[learner.id][agent].add_scalar(scalar_name, value_y, value_x)
         else:
-            self.writer[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
+            '''Agent object was sent'''
+            self.writer_agent[learner.id][agent.id].add_scalar(scalar_name, value_y, value_x)
 
     def save(self, caller) -> None:
         '''
