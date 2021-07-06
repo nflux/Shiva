@@ -477,12 +477,12 @@ class MPILearner(Learner):
             buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'],
                                   self.num_agents, self.observation_space[self.roles[0]],
                                   sum(self.action_space[self.roles[0]]['acs_space']),
-                                  self.configs['Buffer']['alpha'])
+                                  self.configs)
         else:
             buffer = buffer_class(self.configs['Buffer']['capacity'], self.configs['Buffer']['batch_size'],
                                   self.num_agents, self.observation_space,
                                   self.action_space['acs_space'],
-                                  self.configs['Buffer']['alpha'])
+                                  self.configs)
         self.log("Buffer created of type {}".format(buffer_class), verbose_level=2)
         return buffer
 

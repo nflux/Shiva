@@ -200,11 +200,12 @@ class MultiAgentPrioritizedTensorBuffer(ReplayBuffer):
     Returns:
         None
     """
-    def __init__(self, max_size, batch_size, num_agents, obs_dim, acs_dim, alpha, *args, **kwargs):
+    def __init__(self, max_size, batch_size, num_agents, obs_dim, acs_dim, configs, *args, **kwargs):
         super(MultiAgentPrioritizedTensorBuffer, self).__init__(max_size, batch_size, num_agents, obs_dim, acs_dim)
         self.prioritized = True
-        assert alpha >= 0
-        self._alpha = alpha
+        self.configs = configs
+        self._alpha = self.configs['Buffer']['alpha']
+        assert self._alpha >= 0
 
         it_capacity = 1
         while it_capacity < max_size:
@@ -302,7 +303,6 @@ class MultiAgentPrioritizedTensorBuffer(ReplayBuffer):
         weights = np.array(ws)
 
         # if agent_id is None:
-        print(len(idxes), type(idxes))
         return (
             cast_obs(self.obs_buffer[idxes, :, :].float()),
             cast(self.acs_buffer[idxes, :, :].float()),

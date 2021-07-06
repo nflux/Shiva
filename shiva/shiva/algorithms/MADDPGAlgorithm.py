@@ -113,7 +113,14 @@ class MADDPGAlgorithm(Algorithm):
             None
 
         """
+        # start = torch.cuda.Event(enable_timing=True)
+        # end = torch.cuda.Event(enable_timing=True)
+        # start.record()
         minibatch = buffer.sample(device=self.device)
+        # end.record()
+        # torch.cuda.synchronize(self.device)
+        # self.log(f"\nPriority Buffer? {buffer.prioritized}, sampling time: {start.elapsed_time(end)}\n")
+
         if buffer.prioritized:
             bf_states, bf_actions, bf_rewards, bf_next_states, bf_dones, bf_actions_mask, bf_next_actions_mask, sample_weights, sample_idxs = minibatch
         else:
@@ -228,9 +235,14 @@ class MADDPGAlgorithm(Algorithm):
             #     print(Q_these_states_main)
             #     assert False, "NaNs found"
 
-            sqerror = self.loss_calc(y_i.detach(), Q_these_states_main)
-            errors_column += [sqerror.clone().detach().cpu().reshape(-1, 1).abs()]
-            critic_loss = (sqerror*sample_weights).mean()
+            l2_error = self.loss_calc(y_i.detach(), Q_these_states_main)
+
+            if buffer.prioritized:
+                l1_error = torch.nn.functional.l1_loss(y_i.detach(), Q_these_states_main.detach(), reduction='none')
+                errors_column += [l1_error.clone().detach().cpu().reshape(-1, 1).abs()]
+                critic_loss = (l2_error * sample_weights.reshape(-1, 1)).mean()
+            else:
+                critic_loss = l2_error.mean()
             # Backward propagation!
             critic_loss.backward()
             # Update the weights in the direction of the gradient
@@ -318,8 +330,11 @@ class MADDPGAlgorithm(Algorithm):
             # new_sample_priorities = torch.norm(new_sample_priorities, p=2, dim=-1)
             # 3) Max of TD error
             # new_sample_priorities, _ = torch.max(new_sample_priorities, dim=-1)
-            buffer.update_priorities(sample_idxs, new_sample_priorities)
 
+            # start.record()
+            buffer.update_priorities(sample_idxs, new_sample_priorities)
+            # end.record()
+            # self.log(f"\nPriority Buffer? {buffer.prioritized}, update priorities: {start.elapsed_time(end)}\n")
 
     def update_critics(self, agents: list, buffer: object, step_count: int, episodic=False):
         """
