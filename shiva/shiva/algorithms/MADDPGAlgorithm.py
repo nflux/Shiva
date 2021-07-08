@@ -239,7 +239,7 @@ class MADDPGAlgorithm(Algorithm):
 
             if buffer.prioritized:
                 l1_error = torch.nn.functional.l1_loss(y_i.detach(), Q_these_states_main.detach(), reduction='none')
-                errors_column += [l1_error.clone().detach().cpu().reshape(-1, 1).abs()]
+                errors_column += [l1_error.clone().detach().cpu().reshape(-1, 1)]
                 critic_loss = (l2_error * sample_weights.reshape(-1, 1)).mean()
             else:
                 critic_loss = l2_error.mean()
@@ -325,14 +325,14 @@ class MADDPGAlgorithm(Algorithm):
             # we need to decide how to reduce the priority for each transition
 
             # 1) Mean for multi-agent TD error
-            new_sample_priorities = new_sample_priorities.mean(-1)
+            new_sample_priorities = new_sample_priorities.mean(-1).flatten()
             # 2) L2 norm of TD error
             # new_sample_priorities = torch.norm(new_sample_priorities, p=2, dim=-1)
             # 3) Max of TD error
             # new_sample_priorities, _ = torch.max(new_sample_priorities, dim=-1)
 
             # start.record()
-            buffer.update_priorities(sample_idxs, new_sample_priorities)
+            buffer.update_priorities(sample_idxs, new_sample_priorities.tolist())
             # end.record()
             # self.log(f"\nPriority Buffer? {buffer.prioritized}, update priorities: {start.elapsed_time(end)}\n")
 
