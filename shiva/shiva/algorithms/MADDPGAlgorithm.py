@@ -331,6 +331,9 @@ class MADDPGAlgorithm(Algorithm):
             # 3) Max of TD error
             # new_sample_priorities, _ = torch.max(new_sample_priorities, dim=-1)
 
+            # Avoid priorities set to 0
+            new_sample_priorities = new_sample_priorities.clamp(min=1e-20)
+
             # start.record()
             buffer.update_priorities(sample_idxs, new_sample_priorities.tolist())
             # end.record()
