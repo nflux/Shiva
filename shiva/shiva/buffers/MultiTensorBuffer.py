@@ -339,14 +339,14 @@ class MultiAgentPrioritizedTensorBuffer(ReplayBuffer):
         try:
             assert len(idxes) == len(priorities)
             for idx, priority in zip(idxes, priorities):
-                assert priority > 0
-                assert 0 <= idx < self.size
+                assert priority > 0, f"Index: {idx} got priority {priority}"
+                assert 0 <= idx < self.size, f"Index {idx} given is out of range, should be between [{0, self.size})"
                 self._it_sum[idx] = priority ** self._alpha
                 self._it_min[idx] = priority ** self._alpha
 
                 self._max_priority = max(self._max_priority, priority)
         except:
-            print(f"An error occurred, got \nIndeces: {idxes}\nPriorities {priorities}")
+            assert False, f"An error occurred, got \nIndices: {idxes}\nPriorities {priorities}"
 
     def reset(self):
         """ Empties all the buffers and resets the buffer parameters.
