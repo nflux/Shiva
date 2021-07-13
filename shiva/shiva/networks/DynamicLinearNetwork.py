@@ -86,28 +86,12 @@ class SoftMaxHeadDynamicLinearNetwork(torch.nn.Module):
         else:
             return torch.cat([getattr(self, _branch_name)(_shared_output) for _branch_name in self.branch_net_names], dim=-1)
 
-    def _forward_single_branch(self, x, gumbel=False, onehot=False):
+    def _forward_single_branch(self, x, gumbel=False, softmax=True):
         a = self.shared_net(x)
         if gumbel:
-            if len(a.shape) == 3:
-                return torch.cat([self.gumbel(a[:, :, :self.param_ix[0]]), a[:, :, self.param_ix[0]:]], dim=2)
-            elif len(a.shape) == 2:
-                return torch.cat([self.gumbel(a[:, :self.param_ix[0]]), a[:, self.param_ix[0]:]], dim=1)
-            else:
-                return torch.cat([self.gumbel(a[:self.param_ix[0]]), a[self.param_ix[0]:]], dim=0)
-        elif onehot:
-            # print("Network Output (before gumbel):", x, a)
-            if len(a.shape) == 3:
-                return torch.cat([self.gumbel(a[:, :, :self.param_ix[0]]), a[:, :, self.param_ix[0]:]], dim=2)
-            elif len(a.shape) == 2:
-                return torch.cat([self.gumbel(a[:, :self.param_ix[0]]), a[:, self.param_ix[0]:]], dim=1)
-            else:
-                return torch.cat([self.gumbel(a[:self.param_ix[0]]), a[self.param_ix[0]:]], dim=0)
+            return self.gumbel(a)
+        elif softmax:
+            return self.softmax(a)
         else:
-            # print("Network Output (before softmax):", x, a)
-            if len(a.shape) == 3:
-                return torch.cat([self.softmax(a[:, :, :self.param_ix[0]]), a[:, :, self.param_ix[0]:]], dim=2)
-            elif len(a.shape) == 2:
-                return torch.cat([self.softmax(a[:, :self.param_ix[0]]), a[:, self.param_ix[0]:]], dim=1)
-            else:
-                return torch.cat([self.softmax(a[:self.param_ix[0]]), a[self.param_ix[0]:]], dim=0)
+            return a
+

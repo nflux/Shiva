@@ -147,7 +147,7 @@ class GymEnvironment(Environment):
         return current_action_mask
 
     def get_empty_masks(self):
-        empty_mask = np.zeros(sum(self.action_space['acs_space']), dtype=np.bool_)
+        empty_mask = np.zeros(sum(self.action_space[self.roles[0]]['acs_space']), dtype=np.bool_)
         return empty_mask
 
     def get_metrics(self, episodic):
