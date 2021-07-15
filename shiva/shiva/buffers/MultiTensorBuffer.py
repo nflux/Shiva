@@ -272,7 +272,7 @@ class MultiAgentPrioritizedTensorBuffer(ReplayBuffer):
             res.append(idx)
         return res
 
-    def sample(self, beta=None, agent_id=None, device='cpu'):
+    def sample(self, agent_id=None, device='cpu'):
         """
         Args:
             beta: float
@@ -286,12 +286,13 @@ class MultiAgentPrioritizedTensorBuffer(ReplayBuffer):
         Returns:
             A tuple of tensors (obs, acs, rew, next_obs, done, acs_mask, next_acs_mask, weights, idxs)
         """
-        beta = self._beta if beta is None else beta
+        beta = self._beta #if beta is None else beta
         cast = lambda x: Variable(x, requires_grad=False).to(device)
         cast_obs = lambda x: Variable(x, requires_grad=True).to(device)
 
         idxes = self._sample_proportional(self.batch_size)
 
+        # 1) Calculating weights
         ws = []
         p_min = self._it_min.min() / self._it_sum.sum()
         max_weight = (p_min * self.size) ** (-beta)
@@ -301,6 +302,9 @@ class MultiAgentPrioritizedTensorBuffer(ReplayBuffer):
             w = (p_sample * self.size) ** (-beta)
             ws.append(w / max_weight)
         weights = np.array(ws)
+
+        # 2) Weights = priorities
+        # weights = np.array(self._it_sum.get(idxes))
 
         # if agent_id is None:
         return (
@@ -312,7 +316,7 @@ class MultiAgentPrioritizedTensorBuffer(ReplayBuffer):
             cast(self.acs_mask_buffer[idxes, :, :]),
             cast(self.next_acs_mask_buffer[idxes, :, :]),
             cast(torch.from_numpy(weights)),
-            cast(torch.tensor(idxes))
+            idxes
         )
         # else:
         #     return (
@@ -337,13 +341,21 @@ class MultiAgentPrioritizedTensorBuffer(ReplayBuffer):
             variable `idxes`.
         """
         assert len(idxes) == len(priorities)
-        for idx, priority in zip(idxes, priorities):
-            assert priority > 0
-            assert 0 <= idx < self.size
-            self._it_sum[idx] = priority ** self._alpha
-            self._it_min[idx] = priority ** self._alpha
+        priorities = [p ** self._alpha for p in priorities]
+        # print(priorities)
+        # for ix, p in zip(idxes, priorities):
+        #     assert p > 0, f"p <= 0, {ix} {p}"
+        self._it_sum.update(idxes, priorities)
+        self._it_min.update(idxes, priorities)
+        self._max_priority = max([self._max_priority]+priorities)
 
-            self._max_priority = max(self._max_priority, priority)
+        # for idx, priority in zip(idxes, priorities):
+        #     assert priority > 0
+        #     assert 0 <= idx < self.size
+        #     self._it_sum[idx] = priority ** self._alpha
+        #     self._it_min[idx] = priority ** self._alpha
+        #
+        #     self._max_priority = max(self._max_priority, priority)
 
     def reset(self):
         """ Empties all the buffers and resets the buffer parameters.

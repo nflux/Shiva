@@ -73,7 +73,7 @@ class SegmentTree(object):
         end -= 1
         return self._reduce_helper(start, end, 1, 0, self._capacity - 1)
 
-    def __setitem__(self, idx, val):
+    def __setitem__(self, idx: int, val):
         # index of the leaf
         idx += self._capacity
         self._value[idx] = val
@@ -85,10 +85,27 @@ class SegmentTree(object):
             )
             idx //= 2
 
+    def update(self, indxs: list, vals: list):
+        indxs = [ix+self._capacity for ix in indxs] # index of the leafs
+        for ix, v in zip(indxs, vals):
+            self._value[ix] = v # update values of leafs
+        p_indxs = list(set(ix//2 for ix in indxs)) # get unique parent ixs one level up
+        while p_indxs[0] >= 1:
+            for p_ix in p_indxs:
+                self._value[p_ix] = self._operation(
+                    self._value[2 * p_ix],
+                    self._value[2 * p_ix + 1]
+                )
+            p_indxs = list(set(ix // 2 for ix in p_indxs))
+
     def __getitem__(self, idx):
         assert 0 <= idx < self._capacity
         return self._value[self._capacity + idx]
 
+    def get(self, idxs: list):
+        for ix in idxs:
+            assert 0 <= ix < self._capacity
+        return [self._value[ix+self._capacity] for ix in idxs]
 
 class SumSegmentTree(SegmentTree):
     def __init__(self, capacity):

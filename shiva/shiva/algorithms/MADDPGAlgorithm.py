@@ -332,11 +332,13 @@ class MADDPGAlgorithm(Algorithm):
             # new_sample_priorities, _ = torch.max(new_sample_priorities, dim=-1)
 
             # Avoid priorities set to 0
-            new_sample_priorities = new_sample_priorities.clamp(min=1e-20)
+            # new_sample_priorities = new_sample_priorities.clamp(min=1e-20).tolist()
+            new_sample_priorities = (new_sample_priorities + 1e-5).tolist()
 
             # start.record()
             buffer.update_priorities(sample_idxs, new_sample_priorities)
             # end.record()
+            # torch.cuda.synchronize(self.device)
             # self.log(f"\nPriority Buffer? {buffer.prioritized}, update priorities: {start.elapsed_time(end)}\n")
 
     def update_critics(self, agents: list, buffer: object, step_count: int, episodic=False):

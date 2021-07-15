@@ -265,21 +265,6 @@ class MPILearner(Learner):
             elif self.done_count % self.configs['Agent']['lr_decay']['average_episodes'] == 0:
                 self.log(f"ID {self.agents[0].id} Last{self.configs['Agent']['lr_decay']['average_episodes']}AveRew {sum(self.last_rewards[self.agents[0].id]['q']) / len(self.last_rewards[self.agents[0].id]['q'])}")
 
-            # Uncomment in case we want to decay Alpha or Beta from the Prioritized Buffer
-            if self.buffer.prioritized:
-                # # Decay betta only if we are passed exploration phase
-                # # Assuming self.agents have same number of exploration episodes, so we can grab agents[0]
-                # est_exploration_episodes = self.agents[0].exploration_episodes_performed()
-                # new_beta = two_point_formula(self.done_count,
-                #                               (est_exploration_episodes, self.configs['Buffer']['beta_start']),
-                #                               (est_exploration_episodes + self.configs['Buffer']['beta_episodes'],
-                #                                self.configs['Buffer']['beta_end']))
-                # new_beta = min(new_beta, self.configs['Buffer']['beta_start'])
-                # new_beta = max(new_beta, self.configs['Buffer']['beta_end'])
-                beta = self.configs['Buffer']['beta']
-                # self.log(f"Set Buffer beta {beta}")
-                self.buffer.set_beta(beta)
-
             self.alg.update(self.agents, self.buffer, self.done_count, episodic=True)
             self.num_updates = self.alg.get_num_updates()
             self.profiler.time('AlgUpdates', self.num_updates, output_quantity=self.alg.update_iterations)
@@ -304,6 +289,8 @@ class MPILearner(Learner):
         Returns:
             None
         """
+
+        # Learning Rates
         _decay_or_restore_lr = 0  # -1 to decay, 1 to restore, 0 to do nothing
         _decay_log = ""
         for agent in self.agents:
@@ -332,6 +319,29 @@ class MPILearner(Learner):
         except:
             pass
         # self.log(f"{_decay_log}\nCentralCritic LR {self.alg.critic_learning_rate}", verbose_level=1)# if _decay_log != '' else None
+
+        # Replay buffer
+        if self.buffer.prioritized:
+            length_relative_to = self.num_updates  # or self.done_count
+            if 'beta_start' in self.configs['Buffer'] and 'beta_end' in self.configs['Buffer']:
+                # Decay betta only if we are passed exploration phase
+                # Assuming self.agents have same number of exploration episodes, so we can grab agents[0]
+                # est_exploration_episodes = self.agents[0].exploration_episodes_performed()
+                # new_beta = two_point_formula(self.done_count,
+                #                               (est_exploration_episodes, self.configs['Buffer']['beta_start']),
+                #                               (est_exploration_episodes + self.configs['Buffer']['beta_episodes'],
+                #                                self.configs['Buffer']['beta_end']))
+                new_beta = two_point_formula(length_relative_to,
+                                              (0, self.configs['Buffer']['beta_start']),
+                                              (self.configs['Buffer']['beta_episodes'], self.configs['Buffer']['beta_end']))
+                new_beta = max(new_beta, self.configs['Buffer']['beta_start'])
+                new_beta = min(new_beta, self.configs['Buffer']['beta_end'])
+            else:
+                # Fixed value of beta
+                new_beta = self.configs['Buffer']['beta']
+            # self.log(f"Set Buffer beta {beta}")
+            self.buffer.set_beta(new_beta)
+            self.metrics += [(f"{self.agents[0].role}/BufferBeta", new_beta, length_relative_to)]
 
     def run_evolution(self):
         """
@@ -672,12 +682,14 @@ class MPILearner(Learner):
         Returns:
             List[Union[List[Tuple[str, float, int]], Tuple[str, float, int]]]: list of metrics or list of list of metrics
         """
+        l_metrics = self.metrics
+        self.metrics = []
         evolution_metrics = []
         # if self.pbt:
         agent = self.get_agent_of_id(agent_id)
         evolution_metrics += agent.get_metrics()
         # evolution_metrics += [('Agent/{}/Actor_Learning_Rate'.format(agent.role), agent.actor_learning_rate)]
-        return [self.metrics_env[agent_id]] + evolution_metrics
+        return [self.metrics_env[agent_id]] + evolution_metrics + l_metrics
 
     def set_default_configs(self):
         """

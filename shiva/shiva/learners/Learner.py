@@ -11,6 +11,7 @@ class Learner(object):
     evolution_count = 0
     n_evolution_requests = 0
     checkpoints_made = 0
+    metrics = []
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     def __init__(self, learner_id, config, port=None):
