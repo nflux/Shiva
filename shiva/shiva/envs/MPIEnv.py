@@ -31,6 +31,7 @@ class MPIEnv(Environment):
         self.menv_id = self.configs['MultiEnv']['id']
         self.configs['Environment']['manual_seed'] += self.menv_id * 100 + self.id
         super(MPIEnv, self).__init__(self.configs)
+        self.log(f"Received config {self.configs}", verbose_level=3)
         self.launch()
 
     def launch(self):
