@@ -48,6 +48,7 @@ class MultiAgentUnityWrapperEnv15(Environment):
             no_graphics = not self.render,
             timeout_wait = self.timeout_wait if hasattr(self, 'timeout_wait') else 60
         )
+        self.log(f"UnityEnv base_port {self.port} / worker_id {self.worker_id}", verbose_level=3)
         self.log(f"MANUAL SEED {self.manual_seed}")
         # https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md#environmentparameters
         self.channel['config'].set_configuration_parameters(**self.unity_configs)
