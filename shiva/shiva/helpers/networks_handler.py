@@ -67,7 +67,7 @@ def DynamicLinearSequential(input_dim, output_dim, layers: list, activ_function:
 
     for i, layer in enumerate(net_layers):
         if 'linear' in str(type(layer)):
-            layer.weight.data.normal_(0, 0.01) 
+            layer.weight.data.normal_(0, 0.01)
         # if i % 2 == 0:
         #     net_layers[i] = 
 

@@ -37,8 +37,6 @@ class MultiAgentUnityWrapperEnv15(Environment):
             'config': EngineConfigurationChannel(),
             'props': EnvironmentParametersChannel()
         }
-        np.random.seed(self.manual_seed)
-        torch.manual_seed(self.manual_seed)
         self.Unity = UnityEnvironment(
             file_name = self.exec,
             base_port = self.port if hasattr(self, 'port') else 5005, # 5005 is Unity's default value
@@ -49,7 +47,6 @@ class MultiAgentUnityWrapperEnv15(Environment):
             timeout_wait = self.timeout_wait if hasattr(self, 'timeout_wait') else 60
         )
         self.log(f"UnityEnv base_port {self.port} / worker_id {self.worker_id}", verbose_level=3)
-        self.log(f"MANUAL SEED {self.manual_seed}")
         # https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md#environmentparameters
         self.channel['config'].set_configuration_parameters(**self.unity_configs)
         for param_name, param_value in self.unity_props.items():

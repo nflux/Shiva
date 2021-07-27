@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from shiva.core.admin import logger
+from shiva.helpers.misc import set_seed
 
 from typing import Dict, Tuple, List, Union, Any
 
@@ -25,6 +26,7 @@ class Algorithm:
         self.action_space = action_space
         self.loss_calc = getattr(torch.nn, self.configs['Algorithm']['loss_function'])(reduction='none')
         self.num_updates = 0
+        set_seed(self.manual_seed)
         if hasattr(self, 'device'):
             self.device = torch.device(self.device if torch.cuda.is_available() else "cpu")
         else:

@@ -30,9 +30,6 @@ class DDPGAgent(Agent):
     """
     def __init__(self, id:int, obs_space:int, acs_space:dict, configs):
         super(DDPGAgent, self).__init__(id, obs_space, acs_space, configs)
-        torch.manual_seed(self.manual_seed)
-        np.random.seed(self.manual_seed)
-        self.log(f"MANUAL SEED {self.manual_seed}", verbose_level=2)
 
         self.discrete = acs_space['discrete']
         self.continuous = acs_space['continuous']
@@ -444,4 +441,7 @@ class DDPGAgent(Agent):
         return ('shiva.agents', 'DDPGAgent.DDPGAgent')
 
     def __str__(self):
-        return f"<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} noise/epsilon={round(self.noise_scale, 2)}/{round(self.epsilon, 2)} device={self.device})>"
+        try:
+            return f"<DDPGAgent(id={self.id}, role={self.role}, S/E/U={self.step_count}/{self.done_count}/{self.num_updates}, T/P/R={self.num_evolutions['truncate']}/{self.num_evolutions['perturb']}/{self.num_evolutions['resample']} noise/epsilon={round(self.noise_scale, 2)}/{round(self.epsilon, 2)} device={self.device})>"
+        except:
+            return f"<DDPGAgent(id={self.id}>"

@@ -1,6 +1,8 @@
 import torch
 import random
 from shiva.core.admin import logger
+from shiva.helpers.misc import set_seed
+
 
 class Agent:
 
@@ -29,6 +31,8 @@ class Agent:
         self.configs = configs
         {setattr(self, k, v) for k, v in self.configs['Agent'].items()}
         self.id = id
+        set_seed(self.manual_seed)
+        self.log(f"MANUAL SEED {self.manual_seed}")
         self.agent_config = self.configs['Agent']
         self.networks_config = self.configs['Network']
         self.step_count = 0

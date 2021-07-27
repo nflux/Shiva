@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from shiva.core.admin import logger
+from shiva.helpers.misc import set_seed
 
 class Environment:
     """ Abstract Environment Class all environments implemented in Shiva inherit from.
@@ -35,6 +36,10 @@ class Environment:
         self.reward_factor = self.reward_factor if hasattr(self, 'reward_factor') else 1
         self.max_reward = self.max_reward if hasattr(self, 'max_reward') else 1
         self.min_reward = self.min_reward if hasattr(self, 'min_reward') else -1
+
+        set_seed(self.manual_seed)
+        self.log(f"MANUAL SEED {self.manual_seed}")
+
 
     def step(self, actions):
         """
