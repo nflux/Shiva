@@ -239,6 +239,7 @@ class MADDPGAlgorithm(Algorithm):
                 l1_error = torch.nn.functional.l1_loss(y_i.detach(), Q_these_states_main.detach(), reduction='none')
                 errors_column += [l1_error.clone().detach().cpu().reshape(-1, 1).abs()]
                 critic_loss = (l2_error * sample_weights.reshape(-1, 1)).mean()
+                self._metrics[agent.id] += [('Algorithm/L2_Error', l2_error.mean().item(), self.num_updates)]
             else:
                 critic_loss = l2_error.mean()
             # Backward propagation!
@@ -312,7 +313,6 @@ class MADDPGAlgorithm(Algorithm):
             self.num_updates += 1
             self._metrics[agent.id] += [('Algorithm/Actor_Loss', actor_loss.item(), self.num_updates)]
             self._metrics[agent.id] += [('Algorithm/Critic_Loss', critic_loss.item(), self.num_updates)]
-            self._metrics[agent.id] += [('Algorithm/L2_Error', l2_error.mean().item(), self.num_updates)]
             self._metrics[agent.id] += [('Agent/Central_Critic_Learning_Rate', self.critic_learning_rate, self.num_updates)]
             self.log(f"Critic Loss {critic_loss.item()}")
 
