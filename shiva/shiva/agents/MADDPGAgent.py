@@ -20,7 +20,7 @@ class MADDPGAgent(DDPGAgent):
              A tuple of metrics.
         """
         return [
-            ('{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate),
+            ('{}/Actor_Learning_Rate'.format(self.role), self.actor_learning_rate, self.num_updates),
             # ('{}/Critic_Learning_Rate'.format(self.role), self.critic_learning_rate),
             ('{}/Epsilon'.format(self.role), self.epsilon),
             ('{}/Noise_Scale'.format(self.role), self.noise_scale),
