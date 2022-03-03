@@ -2,7 +2,7 @@ absl-py==0.8.1
 astor==0.8.0
 attrs==19.3.0
 backcall==0.1.0
-bleach==3.1.0
+bleach==3.3.0
 cloudpickle==1.2.2
 cycler==0.10.0
 decorator==4.4.0
@@ -16,11 +16,11 @@ gym==0.14.0
 h5py==2.10.0
 importlib-metadata==0.23
 ipykernel==5.1.2
-ipython==7.8.0
+ipython==7.16.3
 ipython-genutils==0.2.0
 ipywidgets==7.5.1
 jedi==0.15.1
-Jinja2==2.10.3
+Jinja2==2.11.3
 json5==0.8.5
 jsonschema==3.1.1
 jupyter==1.0.0
@@ -34,22 +34,22 @@ kiwisolver==1.1.0
 Markdown==3.1.1
 MarkupSafe==1.1.1
 matplotlib==3.1.2
-mistune==0.8.4
+mistune==2.0.1
 -e git+https://github.com/nflux/Control-Tasks.git@1b34681e53e045d1a6fc7af0b1e011450c40944c#egg=mlagents&subdirectory=shiva/shiva/envs/ml-agents/ml-agents
 -e git+https://github.com/nflux/Control-Tasks.git@1b34681e53e045d1a6fc7af0b1e011450c40944c#egg=mlagents_envs&subdirectory=shiva/shiva/envs/ml-agents/ml-agents-envs
 more-itertools==7.2.0
 nbconvert==5.6.0
 nbformat==4.4.0
-notebook==6.0.1
-numpy==1.17.2
-opencv-python==4.1.1.26
+notebook==6.4.1
+numpy==1.22.2
+opencv-python==4.2.0.32.26
 opt-einsum==3.1.0
 pandas==0.25.1
 pandocfilters==1.4.2
 parso==0.5.1
 pexpect==4.7.0
 pickleshare==0.7.5
-Pillow==6.1.0
+Pillow==9.0.1
 prometheus-client==0.7.1
 prompt-toolkit==2.0.10
 protobuf==3.10.0
@@ -57,14 +57,14 @@ ptan==0.4
 ptyprocess==0.6.0
 pybullet==2.5.6
 pyglet==1.3.2
-Pygments==2.4.2
+Pygments==2.7.4
 pynput==1.4.5
 pyparsing==2.4.5
 pyrsistent==0.15.4
 python-dateutil==2.8.0
 python-xlib==0.25
 pytz==2019.3
-PyYAML==5.1.2
+PyYAML==5.4
 pyzmq==18.1.0
 qtconsole==4.5.5
 scipy==1.3.1
