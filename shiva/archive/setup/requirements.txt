@@ -34,7 +34,7 @@ kiwisolver==1.1.0
 Markdown==3.1.1
 MarkupSafe==1.1.1
 matplotlib==3.1.2
-mistune==0.8.4
+mistune==2.0.3
 -e git+https://github.com/nflux/Control-Tasks.git@1b34681e53e045d1a6fc7af0b1e011450c40944c#egg=mlagents&subdirectory=shiva/shiva/envs/ml-agents/ml-agents
 -e git+https://github.com/nflux/Control-Tasks.git@1b34681e53e045d1a6fc7af0b1e011450c40944c#egg=mlagents_envs&subdirectory=shiva/shiva/envs/ml-agents/ml-agents-envs
 more-itertools==7.2.0
