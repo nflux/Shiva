@@ -38,7 +38,7 @@ mistune==0.8.4
 -e git+https://github.com/nflux/Control-Tasks.git@1b34681e53e045d1a6fc7af0b1e011450c40944c#egg=mlagents&subdirectory=shiva/shiva/envs/ml-agents/ml-agents
 -e git+https://github.com/nflux/Control-Tasks.git@1b34681e53e045d1a6fc7af0b1e011450c40944c#egg=mlagents_envs&subdirectory=shiva/shiva/envs/ml-agents/ml-agents-envs
 more-itertools==7.2.0
-nbconvert==5.6.0
+nbconvert==6.3.0
 nbformat==4.4.0
 notebook==6.0.1
 numpy==1.17.2
