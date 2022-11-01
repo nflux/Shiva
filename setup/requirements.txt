@@ -10,3 +10,4 @@ mlagents-envs==0.16.0
 mpi4py==3.0.3
 pandas==1.0.5
 scipy==1.5.1
+wheel>=0.38.0 # not directly required, pinned by Snyk to avoid a vulnerability
