@@ -38,7 +38,7 @@ mistune==0.8.4
 -e git+https://github.com/nflux/Control-Tasks.git@1b34681e53e045d1a6fc7af0b1e011450c40944c#egg=mlagents&subdirectory=shiva/shiva/envs/ml-agents/ml-agents
 -e git+https://github.com/nflux/Control-Tasks.git@1b34681e53e045d1a6fc7af0b1e011450c40944c#egg=mlagents_envs&subdirectory=shiva/shiva/envs/ml-agents/ml-agents-envs
 more-itertools==7.2.0
-nbconvert==5.6.0
+nbconvert==6.3.0b0
 nbformat==4.4.0
 notebook==6.0.1
 numpy==1.17.2
@@ -49,7 +49,7 @@ pandocfilters==1.4.2
 parso==0.5.1
 pexpect==4.7.0
 pickleshare==0.7.5
-Pillow==6.1.0
+Pillow==9.0.1
 prometheus-client==0.7.1
 prompt-toolkit==2.0.10
 protobuf==3.10.0
