@@ -9,4 +9,4 @@ pickle-mixin==1.0.2
 mlagents-envs==0.16.0
 mpi4py==3.0.3
 pandas==1.0.5
-scipy==1.5.1
+scipy==1.10.0
